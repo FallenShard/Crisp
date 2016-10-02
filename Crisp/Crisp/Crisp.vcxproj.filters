@@ -24,6 +24,12 @@
     <ClCompile Include="Source\glad.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\GUI\GuiManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\InputDispatcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.hpp">
@@ -33,6 +39,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\FrameTimeLogger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\GuiManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\InputDispatcher.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Delegate.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Event.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -3,10 +3,12 @@
 #include <memory>
 
 #include <glad/glad.h>
-#include <GLFW\glfw3.h>
+#include <GLFW/glfw3.h>
 
 namespace crisp
 {
+    class InputDispatcher;
+
     class Application
     {
     public:
@@ -21,8 +23,12 @@ namespace crisp
 
         void run();
 
+        void onResize(int width, int height);
+
     private:
         std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)> m_window;
+
+        std::unique_ptr<InputDispatcher> m_inputDispatcher;
 
     };
 }

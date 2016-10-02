@@ -133,11 +133,17 @@
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\glad.cpp" />
+    <ClCompile Include="Source\GUI\GuiManager.cpp" />
+    <ClCompile Include="Source\InputDispatcher.cpp" />
     <ClCompile Include="Source\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.hpp" />
+    <ClInclude Include="Source\Delegate.hpp" />
+    <ClInclude Include="Source\Event.hpp" />
     <ClInclude Include="Source\FrameTimeLogger.hpp" />
+    <ClInclude Include="Source\GUI\GuiManager.hpp" />
+    <ClInclude Include="Source\InputDispatcher.hpp" />
     <ClInclude Include="Source\Timer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

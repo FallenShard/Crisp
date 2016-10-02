@@ -8,6 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
 
+#include "InputDispatcher.hpp"
 #include "Timer.hpp"
 #include "FrameTimeLogger.hpp"
 
@@ -29,11 +30,14 @@ namespace crisp
     {
         std::cout << "Initializing our world...\n";
 
-        GLFWwindow* window = glfwCreateWindow(DefaultWindowWidth, DefaultWindowHeight, ApplicationTitle.c_str(), nullptr, nullptr);
-        m_window.reset(window);
+        m_window.reset(glfwCreateWindow(DefaultWindowWidth, DefaultWindowHeight, ApplicationTitle.c_str(), nullptr, nullptr));
 
         glfwMakeContextCurrent(m_window.get());
         gladLoadGLLoader((GLADloadproc)(glfwGetProcAddress));
+
+        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
+
+        m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
     }
 
     Application::~Application()
@@ -65,5 +69,10 @@ namespace crisp
             
             frameTimeLogger.restart();
         }
+    }
+
+    void Application::onResize(int width, int height)
+    {
+        std::cout << "New dims: (" << width << ", " << height << ")\n";
     }
 }
