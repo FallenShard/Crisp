@@ -88,14 +88,15 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)Resources" "$(OutDir)Resources" /E /Y /I /R</Command>
+      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R
+xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;vulkan-1.lib;freetype27.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -118,33 +119,91 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;vulkan-1.lib;freetype27.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)Resources" "$(OutDir)Resources" /E /Y /I /R</Command>
+      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R
+xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Animation\Animation.cpp" />
+    <ClCompile Include="Source\Animation\Animator.cpp" />
     <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\Core\Image.cpp" />
+    <ClCompile Include="Source\Font.cpp" />
     <ClCompile Include="Source\glad.cpp" />
-    <ClCompile Include="Source\GUI\GuiManager.cpp" />
-    <ClCompile Include="Source\InputDispatcher.cpp" />
+    <ClCompile Include="Source\GUI\Button.cpp" />
+    <ClCompile Include="Source\FontLoader.cpp" />
+    <ClCompile Include="Source\GUI\CheckBox.cpp" />
+    <ClCompile Include="Source\GUI\Control.cpp" />
+    <ClCompile Include="Source\GUI\ControlGroup.cpp" />
+    <ClCompile Include="Source\GUI\DrawingVisitor.cpp" />
+    <ClCompile Include="Source\GUI\TopLevelGroup.cpp" />
+    <ClCompile Include="Source\Core\InputDispatcher.cpp" />
+    <ClCompile Include="Source\GUI\Label.cpp" />
+    <ClCompile Include="Source\GUI\Panel.cpp" />
     <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\OpenGL\OpenGLRenderer.cpp" />
+    <ClCompile Include="Source\ShaderLoader.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanContext.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanDevice.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Animation\Animation.hpp" />
+    <ClInclude Include="Source\Animation\Animator.hpp" />
+    <ClInclude Include="Source\Animation\PropertyAnimation.hpp" />
     <ClInclude Include="Source\Application.hpp" />
-    <ClInclude Include="Source\Delegate.hpp" />
-    <ClInclude Include="Source\Event.hpp" />
+    <ClInclude Include="Source\Core\Delegate.hpp" />
+    <ClInclude Include="Source\Core\Event.hpp" />
+    <ClInclude Include="Source\Core\Image.hpp" />
+    <ClInclude Include="Source\Core\MouseButtonEventArgs.hpp" />
+    <ClInclude Include="Source\Font.hpp" />
     <ClInclude Include="Source\FrameTimeLogger.hpp" />
-    <ClInclude Include="Source\GUI\GuiManager.hpp" />
-    <ClInclude Include="Source\InputDispatcher.hpp" />
-    <ClInclude Include="Source\Timer.hpp" />
+    <ClInclude Include="Source\GUI\Button.hpp" />
+    <ClInclude Include="Source\FontLoader.hpp" />
+    <ClInclude Include="Source\GUI\CheckBox.hpp" />
+    <ClInclude Include="Source\GUI\Control.hpp" />
+    <ClInclude Include="Source\GUI\ControlGroup.hpp" />
+    <ClInclude Include="Source\GUI\DrawingVisitor.hpp" />
+    <ClInclude Include="Source\GUI\TopLevelGroup.hpp" />
+    <ClInclude Include="Source\Core\InputDispatcher.hpp" />
+    <ClInclude Include="Source\GUI\Label.hpp" />
+    <ClInclude Include="Source\GUI\Panel.hpp" />
+    <ClInclude Include="Source\Math\Rect.hpp" />
+    <ClInclude Include="Source\OpenGL\OpenGLDiagnostics.hpp" />
+    <ClInclude Include="Source\OpenGL\OpenGLRenderer.hpp" />
+    <ClInclude Include="Source\ShaderLoader.hpp" />
+    <ClInclude Include="Source\Core\Timer.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanContext.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanDevice.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanRenderer.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\fullscreen-quad-frag.glsl" />
+    <None Include="Resources\Shaders\fullscreen-quad-vert.glsl" />
+    <None Include="Resources\Shaders\gamma-correct-frag.glsl" />
+    <None Include="Resources\Shaders\gamma-correct-vert.glsl" />
+    <None Include="Resources\shaders\gui-quad-col-frag.glsl" />
+    <None Include="Resources\Shaders\gui-quad-unif-col-frag.glsl" />
+    <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
+    <None Include="Resources\shaders\gui-quad-col-vert.glsl" />
+    <None Include="Resources\Shaders\gui-quad-tex-frag.glsl" />
+    <None Include="Resources\Shaders\gui-quad-tex-vert.glsl" />
+    <None Include="Resources\Shaders\gui-text-frag.glsl" />
+    <None Include="Resources\Shaders\gui-text-vert.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vesper\Vesper.vcxproj">
+      <Project>{2dd8e45d-10bf-4cb8-9c70-3882e6962ab7}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

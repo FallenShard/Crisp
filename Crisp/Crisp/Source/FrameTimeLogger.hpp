@@ -1,7 +1,10 @@
 #pragma once
 
 #include <iostream>
+#include <sstream>
 #include <iomanip>
+
+#include "Core/Event.hpp"
 
 namespace crisp
 {
@@ -13,6 +16,8 @@ namespace crisp
 
         void start();
         double restart();
+
+        Event<void, const std::string&> onFpsUpdated;
 
     private:
         double m_accumulatedTime;
@@ -49,7 +54,9 @@ namespace crisp
             double avgMillis = m_updatePeriod / (m_accumulatedFrames - spillOverFrac);
             double avgFrames = 1000.0 / avgMillis;
 
-            std::cout << std::fixed << std::setprecision(2) << std::setfill('0') << '\r' << avgMillis << " ms, " << std::setfill('0') << avgFrames << " fps" << std::flush;
+            std::stringstream stringStream;
+            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << avgMillis << " ms, " << std::setfill('0') << avgFrames << " fps";
+            onFpsUpdated(stringStream.str());
 
             m_accumulatedTime = spillOver;
             m_accumulatedFrames = spillOverFrac;
