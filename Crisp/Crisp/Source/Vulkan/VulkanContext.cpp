@@ -306,6 +306,9 @@ namespace crisp
                 break;
             }
         }
+
+        if (!m_physicalDevice)
+            throw std::exception("Failed to find a suitable physical device!");
     }
 
     bool VulkanContext::checkRequiredExtensions(std::vector<const char*> reqExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
@@ -462,11 +465,18 @@ namespace crisp
                 return format;
         }
 
+        std::cerr << "Could not find supported format!" << std::endl;
         return VkFormat();
     }
 
     VkFormat VulkanContext::findSupportedDepthFormat() const
     {
-        return findSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    }
+    VkPhysicalDeviceProperties VulkanContext::getDeviceProperties() const
+    {
+        VkPhysicalDeviceProperties deviceProps;
+        vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProps);
+        return deviceProps;
     }
 }

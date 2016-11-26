@@ -1,16 +1,23 @@
 #version 450 core
  
-smooth in vec2 fsTexCoord;
+layout(location = 0) in vec2 fsTexCoord;
 
-uniform sampler2D tex;
+layout(location = 0) out vec4 finalColor;
 
-uniform vec2 texCoordScale = vec2(1.0f, 1.0f);
-uniform vec2 texCoordOffset = vec2(0.0f, 0.0f);
-uniform vec4 color;
+layout(set = 1, binding = 0) uniform sampler s;
+layout(set = 1, binding = 1) uniform texture2D tex;
 
-out vec4 finalColor;
+layout(set = 1, binding = 2) uniform TextColor
+{
+    vec4 values[16];
+} textColor;
+
+layout(push_constant) uniform PushConstant
+{
+    layout(offset = 4) int value;
+} colorIndex;
  
 void main()
 {
-    finalColor = texture(tex, fsTexCoord * texCoordScale + texCoordOffset) * color;
+    finalColor = texture(sampler2D(tex, s), fsTexCoord) * textColor.values[colorIndex.value];
 }

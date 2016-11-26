@@ -9,13 +9,14 @@ namespace crisp
         class Panel : public ControlGroup
         {
         public:
+            Panel(RenderSystem* renderSystem);
+            ~Panel();
 
-            glm::vec4 getColor() const;
+            virtual void validate() override;
 
-            virtual void draw(const DrawingVisitor& visitor) const override;
+            ColorPalette getColor() const;
 
-        private:
-
+            virtual void draw(RenderSystem& visitor) override;
         };
     }
 }

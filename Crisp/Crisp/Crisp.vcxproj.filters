@@ -21,9 +21,6 @@
     <ClCompile Include="Source\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\glad.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\ShaderLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -34,9 +31,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Vulkan\VulkanDevice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\OpenGL\OpenGLRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\InputDispatcher.cpp">
@@ -69,9 +63,6 @@
     <ClCompile Include="Source\Animation\Animator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\GUI\DrawingVisitor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\GUI\Panel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -79,6 +70,39 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\Image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\MemoryHeap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Picture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanSwapChain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanRenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\FileUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\VulkanPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\GuiTextPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI\RenderSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,9 +125,6 @@
     <ClInclude Include="Source\Vulkan\VulkanDevice.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\OpenGL\OpenGLRenderer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Core\Delegate.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -114,9 +135,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\InputDispatcher.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\OpenGL\OpenGLDiagnostics.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\Button.hpp">
@@ -155,9 +173,6 @@
     <ClInclude Include="Source\Animation\Animator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\GUI\DrawingVisitor.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\GUI\Panel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -167,19 +182,53 @@
     <ClInclude Include="Source\Core\Image.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Vulkan\MemoryHeap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Picture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanSwapChain.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanRenderPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\DrawItem.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\FileUtils.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\GuiTextPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\RenderSystem.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\gui-quad-tex-vert.glsl" />
-    <None Include="Resources\Shaders\gui-quad-tex-frag.glsl" />
-    <None Include="Resources\shaders\gui-quad-col-vert.glsl" />
-    <None Include="Resources\shaders\gui-quad-col-frag.glsl" />
-    <None Include="Resources\Shaders\gui-text-frag.glsl" />
-    <None Include="Resources\Shaders\gui-text-vert.glsl" />
-    <None Include="Resources\Shaders\gui-quad-unif-col-frag.glsl" />
-    <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Resources\Shaders\fullscreen-quad-frag.glsl" />
     <None Include="Resources\Shaders\fullscreen-quad-vert.glsl" />
     <None Include="Resources\Shaders\gamma-correct-frag.glsl" />
     <None Include="Resources\Shaders\gamma-correct-vert.glsl" />
+    <None Include="Resources\Shaders\gui-quad-tex-frag.glsl" />
+    <None Include="Resources\Shaders\gui-quad-tex-vert.glsl" />
+    <None Include="Resources\Shaders\gui-quad-unif-col-frag.glsl" />
+    <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
+    <None Include="Resources\Shaders\gui-text-frag.glsl" />
+    <None Include="Resources\Shaders\gui-text-vert.glsl" />
   </ItemGroup>
 </Project>

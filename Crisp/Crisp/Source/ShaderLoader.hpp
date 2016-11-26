@@ -2,18 +2,13 @@
 
 #include <string>
 
-#include <glad/glad.h>
+#include <vulkan/vulkan.h>
 
 namespace crisp
 {
     class ShaderLoader
     {
     public:
-        ShaderLoader() = default;
-
-        GLuint load(const std::string& vertexShaderFile, const std::string& fragmentShaderFile);
-
-    private:
-        GLuint compileShader(GLenum type, const std::string& fileName);
+        VkShaderModule load(VkDevice device, const std::string& vulkanShaderFile);
     };
 }

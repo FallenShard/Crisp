@@ -31,7 +31,7 @@ namespace crisp
             virtual bool needsValidation() override;
             virtual void validate() override;
 
-            virtual void draw(const DrawingVisitor& visitor) const override;
+            virtual void draw(RenderSystem& visitor) override;
 
             virtual Control* getControlById(const std::string& id);
 

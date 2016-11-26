@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec2 position;
 
-smooth out vec2 fsTexCoord;
+layout(location = 0) out vec2 fsTexCoord;
 
 void main()
 {

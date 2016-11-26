@@ -27,78 +27,36 @@ namespace crisp
 
             return source;
         }
+
+        std::vector<char> readFile(const std::string& filename)
+        {
+            std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+            if (!file.is_open())
+                throw std::exception("Failed to open file!");
+
+            size_t fileSize = static_cast<size_t>(file.tellg());
+            std::vector<char> buffer(fileSize);
+
+            file.seekg(0);
+            file.read(buffer.data(), fileSize);
+            file.close();
+
+            return buffer;
+        }
     }
 
-    GLuint ShaderLoader::load(const std::string& vertexShaderFile, const std::string& fragmentShaderFile)
+    VkShaderModule ShaderLoader::load(VkDevice device, const std::string& vulkanShaderFile)
     {
-        GLuint program = glCreateProgram();
+        auto shaderCode = readFile(vulkanShaderFile);
 
-        GLuint vertShader = compileShader(GL_VERTEX_SHADER,   vertexShaderFile);
-        GLuint fragShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderFile);
-        glAttachShader(program, vertShader);
-        glAttachShader(program, fragShader);
+        VkShaderModuleCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.codeSize = shaderCode.size();
+        createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-        glLinkProgram(program);
-
-        GLint isLinked = 0;
-        glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
-        if (isLinked == GL_FALSE)
-        {
-            std::cerr << "Error linking program!\n";
-            GLint maxLength = 0;
-            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
-
-            std::vector<GLchar> errorLog(maxLength);
-            glGetProgramInfoLog(program, maxLength, &maxLength, errorLog.data());
-
-            std::string error(errorLog.begin(), errorLog.end());
-            std::cerr << error << std::endl;
-
-            glDeleteProgram(program);
-            return -1;
-        }
-
-        glDetachShader(program, vertShader);
-        glDetachShader(program, fragShader);
-
-        glDeleteShader(vertShader);
-        glDeleteShader(fragShader);
-
-        return program;
-    }
-
-    GLuint ShaderLoader::compileShader(GLenum type, const std::string& fileName)
-    {
-        GLuint shader = glCreateShader(type);
-
-        std::string srcString = fileToString(shaderPath + fileName);
-
-        if (srcString == "")
-            return -1;
-
-        const GLchar* src = srcString.c_str();
-        glShaderSource(shader, 1, &src, nullptr);
-
-        glCompileShader(shader);
-
-        GLint isCompiled = 0;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-        if (isCompiled == GL_FALSE)
-        {
-            std::cerr << "\nError compiling shader " + fileName + "!\n";
-            GLint maxLength = 0;
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-            std::vector<GLchar> errorLog(maxLength);
-            glGetShaderInfoLog(shader, maxLength, &maxLength, errorLog.data());
-
-            std::string error(errorLog.begin(), errorLog.end());
-            std::cerr << error << "!\n";
-
-            glDeleteShader(shader);
-            return -1;
-        }
-
-        return shader;
+        VkShaderModule shaderModule(VK_NULL_HANDLE);
+        vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule);
+        return shaderModule;
     }
 }

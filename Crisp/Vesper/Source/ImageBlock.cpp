@@ -108,7 +108,7 @@ namespace vesper
     std::vector<float> ImageBlock::getRaw()
     {
         std::vector<float> data;
-        data.reserve(m_size.x * m_size.y * 3);
+        data.reserve(m_size.x * m_size.y * 4); // 4th is padding (alpha)
 
         for (int i = m_borderSize; i < m_borderSize + m_size.y; i++)
         {
@@ -118,6 +118,7 @@ namespace vesper
                 data.push_back(rgb.r);
                 data.push_back(rgb.g);
                 data.push_back(rgb.b);
+                data.push_back(1.0f);
             }
         }
 

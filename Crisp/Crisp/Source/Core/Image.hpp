@@ -8,17 +8,18 @@ namespace crisp
     {
     public:
         Image(std::string&& fileName, bool flipY = false);
+        Image(const std::string& fileName, bool flipY = false);
         ~Image();
 
         unsigned char* getData() const;
-        int getWidth() const;
-        int getHeight() const;
-        int getNumComponents() const;
+        unsigned int getWidth() const;
+        unsigned int getHeight() const;
+        unsigned int getNumComponents() const;
 
     private:
         unsigned char* m_data;
-        int m_width;
-        int m_height;
-        int m_numComponents;
+        unsigned int m_width;
+        unsigned int m_height;
+        unsigned int m_numComponents;
     };
 }

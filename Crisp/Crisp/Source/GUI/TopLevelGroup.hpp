@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
 #include <Animation/Animator.hpp>
@@ -18,12 +20,13 @@ namespace crisp
         class Button;
         class ControlGroup;
         class DrawingVisitor;
+        class RenderSystem;
         class Panel;
 
         class TopLevelGroup
         {
         public:
-            TopLevelGroup();
+            TopLevelGroup(std::unique_ptr<RenderSystem> drawingVisitor);
             ~TopLevelGroup();
 
             TopLevelGroup(const TopLevelGroup& other) = delete;
@@ -52,7 +55,7 @@ namespace crisp
             bool m_guiHidingEnabled;
 
             std::unique_ptr<Animator> m_animator;
-            std::unique_ptr<DrawingVisitor> m_drawingVisitor;
+            std::unique_ptr<RenderSystem> m_renderSystem;
             std::unique_ptr<FontLoader> m_fontLoader;
 
             std::shared_ptr<ControlGroup> m_mainGroup;

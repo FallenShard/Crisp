@@ -6,84 +6,6 @@
 
 namespace crisp
 {
-    MemoryHeap::MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize allocSize, uint32_t memTypeIdx, VkDevice device)
-        : memory(VK_NULL_HANDLE)
-        , properties(memProps)
-        , size(allocSize)
-        , memoryTypeIndex(memTypeIdx)
-    {
-        VkMemoryAllocateInfo devAllocInfo = {};
-        devAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        devAllocInfo.allocationSize = size;
-        devAllocInfo.memoryTypeIndex = memoryTypeIndex;
-
-        vkAllocateMemory(device, &devAllocInfo, nullptr, &memory);
-
-        freeChunks.insert(std::make_pair(0, allocSize));
-    }
-
-    void MemoryHeap::free(uint64_t offset, uint64_t size)
-    {
-        freeChunks[offset] = size;
-
-        uint64_t rightBound = offset + size;
-        auto foundRight = freeChunks.find(rightBound);
-        if (foundRight != freeChunks.end())
-        {
-            freeChunks[offset] = size + foundRight->second;
-            freeChunks.erase(foundRight);
-        }
-    }
-
-    void MemoryHeap::coalesce()
-    {
-
-    }
-
-    std::pair<uint64_t, uint64_t> MemoryHeap::allocateChunk(uint64_t size, uint64_t alignment)
-    {
-        VkDeviceSize paddedSize = size + ((alignment - (size & (alignment - 1))) & (alignment - 1));
-
-        std::pair<uint64_t, uint64_t> allocResult = {0, 0};
-        uint64_t foundChunkOffset = 0;
-        uint64_t foundChunkSize = 0;
-        for (auto& freeChunk : freeChunks)
-        {
-            uint64_t chunkOffset = freeChunk.first;
-            uint64_t chunkSize = freeChunk.second;
-
-            uint64_t paddedOffset = chunkOffset + ((alignment - (chunkOffset & (alignment - 1))) & (alignment - 1));
-            uint64_t usableSize = chunkSize - (paddedOffset - chunkOffset);
-
-            if (paddedSize <= usableSize)
-            {
-                foundChunkOffset = chunkOffset;
-                foundChunkSize = chunkSize;
-
-                allocResult.first = paddedOffset;
-                allocResult.second = paddedSize;
-
-                break;
-            }
-        }
-
-        if (foundChunkSize > 0)
-        {
-            // Erase the modified chunk
-            freeChunks.erase(foundChunkOffset);
-
-            // Possibly add the left chunk
-            if (allocResult.first > foundChunkOffset)
-                freeChunks[foundChunkOffset] = allocResult.first - foundChunkOffset;
-
-            // Possibly add the right chunk
-            if (foundChunkOffset + foundChunkSize > allocResult.first + allocResult.second)
-                freeChunks[allocResult.first + allocResult.second] = foundChunkOffset + foundChunkSize - (allocResult.first + allocResult.second);
-        }
-
-        return allocResult;
-    }
-
     VulkanDevice::VulkanDevice(VulkanContext* vulkanContext)
         : m_context(vulkanContext)
         , m_device(VK_NULL_HANDLE)
@@ -96,15 +18,15 @@ namespace crisp
         vkGetDeviceQueue(m_device, queueFamilyIndices.graphicsFamily, 0, &m_graphicsQueue);
         vkGetDeviceQueue(m_device, queueFamilyIndices.presentFamily,  0, &m_presentQueue);
 
-        uint64_t allocationSize = 128 * 1024 * 1024; // 128 MB
-        uint64_t stagingSize    =  32 * 1024 * 1024; //  32 MB
+        uint64_t deviceSize  = 128 * 1024 * 1024; // 128 MB
+        uint64_t stagingSize =  32 * 1024 * 1024; //  32 MB
 
         // Device buffer memory
-        MemoryHeap bufferHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, allocationSize, m_context->findDeviceBufferMemoryType(m_device), m_device);
+        MemoryHeap bufferHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, deviceSize, m_context->findDeviceBufferMemoryType(m_device), m_device);
         m_memoryHeaps.insert(std::make_pair(bufferHeap.memoryTypeIndex, bufferHeap));
 
         // Device image memory
-        MemoryHeap imageHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, allocationSize, m_context->findDeviceImageMemoryType(m_device), m_device);
+        MemoryHeap imageHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, deviceSize, m_context->findDeviceImageMemoryType(m_device), m_device);
         m_memoryHeaps.insert(std::make_pair(imageHeap.memoryTypeIndex, imageHeap));
 
         // Staging memory
@@ -113,9 +35,9 @@ namespace crisp
 
         // Command pool for the graphics queue family
         VkCommandPoolCreateInfo poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-        poolInfo.flags = 0;
+        poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
     }
@@ -149,8 +71,8 @@ namespace crisp
 
     void VulkanDevice::destroyDeviceImage(VkImage image)
     {
-        auto imageInfo = m_deviceImages[image];
-        imageInfo.memoryHeap->free(imageInfo.offset, imageInfo.size);
+        auto memoryChunk = m_deviceImages.at(image);
+        memoryChunk.memoryHeap->free(memoryChunk.offset, memoryChunk.size);
 
         vkDestroyImage(m_device, image, nullptr);
         m_deviceImages.erase(image);
@@ -176,7 +98,17 @@ namespace crisp
         return m_commandPool;
     }
 
+    MemoryChunk VulkanDevice::getStagingBufferChunk(VkBuffer buffer)
+    {
+        return m_stagingBuffers.at(buffer);
+    }
+
     void VulkanDevice::fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size)
+    {
+        fillDeviceBuffer(dstBuffer, srcData, 0, size);
+    }
+
+    void VulkanDevice::fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize dstOffset, VkDeviceSize size)
     {
         auto stagingBufferInfo = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -185,23 +117,23 @@ namespace crisp
         memcpy(data, srcData, static_cast<size_t>(size));
         vkUnmapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory);
 
-        copyBuffer(dstBuffer, stagingBufferInfo.first, size);
+        copyBuffer(dstBuffer, stagingBufferInfo.first, 0, dstOffset, size);
 
         vkDestroyBuffer(m_device, stagingBufferInfo.first, nullptr);
         stagingBufferInfo.second.memoryHeap->free(stagingBufferInfo.second.offset, stagingBufferInfo.second.size);
     }
 
-    VkBuffer VulkanDevice::createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props)
+    VkBuffer VulkanDevice::createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage)
     {
-        auto bufferInfo = createBuffer(size, usage, props);
+        auto bufferInfo = createBuffer(size, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_deviceBuffers.insert(bufferInfo);
 
         return bufferInfo.first;
     }
 
-    VkBuffer VulkanDevice::createStagingBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProps)
+    VkBuffer VulkanDevice::createStagingBuffer(VkDeviceSize size, VkBufferUsageFlags usage)
     {
-        auto bufferInfo = createBuffer(size, usage, memProps);
+        auto bufferInfo = createBuffer(size, usage, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         m_stagingBuffers.insert(bufferInfo);
 
         return bufferInfo.first;
@@ -209,71 +141,119 @@ namespace crisp
 
     void VulkanDevice::updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize size)
     {
-        auto stagingAlloc = m_stagingBuffers[stagingBuffer];
+        updateDeviceBuffer(dstBuffer, stagingBuffer, srcData, 0, 0, size);
+    }
+
+    void VulkanDevice::updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize stagingOffset, VkDeviceSize dstOffset, VkDeviceSize size)
+    {
+        auto bufferChunk = m_stagingBuffers.at(stagingBuffer);
 
         void* data;
-        vkMapMemory(m_device, stagingAlloc.memoryHeap->memory, stagingAlloc.offset, size, 0, &data);
+        vkMapMemory(m_device, bufferChunk.memoryHeap->memory, bufferChunk.offset + stagingOffset, size, 0, &data);
         memcpy(data, srcData, static_cast<size_t>(size));
-        vkUnmapMemory(m_device, stagingAlloc.memoryHeap->memory);
+        vkUnmapMemory(m_device, bufferChunk.memoryHeap->memory);
 
-        copyBuffer(dstBuffer, stagingBuffer, size);
+        copyBuffer(dstBuffer, stagingBuffer, stagingOffset, dstOffset, size);
     }
 
-    VkImage VulkanDevice::createDeviceImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps)
+    void VulkanDevice::fillStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size)
     {
-        auto imageInfo = createImage(width, height, format, tiling, usage, memProps);
-        m_deviceImages.insert(imageInfo);
-
-        return imageInfo.first;
-    }
-
-    void VulkanDevice::fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, uint32_t width, uint32_t height)
-    {
-        auto stagingImageInfo = createImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto chunk = m_stagingBuffers.at(dstBuffer);
 
         void* data;
-        vkMapMemory(m_device, stagingImageInfo.second.memoryHeap->memory, stagingImageInfo.second.offset, size, 0, &data);
+        vkMapMemory(m_device, chunk.memoryHeap->memory, chunk.offset, size, 0, &data);
         memcpy(data, srcData, static_cast<size_t>(size));
-        vkUnmapMemory(m_device, stagingImageInfo.second.memoryHeap->memory);
-
-        transitionImageLayout(stagingImageInfo.first, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        transitionImageLayout(dstImage, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copyImage(dstImage, stagingImageInfo.first, width, height);
-
-
-        vkDestroyImage(m_device, stagingImageInfo.first, nullptr);
-        stagingImageInfo.second.memoryHeap->freeChunks[stagingImageInfo.second.offset] = stagingImageInfo.second.size;
+        vkUnmapMemory(m_device, chunk.memoryHeap->memory);
     }
 
-    VkImageView VulkanDevice::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect) const
+    void* VulkanDevice::mapBuffer(VkBuffer stagingBuffer)
+    {
+        auto chunk = m_stagingBuffers.at(stagingBuffer);
+
+        void* ptr;
+        vkMapMemory(m_device, chunk.memoryHeap->memory, chunk.offset, chunk.size, 0, &ptr);
+        return ptr;
+    }
+
+    void VulkanDevice::unmapBuffer(VkBuffer stagingBuffer)
+    {
+        auto chunk = m_stagingBuffers.at(stagingBuffer);
+        vkUnmapMemory(m_device, chunk.memoryHeap->memory);
+    }
+
+    VkImage VulkanDevice::createDeviceImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage)
+    {
+        auto chunk = createImage(width, height, 1, format, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_deviceImages.insert(chunk);
+
+        return chunk.first;
+    }
+
+    void VulkanDevice::fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers)
+    {
+        auto stagingBufferInfo = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        void* data;
+        vkMapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory, stagingBufferInfo.second.offset, size, 0, &data);
+        memcpy(data, srcData, static_cast<size_t>(size));
+        vkUnmapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory);
+
+        transitionImageLayout(dstImage, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numLayers);
+
+        for (auto i = 0u; i < numLayers; i++)
+            copyBufferToImage(dstImage, stagingBufferInfo.first, extent, i);
+
+        vkDestroyBuffer(m_device, stagingBufferInfo.first, nullptr);
+        stagingBufferInfo.second.memoryHeap->freeChunks[stagingBufferInfo.second.offset] = stagingBufferInfo.second.size;
+    }
+
+    void VulkanDevice::updateDeviceImage(VkImage dstImage, VkBuffer stagingBuffer, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers)
+    {
+        transitionImageLayout(dstImage, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numLayers);
+
+        for (auto i = 0u; i < numLayers; i++)
+            copyBufferToImage(dstImage, stagingBuffer, extent, i);
+    }
+
+    VkImageView VulkanDevice::createImageView(VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t baseLayer, uint32_t numLayers) const
     {
         VkImageViewCreateInfo viewInfo = {};
-        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = image;
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = format;
+        viewInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image        = image;
+        viewInfo.viewType     = viewType;
+        viewInfo.format       = format;
         viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewInfo.subresourceRange.aspectMask = aspect;
-        viewInfo.subresourceRange.baseMipLevel = 0;
-        viewInfo.subresourceRange.levelCount = 1;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount = 1;
+        viewInfo.subresourceRange.aspectMask     = aspect;
+        viewInfo.subresourceRange.baseMipLevel   = 0;
+        viewInfo.subresourceRange.levelCount     = 1;
+        viewInfo.subresourceRange.baseArrayLayer = baseLayer;
+        viewInfo.subresourceRange.layerCount     = numLayers;
 
         VkImageView imageView(VK_NULL_HANDLE);
         vkCreateImageView(m_device, &viewInfo, nullptr, &imageView);
         return imageView;
     }
 
-    std::pair<VkBuffer, AllocationDesc> VulkanDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props)
+    VkSemaphore VulkanDevice::createSemaphore()
+    {
+        VkSemaphoreCreateInfo semInfo = {};
+        semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkSemaphore semaphore;
+        vkCreateSemaphore(m_device, &semInfo, nullptr, &semaphore);
+        return semaphore;
+    }
+
+    std::pair<VkBuffer, MemoryChunk> VulkanDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props)
     {
         // Create a buffer handle
         VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = usage;
+        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size        = size;
+        bufferInfo.usage       = usage;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VkBuffer buffer(VK_NULL_HANDLE);
@@ -288,99 +268,46 @@ namespace crisp
             std::cerr << "Unable to find a suitable memory heap!";
 
         MemoryHeap& heap = m_memoryHeaps.at(supportedHeapIndex);
-        if (heap.properties == props)
-            std::cerr << "Buffer has requested unallocated memory type!";
+        if (heap.properties != props)
+            std::cerr << "Buffer has requested unallocated memory type!\n";
 
         auto allocChunk = heap.allocateChunk(memRequirements.size, memRequirements.alignment);
-
-        vkBindBufferMemory(m_device, buffer, heap.memory, allocChunk.first);
-
-        AllocationDesc desc;
-        desc.memoryHeap = &heap;
-        desc.offset = allocChunk.first;
-        desc.size = allocChunk.second;
-
-        return std::make_pair(buffer, desc);
+        vkBindBufferMemory(m_device, buffer, heap.memory, allocChunk.offset);
+        return std::make_pair(buffer, allocChunk);
     }
 
-    void VulkanDevice::copyBuffer(VkBuffer dstBuffer, VkBuffer srcBuffer, VkDeviceSize size)
+    void VulkanDevice::copyBuffer(VkBuffer dstBuffer, VkBuffer srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
         VkBufferCopy copyRegion = {};
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = size;
+        copyRegion.srcOffset = srcOffset;
+        copyRegion.dstOffset = dstOffset;
+        copyRegion.size      = size;
         vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
         endSingleTimeCommands(commandBuffer);
     }
 
-    std::pair<VkImage, AllocationDesc> VulkanDevice::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps)
-    {
-        // Create an image handle
-        VkImageCreateInfo imageInfo = {};
-        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width = width;
-        imageInfo.extent.height = height;
-        imageInfo.extent.depth = 1;
-        imageInfo.mipLevels = 1;
-        imageInfo.arrayLayers = 1;
-        imageInfo.format = format;
-        imageInfo.tiling = tiling;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-        imageInfo.usage = usage;
-        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags = 0;
-
-        VkImage image(VK_NULL_HANDLE);
-        vkCreateImage(m_device, &imageInfo, nullptr, &image);
-
-        // Assign the image to the proper memory heap
-        VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(m_device, image, &memRequirements);
-
-        uint32_t supportedHeapIndex = m_context->findMemoryType(memRequirements.memoryTypeBits, memProps);
-        if (m_memoryHeaps.find(supportedHeapIndex) == m_memoryHeaps.end())
-            std::cerr << "Unable to find a suitable memory heap!";
-
-        MemoryHeap& heap = m_memoryHeaps.at(supportedHeapIndex);
-        if (heap.properties == memProps)
-            std::cerr << "Image has requested unallocated memory type!";
-
-        auto allocChunk = heap.allocateChunk(memRequirements.size, memRequirements.alignment);
-
-        vkBindImageMemory(m_device, image, heap.memory, allocChunk.first);
-
-        AllocationDesc desc;
-        desc.memoryHeap = &heap;
-        desc.offset = allocChunk.first;
-        desc.size = allocChunk.second;
-
-        return std::make_pair(image, desc);
-    }
-
-    void VulkanDevice::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
+    void VulkanDevice::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t numLayers)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
         VkImageMemoryBarrier barrier = {};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
+        barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout           = oldLayout;
+        barrier.newLayout           = newLayout;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = image;
+        barrier.image               = image;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = numLayers;
         if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         else
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
 
         if (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
         {
@@ -413,28 +340,93 @@ namespace crisp
         endSingleTimeCommands(commandBuffer);
     }
 
-    void VulkanDevice::copyImage(VkImage dstImage, VkImage srcImage, uint32_t width, uint32_t height)
+    VkImage VulkanDevice::createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage)
+    {
+        auto imageInfo = createImage(width, height, layers, format, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_deviceImages.insert(imageInfo);
+
+        return imageInfo.first;
+    }
+
+    void VulkanDevice::copyImage(VkImage dstImage, VkImage srcImage, VkExtent3D extent, uint32_t dstLayer)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-        VkImageSubresourceLayers subResource = {};
-        subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        subResource.baseArrayLayer = 0;
-        subResource.mipLevel = 0;
-        subResource.layerCount = 1;
-
         VkImageCopy region = {};
-        region.srcSubresource = subResource;
-        region.dstSubresource = subResource;
+        region.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.baseArrayLayer = 0;
+        region.srcSubresource.mipLevel       = 0;
+        region.srcSubresource.layerCount     = 1;
+        region.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.baseArrayLayer = dstLayer;
+        region.dstSubresource.mipLevel       = 0;
+        region.dstSubresource.layerCount     = 1;
         region.srcOffset = {0, 0, 0};
         region.dstOffset = {0, 0, 0};
-        region.extent.width = width;
-        region.extent.height = height;
-        region.extent.depth = 1;
+        region.extent    = extent;
 
         vkCmdCopyImage(commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
         endSingleTimeCommands(commandBuffer);
+    }
+
+    void VulkanDevice::copyBufferToImage(VkImage dstImage, VkBuffer srcBuffer, VkExtent3D extent, uint32_t dstLayer)
+    {
+        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+        VkBufferImageCopy copyRegion = {};
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = extent.width;
+        copyRegion.bufferImageHeight = extent.height;
+        copyRegion.imageExtent = extent;
+        copyRegion.imageOffset = { 0, 0, 0 };
+        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.imageSubresource.baseArrayLayer = dstLayer;
+        copyRegion.imageSubresource.layerCount = 1;
+        vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+        endSingleTimeCommands(commandBuffer);
+    }
+
+    std::pair<VkImage, MemoryChunk> VulkanDevice::createImage(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps)
+    {
+        // Create an image handle
+        VkImageCreateInfo imageInfo = {};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width = width;
+        imageInfo.extent.height = height;
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = layers;
+        imageInfo.format = format;
+        imageInfo.tiling = tiling;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+        imageInfo.usage = usage;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.flags = 0;
+
+        VkImage image(VK_NULL_HANDLE);
+        vkCreateImage(m_device, &imageInfo, nullptr, &image);
+
+        // Assign the image to the proper memory heap
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(m_device, image, &memRequirements);
+
+        uint32_t supportedHeapIndex = m_context->findMemoryType(memRequirements.memoryTypeBits, memProps);
+        if (m_memoryHeaps.find(supportedHeapIndex) == m_memoryHeaps.end())
+            std::cerr << "Unable to find a suitable memory heap!";
+
+        MemoryHeap& heap = m_memoryHeaps.at(supportedHeapIndex);
+        if (heap.properties != memProps)
+            std::cerr << "Image has requested unallocated memory type!\n";
+
+        auto allocChunk = heap.allocateChunk(memRequirements.size, memRequirements.alignment);
+
+        vkBindImageMemory(m_device, image, heap.memory, allocChunk.offset);
+
+        return std::make_pair(image, allocChunk);
     }
 
     VkCommandBuffer VulkanDevice::beginSingleTimeCommands()

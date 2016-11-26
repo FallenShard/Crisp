@@ -12,11 +12,10 @@ namespace crisp
         class Button : public Control
         {
         public:
-            Button(const Font& font);
+            Button(RenderSystem* renderSystem);
             virtual ~Button();
 
             void setClickCallback(std::function<void()> callback);
-
             void setText(const std::string& text);
 
             virtual void onMouseEntered() override;
@@ -26,9 +25,9 @@ namespace crisp
 
             virtual void validate() override;
 
-            virtual void draw(const DrawingVisitor& visitor) const override;
+            virtual void draw(RenderSystem& visitor) override;
 
-            glm::vec4 getColorOffset() const;
+            ColorPalette getColor() const;
 
         private:
             enum class State

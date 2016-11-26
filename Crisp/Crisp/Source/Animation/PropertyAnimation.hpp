@@ -70,7 +70,7 @@ namespace crisp
 
                 if (m_updater)
                 {
-                    T lerpVal = m_propertyStart + (m_propertyEnd - m_propertyStart) * (float)frameTime;
+                    T lerpVal = m_propertyStart + (m_propertyEnd - m_propertyStart) * static_cast<float>(frameTime);
                     m_updater(lerpVal);
                 }
 

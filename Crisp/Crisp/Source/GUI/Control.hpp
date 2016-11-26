@@ -3,12 +3,14 @@
 #include <string>
 #include <memory>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
 
 #include "Math/Rect.hpp"
-#include "DrawingVisitor.hpp"
+#include "RenderSystem.hpp"
 
 namespace crisp
 {
@@ -52,7 +54,7 @@ namespace crisp
             void setValidationStatus(bool validationStatus);
             void applyParentProperties();
 
-            virtual void draw(const DrawingVisitor& visitor) const = 0;
+            virtual void draw(RenderSystem& renderSystem) = 0;
 
             template <typename T>
             T* getTypedControlById(std::string id)
@@ -64,9 +66,11 @@ namespace crisp
 
             unsigned int getDistanceToRoot() const;
 
-        protected:
+            unsigned int getTransformId() const;
 
+        protected:
             std::string m_id;
+            unsigned int m_transformId;
 
             Control* m_parent;
 
@@ -82,6 +86,8 @@ namespace crisp
             float m_depth;
 
             bool m_isValidated;
+
+            RenderSystem* m_renderSystem;
         };
     }
 }

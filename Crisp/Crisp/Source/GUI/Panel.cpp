@@ -4,12 +4,30 @@ namespace crisp
 {
     namespace gui
     {
-        glm::vec4 Panel::getColor() const
+        Panel::Panel(RenderSystem* renderSystem)
         {
-            return glm::vec4(0.1f, 0.1f, 0.1f, 0.8f);
+            m_renderSystem = renderSystem;
+            m_transformId = m_renderSystem->registerTransformResource();
         }
 
-        void Panel::draw(const DrawingVisitor& visitor) const
+        Panel::~Panel()
+        {
+            m_renderSystem->unregisterTransformResource(m_transformId);
+        }
+
+        void Panel::validate()
+        {
+            ControlGroup::validate();
+
+            m_renderSystem->updateTransformResource(m_transformId, m_M);
+        }
+
+        ColorPalette Panel::getColor() const
+        {
+            return DarkGray;
+        }
+
+        void Panel::draw(RenderSystem& visitor)
         {
             visitor.draw(*this);
 

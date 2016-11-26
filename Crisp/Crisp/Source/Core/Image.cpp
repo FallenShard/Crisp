@@ -7,14 +7,35 @@
 namespace crisp
 {
     Image::Image(std::string&& fileName, bool flipY)
-        : m_width(-1)
-        , m_height(-1)
-        , m_numComponents(-1)
+        : m_width(0)
+        , m_height(0)
+        , m_numComponents(0)
         , m_data(nullptr)
     {
+        int width, height, numComps;
         stbi_set_flip_vertically_on_load(flipY);
-        m_data = stbi_load(fileName.c_str(), &m_width, &m_height, &m_numComponents, STBI_rgb_alpha);
+        m_data = stbi_load(fileName.c_str(), &width, &height, &numComps, STBI_rgb_alpha);
         stbi_set_flip_vertically_on_load(false);
+
+        m_width         = static_cast<unsigned int>(width);
+        m_height        = static_cast<unsigned int>(height);
+        m_numComponents = static_cast<unsigned int>(numComps);
+    }
+
+    Image::Image(const std::string& fileName, bool flipY)
+        : m_width(0)
+        , m_height(0)
+        , m_numComponents(0)
+        , m_data(nullptr)
+    {
+        int width, height, numComps;
+        stbi_set_flip_vertically_on_load(flipY);
+        m_data = stbi_load(fileName.c_str(), &width, &height, &numComps, STBI_rgb_alpha);
+        stbi_set_flip_vertically_on_load(false);
+
+        m_width = static_cast<unsigned int>(width);
+        m_height = static_cast<unsigned int>(height);
+        m_numComponents = static_cast<unsigned int>(numComps);
     }
 
     Image::~Image()
@@ -27,17 +48,17 @@ namespace crisp
         return m_data;
     }
 
-    int Image::getWidth() const
+    unsigned int Image::getWidth() const
     {
         return m_width;
     }
 
-    int Image::getHeight() const
+    unsigned int Image::getHeight() const
     {
         return m_height;
     }
 
-    int Image::getNumComponents() const
+    unsigned int Image::getNumComponents() const
     {
         return m_numComponents;
     }

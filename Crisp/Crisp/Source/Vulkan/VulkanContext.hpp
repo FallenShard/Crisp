@@ -49,6 +49,8 @@ namespace crisp
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat findSupportedDepthFormat() const;
 
+        VkPhysicalDeviceProperties getDeviceProperties() const;
+
     private:
         void createInstance(std::vector<const char*> reqPlatformExtensions);
         void setupDebugCallback();

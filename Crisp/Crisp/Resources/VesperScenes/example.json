@@ -9,7 +9,7 @@
         "sampler": {
             "type": "independent",
             "params": {
-                "numSamples": 128
+                "numSamples": 16
             }
         },
         "camera": {
@@ -46,8 +46,8 @@
                 "params": {
                     "fileName": "cube.obj",
                     "toWorld": [
-                        { "scale": [ 1, 0.5, 0.5 ] },
-                        { "translate": [ 0, -0.125, 0 ] }
+                        { "scale": [ 1, 0.25, 0.5 ] },
+                        { "translate": [ 0, -0.25, 0 ] }
                     ]
                 },
                 "bsdf": {

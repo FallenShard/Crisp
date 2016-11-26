@@ -3,8 +3,6 @@
 #include <memory>
 #include <functional>
 
-#include <glad/glad.h>
-
 #include "Control.hpp"
 
 #include "Label.hpp"
@@ -16,20 +14,14 @@ namespace crisp
         class CheckBox : public Control
         {
         public:
-            CheckBox(const Font& font);
+            CheckBox(RenderSystem* renderSystem);
             virtual ~CheckBox();
 
             bool isChecked() const;
+            void setCheckCallback(std::function<void(bool)> checkCallback);
+            void setText(const std::string& text);
 
             virtual glm::vec2 getSize() const;
-
-            void setText(const std::string& text);
-            void setColor(const glm::vec4& color);
-            glm::vec4 getColor() const;
-            glm::vec4 getRenderedColor() const;
-
-            void setCheckCallback(std::function<void(bool)> checkCallback);
-
             virtual Rect<float> getBounds() const;
 
             virtual void onMouseEntered() override;
@@ -39,7 +31,10 @@ namespace crisp
 
             virtual void validate() override;
 
-            virtual void draw(const DrawingVisitor& visitor) const override;
+            ColorPalette getColor() const;
+            virtual void draw(RenderSystem& visitor) override;
+
+            unsigned int getTexCoordResourceId() const;
 
         private:
             enum class State
@@ -51,12 +46,13 @@ namespace crisp
 
             State m_state;
             bool m_isChecked;
+            bool m_prevCheckedState;
 
             std::function<void(bool)> m_checkCallback;
 
-            glm::vec4 m_color;
-
             std::unique_ptr<Label> m_label;
+
+            unsigned int m_texCoordResourceId;
         };
     }
 }

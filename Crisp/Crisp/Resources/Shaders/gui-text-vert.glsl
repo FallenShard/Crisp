@@ -1,14 +1,21 @@
 #version 450 core
  
-layout(location = 0) in vec4 coord;
+layout(location = 0) in vec4 posCoord;
 
-out vec2 texCoord;
+layout(location = 0) out vec2 fsTexCoord;
 
-uniform mat4 MVP;
-uniform float z = 0.0f;
+layout(set = 0, binding = 0) uniform GuiTransform
+{
+    mat4 MVP[4];
+} guiTransform;
+
+layout(push_constant) uniform PushConstant
+{
+    layout(offset = 0) int index;
+} pushConsts;
  
 void main()
 {
-    texCoord = coord.zw;
-    gl_Position = MVP * vec4(coord.xy, z, 1.f);
+    fsTexCoord  = posCoord.zw;
+    gl_Position = guiTransform.MVP[pushConsts.index] * vec4(posCoord.xy, 0.0f, 1.0f);
 }

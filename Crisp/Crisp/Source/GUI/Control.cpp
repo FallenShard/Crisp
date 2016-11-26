@@ -11,6 +11,7 @@ namespace crisp
             , m_parent(nullptr)
             , m_padding(0.0f)
             , m_depth(-32.0f)
+            , m_transformId(-1)
         {
         }
 
@@ -129,7 +130,6 @@ namespace crisp
                 m_absolutePosition += m_parent->m_absolutePosition + m_parent->m_padding;
                 m_depth = m_parent->m_depth + 1.0f;
             }
-                
         }
 
         Control* Control::getControlById(const std::string& id)
@@ -140,6 +140,10 @@ namespace crisp
         unsigned int Control::getDistanceToRoot() const
         {
             return m_parent ? 1 + m_parent->getDistanceToRoot() : 0;
+        }
+        unsigned int Control::getTransformId() const
+        {
+            return m_transformId;
         }
     }
 }

@@ -45,7 +45,7 @@ namespace crisp
                     childrenSize.y = std::max(childrenSize.y, childPos.y + childSize.y);
                 }
 
-                return childrenSize + 2.0f * m_padding;
+                return childrenSize + 2.0f * m_padding; // pad on left/right and top/bottom
             }
         }
 
@@ -95,7 +95,10 @@ namespace crisp
 
         void ControlGroup::onMouseExited()
         {
-
+            for (auto& child : m_children)
+            {
+                child->onMouseExited();
+            }
         }
 
         void ControlGroup::onMousePressed(float x, float y)
@@ -140,10 +143,20 @@ namespace crisp
         {
             auto size = getSize();
 
-            m_M = glm::translate(glm::vec3(m_absolutePosition, 0.0f)) * glm::scale(glm::vec3(size, 1.0f));
+            for (auto& child : m_children)
+            {
+                if (child->needsValidation())
+                {
+                    child->applyParentProperties();
+                    child->validate();
+                    child->setValidationStatus(true);
+                }
+            }
+
+            m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(size, 1.0f));
         }
 
-        void ControlGroup::draw(const DrawingVisitor& visitor) const
+        void ControlGroup::draw(RenderSystem& visitor)
         {
             for (auto& child : m_children)
                 child->draw(visitor);
