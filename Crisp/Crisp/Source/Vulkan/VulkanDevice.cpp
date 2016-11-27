@@ -18,19 +18,16 @@ namespace crisp
         vkGetDeviceQueue(m_device, queueFamilyIndices.graphicsFamily, 0, &m_graphicsQueue);
         vkGetDeviceQueue(m_device, queueFamilyIndices.presentFamily,  0, &m_presentQueue);
 
-        uint64_t deviceSize  = 128 * 1024 * 1024; // 128 MB
-        uint64_t stagingSize =  32 * 1024 * 1024; //  32 MB
-
         // Device buffer memory
-        MemoryHeap bufferHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, deviceSize, m_context->findDeviceBufferMemoryType(m_device), m_device);
+        MemoryHeap bufferHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceBufferMemoryType(m_device), m_device);
         m_memoryHeaps.insert(std::make_pair(bufferHeap.memoryTypeIndex, bufferHeap));
 
         // Device image memory
-        MemoryHeap imageHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, deviceSize, m_context->findDeviceImageMemoryType(m_device), m_device);
+        MemoryHeap imageHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device);
         m_memoryHeaps.insert(std::make_pair(imageHeap.memoryTypeIndex, imageHeap));
 
         // Staging memory
-        MemoryHeap stagingHeap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingSize, m_context->findStagingBufferMemoryType(m_device), m_device);
+        MemoryHeap stagingHeap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device);
         m_memoryHeaps.insert(std::make_pair(stagingHeap.memoryTypeIndex, stagingHeap));
 
         // Command pool for the graphics queue family
@@ -474,5 +471,21 @@ namespace crisp
             for (auto& chunk : heap.second.freeChunks)
                 std::cout << "    " << chunk.first << " - " << chunk.second << "-" << chunk.first + chunk.second << "\n";
         }
+    }
+
+    std::pair<uint64_t, uint64_t> VulkanDevice::getDeviceMemoryUsage()
+    {
+        uint64_t allocatedSize = 0;
+        uint64_t takenSize = 0;
+        for (auto& heap : m_memoryHeaps)
+        {
+            if (heap.second.size == DeviceHeapSize)
+            {
+                allocatedSize += heap.second.size;
+                takenSize += heap.second.usedSize;
+            }
+        }
+
+        return { allocatedSize, takenSize };
     }
 }

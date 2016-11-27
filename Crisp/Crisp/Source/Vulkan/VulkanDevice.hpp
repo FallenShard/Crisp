@@ -47,8 +47,12 @@ namespace crisp
         void destroyDeviceImage(VkImage image);
 
         void printMemoryStatus();
+        std::pair<uint64_t, uint64_t> getDeviceMemoryUsage();
 
     private:
+        static constexpr VkDeviceSize DeviceHeapSize = 128 * 1024 * 1024; // 128 MB
+        static constexpr VkDeviceSize StagingHeapSize = 32 * 1024 * 1024; //  32 MB
+
         std::pair<VkBuffer, MemoryChunk> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props);
         void copyBuffer(VkBuffer dstBuffer, VkBuffer srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
 

@@ -21,6 +21,7 @@ namespace crisp
         VkDeviceSize size;
         std::map<uint64_t, uint64_t> freeChunks;
         int32_t memoryTypeIndex;
+        VkDeviceSize usedSize;
 
         MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize size, uint32_t memoryTypeIndex, VkDevice device);
 

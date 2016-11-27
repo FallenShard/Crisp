@@ -6,6 +6,7 @@ namespace crisp
         : memory(VK_NULL_HANDLE)
         , properties(memProps)
         , size(allocSize)
+        , usedSize(0)
         , memoryTypeIndex(memTypeIdx)
     {
         VkMemoryAllocateInfo devAllocInfo = {};
@@ -20,6 +21,7 @@ namespace crisp
 
     void MemoryHeap::free(uint64_t offset, uint64_t size)
     {
+        usedSize -= size;
         freeChunks[offset] = size;
 
         uint64_t rightBound = offset + size;
@@ -62,6 +64,8 @@ namespace crisp
             }
         }
 
+        usedSize += allocResult.size;
+
         if (foundChunkSize > 0)
         {
             // Erase the modified chunk
@@ -75,7 +79,7 @@ namespace crisp
             if (foundChunkOffset + foundChunkSize > allocResult.offset + allocResult.size)
                 freeChunks[allocResult.offset + allocResult.size] = foundChunkOffset + foundChunkSize - (allocResult.offset + allocResult.size);
         }
-
+        
         return allocResult;
     }
 }
