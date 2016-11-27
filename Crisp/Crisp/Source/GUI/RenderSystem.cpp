@@ -328,7 +328,7 @@ namespace crisp
             // Texts
             auto numLabels = *m_freeTextResourceIds.begin();
             m_textResources.reserve(numLabels);
-            for (int i = 0; i < numLabels; i++)
+            for (unsigned int i = 0; i < numLabels; i++)
             {
                 m_textResources.emplace_back(std::make_unique<TextVertexResource>());
                 m_textResources[i]->allocatedVertexCount        = 4 * 32; // 32 characters max per geometry, 4 vertices per character
@@ -348,7 +348,7 @@ namespace crisp
             // Dynamic tex coords
             auto numTexCoords = *m_freeTexCoordResourceIds.begin();
             m_texCoordResources.reserve(numTexCoords);
-            for (int i = 0; i < numTexCoords; i++)
+            for (unsigned int i = 0; i < numTexCoords; i++)
             {
                 m_texCoordResources.emplace_back(std::make_unique<TexCoordResource>());
                 m_texCoordResources[i]->geom.vertexBuffer   = m_renderer->getDevice().createDeviceBuffer(VulkanRenderer::NumVirtualFrames * 4 * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -619,8 +619,8 @@ namespace crisp
             }
             extent.x += currentX;
 
-            vertexCount = textVertices.size();
-            faceCount   = textFaces.size();
+            vertexCount = static_cast<uint32_t>(textVertices.size());
+            faceCount   = static_cast<uint32_t>(textFaces.size());
             geomData.indexCount = faceCount * 3;
 
             renderer->getDevice().fillStagingBuffer(stagingVertexBuffer, textVertices.data(), vertexCount * sizeof(glm::vec4));
