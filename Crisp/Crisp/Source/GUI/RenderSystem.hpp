@@ -79,6 +79,8 @@ namespace crisp
 
             void buildResourceBuffers();
 
+            std::pair<uint64_t, uint64_t> getDeviceMemoryUsage();
+
         private:
             void loadFonts();
             void loadTextures();

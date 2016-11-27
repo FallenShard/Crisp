@@ -67,19 +67,14 @@ namespace crisp
             m_rayTracerUpdateQueue.push(eventArgs);
         });
 
+        m_guiTopLevelGroup->getButton()->setClickCallback([this]()
+        {
+            m_rayTracer->initializeScene("Resources/VesperScenes/example.json");
+            m_rayTracer->start();
+            m_rayTracingStarted = true;
+        });
 
-        //m_rayTracer->initializeScene("Resources/VesperScenes/example.json");
-        //m_rayTracer->start();
-        //m_rayTracingStarted = true;
-        
-        //m_guiTopLevelGroup->getButton()->setClickCallback([this]()
-        //{
-        //    m_rayTracer->initializeScene("Resources/VesperScenes/example.json");
-        //    m_rayTracer->start();
-        //    m_rayTracingStarted = true;
-        //});
-
-        m_background = std::make_unique<Picture>(960, 540, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
+        m_background = std::make_unique<Picture>(DefaultWindowWidth, DefaultWindowHeight, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
     }
 
     Application::~Application()
@@ -117,7 +112,7 @@ namespace crisp
                 m_guiTopLevelGroup->update(timePerFrame);
                 
                 processRayTracerUpdates();
-                //m_guiTopLevelGroup->setTracerProgress(m_tracerProgress, m_timeSpentRendering);
+                m_guiTopLevelGroup->setTracerProgress(m_tracerProgress, m_timeSpentRendering);
             
                 timeSinceLastUpdate -= timePerFrame;
             }

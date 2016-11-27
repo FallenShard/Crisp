@@ -56,15 +56,23 @@ namespace crisp
         void TopLevelGroup::update(double dt)
         {
             m_animator->update(dt);
+
+            auto usage = m_renderSystem->getDeviceMemoryUsage();
+            float percentage = static_cast<float>(usage.second) / static_cast<float>(usage.first);
+            auto label = m_mainGroup->getTypedControlById<Label>("memUsageLabel");
+            label->setText("GPU memory: " + std::to_string(usage.second >> 20) + " / " + std::to_string(usage.first >> 20) + " MB");
+
+            auto panel = m_mainGroup->getTypedControlById<Panel>("memUsageFg");
+            panel->setSize({ 146.0f * percentage, 26.0f });
         }
 
         void TopLevelGroup::setTracerProgress(float percentage, float timeSpentRendering)
         {
-            //float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpentRendering / 8.0f;
-            //
-            //std::stringstream stringStream;
-            //stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " seconds.";
-            //m_label->setText(stringStream.str());
+            float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpentRendering / 8.0f;
+            
+            std::stringstream stringStream;
+            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
+            m_label->setText(stringStream.str());
         }
 
         void TopLevelGroup::draw()
@@ -166,6 +174,30 @@ namespace crisp
             checkBox->setPosition({0, 100});
             checkBox->setText("Hide GUI");
             panel->addControl(checkBox);
+
+            auto backgroundProgress = std::make_shared<gui::Panel>(m_renderSystem.get());
+            backgroundProgress->setId("memUsageBg");
+            backgroundProgress->setPosition({ 0, 150 });
+            backgroundProgress->setPadding(glm::vec2(2.0f));
+            backgroundProgress->setSize({ 150, 30 });
+            backgroundProgress->useAbsoluteSizing(true);
+            backgroundProgress->setColor(DarkGreen);
+            panel->addControl(backgroundProgress);
+
+            auto memUsageLabel = std::make_shared<gui::Label>(m_renderSystem.get());
+            memUsageLabel->setId("memUsageLabel");
+            memUsageLabel->setPosition({ 0, 140 });
+            memUsageLabel->setColor(DarkGreen);
+            memUsageLabel->setScale(0.8f);
+            panel->addControl(memUsageLabel);
+
+            auto memUsage = std::make_shared<gui::Panel>(m_renderSystem.get());
+            memUsage->setId("memUsageFg");
+            memUsage->setPosition({ 0, 0 });
+            memUsage->setSize({ 55.0f, 26.0f });
+            memUsage->useAbsoluteSizing(true);
+            memUsage->setColor(Green);
+            backgroundProgress->addControl(memUsage);
 
             m_renderSystem->buildResourceBuffers();
 

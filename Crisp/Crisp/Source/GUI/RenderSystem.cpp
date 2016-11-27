@@ -362,6 +362,11 @@ namespace crisp
             }
         }
 
+        std::pair<uint64_t, uint64_t> RenderSystem::getDeviceMemoryUsage()
+        {
+            return m_renderer->getDevice().getDeviceMemoryUsage();
+        }
+
         void RenderSystem::createPipelines()
         {
             m_colorQuadPipeline = std::make_unique<GuiColorQuadPipeline>(m_renderer);
