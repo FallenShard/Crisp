@@ -163,6 +163,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTextPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\VulkanPipeline.cpp" />
+    <ClCompile Include="Source\Vulkan\RenderPasses\GuiRenderPass.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanContext.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanDevice.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanRenderer.cpp" />
@@ -202,6 +203,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTextPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp" />
+    <ClInclude Include="Source\Vulkan\RenderPasses\GuiRenderPass.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanDevice.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanRenderer.hpp" />
