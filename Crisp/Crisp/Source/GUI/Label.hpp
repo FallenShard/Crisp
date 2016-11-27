@@ -15,6 +15,8 @@ namespace crisp
             Label(RenderSystem* renderSystem, const std::string& text = "TestLabel");
             ~Label();
 
+            virtual glm::vec2 getSize() const override;
+
             void setText(const std::string& text);
             glm::vec2 getTextExtent() const;
 
