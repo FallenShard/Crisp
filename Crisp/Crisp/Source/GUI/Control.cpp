@@ -12,6 +12,7 @@ namespace crisp
             , m_padding(0.0f)
             , m_depth(-32.0f)
             , m_transformId(-1)
+            , m_scale(1.0f)
         {
         }
 
@@ -74,6 +75,16 @@ namespace crisp
         float Control::getDepth() const
         {
             return m_depth;
+        }
+
+        void Control::setScale(float scale)
+        {
+            m_scale = scale;
+        }
+
+        float Control::setScale() const
+        {
+            return m_scale;
         }
 
         Rect<float> Control::getAbsoluteBounds() const

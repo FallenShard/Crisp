@@ -39,6 +39,9 @@ namespace crisp
             void setDepth(float depth);
             float getDepth() const;
 
+            void setScale(float scale);
+            float setScale() const;
+
             Rect<float> getAbsoluteBounds() const;
             const glm::mat4& getModelMatrix() const;
 
