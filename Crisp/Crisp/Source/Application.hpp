@@ -21,7 +21,6 @@ namespace crisp
 {
     class InputDispatcher;
     class VulkanRenderer;
-    class OpenGLRenderer;
     class Picture;
 
     namespace gui
@@ -62,11 +61,12 @@ namespace crisp
 
         std::unique_ptr<gui::TopLevelGroup> m_guiTopLevelGroup;
 
-        std::unique_ptr<Picture> m_background;
-        std::unique_ptr<vesper::RayTracer> m_rayTracer;
+        std::unique_ptr<Picture> m_rayTracedImage;
         tbb::concurrent_queue<vesper::ImageBlockEventArgs> m_rayTracerUpdateQueue;
         std::atomic<float> m_tracerProgress;
         std::atomic<float> m_timeSpentRendering;
         bool m_rayTracingStarted = false;
+
+        std::unique_ptr<vesper::RayTracer> m_rayTracer;
     };
 }

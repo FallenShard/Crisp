@@ -3,7 +3,6 @@
 #include <string>
 
 #include "Control.hpp"
-#include "FontLoader.hpp"
 
 namespace crisp
 {

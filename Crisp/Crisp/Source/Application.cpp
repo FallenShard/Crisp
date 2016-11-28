@@ -11,16 +11,13 @@
 #include "Core/InputDispatcher.hpp"
 #include "Core/Timer.hpp"
 #include "Core/Image.hpp"
-#include "FrameTimeLogger.hpp"
+#include "Core/Picture.hpp"
+#include "Core/FrameTimeLogger.hpp"
+#include "IO/FileUtils.hpp"
 
 #include "GUI/RenderSystem.hpp"
 #include "GUI/TopLevelGroup.hpp"
 #include "GUI/Button.hpp"
-
-#include "Picture.hpp"
-#include "RayTracer.hpp"
-
-#include "Core/FileUtils.hpp"
 
 namespace crisp
 {
@@ -77,13 +74,13 @@ namespace crisp
             m_rayTracingStarted = true;
         });
 
-        m_background = std::make_unique<Picture>(DefaultWindowWidth, DefaultWindowHeight, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
+        m_rayTracedImage = std::make_unique<Picture>(DefaultWindowWidth, DefaultWindowHeight, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
     }
 
     Application::~Application()
     {
         m_rayTracer.reset();
-        m_background.reset();
+        m_rayTracedImage.reset();
         m_guiTopLevelGroup.reset();
         m_renderer.reset();
         m_window.reset();
@@ -121,7 +118,7 @@ namespace crisp
                 timeSinceLastUpdate -= timePerFrame;
             }
 
-            m_background->draw();
+            m_rayTracedImage->draw();
             m_guiTopLevelGroup->draw();
 
             m_renderer->drawFrame();
@@ -134,11 +131,11 @@ namespace crisp
 
     void Application::onResize(int width, int height)
     {
-        std::cout << "New dims: (" << width << ", " << height << ")\n";
+        std::cout << "New window dims: (" << width << ", " << height << ")\n";
 
         m_renderer->resize(width, height);
 
-        m_background->resize();
+        m_rayTracedImage->resize();
         m_guiTopLevelGroup->resize(width, height);
     }
 
@@ -178,7 +175,7 @@ namespace crisp
         {
             vesper::ImageBlockEventArgs update;
             if (m_rayTracerUpdateQueue.try_pop(update))
-                m_background->updateTexture(update);
+                m_rayTracedImage->updateTexture(update);
         }
     }
 }

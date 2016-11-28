@@ -6,9 +6,6 @@
 #include <sstream>
 #include <iomanip>
 
-#include "ShaderLoader.hpp"
-#include "FontLoader.hpp"
-
 #include "RenderSystem.hpp"
 #include "ControlGroup.hpp"
 #include "Button.hpp"

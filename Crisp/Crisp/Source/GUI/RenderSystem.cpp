@@ -9,8 +9,7 @@
 
 #include "Vulkan/VulkanRenderer.hpp"
 #include "vulkan/Pipelines/VulkanPipeline.hpp"
-#include "ShaderLoader.hpp"
-#include "FontLoader.hpp"
+#include "IO/FontLoader.hpp"
 
 #include "vulkan/Pipelines/GuiColorQuadPipeline.hpp"
 #include "vulkan/Pipelines/GuiTextPipeline.hpp"

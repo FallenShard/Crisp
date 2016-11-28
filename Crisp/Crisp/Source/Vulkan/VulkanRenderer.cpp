@@ -2,9 +2,8 @@
 
 #define NOMINMAX
 
-#include "Core/FileUtils.hpp"
-#include "ShaderLoader.hpp"
-#include "FontLoader.hpp"
+#include "IO/FileUtils.hpp"
+#include "IO/ShaderLoader.hpp"
 
 #include "Pipelines/FullScreenQuadPipeline.hpp"
 

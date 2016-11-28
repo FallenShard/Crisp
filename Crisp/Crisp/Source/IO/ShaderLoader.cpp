@@ -1,6 +1,6 @@
 #include "ShaderLoader.hpp"
 
-#include "Core/FileUtils.hpp"
+#include "FileUtils.hpp"
 
 namespace crisp
 {
