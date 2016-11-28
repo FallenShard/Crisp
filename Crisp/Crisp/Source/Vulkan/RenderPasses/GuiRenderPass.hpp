@@ -2,37 +2,35 @@
 
 #include <vector>
 
-#include <vulkan/vulkan.h>
+#include "VulkanRenderPass.hpp"
 
 namespace crisp
 {
-    class VulkanRenderer;
-
-    class GuiRenderPass
+    class GuiRenderPass : public VulkanRenderPass
     {
     public:
         GuiRenderPass(VulkanRenderer* renderer);
         ~GuiRenderPass();
-        void recreate();
 
-        VkRenderPass getHandle() const;
+        virtual void begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer = nullptr) const override;
+        virtual VkImage getColorAttachment(unsigned int index) const override;
 
-    private:
-        void create();
-        void freeResources();
+        VkFormat getColorFormat() const;
 
-        VulkanRenderer* m_renderer;
-        VkDevice m_device;
-
-        VkRenderPass m_renderPass;
-        VkFormat m_colorFormat;
-        VkFormat m_depthStencilFormat;
+    protected:
+        virtual void createRenderPass() override;
+        virtual void createResources() override;
+        virtual void freeResources() override;
 
         VkImage m_renderTarget;
         VkImage m_depthTarget;
 
+        VkFormat m_colorFormat;
+        VkFormat m_depthFormat;
+
         std::vector<VkImageView> m_renderTargetViews;
         std::vector<VkImageView> m_depthTargetViews;
         std::vector<VkFramebuffer> m_framebuffers;
+        std::vector<VkClearValue> m_clearValues;
     };
 }

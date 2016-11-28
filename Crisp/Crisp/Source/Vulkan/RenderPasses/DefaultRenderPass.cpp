@@ -1,39 +1,48 @@
-#include "VulkanRenderPass.hpp"
+#include "DefaultRenderPass.hpp"
 
-#include <array>
-
-#include "VulkanSwapChain.hpp"
-#include "VulkanContext.hpp"
-#include "VulkanDevice.hpp"
+#include "vulkan/VulkanRenderer.hpp"
 
 namespace crisp
 {
-    VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device, VkFormat colorFormat, VkFormat depthStencilFormat)
-        : m_renderPass(VK_NULL_HANDLE)
-        , m_device(device.getHandle())
-        , m_colorFormat(colorFormat)
-        , m_depthStencilFormat(depthStencilFormat)
+    DefaultRenderPass::DefaultRenderPass(VulkanRenderer* renderer)
+        : VulkanRenderPass(renderer)
+        , m_colorFormat(m_renderer->getSwapChain().getImageFormat())
+        , m_depthFormat(m_renderer->getContext().findSupportedDepthFormat())
+        , m_clearValues(2, {})
     {
-        create();
+        m_clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
+        m_clearValues[1].depthStencil = { 1.0f, 0 };
+
+        createRenderPass();
+        createResources();
     }
 
-    VulkanRenderPass::~VulkanRenderPass()
+    DefaultRenderPass::~DefaultRenderPass()
     {
+        vkDestroyRenderPass(m_device, m_renderPass, nullptr);
         freeResources();
     }
 
-    void VulkanRenderPass::recreate()
+    void DefaultRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
     {
-        freeResources();
-        create();
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass        = m_renderPass;
+        renderPassInfo.framebuffer       = framebuffer;
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = m_renderer->getSwapChainExtent();
+        renderPassInfo.clearValueCount   = static_cast<uint32_t>(m_clearValues.size());
+        renderPassInfo.pClearValues      = m_clearValues.data();
+
+        vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    VkRenderPass VulkanRenderPass::getHandle() const
+    VkImage DefaultRenderPass::getColorAttachment(unsigned int index) const
     {
-        return m_renderPass;
+        return nullptr;
     }
 
-    void VulkanRenderPass::create()
+    void DefaultRenderPass::createRenderPass()
     {
         // Description for color attachment
         VkAttachmentDescription colorAttachment = {};
@@ -48,7 +57,7 @@ namespace crisp
 
         //// Description for depth attachment
         VkAttachmentDescription depthAttachment = {};
-        depthAttachment.format         = m_depthStencilFormat;
+        depthAttachment.format         = m_depthFormat;
         depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
         depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -92,8 +101,11 @@ namespace crisp
         vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
     }
 
-    void VulkanRenderPass::freeResources()
+    void DefaultRenderPass::createResources()
     {
-        vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+    }
+
+    void DefaultRenderPass::freeResources()
+    {
     }
 }

@@ -7,7 +7,7 @@ namespace crisp
     class FullScreenQuadPipeline : public VulkanPipeline
     {
     public:
-        FullScreenQuadPipeline(VulkanRenderer* renderer);
+        FullScreenQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection = false);
 
     protected:
         virtual void create(int width, int height) override;

@@ -7,7 +7,7 @@ namespace crisp
     class GuiTextPipeline : public VulkanPipeline
     {
     public:
-        GuiTextPipeline(VulkanRenderer* renderer);
+        GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

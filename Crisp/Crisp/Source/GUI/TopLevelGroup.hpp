@@ -59,7 +59,8 @@ namespace crisp
             std::unique_ptr<FontLoader> m_fontLoader;
 
             std::shared_ptr<ControlGroup> m_mainGroup;
-            Label* m_label;
+            Label* m_fpsLabel;
+            Label* m_progressLabel;
             Button* m_button;
             Panel* m_panel;
         };

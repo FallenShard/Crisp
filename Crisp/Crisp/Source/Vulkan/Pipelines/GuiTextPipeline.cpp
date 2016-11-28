@@ -4,8 +4,8 @@
 
 namespace crisp
 {
-    GuiTextPipeline::GuiTextPipeline(VulkanRenderer* renderer)
-        : VulkanPipeline(renderer, 2)
+    GuiTextPipeline::GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+        : VulkanPipeline(renderer, 2, renderPass)
     {
         // Descriptor Set Layout
         VkDescriptorSetLayoutBinding transformBinding = {};
@@ -206,7 +206,7 @@ namespace crisp
         pipelineInfo.pDepthStencilState  = &depthStencilState;
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = m_pipelineLayout;
-        pipelineInfo.renderPass          = m_renderer->getDefaultRenderPass().getHandle();
+        pipelineInfo.renderPass          = m_renderPass->getHandle();
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;

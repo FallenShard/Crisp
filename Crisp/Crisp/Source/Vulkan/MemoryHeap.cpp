@@ -1,13 +1,16 @@
 #include "MemoryHeap.hpp"
 
+#include <iostream>
+
 namespace crisp
 {
-    MemoryHeap::MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize allocSize, uint32_t memTypeIdx, VkDevice device)
+    MemoryHeap::MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize allocSize, uint32_t memTypeIdx, VkDevice device, std::string tag)
         : memory(VK_NULL_HANDLE)
         , properties(memProps)
         , size(allocSize)
         , usedSize(0)
         , memoryTypeIndex(memTypeIdx)
+        , tag(tag)
     {
         VkMemoryAllocateInfo devAllocInfo = {};
         devAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -24,18 +27,34 @@ namespace crisp
         usedSize -= size;
         freeChunks[offset] = size;
 
-        uint64_t rightBound = offset + size;
-        auto foundRight = freeChunks.find(rightBound);
-        if (foundRight != freeChunks.end())
+        if (freeChunks.size() > 5)
+            coalesce();
+
+        if (freeChunks.size() > 5)
         {
-            freeChunks[offset] = size + foundRight->second;
-            freeChunks.erase(foundRight);
+            std::cout << "WARNING: Memory fragmentation in " << tag << std::endl;
         }
     }
 
     void MemoryHeap::coalesce()
     {
-
+        std::map<uint64_t, uint64_t> newFreeMap;
+        auto current = freeChunks.begin();
+        auto next = std::next(freeChunks.begin());
+        while (next != freeChunks.end())
+        {
+            auto currRight = current->first + current->second;
+            if (currRight == next->first)
+            {
+                current->second = current->second + next->second;
+                freeChunks.erase(next++);
+            }
+            else
+            {
+                current = next;
+                next++;
+            }
+        }
     }
 
     MemoryChunk MemoryHeap::allocateChunk(uint64_t size, uint64_t alignment)
@@ -78,6 +97,12 @@ namespace crisp
             // Possibly add the right chunk
             if (foundChunkOffset + foundChunkSize > allocResult.offset + allocResult.size)
                 freeChunks[allocResult.offset + allocResult.size] = foundChunkOffset + foundChunkSize - (allocResult.offset + allocResult.size);
+        }
+
+        if (allocResult.size == 0)
+        {
+            std::cout << "CRITICAL ERROR: Allocation failed in " << tag << std::endl;
+            std::cout << "Requested size: " << size << std::endl;
         }
         
         return allocResult;

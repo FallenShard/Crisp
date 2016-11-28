@@ -37,7 +37,7 @@ namespace crisp
         void updateDeviceImage(VkImage dstImage, VkBuffer stagingBuffer, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers);
         void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t numLayers);
 
-        VkImage createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage);
+        VkImage createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage, VkImageLayout layout = VK_IMAGE_LAYOUT_PREINITIALIZED);
 
         VkImageView createImageView(VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t baseLayer, uint32_t numLayers) const;
 
@@ -50,8 +50,8 @@ namespace crisp
         std::pair<uint64_t, uint64_t> getDeviceMemoryUsage();
 
     private:
-        static constexpr VkDeviceSize DeviceHeapSize = 128 * 1024 * 1024; // 128 MB
-        static constexpr VkDeviceSize StagingHeapSize = 32 * 1024 * 1024; //  32 MB
+        static constexpr VkDeviceSize DeviceHeapSize = 256 << 20; // 256 MB
+        static constexpr VkDeviceSize StagingHeapSize = 32 << 20; //  32 MB
 
         std::pair<VkBuffer, MemoryChunk> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props);
         void copyBuffer(VkBuffer dstBuffer, VkBuffer srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
@@ -59,7 +59,7 @@ namespace crisp
         void copyImage(VkImage dstImage, VkImage srcImage, VkExtent3D extent, uint32_t dstLayer);
         void copyBufferToImage(VkImage dstImage, VkBuffer srcBuffer, VkExtent3D extent, uint32_t dstLayer);
 
-        std::pair<VkImage, MemoryChunk> createImage(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps);
+        std::pair<VkImage, MemoryChunk> createImage(VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps);
 
         VkCommandBuffer beginSingleTimeCommands();
         void endSingleTimeCommands(VkCommandBuffer commandBuffer);

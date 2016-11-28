@@ -20,6 +20,8 @@
 #include "Picture.hpp"
 #include "RayTracer.hpp"
 
+#include "Core/FileUtils.hpp"
+
 namespace crisp
 {
     namespace
@@ -43,7 +45,6 @@ namespace crisp
 
         createWindow();
         app = this;
-
         initVulkan();
 
         m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
@@ -69,7 +70,9 @@ namespace crisp
 
         m_guiTopLevelGroup->getButton()->setClickCallback([this]()
         {
-            m_rayTracer->initializeScene("Resources/VesperScenes/example.json");
+            auto sceneFile = "Resources/VesperScenes/" + FileUtils::openFileDialog();
+
+            m_rayTracer->initializeScene(sceneFile);
             m_rayTracer->start();
             m_rayTracingStarted = true;
         });
@@ -79,6 +82,7 @@ namespace crisp
 
     Application::~Application()
     {
+        m_rayTracer.reset();
         m_background.reset();
         m_guiTopLevelGroup.reset();
         m_renderer.reset();
@@ -117,7 +121,7 @@ namespace crisp
                 timeSinceLastUpdate -= timePerFrame;
             }
 
-            //m_background->draw();
+            m_background->draw();
             m_guiTopLevelGroup->draw();
 
             m_renderer->drawFrame();

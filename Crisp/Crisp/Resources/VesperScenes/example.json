@@ -9,7 +9,7 @@
         "sampler": {
             "type": "independent",
             "params": {
-                "numSamples": 16
+                "numSamples": 64
             }
         },
         "camera": {

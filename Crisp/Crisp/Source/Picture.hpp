@@ -32,10 +32,6 @@ namespace crisp
         void resize();
 
     private:
-        //void createDepthResources();
-        //VkImage m_depthImage;
-        //VkImageView m_depthImageView;
-
         VulkanRenderer* m_renderer;
 
         std::unique_ptr<FullScreenQuadPipeline> m_pipeline;

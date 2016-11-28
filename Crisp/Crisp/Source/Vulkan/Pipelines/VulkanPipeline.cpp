@@ -3,9 +3,10 @@
 
 namespace crisp
 {
-    VulkanPipeline::VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount)
+    VulkanPipeline::VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass)
         : m_device(renderer->getDevice().getHandle())
         , m_renderer(renderer)
+        , m_renderPass(renderPass)
         , m_pipelineLayout(nullptr)
         , m_pipeline(nullptr)
         , m_descriptorPools(layoutCount, nullptr)

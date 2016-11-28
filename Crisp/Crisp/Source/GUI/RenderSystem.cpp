@@ -2,6 +2,8 @@
 #define NOMINMAX
 
 #include <algorithm>
+#include <iostream>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
@@ -13,6 +15,7 @@
 #include "vulkan/Pipelines/GuiColorQuadPipeline.hpp"
 #include "vulkan/Pipelines/GuiTextPipeline.hpp"
 #include "vulkan/Pipelines/GuiTexQuadPipeline.hpp"
+#include "vulkan/RenderPasses/GuiRenderPass.hpp"
 
 #include "GUI/Control.hpp"
 #include "GUI/Panel.hpp"
@@ -42,6 +45,7 @@ namespace crisp
 
             loadFonts();
             loadTextures();
+            m_guiPass = std::make_unique<GuiRenderPass>(m_renderer);
             createPipelines();
             initColorPaletteBuffer();
             initGeometryBuffers();
@@ -49,6 +53,12 @@ namespace crisp
             updateDescriptorSets();
 
             m_drawCommands.reserve(100);
+
+
+            VkImageView imageView = m_renderer->getDevice().createImageView(m_guiPass->getColorAttachment(0), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_guiPass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+            m_renderer->displayImage(imageView, VulkanRenderer::NumVirtualFrames);
+
+            m_renderer->registerRenderPass(1, m_guiPass.get());
         }
 
         RenderSystem::~RenderSystem()
@@ -79,7 +89,7 @@ namespace crisp
 
         void RenderSystem::updateTransformResource(unsigned int transformId, const glm::mat4& M)
         {
-            m_mvpTransforms[transformId / 4].MVP[transformId % 4] = m_P * M;
+            m_mvpTransforms[transformId / MatricesPerUniformBuffer].MVP[transformId % MatricesPerUniformBuffer] = m_P * M;
         }
 
         void RenderSystem::unregisterTransformResource(unsigned int transformId)
@@ -264,22 +274,22 @@ namespace crisp
                     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
                         cmd.firstSet, cmd.descSetCount, &cmd.descriptorSets[1], 0, nullptr);
                     
-                    uint32_t dynamicOffset = m_updatedTransBufferIndex * m_transBufferSize  + sizeof(GuiTransform) * (cmd.transformId / MatricesPerUniformBuffer);
+                    uint32_t dynamicOffset = static_cast<uint32_t>(m_updatedTransBufferIndex * m_transBufferSize  + sizeof(GuiTransform) * (cmd.transformId / MatricesPerUniformBuffer));
                     int mvpIndex = cmd.transformId % MatricesPerUniformBuffer;
-
+                
                     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
                         0, 1, &m_transformSet, 1, &dynamicOffset);
-
+                
                     vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &mvpIndex);
                     vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &cmd.colorIndex);
-
+                
                     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cmd.geom->vertexBuffer, &cmd.geom->vertexBufferOffset);
                     vkCmdBindIndexBuffer(commandBuffer, cmd.geom->indexBuffer, cmd.geom->indexBufferOffset, VK_INDEX_TYPE_UINT16);
                     vkCmdDrawIndexed(commandBuffer, cmd.geom->indexCount, 1, 0, 0, 0);
                 }
 
                 m_drawCommands.clear();
-            });
+            }, 1);
         }
 
         void RenderSystem::resize(int width, int height)
@@ -288,8 +298,13 @@ namespace crisp
                 0.0f, static_cast<float>(m_renderer->getSwapChainExtent().height),
                 0.5f, 32.5f);
 
+            m_guiPass->recreate();
             m_colorQuadPipeline->resize(width, height);
             m_textPipeline->resize(width, height);
+            m_texQuadPipeline->resize(width, height);
+
+            VkImageView imageView = m_renderer->getDevice().createImageView(m_guiPass->getColorAttachment(0), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_guiPass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+            m_renderer->displayImage(imageView, VulkanRenderer::NumVirtualFrames);
         }
 
         void RenderSystem::buildResourceBuffers()
@@ -369,9 +384,9 @@ namespace crisp
 
         void RenderSystem::createPipelines()
         {
-            m_colorQuadPipeline = std::make_unique<GuiColorQuadPipeline>(m_renderer);
-            m_textPipeline = std::make_unique<GuiTextPipeline>(m_renderer);
-            m_texQuadPipeline = std::make_unique<GuiTexQuadPipeline>(m_renderer);
+            m_colorQuadPipeline = std::make_unique<GuiColorQuadPipeline>(m_renderer, m_guiPass.get());
+            m_textPipeline = std::make_unique<GuiTextPipeline>(m_renderer, m_guiPass.get());
+            m_texQuadPipeline = std::make_unique<GuiTexQuadPipeline>(m_renderer, m_guiPass.get());
 
             m_transformSet = m_colorQuadPipeline->allocateDescriptorSet(0);
             m_colorQuadDescSets.emplace_back(m_transformSet);
@@ -490,7 +505,7 @@ namespace crisp
         void RenderSystem::initColorPaletteBuffer()
         {
             std::vector<glm::vec4> colors(UniformBufferGranularity / sizeof(glm::vec4));
-            colors.at(DarkGray)   = glm::vec4(0.15f, 0.15f, 0.15f, 0.8f);
+            colors.at(DarkGray)   = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
             colors.at(Green)      = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
             colors.at(LightGreen) = glm::vec4(0.5f, 1.0f, 0.5f, 1.0f);
             colors.at(DarkGreen)  = glm::vec4(0.0f, 0.5f, 0.0f, 1.0f);
@@ -560,7 +575,7 @@ namespace crisp
             m_renderer->getDevice().transitionImageLayout(m_checkBoxImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
             m_checkBoxImageView = m_renderer->getDevice().createImageView(m_checkBoxImage, VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
 
-            // Font sampler
+            // CheckBoxSampler
             VkSamplerCreateInfo samplerInfo = {};
             samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
             samplerInfo.magFilter               = VK_FILTER_LINEAR;
@@ -605,13 +620,13 @@ namespace crisp
                 currentX += gInfo.advanceX;
                 currentY += gInfo.advanceY;
 
-                textVertices.emplace_back(glm::vec4 { x1, y1, gInfo.atlasOffsetX, 0.0f });
-                textVertices.emplace_back(glm::vec4 { x2, y1, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, 0.0f });
-                textVertices.emplace_back(glm::vec4 { x2, y2, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, gInfo.bmpHeight / atlasHeight });
-                textVertices.emplace_back(glm::vec4 { x1, y2, gInfo.atlasOffsetX, gInfo.bmpHeight / atlasHeight });
+                textVertices.emplace_back(x1, y1, gInfo.atlasOffsetX, 0.0f);
+                textVertices.emplace_back(x2, y1, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, 0.0f);
+                textVertices.emplace_back(x2, y2, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, gInfo.bmpHeight / atlasHeight);
+                textVertices.emplace_back(x1, y2, gInfo.atlasOffsetX, gInfo.bmpHeight / atlasHeight);
 
-                textFaces.emplace_back(glm::u16vec3 { ind + 0, ind + 2, ind + 1 });
-                textFaces.emplace_back(glm::u16vec3 { ind + 0, ind + 3, ind + 2 });
+                textFaces.emplace_back(ind + 0, ind + 2, ind + 1);
+                textFaces.emplace_back(ind + 0, ind + 3, ind + 2);
 
                 ind += 4;
 

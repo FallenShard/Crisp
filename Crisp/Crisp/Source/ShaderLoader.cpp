@@ -1,54 +1,17 @@
 #include "ShaderLoader.hpp"
 
-#include <iostream>
-#include <fstream>
-#include <vector>
+#include "Core/FileUtils.hpp"
 
 namespace crisp
 {
     namespace
     {
-        const std::string shaderPath = "Resources/Shaders/";
-
-        std::string fileToString(std::string filePath)
-        {
-            std::ifstream inputFile(filePath);
-            std::string source;
-
-            if (inputFile.is_open())
-            {
-                std::string line;
-                while (std::getline(inputFile, line))
-                {
-                    source += line + '\n';
-                }
-                inputFile.close();
-            }
-
-            return source;
-        }
-
-        std::vector<char> readFile(const std::string& filename)
-        {
-            std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-            if (!file.is_open())
-                throw std::exception("Failed to open file!");
-
-            size_t fileSize = static_cast<size_t>(file.tellg());
-            std::vector<char> buffer(fileSize);
-
-            file.seekg(0);
-            file.read(buffer.data(), fileSize);
-            file.close();
-
-            return buffer;
-        }
+        const std::string shaderPath = "Resources/Shaders/Vulkan/";
     }
 
     VkShaderModule ShaderLoader::load(VkDevice device, const std::string& vulkanShaderFile)
     {
-        auto shaderCode = readFile(vulkanShaderFile);
+        auto shaderCode = FileUtils::readBinaryFile(shaderPath + vulkanShaderFile);
 
         VkShaderModuleCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

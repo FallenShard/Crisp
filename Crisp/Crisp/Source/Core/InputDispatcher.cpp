@@ -10,6 +10,7 @@ namespace crisp
         glfwSetKeyCallback(m_window, InputDispatcher::keyboardCallback);
         glfwSetCursorPosCallback(m_window, InputDispatcher::mouseMoveCallback);
         glfwSetMouseButtonCallback(m_window, InputDispatcher::mouseButtonCallback);
+        glfwSetWindowCloseCallback(m_window, InputDispatcher::closeCallback);
     }
 
     void InputDispatcher::resizeCallback(GLFWwindow* window, int width, int height)
@@ -55,5 +56,11 @@ namespace crisp
                 dispatcher->mouseButtonUp(button, mods, xPos, yPos);
             }
         }
+    }
+
+    void InputDispatcher::closeCallback(GLFWwindow* window)
+    {
+        auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
+        if (dispatcher) dispatcher->windowClosed();
     }
 }

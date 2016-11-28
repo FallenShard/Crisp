@@ -29,6 +29,9 @@ namespace crisp
         Event<void, int, int, double, double> mouseButtonDown;
         Event<void, int, int, double, double> mouseButtonUp;
 
+        static void closeCallback(GLFWwindow* window);
+        Event<void> windowClosed;
+
     private:
         GLFWwindow* m_window;
     };

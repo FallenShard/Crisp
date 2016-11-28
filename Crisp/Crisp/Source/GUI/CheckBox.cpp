@@ -110,7 +110,7 @@ namespace crisp
 
         void CheckBox::validate()
         {
-            m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(m_size, 1));
+            m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(m_size, 1.0f));
             m_renderSystem->updateTransformResource(m_transformId, m_M);
 
             m_label->applyParentProperties();

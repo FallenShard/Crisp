@@ -20,6 +20,8 @@ namespace crisp
     class GuiTextPipeline;
     class GuiTexQuadPipeline;
 
+    class GuiRenderPass;
+
     struct Font;
 
     namespace gui
@@ -91,6 +93,8 @@ namespace crisp
 
             VulkanRenderer* m_renderer;
             glm::mat4 m_P;
+
+            std::unique_ptr<GuiRenderPass> m_guiPass;
 
             VkImage   m_checkBoxImage;
             VkImageView m_checkBoxImageView;

@@ -12,7 +12,6 @@
 
 #include "Vulkan/VulkanRenderer.hpp"
 #include "Vulkan/VulkanSwapChain.hpp"
-#include "Vulkan/VulkanRenderPass.hpp"
 #include "Vulkan/Pipelines/FullScreenQuadPipeline.hpp"
 
 namespace crisp
@@ -20,9 +19,7 @@ namespace crisp
     Picture::Picture(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer& renderer)
     {
         m_renderer = &renderer;
-        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer);
-        
-        //createDepthResources();
+        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass(), true);
 
         // create texture image
         unsigned int numChannels = 4;
@@ -32,7 +29,7 @@ namespace crisp
 
         m_stagingTexBuffer = renderer.getDevice().createStagingBuffer(byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
-        std::vector<float> data(width * height * numChannels, 0.1f);
+        std::vector<float> data(width * height * numChannels, 0.01f);
         renderer.getDevice().fillStagingBuffer(m_stagingTexBuffer, data.data(), byteSize);
 
         m_tex = renderer.getDevice().createDeviceImageArray(width, height, VulkanRenderer::NumVirtualFrames, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -41,7 +38,7 @@ namespace crisp
         renderer.getDevice().transitionImageLayout(m_tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VulkanRenderer::NumVirtualFrames);
 
         // create view
-        m_texView = renderer.getDevice().createImageView(m_tex, VK_IMAGE_VIEW_TYPE_2D_ARRAY, format, VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+        m_texView = renderer.getDevice().createImageView(m_tex, VK_IMAGE_VIEW_TYPE_2D_ARRAY, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
         m_updatedImageIndex = 0;
        
         // create sampler
@@ -130,23 +127,6 @@ namespace crisp
         m_drawItem.vertexOffset  = 0;
         m_drawItem.firstInstance = 0;
     }
-
-    //void Picture::createDepthResources()
-    //{
-    //    VkFormat depthFormat = m_renderer->getContext().findSupportedDepthFormat();
-    //
-    //    if (m_depthImage != VK_NULL_HANDLE)
-    //        m_renderer->getDevice().destroyDeviceImage(m_depthImage);
-    //    m_depthImage = m_renderer->getDevice().createDeviceImage(m_swapChain->getExtent().width, m_swapChain->getExtent().height, depthFormat,
-    //        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    //
-    //    if (m_depthImageView != VK_NULL_HANDLE)
-    //        vkDestroyImageView(m_renderer->getDevice().getHandle(), m_depthImageView, nullptr);
-    //    m_depthImageView = m_renderer->getDevice().createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-    //
-    //    m_renderer->getDevice().transitionImageLayout(m_depthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-    //
-    //}
 
     Picture::~Picture()
     {
@@ -257,7 +237,7 @@ namespace crisp
             unsigned int pushConst = m_updatedImageIndex;
             vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
             vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
-        });
+        }, VulkanRenderer::DefaultRenderPassId);
     }
 
     void Picture::resize()

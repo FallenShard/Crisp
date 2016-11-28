@@ -10,17 +10,19 @@
 #include "VulkanContext.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanSwapChain.hpp"
-#include "VulkanRenderPass.hpp"
+#include "RenderPasses/DefaultRenderPass.hpp"
 
 #include "DrawItem.hpp"
 
 namespace crisp
 {
     struct DrawItem;
+    class FullScreenQuadPipeline;
 
     class VulkanRenderer
     {
     public:
+        static constexpr unsigned int DefaultRenderPassId = 127;
         static constexpr unsigned int NumVirtualFrames = 3;
 
         VulkanRenderer(SurfaceCreator surfCreatorCallback, std::vector<const char*>&& extensions);
@@ -39,10 +41,15 @@ namespace crisp
 
         void resize(int width, int height);
 
-        void addDrawAction(std::function<void(VkCommandBuffer&)> drawAction);
+        void registerRenderPass(uint8_t key, VulkanRenderPass* renderPass);
+        void unregisterRenderPass(uint8_t key);
+
+        void addDrawAction(std::function<void(VkCommandBuffer&)> drawAction, uint8_t renderPassKey);
         void addCopyAction(std::function<void(VkCommandBuffer&)> copyAction);
 
         void record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer);
+
+        void displayImage(VkImageView imageView, int numLayers);
 
         void flushAllQueuedCopyRequests();
         uint32_t getCurrentFrameIndex() const;
@@ -85,6 +92,18 @@ namespace crisp
         std::unordered_map<std::string, VkShaderModule> m_shaderModules;
 
         std::vector<std::function<void(VkCommandBuffer&)>> m_copyActions;
-        std::vector<std::function<void(VkCommandBuffer&)>> m_drawActions;
+
+        VkBuffer m_fsQuadVertexBuffer;
+        VkBuffer m_fsQuadIndexBuffer;
+        VkSampler m_sampler;
+
+        VkImageView m_displayedImageView;
+        uint32_t m_displayedImageLayerCount;
+
+        std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
+        VkDescriptorSet m_fsQuadDescSet;
+
+        using ActionVector = std::vector<std::function<void(VkCommandBuffer&)>>;
+        std::map<uint8_t, std::pair<VulkanRenderPass*, ActionVector>> m_renderPasses;
     };
 }

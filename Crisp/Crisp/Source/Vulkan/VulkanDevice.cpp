@@ -19,15 +19,15 @@ namespace crisp
         vkGetDeviceQueue(m_device, queueFamilyIndices.presentFamily,  0, &m_presentQueue);
 
         // Device buffer memory
-        MemoryHeap bufferHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceBufferMemoryType(m_device), m_device);
+        MemoryHeap bufferHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceBufferMemoryType(m_device), m_device, "Device Buffer Heap");
         m_memoryHeaps.insert(std::make_pair(bufferHeap.memoryTypeIndex, bufferHeap));
 
         // Device image memory
-        MemoryHeap imageHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device);
+        MemoryHeap imageHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
         m_memoryHeaps.insert(std::make_pair(imageHeap.memoryTypeIndex, imageHeap));
 
         // Staging memory
-        MemoryHeap stagingHeap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device);
+        MemoryHeap stagingHeap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
         m_memoryHeaps.insert(std::make_pair(stagingHeap.memoryTypeIndex, stagingHeap));
 
         // Command pool for the graphics queue family
@@ -180,7 +180,7 @@ namespace crisp
 
     VkImage VulkanDevice::createDeviceImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage)
     {
-        auto chunk = createImage(width, height, 1, format, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto chunk = createImage({ width, height, 1u }, 1, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_deviceImages.insert(chunk);
 
         return chunk.first;
@@ -231,6 +231,7 @@ namespace crisp
 
         VkImageView imageView(VK_NULL_HANDLE);
         vkCreateImageView(m_device, &viewInfo, nullptr, &imageView);
+        
         return imageView;
     }
 
@@ -326,6 +327,16 @@ namespace crisp
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         }
+        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        }
+        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        }
         else
         {
             std::cerr << "Unsupported layout transition!" << std::endl;
@@ -337,9 +348,9 @@ namespace crisp
         endSingleTimeCommands(commandBuffer);
     }
 
-    VkImage VulkanDevice::createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage)
+    VkImage VulkanDevice::createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage, VkImageLayout layout)
     {
-        auto imageInfo = createImage(width, height, layers, format, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto imageInfo = createImage({ width, height, 1u }, layers, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_deviceImages.insert(imageInfo);
 
         return imageInfo.first;
@@ -385,27 +396,30 @@ namespace crisp
         endSingleTimeCommands(commandBuffer);
     }
 
-    std::pair<VkImage, MemoryChunk> VulkanDevice::createImage(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps)
+    std::pair<VkImage, MemoryChunk> VulkanDevice::createImage(VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps)
     {
         // Create an image handle
         VkImageCreateInfo imageInfo = {};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width = width;
-        imageInfo.extent.height = height;
-        imageInfo.extent.depth = 1;
+        imageInfo.extent = extent;
         imageInfo.mipLevels = 1;
         imageInfo.arrayLayers = layers;
         imageInfo.format = format;
         imageInfo.tiling = tiling;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+        imageInfo.initialLayout = initLayout;
         imageInfo.usage = usage;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.flags = 0;
 
         VkImage image(VK_NULL_HANDLE);
-        vkCreateImage(m_device, &imageInfo, nullptr, &image);
+        auto res = vkCreateImage(m_device, &imageInfo, nullptr, &image);
+
+        if (res != VK_SUCCESS)
+        {
+            std::cout << "FAILED TO CREATE IMAGE!" << std::endl;
+        }
 
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
@@ -421,7 +435,11 @@ namespace crisp
 
         auto allocChunk = heap.allocateChunk(memRequirements.size, memRequirements.alignment);
 
-        vkBindImageMemory(m_device, image, heap.memory, allocChunk.offset);
+        res = vkBindImageMemory(m_device, image, heap.memory, allocChunk.offset);
+        if (res != VK_SUCCESS)
+        {
+            std::cout << "FAILED TO BIND IMAGE!" << std::endl;
+        }
 
         return std::make_pair(image, allocChunk);
     }

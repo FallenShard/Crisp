@@ -7,7 +7,7 @@ namespace crisp
     class GuiColorQuadPipeline : public VulkanPipeline
     {
     public:
-        GuiColorQuadPipeline(VulkanRenderer* renderer);
+        GuiColorQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

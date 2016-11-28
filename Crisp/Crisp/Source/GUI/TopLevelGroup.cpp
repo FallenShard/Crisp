@@ -31,6 +31,7 @@ namespace crisp
             , m_renderSystem(std::move(renderSystem))
         {
             m_mainGroup = buildGui();
+            m_renderSystem->buildResourceBuffers();
 
             m_panel = m_mainGroup->getTypedControlById<Panel>("mainPanel");
 
@@ -40,7 +41,8 @@ namespace crisp
                 std::cout << "Vilasini is a pupper." << std::endl;
             });
             
-            m_label = m_mainGroup->getTypedControlById<gui::Label>("fpsLabel");
+            m_fpsLabel = m_mainGroup->getTypedControlById<gui::Label>("fpsLabel");
+            m_progressLabel = m_mainGroup->getTypedControlById<gui::Label>("progressLabel");
             
             auto checkBox = m_mainGroup->getTypedControlById<gui::CheckBox>("hideGuiCheckbox");
             checkBox->setCheckCallback([this](bool isChecked)
@@ -55,15 +57,22 @@ namespace crisp
 
         void TopLevelGroup::update(double dt)
         {
+            static double time = 0.0;
             m_animator->update(dt);
 
-            auto usage = m_renderSystem->getDeviceMemoryUsage();
-            float percentage = static_cast<float>(usage.second) / static_cast<float>(usage.first);
-            auto label = m_mainGroup->getTypedControlById<Label>("memUsageLabel");
-            label->setText("GPU memory: " + std::to_string(usage.second >> 20) + " / " + std::to_string(usage.first >> 20) + " MB");
+            if (time > 1.0)
+            {
+                auto usage = m_renderSystem->getDeviceMemoryUsage();
+                float percentage = static_cast<float>(usage.second) / static_cast<float>(usage.first);
+                auto label = m_mainGroup->getTypedControlById<Label>("memUsageLabel");
+                label->setText("GPU memory: " + std::to_string(usage.second >> 20) + " / " + std::to_string(usage.first >> 20) + " MB");
 
-            auto panel = m_mainGroup->getTypedControlById<Panel>("memUsageFg");
-            panel->setSize({ 146.0f * percentage, 26.0f });
+                auto panel = m_mainGroup->getTypedControlById<Panel>("memUsageFg");
+                panel->setSize({ 146.0f * percentage, 26.0f });
+
+                time -= 1.0;
+            }
+            time += dt;
         }
 
         void TopLevelGroup::setTracerProgress(float percentage, float timeSpentRendering)
@@ -72,7 +81,7 @@ namespace crisp
             
             std::stringstream stringStream;
             stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
-            m_label->setText(stringStream.str());
+            m_progressLabel->setText(stringStream.str());
         }
 
         void TopLevelGroup::draw()
@@ -90,6 +99,7 @@ namespace crisp
         void TopLevelGroup::resize(int width, int height)
         {
             m_renderSystem->resize(width, height);
+            m_mainGroup->invalidate();
         }
 
         void TopLevelGroup::onMouseMoved(double x, double y)
@@ -138,7 +148,7 @@ namespace crisp
 
         void TopLevelGroup::setFpsString(const std::string& fps)
         {
-            m_label->setText(fps);
+            m_fpsLabel->setText(fps);
         }
 
         gui::Button* TopLevelGroup::getButton()
@@ -153,15 +163,21 @@ namespace crisp
 
             auto panel = std::make_shared<gui::Panel>(m_renderSystem.get());
             panel->setId("mainPanel");
-            panel->setPosition({20, 20});
+            panel->setPosition({ 20, 20 });
             panel->setPadding(glm::vec2(10.0f));
             panel->setSize({200, 500});
             topLevelGroup->addControl(panel);
             
             auto label = std::make_shared<gui::Label>(m_renderSystem.get());
             label->setId("fpsLabel");
-            label->setPosition({0, 12});
+            label->setPosition({ 0, 10 });
             panel->addControl(label);
+
+            auto progLabel = std::make_shared<gui::Label>(m_renderSystem.get());
+            progLabel->setId("progressLabel");
+            progLabel->setText("PROGRESS");
+            progLabel->setPosition({ 0, 30 });
+            panel->addControl(progLabel);
             
             auto button = std::make_shared<gui::Button>(m_renderSystem.get());
             button->setId("pupperButton");
@@ -194,12 +210,10 @@ namespace crisp
             auto memUsage = std::make_shared<gui::Panel>(m_renderSystem.get());
             memUsage->setId("memUsageFg");
             memUsage->setPosition({ 0, 0 });
-            memUsage->setSize({ 55.0f, 26.0f });
+            memUsage->setSize({ 0.0f, 26.0f });
             memUsage->useAbsoluteSizing(true);
             memUsage->setColor(Green);
             backgroundProgress->addControl(memUsage);
-
-            m_renderSystem->buildResourceBuffers();
 
             return topLevelGroup;
         }

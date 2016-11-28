@@ -4,8 +4,8 @@
 
 namespace crisp
 {
-    FullScreenQuadPipeline::FullScreenQuadPipeline(VulkanRenderer* renderer)
-        : VulkanPipeline(renderer, 1)
+    FullScreenQuadPipeline::FullScreenQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection)
+        : VulkanPipeline(renderer, 1, renderPass)
     {
         // Descriptor pool
         std::array<VkDescriptorPoolSize, 2> poolSizes = {};
@@ -61,9 +61,16 @@ namespace crisp
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
         vkCreatePipelineLayout(m_renderer->getDevice().getHandle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
-
-        m_vertShader = renderer->getShaderModule("fullscreen-quad-vert");
-        m_fragShader = renderer->getShaderModule("fullscreen-quad-frag");
+        if (useGammaCorrection)
+        {
+            m_vertShader = renderer->getShaderModule("gamma-correct-vert");
+            m_fragShader = renderer->getShaderModule("gamma-correct-frag");
+        }
+        else
+        {
+            m_vertShader = renderer->getShaderModule("fullscreen-quad-vert");
+            m_fragShader = renderer->getShaderModule("fullscreen-quad-frag");
+        }
 
         create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
     }
@@ -132,7 +139,15 @@ namespace crisp
 
         auto rasterizationState   = VulkanPipeline::createDefaultRasterizationState();
         auto multisampleState     = VulkanPipeline::createDefaultMultisampleState();
-        auto colorBlendAttachment = VulkanPipeline::createDefaultColorBlendAttachmentState();
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+        colorBlendAttachment.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable         = VK_TRUE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
         auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
         colorBlendState.attachmentCount = 1;
         colorBlendState.pAttachments    = &colorBlendAttachment;
@@ -152,7 +167,7 @@ namespace crisp
         pipelineInfo.pDepthStencilState  = &depthStencilState;
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = m_pipelineLayout;
-        pipelineInfo.renderPass          = m_renderer->getDefaultRenderPass().getHandle();
+        pipelineInfo.renderPass          = m_renderPass->getHandle();
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
