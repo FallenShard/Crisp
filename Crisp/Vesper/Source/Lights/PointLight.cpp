@@ -18,7 +18,7 @@ namespace vesper
 
     Spectrum PointLight::eval(const Light::Sample& sample) const
     {
-        return m_power * InvFourPI / glm::distance2(m_position, sample.ref);
+        return m_power * InvFourPI / glm::length2(m_position - sample.ref);
     }
 
     Spectrum PointLight::sample(Light::Sample& sample, Sampler& sampler) const
