@@ -33,8 +33,9 @@ namespace vesper
 
         Intersection its;
 
-        Spectrum throughput(1.f);
+        Spectrum throughput(1.0f);
         bool isSpecular = true;
+        int bounces = 0;
 
         while (true)
         {
@@ -87,11 +88,15 @@ namespace vesper
             throughput *= bsdf;
             ray = bsdfRay;
 
-            float q = 1.f - std::min(throughput.maxCoeff(), 0.99f);
-            if (sampler.next1D() > q)
-                throughput /= (1.f - q);
-            else
-                break;
+            bounces++;
+            if (bounces > 5)
+            {
+                float q = 1.0f - std::min(throughput.maxCoeff(), 0.99f);
+                if (sampler.next1D() > q)
+                    throughput /= (1.0f - q);
+                else
+                    break;
+            }
         }
 
         return L;

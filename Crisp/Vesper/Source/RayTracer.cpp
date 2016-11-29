@@ -119,7 +119,7 @@ namespace vesper
 
             auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-            std::cout << "Finished rendering scene. Computed in " << duration / 1'000'000.0 << " ms. " << std::endl;
+            std::cout << "Finished rendering scene. Computed in " << duration / 1'000'000'000.0 << " s. " << std::endl;
 
             if (m_renderStatus != RenderStatus::Interrupted)
                 m_renderThread.detach();
