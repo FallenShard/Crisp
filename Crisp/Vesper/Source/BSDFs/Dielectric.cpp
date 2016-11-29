@@ -8,7 +8,7 @@ namespace vesper
 {
     DielectricBSDF::DielectricBSDF(const VariantMap& params)
     {
-        m_intIOR = params.get("intIOR", 1.33f);
+        m_intIOR = params.get("intIOR", 1.5046f);
         m_extIOR = params.get("extIOR", 1.000277f);
     }
 

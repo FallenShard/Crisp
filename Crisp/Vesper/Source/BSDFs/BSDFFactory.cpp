@@ -3,6 +3,7 @@
 #include "BSDF.hpp"
 #include "Lambertian.hpp"
 #include "Dielectric.hpp"
+#include "Mirror.hpp"
 
 namespace vesper
 {
@@ -15,6 +16,10 @@ namespace vesper
         else if (type == "dielectric")
         {
             return std::make_unique<DielectricBSDF>(parameters);
+        }
+        else if (type == "mirror")
+        {
+            return std::make_unique<MirrorBSDF>(parameters);
         }
         else
         {
