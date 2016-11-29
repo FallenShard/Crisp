@@ -45,7 +45,7 @@ namespace vesper
 
     void Scene::addShape(std::unique_ptr<Shape> shape, BSDF* bsdf, Light* light)
     {
-        if (shape->addToAccelerationStructure(this))
+        if (shape->addToAccelerationStructure(m_scene))
         {
             if (light)
             {
@@ -170,31 +170,5 @@ namespace vesper
 
         rtcOccluded(m_scene, rtcRay);
         return rtcRay.geomID == 0;
-    }
-
-    void Scene::addMesh(const Mesh* mesh)
-    {
-        unsigned int geomId = rtcNewTriangleMesh(m_scene, RTC_GEOMETRY_STATIC, mesh->getNumTriangles(), mesh->getNumVertices(), 1);
-
-        Vertex* vertices = static_cast<Vertex*>(rtcMapBuffer(m_scene, geomId, RTC_VERTEX_BUFFER));
-        auto& positions = mesh->getVertexPositions();
-        for (int i = 0; i < positions.size(); i++)
-        {
-            vertices[i].x = positions[i].x;
-            vertices[i].y = positions[i].y;
-            vertices[i].z = positions[i].z;
-            vertices[i].w = 1.f;
-        }
-        rtcUnmapBuffer(m_scene, geomId, RTC_VERTEX_BUFFER);
-        
-        Face* faces = static_cast<Face*>(rtcMapBuffer(m_scene, geomId, RTC_INDEX_BUFFER));
-        auto& triangles = mesh->getTriangleIndices();
-        for (int i = 0; i < mesh->getTriangleIndices().size(); i++)
-        {
-            faces[i].v0 = triangles[i].x;
-            faces[i].v1 = triangles[i].y;
-            faces[i].v2 = triangles[i].z;
-        }
-        rtcUnmapBuffer(m_scene, geomId, RTC_INDEX_BUFFER);
     }
 }

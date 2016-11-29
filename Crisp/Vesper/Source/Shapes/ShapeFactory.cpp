@@ -2,6 +2,7 @@
 
 #include "Shape.hpp"
 #include "Mesh.hpp"
+#include "Sphere.hpp"
 
 namespace vesper
 {
@@ -10,6 +11,10 @@ namespace vesper
         if (type == "mesh")
         {
             return std::make_unique<Mesh>(parameters);
+        }
+        if (type == "sphere")
+        {
+            return std::make_unique<Sphere>(parameters);
         }
         else
         {

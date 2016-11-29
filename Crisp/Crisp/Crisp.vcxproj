@@ -226,6 +226,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
+    <None Include="Resources\VesperScenes\cbox.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

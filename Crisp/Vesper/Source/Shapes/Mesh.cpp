@@ -82,10 +82,31 @@ namespace vesper
         return m_pdf.getNormFactor();
     }
 
-    bool Mesh::addToAccelerationStructure(Scene* scene) const
+    bool Mesh::addToAccelerationStructure(RTCScene scene)
     {
         if (!m_faces.empty())
-            scene->addMesh(this);
+        {
+            m_geomId = rtcNewTriangleMesh(scene, RTC_GEOMETRY_STATIC, getNumTriangles(), getNumVertices(), 1);
+
+            glm::vec4* vertices = static_cast<glm::vec4*>(rtcMapBuffer(scene, m_geomId, RTC_VERTEX_BUFFER));
+            for (int i = 0; i < m_positions.size(); i++)
+            {
+                vertices[i].x = m_positions[i].x;
+                vertices[i].y = m_positions[i].y;
+                vertices[i].z = m_positions[i].z;
+                vertices[i].w = 1.0f;
+            }
+            rtcUnmapBuffer(scene, m_geomId, RTC_VERTEX_BUFFER);
+
+            glm::uvec3* faces = static_cast<glm::uvec3*>(rtcMapBuffer(scene, m_geomId, RTC_INDEX_BUFFER));
+            for (int i = 0; i < m_faces.size(); i++)
+            {
+                faces[i].x = m_faces[i].x;
+                faces[i].y = m_faces[i].y;
+                faces[i].z = m_faces[i].z;
+            }
+            rtcUnmapBuffer(scene, m_geomId, RTC_INDEX_BUFFER);
+        }
 
         return !m_faces.empty();
     }

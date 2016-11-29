@@ -47,8 +47,6 @@ namespace vesper
         bool rayIntersect(const Ray3& ray, Intersection& its) const;
         bool rayIntersect(const Ray3& shadowRay) const;
 
-        void addMesh(const Mesh* mesh);
-
     private:
         RTCDevice m_device;
         RTCScene m_scene;
@@ -62,15 +60,5 @@ namespace vesper
         std::vector<std::unique_ptr<BSDF>> m_bsdfs;
 
         glm::ivec2 m_imageSize;
-
-        struct Vertex
-        {
-            float x, y, z, w;
-        };
-
-        struct Face
-        {
-            unsigned int v0, v1, v2;
-        };
     };
 }

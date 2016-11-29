@@ -16,7 +16,7 @@ namespace vesper
         virtual void fillIntersection(unsigned int triangleId, const Ray3& ray, Intersection& its) const override;
         virtual void sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const override;
         virtual float pdfSurface(const Shape::Sample& shapeSample) const override;
-        virtual bool addToAccelerationStructure(Scene* scene) const override;
+        virtual bool addToAccelerationStructure(RTCScene embreeScene) override;
 
         virtual size_t getNumTriangles() const;
         virtual size_t getNumVertices() const;

@@ -131,6 +131,7 @@
     <ClInclude Include="Source\BSDFs\BSDFFactory.hpp" />
     <ClInclude Include="Source\BSDFs\Dielectric.hpp" />
     <ClInclude Include="Source\BSDFs\Lambertian.hpp" />
+    <ClInclude Include="Source\BSDFs\Mirror.hpp" />
     <ClInclude Include="Source\Cameras\Camera.hpp" />
     <ClInclude Include="Source\Cameras\CameraFactory.hpp" />
     <ClInclude Include="Source\Cameras\Perspective.hpp" />
@@ -148,6 +149,7 @@
     <ClInclude Include="Source\Integrators\MisPathTracer.hpp" />
     <ClInclude Include="Source\Integrators\Normals.hpp" />
     <ClInclude Include="Source\Integrators\PathTracer.hpp" />
+    <ClInclude Include="Source\Lights\AreaLight.hpp" />
     <ClInclude Include="Source\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Lights\Light.hpp" />
     <ClInclude Include="Source\Lights\LightFactory.hpp" />
@@ -170,6 +172,7 @@
     <ClInclude Include="Source\Shapes\MeshLoader.hpp" />
     <ClInclude Include="Source\Shapes\Shape.hpp" />
     <ClInclude Include="Source\Shapes\ShapeFactory.hpp" />
+    <ClInclude Include="Source\Shapes\Sphere.hpp" />
     <ClInclude Include="Source\Spectrums\RgbSpectrum.hpp" />
     <ClInclude Include="Source\Spectrums\Spectrum.hpp" />
     <ClInclude Include="Source\Spectrums\WeightedRgbSpectrum.hpp" />
@@ -178,6 +181,7 @@
     <ClCompile Include="Source\BSDFs\BSDFFactory.cpp" />
     <ClCompile Include="Source\BSDFs\Dielectric.cpp" />
     <ClCompile Include="Source\BSDFs\Lambertian.cpp" />
+    <ClCompile Include="Source\BSDFs\Mirror.cpp" />
     <ClCompile Include="Source\Cameras\Camera.cpp" />
     <ClCompile Include="Source\Cameras\CameraFactory.cpp" />
     <ClCompile Include="Source\Cameras\Perspective.cpp" />
@@ -191,6 +195,7 @@
     <ClCompile Include="Source\Integrators\MisPathTracer.cpp" />
     <ClCompile Include="Source\Integrators\Normals.cpp" />
     <ClCompile Include="Source\Integrators\PathTracer.cpp" />
+    <ClCompile Include="Source\Lights\AreaLight.cpp" />
     <ClCompile Include="Source\Lights\DirectionalLight.cpp" />
     <ClCompile Include="Source\Lights\LightFactory.cpp" />
     <ClCompile Include="Source\Lights\PointLight.cpp" />
@@ -206,6 +211,7 @@
     <ClCompile Include="Source\Shapes\MeshLoader.cpp" />
     <ClCompile Include="Source\Shapes\Shape.cpp" />
     <ClCompile Include="Source\Shapes\ShapeFactory.cpp" />
+    <ClCompile Include="Source\Shapes\Sphere.cpp" />
     <ClCompile Include="Source\Spectrums\RgbSpectrum.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -236,5 +236,6 @@
     <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
+    <None Include="Resources\VesperScenes\cbox.json" />
   </ItemGroup>
 </Project>
