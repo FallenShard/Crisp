@@ -18,7 +18,7 @@ namespace vesper
     {
         float r = sqrtf(sample.y);
         float theta = 2.0f * PI * sample.x;
-        return glm::vec2(r * cosf(theta), r * sinf(theta));
+        return { r * cosf(theta), r * sinf(theta) };
     }
 
     float Warp::squareToUniformDiskPdf()
@@ -62,7 +62,7 @@ namespace vesper
         float theta = 2.0f * PI * sample.x;
         float x = radius * cosf(theta);
         float y = radius * sinf(theta);
-        return glm::vec3(x, y, 1.0f - x * x - y * y);
+        return { x, y, sqrtf(1.0f - x * x - y * y) };
     }
 
     float Warp::squareToCosineHemispherePdf(const glm::vec3& v)
