@@ -3,7 +3,6 @@
 #define NOMINMAX
 
 #include "IO/FileUtils.hpp"
-#include "IO/ShaderLoader.hpp"
 
 #include "Pipelines/FullScreenQuadPipeline.hpp"
 
@@ -54,13 +53,20 @@ namespace crisp
 
         std::string searchDir = "Resources/Shaders/Vulkan/";
         auto files = FileUtils::enumerateFiles(searchDir, "spv");
-
-        ShaderLoader loader;
         for (auto& file : files)
         {
-            auto shader = loader.load(m_device->getHandle(), file);
+            auto shaderCode = FileUtils::readBinaryFile(searchDir + file);
+
+            VkShaderModuleCreateInfo createInfo = {};
+            createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            createInfo.codeSize = shaderCode.size();
+            createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
+
+            VkShaderModule shaderModule(VK_NULL_HANDLE);
+            vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
+
             auto shaderKey = file.substr(0, file.length() - 4);
-            m_shaderModules.insert_or_assign(shaderKey, shader);
+            m_shaderModules.insert_or_assign(shaderKey, shaderModule);
         }
 
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(this, &getDefaultRenderPass());

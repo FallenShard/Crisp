@@ -31,12 +31,6 @@ namespace crisp
             m_renderSystem->buildResourceBuffers();
 
             m_panel = m_mainGroup->getTypedControlById<Panel>("mainPanel");
-
-            m_button = m_mainGroup->getTypedControlById<gui::Button>("pupperButton");
-            m_button->setClickCallback([this]()
-            {
-                std::cout << "Vilasini is a pupper." << std::endl;
-            });
             
             m_fpsLabel = m_mainGroup->getTypedControlById<gui::Label>("fpsLabel");
             m_progressLabel = m_mainGroup->getTypedControlById<gui::Label>("progressLabel");
@@ -148,11 +142,6 @@ namespace crisp
             m_fpsLabel->setText(fps);
         }
 
-        gui::Button* TopLevelGroup::getButton()
-        {
-            return m_button;
-        }
-
         std::shared_ptr<ControlGroup> TopLevelGroup::buildGui()
         {
             auto topLevelGroup = std::make_shared<gui::ControlGroup>();
@@ -165,44 +154,67 @@ namespace crisp
             panel->setSize({200, 500});
             topLevelGroup->addControl(panel);
             
+            float currY = 10.0f;
             auto label = std::make_shared<gui::Label>(m_renderSystem.get());
             label->setId("fpsLabel");
-            label->setPosition({ 0, 10 });
+            label->setPosition({ 0, currY });
             panel->addControl(label);
+            currY += 20.0f;
 
             auto progLabel = std::make_shared<gui::Label>(m_renderSystem.get());
             progLabel->setId("progressLabel");
             progLabel->setText("PROGRESS");
-            progLabel->setPosition({ 0, 30 });
+            progLabel->setPosition({ 0, currY });
             panel->addControl(progLabel);
+            currY += 20.0f;
             
-            auto button = std::make_shared<gui::Button>(m_renderSystem.get());
-            button->setId("pupperButton");
-            button->setPosition({0, 50});
-            button->setSize({150, 30});
-            panel->addControl(button);
+            auto openButton = std::make_shared<gui::Button>(m_renderSystem.get());
+            openButton->setText("Open Scene");
+            openButton->setId("openProjectButton");
+            openButton->setPosition({0, currY });
+            openButton->setSize({150, 30});
+            panel->addControl(openButton);
+            currY += 40.0f;
+
+            auto startButton = std::make_shared<gui::Button>(m_renderSystem.get());
+            startButton->setText("Start Raytracing");
+            startButton->setId("startRaytracingButton");
+            startButton->setPosition({ 0, currY });
+            startButton->setSize({ 150, 30 });
+            panel->addControl(startButton);
+            currY += 40.0f;
+
+            auto stopButton = std::make_shared<gui::Button>(m_renderSystem.get());
+            stopButton->setText("Stop");
+            stopButton->setId("stopRaytracingButton");
+            stopButton->setPosition({ 0, currY });
+            stopButton->setSize({ 150, 30 });
+            panel->addControl(stopButton);
+            currY += 50.0f;
             
             auto checkBox = std::make_shared<gui::CheckBox>(m_renderSystem.get());
             checkBox->setId("hideGuiCheckbox");
-            checkBox->setPosition({0, 100});
+            checkBox->setPosition({0, currY });
             checkBox->setText("Hide GUI");
             panel->addControl(checkBox);
+            currY += 40.0f;
+
+            auto memUsageLabel = std::make_shared<gui::Label>(m_renderSystem.get());
+            memUsageLabel->setId("memUsageLabel");
+            memUsageLabel->setPosition({ 0, currY });
+            memUsageLabel->setColor(DarkGreen);
+            memUsageLabel->setScale(0.8f);
+            panel->addControl(memUsageLabel);
+            currY += 20.0f;
 
             auto backgroundProgress = std::make_shared<gui::Panel>(m_renderSystem.get());
             backgroundProgress->setId("memUsageBg");
-            backgroundProgress->setPosition({ 0, 150 });
+            backgroundProgress->setPosition({ 0, currY });
             backgroundProgress->setPadding(glm::vec2(2.0f));
             backgroundProgress->setSize({ 150, 30 });
             backgroundProgress->useAbsoluteSizing(true);
             backgroundProgress->setColor(DarkGreen);
             panel->addControl(backgroundProgress);
-
-            auto memUsageLabel = std::make_shared<gui::Label>(m_renderSystem.get());
-            memUsageLabel->setId("memUsageLabel");
-            memUsageLabel->setPosition({ 0, 140 });
-            memUsageLabel->setColor(DarkGreen);
-            memUsageLabel->setScale(0.8f);
-            panel->addControl(memUsageLabel);
 
             auto memUsage = std::make_shared<gui::Panel>(m_renderSystem.get());
             memUsage->setId("memUsageFg");

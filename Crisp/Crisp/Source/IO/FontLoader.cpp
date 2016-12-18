@@ -10,6 +10,8 @@ namespace crisp
     {
         const std::string FontPath = "Resources/Fonts/";
 
+        constexpr int padding = 0;
+
         uint32_t ceilPowerOf2(uint32_t value)
         {
             uint32_t result = value - 1;
@@ -82,7 +84,7 @@ namespace crisp
                 continue;
             }
 
-            width += glyph->bitmap.width;
+            width += glyph->bitmap.width + padding;
             height = std::max(height, glyph->bitmap.rows);
         }
 
@@ -114,7 +116,7 @@ namespace crisp
             font.glyphs[i - CharBegin].bmpLeft      = static_cast<float>(glyph->bitmap_left);
             font.glyphs[i - CharBegin].bmpTop       = static_cast<float>(glyph->bitmap_top);
 
-            currX += glyph->bitmap.width;
+            currX += glyph->bitmap.width + padding;
         }
 
         font.width = paddedWidth;

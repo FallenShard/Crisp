@@ -82,7 +82,8 @@ namespace crisp
             m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(m_size, 1.0f));
             m_renderSystem->updateTransformResource(m_transformId, m_M);
 
-            m_label->setPosition((m_size - glm::vec2(m_label->getTextExtent().x, -m_label->getTextExtent().y)) / 2.0f);
+            auto textExtent = m_label->getTextExtent();
+            m_label->setPosition((m_size - glm::vec2(textExtent.x, -textExtent.y)) / 2.0f);
             m_label->applyParentProperties();
             m_label->validate();
             m_label->setValidationStatus(true);

@@ -27,6 +27,7 @@ namespace vesper
         void stop();
 
         void setImageSize(int width, int height);
+        glm::ivec2 getImageSize() const;
 
         void setProgressUpdater(std::function<void(float, float, ImageBlockEventArgs)> callback);
 

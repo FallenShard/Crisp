@@ -7,8 +7,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include "Core/Image.hpp"
-#include "ShaderLoader.hpp"
+#include "IO/Image.hpp"
 
 #include "Vulkan/VulkanRenderer.hpp"
 #include "Vulkan/VulkanSwapChain.hpp"
@@ -140,15 +139,14 @@ namespace crisp
         
         uint32_t numChannels = 4;
         uint32_t rowSize = imageBlockArgs.width * numChannels * sizeof(float);
-        void* ptr = m_renderer->getDevice().mapBuffer(m_stagingTexBuffer);
         for (int i = 0; i < imageBlockArgs.height; i++)
         {
             uint32_t localflipY = imageBlockArgs.height - 1 - i;
-            uint32_t dstOffset = (m_extent.width * (imageBlockArgs.y + localflipY) + imageBlockArgs.x) * numChannels;
+            uint32_t dstOffset = (m_extent.width * (imageBlockArgs.y + localflipY) + imageBlockArgs.x) * numChannels * sizeof(float);
             uint32_t srcIndex = i * imageBlockArgs.width * numChannels;
-            memcpy(reinterpret_cast<float*>(ptr) + dstOffset, &imageBlockArgs.data[srcIndex], rowSize);
+
+            m_renderer->getDevice().updateStagingBuffer(m_stagingTexBuffer, &imageBlockArgs.data[srcIndex], dstOffset, rowSize);
         }
-        m_renderer->getDevice().unmapBuffer(m_stagingTexBuffer);
     }
 
     void Picture::draw()

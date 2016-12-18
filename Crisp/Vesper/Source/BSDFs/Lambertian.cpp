@@ -8,7 +8,7 @@ namespace vesper
 {
     LambertianBSDF::LambertianBSDF(const VariantMap& params)
     {
-        m_reflectance = Spectrum(params.get("reflectance", glm::vec3(1.0f)));
+        m_reflectance = params.get("reflectance", Spectrum(1.0f));
     }
 
     LambertianBSDF::~LambertianBSDF()

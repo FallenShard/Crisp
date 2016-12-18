@@ -43,6 +43,7 @@ namespace crisp
         {
             m_text = text;
 
+            m_textExtent = m_renderSystem->queryTextExtent(m_text);
             m_textChanged = true;
             invalidate();
         }
@@ -70,7 +71,8 @@ namespace crisp
                 m_textChanged = false;
             }
 
-            m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(m_scale, m_scale, 1.0f));
+            glm::vec2 renderedPos(std::floor(m_absolutePosition.x), std::floor(m_absolutePosition.y));
+            m_M = glm::translate(glm::vec3(renderedPos, m_depth)) * glm::scale(glm::vec3(m_scale, m_scale, 1.0f));
 
             m_renderSystem->updateTransformResource(m_transformId, m_M);
         }

@@ -1,13 +1,12 @@
-#include "GuiTextPipeline.hpp"
+#include "UniformColorPipeline.hpp"
 
 #include "Vulkan/VulkanRenderer.hpp"
 
 namespace crisp
 {
-    GuiTextPipeline::GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    UniformColorPipeline::UniformColorPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 2, renderPass)
     {
-        // Descriptor Set Layout
         VkDescriptorSetLayoutBinding transformBinding = {};
         transformBinding.binding            = 0;
         transformBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -15,57 +14,40 @@ namespace crisp
         transformBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
         transformBinding.pImmutableSamplers = nullptr;
 
-        std::vector<VkDescriptorSetLayoutBinding> transBindings =
+        std::vector<VkDescriptorSetLayoutBinding> firstSetBindings =
         {
             transformBinding
         };
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(transBindings.size());
-        layoutInfo.pBindings    = transBindings.data();
+        layoutInfo.bindingCount = static_cast<uint32_t>(firstSetBindings.size());
+        layoutInfo.pBindings    = firstSetBindings.data();
         vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[0]);
 
-        VkDescriptorSetLayoutBinding samplerBinding = {};
-        samplerBinding.binding            = 0;
-        samplerBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
-        samplerBinding.descriptorCount    = 1;
-        samplerBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-        samplerBinding.pImmutableSamplers = nullptr;
-
-        VkDescriptorSetLayoutBinding textureBinding = {};
-        textureBinding.binding            = 1;
-        textureBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        textureBinding.descriptorCount    = 1;
-        textureBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-        textureBinding.pImmutableSamplers = nullptr;
-
         VkDescriptorSetLayoutBinding colorBinding = {};
-        colorBinding.binding            = 2;
+        colorBinding.binding            = 0;
         colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         colorBinding.descriptorCount    = 1;
         colorBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         colorBinding.pImmutableSamplers = nullptr;
 
-        std::vector<VkDescriptorSetLayoutBinding> fragmentBindings =
+        std::vector<VkDescriptorSetLayoutBinding> secondSetBindings =
         {
-            samplerBinding,
-            textureBinding,
             colorBinding
         };
-
         layoutInfo = {};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(fragmentBindings.size());
-        layoutInfo.pBindings    = fragmentBindings.data();
+        layoutInfo.bindingCount = static_cast<uint32_t>(secondSetBindings.size());
+        layoutInfo.pBindings    = secondSetBindings.data();
         vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[1]);
 
         // Push constants
         std::vector<VkPushConstantRange> pushConstants(2, {});
         pushConstants[0].offset     = 0;
-        pushConstants[0].size       = sizeof(uint32_t);
+        pushConstants[0].size       = sizeof(int);
         pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         pushConstants[1].offset     = 4;
-        pushConstants[1].size       = sizeof(uint32_t);
+        pushConstants[1].size       = sizeof(int);
         pushConstants[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         // Pipeline layout
@@ -78,41 +60,33 @@ namespace crisp
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         // Descriptor Pool
-        std::array<VkDescriptorPoolSize, 4> poolSizes = {};
+        std::array<VkDescriptorPoolSize, 2> poolSizes = {};
         poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         poolSizes[0].descriptorCount = 1;
-
-        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
+        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[1].descriptorCount = 1;
 
-        poolSizes[2].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        poolSizes[2].descriptorCount = 1;
-
-        poolSizes[3].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[3].descriptorCount = 1;
-
         VkDescriptorPoolCreateInfo poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSizes[0];
-        poolInfo.maxSets = 1;
+        poolInfo.pPoolSizes    = &poolSizes[0];
+        poolInfo.maxSets       = 1;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[0]);
-        
+
         poolInfo = {};
-        poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 3;
-        poolInfo.pPoolSizes = &poolSizes[1];
-        poolInfo.maxSets = 1;
+        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes    = &poolSizes[1];
+        poolInfo.maxSets       = 1;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[1]);
 
-        m_vertShader = renderer->getShaderModule("gui-text-vert");
-        m_fragShader = renderer->getShaderModule("gui-text-frag");
+        m_vertShader = renderer->getShaderModule("unif-col-vert");
+        m_fragShader = renderer->getShaderModule("unif-col-frag");
 
         create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
     }
 
-    void GuiTextPipeline::create(int width, int height)
+    void UniformColorPipeline::create(int width, int height)
     {
         // Shader stages
         VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -135,13 +109,13 @@ namespace crisp
 
         VkVertexInputBindingDescription bindingDescription = {};
         bindingDescription.binding   = 0;
-        bindingDescription.stride    = sizeof(glm::vec4);
+        bindingDescription.stride    = sizeof(glm::vec3);
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions(1);
         attributeDescriptions[0].binding  = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format   = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[0].offset   = 0;
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
@@ -177,16 +151,7 @@ namespace crisp
 
         auto rasterizationState   = VulkanPipeline::createDefaultRasterizationState();
         auto multisampleState     = VulkanPipeline::createDefaultMultisampleState();
-        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable         = VK_TRUE;
-        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
-        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
-
+        auto colorBlendAttachment = VulkanPipeline::createDefaultColorBlendAttachmentState();
         auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
         colorBlendState.attachmentCount = 1;
         colorBlendState.pAttachments = &colorBlendAttachment;

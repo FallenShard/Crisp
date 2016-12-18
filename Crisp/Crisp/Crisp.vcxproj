@@ -141,8 +141,9 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\Animation\Animation.cpp" />
     <ClCompile Include="Source\Animation\Animator.cpp" />
     <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\Core\Scene.cpp" />
     <ClCompile Include="Source\IO\FileUtils.cpp" />
-    <ClCompile Include="Source\Core\Image.cpp" />
+    <ClCompile Include="Source\IO\Image.cpp" />
     <ClCompile Include="Source\GUI\Button.cpp" />
     <ClCompile Include="Source\IO\FontLoader.cpp" />
     <ClCompile Include="Source\GUI\CheckBox.cpp" />
@@ -155,12 +156,12 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\GUI\RenderSystem.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Core\Picture.cpp" />
-    <ClCompile Include="Source\IO\ShaderLoader.cpp" />
     <ClCompile Include="Source\Vulkan\MemoryHeap.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTextPipeline.cpp" />
+    <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\VulkanPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\RenderPasses\DefaultRenderPass.cpp" />
     <ClCompile Include="Source\Vulkan\RenderPasses\GuiRenderPass.cpp" />
@@ -177,8 +178,9 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Application.hpp" />
     <ClInclude Include="Source\Core\Delegate.hpp" />
     <ClInclude Include="Source\Core\Event.hpp" />
+    <ClInclude Include="Source\Core\Scene.hpp" />
     <ClInclude Include="Source\IO\FileUtils.hpp" />
-    <ClInclude Include="Source\Core\Image.hpp" />
+    <ClInclude Include="Source\IO\Image.hpp" />
     <ClInclude Include="Source\Core\MouseButtonEventArgs.hpp" />
     <ClInclude Include="Source\Core\FrameTimeLogger.hpp" />
     <ClInclude Include="Source\GUI\Button.hpp" />
@@ -193,7 +195,6 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\GUI\RenderSystem.hpp" />
     <ClInclude Include="Source\Math\Rect.hpp" />
     <ClInclude Include="Source\Core\Picture.hpp" />
-    <ClInclude Include="Source\IO\ShaderLoader.hpp" />
     <ClInclude Include="Source\Core\Timer.hpp" />
     <ClInclude Include="Source\Vulkan\DrawItem.hpp" />
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp" />
@@ -201,6 +202,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTextPipeline.hpp" />
+    <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\RenderPasses\DefaultRenderPass.hpp" />
     <ClInclude Include="Source\Vulkan\RenderPasses\GuiRenderPass.hpp" />
@@ -227,6 +229,9 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
     <None Include="Resources\VesperScenes\cbox.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Resources\VesperScenes\cbox.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

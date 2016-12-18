@@ -25,8 +25,8 @@ namespace vesper
 
         float aspect = m_imageSize.x / static_cast<float>(m_imageSize.y);
 
-        Transform ndcScale = Transform::createScale(glm::vec3(2.0f, 2.0f / aspect, 1.0f));
-        Transform screenShift = Transform::createTranslation(glm::vec3(-1.0f, -1.0f / aspect, 0.0f));
+        Transform ndcScale     = Transform::createScale(glm::vec3(2.0f, 2.0f / aspect, 1.0f));
+        Transform screenShift  = Transform::createTranslation(glm::vec3(-1.0f, -1.0f / aspect, 0.0f));
         Transform unprojection = Transform(glm::perspective(glm::radians(m_fov), 1.0f, m_nearZ, m_farZ)).invert();
         m_sampleToCamera = unprojection * screenShift * ndcScale;
 

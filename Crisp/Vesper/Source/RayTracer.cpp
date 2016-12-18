@@ -16,6 +16,7 @@
 #include "Integrators/Integrator.hpp"
 
 #include "Core/JsonSceneParser.hpp"
+#include "Core/XmlSceneParser.hpp"
 
 namespace vesper
 {
@@ -46,8 +47,10 @@ namespace vesper
         if (m_renderStatus == RenderStatus::Busy)
             return;
 
-        JsonSceneParser parser;
-        m_scene = parser.parse(fileName);
+        //JsonSceneParser parser;
+        //m_scene = parser.parse(fileName);
+        XmlSceneParser xmlParser;
+        m_scene = xmlParser.parse(fileName);
         if (m_scene)
         {
             m_image.initialize(m_scene->getCamera()->getImageSize(), m_scene->getCamera()->getReconstructionFilter());
@@ -142,6 +145,11 @@ namespace vesper
     void RayTracer::setImageSize(int width, int height)
     {
         m_image.initialize(glm::ivec2(width, height), nullptr);
+    }
+
+    glm::ivec2 RayTracer::getImageSize() const
+    {
+        return m_image.getSize();
     }
 
     void RayTracer::setProgressUpdater(std::function<void(float, float, ImageBlockEventArgs)> callback)

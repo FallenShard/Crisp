@@ -9,7 +9,7 @@ namespace vesper
     DirectionalLight::DirectionalLight(const VariantMap& params)
     {
         m_direction = params.get<glm::vec3>("direction", glm::vec3(1.0f, -1.0f, 0.0f));
-        m_power = Spectrum(params.get<glm::vec3>("power", glm::vec3(500.0f)));
+        m_power = params.get("power", Spectrum(500.0f));
     }
 
     DirectionalLight::~DirectionalLight()

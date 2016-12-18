@@ -3,21 +3,22 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <chrono>
 
 #include "Core/Event.hpp"
 
 namespace crisp
 {
     template <typename Timer>
-    class FrameTimeLogger : Timer
+    class FrameTimeLogger : public Timer
     {
     public:
         FrameTimeLogger(double msUpdatePeriod = 250.0);
+        ~FrameTimeLogger() = default;
 
-        void start();
-        double restart();
+        void update();
 
-        Event<void, const std::string&> onFpsUpdated;
+        Event<void, const std::string&> onLoggerUpdated;
 
     private:
         double m_accumulatedTime;
@@ -34,15 +35,9 @@ namespace crisp
     }
 
     template <typename Timer>
-    void FrameTimeLogger<Timer>::start()
+    void FrameTimeLogger<Timer>::update()
     {
-        Timer::restart();
-    }
-
-    template <typename Timer>
-    double FrameTimeLogger<Timer>::restart()
-    {
-        double frameTime = Timer::restart();
+        double frameTime = restart();
         m_accumulatedTime += frameTime;
         m_accumulatedFrames++;
 
@@ -56,13 +51,10 @@ namespace crisp
 
             std::stringstream stringStream;
             stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << avgMillis << " ms, " << std::setfill('0') << avgFrames << " fps";
-            onFpsUpdated(stringStream.str());
+            onLoggerUpdated(stringStream.str());
 
             m_accumulatedTime = spillOver;
             m_accumulatedFrames = spillOverFrac;
         }
-        start();
-
-        return frameTime;
     }
 }

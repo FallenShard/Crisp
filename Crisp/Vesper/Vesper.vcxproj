@@ -140,6 +140,7 @@
     <ClInclude Include="Source\Core\JsonSceneParser.hpp" />
     <ClInclude Include="Source\Core\Scene.hpp" />
     <ClInclude Include="Source\Core\VariantMap.hpp" />
+    <ClInclude Include="Source\Core\XmlSceneParser.hpp" />
     <ClInclude Include="Source\ImageBlock.hpp" />
     <ClInclude Include="Source\ImageBlockEventArgs.hpp" />
     <ClInclude Include="Source\Integrators\AmbientOcclusion.hpp" />
@@ -187,6 +188,7 @@
     <ClCompile Include="Source\Cameras\Perspective.cpp" />
     <ClCompile Include="Source\Core\JsonSceneParser.cpp" />
     <ClCompile Include="Source\Core\Scene.cpp" />
+    <ClCompile Include="Source\Core\XmlSceneParser.cpp" />
     <ClCompile Include="Source\ImageBlock.cpp" />
     <ClCompile Include="Source\Integrators\AmbientOcclusion.cpp" />
     <ClCompile Include="Source\Integrators\DirectLighting.cpp" />

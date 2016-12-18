@@ -22,7 +22,7 @@
 #include "GUI/Button.hpp"
 #include "GUI/CheckBox.hpp"
 
-#include "Core/Image.hpp"
+#include "IO/Image.hpp"
 
 namespace crisp
 {
@@ -124,8 +124,7 @@ namespace crisp
 
         glm::vec2 RenderSystem::updateTextResource(unsigned int textResId, const std::string& text)
         {
-            std::string clippedString = text.size() > 32 ? text.substr(0, 32) : text;
-            m_textResources.at(textResId)->text = clippedString;
+            m_textResources.at(textResId)->text = (text.size() > 32 ? text.substr(0, 32) : text);
             m_textResources.at(textResId)->updateStagingBuffer(m_labelFont->font.get(), m_renderer);
             m_textResources.at(textResId)->needsUpdateToDevice = true;
 
@@ -140,14 +139,12 @@ namespace crisp
         glm::vec2 RenderSystem::queryTextExtent(std::string text)
         {
             glm::vec2 extent = glm::vec2(0.0f, 0.0f);
-            float currentX = 0.0f;
             for (auto& character : text)
             {
                 auto& gInfo = m_labelFont->font->glyphs[character - FontLoader::CharBegin];
-                currentX += gInfo.advanceX;
+                extent.x += gInfo.advanceX;
                 extent.y = std::max(extent.y, gInfo.bmpHeight);
             }
-            extent.x += currentX;
             return extent;
         }
 
@@ -215,7 +212,7 @@ namespace crisp
                 VkBufferCopy copyRegion = {};
                 copyRegion.srcOffset = 0;
                 copyRegion.dstOffset = m_updatedTransBufferIndex * m_transBufferSize;
-                copyRegion.size = m_transBufferSize;
+                copyRegion.size      = m_transBufferSize;
                 vkCmdCopyBuffer(commandBuffer, m_transStagingBuffer, m_transBuffer, 1, &copyRegion);
 
                 for (auto& textResource : m_textResources)
@@ -223,9 +220,9 @@ namespace crisp
                     auto textRes = textResource.get();
                     if (textRes->needsUpdateToDevice)
                     {
-                        textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % VulkanRenderer::NumVirtualFrames;
+                        textRes->updatedBufferIndex          = (textRes->updatedBufferIndex + 1) % VulkanRenderer::NumVirtualFrames;
                         textRes->geomData.vertexBufferOffset = textRes->updatedBufferIndex * sizeof(glm::vec4) * textRes->allocatedVertexCount;
-                        textRes->geomData.indexBufferOffset = textRes->updatedBufferIndex * sizeof(glm::u16vec3) * textRes->allocatedFaceCount;
+                        textRes->geomData.indexBufferOffset  = textRes->updatedBufferIndex * sizeof(glm::u16vec3) * textRes->allocatedFaceCount;
                         VkBufferCopy copyVertexRegion = {};
                         copyVertexRegion.srcOffset = 0;
                         copyVertexRegion.dstOffset = textRes->geomData.vertexBufferOffset;

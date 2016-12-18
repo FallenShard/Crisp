@@ -17,6 +17,9 @@
 #include <RayTracer.hpp>
 #include <ImageBlockEventArgs.hpp>
 
+#include "Core/Timer.hpp"
+#include "Core/FrameTimeLogger.hpp"
+
 namespace crisp
 {
     class InputDispatcher;
@@ -31,6 +34,8 @@ namespace crisp
     class Application
     {
     public:
+        static constexpr const char* Title = "Crisp";
+        static constexpr double TimePerFrame = 1.0 / 60.0;
         static constexpr int DefaultWindowWidth  = 960;
         static constexpr int DefaultWindowHeight = 540;
 
@@ -58,6 +63,8 @@ namespace crisp
         std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)> m_window;
         std::unique_ptr<VulkanRenderer> m_renderer;
         std::unique_ptr<InputDispatcher> m_inputDispatcher;
+
+        std::unique_ptr<FrameTimeLogger<Timer<std::milli>>> m_frameTimeLogger;
 
         std::unique_ptr<gui::TopLevelGroup> m_guiTopLevelGroup;
 

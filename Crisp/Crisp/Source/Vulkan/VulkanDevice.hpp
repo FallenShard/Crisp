@@ -28,9 +28,9 @@ namespace crisp
         VkBuffer createStagingBuffer(VkDeviceSize size, VkBufferUsageFlags usages);
         void updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize size);
         void updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize stagingOffset, VkDeviceSize dstOffset, VkDeviceSize size);
+        void updateStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize offset, VkDeviceSize size);
         void fillStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size);
-        void* mapBuffer(VkBuffer stagingBuffer);
-        void unmapBuffer(VkBuffer stagingBuffer);
+        void flushMappedRanges();
 
         VkImage createDeviceImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage);
         void fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers);
@@ -73,6 +73,7 @@ namespace crisp
         VkCommandPool m_commandPool;
 
         std::map<uint32_t, MemoryHeap> m_memoryHeaps;
+        void* m_mappedStagingPtr;
 
         std::map<VkBuffer, MemoryChunk> m_deviceBuffers;
         std::map<VkBuffer, MemoryChunk> m_stagingBuffers;

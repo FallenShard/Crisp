@@ -10,10 +10,10 @@
 #include "Vulkan/VulkanRenderer.hpp"
 #include "Core/InputDispatcher.hpp"
 #include "Core/Timer.hpp"
-#include "Core/Image.hpp"
 #include "Core/Picture.hpp"
-#include "Core/FrameTimeLogger.hpp"
+
 #include "IO/FileUtils.hpp"
+#include "IO/Image.hpp"
 
 #include "GUI/RenderSystem.hpp"
 #include "GUI/TopLevelGroup.hpp"
@@ -23,25 +23,17 @@ namespace crisp
 {
     namespace
     {
-        std::string ApplicationTitle = "Crisp";
-
-        glm::vec4 clearColor = glm::vec4(0.0f);
-
-        FrameTimeLogger<Timer<std::milli>> frameTimeLogger(500);
-
-        constexpr double timePerFrame = 1.0 / 60.0;
-
         Application* app; // as static pointer for global mouse position retrieval
     }
 
     Application::Application()
         : m_window(nullptr, glfwDestroyWindow)
         , m_tracerProgress(0.0f)
+        , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(500.0))
     {
         std::cout << "Initializing application...\n";
 
         createWindow();
-        app = this;
         initVulkan();
 
         m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
@@ -50,7 +42,7 @@ namespace crisp
 
         m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
 
-        frameTimeLogger.onFpsUpdated.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::setFpsString>(m_guiTopLevelGroup.get());
+        m_frameTimeLogger->onLoggerUpdated.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::setFpsString>(m_guiTopLevelGroup.get());
         
         m_inputDispatcher->mouseMoved.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseMoved>(m_guiTopLevelGroup.get());
         m_inputDispatcher->mouseButtonDown.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMousePressed>(m_guiTopLevelGroup.get());
@@ -65,16 +57,31 @@ namespace crisp
             m_rayTracerUpdateQueue.push(eventArgs);
         });
 
-        m_guiTopLevelGroup->getButton()->setClickCallback([this]()
+        m_guiTopLevelGroup->getControlById<gui::Button>("openProjectButton")->setClickCallback([this]()
         {
-            auto sceneFile = "Resources/VesperScenes/" + FileUtils::openFileDialog();
+            auto openedFile = FileUtils::openFileDialog();
+            if (openedFile == "")
+                return;
 
-            m_rayTracer->initializeScene(sceneFile);
+            m_rayTracer->initializeScene("Resources/VesperScenes/" + openedFile);
+
+            auto imageSize = m_rayTracer->getImageSize();
+            m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
+            
+            glfwSetWindowSize(m_window.get(), imageSize.x, imageSize.y);
+        });
+
+        m_guiTopLevelGroup->getControlById<gui::Button>("startRaytracingButton")->setClickCallback([this]()
+        {
             m_rayTracer->start();
             m_rayTracingStarted = true;
         });
 
-        m_rayTracedImage = std::make_unique<Picture>(DefaultWindowWidth, DefaultWindowHeight, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
+        m_guiTopLevelGroup->getControlById<gui::Button>("stopRaytracingButton")->setClickCallback([this]()
+        {
+            m_rayTracer->stop();
+            m_rayTracingStarted = false;
+        });
     }
 
     Application::~Application()
@@ -99,7 +106,7 @@ namespace crisp
     {
         std::cout << "Hello world!\n";
 
-        frameTimeLogger.start();
+        m_frameTimeLogger->restart();
         Timer<std::milli> updateTimer;
         double timeSinceLastUpdate = 0.0;
         while (!glfwWindowShouldClose(m_window.get()))
@@ -107,23 +114,24 @@ namespace crisp
             auto timeDelta = updateTimer.restart() / 1000.0;
             timeSinceLastUpdate += timeDelta;
 
-            while (timeSinceLastUpdate > timePerFrame)
+            while (timeSinceLastUpdate > TimePerFrame)
             {
                 glfwPollEvents();
-                m_guiTopLevelGroup->update(timePerFrame);
+                m_guiTopLevelGroup->update(TimePerFrame);
                 
                 processRayTracerUpdates();
                 m_guiTopLevelGroup->setTracerProgress(m_tracerProgress, m_timeSpentRendering);
             
-                timeSinceLastUpdate -= timePerFrame;
+                timeSinceLastUpdate -= TimePerFrame;
             }
 
-            m_rayTracedImage->draw();
+            if (m_rayTracedImage)
+                m_rayTracedImage->draw();
             m_guiTopLevelGroup->draw();
 
             m_renderer->drawFrame();
 
-            frameTimeLogger.restart();
+            m_frameTimeLogger->update();
         }
 
         m_renderer->finish();
@@ -135,23 +143,22 @@ namespace crisp
 
         m_renderer->resize(width, height);
 
-        m_rayTracedImage->resize();
+        if (m_rayTracedImage)
+            m_rayTracedImage->resize();
+
         m_guiTopLevelGroup->resize(width, height);
     }
 
     void Application::createWindow()
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        m_window.reset(glfwCreateWindow(DefaultWindowWidth, DefaultWindowHeight, ApplicationTitle.c_str(), nullptr, nullptr));
+        m_window.reset(glfwCreateWindow(DefaultWindowWidth, DefaultWindowHeight, Title, nullptr, nullptr));
+
+        app = this;
     }
 
     void Application::initVulkan()
     {
-        SurfaceCreator surfaceCreatorCallback = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) -> VkResult
-        {
-            return glfwCreateWindowSurface(instance, this->m_window.get(), allocCallbacks, surface);
-        };
-        
         std::vector<const char*> extensions;
         unsigned int glfwExtensionCount = 0;
         const char** glfwExtensions;
@@ -159,7 +166,10 @@ namespace crisp
         for (unsigned int i = 0; i < glfwExtensionCount; i++)
             extensions.push_back(glfwExtensions[i]);
         
-        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreatorCallback, std::forward<std::vector<const char*>>(extensions));
+        m_renderer = std::make_unique<VulkanRenderer>([this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) -> VkResult
+        {
+            return glfwCreateWindowSurface(instance, this->m_window.get(), allocCallbacks, surface);
+        }, std::forward<std::vector<const char*>>(extensions));
     }
 
     glm::vec2 Application::getMousePosition()

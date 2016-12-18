@@ -70,6 +70,7 @@ namespace crisp
 
         return buffer;
     }
+
     std::string FileUtils::openFileDialog()
     {
         const int bufferSize = MAX_PATH;
@@ -79,23 +80,23 @@ namespace crisp
         char fileNameBuffer[1024] = { 0 };
 
         OPENFILENAME openFile;
-        openFile.lStructSize = sizeof(OPENFILENAME);
-        openFile.hwndOwner = nullptr;
-        openFile.hInstance = nullptr;
-        openFile.lpstrFilter = nullptr;
+        openFile.lStructSize       = sizeof(OPENFILENAME);
+        openFile.hwndOwner         = nullptr;
+        openFile.hInstance         = nullptr;
+        openFile.lpstrFilter       = nullptr;
         openFile.lpstrCustomFilter = nullptr;
-        openFile.nMaxCustFilter = 0;
-        openFile.nFilterIndex = 0;
-        openFile.lpstrFile = fileNameBuffer;
-        openFile.nMaxFile = 1024;
-        openFile.lpstrFileTitle = nullptr;
-        openFile.nMaxFileTitle = 0;
-        openFile.lpstrInitialDir = nullptr;
-        openFile.lpstrTitle = nullptr;
-        openFile.Flags = OFN_FILEMUSTEXIST;
-        openFile.nFileOffset = 0;
-        openFile.nFileExtension = 0;
-        openFile.lpstrDefExt = nullptr;
+        openFile.nMaxCustFilter    = 0;
+        openFile.nFilterIndex      = 0;
+        openFile.lpstrFile         = fileNameBuffer;
+        openFile.nMaxFile          = 1024;
+        openFile.lpstrFileTitle    = nullptr;
+        openFile.nMaxFileTitle     = 0;
+        openFile.lpstrInitialDir   = nullptr;
+        openFile.lpstrTitle        = nullptr;
+        openFile.Flags             = OFN_FILEMUSTEXIST;
+        openFile.nFileOffset       = 0;
+        openFile.nFileExtension    = 0;
+        openFile.lpstrDefExt       = nullptr;
 
         GetOpenFileName(&openFile);
 

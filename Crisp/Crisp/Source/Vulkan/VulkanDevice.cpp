@@ -6,6 +6,12 @@
 
 namespace crisp
 {
+    namespace
+    {
+        VkMemoryPropertyFlags stagingMemoryBits = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        std::vector<VkMappedMemoryRange> unflushedRanges;
+    }
+
     VulkanDevice::VulkanDevice(VulkanContext* vulkanContext)
         : m_context(vulkanContext)
         , m_device(VK_NULL_HANDLE)
@@ -27,8 +33,9 @@ namespace crisp
         m_memoryHeaps.insert(std::make_pair(imageHeap.memoryTypeIndex, imageHeap));
 
         // Staging memory
-        MemoryHeap stagingHeap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
+        MemoryHeap stagingHeap(stagingMemoryBits, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
         m_memoryHeaps.insert(std::make_pair(stagingHeap.memoryTypeIndex, stagingHeap));
+        vkMapMemory(m_device, stagingHeap.memory, 0, stagingHeap.size, 0, &m_mappedStagingPtr);
 
         // Command pool for the graphics queue family
         VkCommandPoolCreateInfo poolInfo = {};
@@ -41,6 +48,7 @@ namespace crisp
 
     VulkanDevice::~VulkanDevice()
     {
+        vkUnmapMemory(m_device, m_memoryHeaps.at(m_context->findStagingBufferMemoryType(m_device)).memory);
         freeResources();
     }
 
@@ -107,13 +115,8 @@ namespace crisp
 
     void VulkanDevice::fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize dstOffset, VkDeviceSize size)
     {
-        auto stagingBufferInfo = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        void* data;
-        vkMapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory, stagingBufferInfo.second.offset, size, 0, &data);
-        memcpy(data, srcData, static_cast<size_t>(size));
-        vkUnmapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory);
-
+        auto stagingBufferInfo = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingMemoryBits);
+        memcpy(static_cast<char*>(m_mappedStagingPtr) + stagingBufferInfo.second.offset, srcData, static_cast<size_t>(size));
         copyBuffer(dstBuffer, stagingBufferInfo.first, 0, dstOffset, size);
 
         vkDestroyBuffer(m_device, stagingBufferInfo.first, nullptr);
@@ -130,7 +133,7 @@ namespace crisp
 
     VkBuffer VulkanDevice::createStagingBuffer(VkDeviceSize size, VkBufferUsageFlags usage)
     {
-        auto bufferInfo = createBuffer(size, usage, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto bufferInfo = createBuffer(size, usage, stagingMemoryBits);
         m_stagingBuffers.insert(bufferInfo);
 
         return bufferInfo.first;
@@ -144,38 +147,26 @@ namespace crisp
     void VulkanDevice::updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize stagingOffset, VkDeviceSize dstOffset, VkDeviceSize size)
     {
         auto bufferChunk = m_stagingBuffers.at(stagingBuffer);
-
-        void* data;
-        vkMapMemory(m_device, bufferChunk.memoryHeap->memory, bufferChunk.offset + stagingOffset, size, 0, &data);
-        memcpy(data, srcData, static_cast<size_t>(size));
-        vkUnmapMemory(m_device, bufferChunk.memoryHeap->memory);
-
+        memcpy(static_cast<char*>(m_mappedStagingPtr) + bufferChunk.offset + stagingOffset, srcData, static_cast<size_t>(size));
         copyBuffer(dstBuffer, stagingBuffer, stagingOffset, dstOffset, size);
+    }
+
+    void VulkanDevice::updateStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize offset, VkDeviceSize size)
+    {
+        auto chunk = m_stagingBuffers.at(dstBuffer);
+        memcpy(static_cast<char*>(m_mappedStagingPtr) + m_stagingBuffers.at(dstBuffer).offset + offset, srcData, static_cast<size_t>(size));
     }
 
     void VulkanDevice::fillStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size)
     {
         auto chunk = m_stagingBuffers.at(dstBuffer);
-
-        void* data;
-        vkMapMemory(m_device, chunk.memoryHeap->memory, chunk.offset, size, 0, &data);
-        memcpy(data, srcData, static_cast<size_t>(size));
-        vkUnmapMemory(m_device, chunk.memoryHeap->memory);
+        memcpy(static_cast<char*>(m_mappedStagingPtr) + m_stagingBuffers.at(dstBuffer).offset, srcData, static_cast<size_t>(size));
     }
 
-    void* VulkanDevice::mapBuffer(VkBuffer stagingBuffer)
+    void VulkanDevice::flushMappedRanges()
     {
-        auto chunk = m_stagingBuffers.at(stagingBuffer);
-
-        void* ptr;
-        vkMapMemory(m_device, chunk.memoryHeap->memory, chunk.offset, chunk.size, 0, &ptr);
-        return ptr;
-    }
-
-    void VulkanDevice::unmapBuffer(VkBuffer stagingBuffer)
-    {
-        auto chunk = m_stagingBuffers.at(stagingBuffer);
-        vkUnmapMemory(m_device, chunk.memoryHeap->memory);
+        vkFlushMappedMemoryRanges(m_device, static_cast<uint32_t>(unflushedRanges.size()), unflushedRanges.data());
+        unflushedRanges.clear();
     }
 
     VkImage VulkanDevice::createDeviceImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage)
@@ -188,12 +179,9 @@ namespace crisp
 
     void VulkanDevice::fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers)
     {
-        auto stagingBufferInfo = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto stagingBufferInfo = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingMemoryBits);
 
-        void* data;
-        vkMapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory, stagingBufferInfo.second.offset, size, 0, &data);
-        memcpy(data, srcData, static_cast<size_t>(size));
-        vkUnmapMemory(m_device, stagingBufferInfo.second.memoryHeap->memory);
+        memcpy(static_cast<char*>(m_mappedStagingPtr) + stagingBufferInfo.second.offset, srcData, static_cast<size_t>(size));
 
         transitionImageLayout(dstImage, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numLayers);
 

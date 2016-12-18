@@ -9,7 +9,7 @@ namespace vesper
 {
     AreaLight::AreaLight(const VariantMap& params)
     {
-        m_radiance = Spectrum(params.get<glm::vec3>("radiance", glm::vec3(10.0f)));
+        m_radiance = params.get("radiance", Spectrum(10.0f));
     }
 
     AreaLight::~AreaLight()

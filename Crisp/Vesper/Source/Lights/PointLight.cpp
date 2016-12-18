@@ -9,7 +9,7 @@ namespace vesper
     PointLight::PointLight(const VariantMap& params)
     {
         m_position = params.get<glm::vec3>("position", glm::vec3(0.0f, 3.0f, 0.0f));
-        m_power = Spectrum(params.get<glm::vec3>("power", glm::vec3(500.0f)));
+        m_power = params.get("power", Spectrum(500.0f));
     }
 
     PointLight::~PointLight()

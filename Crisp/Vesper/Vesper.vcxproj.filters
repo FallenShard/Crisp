@@ -120,6 +120,9 @@
     <ClCompile Include="Source\Lights\AreaLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\XmlSceneParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\RayTracer.hpp">
@@ -267,6 +270,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Lights\AreaLight.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\XmlSceneParser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

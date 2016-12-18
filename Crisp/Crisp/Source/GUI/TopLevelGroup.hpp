@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 
 #include <Animation/Animator.hpp>
+#include <GUI/ControlGroup.hpp>
 
 namespace crisp
 {
@@ -45,7 +46,11 @@ namespace crisp
 
             void setFpsString(const std::string& fps);
 
-            gui::Button* getButton();
+            template <typename T>
+            T* getControlById(std::string id)
+            {
+                return m_mainGroup->getTypedControlById<T>(id);
+            }
 
         private:
             std::shared_ptr<ControlGroup> buildGui();

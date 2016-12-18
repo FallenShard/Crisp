@@ -60,9 +60,6 @@
     <ClCompile Include="Source\GUI\TopLevelGroup.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Image.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Vulkan\MemoryHeap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -102,10 +99,16 @@
     <ClCompile Include="Source\IO\FontLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\IO\ShaderLoader.cpp">
+    <ClCompile Include="Source\Core\Picture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Picture.cpp">
+    <ClCompile Include="Source\IO\Image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -170,9 +173,6 @@
     <ClInclude Include="Source\GUI\TopLevelGroup.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Image.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -215,13 +215,19 @@
     <ClInclude Include="Source\IO\FontLoader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\IO\ShaderLoader.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Core\Picture.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\FrameTimeLogger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IO\Image.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Scene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -237,5 +243,8 @@
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
     <None Include="Resources\VesperScenes\cbox.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Resources\VesperScenes\cbox.xml" />
   </ItemGroup>
 </Project>
