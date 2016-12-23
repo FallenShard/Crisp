@@ -15,264 +15,264 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\RayTracer.cpp">
+    <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\BSDFs\Lambertian.cpp">
+    <ClCompile Include="Vesper\BSDFs\Dielectric.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Math\Warp.cpp">
+    <ClCompile Include="Vesper\BSDFs\Lambertian.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Samplers\Sampler.cpp">
+    <ClCompile Include="Vesper\BSDFs\Mirror.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Samplers\Independent.cpp">
+    <ClCompile Include="Vesper\Cameras\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\ImageBlock.cpp">
+    <ClCompile Include="Vesper\Cameras\CameraFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\ReconstructionFilters\ReconstructionFilter.cpp">
+    <ClCompile Include="Vesper\Cameras\Perspective.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\ReconstructionFilters\GaussianFilter.cpp">
+    <ClCompile Include="Vesper\Core\JsonSceneParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Cameras\Camera.cpp">
+    <ClCompile Include="Vesper\Core\Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Cameras\Perspective.cpp">
+    <ClCompile Include="Vesper\Core\XmlSceneParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\JsonSceneParser.cpp">
+    <ClCompile Include="Vesper\Integrators\AmbientOcclusion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Scene.cpp">
+    <ClCompile Include="Vesper\Integrators\DirectLighting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\Integrator.cpp">
+    <ClCompile Include="Vesper\Integrators\Integrator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\Normals.cpp">
+    <ClCompile Include="Vesper\Integrators\IntegratorFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Math\DiscretePdf.cpp">
+    <ClCompile Include="Vesper\Integrators\MisPathTracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Shapes\Mesh.cpp">
+    <ClCompile Include="Vesper\Integrators\Normals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Lights\PointLight.cpp">
+    <ClCompile Include="Vesper\Integrators\PathTracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Spectrums\RgbSpectrum.cpp">
+    <ClCompile Include="Vesper\Lights\AreaLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Samplers\SamplerFactory.cpp">
+    <ClCompile Include="Vesper\Lights\DirectionalLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Cameras\CameraFactory.cpp">
+    <ClCompile Include="Vesper\Lights\LightFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Shapes\MeshLoader.cpp">
+    <ClCompile Include="Vesper\Lights\PointLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Shapes\ShapeFactory.cpp">
+    <ClCompile Include="Vesper\Math\DiscretePdf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\IntegratorFactory.cpp">
+    <ClCompile Include="Vesper\Math\Warp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\AmbientOcclusion.cpp">
+    <ClCompile Include="Vesper\ReconstructionFilters\GaussianFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Lights\LightFactory.cpp">
+    <ClCompile Include="Vesper\ReconstructionFilters\ReconstructionFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Shapes\Shape.cpp">
+    <ClCompile Include="Vesper\Samplers\Independent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\DirectLighting.cpp">
+    <ClCompile Include="Vesper\Samplers\Sampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\BSDFs\BSDFFactory.cpp">
+    <ClCompile Include="Vesper\Samplers\SamplerFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\BSDFs\Dielectric.cpp">
+    <ClCompile Include="Vesper\Shapes\Mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\PathTracer.cpp">
+    <ClCompile Include="Vesper\Shapes\MeshLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Integrators\MisPathTracer.cpp">
+    <ClCompile Include="Vesper\Shapes\Shape.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Lights\DirectionalLight.cpp">
+    <ClCompile Include="Vesper\Shapes\ShapeFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Shapes\Sphere.cpp">
+    <ClCompile Include="Vesper\Shapes\Sphere.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\BSDFs\Mirror.cpp">
+    <ClCompile Include="Vesper\Spectrums\RgbSpectrum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Lights\AreaLight.cpp">
+    <ClCompile Include="Vesper\ImageBlock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\XmlSceneParser.cpp">
+    <ClCompile Include="Vesper\RayTracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\RayTracer.hpp">
+    <ClInclude Include="Vesper\BSDFs\BSDF.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\BSDFs\BSDF.hpp">
+    <ClInclude Include="Vesper\BSDFs\BSDFFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Spectrums\RgbSpectrum.hpp">
+    <ClInclude Include="Vesper\BSDFs\Dielectric.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Spectrums\Spectrum.hpp">
+    <ClInclude Include="Vesper\BSDFs\Lambertian.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Spectrums\WeightedRgbSpectrum.hpp">
+    <ClInclude Include="Vesper\BSDFs\Mirror.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\BSDFs\Lambertian.hpp">
+    <ClInclude Include="Vesper\Cameras\Camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\Constants.hpp">
+    <ClInclude Include="Vesper\Cameras\CameraFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\Operations.hpp">
+    <ClInclude Include="Vesper\Cameras\Perspective.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\CoordinateFrame.hpp">
+    <ClInclude Include="Vesper\Core\Fresnel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\Warp.hpp">
+    <ClInclude Include="Vesper\Core\Intersection.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Samplers\Sampler.hpp">
+    <ClInclude Include="Vesper\Core\JsonSceneParser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Samplers\Independent.hpp">
+    <ClInclude Include="Vesper\Core\Scene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\ImageBlock.hpp">
+    <ClInclude Include="Vesper\Core\VariantMap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\ReconstructionFilters\ReconstructionFilter.hpp">
+    <ClInclude Include="Vesper\Core\XmlSceneParser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\ReconstructionFilters\GaussianFilter.hpp">
+    <ClInclude Include="Vesper\Integrators\AmbientOcclusion.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\ImageBlockEventArgs.hpp">
+    <ClInclude Include="Vesper\Integrators\DirectLighting.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Scene.hpp">
+    <ClInclude Include="Vesper\Integrators\Integrator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Lights\Light.hpp">
+    <ClInclude Include="Vesper\Integrators\IntegratorFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\Ray.hpp">
+    <ClInclude Include="Vesper\Integrators\MisPathTracer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\BoundingBox.hpp">
+    <ClInclude Include="Vesper\Integrators\Normals.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\Transform.hpp">
+    <ClInclude Include="Vesper\Integrators\PathTracer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Cameras\Camera.hpp">
+    <ClInclude Include="Vesper\Lights\AreaLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Cameras\Perspective.hpp">
+    <ClInclude Include="Vesper\Lights\DirectionalLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\JsonSceneParser.hpp">
+    <ClInclude Include="Vesper\Lights\Light.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\Integrator.hpp">
+    <ClInclude Include="Vesper\Lights\LightFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\Normals.hpp">
+    <ClInclude Include="Vesper\Lights\PointLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Intersection.hpp">
+    <ClInclude Include="Vesper\Math\BoundingBox.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Shapes\Shape.hpp">
+    <ClInclude Include="Vesper\Math\Constants.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Shapes\Mesh.hpp">
+    <ClInclude Include="Vesper\Math\CoordinateFrame.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\DiscretePdf.hpp">
+    <ClInclude Include="Vesper\Math\DiscretePdf.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Lights\PointLight.hpp">
+    <ClInclude Include="Vesper\Math\Operations.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Samplers\SamplerFactory.hpp">
+    <ClInclude Include="Vesper\Math\Ray.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\VariantMap.hpp">
+    <ClInclude Include="Vesper\Math\Transform.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Cameras\CameraFactory.hpp">
+    <ClInclude Include="Vesper\Math\Warp.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Shapes\MeshLoader.hpp">
+    <ClInclude Include="Vesper\ReconstructionFilters\GaussianFilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Shapes\ShapeFactory.hpp">
+    <ClInclude Include="Vesper\ReconstructionFilters\ReconstructionFilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\IntegratorFactory.hpp">
+    <ClInclude Include="Vesper\Samplers\Independent.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\AmbientOcclusion.hpp">
+    <ClInclude Include="Vesper\Samplers\Sampler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Lights\LightFactory.hpp">
+    <ClInclude Include="Vesper\Samplers\SamplerFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\DirectLighting.hpp">
+    <ClInclude Include="Vesper\Shapes\Mesh.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\BSDFs\BSDFFactory.hpp">
+    <ClInclude Include="Vesper\Shapes\MeshLoader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\BSDFs\Dielectric.hpp">
+    <ClInclude Include="Vesper\Shapes\Shape.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Fresnel.hpp">
+    <ClInclude Include="Vesper\Shapes\ShapeFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\PathTracer.hpp">
+    <ClInclude Include="Vesper\Shapes\Sphere.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Integrators\MisPathTracer.hpp">
+    <ClInclude Include="Vesper\Spectrums\RgbSpectrum.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Lights\DirectionalLight.hpp">
+    <ClInclude Include="Vesper\Spectrums\Spectrum.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Shapes\Sphere.hpp">
+    <ClInclude Include="Vesper\Spectrums\WeightedRgbSpectrum.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\BSDFs\Mirror.hpp">
+    <ClInclude Include="Vesper\ImageBlock.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Lights\AreaLight.hpp">
+    <ClInclude Include="Vesper\ImageBlockEventArgs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\XmlSceneParser.hpp">
+    <ClInclude Include="Vesper\RayTracer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
