@@ -5,8 +5,6 @@
 #include <string>
 #include <chrono>
 
-#include <glm/gtc/type_ptr.hpp>
-
 #include "Vulkan/VulkanRenderer.hpp"
 #include "Core/InputDispatcher.hpp"
 #include "Core/Timer.hpp"

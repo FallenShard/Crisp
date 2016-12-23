@@ -4,8 +4,6 @@
 #include <memory>
 
 #include "Math/Headers.hpp"
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/transform.hpp>
 
 #include "Math/Rect.hpp"
 #include "RenderSystem.hpp"

@@ -3,9 +3,6 @@
 #include <vector>
 #include <iostream>
 
-#include <glm/gtx/transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 namespace crisp
 {
     namespace gui

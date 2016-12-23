@@ -1,7 +1,5 @@
 #include "Picture.hpp"
 
-#include <glm/gtc/type_ptr.hpp>
-
 #include <array>
 #include <fstream>
 #include <iostream>
