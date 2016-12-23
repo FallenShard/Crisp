@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <ImageBlockEventArgs.hpp>
+#include <Vesper/ImageBlockEventArgs.hpp>
 
 #include "Vulkan/DrawItem.hpp"
 

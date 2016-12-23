@@ -6,9 +6,7 @@
 
 #include <vulkan/vulkan.h>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
+#include "Math/Headers.hpp"
 
 #include "vulkan/DrawItem.hpp"
 
@@ -210,6 +208,8 @@ namespace crisp
             };
 
             std::vector<GuiDrawCommand> m_drawCommands;
+
+            VkImageView m_guiImageView;
         };
     }
 }

@@ -107,7 +107,7 @@ namespace crisp
 
         vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
-        m_drawItem.pipeline = m_pipeline->getPipeline();
+        m_drawItem.pipeline = m_pipeline->getHandle();
         m_drawItem.pipelineLayout = m_pipeline->getPipelineLayout();
         m_drawItem.descriptorSetOffset = 0;
         m_drawItem.descriptorSets.push_back(m_descriptorSet);
@@ -225,7 +225,7 @@ namespace crisp
 
         m_renderer->addDrawAction([this](VkCommandBuffer& cmdBuffer)
         {
-            vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipeline());
+            vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
             vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(),
                 0, 1, &m_descriptorSet, 0, nullptr);
 
@@ -240,9 +240,8 @@ namespace crisp
 
     void Picture::resize()
     {
-        //createDepthResources();
         m_pipeline->resize(1, 1);
-        m_drawItem.pipeline       = m_pipeline->getPipeline();
+        m_drawItem.pipeline       = m_pipeline->getHandle();
         m_drawItem.pipelineLayout = m_pipeline->getPipelineLayout();
     }
 }

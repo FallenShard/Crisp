@@ -3,7 +3,8 @@
 #include <vector>
 
 #include <vulkan/vulkan.h>
-#include <glm/glm.hpp>
+
+#include "Math/Headers.hpp"
 
 namespace crisp
 {
@@ -19,7 +20,7 @@ namespace crisp
         inline VkDescriptorPool getDescriptorPool(uint32_t setId) const { return m_descriptorPools.at(setId); }
         inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setId) const { return m_descriptorSetLayouts.at(setId); }
         inline VkPipelineLayout getPipelineLayout() const { return m_pipelineLayout; }
-        inline VkPipeline getPipeline() const { return m_pipeline; }
+        inline VkPipeline getHandle() const { return m_pipeline; }
 
         void resize(int width, int height);
         VkDescriptorSet allocateDescriptorSet(uint32_t setId) const;

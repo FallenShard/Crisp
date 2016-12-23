@@ -6,7 +6,7 @@
 
 #include "Pipelines/FullScreenQuadPipeline.hpp"
 
-#include <glm/glm.hpp>
+#include "Math/Headers.hpp"
 
 #include <iostream>
 
@@ -147,6 +147,8 @@ namespace crisp
         {
             vkDestroyShaderModule(m_device->getHandle(), shaderModule.second, nullptr);
         }
+
+        vkDestroySampler(m_device->getHandle(), m_sampler, nullptr);
     }
 
     VulkanContext& VulkanRenderer::getContext()
@@ -270,7 +272,7 @@ namespace crisp
     {
         addDrawAction([this](VkCommandBuffer& commandBuffer)
         {
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipeline());
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getHandle());
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipelineLayout(),
                 0, 1, &m_fsQuadDescSet, 0, nullptr);
 

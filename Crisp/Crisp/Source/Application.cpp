@@ -48,6 +48,8 @@ namespace crisp
         m_inputDispatcher->mouseButtonDown.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMousePressed>(m_guiTopLevelGroup.get());
         m_inputDispatcher->mouseButtonUp.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseReleased>(m_guiTopLevelGroup.get());
 
+        m_scene = std::make_unique<Scene>(m_renderer.get());
+
         m_rayTracer = std::make_unique<vesper::RayTracer>();
         m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
         m_rayTracer->setProgressUpdater([this](float value, float renderTime, vesper::ImageBlockEventArgs eventArgs)
@@ -89,6 +91,7 @@ namespace crisp
         m_rayTracer.reset();
         m_rayTracedImage.reset();
         m_guiTopLevelGroup.reset();
+        m_scene.reset();
         m_renderer.reset();
         m_window.reset();
         glfwTerminate();
@@ -124,6 +127,9 @@ namespace crisp
             
                 timeSinceLastUpdate -= TimePerFrame;
             }
+
+            if (m_scene)
+                m_scene->render();
 
             if (m_rayTracedImage)
                 m_rayTracedImage->draw();

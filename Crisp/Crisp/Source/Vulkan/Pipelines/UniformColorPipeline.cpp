@@ -42,21 +42,18 @@ namespace crisp
         vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[1]);
 
         // Push constants
-        std::vector<VkPushConstantRange> pushConstants(2, {});
+        std::vector<VkPushConstantRange> pushConstants(1, {});
         pushConstants[0].offset     = 0;
         pushConstants[0].size       = sizeof(int);
-        pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        pushConstants[1].offset     = 4;
-        pushConstants[1].size       = sizeof(int);
-        pushConstants[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        pushConstants[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         // Pipeline layout
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
-        pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
-        pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
+        pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         // Descriptor Pool

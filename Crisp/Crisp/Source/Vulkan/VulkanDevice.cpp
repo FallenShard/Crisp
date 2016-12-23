@@ -123,10 +123,15 @@ namespace crisp
         stagingBufferInfo.second.memoryHeap->free(stagingBufferInfo.second.offset, stagingBufferInfo.second.size);
     }
 
-    VkBuffer VulkanDevice::createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage)
+    VkBuffer VulkanDevice::createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* srcData)
     {
         auto bufferInfo = createBuffer(size, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_deviceBuffers.insert(bufferInfo);
+
+        if (srcData != nullptr)
+        {
+            fillDeviceBuffer(bufferInfo.first, srcData, 0, size);
+        }
 
         return bufferInfo.first;
     }

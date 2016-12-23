@@ -53,9 +53,8 @@ namespace crisp
 
             m_drawCommands.reserve(100);
 
-
-            VkImageView imageView = m_renderer->getDevice().createImageView(m_guiPass->getColorAttachment(0), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_guiPass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
-            m_renderer->displayImage(imageView, VulkanRenderer::NumVirtualFrames);
+            m_guiImageView = m_renderer->getDevice().createImageView(m_guiPass->getColorAttachment(0), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_guiPass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+            m_renderer->displayImage(m_guiImageView, VulkanRenderer::NumVirtualFrames);
 
             m_renderer->registerRenderPass(1, m_guiPass.get());
         }
@@ -71,6 +70,8 @@ namespace crisp
             {
                 vkDestroyImageView(m_renderer->getDevice().getHandle(), font.second->imageView, nullptr);
             }
+
+            vkDestroyImageView(m_renderer->getDevice().getHandle(), m_guiImageView, nullptr);
         }
 
         const glm::mat4& RenderSystem::getProjectionMatrix() const
@@ -266,7 +267,7 @@ namespace crisp
 
                 for (auto& cmd : m_drawCommands)
                 {
-                    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipeline());
+                    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getHandle());
                     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
                         cmd.firstSet, cmd.descSetCount, &cmd.descriptorSets[1], 0, nullptr);
                     

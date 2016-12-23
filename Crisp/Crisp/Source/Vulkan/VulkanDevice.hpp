@@ -24,7 +24,7 @@ namespace crisp
         MemoryChunk getStagingBufferChunk(VkBuffer buffer);
         void fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size);
         void fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize dstOffset, VkDeviceSize size);
-        VkBuffer createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage);
+        VkBuffer createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* srcData = nullptr);
         VkBuffer createStagingBuffer(VkDeviceSize size, VkBufferUsageFlags usages);
         void updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize size);
         void updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize stagingOffset, VkDeviceSize dstOffset, VkDeviceSize size);

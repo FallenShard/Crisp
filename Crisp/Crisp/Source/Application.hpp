@@ -7,18 +7,15 @@
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-
 #include <tbb/concurrent_queue.h>
 
-#include <RayTracer.hpp>
-#include <ImageBlockEventArgs.hpp>
+#include <Vesper/RayTracer.hpp>
+#include <Vesper/ImageBlockEventArgs.hpp>
 
+#include "Math/Headers.hpp"
 #include "Core/Timer.hpp"
 #include "Core/FrameTimeLogger.hpp"
+#include "Core/Scene.hpp"
 
 namespace crisp
 {
@@ -75,5 +72,7 @@ namespace crisp
         bool m_rayTracingStarted = false;
 
         std::unique_ptr<vesper::RayTracer> m_rayTracer;
+
+        std::unique_ptr<Scene> m_scene;
     };
 }

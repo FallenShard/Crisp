@@ -111,6 +111,9 @@
     <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\AbstractCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.hpp">
@@ -230,6 +233,12 @@
     <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\AbstractCamera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Headers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Shaders\fullscreen-quad-frag.glsl" />
@@ -243,6 +252,8 @@
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
     <None Include="Resources\VesperScenes\cbox.json" />
+    <None Include="Resources\Shaders\unif-col-vert.glsl" />
+    <None Include="Resources\Shaders\unif-col-frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\cbox.xml" />

@@ -88,7 +88,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <PostBuildEvent>
@@ -124,7 +124,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -141,6 +141,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\Animation\Animation.cpp" />
     <ClCompile Include="Source\Animation\Animator.cpp" />
     <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\Core\AbstractCamera.cpp" />
     <ClCompile Include="Source\Core\Scene.cpp" />
     <ClCompile Include="Source\IO\FileUtils.cpp" />
     <ClCompile Include="Source\IO\Image.cpp" />
@@ -176,6 +177,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Animation\Animator.hpp" />
     <ClInclude Include="Source\Animation\PropertyAnimation.hpp" />
     <ClInclude Include="Source\Application.hpp" />
+    <ClInclude Include="Source\Core\AbstractCamera.hpp" />
     <ClInclude Include="Source\Core\Delegate.hpp" />
     <ClInclude Include="Source\Core\Event.hpp" />
     <ClInclude Include="Source\Core\Scene.hpp" />
@@ -193,6 +195,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\GUI\Label.hpp" />
     <ClInclude Include="Source\GUI\Panel.hpp" />
     <ClInclude Include="Source\GUI\RenderSystem.hpp" />
+    <ClInclude Include="Source\Math\Headers.hpp" />
     <ClInclude Include="Source\Math\Rect.hpp" />
     <ClInclude Include="Source\Core\Picture.hpp" />
     <ClInclude Include="Source\Core\Timer.hpp" />
@@ -228,6 +231,8 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
+    <None Include="Resources\Shaders\unif-col-vert.glsl" />
+    <None Include="Resources\Shaders\unif-col-frag.glsl" />
     <None Include="Resources\VesperScenes\cbox.json" />
   </ItemGroup>
   <ItemGroup>
