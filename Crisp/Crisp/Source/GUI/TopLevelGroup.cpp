@@ -215,6 +215,7 @@ namespace crisp
             backgroundProgress->useAbsoluteSizing(true);
             backgroundProgress->setColor(DarkGreen);
             panel->addControl(backgroundProgress);
+            currY += 55.0f;
 
             auto memUsage = std::make_shared<gui::Panel>(m_renderSystem.get());
             memUsage->setId("memUsageFg");
@@ -223,6 +224,48 @@ namespace crisp
             memUsage->useAbsoluteSizing(true);
             memUsage->setColor(Green);
             backgroundProgress->addControl(memUsage);
+
+            auto cameraLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Camera");
+            cameraLabel->setPosition({ 0, currY });
+            cameraLabel->setColor(Green);
+            panel->addControl(cameraLabel);
+            currY += 25.0f;
+
+            auto camPosLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Position:");
+            camPosLabel->setPosition({ 0, currY });
+            camPosLabel->setColor(DarkGreen);
+            panel->addControl(camPosLabel);
+
+            auto camPosValueLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "0.00, 0.05, 0.08");
+            camPosValueLabel->setId("camPosValueLabel");
+            camPosValueLabel->setPosition({ 80, currY });
+            camPosValueLabel->setColor(Green);
+            panel->addControl(camPosValueLabel);
+            currY += 20.0f;
+
+            auto camOrientationLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Orientation:");
+            camOrientationLabel->setPosition({ 0, currY });
+            camOrientationLabel->setColor(DarkGreen);
+            panel->addControl(camOrientationLabel);
+
+            auto camOrientValueLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "0.00, 0.05, 0.06");
+            camOrientValueLabel->setId("camOrientValueLabel");
+            camOrientValueLabel->setPosition({ 80, currY });
+            camOrientValueLabel->setColor(Green);
+            panel->addControl(camOrientValueLabel);
+            currY += 20.0f;
+
+            auto camUpLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Up direction:");
+            camUpLabel->setPosition({ 0, currY });
+            camUpLabel->setColor(DarkGreen);
+            panel->addControl(camUpLabel);
+
+            auto camUpValueLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "0.00, 0.05, 0.06");
+            camUpValueLabel->setId("camUpValueLabel");
+            camUpValueLabel->setPosition({ 80, currY });
+            camUpValueLabel->setColor(Green);
+            panel->addControl(camUpValueLabel);
+            currY += 20.0f;
 
             return topLevelGroup;
         }

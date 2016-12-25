@@ -141,8 +141,12 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\Animation\Animation.cpp" />
     <ClCompile Include="Source\Animation\Animator.cpp" />
     <ClCompile Include="Source\Application.cpp" />
-    <ClCompile Include="Source\Core\AbstractCamera.cpp" />
+    <ClCompile Include="Source\Camera\AbstractCamera.cpp" />
+    <ClCompile Include="Source\Camera\CameraController.cpp" />
+    <ClCompile Include="Source\Camera\FreeCamera.cpp" />
+    <ClCompile Include="Source\Camera\TargetCamera.cpp" />
     <ClCompile Include="Source\Core\Scene.cpp" />
+    <ClCompile Include="Source\Core\StringUtils.cpp" />
     <ClCompile Include="Source\IO\FileUtils.cpp" />
     <ClCompile Include="Source\IO\Image.cpp" />
     <ClCompile Include="Source\GUI\Button.cpp" />
@@ -177,9 +181,12 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Animation\Animator.hpp" />
     <ClInclude Include="Source\Animation\PropertyAnimation.hpp" />
     <ClInclude Include="Source\Application.hpp" />
-    <ClInclude Include="Source\Core\AbstractCamera.hpp" />
+    <ClInclude Include="Source\Camera\AbstractCamera.hpp" />
+    <ClInclude Include="Source\Camera\CameraController.hpp" />
+    <ClInclude Include="Source\Camera\TargetCamera.hpp" />
     <ClInclude Include="Source\Core\Delegate.hpp" />
     <ClInclude Include="Source\Core\Event.hpp" />
+    <ClInclude Include="Source\Camera\FreeCamera.hpp" />
     <ClInclude Include="Source\Core\Scene.hpp" />
     <ClInclude Include="Source\IO\FileUtils.hpp" />
     <ClInclude Include="Source\IO\Image.hpp" />
@@ -234,6 +241,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Resources\Shaders\unif-col-vert.glsl" />
     <None Include="Resources\Shaders\unif-col-frag.glsl" />
     <None Include="Resources\VesperScenes\cbox.json" />
+    <None Include="Source\Core\StringUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\cbox.xml" />

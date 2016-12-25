@@ -3,13 +3,27 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
+#include "Application.hpp"
+
 #include "vulkan/VulkanRenderer.hpp"
 #include "vulkan/Pipelines/UniformColorPipeline.hpp"
 
+#include "Camera/CameraController.hpp"
+#include "Core/InputDispatcher.hpp"
+
+#include "GUI/TopLevelGroup.hpp"
+#include "GUI/Label.hpp"
+
+#include "Core/StringUtils.hpp"
 
 namespace crisp
 {
-    Scene::Scene(VulkanRenderer* renderer)
+    namespace
+    {
+        glm::mat4 invertYaxis = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
+    }
+
+    Scene::Scene(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app)
         : m_renderer(renderer)
     {
         std::vector<glm::vec3> vertices;
@@ -48,13 +62,14 @@ namespace crisp
 
         auto extent = m_renderer->getSwapChainExtent();
         auto aspect = static_cast<float>(extent.width) / extent.height;
-        auto correction = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
         auto proj = glm::perspective(glm::radians(45.0f), aspect, 1.0f, 100.0f);
 
         m_transforms.MV = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
-        m_transforms.MVP = correction * proj * m_transforms.MV;
+        m_transforms.MVP = invertYaxis * proj * m_transforms.MV;
 
-        m_transformsBuffer = device.createDeviceBuffer(sizeof(Transforms), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &m_transforms);
+        m_updatedTransformsIndex = 0;
+        m_transformsBuffer = device.createDeviceBuffer(VulkanRenderer::NumVirtualFrames * sizeof(Transforms), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        m_transformsStagingBuffer = device.createStagingBuffer(sizeof(Transforms), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
         VkDescriptorBufferInfo transBufferInfo = {};
         transBufferInfo.buffer = m_transformsBuffer;
@@ -84,7 +99,20 @@ namespace crisp
         descWrites[1].pBufferInfo     = &transBufferInfo;
         vkUpdateDescriptorSets(device.getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0, nullptr);
 
+        m_cameraController = std::make_unique<CameraController>(inputDispatcher->getWindow());
 
+        inputDispatcher->mouseButtonPressed.subscribe<CameraController, &CameraController::onMousePressed>(m_cameraController.get());
+        inputDispatcher->mouseButtonReleased.subscribe<CameraController, &CameraController::onMouseReleased>(m_cameraController.get());
+        inputDispatcher->mouseMoved.subscribe<CameraController, &CameraController::onMouseMoved>(m_cameraController.get());
+        inputDispatcher->mouseWheelScrolled.subscribe<CameraController, &CameraController::onMouseWheelScrolled>(m_cameraController.get());
+
+        auto label = app->getTopLevelGroup()->getControlById<gui::Label>("camPosValueLabel");
+        label->setText(StringUtils::toString(m_cameraController->getCamera().getPosition()));
+
+        auto orientLabel = app->getTopLevelGroup()->getControlById<gui::Label>("camOrientValueLabel");
+        orientLabel->setText(StringUtils::toString(m_cameraController->getCamera().getOrientation()));
+
+        m_app = app;
     }
 
     Scene::~Scene()
@@ -92,16 +120,56 @@ namespace crisp
 
     }
 
-    void Scene::update(double dt)
+    void Scene::resize(int width, int height)
     {
+        m_cameraController->resize(width, height);
+    }
 
+    void Scene::update(float dt)
+    {
+        static float timePassed = 0.0f;
+
+        m_cameraController->update(dt);
+
+        //auto rotation = glm::rotate(timePassed * 2.0f * glm::pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f));
+        //m_transforms.M = rotation;
+
+        auto& V = m_cameraController->getCamera().getViewMatrix();
+        auto& P = m_cameraController->getCamera().getProjectionMatrix();
+
+        auto label = m_app->getTopLevelGroup()->getControlById<gui::Label>("camPosValueLabel");
+        label->setText(StringUtils::toString(m_cameraController->getCamera().getPosition()));
+
+        auto orientLabel = m_app->getTopLevelGroup()->getControlById<gui::Label>("camOrientValueLabel");
+        orientLabel->setText(StringUtils::toString(m_cameraController->getCamera().getOrientation()));
+
+        auto upLabel = m_app->getTopLevelGroup()->getControlById<gui::Label>("camUpValueLabel");
+        upLabel->setText(StringUtils::toString(m_cameraController->getCamera().getUpDirection()));
+
+
+        m_transforms.MV = V * m_transforms.M;
+        m_transforms.MVP = invertYaxis * P * m_transforms.MV;
+
+        timePassed += dt;
     }
 
     void Scene::render()
     {
+        m_renderer->getDevice().fillStagingBuffer(m_transformsStagingBuffer, &m_transforms, sizeof(Transforms));
+
+        m_renderer->addCopyAction([this](VkCommandBuffer& commandBuffer)
+        {
+            m_updatedTransformsIndex = (m_updatedTransformsIndex + 1) % VulkanRenderer::NumVirtualFrames;
+            VkBufferCopy copyRegion = {};
+            copyRegion.srcOffset = 0;
+            copyRegion.dstOffset = m_updatedTransformsIndex * sizeof(Transforms);
+            copyRegion.size = sizeof(Transforms);
+            vkCmdCopyBuffer(commandBuffer, m_transformsStagingBuffer, m_transformsBuffer, 1, &copyRegion);
+        });
+
         m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
         {
-            uint32_t transBufferOffset = 0;
+            uint32_t transBufferOffset = m_updatedTransformsIndex * sizeof(Transforms);
 
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(),

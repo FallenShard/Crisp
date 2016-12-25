@@ -111,7 +111,19 @@
     <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\AbstractCamera.cpp">
+    <ClCompile Include="Source\Camera\AbstractCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera\FreeCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera\CameraController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera\TargetCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\StringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -233,10 +245,19 @@
     <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\AbstractCamera.hpp">
+    <ClInclude Include="Source\Math\Headers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Math\Headers.hpp">
+    <ClInclude Include="Source\Camera\AbstractCamera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Camera\FreeCamera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Camera\CameraController.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Camera\TargetCamera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -254,6 +275,7 @@
     <None Include="Resources\VesperScenes\cbox.json" />
     <None Include="Resources\Shaders\unif-col-vert.glsl" />
     <None Include="Resources\Shaders\unif-col-frag.glsl" />
+    <None Include="Source\Core\StringUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\cbox.xml" />

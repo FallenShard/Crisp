@@ -51,6 +51,8 @@ namespace crisp
 
         void onResize(int width, int height);
 
+        gui::TopLevelGroup* getTopLevelGroup() const;
+
     private:
         void createWindow();
         void initVulkan();

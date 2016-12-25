@@ -76,7 +76,11 @@ namespace crisp
 
             if (m_elapsedTime < m_duration)
             {
+                m_elapsedTime += dt;
+
                 double frameTime = m_interpolator(m_elapsedTime / m_duration);
+                if (m_elapsedTime > m_duration)
+                    frameTime = 1.0f;
 
                 if (m_updater)
                 {
@@ -84,13 +88,10 @@ namespace crisp
                     m_updater(lerpVal);
                 }
 
-                m_elapsedTime += dt;
                 m_frameCount++;
             }
             else
             {
-                if (m_updater)
-                    m_updater(m_propertyEnd);
                 m_loopsCompleted++;
 
                 if (m_isLooped && m_loopsCompleted < m_loopCount)

@@ -43,10 +43,10 @@ namespace crisp
         m_frameTimeLogger->onLoggerUpdated.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::setFpsString>(m_guiTopLevelGroup.get());
         
         m_inputDispatcher->mouseMoved.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseMoved>(m_guiTopLevelGroup.get());
-        m_inputDispatcher->mouseButtonDown.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMousePressed>(m_guiTopLevelGroup.get());
-        m_inputDispatcher->mouseButtonUp.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseReleased>(m_guiTopLevelGroup.get());
+        m_inputDispatcher->mouseButtonPressed.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMousePressed>(m_guiTopLevelGroup.get());
+        m_inputDispatcher->mouseButtonReleased.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseReleased>(m_guiTopLevelGroup.get());
 
-        m_scene = std::make_unique<Scene>(m_renderer.get());
+        m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
 
         m_rayTracer = std::make_unique<vesper::RayTracer>();
         m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
@@ -118,6 +118,8 @@ namespace crisp
             while (timeSinceLastUpdate > TimePerFrame)
             {
                 glfwPollEvents();
+
+                m_scene->update(static_cast<float>(TimePerFrame));
                 m_guiTopLevelGroup->update(TimePerFrame);
                 
                 processRayTracerUpdates();
@@ -147,10 +149,17 @@ namespace crisp
 
         m_renderer->resize(width, height);
 
+        m_scene->resize(width, height);
+
         if (m_rayTracedImage)
             m_rayTracedImage->resize();
 
         m_guiTopLevelGroup->resize(width, height);
+    }
+
+    gui::TopLevelGroup* Application::getTopLevelGroup() const
+    {
+        return m_guiTopLevelGroup.get();
     }
 
     void Application::createWindow()

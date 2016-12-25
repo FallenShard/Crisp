@@ -9,16 +9,27 @@
 
 namespace crisp
 {
+    class Application;
     class VulkanRenderer;
     class UniformColorPipeline;
+
+    class CameraController;
+    class InputDispatcher;
+
+    namespace gui
+    {
+        class Label;
+    }
 
     class Scene
     {
     public:
-        Scene(VulkanRenderer* renderer);
+        Scene(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app);
         ~Scene();
 
-        void update(double dt);
+        void resize(int width, int height);
+
+        void update(float dt);
         void render();
 
     private:
@@ -42,5 +53,11 @@ namespace crisp
 
         Transforms m_transforms;
         VkBuffer m_transformsBuffer;
+        VkBuffer m_transformsStagingBuffer;
+        uint32_t m_updatedTransformsIndex;
+
+        std::unique_ptr<CameraController> m_cameraController;
+
+        Application* m_app;
     };
 }
