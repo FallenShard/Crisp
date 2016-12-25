@@ -32,6 +32,16 @@ namespace crisp
             createInterpolator();
         }
 
+        PropertyAnimation(double duration, T start, T end, std::function<void(const T&)> updater, double delay = 0, Easing easing = Easing::Linear, bool isLooped = false, int loopCount = 1)
+            : Animation(delay, duration, isLooped, loopCount)
+            , m_propertyStart(start)
+            , m_propertyEnd(end)
+            , m_easing(easing)
+            , m_updater(updater)
+        {
+            createInterpolator();
+        }
+
         inline T getPropertyStart()
         {
             return m_propertyStart;
@@ -45,7 +55,7 @@ namespace crisp
         inline void setEasing(Easing easing)
         {
             m_easing = easing;
-            m_interpolator = createInterpolator(easing);
+            m_interpolator = createInterpolator();
         }
 
         void setUpdater(std::function<void(const T&)> updater)
