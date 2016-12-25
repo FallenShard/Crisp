@@ -121,8 +121,7 @@ namespace crisp
             case Easing::QuadraticOut:
                 m_interpolator = [](double dt)
                 {
-                    dt -= 1.0;
-                    return -1.0 * (dt * dt - 1.0);
+                    return -1.0 * dt * (dt - 2.0);
                 };
                 break;
 
@@ -130,7 +129,7 @@ namespace crisp
                 m_interpolator = [](double dt)
                 {
                     dt -= 1.0;
-                    return -1.0 * (dt * dt * dt - 1.0);
+                    return dt * dt * dt + 1.0;
                 };
                 break;
 
