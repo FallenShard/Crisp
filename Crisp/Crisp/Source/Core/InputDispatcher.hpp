@@ -12,6 +12,8 @@ namespace crisp
         InputDispatcher(GLFWwindow* window);
         ~InputDispatcher() = default;
 
+        GLFWwindow* getWindow() const;
+
         InputDispatcher(const InputDispatcher& other) = delete;
         InputDispatcher& operator=(const InputDispatcher& other) = delete;
         InputDispatcher& operator=(InputDispatcher&& other) = delete;
@@ -20,14 +22,17 @@ namespace crisp
         Event<void, int, int> windowResized;
 
         static void keyboardCallback(GLFWwindow* window, int key, int scanCode, int action, int mode);
-        Event<void, int, int> keyDown;
+        Event<void, int, int> keyPressed;
 
         static void mouseMoveCallback(GLFWwindow* window, double xPos, double yPos);
         Event<void, double, double> mouseMoved;
         
         static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-        Event<void, int, int, double, double> mouseButtonDown;
-        Event<void, int, int, double, double> mouseButtonUp;
+        Event<void, int, int, double, double> mouseButtonPressed;
+        Event<void, int, int, double, double> mouseButtonReleased;
+
+        static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
+        Event<void, double> mouseWheelScrolled;
 
         static void closeCallback(GLFWwindow* window);
         Event<void> windowClosed;

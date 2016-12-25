@@ -11,6 +11,12 @@ namespace crisp
         glfwSetCursorPosCallback(m_window, InputDispatcher::mouseMoveCallback);
         glfwSetMouseButtonCallback(m_window, InputDispatcher::mouseButtonCallback);
         glfwSetWindowCloseCallback(m_window, InputDispatcher::closeCallback);
+        glfwSetScrollCallback(m_window, InputDispatcher::mouseWheelCallback);
+    }
+
+    GLFWwindow* InputDispatcher::getWindow() const
+    {
+        return m_window;
     }
 
     void InputDispatcher::resizeCallback(GLFWwindow* window, int width, int height)
@@ -24,7 +30,7 @@ namespace crisp
         if (action == GLFW_PRESS)
         {
             auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
-            if (dispatcher) dispatcher->keyDown(key, mode);
+            if (dispatcher) dispatcher->keyPressed(key, mode);
         }
     }
 
@@ -43,7 +49,7 @@ namespace crisp
             {
                 double xPos, yPos;
                 glfwGetCursorPos(window, &xPos, &yPos);
-                dispatcher->mouseButtonDown(button, mods, xPos, yPos);
+                dispatcher->mouseButtonPressed(button, mods, xPos, yPos);
             }
         }
         else if (action == GLFW_RELEASE)
@@ -53,9 +59,15 @@ namespace crisp
             {
                 double xPos, yPos;
                 glfwGetCursorPos(window, &xPos, &yPos);
-                dispatcher->mouseButtonUp(button, mods, xPos, yPos);
+                dispatcher->mouseButtonReleased(button, mods, xPos, yPos);
             }
         }
+    }
+
+    void InputDispatcher::mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset)
+    {
+        auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
+        if (dispatcher) dispatcher->mouseWheelScrolled(yOffset);
     }
 
     void InputDispatcher::closeCallback(GLFWwindow* window)
