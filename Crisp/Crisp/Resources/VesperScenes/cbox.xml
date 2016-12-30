@@ -3,7 +3,7 @@
     
     <sampler type="independent">
         <parameters>
-            <param name="numSamples" type="int" value="32" />
+            <param name="numSamples" type="int" value="256" />
         </parameters>
     </sampler>
 
@@ -72,6 +72,32 @@
                     <param name="radiance" type="spectrum" value="15 15 15" />
                 </parameters>
             </light>
+        </shape>
+
+        <shape type="mesh">
+            <parameters>
+                <param name="fileName" type="string" value="sphere.obj" />
+                <param name="toWorld" type="transform">
+                    <scale value="0.3263, 0.3263, 0.3263" />
+                    <translate value="0.445800, 0.332100, 0.376700" />
+                </param>
+            </parameters>
+        
+            <bsdf type="dielectric">
+            </bsdf>
+        </shape>
+    
+        <shape type="mesh">
+            <parameters>
+                <param name="fileName" type="string" value="sphere.obj" />
+                <param name="toWorld" type="transform">
+                    <scale value="0.3263, 0.3263, 0.3263" />
+                    <translate value="-0.421400, 0.332100, -0.280000" />
+                </param>
+            </parameters>
+        
+            <bsdf type="mirror">
+            </bsdf>
         </shape>
     </shapes>
 

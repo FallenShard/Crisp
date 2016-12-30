@@ -178,18 +178,18 @@ namespace vesper
                 auto typeAttrib = child->first_attribute("type");
                 if (typeAttrib == nullptr)
                 {
-                    std::cerr << "Parameter specified without a type!" << std::endl;
+                    std::cerr << "Parameter " + paramName + " specified without a type!" << std::endl;
                     continue;
                 }
                 std::string paramType = typeAttrib->value();
 
                 auto valueAttrib = child->first_attribute("value");
-                if (valueAttrib == nullptr)
+                if (paramType != "transform" && valueAttrib == nullptr)
                 {
-                    std::cerr << "Parameter specified without a value!" << std::endl;
+                    std::cerr << "Parameter " + paramName + " specified without a value!" << std::endl;
                     continue;
                 }
-                std::string paramValue = valueAttrib->value();
+                std::string paramValue = valueAttrib ? valueAttrib->value() : "";
 
                 if (paramType == "bool")
                 {
