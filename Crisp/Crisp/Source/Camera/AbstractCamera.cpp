@@ -30,11 +30,6 @@ namespace crisp
         return m_position;
     }
 
-    glm::quat AbstractCamera::getOrientation() const
-    {
-        return m_orientation;
-    }
-
     glm::vec3 AbstractCamera::getLookDirection() const
     {
         return m_look;

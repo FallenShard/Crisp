@@ -70,8 +70,6 @@ namespace crisp
             {
                 vkDestroyImageView(m_renderer->getDevice().getHandle(), font.second->imageView, nullptr);
             }
-
-            vkDestroyImageView(m_renderer->getDevice().getHandle(), m_guiImageView, nullptr);
         }
 
         const glm::mat4& RenderSystem::getProjectionMatrix() const

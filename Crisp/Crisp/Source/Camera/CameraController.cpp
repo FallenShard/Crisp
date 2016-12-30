@@ -56,17 +56,17 @@ namespace crisp
         }
         
         m_animator->update(dt);
-        //if (glfwGetKey(m_window, GLFW_KEY_W))
-        //    m_camera.zoom(3.0f * dt);
-        //
-        //if (glfwGetKey(m_window, GLFW_KEY_S))
-        //    m_camera.zoom(3.0f * -dt);
-        //
-        //if (glfwGetKey(m_window, GLFW_KEY_D))
-        //    m_camera.move(dt, dt);
-        //
-        //if (glfwGetKey(m_window, GLFW_KEY_A))
-        //    m_camera.move(-dt, -dt);
+        if (glfwGetKey(m_window, GLFW_KEY_W))
+            m_camera.walk(3.0f * dt);
+        
+        if (glfwGetKey(m_window, GLFW_KEY_S))
+            m_camera.walk(3.0f * -dt);
+        
+        if (glfwGetKey(m_window, GLFW_KEY_D))
+            m_camera.strafe(dt);
+        
+        if (glfwGetKey(m_window, GLFW_KEY_A))
+            m_camera.strafe(-dt);
 
         //m_camera.update(dt);
         //
@@ -117,25 +117,26 @@ namespace crisp
         {
             auto delta = m_useMouseFiltering ? filterMouseMoves() : m_mousePos - m_prevMousePos;
 
-            if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL))
-            {
-                m_camera.pan(-delta.x / m_screenSize.x, delta.y / m_screenSize.y);
-            }
-            else
-            {
-                m_camera.move(-m_moveSpeed * delta / m_screenSize);
-            }
+            //if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL))
+            //{
+            //    m_camera.pan(-delta.x / m_screenSize.x, delta.y / m_screenSize.y);
+            //}
+            //else
+            //{
+            //    m_camera.move(-m_moveSpeed * delta / m_screenSize);
+            //}
+            m_camera.rotate(delta.x / m_screenSize.x, delta.y / m_screenSize.y);
         }
     }
 
     void CameraController::onMouseWheelScrolled(double offset)
     {
-        auto zoomAnim = std::make_shared<PropertyAnimation<float>>(0.3, m_camera.getDistance(), m_camera.getDistance() - offset, 0.0, Easing::CubicOut);
-        zoomAnim->setUpdater([this](const float& t)
-        {
-            m_camera.setZoom(t);
-        });
-        m_animator->add(zoomAnim);
+        //auto zoomAnim = std::make_shared<PropertyAnimation<float>>(0.3, m_camera.getDistance(), m_camera.getDistance() - offset, 0.0, Easing::CubicOut);
+        //zoomAnim->setUpdater([this](const float& t)
+        //{
+        //    m_camera.setZoom(t);
+        //});
+        //m_animator->add(zoomAnim);
         //m_camera.zoom(offset);
     }
 

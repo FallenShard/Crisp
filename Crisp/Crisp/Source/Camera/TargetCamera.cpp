@@ -74,6 +74,11 @@ namespace crisp
         return m_target;
     }
 
+    glm::quat TargetCamera::getOrientation() const
+    {
+        return m_orientation;
+    }
+
     void TargetCamera::pan(float dx, float dy)
     {
         m_translation.x += dx;

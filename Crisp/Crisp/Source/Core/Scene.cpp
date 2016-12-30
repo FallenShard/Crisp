@@ -7,6 +7,7 @@
 
 #include "vulkan/VulkanRenderer.hpp"
 #include "vulkan/Pipelines/UniformColorPipeline.hpp"
+#include "vulkan/Pipelines/PointSphereSpritePipeline.hpp"
 
 #include "Camera/CameraController.hpp"
 #include "Core/InputDispatcher.hpp"
@@ -110,7 +111,16 @@ namespace crisp
         label->setText(StringUtils::toString(m_cameraController->getCamera().getPosition()));
 
         auto orientLabel = app->getTopLevelGroup()->getControlById<gui::Label>("camOrientValueLabel");
-        orientLabel->setText(StringUtils::toString(m_cameraController->getCamera().getOrientation()));
+
+        std::vector<glm::vec3> positions;
+        for (float x = -1.0f; x <= 1.0f; x += 0.1f)
+            for (float y = -1.0f; y <= 1.0f; y += 0.1f)
+                for (float z = -1.0f; z <= 1.0f; z += 0.1f)
+                    positions.emplace_back(x, y, z);
+
+        m_positionBuffer = device.createDeviceBuffer(positions.size() * sizeof(glm::vec3), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, positions.data());
+
+        m_psPipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
 
         m_app = app;
     }
@@ -141,7 +151,7 @@ namespace crisp
         label->setText(StringUtils::toString(m_cameraController->getCamera().getPosition()));
 
         auto orientLabel = m_app->getTopLevelGroup()->getControlById<gui::Label>("camOrientValueLabel");
-        orientLabel->setText(StringUtils::toString(m_cameraController->getCamera().getOrientation()));
+        orientLabel->setText(StringUtils::toString(m_cameraController->getCamera().getLookDirection()));
 
         auto upLabel = m_app->getTopLevelGroup()->getControlById<gui::Label>("camUpValueLabel");
         upLabel->setText(StringUtils::toString(m_cameraController->getCamera().getUpDirection()));
@@ -179,7 +189,7 @@ namespace crisp
             vkCmdPushConstants(commandBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(int), &colorIndex);
 
             VkDeviceSize vboOffset = 0;
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_buffer, &vboOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_positionBuffer, &vboOffset);
             vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
             vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
 

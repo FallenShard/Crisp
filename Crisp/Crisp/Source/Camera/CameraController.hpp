@@ -44,7 +44,8 @@ namespace crisp
             Rotation
         };
 
-        TargetCamera m_camera;
+        FreeCamera m_camera;
+        //TargetCamera m_camera;
 
         GLFWwindow* m_window;
         CameraInputState m_cameraInputState;

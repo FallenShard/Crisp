@@ -148,6 +148,8 @@ namespace crisp
             vkDestroyShaderModule(m_device->getHandle(), shaderModule.second, nullptr);
         }
 
+        vkDestroyImageView(m_device->getHandle(), m_displayedImageView, nullptr);
+
         vkDestroySampler(m_device->getHandle(), m_sampler, nullptr);
     }
 

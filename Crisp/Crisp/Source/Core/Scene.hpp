@@ -12,6 +12,7 @@ namespace crisp
     class Application;
     class VulkanRenderer;
     class UniformColorPipeline;
+    class PointSphereSpritePipeline;
 
     class CameraController;
     class InputDispatcher;
@@ -59,5 +60,8 @@ namespace crisp
         std::unique_ptr<CameraController> m_cameraController;
 
         Application* m_app;
+
+        std::unique_ptr<PointSphereSpritePipeline> m_psPipeline;
+        VkBuffer m_positionBuffer;
     };
 }

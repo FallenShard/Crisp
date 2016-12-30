@@ -166,6 +166,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTextPipeline.cpp" />
+    <ClCompile Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\VulkanPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\RenderPasses\DefaultRenderPass.cpp" />
@@ -212,6 +213,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTextPipeline.hpp" />
+    <ClInclude Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\RenderPasses\DefaultRenderPass.hpp" />
@@ -238,6 +240,8 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Resources\Shaders\gui-text-frag.glsl" />
     <None Include="Resources\Shaders\gui-text-vert.glsl" />
+    <None Include="Resources\Shaders\point-sphere-sprite-frag.glsl" />
+    <None Include="Resources\Shaders\point-sphere-sprite-vert.glsl" />
     <None Include="Resources\Shaders\unif-col-vert.glsl" />
     <None Include="Resources\Shaders\unif-col-frag.glsl" />
     <None Include="Resources\VesperScenes\cbox.json" />

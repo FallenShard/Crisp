@@ -126,6 +126,9 @@
     <ClCompile Include="Source\Core\StringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.hpp">
@@ -260,6 +263,9 @@
     <ClInclude Include="Source\Camera\TargetCamera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Shaders\fullscreen-quad-frag.glsl" />
@@ -276,6 +282,8 @@
     <None Include="Resources\Shaders\unif-col-vert.glsl" />
     <None Include="Resources\Shaders\unif-col-frag.glsl" />
     <None Include="Source\Core\StringUtils.hpp" />
+    <None Include="Resources\Shaders\point-sphere-sprite-vert.glsl" />
+    <None Include="Resources\Shaders\point-sphere-sprite-frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\cbox.xml" />

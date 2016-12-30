@@ -22,7 +22,6 @@ namespace crisp
         void setPosition(const glm::vec3& position);
         glm::vec3 getPosition() const;
 
-        glm::quat getOrientation() const;
         glm::vec3 getLookDirection() const;
         glm::vec3 getRightDirection() const;
         glm::vec3 getUpDirection() const;
@@ -51,7 +50,7 @@ namespace crisp
         float m_zFar;
         glm::mat4 m_P;
 
-        glm::quat m_orientation;
+        
         glm::vec3 m_position;
         glm::vec3 m_look;
         glm::vec3 m_right;
