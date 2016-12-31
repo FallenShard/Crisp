@@ -20,7 +20,7 @@ namespace vesper
         static float squareToUniformHemispherePdf(const glm::vec3& v);
 
         static glm::vec3 squareToUniformSphereCap(const glm::vec2& sample, float cosThetaMax);
-        static float squareToUniformSphereCapPdf(const glm::vec3& v, float cosThetaMax);
+        static float squareToUniformSphereCapPdf(float cosThetaMax);
 
         static glm::vec3 squareToCosineHemisphere(const glm::vec2& sample);
         static float squareToCosineHemispherePdf(const glm::vec3& v);

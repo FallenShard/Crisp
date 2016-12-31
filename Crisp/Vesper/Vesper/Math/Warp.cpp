@@ -51,7 +51,7 @@ namespace vesper
         return cylinderToSphereSection(sample, 1.0f, cosThetaMax);
     }
 
-    float Warp::squareToUniformSphereCapPdf(const glm::vec3& v, float cosThetaMax)
+    float Warp::squareToUniformSphereCapPdf(float cosThetaMax)
     {
         return InvTwoPI / (1.0f - cosThetaMax);
     }

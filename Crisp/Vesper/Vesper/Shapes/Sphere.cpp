@@ -1,5 +1,8 @@
 #include "Sphere.hpp"
 
+#include "Math/Warp.hpp"
+#include "Samplers/Sampler.hpp"
+
 namespace vesper
 {
     namespace
@@ -27,6 +30,45 @@ namespace vesper
                 std::swap(x0, x1);
 
             return true;
+        }
+
+        inline bool analyticIntersection(const glm::vec3& center, float radius, const RTCRay& ray, float& t)
+        {
+            glm::vec3 centerToOrigin(ray.org[0] - center.x, ray.org[1] - center.y, ray.org[2] - center.z);
+
+            float b = 2.0f * (ray.dir[0] * centerToOrigin.x + ray.dir[1] * centerToOrigin.y + ray.dir[2] * centerToOrigin.z);
+            float c = glm::dot(centerToOrigin, centerToOrigin) - radius * radius;
+
+            float discrim = b * b - 4.0f * c;
+
+            if (discrim < 0.0f) // both complex solutions, no intersection
+            {
+                return false;
+            }
+            else if (discrim < Ray3::Epsilon) // Discriminant is practically zero
+            {
+                t = -0.5f * b;
+            }
+            else
+            {
+                float factor = (b > 0.0f) ? -0.5f * (b + sqrtf(discrim)) : -0.5f * (b - sqrtf(discrim));
+                float t0 = factor;
+                float t1 = c / factor;
+
+                if (t0 > t1) // Prefer the smaller t, select larger if smaller is less than tNear
+                {
+                    t = t1 < ray.tnear ? t0 : t1;
+                }
+                else
+                {
+                    t = t0 < ray.tnear ? t1 : t0;
+                }
+            }
+
+            if (t < ray.tnear || t > ray.tfar)
+                return false;
+            else
+                return true;
         }
     }
     Sphere::Sphere(const VariantMap& params)
@@ -57,118 +99,22 @@ namespace vesper
     {
         const Sphere& sphere = spheres[item];
 
-        //glm::vec3 l = sphere.m_center - glm::vec3(ray.org[0], ray.org[1], ray.org[2]);
-        //float s = (l.x * ray.dir[0] + l.y * ray.dir[1] + l.z * ray.dir[2]);
-        //float l2 = glm::dot(l, l);
-        //float r2 = sphere.m_radius * sphere.m_radius;
-        //
-        //if (s < 0.0f && l2 > r2)
-        //    return;
-        //
-        //float m2 = l2 - s * s;
-        //if (m2 > r2)
-        //    return;
-        //
-        //float q = std::sqrtf(r2 - m2);
-        //float t = (l2 > r2) ? s - q : s + q;
-        //
-        //if ((ray.tnear < t) && (t < ray.tfar))
-        //{
-        //    ray.u = 0.0f;
-        //    ray.v = 0.0f;
-        //    ray.tfar = t;
-        //    ray.geomID = sphere.m_geomId;
-        //    ray.primID = static_cast<unsigned int>(item);
-        //}
-
-        //float t0, t1;
-        //glm::vec3 L = glm::vec3(ray.org[0], ray.org[1], ray.org[2]) - sphere.m_center;
-        //float a = 1.0f;
-        //float b = 2.0f * (L.x * ray.dir[0] + L.y * ray.dir[1] + L.z * ray.dir[2]);
-        //float c = glm::dot(L, L) - sphere.m_radius * sphere.m_radius;
-        //
-        //if (!solveQuadratic(a, b, c, t0, t1))
-        //    return; 
-        //
-        //if (t0 > t1) std::swap(t0, t1);
-        //
-        //if (t0 < 0.0f)// || t0 < ray.tnear)
-        //{
-        //    t0 = t1;
-        //    if (t0 < 0.0f)// || t0 < ray.tnear)
-        //        return;
-        //}
-        //
-        //if (t0 > ray.tfar)
-        //{
-        //    return;
-        //}
-        //
-        //ray.u = 0.0f;
-        //ray.v = 0.0f;
-        //ray.tfar = t0;
-        //ray.geomID = sphere.m_geomId;
-        //ray.primID = static_cast<unsigned int>(item);
-        //ray.Ng[0] = ray.org[0] + t0 * ray.dir[0] - sphere.m_center[0];
-        //ray.Ng[1] = ray.org[1] + t0 * ray.dir[1] - sphere.m_center[1];
-        //ray.Ng[2] = ray.org[2] + t0 * ray.dir[2] - sphere.m_center[2];
-        glm::vec3 cToO = glm::vec3(ray.org[0], ray.org[1], ray.org[2]) - sphere.m_center;
-        
-        const float B = 2.0f * (cToO.x * ray.dir[0] + cToO.y * ray.dir[1] + cToO.z * ray.dir[2]);
-        const float C = glm::dot(cToO, cToO) - sphere.m_radius * sphere.m_radius;
-        const float D = B * B - 4.0f * C;
-        
-        if (D < 0.0f) // No intersection
-            return;
-        
-        const float Q = std::sqrtf(D);
-        const float t0 = 0.5f * (-B - Q);
-        const float t1 = 0.5f * (-B + Q);
-        
-        if ((ray.tnear < t0) && (t0 < ray.tfar))
+        float t;
+        if (analyticIntersection(sphere.m_center, sphere.m_radius, ray, t))
         {
-            ray.u = 0.0f;
-            ray.v = 0.0f;
-            ray.tfar = t0;
+            ray.tfar = t;
             ray.geomID = sphere.m_geomId;
             ray.primID = static_cast<unsigned int>(item);
-            ray.Ng[0] = ray.org[0] + t0 * ray.dir[0] - sphere.m_center[0];
-            ray.Ng[1] = ray.org[1] + t0 * ray.dir[1] - sphere.m_center[1];
-            ray.Ng[2] = ray.org[2] + t0 * ray.dir[2] - sphere.m_center[2];
-            return;
-        }
-        
-        if ((ray.tnear < t1) && (t1 < ray.tfar))
-        {
-            ray.u = 0.0f;
-            ray.v = 0.0f;
-            ray.tfar = t1;
-            ray.geomID = sphere.m_geomId;
-            ray.primID = static_cast<unsigned int>(item);
-            ray.Ng[0] = ray.org[0] + t0 * ray.dir[0] - sphere.m_center[0];
-            ray.Ng[1] = ray.org[1] + t0 * ray.dir[1] - sphere.m_center[1];
-            ray.Ng[2] = ray.org[2] + t0 * ray.dir[2] - sphere.m_center[2];
-            return;
         }
     }
 
     void Sphere::rayOcclude(const Sphere* spheres, RTCRay& ray, size_t item)
     {
         const Sphere& sphere = spheres[item];
-        glm::vec3 v = glm::vec3(ray.org[0], ray.org[1], ray.org[2]) - sphere.m_center;
-        const float A = ray.dir[0] * ray.dir[0] + ray.dir[1] * ray.dir[1] + ray.dir[2] * ray.dir[2];
-        const float B = 2.0f * (v.x * ray.dir[0] + v.y * ray.dir[1] + v.z * ray.dir[2]);
-        const float C = glm::dot(v, v) - sphere.m_radius * sphere.m_radius;
-        const float D = B*B - 4.0f*A*C;
-        if (D < 0.0f) return;
-        const float Q = std::sqrtf(D);
-        const float rcpA = 1.0f / A;
-        const float t0 = 0.5f*rcpA*(-B - Q);
-        const float t1 = 0.5f*rcpA*(-B + Q);
-        if ((ray.tnear < t0) & (t0 < ray.tfar)) {
-            ray.geomID = 0;
-        }
-        if ((ray.tnear < t1) & (t1 < ray.tfar)) {
+
+        float t;
+        if (analyticIntersection(sphere.m_center, sphere.m_radius, ray, t))
+        {
             ray.geomID = 0;
         }
     }
@@ -179,26 +125,60 @@ namespace vesper
         glm::vec3 normal = glm::normalize(its.p - m_center);
 
         its.geoFrame = CoordinateFrame(normal);
-        its.shFrame = CoordinateFrame(normal);
+        its.shFrame  = CoordinateFrame(normal);
 
         auto alpha = asinf(normal.z);
         auto beta = atan2f(normal.y, normal.x);
 
         float u = clamp(0.5f + beta * InvTwoPI, 0.0f, 1.0f);
         float v = clamp(0.5f - alpha * InvPI, 0.0f, 1.0f);
-        its.uv = { u ,v };
+        its.uv = { u, 1.0f - v };
 
         its.shape = this;
     }
 
     void Sphere::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const
     {
+        float invRad2 = 1.0f / (m_radius * m_radius);
+        // Uniform sampling
+        //glm::vec3 q = Warp::squareToUniformSphere(sampler.next2D());
+        //shapeSample.p = m_center + m_radius * q;
+        //shapeSample.n = q;
+        //shapeSample.pdf = invRad2 * Warp::squareToUniformSpherePdf();
 
+        // Spherical cap sampling
+        glm::vec3 centerToRef = shapeSample.ref - m_center;
+
+        float dist = glm::length(centerToRef);
+
+        centerToRef = glm::normalize(centerToRef);
+        CoordinateFrame frame(centerToRef);
+
+        float cosThetaMax = std::min(m_radius / dist, 0.99f);
+
+        glm::vec3 localQ = Warp::squareToUniformSphereCap(sampler.next2D(), cosThetaMax);
+
+        glm::vec3 worldQ = frame.toWorld(localQ);
+        shapeSample.p = m_center + m_radius * worldQ;
+        shapeSample.n = worldQ;
+        shapeSample.pdf = invRad2 * Warp::squareToUniformSpherePdf();
     }
 
     float Sphere::pdfSurface(const Shape::Sample& shapeSample) const
     {
-        return 0.0f;
+        float invRad2 = 1.0f / (m_radius * m_radius);
+        //return invRad2 * Warp::squareToUniformSpherePdf();
+
+        glm::vec3 centerToRef = shapeSample.ref - m_center;
+
+        float dist = glm::length(centerToRef);
+
+        centerToRef = glm::normalize(centerToRef);
+        CoordinateFrame frame(centerToRef);
+
+        float cosThetaMax = std::min(m_radius / dist, 0.99f);
+
+        return invRad2 * Warp::squareToUniformSphereCapPdf(cosThetaMax);
     }
 
     bool Sphere::addToAccelerationStructure(RTCScene scene)
