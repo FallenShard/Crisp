@@ -1,0 +1,49 @@
+<scene>
+    <integrator type="mis-path-tracer" />
+
+    <sampler type="independent">
+        <parameters>
+            <param name="numSamples" type="int" value="128" />
+        </parameters>
+    </sampler>
+
+    <camera type="perspective">
+        <parameters>
+            <param name="imageSize" type="ivec2" value="800, 600" />
+            <param name="fov" type="float" value="27.7856" />
+            <param name="zNear" type="float" value="0.1" />
+            <param name="zFar" type="float" value="100" />
+            <param name="position" type="vec3" value="0, 0.919769, 5.41159" />
+            <param name="target" type="vec3" value="0, 0.893051, 4.41198" />
+            <param name="up" type="vec3" value="0, 1, 0" />
+        </parameters>
+    </camera>
+
+    <shapes>
+        <shape type="mesh">
+            <parameters>
+                <param name="fileName" type="string" value="plane.obj" />
+            </parameters>
+
+            <bsdf type="lambertian">
+                <parameters>
+                    <param name="reflectance" type="spectrum" value="0.725, 0.22, 0.36" />
+                </parameters>
+            </bsdf>
+        </shape>
+
+        <shape type="sphere">
+            <parameters>
+                <param name="center" type="vec3" value="0, 1, 0" />
+                <param name="radius" type="float" value="0.2" />
+            </parameters>
+
+            <light type="area">
+                <parameters>
+                    <param name="radiance" type="spectrum" value="5 5 5" />
+                </parameters>
+            </light>
+        </shape>
+    </shapes>
+
+</scene>
