@@ -101,13 +101,13 @@ namespace vesper
                         auto t2 = std::chrono::high_resolution_clock::now();
                         auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-                        ImageBlockEventArgs args;
-                        args.x = desc.offset.x;
-                        args.y = desc.offset.y;
-                        args.width = desc.size.x;
-                        args.height = desc.size.y;
-                        args.data = currBlock.getRaw();
-                        updateProgress(args, duration / 1'000'000'000.0f);
+                        RayTracerUpdate update;
+                        update.x      = desc.offset.x;
+                        update.y      = desc.offset.y;
+                        update.width  = desc.size.x;
+                        update.height = desc.size.y;
+                        update.data   = currBlock.getRaw();
+                        updateProgress(update, duration / 1'000'000'000.0f);
                     }
                 }
             };
@@ -125,7 +125,9 @@ namespace vesper
             std::cout << "Finished rendering scene. Computed in " << duration / 1'000'000'000.0 << " s. " << std::endl;
 
             if (m_renderStatus != RenderStatus::Interrupted)
+            {
                 m_renderThread.detach();
+            }
 
             m_renderStatus = RenderStatus::Done;
         });
@@ -152,21 +154,24 @@ namespace vesper
         return m_image.getSize();
     }
 
-    void RayTracer::setProgressUpdater(std::function<void(float, float, ImageBlockEventArgs)> callback)
+    void RayTracer::setProgressUpdater(std::function<void(RayTracerUpdate)> callback)
     {
         m_progressUpdater = callback;
     }
 
-    void RayTracer::updateProgress(const ImageBlockEventArgs& eventArgs, float blockRenderTime)
+    void RayTracer::updateProgress(RayTracerUpdate& update, float blockRenderTime)
     {
         std::lock_guard<std::mutex> lock(m_imageMutex);
 
         m_blocksRendered++;
         m_timeSpentRendering += blockRenderTime;
+        update.totalTimeSpentRendering = m_timeSpentRendering;
+        update.blocksRendered = m_blocksRendered;
+        update.numBlocks = m_totalBlocks;
 
         if (m_progressUpdater)
         {
-            m_progressUpdater(static_cast<float>(m_blocksRendered) / m_totalBlocks, m_timeSpentRendering, eventArgs);
+            m_progressUpdater(update);
         }
     }
 

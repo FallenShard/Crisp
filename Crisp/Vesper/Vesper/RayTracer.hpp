@@ -9,7 +9,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include "ImageBlock.hpp"
-#include "ImageBlockEventArgs.hpp"
+#include "RayTracerUpdate.hpp"
 
 namespace vesper
 {
@@ -29,10 +29,10 @@ namespace vesper
         void setImageSize(int width, int height);
         glm::ivec2 getImageSize() const;
 
-        void setProgressUpdater(std::function<void(float, float, ImageBlockEventArgs)> callback);
+        void setProgressUpdater(std::function<void(RayTracerUpdate)> callback);
 
     private:
-        void updateProgress(const ImageBlockEventArgs& eventArgs, float blockRenderTime);
+        void updateProgress(RayTracerUpdate& update, float blockRenderTime);
         void generateImageBlocks(int width, int height);
 
         void renderBlock(ImageBlock& block, Sampler& sampler, const Scene* scene);
@@ -49,7 +49,7 @@ namespace vesper
         ImageBlock m_image;
         tbb::concurrent_queue<ImageBlock::Descriptor> m_descriptorQueue;
 
-        std::function<void(float, float, ImageBlockEventArgs)> m_progressUpdater;
+        std::function<void(RayTracerUpdate)> m_progressUpdater;
 
         std::thread m_renderThread;
         std::atomic<RenderStatus> m_renderStatus;
