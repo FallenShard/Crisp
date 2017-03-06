@@ -7,6 +7,12 @@ namespace crisp
     class FullScreenQuadPipeline : public VulkanPipeline
     {
     public:
+        enum DescSets
+        {
+            DisplayedImage,
+
+            Count
+        };
         FullScreenQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection = false);
 
     protected:

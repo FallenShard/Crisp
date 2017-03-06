@@ -35,13 +35,13 @@ namespace crisp
         FT_Done_FreeType(m_context);
     }
 
-    std::pair<std::string, std::unique_ptr<Font>> FontLoader::load(const std::string& fontName, int fontPixelSize)
+    std::unique_ptr<Font> FontLoader::load(const std::string& fontName, int fontPixelSize)
     {
         FT_Face face;
         if (FT_New_Face(m_context, (FontPath + fontName).c_str(), 0, &face))
         {
             std::cerr << "Failed to create new face: " + fontName << std::endl;
-            return { "", nullptr };
+            return nullptr;
         }
 
         FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
@@ -59,9 +59,10 @@ namespace crisp
 
         FT_Done_Face(face);
 
-        std::pair<std::string, std::unique_ptr<Font>> result = { getFontKey(fontName, fontPixelSize), std::move(font) };
+        font->name = fontName;
+        font->pixelSize = fontPixelSize;
 
-        return result;
+        return std::move(font);
     }
 
     std::string FontLoader::getFontKey(const std::string&fontName, int fontSize) const

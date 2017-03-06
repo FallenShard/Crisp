@@ -30,9 +30,9 @@ namespace crisp
         if (freeChunks.size() > 5)
             coalesce();
 
-        if (freeChunks.size() > 5)
+        if (freeChunks.size() > 10)
         {
-            std::cout << "WARNING: Memory fragmentation in " << tag << std::endl;
+            std::cout << "WARNING: Possible memory fragmentation in " << tag << std::endl;
         }
     }
 

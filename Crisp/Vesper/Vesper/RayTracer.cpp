@@ -68,6 +68,7 @@ namespace vesper
             return;
 
         m_blocksRendered = 0;
+        m_pixelsRendered = 0;
         m_timeSpentRendering = 0.0f;
 
         m_renderStatus = RenderStatus::Busy;
@@ -164,10 +165,11 @@ namespace vesper
         std::lock_guard<std::mutex> lock(m_imageMutex);
 
         m_blocksRendered++;
+        m_pixelsRendered += update.width * update.height;
         m_timeSpentRendering += blockRenderTime;
         update.totalTimeSpentRendering = m_timeSpentRendering;
-        update.blocksRendered = m_blocksRendered;
-        update.numBlocks = m_totalBlocks;
+        update.pixelsRendered = m_pixelsRendered;
+        update.numPixels = m_image.getSize().x * m_image.getSize().y;
 
         if (m_progressUpdater)
         {
@@ -252,6 +254,7 @@ namespace vesper
             m_descriptorQueue.push(descriptors[idx]);
 
         m_blocksRendered = 0;
+        m_pixelsRendered = 0;
         m_totalBlocks = static_cast<int>(m_descriptorQueue.unsafe_size());
     }
 
@@ -269,7 +272,6 @@ namespace vesper
         {
             for (int x = 0; x < block.getFullSize().x; ++x)
             {
-                float weightSum = 0.f;
                 for (int s = 0; s < numSamples; s++)
                 {
                     glm::vec2 pixelSample(x + offset.x + sampler.next1D(), y + offset.y + sampler.next1D());

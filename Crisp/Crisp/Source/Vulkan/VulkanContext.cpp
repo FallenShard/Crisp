@@ -3,6 +3,8 @@
 #include <set>
 #include <iostream>
 
+#include "Application.hpp"
+
 #ifndef _DEBUG
 const bool enableValidationLayers = false;
 #else
@@ -88,9 +90,9 @@ namespace crisp
         for (auto queueFamily : uniqueQueueFamilies)
         {
             VkDeviceQueueCreateInfo queueCreateInfo = {};
-            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queueCreateInfo.queueFamilyIndex = queueFamily;
-            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.queueCount       = 1;
             queueCreateInfo.pQueuePriorities = &queuePriority;
             queueCreateInfos.push_back(queueCreateInfo);
         }
@@ -229,30 +231,30 @@ namespace crisp
     void VulkanContext::createInstance(std::vector<const char*> reqPlatformExtensions)
     {
         VkApplicationInfo appInfo = {};
-        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Crisp";
+        appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName   = Application::Title;
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "No Engine";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        appInfo.pEngineName        = "CrispEngine";
+        appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion         = VK_API_VERSION_1_0;
 
         if (enableValidationLayers)
             reqPlatformExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
         VkInstanceCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        createInfo.pApplicationInfo = &appInfo;
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(reqPlatformExtensions.size());
+        createInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo        = &appInfo;
+        createInfo.enabledExtensionCount   = static_cast<uint32_t>(reqPlatformExtensions.size());
         createInfo.ppEnabledExtensionNames = reqPlatformExtensions.data();
 
         if (enableValidationLayers)
         {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
         }
         else
         {
-            createInfo.enabledLayerCount = 0;
+            createInfo.enabledLayerCount   = 0;
             createInfo.ppEnabledLayerNames = nullptr;
         }
 

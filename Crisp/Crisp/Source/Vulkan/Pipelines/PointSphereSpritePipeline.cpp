@@ -59,17 +59,10 @@ namespace crisp
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
+        poolInfo.poolSizeCount = 2;
         poolInfo.pPoolSizes    = &poolSizes[0];
-        poolInfo.maxSets       = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[0]);
-
-        poolInfo = {};
-        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes    = &poolSizes[1];
-        poolInfo.maxSets       = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[1]);
+        poolInfo.maxSets       = 2;
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("point-sphere-sprite-vert");
         m_fragShader = renderer->getShaderModule("point-sphere-sprite-frag");

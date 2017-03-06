@@ -9,7 +9,7 @@ namespace crisp
     {
         // Descriptor pool
         std::array<VkDescriptorPoolSize, 2> poolSizes = {};
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
         poolSizes[0].descriptorCount = 1;
 
         poolSizes[1].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -19,8 +19,8 @@ namespace crisp
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
-        poolInfo.maxSets       = 1;
-        vkCreateDescriptorPool(m_renderer->getDevice().getHandle(), &poolInfo, nullptr, &m_descriptorPools[0]);
+        poolInfo.maxSets       = 2;
+        vkCreateDescriptorPool(m_renderer->getDevice().getHandle(), &poolInfo, nullptr, &m_descriptorPool);
 
         // Descriptor Set Layout
         VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
@@ -46,19 +46,19 @@ namespace crisp
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
         layoutInfo.pBindings    = bindings.data();
-        vkCreateDescriptorSetLayout(m_renderer->getDevice().getHandle(), &layoutInfo, nullptr, &m_descriptorSetLayouts[0]);
+        vkCreateDescriptorSetLayout(m_renderer->getDevice().getHandle(), &layoutInfo, nullptr, &m_descriptorSetLayouts[DisplayedImage]);
 
         VkPushConstantRange pushConstantRange = {};
-        pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(int);
+        pushConstantRange.offset     = 0;
+        pushConstantRange.size       = sizeof(int);
         pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
-        pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 1;
-        pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+        pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
         vkCreatePipelineLayout(m_renderer->getDevice().getHandle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         if (useGammaCorrection)
@@ -142,17 +142,25 @@ namespace crisp
         VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
         colorBlendAttachment.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachment.blendEnable         = VK_TRUE;
-        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
         colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
-        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
         auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
         colorBlendState.attachmentCount = 1;
         colorBlendState.pAttachments    = &colorBlendAttachment;
 
         auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
+
+        std::vector<VkDynamicState> dynamicStates;
+        dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+
+        VkPipelineDynamicStateCreateInfo dynamicState = {};
+        dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        dynamicState.pDynamicStates    = dynamicStates.data();
 
         VkGraphicsPipelineCreateInfo pipelineInfo = {};
         pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -165,7 +173,7 @@ namespace crisp
         pipelineInfo.pMultisampleState   = &multisampleState;
         pipelineInfo.pColorBlendState    = &colorBlendState;
         pipelineInfo.pDepthStencilState  = &depthStencilState;
-        pipelineInfo.pDynamicState       = nullptr;
+        pipelineInfo.pDynamicState       = &dynamicState;
         pipelineInfo.layout              = m_pipelineLayout;
         pipelineInfo.renderPass          = m_renderPass->getHandle();
         pipelineInfo.subpass             = 0;

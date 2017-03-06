@@ -7,18 +7,17 @@ namespace crisp
         : m_device(renderer->getDevice().getHandle())
         , m_renderer(renderer)
         , m_renderPass(renderPass)
-        , m_pipelineLayout(nullptr)
-        , m_pipeline(nullptr)
-        , m_descriptorPools(layoutCount, nullptr)
-        , m_descriptorSetLayouts(layoutCount, nullptr)
+        , m_pipelineLayout(VK_NULL_HANDLE)
+        , m_pipeline(VK_NULL_HANDLE)
+        , m_descriptorPool(VK_NULL_HANDLE)
+        , m_descriptorSetLayouts(layoutCount, VK_NULL_HANDLE)
     {
     }
 
     VulkanPipeline::~VulkanPipeline()
     {
-        for (auto& pool : m_descriptorPools)
-            if (pool != nullptr)
-                vkDestroyDescriptorPool(m_device, pool, nullptr);
+        if (m_descriptorPool != nullptr)
+            vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 
         for (auto& layout : m_descriptorSetLayouts)
             if (layout != nullptr)
@@ -43,13 +42,27 @@ namespace crisp
     {
         VkDescriptorSetAllocateInfo descSetInfo = {};
         descSetInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        descSetInfo.descriptorPool     = m_descriptorPools.at(setId);
+        descSetInfo.descriptorPool     = m_descriptorPool;
         descSetInfo.descriptorSetCount = 1;
         descSetInfo.pSetLayouts        = &m_descriptorSetLayouts.at(setId);
 
         VkDescriptorSet descSet;
         vkAllocateDescriptorSets(m_renderer->getDevice().getHandle(), &descSetInfo, &descSet);
         return descSet;
+    }
+
+    std::vector<VkDescriptorSet> VulkanPipeline::allocateDescriptorSet(uint32_t setId, uint32_t count) const
+    {
+        std::vector<VkDescriptorSetLayout> layouts(count, m_descriptorSetLayouts.at(setId));
+        VkDescriptorSetAllocateInfo descSetInfo = {};
+        descSetInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descSetInfo.descriptorPool     = m_descriptorPool;
+        descSetInfo.descriptorSetCount = count;
+        descSetInfo.pSetLayouts        = layouts.data();
+
+        std::vector<VkDescriptorSet> descSets(count, nullptr);
+        vkAllocateDescriptorSets(m_renderer->getDevice().getHandle(), &descSetInfo, descSets.data());
+        return descSets;
     }
 
     VkPipelineRasterizationStateCreateInfo VulkanPipeline::createDefaultRasterizationState()

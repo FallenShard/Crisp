@@ -2,6 +2,7 @@
 
 #include <map>
 #include <set>
+#include <memory>
 
 #include <vulkan/vulkan.h>
 #include "MemoryHeap.hpp"
@@ -9,6 +10,16 @@
 namespace crisp
 {
     class VulkanContext;
+
+    struct DeviceMemoryMetrics
+    {
+        uint64_t bufferMemorySize;
+        uint64_t bufferMemoryUsed;
+        uint64_t imageMemorySize;
+        uint64_t imageMemoryUsed;
+        uint64_t stagingMemorySize;
+        uint64_t stagingMemoryUsed;
+    };
 
     class VulkanDevice
     {
@@ -26,9 +37,11 @@ namespace crisp
         void fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize dstOffset, VkDeviceSize size);
         VkBuffer createDeviceBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* srcData = nullptr);
         VkBuffer createStagingBuffer(VkDeviceSize size, VkBufferUsageFlags usages);
+        VkBuffer createStagingBuffer(VkBuffer srcBuffer, VkDeviceSize srcSize, VkDeviceSize newSize, VkBufferUsageFlags usage);
         void updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize size);
         void updateDeviceBuffer(VkBuffer dstBuffer, VkBuffer stagingBuffer, const void* srcData, VkDeviceSize stagingOffset, VkDeviceSize dstOffset, VkDeviceSize size);
         void updateStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize offset, VkDeviceSize size);
+        VkBuffer resizeStagingBuffer(VkBuffer prevBuffer, VkDeviceSize prevSize, VkDeviceSize newSize, VkBufferUsageFlags usage);
         void fillStagingBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size);
         void flushMappedRanges();
 
@@ -41,25 +54,29 @@ namespace crisp
 
         VkImageView createImageView(VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t baseLayer, uint32_t numLayers) const;
 
+        VkSampler createSampler(VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode);
+
         VkSemaphore createSemaphore();
 
         void freeResources();
         void destroyDeviceImage(VkImage image);
+        void destroyDeviceBuffer(VkBuffer buffer);
+        void destroyStagingBuffer(VkBuffer buffer);
 
         void printMemoryStatus();
-        std::pair<uint64_t, uint64_t> getDeviceMemoryUsage();
+        DeviceMemoryMetrics getDeviceMemoryUsage();
 
     private:
-        static constexpr VkDeviceSize DeviceHeapSize = 256 << 20; // 256 MB
-        static constexpr VkDeviceSize StagingHeapSize = 32 << 20; //  32 MB
+        static constexpr VkDeviceSize DeviceHeapSize  = 256 << 20; // 256 MB
+        static constexpr VkDeviceSize StagingHeapSize = 128 << 20; // 128 MB
 
-        std::pair<VkBuffer, MemoryChunk> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props);
+        std::pair<VkBuffer, MemoryChunk> createBuffer(MemoryHeap* heap, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props);
         void copyBuffer(VkBuffer dstBuffer, VkBuffer srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
 
         void copyImage(VkImage dstImage, VkImage srcImage, VkExtent3D extent, uint32_t dstLayer);
         void copyBufferToImage(VkImage dstImage, VkBuffer srcBuffer, VkExtent3D extent, uint32_t dstLayer);
 
-        std::pair<VkImage, MemoryChunk> createImage(VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps);
+        std::pair<VkImage, MemoryChunk> createImage(MemoryHeap* heap, VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps);
 
         VkCommandBuffer beginSingleTimeCommands();
         void endSingleTimeCommands(VkCommandBuffer commandBuffer);
@@ -72,7 +89,9 @@ namespace crisp
 
         VkCommandPool m_commandPool;
 
-        std::map<uint32_t, MemoryHeap> m_memoryHeaps;
+        std::unique_ptr<MemoryHeap> m_deviceBufferHeap;
+        std::unique_ptr<MemoryHeap> m_deviceImageHeap;
+        std::unique_ptr<MemoryHeap> m_stagingBufferHeap;
         void* m_mappedStagingPtr;
 
         std::map<VkBuffer, MemoryChunk> m_deviceBuffers;

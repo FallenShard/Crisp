@@ -35,9 +35,24 @@ namespace crisp
 
         void Panel::draw(RenderSystem& visitor)
         {
-            visitor.draw(*this);
+            visitor.drawQuad(m_transformId, m_color, m_M[3][2]);
 
             ControlGroup::draw(visitor);
+        }
+        
+        void Panel::setClickCallback(std::function<void()> callback)
+        {
+            m_clickCallback = callback;
+        }
+
+        void Panel::onMouseReleased(float x, float y)
+        {
+            if (m_clickCallback != nullptr && getAbsoluteBounds().contains(x, y))
+            {
+                m_clickCallback();
+            }
+
+            ControlGroup::onMouseReleased(x, y);
         }
     }
 }

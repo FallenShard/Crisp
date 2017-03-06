@@ -12,100 +12,93 @@
 
 #include "IO/FileUtils.hpp"
 #include "IO/Image.hpp"
+#include "IO/OpenEXRWriter.hpp"
 
 #include "GUI/RenderSystem.hpp"
-#include "GUI/TopLevelGroup.hpp"
+#include "GUI/Form.hpp"
 #include "GUI/Button.hpp"
 
 namespace crisp
 {
-    namespace
-    {
-        Application* app; // as static pointer for global mouse position retrieval
-    }
-
     Application::Application()
         : m_window(nullptr, glfwDestroyWindow)
         , m_tracerProgress(0.0f)
         , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(500.0))
+        , m_numRayTracedChannels(4)
     {
         std::cout << "Initializing application...\n";
 
         createWindow();
-        initVulkan();
+        createRenderer();
 
         m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
-
-        m_guiTopLevelGroup = std::make_unique<gui::TopLevelGroup>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-
         m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
 
-        m_frameTimeLogger->onLoggerUpdated.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::setFpsString>(m_guiTopLevelGroup.get());
-        
-        m_inputDispatcher->mouseMoved.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseMoved>(m_guiTopLevelGroup.get());
-        m_inputDispatcher->mouseButtonPressed.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMousePressed>(m_guiTopLevelGroup.get());
-        m_inputDispatcher->mouseButtonReleased.subscribe<gui::TopLevelGroup, &gui::TopLevelGroup::onMouseReleased>(m_guiTopLevelGroup.get());
+        m_backgroundPicture = std::make_unique<StaticPicture>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, *m_renderer);
 
-        m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
+        // Create and connect GUI with the mouse
+        m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
+        m_inputDispatcher->mouseMoved.subscribe<gui::Form, &gui::Form::onMouseMoved>(m_guiForm.get());
+        m_inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
+        m_inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
+        m_frameTimeLogger->onLoggerUpdated.subscribe<gui::Form, &gui::Form::setFpsString>(m_guiForm.get());
 
+        // Create ray tracer and add a handler for image block updates
         m_rayTracer = std::make_unique<vesper::RayTracer>();
         m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
-        m_rayTracer->setProgressUpdater([this](float value, float renderTime, vesper::ImageBlockEventArgs eventArgs)
+        m_rayTracer->setProgressUpdater([this](vesper::RayTracerUpdate update)
         {
-            m_tracerProgress = value;
-            m_timeSpentRendering = renderTime;
-            m_rayTracerUpdateQueue.push(eventArgs);
+            m_tracerProgress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
+            m_timeSpentRendering = update.totalTimeSpentRendering;
+            m_rayTracerUpdateQueue.emplace(update);
         });
+        
 
-        m_guiTopLevelGroup->getControlById<gui::Button>("openProjectButton")->setClickCallback([this]()
+        //m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
+
+        
+        
+        
+        m_guiForm->getControlById<gui::Button>("openButton")->setClickCallback([this]()
         {
             auto openedFile = FileUtils::openFileDialog();
             if (openedFile == "")
                 return;
 
+            m_projectName = openedFile.substr(0, openedFile.length() - 4);
             m_rayTracer->initializeScene("Resources/VesperScenes/" + openedFile);
 
             auto imageSize = m_rayTracer->getImageSize();
             m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
-            
-            glfwSetWindowSize(m_window.get(), imageSize.x, imageSize.y);
+            m_rayTracedImageData.resize(m_numRayTracedChannels * imageSize.x * imageSize.y);
         });
 
-        m_guiTopLevelGroup->getControlById<gui::Button>("startRaytracingButton")->setClickCallback([this]()
+        m_guiForm->getControlById<gui::Button>("renderButton")->setClickCallback([this]()
         {
             m_rayTracer->start();
-            m_rayTracingStarted = true;
         });
 
-        m_guiTopLevelGroup->getControlById<gui::Button>("stopRaytracingButton")->setClickCallback([this]()
+        m_guiForm->getControlById<gui::Button>("stopButton")->setClickCallback([this]()
         {
             m_rayTracer->stop();
-            m_rayTracingStarted = false;
+        });
+
+        m_guiForm->getControlById<gui::Button>("saveButton")->setClickCallback([this]()
+        {
+            OpenEXRWriter writer;
+            auto imageSize = m_rayTracer->getImageSize();
+            std::cout << "Writing EXR image..." << std::endl;
+            writer.write(m_projectName + ".exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
         });
     }
 
     Application::~Application()
     {
-        m_rayTracer.reset();
-        m_rayTracedImage.reset();
-        m_guiTopLevelGroup.reset();
-        m_scene.reset();
-        m_renderer.reset();
-        m_window.reset();
-        glfwTerminate();
-    }
-
-    void Application::initDependencies()
-    {
-        if (glfwInit() == GLFW_FALSE)
-        {
-            std::cerr << "Could not initialize GLFW library!" << std::endl;
-        }
     }
 
     void Application::run()
     {
-        std::cout << "Hello world!\n";
+        std::cout << "Hello world from Crisp! The application is up and running!\n";
 
         m_frameTimeLogger->restart();
         Timer<std::milli> updateTimer;
@@ -119,21 +112,27 @@ namespace crisp
             {
                 glfwPollEvents();
 
-                m_scene->update(static_cast<float>(TimePerFrame));
-                m_guiTopLevelGroup->update(TimePerFrame);
+                m_guiForm->update(TimePerFrame);
+
+                //m_scene->update(static_cast<float>(TimePerFrame));
                 
                 processRayTracerUpdates();
-                m_guiTopLevelGroup->setTracerProgress(m_tracerProgress, m_timeSpentRendering);
+                m_guiForm->setTracerProgress(m_tracerProgress, m_timeSpentRendering);
             
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
-            if (m_scene)
-                m_scene->render();
+            m_backgroundPicture->draw();
 
+            //if (m_scene)
+            //    m_scene->render();
+            //
             if (m_rayTracedImage)
                 m_rayTracedImage->draw();
-            m_guiTopLevelGroup->draw();
+            m_guiForm->draw();
+            
+            //
+            
 
             m_renderer->drawFrame();
 
@@ -148,57 +147,87 @@ namespace crisp
         std::cout << "New window dims: (" << width << ", " << height << ")\n";
 
         m_renderer->resize(width, height);
+        m_backgroundPicture->resize(width, height);
 
-        m_scene->resize(width, height);
-
+        m_guiForm->resize(width, height);
+        //
+        //m_scene->resize(width, height);
+        //
         if (m_rayTracedImage)
-            m_rayTracedImage->resize();
-
-        m_guiTopLevelGroup->resize(width, height);
+            m_rayTracedImage->resize(width, height);
     }
 
-    gui::TopLevelGroup* Application::getTopLevelGroup() const
+    gui::Form* Application::getForm() const
     {
-        return m_guiTopLevelGroup.get();
+        return m_guiForm.get();
     }
 
     void Application::createWindow()
     {
+        // This hint is needed for Vulkan-based renderers
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         m_window.reset(glfwCreateWindow(DefaultWindowWidth, DefaultWindowHeight, Title, nullptr, nullptr));
-
-        app = this;
     }
 
-    void Application::initVulkan()
+    void Application::createRenderer()
     {
+        // Extensions required by the windowing library (GLFW)
         std::vector<const char*> extensions;
         unsigned int glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         for (unsigned int i = 0; i < glfwExtensionCount; i++)
             extensions.push_back(glfwExtensions[i]);
-        
-        m_renderer = std::make_unique<VulkanRenderer>([this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) -> VkResult
+
+        // Window creation surface callback from the windowing library
+        auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) -> VkResult
         {
             return glfwCreateWindowSurface(instance, this->m_window.get(), allocCallbacks, surface);
-        }, std::forward<std::vector<const char*>>(extensions));
+        };
+        
+        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, std::forward<std::vector<const char*>>(extensions));
     }
 
-    glm::vec2 Application::getMousePosition()
-    {
-        double x, y;
-        glfwGetCursorPos(app->m_window.get(), &x, &y);
-        return glm::vec2(static_cast<float>(x), static_cast<float>(y));
-    }
+    //glm::vec2 Application::getMousePosition()
+    //{
+    //    double x, y;
+    //    glfwGetCursorPos(app->m_window.get(), &x, &y);
+    //    return glm::vec2(static_cast<float>(x), static_cast<float>(y));
+    //}
 
     void Application::processRayTracerUpdates()
     {
         while (!m_rayTracerUpdateQueue.empty())
         {
-            vesper::ImageBlockEventArgs update;
+            vesper::RayTracerUpdate update;
             if (m_rayTracerUpdateQueue.try_pop(update))
-                m_rayTracedImage->updateTexture(update);
+            {
+                m_rayTracedImage->postTextureUpdate(update);
+
+                auto imageSize = m_rayTracer->getImageSize();
+                for (int y = 0; y < update.height; y++)
+                {
+                    for (int x = 0; x < update.width; x++)
+                    {
+                        size_t rowIdx = update.y + y;
+                        size_t colIdx = update.x + x;
+
+                        for (int c = 0; c < 4; c++)
+                        {
+                            m_rayTracedImageData[(rowIdx * imageSize.x + colIdx) * 4 + c] = update.data[(y * update.width + x) * 4 + c];
+                        }
+                    }
+                }
+
+                if (update.pixelsRendered == update.numPixels)
+                {
+                    //OpenEXRWriter writer;
+                    //auto imageSize = m_rayTracer->getImageSize();
+                    //std::cout << "Writing EXR image..." << std::endl;
+                    //writer.write("testimage.exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
+                }
+            }
+                
         }
     }
 }

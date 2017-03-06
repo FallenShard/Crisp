@@ -26,6 +26,8 @@ namespace crisp
         uint32_t width;
         uint32_t height;
         GlyphArray glyphs;
+        std::string name;
+        uint32_t pixelSize;
     };
 
     class FontLoader
@@ -37,7 +39,7 @@ namespace crisp
         FontLoader();
         ~FontLoader();
 
-        std::pair<std::string, std::unique_ptr<Font>> load(const std::string& fontName, int fontPixelSize);
+        std::unique_ptr<Font> load(const std::string& fontName, int fontPixelSize);
         std::string getFontKey(const std::string& fontName, int fontPixelSize) const;
             
     private:

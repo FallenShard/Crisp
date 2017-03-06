@@ -12,15 +12,13 @@ namespace crisp
             : m_state(State::Idle)
             , m_label(std::make_unique<Label>(renderSystem, "Button"))
         {
-            m_position = glm::vec2(50.0f, 50.0f);
-            m_size = glm::vec2(200.0f, 50.0f);
-            m_M = glm::translate(glm::vec3(m_position, m_depth)) * glm::scale(glm::vec3(m_size, 1.0f));
-
-            m_label->setParent(this);
-            m_label->setPosition((m_size - m_label->getTextExtent()) / 2.0f);
-
             m_renderSystem = renderSystem;
+
             m_transformId = m_renderSystem->registerTransformResource();
+            m_M           = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_size, 1.0f));
+            
+            m_label->setParent(this);
+            m_label->setAnchor(Anchor::Center);
         }
 
         Button::~Button()
@@ -61,7 +59,7 @@ namespace crisp
 
         void Button::onMouseReleased(float x, float y)
         {
-            if (getAbsoluteBounds().contains(x, y))
+            if (getAbsoluteBounds().contains(x, y) && m_state == State::Pressed)
             {
                 if (m_clickCallback != nullptr)
                     m_clickCallback();
@@ -76,33 +74,25 @@ namespace crisp
 
         void Button::validate()
         {
-            m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(m_size, 1.0f));
-            m_renderSystem->updateTransformResource(m_transformId, m_M);
+            if (m_id == "openButton")
+            {
+                int x = 3;
+            }
+            auto absPos = getAbsolutePosition();
+            auto absDepth = getAbsoluteDepth();
+            auto absSize = getSize();
 
-            auto textExtent = m_label->getTextExtent();
-            m_label->setPosition((m_size - glm::vec2(textExtent.x, -textExtent.y)) / 2.0f);
-            m_label->applyParentProperties();
+            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
+            m_renderSystem->updateTransformResource(m_transformId, m_M);
+            
             m_label->validate();
             m_label->setValidationStatus(true);
-
-            if (m_state == State::Pressed)
-                return;
-
-            auto mouse = Application::getMousePosition();
-            m_state = getAbsoluteBounds().contains(mouse.x, mouse.y) ? State::Hover : State::Idle;
         }
 
         void Button::draw(RenderSystem& visitor)
         {
-            visitor.draw(*this);
-
-            if (m_state == State::Idle)
-                m_label->setColor(Green);
-            else if (m_state == State::Hover)
-                m_label->setColor(LightGreen);
-            else
-                m_label->setColor(DarkGreen);
-            visitor.draw(*m_label);
+            visitor.drawQuad(m_transformId, getColor(), m_M[3][2]);
+            m_label->draw(visitor);
         }
 
         ColorPalette Button::getColor() const

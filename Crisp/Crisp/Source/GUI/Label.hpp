@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Control.hpp"
+#include "IO/FontLoader.hpp"
 
 namespace crisp
 {
@@ -11,10 +12,11 @@ namespace crisp
         class Label : public Control
         {
         public:
-            Label(RenderSystem* renderSystem, const std::string& text = "TestLabel");
+            Label(RenderSystem* renderSystem, const std::string& text = "Example Text");
             ~Label();
 
-            virtual glm::vec2 getSize() const override;
+            virtual float getWidth() const override;
+            virtual float getHeight() const override;
 
             void setText(const std::string& text);
             glm::vec2 getTextExtent() const;
@@ -29,12 +31,13 @@ namespace crisp
             unsigned int getTextResourceId() const;
 
         private:
+            unsigned int m_fontId;
             std::string m_text;
             glm::vec2 m_textExtent;
-            unsigned int m_textResourceId;
-            bool m_textChanged;
-            
+
             ColorPalette m_color;
+
+            unsigned int m_textResourceId;
         };
     }
 }

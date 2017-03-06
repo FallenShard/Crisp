@@ -57,9 +57,6 @@
     <ClCompile Include="Source\GUI\Panel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\GUI\TopLevelGroup.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Vulkan\MemoryHeap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -129,6 +126,21 @@
     <ClCompile Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\IO\OpenEXRWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ApplicationEnvironment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\StaticPicture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI\Form.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\DeviceBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.hpp">
@@ -186,9 +198,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\Panel.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\GUI\TopLevelGroup.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp">
@@ -266,6 +275,24 @@
     <ClInclude Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\IO\OpenEXRWriter.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ApplicationEnvironment.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\StaticPicture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\Form.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\DeviceBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\Enums.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Shaders\fullscreen-quad-frag.glsl" />
@@ -289,5 +316,7 @@
     <Xml Include="Resources\VesperScenes\cbox.xml" />
     <Xml Include="Resources\VesperScenes\cbox_mesh.xml" />
     <Xml Include="Resources\VesperScenes\sphere_light_test.xml" />
+    <Xml Include="Resources\VesperScenes\point_ems.xml" />
+    <Xml Include="Resources\VesperScenes\ajax-av.xml" />
   </ItemGroup>
 </Project>

@@ -7,8 +7,9 @@
 #include <vulkan/vulkan.h>
 
 #include "Math/Headers.hpp"
+#include "IO/FontLoader.hpp"
 
-#include "vulkan/DrawItem.hpp"
+#include "Vulkan/VulkanRenderer.hpp"
 
 namespace crisp
 {
@@ -17,6 +18,7 @@ namespace crisp
     class GuiColorQuadPipeline;
     class GuiTextPipeline;
     class GuiTexQuadPipeline;
+    class FullScreenQuadPipeline;
 
     class GuiRenderPass;
 
@@ -39,6 +41,7 @@ namespace crisp
             LightGray,
             White,
             MediumGray,
+            Blue,
 
             Gray20,
             Gray30,
@@ -50,6 +53,8 @@ namespace crisp
         class RenderSystem
         {
         public:
+            static constexpr uint32_t GuiRenderPassId = 64;
+
             RenderSystem(VulkanRenderer* renderer);
             ~RenderSystem();
 
@@ -63,81 +68,55 @@ namespace crisp
             void updateTexCoordResource(unsigned int resourceId, const glm::vec2& min, const glm::vec2& max);
             void unregisterTexCoordResource(unsigned int resourceId);
 
-            unsigned int registerTextResource();
-            glm::vec2 updateTextResource(unsigned int textResId, const std::string& text);
+            unsigned int registerTextResource(std::string text, unsigned int fontId);
+            glm::vec2 updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId);
             void unregisterTextResource(unsigned int textResId);
-            glm::vec2 queryTextExtent(std::string text);
+            glm::vec2 queryTextExtent(std::string text, unsigned int fontId);
 
-            void draw(const Panel& panel);
-            void draw(const Button& button);
             void draw(const CheckBox& checkBox);
-            void draw(const Label& label);
+
+            void drawQuad(unsigned int transformId, ColorPalette color, float depth) const;
+            void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, ColorPalette color, float depth);
 
             void submitDrawRequests();
 
             void resize(int width, int height);
 
-            void buildResourceBuffers();
 
-            std::pair<uint64_t, uint64_t> getDeviceMemoryUsage();
+            DeviceMemoryMetrics getDeviceMemoryUsage();
+            glm::vec2 getScreenSize() const;
+
+            uint32_t getFont(std::string name, uint32_t pixelSize);
 
         private:
-            void loadFonts();
-            void loadTextures();
             void createPipelines();
             void initColorPaletteBuffer();
+            void initColorDescriptorSet();
             void initGeometryBuffers();
-            void updateDescriptorSets();
+            void initTransformsResources();
+            void initGuiRenderTargetResources();
+
+            void loadTextures();
+
+            void updateTransformUniformBuffer(uint32_t frameId);
 
             VulkanRenderer* m_renderer;
+            VulkanDevice*   m_device;
+
+            static constexpr float DepthLayers = 32.0f;
             glm::mat4 m_P;
 
             std::unique_ptr<GuiRenderPass> m_guiPass;
-
-            VkImage   m_checkBoxImage;
-            VkImageView m_checkBoxImageView;
-            VkSampler m_checkBoxSampler;
-
-            // Font resources
-            struct FontTexture
-            {
-                std::unique_ptr<Font> font;
-                VkImage image;
-                VkImageView imageView;
-            };
-            std::unordered_map<std::string, std::unique_ptr<FontTexture>> m_fonts;
-            FontTexture* m_labelFont;
-            VkSampler m_fontSampler;
-
-            // Pipelines
-            std::unique_ptr<GuiColorQuadPipeline> m_colorQuadPipeline;
-            std::unique_ptr<GuiTextPipeline> m_textPipeline;
-            std::unique_ptr<GuiTexQuadPipeline> m_texQuadPipeline;
-
-            VkDescriptorSet m_transformSet;
-            std::vector<VkDescriptorSet> m_colorQuadDescSets;
-            std::vector<VkDescriptorSet> m_textDescSets;
-            std::vector<VkDescriptorSet> m_texQuadDescSets;
+            std::unique_ptr<GuiColorQuadPipeline>   m_colorQuadPipeline;
+            std::unique_ptr<GuiTextPipeline>        m_textPipeline;
+            std::unique_ptr<GuiTexQuadPipeline>     m_texQuadPipeline;
+            std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
 
             // Colors
-            VkBuffer m_colorPaletteBuffer;
+            VkBuffer        m_colorPaletteBuffer;
+            VkDescriptorSet m_colorDescriptorSet;
 
-            // MVP Resources
-            VkBuffer m_transBuffer;
-            VkBuffer m_transStagingBuffer;
-            VkDeviceSize m_transBufferSize;
-            uint32_t m_updatedTransBufferIndex;
-
-            static constexpr unsigned int UniformBufferGranularity = 256;
-            static constexpr unsigned int MatrixSize = sizeof(glm::mat4);
-            static constexpr unsigned int MatricesPerUniformBuffer = UniformBufferGranularity / MatrixSize;
-            struct GuiTransform
-            {
-                glm::mat4 MVP[MatricesPerUniformBuffer];
-            };
-            std::vector<GuiTransform> m_mvpTransforms;
-            std::set<unsigned int> m_freeTransformIds;
-
+            // Geometry
             struct GeometryData
             {
                 VkBuffer vertexBuffer;
@@ -150,9 +129,54 @@ namespace crisp
             // [0..1] quad geometry
             GeometryData m_quadGeometry;
 
-            // Text Resources
-            struct TextVertexResource
+            // MVP Transforms resources
+            static constexpr unsigned int TransformsResourceIncrement = 4;
+            static constexpr unsigned int UniformBufferGranularity = 256;
+            static constexpr unsigned int MatrixSize = sizeof(glm::mat4);
+            static constexpr unsigned int MatricesPerGranularity = UniformBufferGranularity / MatrixSize;
+            struct TransformsFrameResource
             {
+                VkBuffer        uniformBuffer;
+                VkDeviceSize    bufferSize;
+                VkDescriptorSet descSet;
+                bool            isUpdated;
+
+                void createBufferAndUpdateSet(VulkanDevice* device, VkDeviceSize size);
+            };
+            TransformsFrameResource m_transformsResources[VulkanRenderer::NumVirtualFrames];
+            VkBuffer                m_transformsStagingBuffer;
+            VkDeviceSize            m_transformsStagingBufferSize;
+            std::set<unsigned int>  m_transformsResourceIdPool;
+            unsigned int            m_numRegisteredTransformResources;
+
+            // Sampler
+            VkSampler m_linearClampSampler;
+            VkSampler m_nnClampSampler;
+            
+            // Gui render target
+            VkDescriptorSet m_fsQuadDescSet;
+            VkImageView     m_guiImageView;
+
+            //VkImage   m_checkBoxImage;
+            //VkImageView m_checkBoxImageView;
+
+            // Font resources
+            struct FontTexture
+            {
+                std::unique_ptr<Font> font;
+                VkImage               image;
+                VkImageView           imageView;
+                VkDescriptorSet       descSet;
+            };
+            std::vector<std::unique_ptr<FontTexture>> m_fonts;
+            FontLoader m_fontLoader;
+            
+            std::vector<VkDescriptorSet> m_texQuadDescSets;
+
+            // Text Resources
+            struct TextGeometryResource
+            {
+                static constexpr uint32_t NumInitialAllocatedCharacters = 32;
                 GeometryData geomData;
                 VkBuffer stagingVertexBuffer;
                 VkBuffer stagingIndexBuffer;
@@ -163,17 +187,19 @@ namespace crisp
                 uint32_t faceCount;
 
                 unsigned char updatedBufferIndex;
-                bool needsUpdateToDevice;
+                bool isUpdatedOnDevice;
 
-                std::string text;
                 glm::vec2 extent;
 
-                void updateStagingBuffer(Font* font, VulkanRenderer* renderer);
-            };
-            std::vector<std::unique_ptr<TextVertexResource>> m_textResources;
-            std::set<unsigned int> m_freeTextResourceIds;
+                std::vector<VkDescriptorSet> descSets;
 
-            struct TexCoordResource
+                void updateStagingBuffer(std::string text, Font* font, VulkanRenderer* renderer);
+            };
+            static constexpr uint32_t TextResourceIncrement = 10;
+            std::vector<std::unique_ptr<TextGeometryResource>> m_textResources;
+            std::set<unsigned int> m_textResourceIdPool;
+
+            /*struct TexCoordResource
             {
                 GeometryData geom;
                 VkBuffer stagingVertexBuffer;
@@ -185,31 +211,31 @@ namespace crisp
             };
 
             std::vector<std::unique_ptr<TexCoordResource>> m_texCoordResources;
-            std::set<unsigned int> m_freeTexCoordResourceIds;
+            std::set<unsigned int> m_freeTexCoordResourceIds;*/
 
             struct GuiDrawCommand
             {
-                VulkanPipeline* pipeline;
-                VkDescriptorSet* descriptorSets;
+                const VulkanPipeline* pipeline;
+                const VkDescriptorSet* descriptorSets;
                 uint8_t firstSet;
                 uint8_t descSetCount;
                 
-                GeometryData* geom;
+                const GeometryData* geom;
                 
                 uint16_t transformId;
                 ColorPalette colorIndex;
                 float depth;
 
                 GuiDrawCommand() {}
-                GuiDrawCommand(VulkanPipeline* vp, VkDescriptorSet* dSets, uint8_t first, uint8_t setCount,
-                    GeometryData* gd, uint32_t tid, ColorPalette cidx, float d)
+                GuiDrawCommand(VulkanPipeline* vp, const VkDescriptorSet* dSets, uint8_t first, uint8_t setCount,
+                    const GeometryData* gd, uint32_t tid, ColorPalette cidx, float d)
                     : pipeline(vp), descriptorSets(dSets), firstSet(first), descSetCount(setCount)
                     , geom(gd), transformId(tid), colorIndex(cidx), depth(d) {}
             };
 
-            std::vector<GuiDrawCommand> m_drawCommands;
+            mutable std::vector<GuiDrawCommand> m_drawCommands;
 
-            VkImageView m_guiImageView;
+            
         };
     }
 }

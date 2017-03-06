@@ -5,7 +5,7 @@
 namespace crisp
 {
     GuiTextPipeline::GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
-        : VulkanPipeline(renderer, 2, renderPass)
+        : VulkanPipeline(renderer, DescSets::Count, renderPass)
     {
         // Descriptor Set Layout
         VkDescriptorSetLayoutBinding transformBinding = {};
@@ -23,7 +23,7 @@ namespace crisp
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(transBindings.size());
         layoutInfo.pBindings    = transBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[0]);
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Transform]);
 
         VkDescriptorSetLayoutBinding samplerBinding = {};
         samplerBinding.binding            = 0;
@@ -40,24 +40,34 @@ namespace crisp
         textureBinding.pImmutableSamplers = nullptr;
 
         VkDescriptorSetLayoutBinding colorBinding = {};
-        colorBinding.binding            = 2;
+        colorBinding.binding            = 0;
         colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         colorBinding.descriptorCount    = 1;
         colorBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         colorBinding.pImmutableSamplers = nullptr;
 
-        std::vector<VkDescriptorSetLayoutBinding> fragmentBindings =
+        std::vector<VkDescriptorSetLayoutBinding> secondSetBindings =
+        {
+            colorBinding
+        };
+        layoutInfo = {};
+        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(secondSetBindings.size());
+        layoutInfo.pBindings    = secondSetBindings.data();
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Color]);
+
+
+        std::vector<VkDescriptorSetLayoutBinding> fontBindings =
         {
             samplerBinding,
             textureBinding,
-            colorBinding
         };
 
         layoutInfo = {};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(fragmentBindings.size());
-        layoutInfo.pBindings    = fragmentBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[1]);
+        layoutInfo.bindingCount = static_cast<uint32_t>(fontBindings.size());
+        layoutInfo.pBindings    = fontBindings.data();
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::FontAtlas]);
 
         // Push constants
         std::vector<VkPushConstantRange> pushConstants(2, {});
@@ -70,41 +80,30 @@ namespace crisp
 
         // Pipeline layout
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
-        pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
-        pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
+        pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
-        // Descriptor Pool
-        std::array<VkDescriptorPoolSize, 4> poolSizes = {};
-        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        poolSizes[0].descriptorCount = 1;
-
-        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
-        poolSizes[1].descriptorCount = 1;
-
-        poolSizes[2].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        poolSizes[2].descriptorCount = 1;
-
-        poolSizes[3].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[3].descriptorCount = 1;
+        // Descriptor Pool, transforms and color come from GuiColorQuadPipeline
+        std::vector<VkDescriptorPoolSize> poolSizes =
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 1 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 }
+        };
+        //poolSizes[0].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
+        //poolSizes[0].descriptorCount = 1;
+        //poolSizes[1].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        //poolSizes[1].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSizes[0];
-        poolInfo.maxSets = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[0]);
-        
-        poolInfo = {};
-        poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 3;
-        poolInfo.pPoolSizes = &poolSizes[1];
-        poolInfo.maxSets = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[1]);
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes    = poolSizes.data();
+        poolInfo.maxSets       = 4;
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-text-vert");
         m_fragShader = renderer->getShaderModule("gui-text-frag");
@@ -180,11 +179,11 @@ namespace crisp
         VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachment.blendEnable         = VK_TRUE;
-        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
         colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
         colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
 
         auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();

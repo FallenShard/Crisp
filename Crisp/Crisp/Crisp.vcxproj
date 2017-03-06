@@ -136,16 +136,22 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
       <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R
 xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\Animation\Animation.cpp" />
     <ClCompile Include="Source\Animation\Animator.cpp" />
     <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\ApplicationEnvironment.cpp" />
     <ClCompile Include="Source\Camera\AbstractCamera.cpp" />
     <ClCompile Include="Source\Camera\CameraController.cpp" />
     <ClCompile Include="Source\Camera\FreeCamera.cpp" />
     <ClCompile Include="Source\Camera\TargetCamera.cpp" />
     <ClCompile Include="Source\Core\Scene.cpp" />
+    <ClCompile Include="Source\Core\StaticPicture.cpp" />
     <ClCompile Include="Source\Core\StringUtils.cpp" />
     <ClCompile Include="Source\IO\FileUtils.cpp" />
     <ClCompile Include="Source\IO\Image.cpp" />
@@ -154,13 +160,15 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\GUI\CheckBox.cpp" />
     <ClCompile Include="Source\GUI\Control.cpp" />
     <ClCompile Include="Source\GUI\ControlGroup.cpp" />
-    <ClCompile Include="Source\GUI\TopLevelGroup.cpp" />
+    <ClCompile Include="Source\GUI\Form.cpp" />
     <ClCompile Include="Source\Core\InputDispatcher.cpp" />
     <ClCompile Include="Source\GUI\Label.cpp" />
     <ClCompile Include="Source\GUI\Panel.cpp" />
     <ClCompile Include="Source\GUI\RenderSystem.cpp" />
+    <ClCompile Include="Source\IO\OpenEXRWriter.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Core\Picture.cpp" />
+    <ClCompile Include="Source\Vulkan\DeviceBuffer.cpp" />
     <ClCompile Include="Source\Vulkan\MemoryHeap.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.cpp" />
@@ -182,6 +190,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Animation\Animator.hpp" />
     <ClInclude Include="Source\Animation\PropertyAnimation.hpp" />
     <ClInclude Include="Source\Application.hpp" />
+    <ClInclude Include="Source\ApplicationEnvironment.hpp" />
     <ClInclude Include="Source\Camera\AbstractCamera.hpp" />
     <ClInclude Include="Source\Camera\CameraController.hpp" />
     <ClInclude Include="Source\Camera\TargetCamera.hpp" />
@@ -189,6 +198,8 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Core\Event.hpp" />
     <ClInclude Include="Source\Camera\FreeCamera.hpp" />
     <ClInclude Include="Source\Core\Scene.hpp" />
+    <ClInclude Include="Source\Core\StaticPicture.hpp" />
+    <ClInclude Include="Source\GUI\Enums.hpp" />
     <ClInclude Include="Source\IO\FileUtils.hpp" />
     <ClInclude Include="Source\IO\Image.hpp" />
     <ClInclude Include="Source\Core\MouseButtonEventArgs.hpp" />
@@ -198,15 +209,17 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\GUI\CheckBox.hpp" />
     <ClInclude Include="Source\GUI\Control.hpp" />
     <ClInclude Include="Source\GUI\ControlGroup.hpp" />
-    <ClInclude Include="Source\GUI\TopLevelGroup.hpp" />
+    <ClInclude Include="Source\GUI\Form.hpp" />
     <ClInclude Include="Source\Core\InputDispatcher.hpp" />
     <ClInclude Include="Source\GUI\Label.hpp" />
     <ClInclude Include="Source\GUI\Panel.hpp" />
     <ClInclude Include="Source\GUI\RenderSystem.hpp" />
+    <ClInclude Include="Source\IO\OpenEXRWriter.hpp" />
     <ClInclude Include="Source\Math\Headers.hpp" />
     <ClInclude Include="Source\Math\Rect.hpp" />
     <ClInclude Include="Source\Core\Picture.hpp" />
     <ClInclude Include="Source\Core\Timer.hpp" />
+    <ClInclude Include="Source\Vulkan\DeviceBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\DrawItem.hpp" />
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp" />
@@ -248,8 +261,12 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Source\Core\StringUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="Resources\VesperScenes\cbox.xml" />
+    <Xml Include="Resources\VesperScenes\ajax-av.xml" />
+    <Xml Include="Resources\VesperScenes\cbox.xml">
+      <SubType>Designer</SubType>
+    </Xml>
     <Xml Include="Resources\VesperScenes\cbox_mesh.xml" />
+    <Xml Include="Resources\VesperScenes\point_ems.xml" />
     <Xml Include="Resources\VesperScenes\sphere_light_test.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

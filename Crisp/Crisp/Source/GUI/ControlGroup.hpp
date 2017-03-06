@@ -18,8 +18,8 @@ namespace crisp
             void addControl(std::shared_ptr<Control> control);
             void removeControl(const std::string& id);
 
-            virtual void useAbsoluteSizing(bool absoluteSizing);
-            virtual glm::vec2 getSize() const;
+            virtual float getWidth() const;
+            virtual float getHeight() const;
 
             virtual void onMouseMoved(float x, float y);
             virtual void onMouseEntered();
@@ -28,18 +28,16 @@ namespace crisp
             virtual void onMouseReleased(float x, float y);
 
             virtual void invalidate() override;
-            virtual bool needsValidation() override;
+            virtual bool isInvalidated() override;
             virtual void validate() override;
 
-            virtual void draw(RenderSystem& visitor) override;
+            virtual void draw(RenderSystem& renderSystem) override;
 
             virtual Control* getControlById(const std::string& id);
 
         protected:
             glm::vec2 m_prevMousePos;
             std::vector<std::shared_ptr<Control>> m_children;
-
-            bool m_useAbsoluteSizing;
         };
     }
 }

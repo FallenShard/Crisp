@@ -23,5 +23,5 @@ void main()
 {
     vec3 texCoord = vec3(fsTexCoord, float(texIndex.value));
     vec4 texel = texture(sampler2DArray(texArray, s), texCoord);
-    finalColor = vec4(toSrgb(texel.r), toSrgb(texel.g), toSrgb(texel.b), 1.0f);
+    finalColor = vec4(toSrgb(texel.r), toSrgb(texel.g), toSrgb(texel.b), texel.a);
 }

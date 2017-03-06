@@ -7,6 +7,13 @@ namespace crisp
     class GuiColorQuadPipeline : public VulkanPipeline
     {
     public:
+        enum DescSets
+        {
+            Transform,
+            Color,
+
+            Count
+        };
         GuiColorQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
 
     protected:

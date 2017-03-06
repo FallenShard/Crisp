@@ -17,27 +17,29 @@ namespace crisp
         , m_depthImageViews(NumVirtualFrames, VK_NULL_HANDLE)
         , m_framesRendered(0)
         , m_currentFrameIndex(0)
-        , m_displayedImageView(VK_NULL_HANDLE)
-        , m_displayedImageLayerCount(0)
+        //, m_displayedImageView(VK_NULL_HANDLE)
+        //, m_displayedImageLayerCount(0)
     {
-        m_context = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<const char*>>(extensions));
-        m_device = std::make_unique<VulkanDevice>(m_context.get());
-        m_swapChain = std::make_unique<VulkanSwapChain>(*m_context, *m_device);
+        // Create fundamental objects for the API
+        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<const char*>>(extensions));
+        m_device            = std::make_unique<VulkanDevice>(m_context.get());
+        m_swapChain         = std::make_unique<VulkanSwapChain>(*m_context, *m_device);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
-        VkFormat depthFormat = m_context->findSupportedDepthFormat();
-        m_depthImageArray = m_device->createDeviceImageArray(m_swapChain->getExtent().width, m_swapChain->getExtent().height, NumVirtualFrames, depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        // Depth images and views creation
+        m_depthFormat = m_context->findSupportedDepthFormat();
+        m_depthImageArray = m_device->createDeviceImageArray(m_swapChain->getExtent().width, m_swapChain->getExtent().height, NumVirtualFrames, m_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
         m_device->transitionImageLayout(m_depthImageArray, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, NumVirtualFrames);
         for (unsigned int i = 0; i < NumVirtualFrames; i++)
-            m_depthImageViews[i] = m_device->createImageView(m_depthImageArray, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
-        
+            m_depthImageViews[i] = m_device->createImageView(m_depthImageArray, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
 
+        // Create frame resources, such as command buffer, fence and semaphores
         for (auto& frameRes : m_frameResources)
         {
             VkCommandBufferAllocateInfo cmdBufallocInfo = {};
-            cmdBufallocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            cmdBufallocInfo.commandPool = m_device->getCommandPool();
-            cmdBufallocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            cmdBufallocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            cmdBufallocInfo.commandPool        = m_device->getCommandPool();
+            cmdBufallocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             cmdBufallocInfo.commandBufferCount = 1;
             vkAllocateCommandBuffers(m_device->getHandle(), &cmdBufallocInfo, &frameRes.cmdBuffer);
 
@@ -51,45 +53,15 @@ namespace crisp
             frameRes.renderFinishedSemaphore = m_device->createSemaphore();
         }
 
+        // Creates a map of all shaders
         std::string searchDir = "Resources/Shaders/Vulkan/";
-        auto files = FileUtils::enumerateFiles(searchDir, "spv");
-        for (auto& file : files)
-        {
-            auto shaderCode = FileUtils::readBinaryFile(searchDir + file);
+        loadShaders(searchDir);
 
-            VkShaderModuleCreateInfo createInfo = {};
-            createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            createInfo.codeSize = shaderCode.size();
-            createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
+        //m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(this, &getDefaultRenderPass());
+        //m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(0);
 
-            VkShaderModule shaderModule(VK_NULL_HANDLE);
-            vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
-
-            auto shaderKey = file.substr(0, file.length() - 4);
-            m_shaderModules.insert_or_assign(shaderKey, shaderModule);
-        }
-
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(this, &getDefaultRenderPass());
-        m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(0);
         // create sampler
-        VkSamplerCreateInfo samplerInfo = {};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.anisotropyEnable = VK_FALSE;
-        samplerInfo.maxAnisotropy = 1.0f;
-        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.compareEnable = VK_FALSE;
-        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerInfo.mipLodBias = 0.0f;
-        samplerInfo.minLod = 0.0f;
-        samplerInfo.maxLod = 0.0f;
-        vkCreateSampler(m_device->getHandle(), &samplerInfo, nullptr, &m_sampler);
+        //m_sampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         // create vertex buffer
         std::vector<glm::vec2> vertices =
@@ -111,22 +83,21 @@ namespace crisp
         m_fsQuadIndexBuffer = m_device->createDeviceBuffer(sizeof(glm::u16vec3) * faces.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
         m_device->fillDeviceBuffer(m_fsQuadIndexBuffer, faces.data(), sizeof(glm::u16vec3) * faces.size());
 
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.sampler = m_sampler;
-
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
-        descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet          = m_fsQuadDescSet;
-        descriptorWrites[0].dstBinding      = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pImageInfo      = &imageInfo;
-
-        vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        //VkDescriptorImageInfo imageInfo = {};
+        //imageInfo.sampler = m_sampler;
+        //
+        //std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+        //descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        //descriptorWrites[0].dstSet          = m_fsQuadDescSet;
+        //descriptorWrites[0].dstBinding      = 0;
+        //descriptorWrites[0].dstArrayElement = 0;
+        //descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
+        //descriptorWrites[0].descriptorCount = 1;
+        //descriptorWrites[0].pImageInfo      = &imageInfo;
+        //
+        //vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
         registerRenderPass(DefaultRenderPassId, m_defaultRenderPass.get());
-        
     }
 
     VulkanRenderer::~VulkanRenderer()
@@ -141,16 +112,19 @@ namespace crisp
         }
 
         for (auto& view : m_depthImageViews)
+        {
             vkDestroyImageView(m_device->getHandle(), view, nullptr);
+        }
 
         for (auto& shaderModule : m_shaderModules)
         {
             vkDestroyShaderModule(m_device->getHandle(), shaderModule.second, nullptr);
         }
 
-        vkDestroyImageView(m_device->getHandle(), m_displayedImageView, nullptr);
+        //if (m_displayedImageView != VK_NULL_HANDLE)
+        //    vkDestroyImageView(m_device->getHandle(), m_displayedImageView, nullptr);
 
-        vkDestroySampler(m_device->getHandle(), m_sampler, nullptr);
+        //vkDestroySampler(m_device->getHandle(), m_sampler, nullptr);
     }
 
     VulkanContext& VulkanRenderer::getContext()
@@ -166,6 +140,33 @@ namespace crisp
     VulkanSwapChain& VulkanRenderer::getSwapChain()
     {
         return *m_swapChain;
+    }
+
+    void VulkanRenderer::loadShaders(std::string dirPath)
+    {
+        auto files = FileUtils::enumerateFiles(dirPath, "spv");
+        for (auto& file : files)
+        {
+            auto shaderCode = FileUtils::readBinaryFile(dirPath + file);
+
+            VkShaderModuleCreateInfo createInfo = {};
+            createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            createInfo.codeSize = shaderCode.size();
+            createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+
+            VkShaderModule shaderModule(VK_NULL_HANDLE);
+            vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
+
+            auto shaderKey = file.substr(0, file.length() - 4);
+
+            auto existingItem = m_shaderModules.find(shaderKey);
+            if (existingItem != m_shaderModules.end())
+            {
+                vkDestroyShaderModule(m_device->getHandle(), existingItem->second, nullptr);
+            }
+
+            m_shaderModules.insert_or_assign(shaderKey, shaderModule);
+        }
     }
 
     VkCommandBuffer VulkanRenderer::acquireCommandBuffer()
@@ -210,13 +211,13 @@ namespace crisp
         };
 
         VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = m_defaultRenderPass->getHandle();
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = m_defaultRenderPass->getHandle();
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
-        framebufferInfo.pAttachments = attachmentViews.data();
-        framebufferInfo.width  = m_swapChain->getExtent().width;
-        framebufferInfo.height = m_swapChain->getExtent().height;
-        framebufferInfo.layers = 1;
+        framebufferInfo.pAttachments    = attachmentViews.data();
+        framebufferInfo.width           = m_swapChain->getExtent().width;
+        framebufferInfo.height          = m_swapChain->getExtent().height;
+        framebufferInfo.layers          = 1;
         vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_frameResources[m_currentFrameIndex].framebuffer);
 
         return m_frameResources[m_currentFrameIndex].framebuffer;
@@ -260,7 +261,7 @@ namespace crisp
         }
     }
 
-    void VulkanRenderer::addDrawAction(std::function<void(VkCommandBuffer&)> drawAction, uint8_t renderPassId)
+    void VulkanRenderer::addDrawAction(std::function<void(VkCommandBuffer&)> drawAction, uint32_t renderPassId)
     {
         m_renderPasses.at(renderPassId).second.emplace_back(drawAction);
     }
@@ -270,29 +271,23 @@ namespace crisp
         m_copyActions.emplace_back(copyAction);
     }
 
+    void VulkanRenderer::addImageTransition(std::function<void(VkCommandBuffer&)> imageTransition)
+    {
+        m_imageTransitions.emplace_back(imageTransition);
+    }
+
     void VulkanRenderer::record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer)
     {
-        addDrawAction([this](VkCommandBuffer& commandBuffer)
-        {
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getHandle());
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipelineLayout(),
-                0, 1, &m_fsQuadDescSet, 0, nullptr);
-
-            VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_fsQuadVertexBuffer, &offset);
-            vkCmdBindIndexBuffer(commandBuffer, m_fsQuadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-            unsigned int pushConst = m_currentFrameIndex;
-            vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-            vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
-        }, DefaultRenderPassId);
-
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         beginInfo.pInheritanceInfo = nullptr;
 
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        for (auto& transition : m_imageTransitions)
+            transition(commandBuffer);
+
         for (auto& action : m_copyActions)
             action(commandBuffer);
 
@@ -310,33 +305,29 @@ namespace crisp
         vkEndCommandBuffer(commandBuffer);
     }
 
-    void VulkanRenderer::displayImage(VkImageView imageView, int numLayers)
-    {
-        if (m_displayedImageView != VK_NULL_HANDLE)
-            vkDestroyImageView(m_device->getHandle(), m_displayedImageView, nullptr);
-
-        m_displayedImageLayerCount = numLayers;
-        m_displayedImageView = imageView;
-        
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = m_displayedImageView;
-        
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
-        descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet          = m_fsQuadDescSet;
-        descriptorWrites[0].dstBinding      = 1;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pImageInfo      = &imageInfo;
-        
-        vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    }
-
-    void VulkanRenderer::flushAllQueuedCopyRequests()
-    {
-    }
+    //void VulkanRenderer::displayImage(VkImageView imageView, int numLayers)
+    //{
+    //    if (m_displayedImageView != VK_NULL_HANDLE)
+    //        vkDestroyImageView(m_device->getHandle(), m_displayedImageView, nullptr);
+    //
+    //    m_displayedImageLayerCount = numLayers;
+    //    m_displayedImageView = imageView;
+    //    
+    //    VkDescriptorImageInfo imageInfo = {};
+    //    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    //    imageInfo.imageView = m_displayedImageView;
+    //    
+    //    std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+    //    descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    //    descriptorWrites[0].dstSet          = m_fsQuadDescSet;
+    //    descriptorWrites[0].dstBinding      = 1;
+    //    descriptorWrites[0].dstArrayElement = 0;
+    //    descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    //    descriptorWrites[0].descriptorCount = 1;
+    //    descriptorWrites[0].pImageInfo      = &imageInfo;
+    //    
+    //    vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    //}
 
     uint32_t VulkanRenderer::getCurrentFrameIndex() const
     {
@@ -348,7 +339,10 @@ namespace crisp
         auto cmdBuffer = acquireCommandBuffer();
         auto swapChainImgIndex = acquireNextImageIndex();
         if (swapChainImgIndex == -1)
+        {
+            std::cerr << "Failed to acquire swap chain image!" << std::endl;
             return;
+        }
 
         resetCommandBuffer(cmdBuffer);
 
@@ -361,6 +355,8 @@ namespace crisp
         for (auto& item : m_renderPasses)
             item.second.second.clear();
         m_currentFrameIndex = (m_currentFrameIndex + 1) % NumVirtualFrames;
+
+        destroyObjectsScheduledForRemoval();
     }
 
     void VulkanRenderer::recreateSwapChain()
@@ -392,18 +388,51 @@ namespace crisp
         vkDeviceWaitIdle(m_device->getHandle());
     }
 
+    void VulkanRenderer::scheduleStagingBufferForRemoval(VkBuffer buffer)
+    {
+        if (m_oldStagingBuffers.find(buffer) == m_oldStagingBuffers.end())
+        {
+            m_oldStagingBuffers.emplace(buffer, NumVirtualFrames);
+        }
+    }
+
+    void VulkanRenderer::destroyObjectsScheduledForRemoval()
+    {
+        if (!m_oldStagingBuffers.empty())
+        {
+            // Decrement remaining age of old staging buffers
+            for (auto& el : m_oldStagingBuffers)
+                el.second--;
+
+            // Remove those with 0 frames remaining
+            for (auto it = m_oldStagingBuffers.begin(), ite = m_oldStagingBuffers.end(); it != ite;)
+            {
+                if (it->second == 0) // time to die, no frames remaining
+                {
+                    auto& buffer = it->first;
+                    m_device->destroyStagingBuffer(buffer);
+                    it = m_oldStagingBuffers.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+    }
+
     void VulkanRenderer::resize(int width, int height)
     {
         recreateSwapChain();
-        m_fsQuadPipeline->resize(width, height);
+        //m_fsQuadPipeline->resize(width, height);
     }
 
-    void VulkanRenderer::registerRenderPass(uint8_t key, VulkanRenderPass* renderPass)
+    void VulkanRenderer::registerRenderPass(uint32_t key, VulkanRenderPass* renderPass)
     {
         m_renderPasses[key] = std::make_pair(renderPass, ActionVector());
     }
 
-    void VulkanRenderer::unregisterRenderPass(uint8_t key)
+    void VulkanRenderer::unregisterRenderPass(uint32_t key)
     {
         m_renderPasses.erase(key);
     }
@@ -421,5 +450,15 @@ namespace crisp
     VkExtent2D VulkanRenderer::getSwapChainExtent() const
     {
         return m_swapChain->getExtent();
+    }
+
+    VkBuffer VulkanRenderer::getFullScreenQuadVertexBuffer() const
+    {
+        return m_fsQuadVertexBuffer;
+    }
+
+    VkBuffer VulkanRenderer::getFullScreenQuadIndexBuffer() const
+    {
+        return m_fsQuadIndexBuffer;
     }
 }

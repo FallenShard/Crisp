@@ -93,18 +93,10 @@ namespace crisp
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSizes[0];
-        poolInfo.maxSets = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[0]);
-
-        poolInfo = {};
-        poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 3;
-        poolInfo.pPoolSizes = &poolSizes[1];
-        poolInfo.maxSets = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[1]);
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes    = poolSizes.data();
+        poolInfo.maxSets       = 4;
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-quad-tex-vert");
         m_fragShader = renderer->getShaderModule("gui-quad-tex-frag");

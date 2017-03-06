@@ -142,7 +142,6 @@
     <ClInclude Include="Vesper\Core\VariantMap.hpp" />
     <ClInclude Include="Vesper\Core\XmlSceneParser.hpp" />
     <ClInclude Include="Vesper\ImageBlock.hpp" />
-    <ClInclude Include="Vesper\ImageBlockEventArgs.hpp" />
     <ClInclude Include="Vesper\Integrators\AmbientOcclusion.hpp" />
     <ClInclude Include="Vesper\Integrators\DirectLighting.hpp" />
     <ClInclude Include="Vesper\Integrators\Integrator.hpp" />
@@ -164,6 +163,7 @@
     <ClInclude Include="Vesper\Math\Transform.hpp" />
     <ClInclude Include="Vesper\Math\Warp.hpp" />
     <ClInclude Include="Vesper\RayTracer.hpp" />
+    <ClInclude Include="Vesper\RayTracerUpdate.hpp" />
     <ClInclude Include="Vesper\ReconstructionFilters\GaussianFilter.hpp" />
     <ClInclude Include="Vesper\ReconstructionFilters\ReconstructionFilter.hpp" />
     <ClInclude Include="Vesper\Samplers\Independent.hpp" />

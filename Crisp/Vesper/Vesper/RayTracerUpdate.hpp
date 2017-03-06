@@ -6,8 +6,8 @@ namespace vesper
 {
     struct RayTracerUpdate
     {
-        int blocksRendered;
-        int numBlocks;
+        int pixelsRendered;
+        int numPixels;
         float totalTimeSpentRendering;
         int x;
         int y;

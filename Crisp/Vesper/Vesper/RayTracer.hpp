@@ -57,6 +57,7 @@ namespace vesper
         std::mutex m_imageMutex;
 
         float m_timeSpentRendering;
+        int m_pixelsRendered;
         int m_blocksRendered;
         int m_totalBlocks;
     };

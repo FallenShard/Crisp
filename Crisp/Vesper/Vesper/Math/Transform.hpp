@@ -97,7 +97,7 @@ namespace vesper
 
         static Transform createRotation(float angle, const glm::vec3& axis)
         {
-            return glm::rotate(angle, glm::normalize(axis));
+            return glm::rotate(glm::radians(angle), glm::normalize(axis));
         }
     };
 }

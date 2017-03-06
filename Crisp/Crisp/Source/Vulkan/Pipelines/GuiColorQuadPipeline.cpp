@@ -5,13 +5,13 @@
 namespace crisp
 {
     GuiColorQuadPipeline::GuiColorQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
-        : VulkanPipeline(renderer, 2, renderPass)
+        : VulkanPipeline(renderer, DescSets::Count, renderPass)
     {
         VkDescriptorSetLayoutBinding transformBinding = {};
-        transformBinding.binding = 0;
-        transformBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        transformBinding.descriptorCount = 1;
-        transformBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        transformBinding.binding            = 0;
+        transformBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        transformBinding.descriptorCount    = 1;
+        transformBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
         transformBinding.pImmutableSamplers = nullptr;
 
         std::vector<VkDescriptorSetLayoutBinding> firstSetBindings =
@@ -19,16 +19,16 @@ namespace crisp
             transformBinding
         };
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(firstSetBindings.size());
-        layoutInfo.pBindings = firstSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[0]);
+        layoutInfo.pBindings    = firstSetBindings.data();
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Transform]);
 
         VkDescriptorSetLayoutBinding colorBinding = {};
-        colorBinding.binding = 0;
-        colorBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        colorBinding.descriptorCount = 1;
-        colorBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        colorBinding.binding            = 0;
+        colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        colorBinding.descriptorCount    = 1;
+        colorBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         colorBinding.pImmutableSamplers = nullptr;
 
         std::vector<VkDescriptorSetLayoutBinding> secondSetBindings =
@@ -36,10 +36,10 @@ namespace crisp
             colorBinding
         };
         layoutInfo = {};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(secondSetBindings.size());
-        layoutInfo.pBindings = secondSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[1]);
+        layoutInfo.pBindings    = secondSetBindings.data();
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Color]);
 
         // Push constants
         std::vector<VkPushConstantRange> pushConstants(2, {});
@@ -52,34 +52,27 @@ namespace crisp
 
         // Pipeline layout
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
-        pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
-        pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
+        pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         // Descriptor Pool
         std::array<VkDescriptorPoolSize, 2> poolSizes = {};
-        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        poolSizes[0].descriptorCount = 1;
+        poolSizes[DescSets::Transform].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        poolSizes[DescSets::Transform].descriptorCount = 3;
 
-        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[1].descriptorCount = 1;
+        poolSizes[DescSets::Color].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[DescSets::Color].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSizes[0];
-        poolInfo.maxSets = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[0]);
-        
-        poolInfo = {};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSizes[1];
-        poolInfo.maxSets = 1;
-        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPools[1]);
+        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes    = poolSizes.data();
+        poolInfo.maxSets       = 4;
+        vkCreateDescriptorPool(m_renderer->getDevice().getHandle(), &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-quad-unif-col-vert");
         m_fragShader = renderer->getShaderModule("gui-quad-unif-col-frag");

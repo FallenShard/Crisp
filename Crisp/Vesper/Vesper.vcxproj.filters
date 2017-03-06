@@ -269,10 +269,10 @@
     <ClInclude Include="Vesper\ImageBlock.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vesper\ImageBlockEventArgs.hpp">
+    <ClInclude Include="Vesper\RayTracer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vesper\RayTracer.hpp">
+    <ClInclude Include="Vesper\RayTracerUpdate.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

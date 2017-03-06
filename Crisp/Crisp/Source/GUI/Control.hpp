@@ -8,6 +8,8 @@
 #include "Math/Rect.hpp"
 #include "RenderSystem.hpp"
 
+#include "GUI/Enums.hpp"
+
 namespace crisp
 {
     namespace gui
@@ -22,18 +24,31 @@ namespace crisp
             std::string getId() const;
 
             void setParent(Control* parent);
+            Control* getParent() const;
+
+            void setAnchor(Anchor anchor);
+            Anchor getAnchor() const;
+
+            void setWidthSizingBehavior(Sizing sizing, float widthPercent = 1.0f);
+            Sizing getWidthSizingBehavior() const;
+
+            void setHeightSizingBehavior(Sizing sizing, float heightPercent = 1.0f);
+            Sizing getHeightSizingBehavior() const;
 
             void setPosition(const glm::vec2& position);
             glm::vec2 getPosition() const;
 
             void setSize(const glm::vec2& size);
-            virtual glm::vec2 getSize() const;
+            glm::vec2 getSize() const;
+
+            virtual float getWidth() const;
+            virtual float getHeight() const;
 
             void setPadding(glm::vec2&& padding);
             glm::vec2 getPadding() const;
 
-            void setDepth(float depth);
-            float getDepth() const;
+            void setDepthOffset(float depthOffset);
+            float getDepthOffset() const;
 
             void setScale(float scale);
             float setScale() const;
@@ -47,46 +62,53 @@ namespace crisp
             virtual void onMousePressed(float x, float y);
             virtual void onMouseReleased(float x, float y);
 
-            virtual void invalidate();
-            virtual bool needsValidation();
-            virtual void validate() = 0;
             void setValidationStatus(bool validationStatus);
-            void applyParentProperties();
+            virtual void invalidate();
+            virtual bool isInvalidated();
+            virtual void validate();
 
             virtual void draw(RenderSystem& renderSystem) = 0;
 
             template <typename T>
-            T* getTypedControlById(std::string id)
-            {
-                return dynamic_cast<T*>(getControlById(id));
-            }
-
+            T* getTypedControlById(std::string id) { return dynamic_cast<T*>(getControlById(id)); }
             virtual Control* getControlById(const std::string& id);
-
-            unsigned int getDistanceToRoot() const;
 
             unsigned int getTransformId() const;
 
-        protected:
-            std::string m_id;
-            unsigned int m_transformId;
+            unsigned int getRootDistance() const;
+            void printDebugId() const;
 
+        protected:
+            glm::vec2 getParentAbsolutePosition() const;
+            float getParentAbsoluteDepth() const;
+            glm::vec2 getParentPadding() const;
+
+            glm::vec2 getAbsolutePosition() const;
+            float getAbsoluteDepth() const;
+
+            std::string m_id;
+            
             Control* m_parent;
 
-            glm::vec2 m_absolutePosition;
+            Anchor    m_anchor;
+            Sizing    m_widthSizingBehavior;
+            Sizing    m_heightSizingBehavior;
+            glm::vec2 m_parentSizePercent;
 
             glm::vec2 m_position;
             glm::vec2 m_size;
             glm::vec2 m_padding;
-            glm::mat4 m_M;
+            
+            glm::mat4 m_M; // Captures absolute position and scale etc.
 
             float m_scale;
             float m_opacity;
-            float m_depth;
+            float m_depthOffset;
 
+            
             bool m_isValidated;
-
             RenderSystem* m_renderSystem;
+            unsigned int m_transformId;
         };
     }
 }

@@ -80,7 +80,7 @@ namespace crisp
         colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-        //// Description for depth attachment
+        // Description for depth attachment
         VkAttachmentDescription depthAttachment = {};
         depthAttachment.format         = m_depthFormat;
         depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
@@ -133,7 +133,7 @@ namespace crisp
         m_renderer->getDevice().transitionImageLayout(m_renderTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VulkanRenderer::NumVirtualFrames);
 
         m_depthTarget = m_renderer->getDevice().createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
-            VulkanRenderer::NumVirtualFrames, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
+            VulkanRenderer::NumVirtualFrames, m_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
         m_renderer->getDevice().transitionImageLayout(m_depthTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VulkanRenderer::NumVirtualFrames);
 
         m_renderTargetViews.resize(VulkanRenderer::NumVirtualFrames);
@@ -142,7 +142,7 @@ namespace crisp
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {
             m_renderTargetViews[i] = m_renderer->getDevice().createImageView(m_renderTarget, VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
-            m_depthTargetViews[i] = m_renderer->getDevice().createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
+            m_depthTargetViews[i] = m_renderer->getDevice().createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
             std::vector<VkImageView> attachmentViews =
             {
                 m_renderTargetViews[i],

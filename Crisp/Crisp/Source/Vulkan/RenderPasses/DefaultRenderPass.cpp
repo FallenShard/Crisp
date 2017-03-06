@@ -103,6 +103,7 @@ namespace crisp
 
     void DefaultRenderPass::createResources()
     {
+        // Uses image resources given by swap chain
     }
 
     void DefaultRenderPass::freeResources()

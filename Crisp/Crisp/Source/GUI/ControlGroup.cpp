@@ -11,42 +11,7 @@ namespace crisp
     {
         ControlGroup::ControlGroup()
             : m_prevMousePos(-1.0, -1.0)
-            , m_useAbsoluteSizing(false)
         {
-        }
-
-        void ControlGroup::useAbsoluteSizing(bool absoluteSizing)
-        {
-            m_useAbsoluteSizing = absoluteSizing;
-        }
-
-        glm::vec2 ControlGroup::getSize() const
-        {
-            if (m_useAbsoluteSizing)
-            {
-                return m_size;
-            }
-            else
-            {
-                glm::vec2 childrenSize = glm::vec2(0.0f, 0.0f);
-
-                for (auto& child : m_children)
-                {
-                    if (child->needsValidation())
-                    {
-                        child->applyParentProperties();
-                        child->validate();
-                        child->setValidationStatus(true);
-                    }
-
-                    auto childPos = child->getPosition();
-                    auto childSize = child->getSize();
-                    childrenSize.x = std::max(childrenSize.x, childPos.x + childSize.x);
-                    childrenSize.y = std::max(childrenSize.y, childPos.y + childSize.y);
-                }
-
-                return childrenSize + 2.0f * m_padding; // pad on left/right and top/bottom
-            }
         }
 
         void ControlGroup::addControl(std::shared_ptr<Control> control)
@@ -63,6 +28,46 @@ namespace crisp
             {
                 return child->getId() == id;
             });
+        }
+
+        float ControlGroup::getWidth() const
+        {
+            if (m_widthSizingBehavior == Sizing::WrapContent)
+            {
+                float childrenWidth = 0.0f;
+                for (auto& child : m_children)
+                {
+                    auto childPosX = child->getPosition().x;
+                    auto childWidth = child->getWidth();
+                    childrenWidth = std::max(childrenWidth, childPosX + childWidth);
+                }
+
+                return childrenWidth + m_padding.x;
+            }
+            else
+            {
+                return Control::getWidth();
+            }
+        }
+
+        float ControlGroup::getHeight() const
+        {
+            if (m_heightSizingBehavior == Sizing::WrapContent)
+            {
+                float childrenHeight = 0.0f;
+                for (auto& child : m_children)
+                {
+                    auto childPosY = child->getPosition().y;
+                    auto childHeight = child->getHeight();
+                    childrenHeight = std::max(childrenHeight, childPosY + childHeight);
+                }
+
+                return childrenHeight + m_padding.y;
+            }
+            else
+            {
+                return Control::getHeight();
+            }
         }
 
         void ControlGroup::onMouseMoved(float x, float y)
@@ -118,7 +123,6 @@ namespace crisp
             }
         }
 
-
         void ControlGroup::invalidate()
         {
             m_isValidated = false;
@@ -127,14 +131,14 @@ namespace crisp
                 child->invalidate();
         }
 
-        bool ControlGroup::needsValidation()
+        bool ControlGroup::isInvalidated()
         {
             if (!m_isValidated)
                 return true;
 
             bool childrenValid = false;
             for (auto& child : m_children)
-                childrenValid |= child->needsValidation();
+                childrenValid |= child->isInvalidated();
 
             return childrenValid;
         }
@@ -142,18 +146,19 @@ namespace crisp
         void ControlGroup::validate()
         {
             auto size = getSize();
+            auto absPos = getAbsolutePosition();
+            auto absDepth = getAbsoluteDepth();
+
+            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(size, 1.0f));
 
             for (auto& child : m_children)
             {
-                if (child->needsValidation())
+                if (child->isInvalidated())
                 {
-                    child->applyParentProperties();
                     child->validate();
                     child->setValidationStatus(true);
                 }
             }
-
-            m_M = glm::translate(glm::vec3(m_absolutePosition, m_depth)) * glm::scale(glm::vec3(size, 1.0f));
         }
 
         void ControlGroup::draw(RenderSystem& visitor)

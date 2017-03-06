@@ -7,6 +7,15 @@ namespace crisp
     class GuiTextPipeline : public VulkanPipeline
     {
     public:
+        enum DescSets
+        {
+            Transform,
+            Color,
+            FontAtlas,
+
+            Count
+        };
+
         GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
 
     protected:

@@ -12,7 +12,7 @@
 #include "Camera/CameraController.hpp"
 #include "Core/InputDispatcher.hpp"
 
-#include "GUI/TopLevelGroup.hpp"
+#include "GUI/Form.hpp"
 #include "GUI/Label.hpp"
 
 #include "Core/StringUtils.hpp"
@@ -107,10 +107,10 @@ namespace crisp
         inputDispatcher->mouseMoved.subscribe<CameraController, &CameraController::onMouseMoved>(m_cameraController.get());
         inputDispatcher->mouseWheelScrolled.subscribe<CameraController, &CameraController::onMouseWheelScrolled>(m_cameraController.get());
 
-        auto label = app->getTopLevelGroup()->getControlById<gui::Label>("camPosValueLabel");
+        auto label = app->getForm()->getControlById<gui::Label>("camPosValueLabel");
         label->setText(StringUtils::toString(m_cameraController->getCamera().getPosition()));
 
-        auto orientLabel = app->getTopLevelGroup()->getControlById<gui::Label>("camOrientValueLabel");
+        auto orientLabel = app->getForm()->getControlById<gui::Label>("camOrientValueLabel");
 
         std::vector<glm::vec3> positions;
         for (float x = -1.0f; x <= 1.0f; x += 0.1f)
@@ -147,13 +147,13 @@ namespace crisp
         auto& V = m_cameraController->getCamera().getViewMatrix();
         auto& P = m_cameraController->getCamera().getProjectionMatrix();
 
-        auto label = m_app->getTopLevelGroup()->getControlById<gui::Label>("camPosValueLabel");
+        auto label = m_app->getForm()->getControlById<gui::Label>("camPosValueLabel");
         label->setText(StringUtils::toString(m_cameraController->getCamera().getPosition()));
 
-        auto orientLabel = m_app->getTopLevelGroup()->getControlById<gui::Label>("camOrientValueLabel");
+        auto orientLabel = m_app->getForm()->getControlById<gui::Label>("camOrientValueLabel");
         orientLabel->setText(StringUtils::toString(m_cameraController->getCamera().getLookDirection()));
 
-        auto upLabel = m_app->getTopLevelGroup()->getControlById<gui::Label>("camUpValueLabel");
+        auto upLabel = m_app->getForm()->getControlById<gui::Label>("camUpValueLabel");
         upLabel->setText(StringUtils::toString(m_cameraController->getCamera().getUpDirection()));
 
 

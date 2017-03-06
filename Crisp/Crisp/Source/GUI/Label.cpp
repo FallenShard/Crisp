@@ -11,18 +11,15 @@ namespace crisp
             : m_color(Green)
             , m_text(text)
             , m_textResourceId(-1)
-            , m_textChanged(true)
         {
-            m_M = glm::translate(glm::vec3(m_position, 0.0f));
+            m_renderSystem = renderSystem;
 
-            m_renderSystem = renderSystem; 
-            
             m_transformId = m_renderSystem->registerTransformResource();
-            m_textResourceId = m_renderSystem->registerTextResource();
-            m_textExtent = m_renderSystem->queryTextExtent(text);
+            m_M           = glm::translate(glm::vec3(m_position, m_depthOffset));
 
-            setText(text);
-            setPosition(glm::vec2(0, 20));
+            m_fontId         = m_renderSystem->getFont("SegoeUI.ttf", 14);
+            m_textResourceId = m_renderSystem->registerTextResource(m_text, m_fontId);
+            m_textExtent     = m_renderSystem->queryTextExtent(m_text, m_fontId);
         }
 
         Label::~Label()
@@ -31,17 +28,22 @@ namespace crisp
             m_renderSystem->unregisterTransformResource(m_transformId);
         }
 
-        glm::vec2 Label::getSize() const
+        float Label::getWidth() const
         {
-            return m_textExtent * m_scale;
+            return m_textExtent.x;
+        }
+
+        float Label::getHeight() const
+        {
+            return m_textExtent.y;
         }
 
         void Label::setText(const std::string& text)
         {
             m_text = text;
 
-            m_textExtent = m_renderSystem->queryTextExtent(m_text);
-            m_textChanged = true;
+            m_textExtent = m_renderSystem->updateTextResource(m_textResourceId, m_text, m_fontId);
+
             invalidate();
         }
 
@@ -62,21 +64,18 @@ namespace crisp
 
         void Label::validate()
         {
-            if (m_textChanged)
-            {
-                m_textExtent = m_renderSystem->updateTextResource(m_textResourceId, m_text);
-                m_textChanged = false;
-            }
+            auto absPos = getAbsolutePosition();
+            auto absDepth = getAbsoluteDepth();
 
-            glm::vec2 renderedPos(std::floor(m_absolutePosition.x), std::floor(m_absolutePosition.y));
-            m_M = glm::translate(glm::vec3(renderedPos, m_depth)) * glm::scale(glm::vec3(m_scale, m_scale, 1.0f));
-
+            glm::vec2 renderedPos(std::round(absPos.x), std::round(absPos.y + m_textExtent.y));
+            m_M = glm::translate(glm::vec3(renderedPos, absDepth));// *glm::scale(glm::vec3(m_scale, m_scale, 1.0f));
+            
             m_renderSystem->updateTransformResource(m_transformId, m_M);
         }
 
         void Label::draw(RenderSystem& visitor)
         {
-            visitor.draw(*this);
+            visitor.drawText(m_textResourceId, m_transformId, m_color, m_M[3][2]);
         }
 
         unsigned int Label::getTextResourceId() const

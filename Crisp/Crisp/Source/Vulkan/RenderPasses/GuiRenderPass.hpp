@@ -13,7 +13,7 @@ namespace crisp
         ~GuiRenderPass();
 
         virtual void begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer = nullptr) const override;
-        virtual VkImage getColorAttachment(unsigned int index) const override;
+        virtual VkImage getColorAttachment(unsigned int index = 0) const override;
 
         VkFormat getColorFormat() const;
 
