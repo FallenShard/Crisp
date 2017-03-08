@@ -7,6 +7,8 @@ namespace vesper
 {
     struct RgbSpectrum
     {
+#pragma warning(push)
+#pragma warning(disable: 4201) // nameless struct
         union
         {
             float values[3];
@@ -15,6 +17,7 @@ namespace vesper
                 float r, g, b;
             };
         };
+#pragma warning(pop)
 
         RgbSpectrum(float value = 0.0f);
         RgbSpectrum(float red, float green, float blue);

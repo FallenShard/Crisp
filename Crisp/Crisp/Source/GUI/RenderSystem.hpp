@@ -228,7 +228,7 @@ namespace crisp
 
                 GuiDrawCommand() {}
                 GuiDrawCommand(VulkanPipeline* vp, const VkDescriptorSet* dSets, uint8_t first, uint8_t setCount,
-                    const GeometryData* gd, uint32_t tid, ColorPalette cidx, float d)
+                    const GeometryData* gd, uint16_t tid, ColorPalette cidx, float d)
                     : pipeline(vp), descriptorSets(dSets), firstSet(first), descSetCount(setCount)
                     , geom(gd), transformId(tid), colorIndex(cidx), depth(d) {}
             };

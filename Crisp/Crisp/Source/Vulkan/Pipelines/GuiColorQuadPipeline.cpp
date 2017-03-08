@@ -42,7 +42,7 @@ namespace crisp
         vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Color]);
 
         // Push constants
-        std::vector<VkPushConstantRange> pushConstants(2, {});
+        std::vector<VkPushConstantRange> pushConstants(2, VkPushConstantRange{});
         pushConstants[0].offset     = 0;
         pushConstants[0].size       = sizeof(int);
         pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;

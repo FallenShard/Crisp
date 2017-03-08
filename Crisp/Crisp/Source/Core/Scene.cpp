@@ -1,8 +1,5 @@
 #include "Scene.hpp"
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/transform.hpp>
-
 #include "Application.hpp"
 
 #include "vulkan/VulkanRenderer.hpp"
@@ -82,7 +79,7 @@ namespace crisp
         colorBufferInfo.offset = 0;
         colorBufferInfo.range = sizeof(glm::vec4) * colors.size();
 
-        std::vector<VkWriteDescriptorSet> descWrites(2, {});
+        std::vector<VkWriteDescriptorSet> descWrites(2, VkWriteDescriptorSet{});
         descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descWrites[0].dstSet          = m_descSets[1];
         descWrites[0].dstBinding      = 0;

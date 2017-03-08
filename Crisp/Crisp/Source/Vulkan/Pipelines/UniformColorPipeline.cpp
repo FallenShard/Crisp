@@ -42,7 +42,7 @@ namespace crisp
         vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[1]);
 
         // Push constants
-        std::vector<VkPushConstantRange> pushConstants(1, {});
+        std::vector<VkPushConstantRange> pushConstants(1, VkPushConstantRange{});
         pushConstants[0].offset     = 0;
         pushConstants[0].size       = sizeof(int);
         pushConstants[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;

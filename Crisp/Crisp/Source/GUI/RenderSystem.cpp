@@ -4,9 +4,6 @@
 #include <algorithm>
 #include <iostream>
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/transform.hpp>
-
 #include "Vulkan/VulkanRenderer.hpp"
 #include "vulkan/Pipelines/VulkanPipeline.hpp"
 #include "IO/FontLoader.hpp"
@@ -133,13 +130,13 @@ namespace crisp
             return 0;
         }
 
-        void RenderSystem::updateTexCoordResource(unsigned int resourceId, const glm::vec2& min, const glm::vec2& max)
+        void RenderSystem::updateTexCoordResource(unsigned int, const glm::vec2&, const glm::vec2&)
         {
             //m_texCoordResources.at(resourceId)->generate(min, max, m_renderer);
             //m_texCoordResources.at(resourceId)->needsUpdateToDevice = true;
         }
 
-        void RenderSystem::unregisterTexCoordResource(unsigned int resourceId)
+        void RenderSystem::unregisterTexCoordResource(unsigned int)
         {
             //m_freeTexCoordResourceIds.insert(resourceId);
         }
@@ -200,7 +197,7 @@ namespace crisp
             return extent;
         }
 
-        void RenderSystem::draw(const CheckBox& checkBox)
+        void RenderSystem::draw(const CheckBox&)
         {
             //auto texRes = m_texCoordResources.at(checkBox.getTexCoordResourceId()).get();
             //m_drawCommands.emplace_back(
@@ -214,16 +211,17 @@ namespace crisp
             //);
         }
 
-        void RenderSystem::drawQuad(unsigned int transformId, ColorPalette color, float depth) const
+        void RenderSystem::drawQuad(unsigned int transformResourceId, ColorPalette color, float depth) const
         {
-            m_drawCommands.emplace_back(m_colorQuadPipeline.get(), &m_colorDescriptorSet, 1, 1, &m_quadGeometry,
-                transformId, color, depth);
+            m_drawCommands.emplace_back(m_colorQuadPipeline.get(), &m_colorDescriptorSet, static_cast<uint8_t>(1), static_cast<uint8_t>(1), &m_quadGeometry,
+                static_cast<uint16_t>(transformResourceId), color, depth);
         }
 
         void RenderSystem::drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, ColorPalette color, float depth)
         {
             auto textRes = m_textResources.at(textRenderResourceId).get();
-            m_drawCommands.emplace_back(m_textPipeline.get(), textRes->descSets.data(), 1, static_cast<uint8_t>(textRes->descSets.size()), &textRes->geomData, transformResourceId, color, depth);
+            m_drawCommands.emplace_back(m_textPipeline.get(), textRes->descSets.data(), static_cast<uint8_t>(1), static_cast<uint8_t>(textRes->descSets.size()), &textRes->geomData,
+                static_cast<uint16_t>(transformResourceId), color, depth);
         }
 
         void RenderSystem::submitDrawRequests()
@@ -437,7 +435,7 @@ namespace crisp
 
             fontTexture->descSet = m_textPipeline->allocateDescriptorSet(GuiTextPipeline::FontAtlas);
 
-            std::vector<VkWriteDescriptorSet> descWrites(2, {});
+            std::vector<VkWriteDescriptorSet> descWrites(2, VkWriteDescriptorSet{});
             descWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descWrites[0].dstSet = fontTexture->descSet;
             descWrites[0].dstBinding = 0;
@@ -498,7 +496,7 @@ namespace crisp
             colorBufferInfo.offset = 0;
             colorBufferInfo.range  = UniformBufferGranularity;
 
-            std::vector<VkWriteDescriptorSet> descWrites(1, {});
+            std::vector<VkWriteDescriptorSet> descWrites(1, VkWriteDescriptorSet{});
             descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descWrites[0].dstSet          = m_colorDescriptorSet;
             descWrites[0].dstBinding      = 0;

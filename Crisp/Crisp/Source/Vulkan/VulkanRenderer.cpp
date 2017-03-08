@@ -223,7 +223,7 @@ namespace crisp
         return m_frameResources[m_currentFrameIndex].framebuffer;
     }
 
-    void VulkanRenderer::submitToQueue(VkCommandBuffer cmdBuffer)
+    void VulkanRenderer::submitToQueue(VkCommandBuffer)
     {
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 

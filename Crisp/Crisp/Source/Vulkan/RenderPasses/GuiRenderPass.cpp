@@ -9,7 +9,7 @@ namespace crisp
         , m_renderTargetViews(VulkanRenderer::NumVirtualFrames)
         , m_depthTargetViews(VulkanRenderer::NumVirtualFrames)
         , m_framebuffers(VulkanRenderer::NumVirtualFrames)
-        , m_clearValues(2, {})
+        , m_clearValues(2)
         , m_colorFormat(VK_FORMAT_R8G8B8A8_UNORM)
         , m_depthFormat(VK_FORMAT_D32_SFLOAT)
     {

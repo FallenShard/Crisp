@@ -8,7 +8,7 @@ namespace crisp
         : VulkanRenderPass(renderer)
         , m_colorFormat(m_renderer->getSwapChain().getImageFormat())
         , m_depthFormat(m_renderer->getContext().findSupportedDepthFormat())
-        , m_clearValues(2, {})
+        , m_clearValues(2)
     {
         m_clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
         m_clearValues[1].depthStencil = { 1.0f, 0 };
