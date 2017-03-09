@@ -94,21 +94,28 @@ namespace vesper
         auto tokens = tokenize(meshFilename, ".");
         std::string ext = tokens[tokens.size() - 1];
 
+        if (loadModelCache(tokens[0], positions, normals, texCoords, faces, transform))
+        {
+            std::cout << "Loading Wavefront Obj mesh from cache: " + meshFilename << std::endl;
+            return true;
+        }
+            
+
         if (ext == "obj")
         {
             std::cout << "Loading Wavefront Obj mesh: " + meshFilename << std::endl;
-            loadWavefrontObj(meshFile, positions, normals, texCoords, faces, transform);
+            loadWavefrontObj(meshFile, positions, normals, texCoords, faces);
+            createModelCache(tokens[0], positions, normals, texCoords, faces);
+            applyTransform(positions, normals, transform);
             return true;
         }
-
 
         return false;
     }
 
     void MeshLoader::loadWavefrontObj(std::ifstream& file, 
         std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
-        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces,
-        const Transform& transform) const
+        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
         using VertexMap = std::unordered_map<ObjVertex, unsigned int, ObjVertexHasher>;
 
@@ -130,7 +137,7 @@ namespace vesper
             {
                 glm::vec3 p;
                 lineStream >> p.x >> p.y >> p.z;
-                tempPositions.push_back(transform.transformPoint(p));
+                tempPositions.push_back(p);
             }
             else if (prefix == "vt")
             {
@@ -142,7 +149,7 @@ namespace vesper
             {
                 glm::vec3 n;
                 lineStream >> n.x >> n.y >> n.z;
-                tempNormals.push_back(transform.transformNormal(glm::normalize(n)));
+                tempNormals.push_back(glm::normalize(n));
             }
             else if (prefix == "f")
             {
@@ -193,4 +200,75 @@ namespace vesper
         }
     }
 
+    bool MeshLoader::loadModelCache(std::string fileName,
+        std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
+        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces,
+        const Transform& transform) const
+    {
+        std::ifstream binaryFile(fileName + ".cmf", std::ios::in | std::ios::binary);
+        if (binaryFile.fail())
+            return false;
+
+        std::size_t numVertices;
+        binaryFile.read(reinterpret_cast<char*>(&numVertices), sizeof(std::size_t));
+        positions.resize(numVertices);
+
+        std::size_t numNormals;
+        binaryFile.read(reinterpret_cast<char*>(&numNormals), sizeof(std::size_t));
+        normals.resize(numNormals);
+
+        std::size_t numTexCoords;
+        binaryFile.read(reinterpret_cast<char*>(&numTexCoords), sizeof(std::size_t));
+        texCoords.resize(numTexCoords);
+
+        std::size_t numFaces;
+        binaryFile.read(reinterpret_cast<char*>(&numFaces), sizeof(std::size_t));
+        faces.resize(numFaces);
+
+        binaryFile.read(reinterpret_cast<char*>(positions.data()), numVertices * sizeof(glm::vec3));
+        binaryFile.read(reinterpret_cast<char*>(normals.data()), numNormals * sizeof(glm::vec3));
+        binaryFile.read(reinterpret_cast<char*>(texCoords.data()), numTexCoords * sizeof(glm::vec2));
+        binaryFile.read(reinterpret_cast<char*>(faces.data()), numFaces * sizeof(glm::uvec3));
+
+        applyTransform(positions, normals, transform);
+
+        return true;
+    }
+
+    void MeshLoader::createModelCache(std::string fileName,
+        std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
+        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
+    {
+        std::ofstream binaryFile(fileName + ".cmf", std::ios::out | std::ios::binary);
+
+        std::size_t numVertices = positions.size();
+        binaryFile.write(reinterpret_cast<const char*>(&numVertices), sizeof(std::size_t));
+
+        std::size_t numNormals = normals.size();
+        binaryFile.write(reinterpret_cast<const char*>(&numNormals), sizeof(std::size_t));
+
+        std::size_t numTexCoords = texCoords.size();
+        binaryFile.write(reinterpret_cast<const char*>(&numTexCoords), sizeof(std::size_t));
+
+        std::size_t numFaces = faces.size();
+        binaryFile.write(reinterpret_cast<const char*>(&numFaces), sizeof(std::size_t));
+
+        binaryFile.write(reinterpret_cast<const char*>(positions.data()), numVertices * sizeof(glm::vec3));
+        binaryFile.write(reinterpret_cast<const char*>(normals.data()), numNormals * sizeof(glm::vec3));
+        binaryFile.write(reinterpret_cast<const char*>(texCoords.data()), numTexCoords * sizeof(glm::vec2));
+        binaryFile.write(reinterpret_cast<const char*>(faces.data()), numFaces * sizeof(glm::uvec3));
+    }
+
+    void MeshLoader::applyTransform(std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, const Transform& transform) const
+    {
+        for (auto& position : positions)
+        {
+            position = transform.transformPoint(position);
+        }
+
+        for (auto& normal : normals)
+        {
+            normal = transform.transformNormal(normal);
+        }
+    }
 }

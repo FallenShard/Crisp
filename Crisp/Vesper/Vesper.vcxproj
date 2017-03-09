@@ -146,6 +146,7 @@
     <ClInclude Include="Vesper\Integrators\DirectLighting.hpp" />
     <ClInclude Include="Vesper\Integrators\Integrator.hpp" />
     <ClInclude Include="Vesper\Integrators\IntegratorFactory.hpp" />
+    <ClInclude Include="Vesper\Integrators\MisDirectLighting.hpp" />
     <ClInclude Include="Vesper\Integrators\MisPathTracer.hpp" />
     <ClInclude Include="Vesper\Integrators\Normals.hpp" />
     <ClInclude Include="Vesper\Integrators\PathTracer.hpp" />
@@ -177,6 +178,10 @@
     <ClInclude Include="Vesper\Spectrums\RgbSpectrum.hpp" />
     <ClInclude Include="Vesper\Spectrums\Spectrum.hpp" />
     <ClInclude Include="Vesper\Spectrums\WeightedRgbSpectrum.hpp" />
+    <ClInclude Include="Vesper\Textures\CheckerboardTexture.hpp" />
+    <ClInclude Include="Vesper\Textures\ConstantTexture.hpp" />
+    <ClInclude Include="Vesper\Textures\Texture.hpp" />
+    <ClInclude Include="Vesper\Textures\TextureFactory.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp" />
@@ -194,6 +199,7 @@
     <ClCompile Include="Vesper\Integrators\DirectLighting.cpp" />
     <ClCompile Include="Vesper\Integrators\Integrator.cpp" />
     <ClCompile Include="Vesper\Integrators\IntegratorFactory.cpp" />
+    <ClCompile Include="Vesper\Integrators\MisDirectLighting.cpp" />
     <ClCompile Include="Vesper\Integrators\MisPathTracer.cpp" />
     <ClCompile Include="Vesper\Integrators\Normals.cpp" />
     <ClCompile Include="Vesper\Integrators\PathTracer.cpp" />
@@ -215,6 +221,8 @@
     <ClCompile Include="Vesper\Shapes\ShapeFactory.cpp" />
     <ClCompile Include="Vesper\Shapes\Sphere.cpp" />
     <ClCompile Include="Vesper\Spectrums\RgbSpectrum.cpp" />
+    <ClCompile Include="Vesper\Textures\CheckerboardTexture.cpp" />
+    <ClCompile Include="Vesper\Textures\ConstantTexture.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

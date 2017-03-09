@@ -18,6 +18,7 @@ namespace vesper
         m_invImageSize.x = 1.0f / m_imageSize.x;
         m_invImageSize.y = 1.0f / m_imageSize.y;
 
+        auto mirrorHor = params.get<bool>("mirrorHorizontally", false);
         auto position = params.get<glm::vec3>("position", {0, 0, 5});
         auto target   = params.get<glm::vec3>("target", {0, 0, 0});
         auto up       = params.get<glm::vec3>("up", {0, 1, 0});
@@ -28,7 +29,10 @@ namespace vesper
         Transform ndcScale     = Transform::createScale(glm::vec3(2.0f, 2.0f / aspect, 1.0f));
         Transform screenShift  = Transform::createTranslation(glm::vec3(-1.0f, -1.0f / aspect, 0.0f));
         Transform unprojection = Transform(glm::perspective(glm::radians(m_fov), 1.0f, m_nearZ, m_farZ)).invert();
-        m_sampleToCamera = unprojection * screenShift * ndcScale;
+
+        Transform mirror = Transform::createScale(glm::vec3(mirrorHor ? -1.0f : 1.0f, 1.0f, 1.0f));
+
+        m_sampleToCamera = unprojection * mirror * screenShift * ndcScale;
 
         if (!m_filter)
         {

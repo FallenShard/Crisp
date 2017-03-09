@@ -19,6 +19,7 @@
 #include "Shapes/ShapeFactory.hpp"
 #include "Lights/LightFactory.hpp"
 #include "BSDFs/BSDFFactory.hpp"
+#include "Textures/TextureFactory.hpp"
 
 namespace vesper
 {
@@ -94,6 +95,18 @@ namespace vesper
         float parse<float>(const std::string& string)
         {
             return static_cast<float>(std::atof(string.c_str()));
+        }
+
+        template<>
+        glm::vec2 parse<glm::vec2>(const std::string& string)
+        {
+            glm::vec2 result(0.0f);
+            std::stringstream stringStream(replaceAll(string, ",", " "));
+            std::string value;
+            stringStream >> value; result.x = static_cast<float>(std::atof(value.c_str()));
+            stringStream >> value; result.y = static_cast<float>(std::atof(value.c_str()));
+
+            return result;
         }
 
         template<>
@@ -201,6 +214,10 @@ namespace vesper
                 {
                     params.insert(paramName, paramValue);
                 }
+                else if (paramType == "vec2")
+                {
+                    params.insert(paramName, parse<glm::vec2>(paramValue));
+                }
                 else if (paramType == "vec3")
                 {
                     params.insert(paramName, parse<glm::vec3>(paramValue));
@@ -219,7 +236,7 @@ namespace vesper
                 }
                 else
                 {
-                    std::cerr << paramName << " has specified unrecognizd type!" << std::endl;
+                    std::cerr << paramName << " has specified unrecognized type!" << std::endl;
                 }
             }
         }
@@ -240,6 +257,26 @@ namespace vesper
                 }
             }
             return FactoryType::create(type, params);
+        }
+
+        template <typename DataType>
+        std::unique_ptr<Texture<DataType>> createTexture(xml_node<char>* node)
+        {
+            std::string type = "default";
+            std::string dataType = "float";
+            VariantMap params;
+            if (node != nullptr)
+            {
+                parseParameters(params, node->first_node("parameters"));
+
+                auto typeAttrib = node->first_attribute("type");
+                if (typeAttrib != nullptr)
+                    type = typeAttrib->value();
+
+                
+            }
+
+            return TextureFactory::create<(type, params);
         }
     }
 
@@ -273,7 +310,24 @@ namespace vesper
                     light = create<Light, LightFactory>(shapeNode->first_node("light"));
                 }
 
+
                 std::unique_ptr<BSDF> bsdf = create<BSDF, BSDFFactory>(shapeNode->first_node("bsdf"));
+                if (shapeNode->first_node("bsdf")->first_node("texture") != nullptr)
+                {
+                    std::string dataType = "float";
+                    auto dataAttrib = shapeNode->first_node("bsdf")->first_node("texture")->first_attribute("data");
+                    if (dataAttrib != nullptr)
+                        dataType = dataAttrib->value();
+
+                    if (dataType == "float")
+                    {
+                        bsdf->setTexture(create<Texture<float>, TextureFactory<float>>(shapeNode->first_node("bsdf")->first_node("texture")));
+                    }
+                    else if (dataType == "spectrum")
+                    {
+                        bsdf->setTexture(create<Texture<Spectrum>, TextureFactory<Spectrum>>(shapeNode->first_node("bsdf")->first_node("texture")));
+                    }
+                }
 
                 scene->addShape(std::move(create<Shape, ShapeFactory>(shapeNode)), bsdf.get(), light.get());
 

@@ -10,7 +10,7 @@ namespace vesper
     template <typename PointType, typename DirType>
     struct Ray
     {
-        static constexpr float Epsilon = 1e-5f;
+        static constexpr float Epsilon = 1e-4f;
 
         PointType o;
         DirType d;

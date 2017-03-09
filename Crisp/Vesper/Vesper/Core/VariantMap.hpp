@@ -15,7 +15,7 @@ namespace vesper
     class VariantMap
     {
     public:
-        template<typename T>
+        template <typename T>
         void insert(const std::string& key, T value)
         {
             m_map.insert_or_assign(key, VariantType(value));
@@ -26,7 +26,7 @@ namespace vesper
             m_map.erase(key);
         }
 
-        template<typename T>
+        template <typename T>
         T get(const std::string& key, T defaultVal = T()) const
         {
             if (m_map.find(key) != m_map.end())
@@ -45,6 +45,11 @@ namespace vesper
             }
 
             return defaultVal;
+        }
+
+        bool contains(const std::string& key) const
+        {
+            return m_map.find(key) != m_map.end();
         }
 
     private:

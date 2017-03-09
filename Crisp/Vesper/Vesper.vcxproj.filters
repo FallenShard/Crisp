@@ -123,6 +123,15 @@
     <ClCompile Include="Vesper\RayTracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vesper\Textures\CheckerboardTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\Textures\ConstantTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\Integrators\MisDirectLighting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp">
@@ -273,6 +282,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\RayTracerUpdate.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Textures\TextureFactory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Textures\Texture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Textures\CheckerboardTexture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Textures\ConstantTexture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Integrators\MisDirectLighting.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
