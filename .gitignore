@@ -267,5 +267,7 @@ __pycache__/
 # Cake - Uncomment if you are using it
 # tools/
 
-# Unignore meshes
-!*.obj 
+# Ignore all resources
+Resources/
+*.exr
+

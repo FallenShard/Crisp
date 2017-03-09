@@ -295,28 +295,20 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shaders\fullscreen-quad-frag.glsl" />
-    <None Include="Resources\Shaders\fullscreen-quad-vert.glsl" />
-    <None Include="Resources\Shaders\gamma-correct-frag.glsl" />
-    <None Include="Resources\Shaders\gamma-correct-vert.glsl" />
-    <None Include="Resources\Shaders\gui-quad-tex-frag.glsl" />
-    <None Include="Resources\Shaders\gui-quad-tex-vert.glsl" />
-    <None Include="Resources\Shaders\gui-quad-unif-col-frag.glsl" />
-    <None Include="Resources\Shaders\gui-quad-unif-col-vert.glsl" />
-    <None Include="Resources\Shaders\gui-text-frag.glsl" />
-    <None Include="Resources\Shaders\gui-text-vert.glsl" />
-    <None Include="Resources\VesperScenes\cbox.json" />
-    <None Include="Resources\Shaders\unif-col-vert.glsl" />
-    <None Include="Resources\Shaders\unif-col-frag.glsl" />
     <None Include="Source\Core\StringUtils.hpp" />
-    <None Include="Resources\Shaders\point-sphere-sprite-vert.glsl" />
-    <None Include="Resources\Shaders\point-sphere-sprite-frag.glsl" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="Resources\VesperScenes\cbox.xml" />
-    <Xml Include="Resources\VesperScenes\cbox_mesh.xml" />
-    <Xml Include="Resources\VesperScenes\sphere_light_test.xml" />
-    <Xml Include="Resources\VesperScenes\point_ems.xml" />
-    <Xml Include="Resources\VesperScenes\ajax-av.xml" />
+    <None Include="Source\Shaders\fullscreen-quad-frag.glsl" />
+    <None Include="Source\Shaders\fullscreen-quad-vert.glsl" />
+    <None Include="Source\Shaders\gamma-correct-frag.glsl" />
+    <None Include="Source\Shaders\gamma-correct-vert.glsl" />
+    <None Include="Source\Shaders\gui-quad-tex-frag.glsl" />
+    <None Include="Source\Shaders\gui-quad-tex-vert.glsl" />
+    <None Include="Source\Shaders\gui-quad-unif-col-frag.glsl" />
+    <None Include="Source\Shaders\gui-quad-unif-col-vert.glsl" />
+    <None Include="Source\Shaders\gui-text-frag.glsl" />
+    <None Include="Source\Shaders\gui-text-vert.glsl" />
+    <None Include="Source\Shaders\point-sphere-sprite-frag.glsl" />
+    <None Include="Source\Shaders\point-sphere-sprite-vert.glsl" />
+    <None Include="Source\Shaders\unif-col-frag.glsl" />
+    <None Include="Source\Shaders\unif-col-vert.glsl" />
   </ItemGroup>
 </Project>

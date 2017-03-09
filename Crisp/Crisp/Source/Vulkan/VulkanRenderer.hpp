@@ -53,8 +53,6 @@ namespace crisp
         void addCopyAction(std::function<void(VkCommandBuffer&)> copyAction);
         void addDrawAction(std::function<void(VkCommandBuffer&)> drawAction, uint32_t renderPassId);
 
-        //void displayImage(VkImageView imageView, int numLayers);
-        
         void drawFrame();
         
         void finish();
@@ -99,22 +97,14 @@ namespace crisp
 
         std::unordered_map<std::string, VkShaderModule> m_shaderModules;
 
-        
+        using ActionVector = std::vector<std::function<void(VkCommandBuffer&)>>;
+        ActionVector m_imageTransitions;
+        ActionVector m_copyActions;
         std::vector<std::function<void(VkCommandBuffer&)>> m_renderActions;
 
         VkBuffer m_fsQuadVertexBuffer;
         VkBuffer m_fsQuadIndexBuffer;
-        //VkSampler m_sampler;
-
-        //VkImageView m_displayedImageView;
-        //uint32_t m_displayedImageLayerCount;
-
-        //std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
-        //VkDescriptorSet m_fsQuadDescSet;
-
-        using ActionVector = std::vector<std::function<void(VkCommandBuffer&)>>;
-        ActionVector m_imageTransitions;
-        ActionVector m_copyActions;
+        
         std::map<uint32_t, std::pair<VulkanRenderPass*, ActionVector>> m_renderPasses;
 
         std::map<VkBuffer, uint32_t> m_oldStagingBuffers;
