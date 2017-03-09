@@ -167,6 +167,8 @@ namespace vesper
 
             for (auto child = node->first_node(); child != nullptr; child = child->next_sibling())
             {
+                std::string paramType = child->name();
+
                 auto nameAttrib = child->first_attribute("name");
                 if (nameAttrib == nullptr)
                 {
@@ -174,14 +176,6 @@ namespace vesper
                     continue;
                 }
                 std::string paramName = nameAttrib->value();
-
-                auto typeAttrib = child->first_attribute("type");
-                if (typeAttrib == nullptr)
-                {
-                    std::cerr << "Parameter " + paramName + " specified without a type!" << std::endl;
-                    continue;
-                }
-                std::string paramType = typeAttrib->value();
 
                 auto valueAttrib = child->first_attribute("value");
                 if (paramType != "transform" && valueAttrib == nullptr)
@@ -222,6 +216,10 @@ namespace vesper
                 else if (paramType == "transform")
                 {
                     params.insert(paramName, parseTransform(child));
+                }
+                else
+                {
+                    std::cerr << paramName << " has specified unrecognizd type!" << std::endl;
                 }
             }
         }
