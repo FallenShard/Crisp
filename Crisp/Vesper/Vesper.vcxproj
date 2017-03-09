@@ -144,8 +144,10 @@
     <ClInclude Include="Vesper\ImageBlock.hpp" />
     <ClInclude Include="Vesper\Integrators\AmbientOcclusion.hpp" />
     <ClInclude Include="Vesper\Integrators\DirectLighting.hpp" />
+    <ClInclude Include="Vesper\Integrators\EmsDirectLighting.hpp" />
     <ClInclude Include="Vesper\Integrators\Integrator.hpp" />
     <ClInclude Include="Vesper\Integrators\IntegratorFactory.hpp" />
+    <ClInclude Include="Vesper\Integrators\MatsDirectLighting.hpp" />
     <ClInclude Include="Vesper\Integrators\MisDirectLighting.hpp" />
     <ClInclude Include="Vesper\Integrators\MisPathTracer.hpp" />
     <ClInclude Include="Vesper\Integrators\Normals.hpp" />
@@ -197,8 +199,10 @@
     <ClCompile Include="Vesper\ImageBlock.cpp" />
     <ClCompile Include="Vesper\Integrators\AmbientOcclusion.cpp" />
     <ClCompile Include="Vesper\Integrators\DirectLighting.cpp" />
+    <ClCompile Include="Vesper\Integrators\EmsDirectLighting.cpp" />
     <ClCompile Include="Vesper\Integrators\Integrator.cpp" />
     <ClCompile Include="Vesper\Integrators\IntegratorFactory.cpp" />
+    <ClCompile Include="Vesper\Integrators\MatsDirectLighting.cpp" />
     <ClCompile Include="Vesper\Integrators\MisDirectLighting.cpp" />
     <ClCompile Include="Vesper\Integrators\MisPathTracer.cpp" />
     <ClCompile Include="Vesper\Integrators\Normals.cpp" />

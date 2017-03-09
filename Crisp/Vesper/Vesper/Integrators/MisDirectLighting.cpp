@@ -53,6 +53,7 @@ namespace vesper
 
         BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
         bsdfSample.measure = BSDF::Measure::SolidAngle;
+        bsdfSample.eta     = 1.0f;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
 
         float pdfLight = lightSample.pdf;
@@ -62,12 +63,12 @@ namespace vesper
 
     Spectrum MisDirectLightingIntegrator::bsdfImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
     {
-        BSDF::Sample bsdfSam(its.p, its.toLocal(-ray.d), its.uv);
-        bsdfSam.measure = BSDF::Measure::SolidAngle;
-        auto bsdfSpec = its.shape->getBSDF()->sample(bsdfSam, sampler);
+        BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
+        auto bsdfSpec = its.shape->getBSDF()->sample(bsdfSample, sampler);
+        float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
 
         Intersection bsdfIts;
-        Ray3 bsdfRay(its.p, its.toWorld(bsdfSam.wo));
+        Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
         if (!scene->rayIntersect(bsdfRay, bsdfIts))
             return Spectrum(0.0f);
 
@@ -79,8 +80,8 @@ namespace vesper
         lightSam.wi = bsdfRay.d;
         auto lightSpec = light->eval(lightSam);
 
-        float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSam);
-        float pdfLight = light->pdf(lightSam) * scene->getLightPdf();
-        return pdfBsdf * bsdfSpec * lightSpec / (pdfBsdf + pdfLight);
+        float pdfLight = light->pdf(lightSam);
+
+        return  bsdfSpec * lightSpec * pdfBsdf / (pdfBsdf + pdfLight);
     }
 }

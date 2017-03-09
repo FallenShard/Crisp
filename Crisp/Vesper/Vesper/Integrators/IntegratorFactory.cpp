@@ -6,6 +6,8 @@
 #include "PathTracer.hpp"
 #include "MisPathTracer.hpp"
 #include "MisDirectLighting.hpp"
+#include "EmsDirectLighting.hpp"
+#include "MatsDirectLighting.hpp"
 
 namespace vesper
 {
@@ -22,6 +24,14 @@ namespace vesper
         else if (type == "direct-lighting")
         {
             return std::make_unique<DirectLightingIntegrator>(parameters);
+        }
+        else if (type == "ems-direct-lighting")
+        {
+            return std::make_unique<EmsDirectLightingIntegrator>(parameters);
+        }
+        else if (type == "mats-direct-lighting")
+        {
+            return std::make_unique<MatsDirectLightingIntegrator>(parameters);
         }
         else if (type == "mis-direct-lighting")
         {

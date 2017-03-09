@@ -259,6 +259,23 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Source\Shaders\unif-col-frag.glsl" />
     <None Include="Source\Core\StringUtils.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="Resources\VesperScenes\ajax-av.xml" />
+    <Xml Include="Resources\VesperScenes\ajax-normals.xml" />
+    <Xml Include="Resources\VesperScenes\cbox.xml" />
+    <Xml Include="Resources\VesperScenes\cbox_mesh.xml" />
+    <Xml Include="Resources\VesperScenes\mesh-texture.xml" />
+    <Xml Include="Resources\VesperScenes\odyssey-ems.xml" />
+    <Xml Include="Resources\VesperScenes\odyssey-mats.xml" />
+    <Xml Include="Resources\VesperScenes\odyssey-mis.xml" />
+    <Xml Include="Resources\VesperScenes\point_ems.xml" />
+    <Xml Include="Resources\VesperScenes\sphere-analytic.xml" />
+    <Xml Include="Resources\VesperScenes\sphere-mesh.xml" />
+    <Xml Include="Resources\VesperScenes\sphere-texture.xml" />
+    <Xml Include="Resources\VesperScenes\sphere_light_test.xml" />
+    <Xml Include="Resources\VesperScenes\sponza-av.xml" />
+    <Xml Include="Resources\VesperScenes\sponza-direct.xml" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
