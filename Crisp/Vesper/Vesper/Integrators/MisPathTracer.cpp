@@ -56,7 +56,7 @@ namespace vesper
                 float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
                 if (!(cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)))
                 {
-                    BSDF::Sample bsdfSam(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
+                    BSDF::Sample bsdfSam(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
                     bsdfSam.measure = BSDF::Measure::SolidAngle;
                     auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSam);
 
@@ -66,7 +66,7 @@ namespace vesper
                 }
             }
 
-            BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d));
+            BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
             auto bsdf = its.shape->getBSDF()->sample(bsdfSample, sampler);
             Intersection bsdfIts;
             Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
