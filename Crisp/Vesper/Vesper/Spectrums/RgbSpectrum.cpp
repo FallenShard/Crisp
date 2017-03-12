@@ -113,7 +113,7 @@ namespace vesper
         return *this;
     }
 
-    RgbSpectrum & RgbSpectrum::operator/=(float scalar)
+    RgbSpectrum& RgbSpectrum::operator/=(float scalar)
     {
         r /= scalar;
         g /= scalar;
@@ -168,6 +168,26 @@ namespace vesper
     bool RgbSpectrum::isZero() const
     {
         return r == 0.0f && g == 0.0f && b == 0.0f;
+    }
+
+    bool RgbSpectrum::isInfinite() const
+    {
+        if (!std::isfinite(r) ||
+            !std::isfinite(g) ||
+            !std::isfinite(b))
+            return true;
+
+        return false;
+    }
+
+    bool RgbSpectrum::isNaN() const
+    {
+        if (std::isnan(r) ||
+            std::isnan(g) ||
+            std::isnan(b))
+            return true;
+
+        return false;
     }
 
     RgbSpectrum RgbSpectrum::toSrgb() const

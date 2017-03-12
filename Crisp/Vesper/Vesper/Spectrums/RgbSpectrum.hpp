@@ -51,6 +51,8 @@ namespace vesper
 
         bool isValid() const;
         bool isZero() const;
+        bool isInfinite() const;
+        bool isNaN() const;
 
         RgbSpectrum toSrgb() const;
     };
