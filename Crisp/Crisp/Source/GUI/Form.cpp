@@ -346,6 +346,7 @@ namespace crisp
             panel->setPadding({ 10, 10 });
             panel->setColor(ColorPalette::DarkGray);
             panel->setAnchor(Anchor::BottomLeft);
+            panel->setHeightSizingBehavior(Sizing::WrapContent);
 
             auto panelName = std::make_shared<gui::Label>(m_renderSystem.get(), "Memory Usage");
             panelName->setPosition({ 0, 0 });
@@ -354,39 +355,7 @@ namespace crisp
 
             buildProgressBar(panel, 50.0f, "Buffer Device Memory", "bufferDeviceMem");
             buildProgressBar(panel, 110.0f, "Image Device Memory", "imageDeviceMem");
-            buildProgressBar(panel, 160.0f, "Staging Memory", "stagingMem");
-
-            //auto bufferDevMemLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Buffer Device Memory");
-            //bufferDevMemLabel->setPosition({ 0, 50 });
-            //bufferDevMemLabel->setColor(ColorPalette::White);
-            //panel->addControl(bufferDevMemLabel);
-            //
-            //auto deviceMemoryBg = std::make_shared<gui::Panel>(m_renderSystem.get());
-            //deviceMemoryBg->setPosition({ 0, 70 });
-            //deviceMemoryBg->setSize({ 200, 20 });
-            //deviceMemoryBg->setPadding({ 3, 3 });
-            //deviceMemoryBg->setColor(ColorPalette::Gray20);
-            //panel->addControl(deviceMemoryBg);
-            //
-            //auto deviceMemory = std::make_shared<gui::Panel>(m_renderSystem.get());
-            //deviceMemory->setId("bufferMemUsage");
-            //deviceMemory->setPosition({ 0, 0 });
-            //deviceMemory->setSize({ 200, 20 });
-            //deviceMemory->setColor(ColorPalette::DarkGreen);
-            //deviceMemory->setWidthSizingBehavior(Sizing::FillParent, 0.3f);
-            //deviceMemoryBg->addControl(deviceMemory);
-            //
-            //auto bufferMemLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "100.0%");
-            //bufferMemLabel->setId("bufferMemUsageLabel");
-            //bufferMemLabel->setPosition({ 6, 3 });
-            //bufferMemLabel->setAnchor(Anchor::Center);
-            //bufferMemLabel->setColor(ColorPalette::White);
-            //deviceMemoryBg->addControl(bufferMemLabel);
-
-            //auto imageDeviceMemory = std::make_shared<gui::Label>(m_renderSystem.get(), "Image Device Memory");
-            //imageDeviceMemory->setPosition({ 0, 110 });
-            //imageDeviceMemory->setColor(ColorPalette::White);
-            //panel->addControl(imageDeviceMemory);
+            buildProgressBar(panel, 170.0f, "Staging Memory", "stagingMem");
 
             return panel;
         }
