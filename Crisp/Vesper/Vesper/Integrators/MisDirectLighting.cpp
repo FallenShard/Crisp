@@ -10,6 +10,21 @@
 
 namespace vesper
 {
+    namespace
+    {
+        inline float powerHeuristic(float fPdf, float gPdf)
+        {
+            float fPdf2 = fPdf * fPdf;
+            float gPdf2 = gPdf * gPdf;
+            return fPdf2 / (fPdf2 + gPdf2);
+        }
+
+        inline float balanceHeuristic(float fPdf, float gPdf)
+        {
+            return fPdf / (fPdf + gPdf);
+        }
+    }
+
     MisDirectLightingIntegrator::MisDirectLightingIntegrator(const VariantMap& params)
     {
     }
@@ -44,44 +59,49 @@ namespace vesper
 
     Spectrum MisDirectLightingIntegrator::lightImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
     {
+        Spectrum Li(0.0f);
+
         Light::Sample lightSample(its.p);
         auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
         float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
-        if (cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
-            return Spectrum(0.0f);
+        if (lightSample.pdf <= 0.0f || cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
+            return Li;
 
         BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         bsdfSample.eta     = 1.0f;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
+        Li = bsdfSpec * lightSpec * cosFactor;
 
         float pdfLight = lightSample.pdf;
         float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
-        return pdfLight * bsdfSpec * lightSpec * cosFactor / (pdfLight + pdfBsdf);
+        return Li * powerHeuristic(pdfLight, pdfBsdf);
     }
 
     Spectrum MisDirectLightingIntegrator::bsdfImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
     {
+        Spectrum Li(0.0f);
+
         BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
         auto bsdfSpec = its.shape->getBSDF()->sample(bsdfSample, sampler);
-        float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
-
+        
         Intersection bsdfIts;
         Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
         if (!scene->rayIntersect(bsdfRay, bsdfIts))
-            return Spectrum(0.0f);
+            return Li;
 
         if (!bsdfIts.shape->getLight())
-            return Spectrum(0.0f);
+            return Li;
 
         auto light = bsdfIts.shape->getLight();
         Light::Sample lightSam(its.p, bsdfIts.p, bsdfIts.shFrame.n);
         lightSam.wi = bsdfRay.d;
         auto lightSpec = light->eval(lightSam);
+        Li = bsdfSpec * lightSpec;
 
-        float pdfLight = light->pdf(lightSam);
-
-        return  bsdfSpec * lightSpec * pdfBsdf / (pdfBsdf + pdfLight);
+        float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
+        float pdfLight = light->pdf(lightSam) * scene->getLightPdf();
+        return Li * powerHeuristic(pdfBsdf, pdfLight);
     }
 }
