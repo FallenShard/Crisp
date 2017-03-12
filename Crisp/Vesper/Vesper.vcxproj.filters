@@ -138,6 +138,9 @@
     <ClCompile Include="Vesper\Integrators\MatsDirectLighting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\Microfacet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp">
@@ -309,6 +312,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Integrators\MatsDirectLighting.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSDFs\Microfacet.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

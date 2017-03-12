@@ -4,6 +4,7 @@
 #include "Lambertian.hpp"
 #include "Dielectric.hpp"
 #include "Mirror.hpp"
+#include "Microfacet.hpp"
 
 namespace vesper
 {
@@ -20,6 +21,10 @@ namespace vesper
         else if (type == "mirror")
         {
             return std::make_unique<MirrorBSDF>(parameters);
+        }
+        else if (type == "microfacet")
+        {
+            return std::make_unique<MicrofacetBSDF>(parameters);
         }
         else
         {

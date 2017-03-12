@@ -131,6 +131,7 @@
     <ClInclude Include="Vesper\BSDFs\BSDFFactory.hpp" />
     <ClInclude Include="Vesper\BSDFs\Dielectric.hpp" />
     <ClInclude Include="Vesper\BSDFs\Lambertian.hpp" />
+    <ClInclude Include="Vesper\BSDFs\Microfacet.hpp" />
     <ClInclude Include="Vesper\BSDFs\Mirror.hpp" />
     <ClInclude Include="Vesper\Cameras\Camera.hpp" />
     <ClInclude Include="Vesper\Cameras\CameraFactory.hpp" />
@@ -189,6 +190,7 @@
     <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp" />
     <ClCompile Include="Vesper\BSDFs\Dielectric.cpp" />
     <ClCompile Include="Vesper\BSDFs\Lambertian.cpp" />
+    <ClCompile Include="Vesper\BSDFs\Microfacet.cpp" />
     <ClCompile Include="Vesper\BSDFs\Mirror.cpp" />
     <ClCompile Include="Vesper\Cameras\Camera.cpp" />
     <ClCompile Include="Vesper\Cameras\CameraFactory.cpp" />

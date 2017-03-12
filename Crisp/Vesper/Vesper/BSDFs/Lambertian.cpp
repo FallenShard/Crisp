@@ -60,12 +60,14 @@ namespace vesper
 
     float LambertianBSDF::pdf(const BSDF::Sample& bsdfSample) const
     {
+        auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
         if (bsdfSample.measure != Measure::SolidAngle ||
-            CoordinateFrame::cosTheta(bsdfSample.wi) <= 0.0f ||
-            CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f)
+            cosThetaO <= 0.0f)
+        {
             return 0.0f;
+        }
 
-        return InvPI * CoordinateFrame::cosTheta(bsdfSample.wo);
+        return InvPI * cosThetaO;
     }
 
     unsigned int LambertianBSDF::getType() const
