@@ -104,6 +104,8 @@ namespace vesper
     Spectrum Scene::sampleLight(const Intersection& its, Sampler& sampler, Light::Sample& lightSample) const
     {
         auto light = getRandomLight(sampler.next1D());
+        if (!light)
+            return Spectrum(0.0f);
 
         Spectrum lightContrib = light->sample(lightSample, sampler);
 
