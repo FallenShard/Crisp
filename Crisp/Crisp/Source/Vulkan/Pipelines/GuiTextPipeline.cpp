@@ -15,15 +15,23 @@ namespace crisp
         transformBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
         transformBinding.pImmutableSamplers = nullptr;
 
+        VkDescriptorSetLayoutBinding colorBinding = {};
+        colorBinding.binding            = 1;
+        colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        colorBinding.descriptorCount    = 1;
+        colorBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+        colorBinding.pImmutableSamplers = nullptr;
+
         std::vector<VkDescriptorSetLayoutBinding> transBindings =
         {
-            transformBinding
+            transformBinding,
+            colorBinding
         };
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(transBindings.size());
         layoutInfo.pBindings    = transBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Transform]);
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::TransformAndColor]);
 
         VkDescriptorSetLayoutBinding samplerBinding = {};
         samplerBinding.binding            = 0;
@@ -38,24 +46,6 @@ namespace crisp
         textureBinding.descriptorCount    = 1;
         textureBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         textureBinding.pImmutableSamplers = nullptr;
-
-        VkDescriptorSetLayoutBinding colorBinding = {};
-        colorBinding.binding            = 0;
-        colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        colorBinding.descriptorCount    = 1;
-        colorBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-        colorBinding.pImmutableSamplers = nullptr;
-
-        std::vector<VkDescriptorSetLayoutBinding> secondSetBindings =
-        {
-            colorBinding
-        };
-        layoutInfo = {};
-        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(secondSetBindings.size());
-        layoutInfo.pBindings    = secondSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Color]);
-
 
         std::vector<VkDescriptorSetLayoutBinding> fontBindings =
         {
@@ -93,16 +83,12 @@ namespace crisp
             { VK_DESCRIPTOR_TYPE_SAMPLER, 1 },
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 }
         };
-        //poolSizes[0].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
-        //poolSizes[0].descriptorCount = 1;
-        //poolSizes[1].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        //poolSizes[1].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
-        poolInfo.maxSets       = 4;
+        poolInfo.maxSets       = 1;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-text-vert");

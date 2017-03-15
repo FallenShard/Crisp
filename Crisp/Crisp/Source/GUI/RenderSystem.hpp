@@ -64,6 +64,10 @@ namespace crisp
             void updateTransformResource(unsigned int transformId, const glm::mat4& M);
             void unregisterTransformResource(unsigned int transformId);
 
+            unsigned int registerColorResource();
+            void updateColorResource(unsigned int colorId, const glm::vec4& color);
+            void unregisterColorResource(unsigned int colorId);
+
             unsigned int registerTexCoordResource();
             void updateTexCoordResource(unsigned int resourceId, const glm::vec2& min, const glm::vec2& max);
             void unregisterTexCoordResource(unsigned int resourceId);
@@ -75,8 +79,8 @@ namespace crisp
 
             void draw(const CheckBox& checkBox);
 
-            void drawQuad(unsigned int transformId, ColorPalette color, float depth) const;
-            void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, ColorPalette color, float depth);
+            void drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const;
+            void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth);
 
             void submitDrawRequests();
 
@@ -90,15 +94,15 @@ namespace crisp
 
         private:
             void createPipelines();
-            void initColorPaletteBuffer();
-            void initColorDescriptorSet();
             void initGeometryBuffers();
             void initTransformsResources();
+            void initColorResources();
             void initGuiRenderTargetResources();
 
             void loadTextures();
 
             void updateTransformUniformBuffer(uint32_t frameId);
+            void updateColorBuffer(uint32_t frameId);
 
             VulkanRenderer* m_renderer;
             VulkanDevice*   m_device;
@@ -111,10 +115,6 @@ namespace crisp
             std::unique_ptr<GuiTextPipeline>        m_textPipeline;
             std::unique_ptr<GuiTexQuadPipeline>     m_texQuadPipeline;
             std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
-
-            // Colors
-            VkBuffer        m_colorPaletteBuffer;
-            VkDescriptorSet m_colorDescriptorSet;
 
             // Geometry
             struct GeometryData
@@ -130,24 +130,32 @@ namespace crisp
             GeometryData m_quadGeometry;
 
             // MVP Transforms resources
-            static constexpr unsigned int TransformsResourceIncrement = 4;
             static constexpr unsigned int UniformBufferGranularity = 256;
             static constexpr unsigned int MatrixSize = sizeof(glm::mat4);
             static constexpr unsigned int MatricesPerGranularity = UniformBufferGranularity / MatrixSize;
-            struct TransformsFrameResource
+            struct UniformBufferFrameResource
             {
                 VkBuffer        uniformBuffer;
                 VkDeviceSize    bufferSize;
                 VkDescriptorSet descSet;
                 bool            isUpdated;
 
-                void createBufferAndUpdateSet(VulkanDevice* device, VkDeviceSize size);
+                void createBufferAndUpdateSet(VulkanDevice* device, VkDeviceSize size, uint32_t binding);
             };
-            TransformsFrameResource m_transformsResources[VulkanRenderer::NumVirtualFrames];
-            VkBuffer                m_transformsStagingBuffer;
-            VkDeviceSize            m_transformsStagingBufferSize;
-            std::set<unsigned int>  m_transformsResourceIdPool;
-            unsigned int            m_numRegisteredTransformResources;
+            UniformBufferFrameResource m_transformsResources[VulkanRenderer::NumVirtualFrames];
+            VkBuffer                   m_transformsStagingBuffer;
+            VkDeviceSize               m_transformsStagingBufferSize;
+            std::set<unsigned int>     m_transformsResourceIdPool;
+            unsigned int               m_numRegisteredTransformResources;
+
+            // Color resources
+            static constexpr unsigned int ColorSize = sizeof(glm::vec4);
+            static constexpr unsigned int ColorsPerGranularity = UniformBufferGranularity / ColorSize;
+            UniformBufferFrameResource m_colorsResources[VulkanRenderer::NumVirtualFrames];
+            VkBuffer                   m_colorsStagingBuffer;
+            VkDeviceSize               m_colorsStagingBufferSize;
+            std::set<unsigned int>     m_colorsResourceIdPool;
+            unsigned int               m_numRegisteredColorResources;
 
             // Sampler
             VkSampler m_linearClampSampler;
@@ -223,14 +231,14 @@ namespace crisp
                 const GeometryData* geom;
                 
                 uint16_t transformId;
-                ColorPalette colorIndex;
+                uint16_t colorId;
                 float depth;
 
                 GuiDrawCommand() {}
                 GuiDrawCommand(VulkanPipeline* vp, const VkDescriptorSet* dSets, uint8_t first, uint8_t setCount,
-                    const GeometryData* gd, uint16_t tid, ColorPalette cidx, float d)
+                    const GeometryData* gd, uint16_t tid, uint16_t cid, float d)
                     : pipeline(vp), descriptorSets(dSets), firstSet(first), descSetCount(setCount)
-                    , geom(gd), transformId(tid), colorIndex(cidx), depth(d) {}
+                    , geom(gd), transformId(tid), colorId(cid), depth(d) {}
             };
 
             mutable std::vector<GuiDrawCommand> m_drawCommands;

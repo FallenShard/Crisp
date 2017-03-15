@@ -49,6 +49,11 @@ namespace crisp
 
         void onResize(int width, int height);
 
+        void startRayTracing();
+        void stopRayTracing();
+        void openSceneFile();
+        void writeImageToExr();
+
         gui::Form* getForm() const;
 
     private:

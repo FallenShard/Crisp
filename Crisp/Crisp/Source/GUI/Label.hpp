@@ -12,7 +12,7 @@ namespace crisp
         class Label : public Control
         {
         public:
-            Label(RenderSystem* renderSystem, const std::string& text = "Example Text");
+            Label(Form* parentForm, const std::string& text = "Example Text");
             ~Label();
 
             virtual float getWidth() const override;
@@ -20,9 +20,6 @@ namespace crisp
 
             void setText(const std::string& text);
             glm::vec2 getTextExtent() const;
-
-            void setColor(ColorPalette color);
-            ColorPalette getColor() const;
 
             virtual void validate() override;
 
@@ -34,8 +31,6 @@ namespace crisp
             unsigned int m_fontId;
             std::string m_text;
             glm::vec2 m_textExtent;
-
-            ColorPalette m_color;
 
             unsigned int m_textResourceId;
         };

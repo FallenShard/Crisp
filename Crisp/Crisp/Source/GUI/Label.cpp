@@ -7,15 +7,17 @@ namespace crisp
 {
     namespace gui
     {
-        Label::Label(RenderSystem* renderSystem, const std::string& text)
-            : m_color(Green)
+        Label::Label(Form* parentForm, const std::string& text)
+            : Control(parentForm)
             , m_text(text)
             , m_textResourceId(-1)
         {
-            m_renderSystem = renderSystem;
-
             m_transformId = m_renderSystem->registerTransformResource();
             m_M           = glm::translate(glm::vec3(m_position, m_depthOffset));
+
+            m_color = glm::vec4(1.0f);
+            m_colorId = m_renderSystem->registerColorResource();
+            m_renderSystem->updateColorResource(m_colorId, m_color);
 
             m_fontId         = m_renderSystem->getFont("SegoeUI.ttf", 14);
             m_textResourceId = m_renderSystem->registerTextResource(m_text, m_fontId);
@@ -44,7 +46,7 @@ namespace crisp
 
             m_textExtent = m_renderSystem->updateTextResource(m_textResourceId, m_text, m_fontId);
 
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         glm::vec2 Label::getTextExtent() const
@@ -52,30 +54,29 @@ namespace crisp
             return m_textExtent;
         }
 
-        void Label::setColor(ColorPalette color)
-        {
-            m_color = color;
-        }
-
-        ColorPalette Label::getColor() const
-        {
-            return m_color;
-        }
-
         void Label::validate()
         {
-            auto absPos = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
+            if (m_validationFlags & Validation::Transform)
+            {
+                auto absPos = getAbsolutePosition();
+                auto absDepth = getAbsoluteDepth();
 
-            glm::vec2 renderedPos(std::round(absPos.x), std::round(absPos.y + m_textExtent.y));
-            m_M = glm::translate(glm::vec3(renderedPos, absDepth));// *glm::scale(glm::vec3(m_scale, m_scale, 1.0f));
-            
-            m_renderSystem->updateTransformResource(m_transformId, m_M);
+                glm::vec2 renderedPos(std::round(absPos.x), std::round(absPos.y + m_textExtent.y));
+                m_M = glm::translate(glm::vec3(renderedPos, absDepth));// *glm::scale(glm::vec3(m_scale, m_scale, 1.0f));
+
+                m_renderSystem->updateTransformResource(m_transformId, m_M);
+            }
+
+            if (m_validationFlags & Validation::Color)
+            {
+                m_color.a = getParentAbsoluteOpacity() * m_opacity;
+                m_renderSystem->updateColorResource(m_colorId, m_color);
+            }
         }
 
         void Label::draw(RenderSystem& visitor)
         {
-            visitor.drawText(m_textResourceId, m_transformId, m_color, m_M[3][2]);
+            visitor.drawText(m_textResourceId, m_transformId, m_colorId, m_M[3][2]);
         }
 
         unsigned int Label::getTextResourceId() const

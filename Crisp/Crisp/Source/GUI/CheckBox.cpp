@@ -8,10 +8,11 @@ namespace crisp
     namespace gui
     {
         CheckBox::CheckBox(RenderSystem* renderSystem)
-            : m_state(State::Idle)
+            : Control(nullptr)
+            , m_state(State::Idle)
             , m_isChecked(false)
             , m_prevCheckedState(true)
-            , m_label(std::make_unique<Label>(renderSystem, "CheckBox"))
+            , m_label(std::make_unique<Label>(nullptr, "CheckBox"))
         {
             m_position = glm::vec2(300, 300);
             m_size = glm::vec2(16, 16);
@@ -131,12 +132,12 @@ namespace crisp
         {
             visitor.draw(*this);
 
-            if (m_state == State::Idle)
-                m_label->setColor(Green);
-            else if (m_state == State::Hover)
-                m_label->setColor(LightGreen);
-            else
-                m_label->setColor(DarkGreen);
+            //if (m_state == State::Idle)
+            //    m_label->setColor(Green);
+            //else if (m_state == State::Hover)
+            //    m_label->setColor(LightGreen);
+            //else
+            //    m_label->setColor(DarkGreen);
             //visitor.draw(*m_label);
         }
 

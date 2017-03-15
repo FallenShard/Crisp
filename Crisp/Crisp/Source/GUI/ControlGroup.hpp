@@ -13,7 +13,7 @@ namespace crisp
         class ControlGroup : public Control
         {
         public:
-            ControlGroup();
+            ControlGroup(Form* parentForm);
 
             void addControl(std::shared_ptr<Control> control);
             void removeControl(const std::string& id);
@@ -27,8 +27,8 @@ namespace crisp
             virtual void onMousePressed(float x, float y);
             virtual void onMouseReleased(float x, float y);
 
-            virtual void invalidate() override;
-            virtual bool isInvalidated() override;
+            virtual void setValidationFlags(Validation validation) override;
+            virtual bool needsValidation() override;
             virtual void validate() override;
 
             virtual void draw(RenderSystem& renderSystem) override;
@@ -38,6 +38,7 @@ namespace crisp
         protected:
             glm::vec2 m_prevMousePos;
             std::vector<std::shared_ptr<Control>> m_children;
+            glm::vec2 m_cachedChildrenSize;
         };
     }
 }

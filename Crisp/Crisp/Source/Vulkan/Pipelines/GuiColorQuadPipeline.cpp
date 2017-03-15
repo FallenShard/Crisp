@@ -14,32 +14,23 @@ namespace crisp
         transformBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
         transformBinding.pImmutableSamplers = nullptr;
 
-        std::vector<VkDescriptorSetLayoutBinding> firstSetBindings =
-        {
-            transformBinding
-        };
-        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(firstSetBindings.size());
-        layoutInfo.pBindings    = firstSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Transform]);
-
         VkDescriptorSetLayoutBinding colorBinding = {};
-        colorBinding.binding            = 0;
-        colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        colorBinding.binding            = 1;
+        colorBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         colorBinding.descriptorCount    = 1;
         colorBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         colorBinding.pImmutableSamplers = nullptr;
 
-        std::vector<VkDescriptorSetLayoutBinding> secondSetBindings =
+        std::vector<VkDescriptorSetLayoutBinding> setBindings =
         {
+            transformBinding,
             colorBinding
         };
-        layoutInfo = {};
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(secondSetBindings.size());
-        layoutInfo.pBindings    = secondSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::Color]);
+        layoutInfo.bindingCount = static_cast<uint32_t>(setBindings.size());
+        layoutInfo.pBindings    = setBindings.data();
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DescSets::TransformAndColor]);
 
         // Push constants
         std::vector<VkPushConstantRange> pushConstants(2, VkPushConstantRange{});
@@ -60,18 +51,17 @@ namespace crisp
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         // Descriptor Pool
-        std::array<VkDescriptorPoolSize, 2> poolSizes = {};
-        poolSizes[DescSets::Transform].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        poolSizes[DescSets::Transform].descriptorCount = 3;
-
-        poolSizes[DescSets::Color].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[DescSets::Color].descriptorCount = 1;
+        std::vector<VkDescriptorPoolSize> poolSizes =
+        {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 3 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 3 }
+        };
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
-        poolInfo.maxSets       = 4;
+        poolInfo.maxSets       = 3;
         vkCreateDescriptorPool(m_renderer->getDevice().getHandle(), &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-quad-unif-col-vert");

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 namespace crisp
 {
     namespace gui
@@ -21,7 +23,27 @@ namespace crisp
             LeftCenter,
             BottomCenter,
             RightCenter,
-            Center
+            Center,
+            CenterVertically,
+            CenterHorizontally
         };
+
+        enum class Validation
+        {
+            None = 0,
+            Transform = 1,
+            Color = 2,
+            All = Transform | Color
+        };
+
+        static Validation operator|(Validation f1, Validation f2)
+        {
+            return static_cast<Validation>(static_cast<std::underlying_type<Validation>::type>(f1) | static_cast<std::underlying_type<Validation>::type>(f2));
+        }
+
+        static bool operator&(Validation f1, Validation f2)
+        {
+            return static_cast<std::underlying_type<Validation>::type>(f1) & static_cast<std::underlying_type<Validation>::type>(f2);
+        }
     }
 }

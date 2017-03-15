@@ -27,19 +27,21 @@ namespace crisp
             , m_animator(std::make_unique<Animator>())
             , m_renderSystem(std::move(renderSystem))
             , m_timePassed(0.0)
+            , m_bufferMemUsageLabel(nullptr)
+            , m_fpsLabel(nullptr)
         {
-            m_rootControlGroup = buildGui();
+            m_rootControlGroup = std::make_shared<gui::ControlGroup>(this);
+            m_rootControlGroup->setId("rootControlGroup");
+            m_rootControlGroup->setDepthOffset(-32.0f);
+            m_rootControlGroup->setSize(m_renderSystem->getScreenSize());
+
+            m_rootControlGroup->addControl(fadeIn(buildWelcomeScreen()));
             
-            m_optionsPanel         = m_rootControlGroup->getTypedControlById<Panel>("mainPanel");
             m_fpsLabel             = m_rootControlGroup->getTypedControlById<Label>("fpsLabel");
             m_progressLabel        = m_rootControlGroup->getTypedControlById<Label>("progressLabel");
             m_progressBar          = m_rootControlGroup->getTypedControlById<Panel>("progressBar");
-            m_bufferMemUsage       = m_rootControlGroup->getTypedControlById<Panel>("bufferDeviceMem");
-            m_bufferMemUsageLabel  = m_rootControlGroup->getTypedControlById<Label>("bufferDeviceMemLabel");
-            m_imageMemUsage        = m_rootControlGroup->getTypedControlById<Panel>("imageDeviceMem");
-            m_imageMemUsageLabel   = m_rootControlGroup->getTypedControlById<Label>("imageDeviceMemLabel");
-            m_stagingMemUsage      = m_rootControlGroup->getTypedControlById<Panel>("stagingMem");
-            m_stagingMemUsageLabel = m_rootControlGroup->getTypedControlById<Label>("stagingMemLabel");
+
+            
 
             //
             //auto checkBox = m_mainGroup->getTypedControlById<gui::CheckBox>("hideGuiCheckbox");
@@ -53,14 +55,29 @@ namespace crisp
         {
         }
 
+        RenderSystem* Form::getRenderSystem()
+        {
+            return m_renderSystem.get();
+        }
+        Animator* Form::getAnimator()
+        {
+            return m_animator.get();
+        }
+
+        void Form::postGuiUpdate(std::function<void()>&& guiUpdateCallback)
+        {
+            m_guiUpdates.emplace_back(std::forward<std::function<void()>>(guiUpdateCallback));
+        }
+
         void Form::update(double dt)
         {
-            for (auto& controlPair : m_pendingControls)
+            if (!m_guiUpdates.empty())
             {
-                controlPair.first->addControl(controlPair.second);
-            }
-            m_pendingControls.clear();
+                for (auto& guiUpdate : m_guiUpdates)
+                    guiUpdate();
 
+                m_guiUpdates.clear();
+            }
             
             m_animator->update(dt);
 
@@ -68,54 +85,27 @@ namespace crisp
 
             if (m_timePassed > 1.0)
             {
-                auto metrics = m_renderSystem->getDeviceMemoryUsage();
-
-                // Device buffer
-                float percentage = static_cast<float>(metrics.bufferMemoryUsed) / static_cast<float>(metrics.bufferMemorySize);
-
-                std::stringstream deviceBufferStream;
-                deviceBufferStream << std::to_string(metrics.bufferMemoryUsed >> 20) << " / " << std::to_string(metrics.bufferMemorySize >> 20) << " MB";
-
-                m_bufferMemUsageLabel->setText(deviceBufferStream.str());
-                m_bufferMemUsage->setWidthSizingBehavior(Sizing::FillParent, percentage);
-
-                // Device image
-                percentage = static_cast<float>(metrics.imageMemoryUsed) / static_cast<float>(metrics.imageMemorySize);
-
-                std::stringstream deviceImageStream;
-                deviceImageStream << std::to_string(metrics.imageMemoryUsed >> 20) << " / " << std::to_string(metrics.imageMemorySize >> 20) << " MB";
-
-                m_imageMemUsageLabel->setText(deviceImageStream.str());
-                m_imageMemUsage->setWidthSizingBehavior(Sizing::FillParent, percentage);
-
-                percentage = static_cast<float>(metrics.stagingMemoryUsed) / static_cast<float>(metrics.stagingMemorySize);
-
-                std::stringstream stagingMemoryStream;
-                stagingMemoryStream << std::to_string(metrics.stagingMemoryUsed >> 20) << " / " << std::to_string(metrics.stagingMemorySize >> 20) << " MB";
-
-                m_stagingMemUsageLabel->setText(stagingMemoryStream.str());
-                m_stagingMemUsage->setWidthSizingBehavior(Sizing::FillParent, percentage);
-
+                updateMemoryMetrics();
                 m_timePassed -= 1.0;
             }
         }
 
         void Form::setTracerProgress(float percentage, float timeSpentRendering)
         {
-            float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpentRendering / 8.0f;
-            
-            std::stringstream stringStream;
-            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
-            m_progressLabel->setText(stringStream.str());
-            m_progressBar->setWidthSizingBehavior(Sizing::FillParent, percentage);
+            //float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpentRendering / 8.0f;
+            //
+            //std::stringstream stringStream;
+            //stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
+            //m_progressLabel->setText(stringStream.str());
+            //m_progressBar->setWidthSizingBehavior(Sizing::FillParent, percentage);
         }
 
         void Form::draw()
         {
-            if (m_rootControlGroup->isInvalidated())
+            if (m_rootControlGroup->needsValidation())
             {
                 m_rootControlGroup->validate();
-                m_rootControlGroup->setValidationStatus(true);
+                m_rootControlGroup->clearValidationFlags();
             }
 
             m_rootControlGroup->draw(*m_renderSystem);
@@ -174,20 +164,57 @@ namespace crisp
 
         void Form::setFpsString(const std::string& fps)
         {
-            m_fpsLabel->setText(fps);
+            if (m_fpsLabel)
+                m_fpsLabel->setText(fps);
         }
 
-        std::shared_ptr<ControlGroup> Form::buildGui()
+        void Form::addMemoryUsagePanel()
         {
-            auto rootControlGroup = std::make_shared<gui::ControlGroup>();
-            rootControlGroup->setId("rootControlGroup");
-            rootControlGroup->setDepthOffset(-32.0f);
-            rootControlGroup->setSize(m_renderSystem->getScreenSize());
+            m_rootControlGroup->addControl(fadeIn(buildMemoryUsagePanel()));
+            m_bufferMemUsage       = m_rootControlGroup->getTypedControlById<Panel>("bufferDeviceMem");
+            m_bufferMemUsageLabel  = m_rootControlGroup->getTypedControlById<Label>("bufferDeviceMemLabel");
+            m_imageMemUsage        = m_rootControlGroup->getTypedControlById<Panel>("imageDeviceMem");
+            m_imageMemUsageLabel   = m_rootControlGroup->getTypedControlById<Label>("imageDeviceMemLabel");
+            m_stagingMemUsage      = m_rootControlGroup->getTypedControlById<Panel>("stagingMem");
+            m_stagingMemUsageLabel = m_rootControlGroup->getTypedControlById<Label>("stagingMemLabel");
+        }
 
-            rootControlGroup->addControl(buildStatusBar());
-            rootControlGroup->addControl(buildSceneOptions());
-            rootControlGroup->addControl(buildProgressBar());
-            rootControlGroup->addControl(buildMemoryUsagePanel());
+
+
+        void Form::addStatusBar()
+        {
+            m_rootControlGroup->addControl(fadeIn(buildStatusBar()));
+            m_fpsLabel = m_rootControlGroup->getTypedControlById<Label>("fpsLabel");
+        }
+
+        void Form::add(std::shared_ptr<Control> control)
+        {
+            m_rootControlGroup->addControl(fadeIn(control));
+        }
+
+        void Form::fadeOutAndRemove(std::string controlId, float duration)
+        {
+            auto control = m_rootControlGroup->getControlById(controlId);
+            if (!control)
+                return;
+
+            auto colorAnim = std::make_shared<PropertyAnimation<float>>(duration, 1.0f, 0.0f, 0, Easing::SlowIn);
+            colorAnim->setUpdater([control](const auto& t)
+            {
+                control->setOpacity(t);
+            });
+            colorAnim->finished.subscribe([this, control]()
+            {
+                postGuiUpdate([this, control]()
+                {
+                    m_rootControlGroup->removeControl(control->getId());
+                });
+            });
+            m_animator->add(colorAnim);
+        }
+
+            //rootControlGroup->addControl(buildStatusBar());
+            //rootControlGroup->addControl(buildMemoryUsagePanel());
 
             /*
             
@@ -240,20 +267,60 @@ namespace crisp
             panel->addControl(camUpValueLabel);
             currY += 20.0f;*/
 
-            return rootControlGroup;
+        //    return rootControlGroup;
+        //}
+
+        std::shared_ptr<ControlGroup> Form::buildWelcomeScreen()
+        {
+            auto panel = std::make_shared<gui::Panel>(this);
+            panel->setId("welcomePanel");
+            panel->setSize({ 300, 500 });
+            panel->setPadding({ 10, 10 });
+            panel->setAnchor(Anchor::Center);
+            panel->setHeightSizingBehavior(Sizing::WrapContent);
+            panel->setWidthSizingBehavior(Sizing::WrapContent);
+            panel->setOpacity(0.0f);
+
+            auto welcomeLabel = std::make_shared<gui::Label>(this, "Welcome to Crisp!");
+            welcomeLabel->setPosition({ 0, 20 });
+            welcomeLabel->setAnchor(Anchor::CenterHorizontally);
+            panel->addControl(welcomeLabel);
+
+            auto selectLabel = std::make_shared<gui::Label>(this, "Select your environment:");
+            selectLabel->setPosition({ 0, 50 });
+            selectLabel->setAnchor(Anchor::CenterHorizontally);
+            panel->addControl(selectLabel);
+            
+            auto button = std::make_shared<gui::Button>(this);
+            button->setId("crispButton");
+            button->setText("Crisp (Real-time Renderer)");
+            button->setPosition({ 0, 80 });
+            button->setSize({ 180, 30 });
+            button->setAnchor(Anchor::CenterHorizontally);
+            panel->addControl(button);
+            
+            button = std::make_shared<gui::Button>(this);
+            button->setId("vesperButton");
+            button->setText("Vesper (Offline Ray Tracer)");
+            button->setPosition({ 0, 120 });
+            button->setSize({ 180, 30 });
+            button->setAnchor(Anchor::CenterHorizontally);
+            panel->addControl(button);
+
+            return panel;
         }
 
         std::shared_ptr<ControlGroup> Form::buildStatusBar()
         {
-            auto statusBar = std::make_shared<gui::Panel>(m_renderSystem.get());
+            auto statusBar = std::make_shared<gui::Panel>(this);
             statusBar->setId("statusBar");
             statusBar->setPosition({ 0, 0 });
             statusBar->setSize({ 500, 20 });
             statusBar->setPadding({ 3, 3 });
-            statusBar->setColor(ColorPalette::DarkGray);
+            statusBar->setColor(glm::vec4(0.1f, 0.1f, 0.1f, 1.0f));
             statusBar->setWidthSizingBehavior(Sizing::FillParent);
 
-            auto label = std::make_shared<gui::Label>(m_renderSystem.get(), "ExampleText");
+            auto label = std::make_shared<gui::Label>(this, "ExampleText");
             label->setId("fpsLabel");
             label->setPosition({ 6, 3 });
             label->setAnchor(Anchor::TopRight);
@@ -262,95 +329,20 @@ namespace crisp
             return statusBar;
         }
 
-        std::shared_ptr<ControlGroup> Form::buildSceneOptions()
-        {
-            auto panel = std::make_shared<gui::Panel>(m_renderSystem.get());
-            panel->setId("optionsPanel");
-            panel->setPosition({ 10, 30 });
-            panel->setSize({ 200, 500 });
-            panel->setPadding({ 10, 10 });
-            panel->setAnchor(Anchor::TopLeft);
-            panel->setHeightSizingBehavior(Sizing::WrapContent);
-            
-            auto button = std::make_shared<gui::Button>(m_renderSystem.get());
-            button->setId("openButton");
-            button->setText("Open XML Scene");
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
-            panel->addControl(button);
-
-            button = std::make_shared<gui::Button>(m_renderSystem.get());
-            button->setId("renderButton");
-            button->setText("Start Raytracing");
-            button->setPosition({ 0, 50 });
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
-            panel->addControl(button);
-
-            button = std::make_shared<gui::Button>(m_renderSystem.get());
-            button->setId("stopButton");
-            button->setText("Stop Raytracing");
-            button->setPosition({ 0, 90 });
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
-            panel->addControl(button);
-
-            button = std::make_shared<gui::Button>(m_renderSystem.get());
-            button->setId("saveButton");
-            button->setText("Save as EXR");
-            button->setPosition({ 0, 130 });
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
-            panel->addControl(button);
-
-            return panel;
-        }
-
-        std::shared_ptr<ControlGroup> Form::buildProgressBar()
-        {
-            auto progressBarBg = std::make_shared<gui::Panel>(m_renderSystem.get());
-            progressBarBg->setId("progressBarBg");
-            progressBarBg->setPosition({ 0, 0 });
-            progressBarBg->setSize({ 500, 20 });
-            progressBarBg->setPadding({ 3, 3 });
-            progressBarBg->setColor(ColorPalette::DarkGray);
-            progressBarBg->setAnchor(Anchor::BottomLeft);
-            progressBarBg->setWidthSizingBehavior(Sizing::FillParent);
-
-            auto progressBar = std::make_shared<gui::Panel>(m_renderSystem.get());
-            progressBar->setId("progressBar");
-            progressBar->setPosition({ 0, 0 });
-            progressBar->setSize({ 500, 20 });
-            progressBar->setPadding({ 3, 3 });
-            progressBar->setColor(ColorPalette::DarkGreen);
-            progressBar->setAnchor(Anchor::BottomLeft);
-            progressBar->setWidthSizingBehavior(Sizing::FillParent, 0.0);
-            progressBarBg->addControl(progressBar);
-
-            auto label = std::make_shared<gui::Label>(m_renderSystem.get(), "100.0%");
-            label->setId("progressLabel");
-            label->setPosition({ 6, 3 });
-            label->setAnchor(Anchor::Center);
-            label->setColor(ColorPalette::White);
-            progressBarBg->addControl(label);
-
-            return progressBarBg;
-        }
-
         std::shared_ptr<ControlGroup> Form::buildMemoryUsagePanel()
         {
-            auto panel = std::make_shared<gui::Panel>(m_renderSystem.get());
+            auto panel = std::make_shared<gui::Panel>(this);
             panel->setId("memoryUsagePanel");
             panel->setPosition({ 10, 30 });
             panel->setSize({ 200, 300 });
             panel->setPadding({ 10, 10 });
-            panel->setColor(ColorPalette::DarkGray);
+            panel->setColor(glm::vec4(0.1f, 0.1f, 0.1f, 1.0f));
             panel->setAnchor(Anchor::BottomLeft);
             panel->setHeightSizingBehavior(Sizing::WrapContent);
 
-            auto panelName = std::make_shared<gui::Label>(m_renderSystem.get(), "Memory Usage");
+            auto panelName = std::make_shared<gui::Label>(this, "Memory Usage");
             panelName->setPosition({ 0, 0 });
-            panelName->setColor(ColorPalette::Green);
+            panelName->setColor(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
             panel->addControl(panelName);
 
             buildProgressBar(panel, 50.0f, "Buffer Device Memory", "bufferDeviceMem");
@@ -362,31 +354,77 @@ namespace crisp
 
         void Form::buildProgressBar(std::shared_ptr<ControlGroup> parent, float verticalOffset, std::string name, std::string tag)
         {
-            auto bufferDevMemLabel = std::make_shared<gui::Label>(m_renderSystem.get(), name);
+            auto bufferDevMemLabel = std::make_shared<gui::Label>(this, name);
             bufferDevMemLabel->setPosition({ 0, verticalOffset });
-            bufferDevMemLabel->setColor(ColorPalette::White);
+            bufferDevMemLabel->setColor(glm::vec4(1.0f));
             parent->addControl(bufferDevMemLabel);
 
-            auto deviceMemoryBg = std::make_shared<gui::Panel>(m_renderSystem.get());
+            auto deviceMemoryBg = std::make_shared<gui::Panel>(this);
             deviceMemoryBg->setPosition({ 0, verticalOffset + 20.0f });
             deviceMemoryBg->setSize({ 200, 20 });
             deviceMemoryBg->setPadding({ 3, 3 });
-            deviceMemoryBg->setColor(ColorPalette::Gray20);
+            deviceMemoryBg->setColor(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
             parent->addControl(deviceMemoryBg);
 
-            auto deviceMemory = std::make_shared<gui::Panel>(m_renderSystem.get());
+            auto deviceMemory = std::make_shared<gui::Panel>(this);
             deviceMemory->setId(tag);
             deviceMemory->setPosition({ 0, 0 });
             deviceMemory->setSize({ 200, 20 });
-            deviceMemory->setColor(ColorPalette::DarkGreen);
+            deviceMemory->setColor(glm::vec4(0.0f, 0.5f, 0.0f, 1.0f));
             deviceMemory->setWidthSizingBehavior(Sizing::FillParent, 0.3f);
             deviceMemoryBg->addControl(deviceMemory);
 
-            auto bufferMemLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "100.0%");
+            auto bufferMemLabel = std::make_shared<gui::Label>(this, "100.0%");
             bufferMemLabel->setId(tag + "Label");
             bufferMemLabel->setAnchor(Anchor::Center);
-            bufferMemLabel->setColor(ColorPalette::White);
+            bufferMemLabel->setColor(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
             deviceMemoryBg->addControl(bufferMemLabel);
+        }
+
+        std::shared_ptr<Control> Form::fadeIn(std::shared_ptr<Control> control, float duration)
+        {
+            auto anim = std::make_shared<PropertyAnimation<float>>(duration, 0.0f, 1.0f, 0, Easing::SlowOut);
+            anim->setUpdater([this, control](const auto& t)
+            {
+                control->setOpacity(t);
+            });
+            m_animator->add(anim);
+
+            return control;
+        }
+
+        void Form::updateMemoryMetrics()
+        {
+            if (!m_bufferMemUsageLabel)
+                return;
+
+            auto metrics = m_renderSystem->getDeviceMemoryUsage();
+
+            // Device buffer
+            float percentage = static_cast<float>(metrics.bufferMemoryUsed) / static_cast<float>(metrics.bufferMemorySize);
+
+            std::stringstream deviceBufferStream;
+            deviceBufferStream << std::to_string(metrics.bufferMemoryUsed >> 20) << " / " << std::to_string(metrics.bufferMemorySize >> 20) << " MB";
+
+            m_bufferMemUsageLabel->setText(deviceBufferStream.str());
+            m_bufferMemUsage->setWidthSizingBehavior(Sizing::FillParent, percentage);
+
+            // Device image
+            percentage = static_cast<float>(metrics.imageMemoryUsed) / static_cast<float>(metrics.imageMemorySize);
+
+            std::stringstream deviceImageStream;
+            deviceImageStream << std::to_string(metrics.imageMemoryUsed >> 20) << " / " << std::to_string(metrics.imageMemorySize >> 20) << " MB";
+
+            m_imageMemUsageLabel->setText(deviceImageStream.str());
+            m_imageMemUsage->setWidthSizingBehavior(Sizing::FillParent, percentage);
+
+            percentage = static_cast<float>(metrics.stagingMemoryUsed) / static_cast<float>(metrics.stagingMemorySize);
+
+            std::stringstream stagingMemoryStream;
+            stagingMemoryStream << std::to_string(metrics.stagingMemoryUsed >> 20) << " / " << std::to_string(metrics.stagingMemorySize >> 20) << " MB";
+
+            m_stagingMemUsageLabel->setText(stagingMemoryStream.str());
+            m_stagingMemUsage->setWidthSizingBehavior(Sizing::FillParent, percentage);
         }
     }
 }

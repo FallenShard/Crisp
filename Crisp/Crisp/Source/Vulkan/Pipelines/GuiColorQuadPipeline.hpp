@@ -9,8 +9,7 @@ namespace crisp
     public:
         enum DescSets
         {
-            Transform,
-            Color,
+            TransformAndColor,
 
             Count
         };

@@ -14,10 +14,12 @@ namespace crisp
 {
     namespace gui
     {
-        class Control
+        class Form;
+
+        class Control : public std::enable_shared_from_this<Control>
         {
         public:
-            Control();
+            Control(Form* form);
             virtual ~Control();
 
             void setId(std::string id);
@@ -53,6 +55,12 @@ namespace crisp
             void setScale(float scale);
             float setScale() const;
 
+            void setColor(glm::vec4 color);
+            glm::vec4 getColor() const;
+
+            virtual void setOpacity(float opacity);
+            float getOpacity() const;
+
             Rect<float> getAbsoluteBounds() const;
             const glm::mat4& getModelMatrix() const;
 
@@ -62,9 +70,10 @@ namespace crisp
             virtual void onMousePressed(float x, float y);
             virtual void onMouseReleased(float x, float y);
 
-            void setValidationStatus(bool validationStatus);
-            virtual void invalidate();
-            virtual bool isInvalidated();
+            virtual void setValidationFlags(Validation validation);
+            void clearValidationFlags();
+            Validation getValidationFlags() const;
+            virtual bool needsValidation();
             virtual void validate();
 
             virtual void draw(RenderSystem& renderSystem) = 0;
@@ -82,6 +91,8 @@ namespace crisp
             glm::vec2 getParentAbsolutePosition() const;
             float getParentAbsoluteDepth() const;
             glm::vec2 getParentPadding() const;
+
+            float getParentAbsoluteOpacity() const;
 
             glm::vec2 getAbsolutePosition() const;
             float getAbsoluteDepth() const;
@@ -102,13 +113,17 @@ namespace crisp
             glm::mat4 m_M; // Captures absolute position and scale etc.
 
             float m_scale;
-            float m_opacity;
             float m_depthOffset;
 
-            
-            bool m_isValidated;
+            Validation m_validationFlags;
+
+            Form* m_form;
             RenderSystem* m_renderSystem;
             unsigned int m_transformId;
+
+            glm::vec4 m_color;  // Holds absolute values
+            float m_opacity;    // Holds control opacity
+            unsigned int m_colorId;
         };
     }
 }

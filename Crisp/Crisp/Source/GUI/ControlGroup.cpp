@@ -9,8 +9,9 @@ namespace crisp
 {
     namespace gui
     {
-        ControlGroup::ControlGroup()
-            : m_prevMousePos(-1.0, -1.0)
+        ControlGroup::ControlGroup(Form* parentForm)
+            : Control(parentForm)
+            , m_prevMousePos(-1.0, -1.0)
         {
         }
 
@@ -19,15 +20,15 @@ namespace crisp
             m_children.emplace_back(control);
             control->setParent(this);
 
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         void ControlGroup::removeControl(const std::string& id)
         {
-            std::remove_if(std::begin(m_children), std::end(m_children), [id](const std::shared_ptr<Control>& child)
+            m_children.erase(std::remove_if(std::begin(m_children), std::end(m_children), [id](const std::shared_ptr<Control>& child)
             {
                 return child->getId() == id;
-            });
+            }));
         }
 
         float ControlGroup::getWidth() const
@@ -42,7 +43,7 @@ namespace crisp
                     childrenWidth = std::max(childrenWidth, childPosX + childWidth);
                 }
 
-                return childrenWidth + m_padding.x;
+                return childrenWidth + 2.0f * m_padding.x;
             }
             else
             {
@@ -62,7 +63,7 @@ namespace crisp
                     childrenHeight = std::max(childrenHeight, childPosY + childHeight);
                 }
 
-                return childrenHeight + m_padding.y;
+                return childrenHeight + 2.0f * m_padding.y;
             }
             else
             {
@@ -123,22 +124,22 @@ namespace crisp
             }
         }
 
-        void ControlGroup::invalidate()
+        void ControlGroup::setValidationFlags(Validation validation)
         {
-            m_isValidated = false;
+            m_validationFlags = m_validationFlags | validation;
             
             for (auto& child : m_children)
-                child->invalidate();
+                child->setValidationFlags(validation);
         }
 
-        bool ControlGroup::isInvalidated()
+        bool ControlGroup::needsValidation()
         {
-            if (!m_isValidated)
+            if (m_validationFlags != Validation::None)
                 return true;
 
             bool childrenValid = false;
             for (auto& child : m_children)
-                childrenValid |= child->isInvalidated();
+                childrenValid |= child->needsValidation();
 
             return childrenValid;
         }
@@ -153,10 +154,10 @@ namespace crisp
 
             for (auto& child : m_children)
             {
-                if (child->isInvalidated())
+                if (child->needsValidation())
                 {
                     child->validate();
-                    child->setValidationStatus(true);
+                    child->clearValidationFlags();
                 }
             }
         }

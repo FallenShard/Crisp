@@ -12,7 +12,7 @@ namespace crisp
         class Button : public Control
         {
         public:
-            Button(RenderSystem* renderSystem);
+            Button(Form* parentForm);
             virtual ~Button();
 
             void setClickCallback(std::function<void()> callback);
@@ -27,8 +27,6 @@ namespace crisp
 
             virtual void draw(RenderSystem& visitor) override;
 
-            ColorPalette getColor() const;
-
         private:
             enum class State
             {
@@ -36,6 +34,7 @@ namespace crisp
                 Hover,
                 Pressed
             };
+            void setState(State state);
 
             State m_state;
 

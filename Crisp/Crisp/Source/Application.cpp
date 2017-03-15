@@ -17,6 +17,7 @@
 #include "GUI/RenderSystem.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/Button.hpp"
+#include "GUI/VesperGui.hpp"
 
 namespace crisp
 {
@@ -56,39 +57,22 @@ namespace crisp
 
         //m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
 
-        
-        
-        
-        m_guiForm->getControlById<gui::Button>("openButton")->setClickCallback([this]()
+        auto vesperButton = m_guiForm->getControlById<gui::Button>("vesperButton");
+        vesperButton->setClickCallback([this, form = m_guiForm.get()]()
         {
-            auto openedFile = FileUtils::openFileDialog();
-            if (openedFile == "")
-                return;
+            form->postGuiUpdate([this, form]()
+            {
+                form->addMemoryUsagePanel();
+                form->addStatusBar();
 
-            m_projectName = openedFile.substr(0, openedFile.length() - 4);
-            m_rayTracer->initializeScene("Resources/VesperScenes/" + openedFile);
+                gui::VesperGui vesperGui;
+                form->add(vesperGui.buildSceneOptions(form));
+                form->add(vesperGui.buildProgressBar(form));
 
-            auto imageSize = m_rayTracer->getImageSize();
-            m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
-            m_rayTracedImageData.resize(m_numRayTracedChannels * imageSize.x * imageSize.y);
-        });
+                vesperGui.setupInputCallbacks(form, this);
+            });
 
-        m_guiForm->getControlById<gui::Button>("renderButton")->setClickCallback([this]()
-        {
-            m_rayTracer->start();
-        });
-
-        m_guiForm->getControlById<gui::Button>("stopButton")->setClickCallback([this]()
-        {
-            m_rayTracer->stop();
-        });
-
-        m_guiForm->getControlById<gui::Button>("saveButton")->setClickCallback([this]()
-        {
-            OpenEXRWriter writer;
-            auto imageSize = m_rayTracer->getImageSize();
-            std::cout << "Writing EXR image..." << std::endl;
-            writer.write(m_projectName + ".exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
+            form->fadeOutAndRemove("welcomePanel", 0.5f);
         });
     }
 
@@ -129,11 +113,9 @@ namespace crisp
             //
             if (m_rayTracedImage)
                 m_rayTracedImage->draw();
+
             m_guiForm->draw();
             
-            //
-            
-
             m_renderer->drawFrame();
 
             m_frameTimeLogger->update();
@@ -155,6 +137,38 @@ namespace crisp
         //
         if (m_rayTracedImage)
             m_rayTracedImage->resize(width, height);
+    }
+
+    void Application::startRayTracing()
+    {
+        m_rayTracer->start();
+    }
+
+    void Application::stopRayTracing()
+    {
+        m_rayTracer->stop();
+    }
+
+    void Application::openSceneFile()
+    {
+        auto openedFile = FileUtils::openFileDialog();
+        if (openedFile == "")
+            return;
+
+        m_projectName = openedFile.substr(0, openedFile.length() - 4);
+        m_rayTracer->initializeScene("Resources/VesperScenes/" + openedFile);
+
+        auto imageSize = m_rayTracer->getImageSize();
+        m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
+        m_rayTracedImageData.resize(m_numRayTracedChannels * imageSize.x * imageSize.y);
+    }
+
+    void Application::writeImageToExr()
+    {
+        OpenEXRWriter writer;
+        auto imageSize = m_rayTracer->getImageSize();
+        std::cout << "Writing EXR image..." << std::endl;
+        writer.write(m_projectName + ".exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
     }
 
     gui::Form* Application::getForm() const
@@ -218,16 +232,7 @@ namespace crisp
                         }
                     }
                 }
-
-                if (update.pixelsRendered == update.numPixels)
-                {
-                    //OpenEXRWriter writer;
-                    //auto imageSize = m_rayTracer->getImageSize();
-                    //std::cout << "Writing EXR image..." << std::endl;
-                    //writer.write("testimage.exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
-                }
             }
-                
         }
     }
 }

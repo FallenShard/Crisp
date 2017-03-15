@@ -40,15 +40,14 @@ namespace crisp
             // Create pipelines for different types of drawable objects
             createPipelines();
             
-            // Create buffer that holds the color palette and descriptor set to reference it
-            initColorPaletteBuffer();
-            initColorDescriptorSet();
-
             // [0..1] Quad geometries for GUI elements
             initGeometryBuffers();
 
             // Initialize resources to support dynamic addition of MVP transform resources
             initTransformsResources();
+
+            // Initialize resources to support dynamic addition of color resources
+            initColorResources();
 
             // Initialize gui render target rendering resources
             m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -88,7 +87,7 @@ namespace crisp
             // If we use up all free resource ids, resize the buffers
             if (m_transformsResourceIdPool.empty())
             {
-                for (unsigned int i = 0; i < TransformsResourceIncrement; i++)
+                for (unsigned int i = 0; i < MatricesPerGranularity; i++)
                 {
                     m_transformsResourceIdPool.insert(m_numRegisteredTransformResources + i);
                 }
@@ -123,6 +122,52 @@ namespace crisp
         {
             m_transformsResourceIdPool.insert(transformId);
             m_numRegisteredTransformResources--;
+        }
+
+        unsigned int RenderSystem::registerColorResource()
+        {
+            auto freeColorId = *m_colorsResourceIdPool.begin(); // Smallest element in a set is at .begin()
+            m_colorsResourceIdPool.erase(freeColorId);
+            m_numRegisteredColorResources++;
+
+            // If we use up all free resource ids, resize the buffers
+            if (m_colorsResourceIdPool.empty())
+            {
+                for (unsigned int i = 0; i < MatricesPerGranularity; i++)
+                {
+                    m_colorsResourceIdPool.insert(m_numRegisteredColorResources + i);
+                }
+
+                auto numTransforms = m_numRegisteredColorResources + m_colorsResourceIdPool.size();
+                auto multiplier = (numTransforms - 1) / ColorsPerGranularity + 1;
+
+                // Create the new staging buffer, prepare previous one to be destroyed and set the new one as main
+                auto prevSize = m_colorsStagingBufferSize;
+                m_colorsStagingBufferSize = UniformBufferGranularity * multiplier;
+
+                auto newStagingBuffer = m_device->createStagingBuffer(m_colorsStagingBuffer, prevSize, m_colorsStagingBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+                m_renderer->scheduleStagingBufferForRemoval(m_colorsStagingBuffer);
+                m_colorsStagingBuffer = newStagingBuffer;
+
+                // Invalidate current device-backed uniform buffers
+                for (auto& res : m_colorsResources)
+                {
+                    res.isUpdated = false;
+                }
+            }
+
+            return freeColorId;
+        }
+        
+        void RenderSystem::updateColorResource(unsigned int colorId, const glm::vec4& color)
+        {
+            m_device->updateStagingBuffer(m_colorsStagingBuffer, glm::value_ptr(color), colorId * ColorSize, ColorSize);
+        }
+
+        void RenderSystem::unregisterColorResource(unsigned int colorId)
+        {
+            m_colorsResourceIdPool.insert(colorId);
+            m_numRegisteredColorResources--;
         }
 
         unsigned int RenderSystem::registerTexCoordResource()
@@ -163,7 +208,6 @@ namespace crisp
             textRes->geomData.vertexBufferOffset = 0;
             textRes->geomData.indexBufferOffset  = 0;
             textRes->geomData.indexCount         = 32;
-            textRes->descSets.emplace_back(m_colorDescriptorSet);
             textRes->descSets.emplace_back(m_fonts.at(fontId)->descSet);
             textRes->updateStagingBuffer(text, m_fonts.at(fontId)->font.get(), m_renderer);
 
@@ -211,17 +255,17 @@ namespace crisp
             //);
         }
 
-        void RenderSystem::drawQuad(unsigned int transformResourceId, ColorPalette color, float depth) const
+        void RenderSystem::drawQuad(unsigned int transformResourceId, uint32_t colorId, float depth) const
         {
-            m_drawCommands.emplace_back(m_colorQuadPipeline.get(), &m_colorDescriptorSet, static_cast<uint8_t>(1), static_cast<uint8_t>(1), &m_quadGeometry,
-                static_cast<uint16_t>(transformResourceId), color, depth);
+            m_drawCommands.emplace_back(m_colorQuadPipeline.get(), nullptr, 0, 0, &m_quadGeometry,
+                static_cast<uint16_t>(transformResourceId), static_cast<uint16_t>(colorId), depth);
         }
 
-        void RenderSystem::drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, ColorPalette color, float depth)
+        void RenderSystem::drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorId, float depth)
         {
             auto textRes = m_textResources.at(textRenderResourceId).get();
             m_drawCommands.emplace_back(m_textPipeline.get(), textRes->descSets.data(), static_cast<uint8_t>(1), static_cast<uint8_t>(textRes->descSets.size()), &textRes->geomData,
-                static_cast<uint16_t>(transformResourceId), color, depth);
+                static_cast<uint16_t>(transformResourceId), static_cast<uint16_t>(colorId), depth);
         }
 
         void RenderSystem::submitDrawRequests()
@@ -243,6 +287,20 @@ namespace crisp
                 copyRegion.dstOffset = 0;
                 copyRegion.size = m_transformsStagingBufferSize;
                 vkCmdCopyBuffer(commandBuffer, m_transformsStagingBuffer, currTransRes.uniformBuffer, 1, &copyRegion);
+
+                // Color
+                auto& currColorRes = m_colorsResources[currentFrame];
+
+                if (!currColorRes.isUpdated)
+                {
+                    updateColorBuffer(currentFrame);
+                }
+
+                copyRegion = {};
+                copyRegion.srcOffset = 0;
+                copyRegion.dstOffset = 0;
+                copyRegion.size = m_colorsStagingBufferSize;
+                vkCmdCopyBuffer(commandBuffer, m_colorsStagingBuffer, currColorRes.uniformBuffer, 1, &copyRegion);
 
                 // Text resources
                 for (auto& textResource : m_textResources)
@@ -299,18 +357,24 @@ namespace crisp
                 for (auto& cmd : m_drawCommands)
                 {
                     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getHandle());
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
-                        cmd.firstSet, cmd.descSetCount, cmd.descriptorSets, 0, nullptr);
+                    if (cmd.descriptorSets)
+                        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
+                            cmd.firstSet, cmd.descSetCount, cmd.descriptorSets, 0, nullptr);
                     
                     // Latest updated buffer
-                    uint32_t dynamicOffset = static_cast<uint32_t>(UniformBufferGranularity * (cmd.transformId / MatricesPerGranularity)); // order is important!
-                    int transformIndex = cmd.transformId % MatricesPerGranularity;
-                
+                    uint32_t dynamicOffsets[2];
+                    dynamicOffsets[0] = static_cast<uint32_t>(UniformBufferGranularity * (cmd.transformId / MatricesPerGranularity)); // order is important!
+                    dynamicOffsets[1] = static_cast<uint32_t>(UniformBufferGranularity * (cmd.colorId / ColorsPerGranularity)); // order is important!
+
+                    int pushConstants[2];
+                    pushConstants[0] = cmd.transformId % MatricesPerGranularity;
+                    pushConstants[1] = cmd.colorId % ColorsPerGranularity;
+
                     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
-                        0, 1, &m_transformsResources[currentFrame].descSet, 1, &dynamicOffset);
+                        0, 1, &m_transformsResources[currentFrame].descSet, 2, dynamicOffsets);
                 
-                    vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &transformIndex);
-                    vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &cmd.colorIndex);
+                    vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &pushConstants[0]);
+                    vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
                 
                     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cmd.geom->vertexBuffer, &cmd.geom->vertexBufferOffset);
                     vkCmdBindIndexBuffer(commandBuffer, cmd.geom->indexBuffer, cmd.geom->indexBufferOffset, VK_INDEX_TYPE_UINT16);
@@ -468,44 +532,44 @@ namespace crisp
             m_fsQuadPipeline    = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
         }
 
-        void RenderSystem::initColorPaletteBuffer()
-        {
-            std::vector<glm::vec4> colors(UniformBufferGranularity / sizeof(glm::vec4));
-            colors.at(DarkGray)   = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
-            colors.at(Green)      = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-            colors.at(LightGreen) = glm::vec4(0.5f, 1.0f, 0.5f, 1.0f);
-            colors.at(DarkGreen)  = glm::vec4(0.0f, 0.5f, 0.0f, 1.0f);
-            colors.at(LightGray)  = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-            colors.at(White)      = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-            colors.at(MediumGray) = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-            colors.at(Gray20)     = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-            colors.at(Gray30)     = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
-            colors.at(Gray40)     = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
-            colors.at(Blue)       = glm::vec4(0.2f, 0.2f, 1.0f, 1.0f);
-
-            m_colorPaletteBuffer = m_device->createDeviceBuffer(colors.size() * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-            m_device->fillDeviceBuffer(m_colorPaletteBuffer, colors.data(), colors.size() * sizeof(glm::vec4));
-        }
-
-        void RenderSystem::initColorDescriptorSet()
-        {
-            m_colorDescriptorSet = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::Color);
-
-            VkDescriptorBufferInfo colorBufferInfo = {};
-            colorBufferInfo.buffer = m_colorPaletteBuffer;
-            colorBufferInfo.offset = 0;
-            colorBufferInfo.range  = UniformBufferGranularity;
-
-            std::vector<VkWriteDescriptorSet> descWrites(1, VkWriteDescriptorSet{});
-            descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descWrites[0].dstSet          = m_colorDescriptorSet;
-            descWrites[0].dstBinding      = 0;
-            descWrites[0].dstArrayElement = 0;
-            descWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descWrites[0].descriptorCount = 1;
-            descWrites[0].pBufferInfo     = &colorBufferInfo;
-            vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0, nullptr);
-        }
+        //void RenderSystem::initColorPaletteBuffer()
+        //{
+        //    std::vector<glm::vec4> colors(UniformBufferGranularity / sizeof(glm::vec4));
+        //    colors.at(DarkGray)   = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
+        //    colors.at(Green)      = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        //    colors.at(LightGreen) = glm::vec4(0.5f, 1.0f, 0.5f, 1.0f);
+        //    colors.at(DarkGreen)  = glm::vec4(0.0f, 0.5f, 0.0f, 1.0f);
+        //    colors.at(LightGray)  = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+        //    colors.at(White)      = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        //    colors.at(MediumGray) = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+        //    colors.at(Gray20)     = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+        //    colors.at(Gray30)     = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+        //    colors.at(Gray40)     = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+        //    colors.at(Blue)       = glm::vec4(0.2f, 0.2f, 1.0f, 1.0f);
+        //
+        //    m_colorPaletteBuffer = m_device->createDeviceBuffer(colors.size() * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        //    m_device->fillDeviceBuffer(m_colorPaletteBuffer, colors.data(), colors.size() * sizeof(glm::vec4));
+        //}
+        //
+        //void RenderSystem::initColorDescriptorSet()
+        //{
+        //    m_colorDescriptorSet = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::Color);
+        //
+        //    VkDescriptorBufferInfo colorBufferInfo = {};
+        //    colorBufferInfo.buffer = m_colorPaletteBuffer;
+        //    colorBufferInfo.offset = 0;
+        //    colorBufferInfo.range  = UniformBufferGranularity;
+        //
+        //    std::vector<VkWriteDescriptorSet> descWrites(1, VkWriteDescriptorSet{});
+        //    descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        //    descWrites[0].dstSet          = m_colorDescriptorSet;
+        //    descWrites[0].dstBinding      = 0;
+        //    descWrites[0].dstArrayElement = 0;
+        //    descWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        //    descWrites[0].descriptorCount = 1;
+        //    descWrites[0].pBufferInfo     = &colorBufferInfo;
+        //    vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0, nullptr);
+        //}
 
         void RenderSystem::initGeometryBuffers()
         {
@@ -526,13 +590,13 @@ namespace crisp
 
         void RenderSystem::initTransformsResources()
         {
-            for (unsigned int i = 0; i < TransformsResourceIncrement; i++)
+            for (unsigned int i = 0; i < MatricesPerGranularity; i++)
             {
                 m_transformsResourceIdPool.insert(i); // unoccupied mvp transform ids
             }
 
             // Minimum multiples of granularity to store TransformsResourceIncrement matrices
-            auto multiplier = (TransformsResourceIncrement - 1) / MatricesPerGranularity + 1;
+            auto multiplier = (m_transformsResourceIdPool.size() - 1) / MatricesPerGranularity + 1;
 
             // Single staging buffer, will always contain latest data
             m_transformsStagingBufferSize = UniformBufferGranularity * multiplier;
@@ -544,10 +608,35 @@ namespace crisp
                 auto& res = m_transformsResources[i];
 
                 // Create the descriptor set
-                res.descSet = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::Transform);
+                res.descSet = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor);
 
                 // Create the buffer and link it with descriptor set
-                res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize);
+                res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize, 0);
+            }
+        }
+
+        void RenderSystem::initColorResources()
+        {
+            for (unsigned int i = 0; i < ColorsPerGranularity; i++)
+            {
+                m_colorsResourceIdPool.insert(i); // unoccupiedcolor ids
+            }
+
+            // Minimum multiples of granularity to store colors
+            auto multiplier = (m_colorsResourceIdPool.size() - 1) / ColorsPerGranularity + 1;
+
+            m_colorsStagingBufferSize = UniformBufferGranularity * multiplier;
+            m_colorsStagingBuffer     = m_device->createStagingBuffer(m_colorsStagingBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+            // Per-frame buffers and descriptor sets, because each unprocessed command buffer may hold onto its own unique version when the current one is modified
+            for (unsigned int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+            {
+                auto& res = m_colorsResources[i];
+
+                res.descSet = m_transformsResources[i].descSet;
+
+                // Create the buffer and link it with descriptor set
+                res.createBufferAndUpdateSet(m_device, m_colorsStagingBufferSize, 1);
             }
         }
 
@@ -626,10 +715,21 @@ namespace crisp
             m_device->destroyDeviceBuffer(res.uniformBuffer);
 
             // Create a new buffer and link it to descriptor set
-            res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize);
+            res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize, 0);
         }
 
-        void RenderSystem::TransformsFrameResource::createBufferAndUpdateSet(VulkanDevice* device, VkDeviceSize size)
+        void RenderSystem::updateColorBuffer(uint32_t frameId)
+        {
+            auto& res = m_colorsResources[frameId];
+
+            // Destroy the old buffer to free memory 
+            m_device->destroyDeviceBuffer(res.uniformBuffer);
+
+            // Create a new buffer and link it to descriptor set
+            res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize, 1);
+        }
+
+        void RenderSystem::UniformBufferFrameResource::createBufferAndUpdateSet(VulkanDevice* device, VkDeviceSize size, uint32_t binding)
         {
             bufferSize = size;
             uniformBuffer = device->createDeviceBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -637,16 +737,16 @@ namespace crisp
             VkDescriptorBufferInfo transBufferInfo = {};
             transBufferInfo.buffer = uniformBuffer;
             transBufferInfo.offset = 0;
-            transBufferInfo.range = UniformBufferGranularity;
+            transBufferInfo.range  = UniformBufferGranularity; // Because we use UNIFORM_BUFFER_DYNAMIC, it stays the same size
 
             VkWriteDescriptorSet descWrite = {};
-            descWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descWrite.dstSet = descSet;
-            descWrite.dstBinding = 0;
+            descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descWrite.dstSet          = descSet;
+            descWrite.dstBinding      = binding;
             descWrite.dstArrayElement = 0;
-            descWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
             descWrite.descriptorCount = 1;
-            descWrite.pBufferInfo = &transBufferInfo;
+            descWrite.pBufferInfo     = &transBufferInfo;
 
             vkUpdateDescriptorSets(device->getHandle(), 1, &descWrite, 0, nullptr);
             isUpdated = true;

@@ -2,11 +2,13 @@
 
 #include <iostream>
 
+#include "Form.hpp"
+
 namespace crisp
 {
     namespace gui
     {
-        Control::Control()
+        Control::Control(Form* form)
             : m_id("")
             , m_parent(nullptr)
             , m_anchor(Anchor::TopLeft)
@@ -17,10 +19,13 @@ namespace crisp
             , m_size(50.0f)
             , m_padding(0.0f)
             , m_depthOffset(1.0f)
+            , m_color(glm::vec4(1.0f))
             , m_opacity(1.0f)
             , m_scale(1.0f)
-            , m_isValidated(false)
+            , m_validationFlags(Validation::All)
             , m_transformId(-1)
+            , m_form(form)
+            , m_renderSystem(form->getRenderSystem())
         {
         }
 
@@ -41,7 +46,7 @@ namespace crisp
         void Control::setParent(Control* parent)
         {
             m_parent = parent;
-            invalidate();
+            setValidationFlags(Validation::All);
         }
 
         Control* Control::getParent() const
@@ -52,7 +57,7 @@ namespace crisp
         void Control::setAnchor(Anchor anchor)
         {
             m_anchor = anchor;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         Anchor Control::getAnchor() const
@@ -64,7 +69,7 @@ namespace crisp
         {
             m_widthSizingBehavior = sizing;
             m_parentSizePercent.x = widthPercent;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         Sizing Control::getWidthSizingBehavior() const
@@ -76,7 +81,7 @@ namespace crisp
         {
             m_heightSizingBehavior = sizing;
             m_parentSizePercent.y = heightPercent;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         Sizing Control::getHeightSizingBehavior() const
@@ -87,7 +92,7 @@ namespace crisp
         void Control::setPosition(const glm::vec2& position)
         {
             m_position = position;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         glm::vec2 Control::getPosition() const
@@ -98,7 +103,7 @@ namespace crisp
         void Control::setSize(const glm::vec2& size)
         {
             m_size = size;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         glm::vec2 Control::getSize() const
@@ -155,7 +160,7 @@ namespace crisp
         void Control::setPadding(glm::vec2&& padding)
         {
             m_padding = padding;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         glm::vec2 Control::getPadding() const
@@ -166,7 +171,7 @@ namespace crisp
         void Control::setDepthOffset(float depthOffset)
         {
             m_depthOffset = depthOffset;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         float Control::getDepthOffset() const
@@ -177,12 +182,37 @@ namespace crisp
         void Control::setScale(float scale)
         {
             m_scale = scale;
-            invalidate();
+            setValidationFlags(Validation::Transform);
         }
 
         float Control::setScale() const
         {
             return m_scale;
+        }
+
+        void Control::setColor(glm::vec4 color)
+        {
+            m_color.r = color.r;
+            m_color.g = color.g;
+            m_color.b = color.b;
+            m_opacity = color.a;
+            setValidationFlags(Validation::Color);
+        }
+
+        glm::vec4 Control::getColor() const
+        {
+            return m_color;
+        }
+
+        void Control::setOpacity(float opacity)
+        {
+            m_opacity = opacity;
+            setValidationFlags(Validation::Color);
+        }
+
+        float Control::getOpacity() const
+        {
+            return m_opacity;
         }
 
         Rect<float> Control::getAbsoluteBounds() const
@@ -215,26 +245,39 @@ namespace crisp
         {
         }
 
-        void Control::setValidationStatus(bool validationStatus)
+        void Control::setValidationFlags(Validation validation)
         {
-            m_isValidated = validationStatus;
+            m_validationFlags = m_validationFlags | validation;
         }
 
-        void Control::invalidate()
+        void Control::clearValidationFlags()
         {
-            m_isValidated = false;
+            m_validationFlags = Validation::None;
         }
 
-        bool Control::isInvalidated()
+        Validation Control::getValidationFlags() const
         {
-            return !m_isValidated;
+            return m_validationFlags;
+        }
+
+        bool Control::needsValidation()
+        {
+            return m_validationFlags != Validation::None;
         }
 
         void Control::validate()
         {
-            auto absPos = getParentAbsolutePosition() + m_position;
-            auto absDepth = getParentAbsoluteDepth() + m_depthOffset;
-            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(m_size, 1.0f));
+            if (m_validationFlags & Validation::Transform)
+            {
+                auto absPos = getParentAbsolutePosition() + m_position;
+                auto absDepth = getParentAbsoluteDepth() + m_depthOffset;
+                m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(m_size, 1.0f));
+            }
+
+            if (m_validationFlags & Validation::Color)
+            {
+                m_color.a = getParentAbsoluteOpacity() * m_opacity;
+            }
         }
 
         Control* Control::getControlById(const std::string& id)
@@ -275,6 +318,11 @@ namespace crisp
             return m_parent ? m_parent->getPadding() : glm::vec2(0.0f);
         }
 
+        float Control::getParentAbsoluteOpacity() const
+        {
+            return m_parent ? m_parent->m_color.a : 1.0f;
+        }
+
         glm::vec2 Control::getAbsolutePosition() const
         {
             auto parentAbsPos = getParentAbsolutePosition();
@@ -284,7 +332,7 @@ namespace crisp
             default:
             case Anchor::TopLeft:
             {
-                return parentAbsPos + glm::max(parentPadding, m_position);
+                return parentAbsPos + parentPadding + m_position;
             }
 
             case Anchor::BottomRight:
@@ -337,6 +385,23 @@ namespace crisp
                     absPos.y += parentPadding.y;
                 else
                     absPos.y += (parentSize.y - size.y) / 2.0f;
+
+                return absPos;
+            }
+
+            case Anchor::CenterHorizontally:
+            {
+                auto parentSize = m_parent ? m_parent->getSize() : glm::vec2(0.0f);
+                auto size = getSize();
+
+                auto absPos = parentAbsPos;
+
+                if (m_widthSizingBehavior == Sizing::FillParent)
+                    absPos.x += parentPadding.x;
+                else
+                    absPos.x += (parentSize.x - size.x) / 2.0f;
+
+                absPos.y += parentPadding.y + m_position.y;
 
                 return absPos;
             }

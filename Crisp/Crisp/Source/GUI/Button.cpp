@@ -1,21 +1,25 @@
 #include "Button.hpp"
+#include "Form.hpp"
 
 #include <iostream>
 
-#include "Application.hpp"
+#include "Animation/PropertyAnimation.hpp"
 
 namespace crisp
 {
     namespace gui
     {
-        Button::Button(RenderSystem* renderSystem)
-            : m_state(State::Idle)
-            , m_label(std::make_unique<Label>(renderSystem, "Button"))
+        Button::Button(Form* parentForm)
+            : Control(parentForm)
+            , m_state(State::Idle)
+            , m_label(std::make_unique<Label>(parentForm, "Button"))
         {
-            m_renderSystem = renderSystem;
-
             m_transformId = m_renderSystem->registerTransformResource();
             m_M           = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_size, 1.0f));
+
+            m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+            m_colorId = m_renderSystem->registerColorResource();
+            m_renderSystem->updateColorResource(m_colorId, m_color);
             
             m_label->setParent(this);
             m_label->setAnchor(Anchor::Center);
@@ -38,23 +42,23 @@ namespace crisp
 
         void Button::onMouseEntered()
         {
-            if (m_state == State::Pressed || m_state == State::Hover)
+            if (m_state != State::Idle)
                 return;
 
-            m_state = State::Hover;
+            setState(State::Hover);
         }
 
         void Button::onMouseExited()
         {
-            if (m_state == State::Pressed || m_state == State::Idle)
+            if (m_state != State::Hover)
                 return;
 
-            m_state = State::Idle;
+            setState(State::Idle);
         }
 
         void Button::onMousePressed(float x, float y)
         {
-            m_state = State::Pressed;
+            setState(State::Pressed);
         }
 
         void Button::onMouseReleased(float x, float y)
@@ -64,45 +68,71 @@ namespace crisp
                 if (m_clickCallback != nullptr)
                     m_clickCallback();
 
-                m_state = State::Hover;
+                setState(State::Hover);
             }
             else
             {
-                m_state = State::Idle;
+                setState(State::Idle);
             }
         }
 
         void Button::validate()
         {
-            if (m_id == "openButton")
+            if (m_validationFlags & Validation::Transform)
             {
-                int x = 3;
-            }
-            auto absPos = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
-            auto absSize = getSize();
+                auto absPos   = getAbsolutePosition();
+                auto absDepth = getAbsoluteDepth();
+                auto absSize  = getSize();
 
-            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
-            m_renderSystem->updateTransformResource(m_transformId, m_M);
+                m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
+                m_renderSystem->updateTransformResource(m_transformId, m_M);
+            }
+
+            if (m_validationFlags & Validation::Color)
+            {
+                m_color.a = getParentAbsoluteOpacity() * m_opacity;
+                m_renderSystem->updateColorResource(m_colorId, m_color);
+            }
             
+            m_label->setValidationFlags(m_validationFlags);
             m_label->validate();
-            m_label->setValidationStatus(true);
+            m_label->clearValidationFlags();
         }
 
         void Button::draw(RenderSystem& visitor)
         {
-            visitor.drawQuad(m_transformId, getColor(), m_M[3][2]);
+            visitor.drawQuad(m_transformId, m_colorId, m_M[3][2]);
             m_label->draw(visitor);
         }
 
-        ColorPalette Button::getColor() const
+        void Button::setState(State state)
         {
+            if (m_state == state)
+                return;
+
+            m_state = state;
+
+            glm::vec4 targetColor;
+
             if (m_state == State::Idle)
-                return Gray30;
+            {
+                targetColor = glm::vec4(0.3f, 0.3f, 0.3f, m_opacity);
+            }
             else if (m_state == State::Hover)
-                return Gray40;
+            {
+                targetColor = glm::vec4(0.4f, 0.4f, 0.4f, m_opacity);
+            }
             else
-                return Gray20;
+            {
+                targetColor = glm::vec4(0.2f, 0.2f, 0.2f, m_opacity);
+            }
+
+            auto colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.3, glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity), targetColor, 0, Easing::SlowOut);
+            colorAnim->setUpdater([this](const glm::vec4& t)
+            {
+                setColor(t);
+            });
+            m_form->getAnimator()->add(colorAnim);
         }
     }
 }

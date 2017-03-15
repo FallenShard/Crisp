@@ -1,6 +1,8 @@
 #pragma once
 
 #include <set>
+#include <vector>
+#include <functional>
 
 #include "Delegate.hpp"
 
@@ -30,6 +32,12 @@ namespace crisp
             m_delegates.insert(Delegate<ReturnType, ParamTypes...>::fromStaticFunction<callbackMethod>());
         }
 
+        template <typename FuncType>
+        void subscribe(FuncType&& func)
+        {
+            m_functors.emplace_back(std::forward<FuncType>(func));
+        }
+
         template<typename T>
         void subscribe(Delegate<ReturnType, ParamTypes...> del)
         {
@@ -46,9 +54,13 @@ namespace crisp
         {
             for (auto& delegate : m_delegates)
                 delegate(args...);
+
+            for (auto& func : m_functors)
+                func(args...);
         }
 
     private:
         std::set<Delegate<ReturnType, ParamTypes...>> m_delegates;
+        std::vector<std::function<ReturnType(ParamTypes...)>> m_functors;
     };
 }

@@ -4,11 +4,14 @@ namespace crisp
 {
     namespace gui
     {
-        Panel::Panel(RenderSystem* renderSystem)
-            : m_color(DarkGray)
+        Panel::Panel(Form* parentForm)
+            : ControlGroup(parentForm)
         {
-            m_renderSystem = renderSystem;
             m_transformId = m_renderSystem->registerTransformResource();
+
+            m_color = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
+            m_colorId = m_renderSystem->registerColorResource();
+            m_renderSystem->updateColorResource(m_colorId, m_color);
         }
 
         Panel::~Panel()
@@ -18,24 +21,23 @@ namespace crisp
 
         void Panel::validate()
         {
+            if (m_validationFlags & Validation::Color)
+            {
+                m_color.a = getParentAbsoluteOpacity() * m_opacity;
+                m_renderSystem->updateColorResource(m_colorId, m_color);
+            }
+
             ControlGroup::validate();
 
-            m_renderSystem->updateTransformResource(m_transformId, m_M);
-        }
-
-        void Panel::setColor(ColorPalette color)
-        {
-            m_color = color;
-        }
-
-        ColorPalette Panel::getColor() const
-        {
-            return m_color;
+            if (m_validationFlags & Validation::Transform)
+            {
+                m_renderSystem->updateTransformResource(m_transformId, m_M);
+            }
         }
 
         void Panel::draw(RenderSystem& visitor)
         {
-            visitor.drawQuad(m_transformId, m_color, m_M[3][2]);
+            visitor.drawQuad(m_transformId, m_colorId, m_M[3][2]);
 
             ControlGroup::draw(visitor);
         }
