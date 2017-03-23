@@ -5,38 +5,42 @@
 #include "Animation/Animator.hpp"
 #include "Animation/PropertyAnimation.hpp"
 
+#include "Core/InputDispatcher.hpp"
+
 namespace crisp
 {
-    namespace
-    {
-        size_t MouseFilterListSize = 10;
-    }
-
-    CameraController::CameraController(GLFWwindow* window)
-        : m_window(window)
-        , m_cameraInputState(CameraInputState::Rotation)
+    CameraController::CameraController(InputDispatcher* inputDispatcher)
+        : m_window(inputDispatcher->getWindow())
         , m_useMouseFiltering(true)
         , m_isMoving(false)
+        , m_moveSpeed(2.0f)
         , m_refreshDeltasWithUpdate(true)
+        , m_targetCamera(RotationStrategy::EulerAngles)
+        //, m_cameraState(CameraState::Target)
     {
         int width, height;
-        glfwGetWindowSize(window, &width, &height);
+        glfwGetWindowSize(m_window, &width, &height);
         m_screenSize.x = static_cast<float>(width);
         m_screenSize.y = static_cast<float>(height);
-        m_camera.setupProjection(35.0f, m_screenSize.x / m_screenSize.y, 0.5f);
+
+        float aspectRatio = m_screenSize.x / m_screenSize.y;
+        m_targetCamera.setupProjection(35.0f, aspectRatio);
+        m_targetCamera.setPosition({ 0.0f, 0.0f, 5.0f });
 
         double x, y;
-        glfwGetCursorPos(window, &x, &y);
-        m_mousePos.x = static_cast<float>(x);
-        m_mousePos.y = static_cast<float>(y);
-        m_prevMousePos = m_mousePos;
+        glfwGetCursorPos(m_window, &x, &y);
+        m_prevMousePos.x   = static_cast<float>(x);
+        m_prevMousePos.y   = static_cast<float>(y);
 
         m_animator = std::make_unique<Animator>();
 
-        m_moveSpeed = 5.0f;
-
         for (int i = 0; i < MouseFilterListSize; i++)
             m_mouseDeltas.push_front(glm::vec2(0.0f, 0.0f));
+
+        inputDispatcher->mouseButtonPressed.subscribe<CameraController, &CameraController::onMousePressed>(this);
+        inputDispatcher->mouseButtonReleased.subscribe<CameraController, &CameraController::onMouseReleased>(this);
+        inputDispatcher->mouseMoved.subscribe<CameraController, &CameraController::onMouseMoved>(this);
+        inputDispatcher->mouseWheelScrolled.subscribe<CameraController, &CameraController::onMouseWheelScrolled>(this);
     }
 
     CameraController::~CameraController()
@@ -56,38 +60,18 @@ namespace crisp
         }
         
         m_animator->update(dt);
-        if (glfwGetKey(m_window, GLFW_KEY_W))
-            m_camera.walk(3.0f * dt);
-        
-        if (glfwGetKey(m_window, GLFW_KEY_S))
-            m_camera.walk(3.0f * -dt);
-        
-        if (glfwGetKey(m_window, GLFW_KEY_D))
-            m_camera.strafe(dt);
-        
-        if (glfwGetKey(m_window, GLFW_KEY_A))
-            m_camera.strafe(-dt);
 
-        //m_camera.update(dt);
-        //
-        //if (m_cameraInputState == CameraInputState::Rotation)
-        //    applyRotation(dt);
-        //else
-        //    applyZoom(dt);
-
-        m_camera.update(dt);
+        m_targetCamera.update(dt);
     }
 
     void CameraController::onMousePressed(int button, int mods, double xPos, double yPos)
     {
         if (button == GLFW_MOUSE_BUTTON_2)
         {
-            glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             m_isMoving = true;
 
-            m_mousePos.x = static_cast<float>(xPos);
-            m_mousePos.y = static_cast<float>(yPos);
-            m_prevMousePos = m_mousePos;
+            m_prevMousePos.x = static_cast<float>(xPos);
+            m_prevMousePos.y = static_cast<float>(yPos);
         }
     }
 
@@ -95,99 +79,70 @@ namespace crisp
     {
         if (button == GLFW_MOUSE_BUTTON_2)
         {
-            glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             m_isMoving = false;
 
-            m_mousePos.x = static_cast<float>(xPos);
-            m_mousePos.y = static_cast<float>(yPos);
-            m_prevMousePos = m_mousePos;
+            m_prevMousePos.x = static_cast<float>(xPos);
+            m_prevMousePos.y = static_cast<float>(yPos);
         }
     }
 
     void CameraController::onMouseMoved(double xPos, double yPos)
     {
-        m_prevMousePos = m_mousePos;
-        m_mousePos = glm::vec2(static_cast<float>(xPos), static_cast<float>(yPos));
+        auto mousePos = glm::vec2(static_cast<float>(xPos), static_cast<float>(yPos));
 
         m_mouseDeltas.pop_back();
-        m_mouseDeltas.push_front(m_mousePos - m_prevMousePos);
+        m_mouseDeltas.push_front(mousePos - m_prevMousePos);
         m_refreshDeltasWithUpdate = false;
 
         if (m_isMoving)
         {
-            auto delta = m_useMouseFiltering ? filterMouseMoves() : m_mousePos - m_prevMousePos;
+            auto delta = m_useMouseFiltering ? filterMouseMoves() : mousePos - m_prevMousePos;
 
-            //if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL))
-            //{
-            //    m_camera.pan(-delta.x / m_screenSize.x, delta.y / m_screenSize.y);
-            //}
-            //else
-            //{
-            //    m_camera.move(-m_moveSpeed * delta / m_screenSize);
-            //}
-            m_camera.rotate(delta.x / m_screenSize.x, delta.y / m_screenSize.y);
+            m_targetCamera.move(m_moveSpeed * -delta / m_screenSize);
         }
+
+        m_prevMousePos = mousePos;
     }
 
     void CameraController::onMouseWheelScrolled(double offset)
     {
-        //auto zoomAnim = std::make_shared<PropertyAnimation<float>>(0.3, m_camera.getDistance(), m_camera.getDistance() - offset, 0.0, Easing::CubicOut);
-        //zoomAnim->setUpdater([this](const float& t)
-        //{
-        //    m_camera.setZoom(t);
-        //});
-        //m_animator->add(zoomAnim);
-        //m_camera.zoom(offset);
+        auto zoomAnim = std::make_shared<PropertyAnimation<float>>(0.3, m_targetCamera.getDistance(), m_targetCamera.getDistance() - offset, 0.0, Easing::CubicOut);
+        zoomAnim->setUpdater([this](const float& t)
+        {
+            m_targetCamera.setZoom(t);
+        });
+        m_animator->add(zoomAnim);
     }
 
     void CameraController::resize(int width, int height)
     {
         m_screenSize.x = static_cast<float>(width);
         m_screenSize.y = static_cast<float>(height);
-        m_camera.setApectRatio(m_screenSize.x / m_screenSize.y);
+        m_targetCamera.setApectRatio(m_screenSize.x / m_screenSize.y);
     }
 
     const AbstractCamera& CameraController::getCamera() const
     {
-        return m_camera;
+        return m_targetCamera;
     }
 
-    void CameraController::applyZoom(float dt)
+    const CameraParameters* CameraController::getCameraParameters() const
     {
-
-    }
-
-    void CameraController::applyRotation(float dt)
-    {
-        double x, y;
-        glfwGetCursorPos(m_window, &x, &y);
-        m_deltaX += static_cast<float>(y - m_prevY) / 5.0f;
-        m_deltaY += static_cast<float>(m_prevX - x) / 5.0f;
-        if (m_useMouseFiltering)
-        {
-            m_rotationValues = filterMouseMoves();
-        }
-        else
-        {
-            m_rotationValues.x = m_deltaX;
-            m_rotationValues.y = m_deltaY;
-        }
+        return &m_cameraParameters;
     }
 
     glm::vec2 CameraController::filterMouseMoves()
     {
-        float weight = 1.0f;
-        float weightDecay = 0.2f;
-
         glm::vec2 result(0.0f, 0.0f);
         float weightSum = 0.0f;
+        float currentWeight = MouseFilterWeight;
 
         for (auto& delta : m_mouseDeltas)
         {
-            result += weight * delta;
-            weightSum += weight;
+            result    += currentWeight * delta;
+            weightSum += currentWeight;
 
-            weight *= weightDecay;
+            currentWeight *= MouseFilterWeightDecay;
         }
 
         return result / weightSum;

@@ -4,10 +4,16 @@
 
 namespace crisp
 {
+    enum class RotationStrategy
+    {
+        EulerAngles,
+        Quaternion
+    };
+
     class TargetCamera : public AbstractCamera
     {
     public:
-        TargetCamera();
+        TargetCamera(RotationStrategy rotationStrategy);
         ~TargetCamera();
 
         virtual void update(float dt) override;
@@ -30,11 +36,14 @@ namespace crisp
         glm::vec3 m_translation; // in camera space
 
         glm::quat m_orientation;
+        glm::vec3 m_eulerAngles;
 
         float m_minDistance;
         float m_maxDistance;
 
-        bool m_needsViewUpdate;
+        static constexpr unsigned int NormalizationFrequency = 10;
         unsigned int m_normalizationCount;
+
+        RotationStrategy m_rotationStrategy;
     };
 }

@@ -3,6 +3,7 @@
 namespace crisp
 {
     AbstractCamera::AbstractCamera()
+        : m_recalculateViewMatrix(true)
     {
     }
 
@@ -20,29 +21,9 @@ namespace crisp
         m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
     }
 
-    void AbstractCamera::setPosition(const glm::vec3& position)
+    const glm::mat4& AbstractCamera::getProjectionMatrix() const
     {
-        m_position = position;
-    }
-
-    glm::vec3 AbstractCamera::getPosition() const
-    {
-        return m_position;
-    }
-
-    glm::vec3 AbstractCamera::getLookDirection() const
-    {
-        return m_look;
-    }
-    
-    glm::vec3 AbstractCamera::getRightDirection() const
-    {
-        return m_right;
-    }
-
-    glm::vec3 AbstractCamera::getUpDirection() const
-    {
-        return m_up;
+        return m_P;
     }
 
     void AbstractCamera::setFov(float fovY)
@@ -67,8 +48,40 @@ namespace crisp
         return m_aspectRatio;
     }
 
+    void AbstractCamera::setPosition(const glm::vec3& position)
+    {
+        m_position = position;
+        m_recalculateViewMatrix = true;
+    }
+
+    glm::vec3 AbstractCamera::getPosition() const
+    {
+        return m_position;
+    }
+
+    glm::vec3 AbstractCamera::getLookDirection() const
+    {
+        return m_look;
+    }
+    
+    glm::vec3 AbstractCamera::getRightDirection() const
+    {
+        return m_right;
+    }
+
+    glm::vec3 AbstractCamera::getUpDirection() const
+    {
+        return m_up;
+    }
+
+    const glm::mat4& AbstractCamera::getViewMatrix() const
+    {
+        return m_V;
+    }
+
     void AbstractCamera::calculateFrustumPlanes() const
     {
+        // TODO
     }
 
     bool AbstractCamera::isPointInFrustum(const glm::vec3& point)
@@ -84,16 +97,6 @@ namespace crisp
     bool AbstractCamera::isBoxInFrustum(const glm::vec3& min, const glm::vec3& max)
     {
         return false;
-    }
-
-    const glm::mat4& AbstractCamera::getViewMatrix() const
-    {
-        return m_V;
-    }
-
-    const glm::mat4& AbstractCamera::getProjectionMatrix() const
-    {
-        return m_P;
     }
 
     std::array<glm::vec4, AbstractCamera::NumFrustumPlanes> AbstractCamera::getFrustumPlanes() const
