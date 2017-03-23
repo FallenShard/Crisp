@@ -42,6 +42,14 @@ namespace crisp
             createInterpolator();
         }
 
+        PropertyAnimation(double duration, std::function<void(const T&)> updater, double delay = 0, Easing easing = Easing::Linear, bool isLooped = false, int loopCount = 1)
+            : Animation(delay, duration, isLooped, loopCount)
+            , m_easing(easing)
+            , m_updater(updater)
+        {
+            createInterpolator();
+        }
+
         inline T getPropertyStart()
         {
             return m_propertyStart;
@@ -105,6 +113,13 @@ namespace crisp
                     finished();
                 }
             }
+        }
+
+        void reset(T start, T end)
+        {
+            m_propertyStart = start;
+            m_propertyEnd   = end;
+            Animation::reset();
         }
 
     private:
