@@ -9,6 +9,7 @@
 #include "Spectrums/Spectrum.hpp"
 #include "Core/Intersection.hpp"
 #include "Math/Ray.hpp"
+#include "Math/BoundingBox.hpp"
 #include "Lights/Light.hpp"
 
 namespace vesper
@@ -32,6 +33,7 @@ namespace vesper
         void setCamera(std::unique_ptr<Camera> camera);
         void addShape(std::unique_ptr<Shape> shape, BSDF* bsdf, Light* light = nullptr);
         void addLight(std::unique_ptr<Light> light);
+        void addEnvironmentLight(std::unique_ptr<Light> light);
         void addBSDF(std::unique_ptr<BSDF> bsdf);
 
         void finishInitialization();
@@ -44,8 +46,14 @@ namespace vesper
         float getLightPdf() const;
         Spectrum sampleLight(const Intersection& its, Sampler& sampler, Light::Sample& lightSample) const;
 
+        Spectrum evalEnvLight(const Ray3& ray) const;
+        Light* getEnvironmentLight() const;
+
         bool rayIntersect(const Ray3& ray, Intersection& its) const;
         bool rayIntersect(const Ray3& shadowRay) const;
+
+        BoundingBox3 getBoundingBox() const;
+        glm::vec4 getBoundingSphere() const;
 
     private:
         RTCDevice m_device;
@@ -59,6 +67,11 @@ namespace vesper
         std::vector<std::unique_ptr<Light>> m_lights;
         std::vector<std::unique_ptr<BSDF>> m_bsdfs;
 
+        Light* m_envLight;
+
         glm::ivec2 m_imageSize;
+
+        glm::vec4 m_boundingSphere;
+        BoundingBox3 m_boundingBox;
     };
 }

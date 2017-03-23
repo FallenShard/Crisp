@@ -139,6 +139,7 @@
     <ClInclude Include="Vesper\Core\Fresnel.hpp" />
     <ClInclude Include="Vesper\Core\Intersection.hpp" />
     <ClInclude Include="Vesper\Core\JsonSceneParser.hpp" />
+    <ClInclude Include="Vesper\Core\MipMap.hpp" />
     <ClInclude Include="Vesper\Core\Scene.hpp" />
     <ClInclude Include="Vesper\Core\VariantMap.hpp" />
     <ClInclude Include="Vesper\Core\XmlSceneParser.hpp" />
@@ -155,6 +156,7 @@
     <ClInclude Include="Vesper\Integrators\PathTracer.hpp" />
     <ClInclude Include="Vesper\Lights\AreaLight.hpp" />
     <ClInclude Include="Vesper\Lights\DirectionalLight.hpp" />
+    <ClInclude Include="Vesper\Lights\EnvironmentLight.hpp" />
     <ClInclude Include="Vesper\Lights\Light.hpp" />
     <ClInclude Include="Vesper\Lights\LightFactory.hpp" />
     <ClInclude Include="Vesper\Lights\PointLight.hpp" />
@@ -211,6 +213,7 @@
     <ClCompile Include="Vesper\Integrators\PathTracer.cpp" />
     <ClCompile Include="Vesper\Lights\AreaLight.cpp" />
     <ClCompile Include="Vesper\Lights\DirectionalLight.cpp" />
+    <ClCompile Include="Vesper\Lights\EnvironmentLight.cpp" />
     <ClCompile Include="Vesper\Lights\LightFactory.cpp" />
     <ClCompile Include="Vesper\Lights\PointLight.cpp" />
     <ClCompile Include="Vesper\Math\DiscretePdf.cpp" />

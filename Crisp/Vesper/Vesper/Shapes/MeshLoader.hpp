@@ -7,15 +7,12 @@
 
 namespace vesper
 {
-    struct Transform;
-
     class MeshLoader
     {
     public:
         bool load(std::string fileName, 
             std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
-            std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces, 
-            const Transform& transform) const;
+            std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const;
 
     private:
         void loadWavefrontObj(std::ifstream& file, 
@@ -24,13 +21,10 @@ namespace vesper
 
         bool loadModelCache(std::string fileName,
             std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
-            std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces,
-            const Transform& transform) const;
+            std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const;
 
         void createModelCache(std::string fileName,
             std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
             std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const;
-
-        void applyTransform(std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, const Transform& transform) const;
     };
 }

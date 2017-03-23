@@ -15,11 +15,20 @@ namespace vesper
         m_toWorld = params.get<Transform>("toWorld");
 
         MeshLoader meshLoader;
-        if (!meshLoader.load(filename, m_positions, m_normals, m_texCoords, m_faces, m_toWorld))
+        if (!meshLoader.load(filename, m_positions, m_normals, m_texCoords, m_faces))
         {
-            std::cout << "Could not open " + filename << std::endl;
+            std::cerr << "Could not open " + filename << std::endl;
             return;
         }
+
+        for (auto& p : m_positions)
+            p = m_toWorld.transformPoint(p);
+
+        for (auto& n : m_normals)
+            n = m_toWorld.transformNormal(n);
+
+        for (auto& p : m_positions)
+            m_boundingBox.expandBy(p);
 
         m_pdf.reserve(getNumTriangles());
         for (auto i = 0; i < getNumTriangles(); i++)

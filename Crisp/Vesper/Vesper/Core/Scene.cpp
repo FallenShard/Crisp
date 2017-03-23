@@ -55,6 +55,8 @@ namespace vesper
 
             shape->setBSDF(bsdf);
 
+            m_boundingBox.expandBy(shape->getBoundingBox());
+
             m_shapes.emplace_back(std::move(shape));
         }
     }
@@ -64,6 +66,12 @@ namespace vesper
         m_lights.emplace_back(std::move(light));
     }
 
+    void Scene::addEnvironmentLight(std::unique_ptr<Light> light)
+    {
+        m_lights.emplace_back(std::move(light));
+        m_envLight = m_lights.back().get();
+    }
+
     void Scene::addBSDF(std::unique_ptr<BSDF> bsdf)
     {
         m_bsdfs.emplace_back(std::move(bsdf));
@@ -71,6 +79,14 @@ namespace vesper
 
     void Scene::finishInitialization()
     {
+        auto center = m_boundingBox.getCenter();
+        auto radius = m_boundingBox.radius();
+        m_boundingSphere = glm::vec4(center, radius);
+        if (m_envLight)
+        {
+            m_envLight->setBoundingSphere(m_boundingSphere);
+        }
+
         rtcCommit(m_scene);
     }
 
@@ -101,6 +117,11 @@ namespace vesper
         return 1.0f / static_cast<float>(m_lights.size());
     }
 
+    Light* Scene::getEnvironmentLight() const
+    {
+        return m_envLight;
+    }
+
     Spectrum Scene::sampleLight(const Intersection& its, Sampler& sampler, Light::Sample& lightSample) const
     {
         auto light = getRandomLight(sampler.next1D());
@@ -117,6 +138,13 @@ namespace vesper
         }
 
         return Spectrum(0.0f);
+    }
+
+    Spectrum Scene::evalEnvLight(const Ray3& ray) const
+    {
+        Light::Sample sample(ray.o, ray(1.0f), ray.d);
+        sample.wi = ray.d;
+        return m_envLight ? m_envLight->eval(sample) : Spectrum(0.0f);
     }
 
     bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const
@@ -172,5 +200,15 @@ namespace vesper
 
         rtcOccluded(m_scene, rtcRay);
         return rtcRay.geomID == 0;
+    }
+
+    BoundingBox3 Scene::getBoundingBox() const
+    {
+        return m_boundingBox;
+    }
+
+    glm::vec4 Scene::getBoundingSphere() const
+    {
+        return m_boundingSphere;
     }
 }

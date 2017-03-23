@@ -344,7 +344,10 @@ namespace vesper
         {
             for (auto lightNode = lights->first_node("light"); lightNode != nullptr; lightNode = lightNode->next_sibling("light"))
             {
-                scene->addLight(std::move(create<Light, LightFactory>(lightNode)));
+                if (!strcmp(lightNode->first_attribute("type")->value(),"environment"))
+                    scene->addEnvironmentLight(std::move(create<Light, LightFactory>(lightNode)));
+                else
+                    scene->addLight(std::move(create<Light, LightFactory>(lightNode)));
             }
         }
         

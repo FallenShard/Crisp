@@ -8,6 +8,11 @@ namespace vesper
     {
     }
 
+    BoundingBox3 Shape::getBoundingBox() const
+    {
+        return m_boundingBox;
+    }
+
     void Shape::setLight(Light* light)
     {
         m_light = light;

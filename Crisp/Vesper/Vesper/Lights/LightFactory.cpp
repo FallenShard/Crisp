@@ -3,6 +3,7 @@
 #include "PointLight.hpp"
 #include "DirectionalLight.hpp"
 #include "AreaLight.hpp"
+#include "EnvironmentLight.hpp"
 
 namespace vesper
 {
@@ -19,6 +20,10 @@ namespace vesper
         else if (type == "area")
         {
             return std::make_unique<AreaLight>(parameters);
+        }
+        else if (type == "environment")
+        {
+            return std::make_unique<EnvironmentLight>(parameters);
         }
         else
         {

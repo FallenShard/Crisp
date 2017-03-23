@@ -6,8 +6,6 @@
 
 #include <glm/glm.hpp>
 
-#include "Math/Transform.hpp"
-
 namespace vesper
 {
     namespace
@@ -83,8 +81,7 @@ namespace vesper
 
     bool MeshLoader::load(std::string fileName, 
         std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
-        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces,
-        const Transform& transform) const
+        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
         std::string meshFilename = "Resources/Meshes/" + fileName;
         std::ifstream meshFile(meshFilename);
@@ -94,7 +91,7 @@ namespace vesper
         auto tokens = tokenize(meshFilename, ".");
         std::string ext = tokens[tokens.size() - 1];
 
-        if (loadModelCache(tokens[0], positions, normals, texCoords, faces, transform))
+        if (loadModelCache(tokens[0], positions, normals, texCoords, faces))
         {
             std::cout << "Loading Wavefront Obj mesh from cache: " + meshFilename << std::endl;
             return true;
@@ -106,7 +103,6 @@ namespace vesper
             std::cout << "Loading Wavefront Obj mesh: " + meshFilename << std::endl;
             loadWavefrontObj(meshFile, positions, normals, texCoords, faces);
             createModelCache(tokens[0], positions, normals, texCoords, faces);
-            applyTransform(positions, normals, transform);
             return true;
         }
 
@@ -202,8 +198,7 @@ namespace vesper
 
     bool MeshLoader::loadModelCache(std::string fileName,
         std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
-        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces,
-        const Transform& transform) const
+        std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
         std::ifstream binaryFile(fileName + ".cmf", std::ios::in | std::ios::binary);
         if (binaryFile.fail())
@@ -230,8 +225,6 @@ namespace vesper
         binaryFile.read(reinterpret_cast<char*>(texCoords.data()), numTexCoords * sizeof(glm::vec2));
         binaryFile.read(reinterpret_cast<char*>(faces.data()), numFaces * sizeof(glm::uvec3));
 
-        applyTransform(positions, normals, transform);
-
         return true;
     }
 
@@ -253,22 +246,9 @@ namespace vesper
         std::size_t numFaces = faces.size();
         binaryFile.write(reinterpret_cast<const char*>(&numFaces), sizeof(std::size_t));
 
-        binaryFile.write(reinterpret_cast<const char*>(positions.data()), numVertices * sizeof(glm::vec3));
-        binaryFile.write(reinterpret_cast<const char*>(normals.data()), numNormals * sizeof(glm::vec3));
+        binaryFile.write(reinterpret_cast<const char*>(positions.data()), numVertices  * sizeof(glm::vec3));
+        binaryFile.write(reinterpret_cast<const char*>(normals.data()),   numNormals   * sizeof(glm::vec3));
         binaryFile.write(reinterpret_cast<const char*>(texCoords.data()), numTexCoords * sizeof(glm::vec2));
-        binaryFile.write(reinterpret_cast<const char*>(faces.data()), numFaces * sizeof(glm::uvec3));
-    }
-
-    void MeshLoader::applyTransform(std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, const Transform& transform) const
-    {
-        for (auto& position : positions)
-        {
-            position = transform.transformPoint(position);
-        }
-
-        for (auto& normal : normals)
-        {
-            normal = transform.transformNormal(normal);
-        }
+        binaryFile.write(reinterpret_cast<const char*>(faces.data()),     numFaces     * sizeof(glm::uvec3));
     }
 }

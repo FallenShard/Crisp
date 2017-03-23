@@ -11,6 +11,7 @@
 #include "Math/CoordinateFrame.hpp"
 #include "Math/Ray.hpp"
 #include "Math/Transform.hpp"
+#include "Math/BoundingBox.hpp"
 #include "Core/Intersection.hpp"
 #include "Core/VariantMap.hpp"
 
@@ -43,6 +44,8 @@ namespace vesper
         virtual float pdfSurface(const Shape::Sample& shapeSample) const = 0;
         virtual bool addToAccelerationStructure(RTCScene embreeScene) = 0;
 
+        BoundingBox3 getBoundingBox() const;
+
         void setLight(Light* light);
         const Light* getLight() const;
 
@@ -56,5 +59,8 @@ namespace vesper
         Transform m_toWorld;
 
         unsigned int m_geomId;
+
+
+        BoundingBox3 m_boundingBox;
     };
 }

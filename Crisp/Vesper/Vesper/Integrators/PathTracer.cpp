@@ -29,7 +29,10 @@ namespace vesper
         while (true)
         {
             if (!scene->rayIntersect(ray, its))
+            {
+                L += throughput * scene->evalEnvLight(ray);
                 return L;
+            }
 
             if (its.shape->getLight())
             {
@@ -37,7 +40,7 @@ namespace vesper
                 L += throughput * its.shape->getLight()->eval(lightSample);
             }
 
-            BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d));
+            BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
             throughput *= its.shape->getBSDF()->sample(bsdfSample, sampler);
 
             ray.o = its.p;

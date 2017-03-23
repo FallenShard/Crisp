@@ -39,15 +39,21 @@ namespace vesper
 
         while (true)
         {
+            // When there's no intersection, evaluate environment light
             if (!scene->rayIntersect(ray, its))
+            {
+                L += throughput * scene->evalEnvLight(ray);
                 break;
+            }
 
+            // If the previous bounce is specular and we hit a light source, evaluate it
             if (isSpecular && its.shape->getLight())
             {
                 Light::Sample lightSample(ray.o, its.p, its.shFrame.n);
                 L += throughput * its.shape->getLight()->eval(lightSample);
             }
 
+            // If we did not hit a delta BRDF (mirror, glass etc.), sample the light
             if (its.shape->getBSDF()->getType() != BSDF::Type::Delta)
             {
                 Light::Sample lightSample(its.p);
@@ -66,20 +72,30 @@ namespace vesper
                 }
             }
 
+            // Sample the BSDF to continue bouncing
             BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
             auto bsdf = its.shape->getBSDF()->sample(bsdfSample, sampler);
             Intersection bsdfIts;
             Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
-            if (scene->rayIntersect(bsdfRay, bsdfIts) && bsdfIts.shape->getLight())
-            {
-                auto light = bsdfIts.shape->getLight();
+            const Light* hitLight = nullptr;
 
+            if (!scene->rayIntersect(bsdfRay, bsdfIts))
+            {
+                hitLight = scene->getEnvironmentLight();
+            }
+            else if (bsdfIts.shape->getLight())
+            {
+                hitLight = bsdfIts.shape->getLight();
+            }
+
+            if (hitLight)
+            {
                 Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
                 lightSample.wi = bsdfRay.d;
-                auto lightSpec = light->eval(lightSample);
+                auto lightSpec = hitLight->eval(lightSample);
 
                 float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
-                float pdfEm = light->pdf(lightSample) * scene->getLightPdf();
+                float pdfEm = hitLight->pdf(lightSample) * scene->getLightPdf();
                 if (pdfBsdf + pdfEm > 0.0f)
                     L += throughput * bsdf * lightSpec * miWeight(pdfBsdf, pdfEm);
             }
