@@ -90,16 +90,6 @@ namespace crisp
             }
         }
 
-        void Form::setTracerProgress(float percentage, float timeSpentRendering)
-        {
-            //float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpentRendering / 8.0f;
-            //
-            //std::stringstream stringStream;
-            //stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
-            //m_progressLabel->setText(stringStream.str());
-            //m_progressBar->setWidthSizingBehavior(Sizing::FillParent, percentage);
-        }
-
         void Form::draw()
         {
             if (m_rootControlGroup->needsValidation())
@@ -178,8 +168,6 @@ namespace crisp
             m_stagingMemUsage      = m_rootControlGroup->getTypedControlById<Panel>("stagingMem");
             m_stagingMemUsageLabel = m_rootControlGroup->getTypedControlById<Label>("stagingMemLabel");
         }
-
-
 
         void Form::addStatusBar()
         {
@@ -317,13 +305,13 @@ namespace crisp
             statusBar->setPosition({ 0, 0 });
             statusBar->setSize({ 500, 20 });
             statusBar->setPadding({ 3, 3 });
-            statusBar->setColor(glm::vec4(0.1f, 0.1f, 0.1f, 1.0f));
+            statusBar->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
             statusBar->setWidthSizingBehavior(Sizing::FillParent);
 
             auto label = std::make_shared<gui::Label>(this, "ExampleText");
             label->setId("fpsLabel");
             label->setPosition({ 6, 3 });
-            label->setAnchor(Anchor::TopRight);
+            label->setAnchor(Anchor::Center);
             statusBar->addControl(label);
 
             return statusBar;
@@ -336,7 +324,7 @@ namespace crisp
             panel->setPosition({ 10, 30 });
             panel->setSize({ 200, 300 });
             panel->setPadding({ 10, 10 });
-            panel->setColor(glm::vec4(0.1f, 0.1f, 0.1f, 1.0f));
+            panel->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
             panel->setAnchor(Anchor::BottomLeft);
             panel->setHeightSizingBehavior(Sizing::WrapContent);
 
@@ -345,9 +333,9 @@ namespace crisp
             panelName->setColor(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
             panel->addControl(panelName);
 
-            buildProgressBar(panel, 50.0f, "Buffer Device Memory", "bufferDeviceMem");
-            buildProgressBar(panel, 110.0f, "Image Device Memory", "imageDeviceMem");
-            buildProgressBar(panel, 170.0f, "Staging Memory", "stagingMem");
+            buildProgressBar(panel, 30.0f, "Buffer Device Memory", "bufferDeviceMem");
+            buildProgressBar(panel, 90.0f, "Image Device Memory", "imageDeviceMem");
+            buildProgressBar(panel, 150.0f, "Staging Memory", "stagingMem");
 
             return panel;
         }

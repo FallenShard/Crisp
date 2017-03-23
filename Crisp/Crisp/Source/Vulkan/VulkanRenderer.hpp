@@ -42,7 +42,7 @@ namespace crisp
 
         VkBuffer getFullScreenQuadVertexBuffer() const;
         VkBuffer getFullScreenQuadIndexBuffer() const;
-        uint32_t getCurrentFrameIndex() const;
+        uint32_t getCurrentVirtualFrameIndex() const;
 
         void resize(int width, int height);
 
@@ -58,6 +58,7 @@ namespace crisp
         void finish();
 
         void scheduleStagingBufferForRemoval(VkBuffer buffer);
+        void scheduleStagingBufferForRemoval(VkBuffer buffer, MemoryChunk chunk);
         void destroyObjectsScheduledForRemoval();
 
     private:
@@ -108,5 +109,6 @@ namespace crisp
         std::map<uint32_t, std::pair<VulkanRenderPass*, ActionVector>> m_renderPasses;
 
         std::map<VkBuffer, uint32_t> m_oldStagingBuffers;
+        std::map<VkBuffer, std::pair<MemoryChunk, uint32_t>> m_oldStagingBuffersAndChunks;
     };
 }

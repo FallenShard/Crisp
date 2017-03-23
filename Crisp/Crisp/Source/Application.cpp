@@ -52,10 +52,23 @@ namespace crisp
             m_tracerProgress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
             m_timeSpentRendering = update.totalTimeSpentRendering;
             m_rayTracerUpdateQueue.emplace(update);
+            rayTracerProgressed(m_tracerProgress, m_timeSpentRendering);
         });
         
 
-        //m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
+        auto crispButton = m_guiForm->getControlById<gui::Button>("crispButton");
+        crispButton->setClickCallback([this, form = m_guiForm.get()]()
+        {
+            form->postGuiUpdate([this, form]()
+            {
+                form->addMemoryUsagePanel();
+                form->addStatusBar();
+
+                m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
+            });
+
+            form->fadeOutAndRemove("welcomePanel", 0.5f);
+        });
 
         auto vesperButton = m_guiForm->getControlById<gui::Button>("vesperButton");
         vesperButton->setClickCallback([this, form = m_guiForm.get()]()
@@ -74,6 +87,8 @@ namespace crisp
 
             form->fadeOutAndRemove("welcomePanel", 0.5f);
         });
+
+        //crispButton->click();
     }
 
     Application::~Application()
@@ -98,24 +113,24 @@ namespace crisp
 
                 m_guiForm->update(TimePerFrame);
 
-                //m_scene->update(static_cast<float>(TimePerFrame));
-                
+                if (m_scene)
+                    m_scene->update(static_cast<float>(TimePerFrame));
+
                 processRayTracerUpdates();
-                m_guiForm->setTracerProgress(m_tracerProgress, m_timeSpentRendering);
-            
+
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
-            m_backgroundPicture->draw();
+            if (m_scene)
+                m_scene->render();
+            else
+                m_backgroundPicture->draw();
 
-            //if (m_scene)
-            //    m_scene->render();
-            //
             if (m_rayTracedImage)
                 m_rayTracedImage->draw();
 
             m_guiForm->draw();
-            
+
             m_renderer->drawFrame();
 
             m_frameTimeLogger->update();
@@ -132,9 +147,10 @@ namespace crisp
         m_backgroundPicture->resize(width, height);
 
         m_guiForm->resize(width, height);
-        //
-        //m_scene->resize(width, height);
-        //
+        
+        if (m_scene)
+            m_scene->resize(width, height);
+
         if (m_rayTracedImage)
             m_rayTracedImage->resize(width, height);
     }
@@ -201,13 +217,6 @@ namespace crisp
         
         m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, std::forward<std::vector<const char*>>(extensions));
     }
-
-    //glm::vec2 Application::getMousePosition()
-    //{
-    //    double x, y;
-    //    glfwGetCursorPos(app->m_window.get(), &x, &y);
-    //    return glm::vec2(static_cast<float>(x), static_cast<float>(y));
-    //}
 
     void Application::processRayTracerUpdates()
     {

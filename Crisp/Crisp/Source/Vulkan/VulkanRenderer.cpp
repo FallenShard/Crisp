@@ -267,18 +267,22 @@ namespace crisp
         for (auto& item : m_renderPasses)
         {
             auto pass = item.second.first;
-            pass->begin(commandBuffer, framebuffer);
 
-            for (auto& action : item.second.second)
-                action(commandBuffer);
+            if (!item.second.second.empty())
+            {
+                pass->begin(commandBuffer, framebuffer);
 
-            pass->end(commandBuffer);
+                for (auto& action : item.second.second)
+                    action(commandBuffer);
+
+                pass->end(commandBuffer);
+            }
         }
 
         vkEndCommandBuffer(commandBuffer);
     }
 
-    uint32_t VulkanRenderer::getCurrentFrameIndex() const
+    uint32_t VulkanRenderer::getCurrentVirtualFrameIndex() const
     {
         return m_currentFrameIndex;
     }
@@ -345,6 +349,14 @@ namespace crisp
         }
     }
 
+    void VulkanRenderer::scheduleStagingBufferForRemoval(VkBuffer buffer, MemoryChunk chunk)
+    {
+        if (m_oldStagingBuffersAndChunks.find(buffer) == m_oldStagingBuffersAndChunks.end())
+        {
+            m_oldStagingBuffersAndChunks.emplace(buffer, std::make_pair(chunk, NumVirtualFrames));
+        }
+    }
+
     void VulkanRenderer::destroyObjectsScheduledForRemoval()
     {
         if (!m_oldStagingBuffers.empty())
@@ -361,6 +373,25 @@ namespace crisp
                     auto& buffer = it->first;
                     m_device->destroyStagingBuffer(buffer);
                     it = m_oldStagingBuffers.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+
+            for (auto& el : m_oldStagingBuffersAndChunks)
+                el.second.second--;
+
+            for (auto it = m_oldStagingBuffersAndChunks.begin(), ite = m_oldStagingBuffersAndChunks.end(); it != ite;)
+            {
+                if (it->second.second == 0) // time to die, no frames remaining
+                {
+                    auto& buffer = it->first;
+                    it->second.first.memoryHeap->free(it->second.first); // free from heap
+
+                    vkDestroyBuffer(m_device->getHandle(), buffer, nullptr);
+                    it = m_oldStagingBuffersAndChunks.erase(it);
                 }
                 else
                 {

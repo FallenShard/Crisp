@@ -56,6 +56,8 @@ namespace crisp
 
         gui::Form* getForm() const;
 
+        Event<void, float, float> rayTracerProgressed;
+
     private:
         void createWindow();
         void createRenderer();

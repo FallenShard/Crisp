@@ -16,7 +16,7 @@ namespace crisp
     {
         class Form;
 
-        class Control : public std::enable_shared_from_this<Control>
+        class Control
         {
         public:
             Control(Form* form);

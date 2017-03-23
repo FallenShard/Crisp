@@ -1,12 +1,13 @@
-#include "PointSphereSpritePipeline.hpp"
+#include "SkyboxPipeline.hpp"
 
 #include "Vulkan/VulkanRenderer.hpp"
 
 namespace crisp
 {
-    PointSphereSpritePipeline::PointSphereSpritePipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
-        : VulkanPipeline(renderer, 2, renderPass)
+    SkyboxPipeline::SkyboxPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+        : VulkanPipeline(renderer, 1, renderPass)
     {
+        // Descriptor Set Layout
         VkDescriptorSetLayoutBinding transformBinding = {};
         transformBinding.binding            = 0;
         transformBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -14,61 +15,53 @@ namespace crisp
         transformBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
         transformBinding.pImmutableSamplers = nullptr;
 
-        std::vector<VkDescriptorSetLayoutBinding> firstSetBindings =
+        VkDescriptorSetLayoutBinding textureBinding = {};
+        textureBinding.binding         = 1;
+        textureBinding.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        textureBinding.descriptorCount = 1;
+        textureBinding.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+        textureBinding.pImmutableSamplers = nullptr;
+
+        std::vector<VkDescriptorSetLayoutBinding> transBindings =
         {
-            transformBinding
+            transformBinding,
+            textureBinding
         };
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(firstSetBindings.size());
-        layoutInfo.pBindings    = firstSetBindings.data();
+        layoutInfo.bindingCount = static_cast<uint32_t>(transBindings.size());
+        layoutInfo.pBindings    = transBindings.data();
         vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[0]);
-
-        VkDescriptorSetLayoutBinding particleParamBinding = {};
-        particleParamBinding.binding            = 0;
-        particleParamBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        particleParamBinding.descriptorCount    = 1;
-        particleParamBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        particleParamBinding.pImmutableSamplers = nullptr;
-
-        std::vector<VkDescriptorSetLayoutBinding> secondSetBindings =
-        {
-            particleParamBinding
-        };
-        layoutInfo = {};
-        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(secondSetBindings.size());
-        layoutInfo.pBindings    = secondSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[1]);
 
         // Pipeline layout
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_descriptorSetLayouts.size());
         pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges    = nullptr;
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         // Descriptor Pool
-        std::array<VkDescriptorPoolSize, 1> poolSizes = {};
-        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        poolSizes[0].descriptorCount = 2;
+        std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        poolSizes[0].descriptorCount = 1;
+
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo poolInfo = {};
-        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = poolSizes.size();
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
         poolInfo.maxSets       = 2;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
-        m_vertShader = renderer->getShaderModule("point-sphere-sprite-vert");
-        m_fragShader = renderer->getShaderModule("point-sphere-sprite-frag");
+        m_vertShader = m_renderer->getShaderModule("skybox-vert");
+        m_fragShader = m_renderer->getShaderModule("skybox-frag");
 
-        create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
+        create(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height);
     }
 
-    void PointSphereSpritePipeline::create(int width, int height)
+    void SkyboxPipeline::create(int width, int height)
     {
         // Shader stages
         VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -109,7 +102,7 @@ namespace crisp
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
         inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkViewport viewport = {};
@@ -137,8 +130,7 @@ namespace crisp
         auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
         colorBlendState.attachmentCount = 1;
         colorBlendState.pAttachments = &colorBlendAttachment;
-
-        auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
+        auto depthStencilState  = VulkanPipeline::createDefaultDepthStencilState();
 
         VkGraphicsPipelineCreateInfo pipelineInfo = {};
         pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

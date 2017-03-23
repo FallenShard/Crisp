@@ -28,11 +28,18 @@ namespace crisp
         Button::~Button()
         {
             m_renderSystem->unregisterTransformResource(m_transformId);
+            m_form->getAnimator()->remove(m_colorAnim);
         }
 
         void Button::setClickCallback(std::function<void()> callback)
         {
             m_clickCallback = callback;
+        }
+
+        void Button::click()
+        {
+            if (m_clickCallback != nullptr)
+                m_clickCallback();
         }
 
         void Button::setText(const std::string& text)
@@ -116,23 +123,33 @@ namespace crisp
 
             if (m_state == State::Idle)
             {
-                targetColor = glm::vec4(0.3f, 0.3f, 0.3f, m_opacity);
+                targetColor = glm::vec4(glm::vec3(0.3f), m_opacity);
             }
             else if (m_state == State::Hover)
             {
-                targetColor = glm::vec4(0.4f, 0.4f, 0.4f, m_opacity);
+                targetColor = glm::vec4(glm::vec3(0.4f), m_opacity);
             }
             else
             {
-                targetColor = glm::vec4(0.2f, 0.2f, 0.2f, m_opacity);
+                targetColor = glm::vec4(glm::vec3(0.2f), m_opacity);
             }
 
-            auto colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.3, glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity), targetColor, 0, Easing::SlowOut);
-            colorAnim->setUpdater([this](const glm::vec4& t)
+            if (m_colorAnim == nullptr)
             {
-                setColor(t);
-            });
-            m_form->getAnimator()->add(colorAnim);
+                m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity), targetColor, [this](const glm::vec4& t)
+                {
+                    setColor(t);
+                }, 0, Easing::SlowOut);
+
+                m_form->getAnimator()->add(m_colorAnim);
+            }
+            else
+            {
+                if (m_colorAnim->isFinished())
+                    m_form->getAnimator()->add(m_colorAnim);
+
+                m_colorAnim->reset(glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity), targetColor);
+            }
         }
     }
 }

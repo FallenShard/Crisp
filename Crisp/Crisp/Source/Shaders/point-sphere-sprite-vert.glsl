@@ -21,10 +21,15 @@ out VsOut
 	vec3 eyePos;
 } vsOut;
 
+layout(push_constant) uniform PushConstant
+{
+	layout(offset = 0) int value;
+} paramIndex;
+
 void main()
 {
 	vsOut.eyePos = (MV * vec4(position, 1.0f)).xyz;
 
-	gl_PointSize = 2.0f;//radius * screenSpaceScale / -vsOut.eyePos.z;
+	gl_PointSize = radius * screenSpaceScale / -vsOut.eyePos.z;
 	gl_Position = MVP * vec4(position, 1.0f);
 }

@@ -31,6 +31,19 @@ namespace crisp
             {
                 app->writeImageToExr();
             });
+
+            auto progressLabel = form->getControlById<Label>("progressLabel");
+            auto progressBar   = form->getControlById<Panel>("progressBar");
+
+            app->rayTracerProgressed.subscribe([form, progressLabel, progressBar](float percentage, float timeSpent)
+            {
+                float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
+                
+                std::stringstream stringStream;
+                stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
+                progressLabel->setText(stringStream.str());
+                progressBar->setWidthSizingBehavior(Sizing::FillParent, percentage);
+            });
         }
 
         std::shared_ptr<Control> VesperGui::buildSceneOptions(Form* form)
@@ -84,7 +97,7 @@ namespace crisp
             progressBarBg->setPosition({ 0, 0 });
             progressBarBg->setSize({ 500, 20 });
             progressBarBg->setPadding({ 3, 3 });
-            progressBarBg->setColor(glm::vec4(0.1f, 0.1f, 0.1f, 1.0f));
+            progressBarBg->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
             progressBarBg->setAnchor(Anchor::BottomLeft);
             progressBarBg->setWidthSizingBehavior(Sizing::FillParent);
 

@@ -38,7 +38,6 @@ namespace crisp
             void postGuiUpdate(std::function<void()>&& guiUpdateCallback);
 
             void update(double dt);
-            void setTracerProgress(float value, float timeSpentRendering);
 
             void resize(int width, int height);
             void onMouseMoved(double mouseX, double mouseY);

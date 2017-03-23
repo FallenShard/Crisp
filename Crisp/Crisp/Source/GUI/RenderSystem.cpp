@@ -201,11 +201,9 @@ namespace crisp
             textRes->allocatedFaceCount          = TextGeometryResource::NumInitialAllocatedCharacters * 2; // 2 Triangles per letter
             textRes->updatedBufferIndex          = 0;
             textRes->isUpdatedOnDevice           = false;
-            textRes->geomData.vertexBuffer       = m_device->createDeviceBuffer(VulkanRenderer::NumVirtualFrames * textRes->allocatedVertexCount * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-            textRes->stagingVertexBuffer         = m_device->createStagingBuffer(textRes->allocatedVertexCount * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-            textRes->geomData.indexBuffer        = m_device->createDeviceBuffer(VulkanRenderer::NumVirtualFrames * textRes->allocatedFaceCount * sizeof(glm::u16vec3), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-            textRes->stagingIndexBuffer          = m_device->createStagingBuffer(textRes->allocatedFaceCount * sizeof(glm::u16vec3), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-            textRes->geomData.vertexBufferOffset = 0;
+            textRes->geomData.vertexBuffer       = std::make_unique<VertexBuffer>(m_device, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
+            textRes->geomData.indexBuffer        = std::make_unique<IndexBuffer>(m_device, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
+            textRes->geomData.vertexBufferGroup  = { { textRes->geomData.vertexBuffer.get(), 0 } };
             textRes->geomData.indexBufferOffset  = 0;
             textRes->geomData.indexCount         = 32;
             textRes->descSets.emplace_back(m_fonts.at(fontId)->descSet);
@@ -272,7 +270,7 @@ namespace crisp
         {
             m_renderer->addCopyAction([this](VkCommandBuffer& commandBuffer)
             {
-                auto currentFrame = m_renderer->getCurrentFrameIndex();
+                auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
                 // Update device uniform buffer for the current command buffer
                 auto& currTransRes = m_transformsResources[currentFrame];
@@ -309,19 +307,10 @@ namespace crisp
                     if (!textRes->isUpdatedOnDevice)
                     {
                         textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % VulkanRenderer::NumVirtualFrames;
-                        textRes->geomData.vertexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
+                        textRes->geomData.vertexBufferGroup.offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
                         textRes->geomData.indexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
-                        VkBufferCopy copyVertexRegion = {};
-                        copyVertexRegion.srcOffset = 0;
-                        copyVertexRegion.dstOffset = textRes->geomData.vertexBufferOffset;
-                        copyVertexRegion.size = sizeof(glm::vec4) * textRes->vertexCount;
-                        vkCmdCopyBuffer(commandBuffer, textRes->stagingVertexBuffer, textRes->geomData.vertexBuffer, 1, &copyVertexRegion);
-
-                        VkBufferCopy copyIndexRegion = {};
-                        copyIndexRegion.srcOffset = 0;
-                        copyIndexRegion.dstOffset = textRes->geomData.indexBufferOffset;
-                        copyIndexRegion.size = sizeof(glm::u16vec3) * textRes->faceCount;
-                        vkCmdCopyBuffer(commandBuffer, textRes->stagingIndexBuffer, textRes->geomData.indexBuffer, 1, &copyIndexRegion);
+                        textRes->geomData.vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
+                        textRes->geomData.indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
 
                         textRes->isUpdatedOnDevice = true;
                     }
@@ -352,7 +341,7 @@ namespace crisp
                     return a.depth < b.depth;
                 });
 
-                auto currentFrame = m_renderer->getCurrentFrameIndex();
+                auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
                 for (auto& cmd : m_drawCommands)
                 {
@@ -376,8 +365,8 @@ namespace crisp
                     vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &pushConstants[0]);
                     vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
                 
-                    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &cmd.geom->vertexBuffer, &cmd.geom->vertexBufferOffset);
-                    vkCmdBindIndexBuffer(commandBuffer, cmd.geom->indexBuffer, cmd.geom->indexBufferOffset, VK_INDEX_TYPE_UINT16);
+                    cmd.geom->vertexBufferGroup.bind(commandBuffer);
+                    cmd.geom->indexBuffer->bind(commandBuffer, cmd.geom->indexBufferOffset);
                     vkCmdDrawIndexed(commandBuffer, cmd.geom->indexCount, 1, 0, 0, 0);
                 }
 
@@ -405,7 +394,7 @@ namespace crisp
                 vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fsVertexBuffer, &offset);
                 vkCmdBindIndexBuffer(commandBuffer, m_renderer->getFullScreenQuadIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
                 
-                unsigned int pushConst = m_renderer->getCurrentFrameIndex();
+                unsigned int pushConst = m_renderer->getCurrentVirtualFrameIndex();
                 vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
                 vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
             }, VulkanRenderer::DefaultRenderPassId);
@@ -532,58 +521,23 @@ namespace crisp
             m_fsQuadPipeline    = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
         }
 
-        //void RenderSystem::initColorPaletteBuffer()
-        //{
-        //    std::vector<glm::vec4> colors(UniformBufferGranularity / sizeof(glm::vec4));
-        //    colors.at(DarkGray)   = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
-        //    colors.at(Green)      = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-        //    colors.at(LightGreen) = glm::vec4(0.5f, 1.0f, 0.5f, 1.0f);
-        //    colors.at(DarkGreen)  = glm::vec4(0.0f, 0.5f, 0.0f, 1.0f);
-        //    colors.at(LightGray)  = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-        //    colors.at(White)      = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-        //    colors.at(MediumGray) = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-        //    colors.at(Gray20)     = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-        //    colors.at(Gray30)     = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
-        //    colors.at(Gray40)     = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
-        //    colors.at(Blue)       = glm::vec4(0.2f, 0.2f, 1.0f, 1.0f);
-        //
-        //    m_colorPaletteBuffer = m_device->createDeviceBuffer(colors.size() * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        //    m_device->fillDeviceBuffer(m_colorPaletteBuffer, colors.data(), colors.size() * sizeof(glm::vec4));
-        //}
-        //
-        //void RenderSystem::initColorDescriptorSet()
-        //{
-        //    m_colorDescriptorSet = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::Color);
-        //
-        //    VkDescriptorBufferInfo colorBufferInfo = {};
-        //    colorBufferInfo.buffer = m_colorPaletteBuffer;
-        //    colorBufferInfo.offset = 0;
-        //    colorBufferInfo.range  = UniformBufferGranularity;
-        //
-        //    std::vector<VkWriteDescriptorSet> descWrites(1, VkWriteDescriptorSet{});
-        //    descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        //    descWrites[0].dstSet          = m_colorDescriptorSet;
-        //    descWrites[0].dstBinding      = 0;
-        //    descWrites[0].dstArrayElement = 0;
-        //    descWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        //    descWrites[0].descriptorCount = 1;
-        //    descWrites[0].pBufferInfo     = &colorBufferInfo;
-        //    vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0, nullptr);
-        //}
-
         void RenderSystem::initGeometryBuffers()
         {
             // Vertex buffer
             std::vector<glm::vec2> quadVerts = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
-            m_quadGeometry.vertexBuffer = m_device->createDeviceBuffer(quadVerts.size() * sizeof(glm::vec2), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-            m_device->fillDeviceBuffer(m_quadGeometry.vertexBuffer, quadVerts.data(), quadVerts.size() * sizeof(glm::vec2));
+            m_quadGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_device, quadVerts);
+            //m_quadGeometry.vertexBuffer = m_device->createDeviceBuffer(quadVerts.size() * sizeof(glm::vec2), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+            //m_device->fillDeviceBuffer(m_quadGeometry.vertexBuffer, quadVerts.data(), quadVerts.size() * sizeof(glm::vec2));
 
             // Index buffer
             std::vector<glm::u16vec3> quadFaces = { { 0, 1, 2 }, { 0, 2, 3 } };
-            m_quadGeometry.indexBuffer = m_device->createDeviceBuffer(sizeof(glm::u16vec3) * quadFaces.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-            m_device->fillDeviceBuffer(m_quadGeometry.indexBuffer, quadFaces.data(), sizeof(glm::u16vec3) * quadFaces.size());
+            //m_quadGeometry.indexBuffer = m_device->createDeviceBuffer(sizeof(glm::u16vec3) * quadFaces.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+            //m_device->fillDeviceBuffer(m_quadGeometry.indexBuffer, quadFaces.data(), sizeof(glm::u16vec3) * quadFaces.size());
+            m_quadGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_device, quadFaces);
+            m_quadGeometry.vertexBufferGroup = {
+                { m_quadGeometry.vertexBuffer.get(), 0 }
+            };
 
-            m_quadGeometry.vertexBufferOffset = 0;
             m_quadGeometry.indexBufferOffset  = 0;
             m_quadGeometry.indexCount         = 6;
         }
@@ -794,8 +748,10 @@ namespace crisp
             faceCount   = static_cast<uint32_t>(textFaces.size());
             geomData.indexCount = faceCount * 3;
 
-            renderer->getDevice().fillStagingBuffer(stagingVertexBuffer, textVertices.data(), vertexCount * sizeof(glm::vec4));
-            renderer->getDevice().fillStagingBuffer(stagingIndexBuffer, textFaces.data(), faceCount * sizeof(glm::u16vec3));
+            geomData.vertexBuffer->updateStagingBuffer(textVertices);
+            geomData.indexBuffer->updateStagingBuffer(textFaces);
+            //renderer->getDevice().fillStagingBuffer(stagingVertexBuffer, textVertices.data(), vertexCount * sizeof(glm::vec4));
+            //renderer->getDevice().fillStagingBuffer(stagingIndexBuffer, textFaces.data(), faceCount * sizeof(glm::u16vec3));
         }
 
         //void RenderSystem::TexCoordResource::generate(const glm::vec2& min, const glm::vec2& max, VulkanRenderer* renderer)

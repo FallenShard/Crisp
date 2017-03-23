@@ -7,6 +7,9 @@
 
 #include "Math/Headers.hpp"
 
+#include "vulkan/VertexBufferBindingGroup.hpp"
+#include "vulkan/DescriptorSetGroup.hpp"
+
 namespace crisp
 {
     class Application;
@@ -16,6 +19,11 @@ namespace crisp
 
     class CameraController;
     class InputDispatcher;
+
+    class IndexBuffer;
+    class UniformBuffer;
+
+    class Skybox;
 
     namespace gui
     {
@@ -35,14 +43,18 @@ namespace crisp
 
     private:
         VulkanRenderer* m_renderer;
+        Application* m_app;
+        std::unique_ptr<CameraController> m_cameraController;
+
+        std::unique_ptr<Skybox> m_skybox;
 
         std::unique_ptr<UniformColorPipeline> m_pipeline;
-        std::vector<VkDescriptorSet> m_descSets;
 
-        VkBuffer m_buffer;
-        VkBuffer m_indexBuffer;
+        std::unique_ptr<PointSphereSpritePipeline> m_psPipeline;
+        DescriptorSetGroup m_descriptorSetGroup;
 
-        VkBuffer m_colorPaletteBuffer;
+        VertexBufferBindingGroup m_vertexBufferGroup;
+        std::unique_ptr<VertexBuffer> m_buffer;
 
         struct Transforms
         {
@@ -53,15 +65,15 @@ namespace crisp
         };
 
         Transforms m_transforms;
-        VkBuffer m_transformsBuffer;
-        VkBuffer m_transformsStagingBuffer;
-        uint32_t m_updatedTransformsIndex;
+        std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
-        std::unique_ptr<CameraController> m_cameraController;
+        struct ParticleParams
+        {
+            float radius;
+            float screenSpaceScale;
+        };
 
-        Application* m_app;
-
-        std::unique_ptr<PointSphereSpritePipeline> m_psPipeline;
-        VkBuffer m_positionBuffer;
+        ParticleParams m_params;
+        std::unique_ptr<UniformBuffer> m_particleParamsBuffer;
     };
 }

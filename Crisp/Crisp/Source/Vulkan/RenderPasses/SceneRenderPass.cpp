@@ -1,10 +1,10 @@
-#include "GuiRenderPass.hpp"
+#include "SceneRenderPass.hpp"
 
 #include "Vulkan/VulkanRenderer.hpp"
 
 namespace crisp
 {
-    GuiRenderPass::GuiRenderPass(VulkanRenderer* renderer)
+    SceneRenderPass::SceneRenderPass(VulkanRenderer* renderer)
         : VulkanRenderPass(renderer)
         , m_renderTargetViews(VulkanRenderer::NumVirtualFrames)
         , m_depthTargetViews(VulkanRenderer::NumVirtualFrames)
@@ -13,20 +13,20 @@ namespace crisp
         , m_colorFormat(VK_FORMAT_R8G8B8A8_UNORM)
         , m_depthFormat(VK_FORMAT_D32_SFLOAT)
     {
-        m_clearValues[0].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+        m_clearValues[0].color        = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_clearValues[1].depthStencil = { 1.0f, 0 };
 
         createRenderPass();
         createResources();
     }
 
-    GuiRenderPass::~GuiRenderPass()
+    SceneRenderPass::~SceneRenderPass()
     {
         freeResources();
         vkDestroyRenderPass(m_device, m_renderPass, nullptr);
     }
 
-    void GuiRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
+    void SceneRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
     {
         // Transition the destination image layer into attachment layout
         VkImageMemoryBarrier transBarrier = {};
@@ -57,17 +57,17 @@ namespace crisp
         vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    VkImage GuiRenderPass::getColorAttachment(unsigned int index) const
+    VkImage SceneRenderPass::getColorAttachment(unsigned int index) const
     {
         return m_renderTarget;
     }
 
-    VkFormat GuiRenderPass::getColorFormat() const
+    VkFormat SceneRenderPass::getColorFormat() const
     {
         return m_colorFormat;
     }
 
-    void GuiRenderPass::createRenderPass()
+    void SceneRenderPass::createRenderPass()
     {
         // Description for color attachment
         VkAttachmentDescription colorAttachment = {};
@@ -126,7 +126,7 @@ namespace crisp
         vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
     }
 
-    void GuiRenderPass::createResources()
+    void SceneRenderPass::createResources()
     {
         m_renderTarget = m_renderer->getDevice().createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
             VulkanRenderer::NumVirtualFrames, m_colorFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
@@ -142,7 +142,7 @@ namespace crisp
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {
             m_renderTargetViews[i] = m_renderer->getDevice().createImageView(m_renderTarget, VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
-            m_depthTargetViews[i] = m_renderer->getDevice().createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
+            m_depthTargetViews[i]  = m_renderer->getDevice().createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
             std::vector<VkImageView> attachmentViews =
             {
                 m_renderTargetViews[i],
@@ -161,7 +161,7 @@ namespace crisp
         }
     }
 
-    void GuiRenderPass::freeResources()
+    void SceneRenderPass::freeResources()
     {
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {

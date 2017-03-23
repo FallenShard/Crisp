@@ -4,6 +4,7 @@
 
 #include "Control.hpp"
 #include "Label.hpp"
+#include "Animation/PropertyAnimation.hpp"
 
 namespace crisp
 {
@@ -16,6 +17,7 @@ namespace crisp
             virtual ~Button();
 
             void setClickCallback(std::function<void()> callback);
+            void click();
             void setText(const std::string& text);
 
             virtual void onMouseEntered() override;
@@ -34,11 +36,14 @@ namespace crisp
                 Hover,
                 Pressed
             };
+
             void setState(State state);
 
             State m_state;
 
             std::function<void()> m_clickCallback;
+
+            std::shared_ptr<PropertyAnimation<glm::vec4>> m_colorAnim;
 
             std::unique_ptr<Label> m_label;
         };

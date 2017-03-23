@@ -11,6 +11,9 @@
 
 #include "Vulkan/VulkanRenderer.hpp"
 
+#include "vulkan/VertexBufferBindingGroup.hpp"
+#include "vulkan/IndexBuffer.hpp"
+
 namespace crisp
 {
     class VulkanRenderer;
@@ -19,6 +22,9 @@ namespace crisp
     class GuiTextPipeline;
     class GuiTexQuadPipeline;
     class FullScreenQuadPipeline;
+
+    class IndexBuffer;
+    class UniformBuffer;
 
     class GuiRenderPass;
 
@@ -119,9 +125,9 @@ namespace crisp
             // Geometry
             struct GeometryData
             {
-                VkBuffer vertexBuffer;
-                VkDeviceSize vertexBufferOffset;
-                VkBuffer indexBuffer;
+                VertexBufferBindingGroup vertexBufferGroup;
+                std::unique_ptr<VertexBuffer> vertexBuffer;
+                std::unique_ptr<IndexBuffer> indexBuffer;
                 VkDeviceSize indexBufferOffset;
                 uint32_t indexCount;
             };
@@ -186,8 +192,6 @@ namespace crisp
             {
                 static constexpr uint32_t NumInitialAllocatedCharacters = 32;
                 GeometryData geomData;
-                VkBuffer stagingVertexBuffer;
-                VkBuffer stagingIndexBuffer;
 
                 uint32_t allocatedVertexCount;
                 uint32_t vertexCount;
@@ -242,8 +246,6 @@ namespace crisp
             };
 
             mutable std::vector<GuiDrawCommand> m_drawCommands;
-
-            
         };
     }
 }

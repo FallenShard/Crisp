@@ -92,8 +92,8 @@
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R
-xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
+      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
+xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -133,8 +133,8 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;vulkan-1.lib;freetype27.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R
-xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
+      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
+xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -169,17 +169,25 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClCompile Include="Source\IO\OpenEXRWriter.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Core\Picture.cpp" />
-    <ClCompile Include="Source\Vulkan\DeviceBuffer.cpp" />
+    <ClCompile Include="Source\Models\Skybox.cpp" />
+    <ClCompile Include="Source\Vulkan\DescriptorSetGroup.cpp" />
+    <ClCompile Include="Source\Vulkan\IndexBuffer.cpp" />
     <ClCompile Include="Source\Vulkan\MemoryHeap.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\GuiTextPipeline.cpp" />
+    <ClCompile Include="Source\Vulkan\Pipelines\LiquidPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.cpp" />
+    <ClCompile Include="Source\Vulkan\Pipelines\SkyboxPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\Pipelines\VulkanPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\RenderPasses\DefaultRenderPass.cpp" />
     <ClCompile Include="Source\Vulkan\RenderPasses\GuiRenderPass.cpp" />
+    <ClCompile Include="Source\Vulkan\RenderPasses\SceneRenderPass.cpp" />
+    <ClCompile Include="Source\Vulkan\UniformBuffer.cpp" />
+    <ClCompile Include="Source\Vulkan\UniformMultiBuffer.cpp" />
+    <ClCompile Include="Source\Vulkan\VertexBuffer.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanContext.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanDevice.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanRenderer.cpp" />
@@ -201,7 +209,6 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Core\Scene.hpp" />
     <ClInclude Include="Source\Core\StaticPicture.hpp" />
     <ClInclude Include="Source\GUI\Enums.hpp" />
-    <ClInclude Include="Source\GUI\Fragment.hpp" />
     <ClInclude Include="Source\GUI\VesperGui.hpp" />
     <ClInclude Include="Source\IO\FileUtils.hpp" />
     <ClInclude Include="Source\IO\Image.hpp" />
@@ -222,18 +229,28 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <ClInclude Include="Source\Math\Rect.hpp" />
     <ClInclude Include="Source\Core\Picture.hpp" />
     <ClInclude Include="Source\Core\Timer.hpp" />
-    <ClInclude Include="Source\Vulkan\DeviceBuffer.hpp" />
+    <ClInclude Include="Source\Models\Skybox.hpp" />
+    <ClInclude Include="Source\Vulkan\BufferUpdatePolicy.hpp" />
+    <ClInclude Include="Source\Vulkan\DescriptorSetGroup.hpp" />
     <ClInclude Include="Source\Vulkan\DrawItem.hpp" />
+    <ClInclude Include="Source\Vulkan\IndexBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\GuiTextPipeline.hpp" />
+    <ClInclude Include="Source\Vulkan\Pipelines\LiquidPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.hpp" />
+    <ClInclude Include="Source\Vulkan\Pipelines\SkyboxPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\RenderPasses\DefaultRenderPass.hpp" />
     <ClInclude Include="Source\Vulkan\RenderPasses\GuiRenderPass.hpp" />
+    <ClInclude Include="Source\Vulkan\RenderPasses\SceneRenderPass.hpp" />
+    <ClInclude Include="Source\Vulkan\UniformBuffer.hpp" />
+    <ClInclude Include="Source\Vulkan\UniformMultiBuffer.hpp" />
+    <ClInclude Include="Source\Vulkan\VertexBuffer.hpp" />
+    <ClInclude Include="Source\Vulkan\VertexBufferBindingGroup.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanDevice.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanRenderer.hpp" />
@@ -256,8 +273,12 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <None Include="Source\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Source\Shaders\gui-text-frag.glsl" />
     <None Include="Source\Shaders\gui-text-vert.glsl" />
+    <None Include="Source\Shaders\liquid-frag.glsl" />
+    <None Include="Source\Shaders\liquid-vert.glsl" />
     <None Include="Source\Shaders\point-sphere-sprite-frag.glsl" />
     <None Include="Source\Shaders\point-sphere-sprite-vert.glsl" />
+    <None Include="Source\Shaders\skybox-frag.glsl" />
+    <None Include="Source\Shaders\skybox-vert.glsl" />
     <None Include="Source\Shaders\unif-col-vert.glsl" />
     <None Include="Source\Shaders\unif-col-frag.glsl" />
     <None Include="Source\Core\StringUtils.hpp" />
@@ -266,7 +287,9 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R</Command>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />
     <Xml Include="Resources\VesperScenes\cbox.xml" />
     <Xml Include="Resources\VesperScenes\cbox_mesh.xml" />
-    <Xml Include="Resources\VesperScenes\mesh-texture.xml" />
+    <Xml Include="Resources\VesperScenes\mesh-texture.xml">
+      <SubType>Designer</SubType>
+    </Xml>
     <Xml Include="Resources\VesperScenes\odyssey-ems.xml" />
     <Xml Include="Resources\VesperScenes\odyssey-mats.xml" />
     <Xml Include="Resources\VesperScenes\odyssey-mis.xml" />
