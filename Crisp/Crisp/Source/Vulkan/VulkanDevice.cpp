@@ -228,19 +228,19 @@ namespace crisp
         return chunk.first;
     }
 
-    void VulkanDevice::fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers)
+    void VulkanDevice::fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers, uint32_t firstLayer)
     {
         auto stagingBufferInfo = createBuffer(m_stagingBufferHeap.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, stagingMemoryBits);
 
         memcpy(static_cast<char*>(m_mappedStagingPtr) + stagingBufferInfo.second.offset, srcData, static_cast<size_t>(size));
 
-        transitionImageLayout(dstImage, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numLayers);
+        transitionImageLayout(dstImage, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, numLayers, firstLayer);
 
-        for (auto i = 0u; i < numLayers; i++)
+        for (auto i = firstLayer; i < firstLayer + numLayers; i++)
             copyBufferToImage(dstImage, stagingBufferInfo.first, extent, i);
 
         vkDestroyBuffer(m_device, stagingBufferInfo.first, nullptr);
-        stagingBufferInfo.second.memoryHeap->freeChunks[stagingBufferInfo.second.offset] = stagingBufferInfo.second.size;
+        stagingBufferInfo.second.memoryHeap->free(stagingBufferInfo.second);
     }
 
     void VulkanDevice::updateDeviceImage(VkImage dstImage, VkBuffer stagingBuffer, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers)
@@ -309,6 +309,21 @@ namespace crisp
         return semaphore;
     }
 
+    MemoryHeap* VulkanDevice::getDeviceBufferHeap() const
+    {
+        return m_deviceBufferHeap.get();
+    }
+
+    MemoryHeap* VulkanDevice::getStagingBufferHeap() const
+    {
+        return m_stagingBufferHeap.get();
+    }
+
+    void* VulkanDevice::getStagingMemoryPtr() const
+    {
+        return m_mappedStagingPtr;
+    }
+
     std::pair<VkBuffer, MemoryChunk> VulkanDevice::createBuffer(MemoryHeap* heap, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props)
     {
         // Create a buffer handle
@@ -350,7 +365,7 @@ namespace crisp
         endSingleTimeCommands(commandBuffer);
     }
 
-    void VulkanDevice::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t numLayers)
+    void VulkanDevice::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t numLayers, uint32_t baseLayer)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -363,7 +378,7 @@ namespace crisp
         barrier.image               = image;
         barrier.subresourceRange.baseMipLevel   = 0;
         barrier.subresourceRange.levelCount     = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.baseArrayLayer = baseLayer;
         barrier.subresourceRange.layerCount     = numLayers;
         if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -411,9 +426,9 @@ namespace crisp
         endSingleTimeCommands(commandBuffer);
     }
 
-    VkImage VulkanDevice::createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage, VkImageLayout layout)
+    VkImage VulkanDevice::createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage, VkImageLayout layout, VkImageCreateFlags createFlags)
     {
-        auto imageInfo = createImage(m_deviceImageHeap.get(), { width, height, 1u }, layers, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto imageInfo = createImage(m_deviceImageHeap.get(), { width, height, 1u }, layers, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, createFlags);
         m_deviceImages.insert(imageInfo);
 
         return imageInfo.first;
@@ -446,35 +461,35 @@ namespace crisp
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
         VkBufferImageCopy copyRegion = {};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = extent.width;
-        copyRegion.bufferImageHeight = extent.height;
-        copyRegion.imageExtent = extent;
-        copyRegion.imageOffset = { 0, 0, 0 };
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copyRegion.bufferOffset                    = 0;
+        copyRegion.bufferRowLength                 = extent.width;
+        copyRegion.bufferImageHeight               = extent.height;
+        copyRegion.imageExtent                     = extent;
+        copyRegion.imageOffset                     = { 0, 0, 0 };
+        copyRegion.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
         copyRegion.imageSubresource.baseArrayLayer = dstLayer;
-        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageSubresource.layerCount     = 1;
         vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
         endSingleTimeCommands(commandBuffer);
     }
 
-    std::pair<VkImage, MemoryChunk> VulkanDevice::createImage(MemoryHeap* heap, VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps)
+    std::pair<VkImage, MemoryChunk> VulkanDevice::createImage(MemoryHeap* heap, VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps, VkImageCreateFlags createFlags)
     {
         // Create an image handle
         VkImageCreateInfo imageInfo = {};
-        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent = extent;
-        imageInfo.mipLevels = 1;
-        imageInfo.arrayLayers = layers;
-        imageInfo.format = format;
-        imageInfo.tiling = tiling;
+        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+        imageInfo.extent        = extent;
+        imageInfo.mipLevels     = 1;
+        imageInfo.arrayLayers   = layers;
+        imageInfo.format        = format;
+        imageInfo.tiling        = tiling;
         imageInfo.initialLayout = initLayout;
-        imageInfo.usage = usage;
-        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags = 0;
+        imageInfo.usage         = usage;
+        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.flags         = 0;
 
         VkImage image(VK_NULL_HANDLE);
         auto res = vkCreateImage(m_device, &imageInfo, nullptr, &image);

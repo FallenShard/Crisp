@@ -28,6 +28,7 @@ namespace crisp
         MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize size, uint32_t memoryTypeIndex, VkDevice device, std::string tag);
 
         void coalesce();
+        inline void free(const MemoryChunk& chunk) { free(chunk.offset, chunk.size); }
         void free(uint64_t offset, uint64_t size);
         MemoryChunk allocateChunk(uint64_t size, uint64_t alignment);
     };

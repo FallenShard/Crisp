@@ -46,11 +46,11 @@ namespace crisp
         void flushMappedRanges();
 
         VkImage createDeviceImage(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage);
-        void fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers);
+        void fillDeviceImage(VkImage dstImage, const void* srcData, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers, uint32_t firstLayer = 0);
         void updateDeviceImage(VkImage dstImage, VkBuffer stagingBuffer, VkDeviceSize size, VkExtent3D extent, uint32_t numLayers);
-        void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t numLayers);
+        void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t numLayers, uint32_t baseLayer = 0);
 
-        VkImage createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage, VkImageLayout layout = VK_IMAGE_LAYOUT_PREINITIALIZED);
+        VkImage createDeviceImageArray(uint32_t width, uint32_t height, uint32_t layers, VkFormat format, VkImageUsageFlags usage, VkImageLayout layout = VK_IMAGE_LAYOUT_PREINITIALIZED, VkImageCreateFlags createFlags = 0);
 
         VkImageView createImageView(VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, uint32_t baseLayer, uint32_t numLayers) const;
 
@@ -66,17 +66,22 @@ namespace crisp
         void printMemoryStatus();
         DeviceMemoryMetrics getDeviceMemoryUsage();
 
+        std::pair<VkBuffer, MemoryChunk> createBuffer(MemoryHeap* heap, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props);
+
+        MemoryHeap* getDeviceBufferHeap() const;
+        MemoryHeap* getStagingBufferHeap() const;
+        void* getStagingMemoryPtr() const;
+
     private:
         static constexpr VkDeviceSize DeviceHeapSize  = 256 << 20; // 256 MB
         static constexpr VkDeviceSize StagingHeapSize = 128 << 20; // 128 MB
 
-        std::pair<VkBuffer, MemoryChunk> createBuffer(MemoryHeap* heap, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props);
         void copyBuffer(VkBuffer dstBuffer, VkBuffer srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
 
         void copyImage(VkImage dstImage, VkImage srcImage, VkExtent3D extent, uint32_t dstLayer);
         void copyBufferToImage(VkImage dstImage, VkBuffer srcBuffer, VkExtent3D extent, uint32_t dstLayer);
 
-        std::pair<VkImage, MemoryChunk> createImage(MemoryHeap* heap, VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps);
+        std::pair<VkImage, MemoryChunk> createImage(MemoryHeap* heap, VkExtent3D extent, uint32_t layers, VkFormat format, VkImageLayout initLayout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProps, VkImageCreateFlags createFlags = 0);
 
         VkCommandBuffer beginSingleTimeCommands();
         void endSingleTimeCommands(VkCommandBuffer commandBuffer);

@@ -59,8 +59,6 @@ namespace crisp
 
     MemoryChunk MemoryHeap::allocateChunk(uint64_t size, uint64_t alignment)
     {
-        VkDeviceSize paddedSize = size + ((alignment - (size & (alignment - 1))) & (alignment - 1));
-
         MemoryChunk allocResult = { this, 0, 0 };
         uint64_t foundChunkOffset = 0;
         uint64_t foundChunkSize = 0;
@@ -72,13 +70,13 @@ namespace crisp
             uint64_t paddedOffset = chunkOffset + ((alignment - (chunkOffset & (alignment - 1))) & (alignment - 1));
             uint64_t usableSize = chunkSize - (paddedOffset - chunkOffset);
 
-            if (paddedSize <= usableSize)
+            if (size <= usableSize)
             {
                 foundChunkOffset = chunkOffset;
-                foundChunkSize = chunkSize;
+                foundChunkSize   = chunkSize;
 
                 allocResult.offset = paddedOffset;
-                allocResult.size   = paddedSize;
+                allocResult.size   = size;
                 break;
             }
         }
