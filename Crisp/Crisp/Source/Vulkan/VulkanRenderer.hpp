@@ -10,6 +10,7 @@
 #include "VulkanContext.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanSwapChain.hpp"
+#include "VertexBufferBindingGroup.hpp"
 #include "RenderPasses/DefaultRenderPass.hpp"
 
 #include "DrawItem.hpp"
@@ -40,8 +41,8 @@ namespace crisp
         VkShaderModule getShaderModule(std::string&& key) const;
         VkExtent2D getSwapChainExtent() const;
 
-        VkBuffer getFullScreenQuadVertexBuffer() const;
-        VkBuffer getFullScreenQuadIndexBuffer() const;
+        void drawFullScreenQuad(VkCommandBuffer& cmdBuffer) const;
+
         uint32_t getCurrentVirtualFrameIndex() const;
 
         void resize(int width, int height);
@@ -105,6 +106,7 @@ namespace crisp
 
         VkBuffer m_fsQuadVertexBuffer;
         VkBuffer m_fsQuadIndexBuffer;
+        VertexBufferBindingGroup m_fsQuadVertexBufferBindingGroup;
         
         std::map<uint32_t, std::pair<VulkanRenderPass*, ActionVector>> m_renderPasses;
 

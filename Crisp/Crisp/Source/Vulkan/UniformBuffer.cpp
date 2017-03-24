@@ -8,6 +8,7 @@ namespace crisp
     UniformBuffer::UniformBuffer(VulkanDevice* device, VkDeviceSize size, BufferUpdatePolicy updatePolicy, const void* data)
         : m_device(device)
         , m_updatePolicy(updatePolicy)
+        , m_framesToUpdateOnGpu(VulkanRenderer::NumVirtualFrames)
     {
         auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         auto deviceBufferHeap = m_device->getDeviceBufferHeap();
@@ -55,19 +56,25 @@ namespace crisp
     void UniformBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
         memcpy(static_cast<char*>(m_device->getStagingMemoryPtr()) + m_stagingMemoryChunk.offset, data, static_cast<size_t>(size));
+        m_framesToUpdateOnGpu = VulkanRenderer::NumVirtualFrames;
     }
 
     void UniformBuffer::updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex)
     {
+        if (m_framesToUpdateOnGpu == 0)
+            return;
+
         VkBufferCopy copyRegion = {};
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = currentFrameIndex * m_deviceRegionSize;
         copyRegion.size      = m_stagingMemoryChunk.size;
         vkCmdCopyBuffer(commandBuffer, m_stagingBuffer, m_buffer, 1, &copyRegion);
+
+        m_framesToUpdateOnGpu--;
     }
 
     uint32_t UniformBuffer::getDynamicOffset(uint32_t currentFrameIndex) const
     {
-        return currentFrameIndex * m_deviceRegionSize;
+        return static_cast<uint32_t>(currentFrameIndex * m_deviceRegionSize);
     }
 }

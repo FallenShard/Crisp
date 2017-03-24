@@ -11,7 +11,7 @@ namespace crisp
         VertexBufferBindingGroup() {}
         ~VertexBufferBindingGroup() {}
 
-        using VertexBufferBindingGroupItem = std::pair<VertexBuffer*, VkDeviceSize>;
+        using VertexBufferBindingGroupItem = std::pair<VkBuffer, VkDeviceSize>;
 
         VertexBufferBindingGroup(uint32_t firstBinding, uint32_t bindingCount, std::initializer_list<VertexBufferBindingGroupItem>&& bindings)
             : firstBinding(firstBinding)
@@ -19,7 +19,7 @@ namespace crisp
         {
             for (auto& item : bindings)
             {
-                buffers.emplace_back(item.first->get());
+                buffers.emplace_back(item.first);
                 offsets.emplace_back(item.second);
             }
         }

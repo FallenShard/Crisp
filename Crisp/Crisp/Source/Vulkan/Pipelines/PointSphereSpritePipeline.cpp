@@ -57,7 +57,7 @@ namespace crisp
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = poolSizes.size();
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
         poolInfo.maxSets       = 2;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);

@@ -37,5 +37,6 @@ namespace crisp
         MemoryChunk m_stagingMemoryChunk;
 
         VkDeviceSize m_deviceRegionSize;
+        uint32_t m_framesToUpdateOnGpu;
     };
 }

@@ -75,6 +75,11 @@ namespace crisp
         m_fsQuadIndexBuffer = m_device->createDeviceBuffer(sizeof(glm::u16vec3) * faces.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
         m_device->fillDeviceBuffer(m_fsQuadIndexBuffer, faces.data(), sizeof(glm::u16vec3) * faces.size());
 
+        m_fsQuadVertexBufferBindingGroup =
+        {
+            { m_fsQuadVertexBuffer, 0 }
+        };
+
         registerRenderPass(DefaultRenderPassId, m_defaultRenderPass.get());
     }
 
@@ -431,13 +436,10 @@ namespace crisp
         return m_swapChain->getExtent();
     }
 
-    VkBuffer VulkanRenderer::getFullScreenQuadVertexBuffer() const
+    void VulkanRenderer::drawFullScreenQuad(VkCommandBuffer& cmdBuffer) const
     {
-        return m_fsQuadVertexBuffer;
-    }
-
-    VkBuffer VulkanRenderer::getFullScreenQuadIndexBuffer() const
-    {
-        return m_fsQuadIndexBuffer;
+        m_fsQuadVertexBufferBindingGroup.bind(cmdBuffer);
+        vkCmdBindIndexBuffer(cmdBuffer, m_fsQuadIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
     }
 }
