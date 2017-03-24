@@ -35,10 +35,10 @@ namespace crisp
     {
     }
 
-    void FreeCamera::update(float dt)
+    bool FreeCamera::update(float dt)
     {
         if (!m_needsViewUpdate)
-            return;
+            return false;
         
         auto rotation = glm::yawPitchRoll(m_yawPitchRoll.x, m_yawPitchRoll.y, m_yawPitchRoll.z);
         
@@ -53,6 +53,7 @@ namespace crisp
         m_V = rotation * glm::translate(-m_position);
         
         m_needsViewUpdate = false;
+        return true;
     }
 
     void FreeCamera::walk(float dt)

@@ -33,10 +33,10 @@ namespace crisp
     {
     }
 
-    void TargetCamera::update(float dt)
+    bool TargetCamera::update(float dt)
     {
         if (!m_recalculateViewMatrix)
-            return;
+            return false;
 
         if (++m_normalizationCount == NormalizationFrequency)
         {
@@ -58,6 +58,8 @@ namespace crisp
         m_V        = glm::lookAt(m_position, m_target, m_up);
 
         m_recalculateViewMatrix = false;
+
+        return true;
     }
 
     void TargetCamera::setTarget(const glm::vec3& target)

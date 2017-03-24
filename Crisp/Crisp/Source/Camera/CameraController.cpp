@@ -47,7 +47,7 @@ namespace crisp
     {
     }
 
-    void CameraController::update(float dt)
+    bool CameraController::update(float dt)
     {
         if (m_refreshDeltasWithUpdate)
         {
@@ -61,7 +61,7 @@ namespace crisp
         
         m_animator->update(dt);
 
-        m_targetCamera.update(dt);
+        return m_targetCamera.update(dt);
     }
 
     void CameraController::onMousePressed(int button, int mods, double xPos, double yPos)

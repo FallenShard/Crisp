@@ -10,7 +10,7 @@ namespace crisp
         FreeCamera();
         ~FreeCamera();
 
-        virtual void update(float dt) override;
+        virtual bool update(float dt) override;
         
         void walk(float dt);
         void strafe(float dt);

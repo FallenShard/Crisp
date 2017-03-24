@@ -15,7 +15,7 @@ namespace crisp
         AbstractCamera();
         virtual ~AbstractCamera();
 
-        virtual void update(float dt) = 0;
+        virtual bool update(float dt) = 0;
 
         void setupProjection(float fovY, float aspectRatio, float zNear = 0.1f, float zFar = 1000.0f);
         const glm::mat4& getProjectionMatrix() const;

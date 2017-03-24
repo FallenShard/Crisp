@@ -7,7 +7,7 @@ namespace crisp
     enum class RotationStrategy
     {
         EulerAngles,
-        Quaternion
+        IncrementalQuaternions
     };
 
     class TargetCamera : public AbstractCamera
@@ -16,7 +16,7 @@ namespace crisp
         TargetCamera(RotationStrategy rotationStrategy);
         ~TargetCamera();
 
-        virtual void update(float dt) override;
+        virtual bool update(float dt) override;
 
         void setTarget(const glm::vec3& target);
         glm::vec3 getTarget() const;

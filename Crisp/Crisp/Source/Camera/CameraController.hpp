@@ -27,7 +27,7 @@ namespace crisp
         CameraController(InputDispatcher* inputDispatcher);
         ~CameraController();
 
-        void update(float dt);
+        bool update(float dt);
 
         void onMousePressed(int button, int mods, double xPos, double yPos);
         void onMouseReleased(int button, int mods, double xPos, double yPos);
