@@ -74,8 +74,8 @@ namespace crisp
 
             double m_timePassed;
 
-            std::unique_ptr<Animator> m_animator;
             std::unique_ptr<RenderSystem> m_renderSystem;
+            std::unique_ptr<Animator> m_animator;
 
             std::shared_ptr<ControlGroup> m_rootControlGroup;
 

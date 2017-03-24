@@ -203,7 +203,7 @@ namespace crisp
             textRes->isUpdatedOnDevice           = false;
             textRes->geomData.vertexBuffer       = std::make_unique<VertexBuffer>(m_device, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
             textRes->geomData.indexBuffer        = std::make_unique<IndexBuffer>(m_device, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
-            textRes->geomData.vertexBufferGroup  = { { textRes->geomData.vertexBuffer.get(), 0 } };
+            textRes->geomData.vertexBufferGroup  = { { textRes->geomData.vertexBuffer->get(), 0 } };
             textRes->geomData.indexBufferOffset  = 0;
             textRes->geomData.indexCount         = 32;
             textRes->descSets.emplace_back(m_fonts.at(fontId)->descSet);
@@ -388,15 +388,11 @@ namespace crisp
                 vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
                 vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipelineLayout(),
                     0, 1, &m_fsQuadDescSet, 0, nullptr);
-                
-                VkDeviceSize offset = 0;
-                auto fsVertexBuffer = m_renderer->getFullScreenQuadVertexBuffer();
-                vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fsVertexBuffer, &offset);
-                vkCmdBindIndexBuffer(commandBuffer, m_renderer->getFullScreenQuadIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
-                
+
                 unsigned int pushConst = m_renderer->getCurrentVirtualFrameIndex();
                 vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-                vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
+                
+                m_renderer->drawFullScreenQuad(commandBuffer);
             }, VulkanRenderer::DefaultRenderPassId);
         }
 
@@ -535,7 +531,7 @@ namespace crisp
             //m_device->fillDeviceBuffer(m_quadGeometry.indexBuffer, quadFaces.data(), sizeof(glm::u16vec3) * quadFaces.size());
             m_quadGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_device, quadFaces);
             m_quadGeometry.vertexBufferGroup = {
-                { m_quadGeometry.vertexBuffer.get(), 0 }
+                { m_quadGeometry.vertexBuffer->get(), 0 }
             };
 
             m_quadGeometry.indexBufferOffset  = 0;

@@ -12,7 +12,7 @@
 
 namespace crisp
 {
-    Skybox::Skybox(VulkanRenderer* renderer)
+    Skybox::Skybox(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
         : m_renderer(renderer)
         , m_device(&renderer->getDevice())
     {
@@ -33,10 +33,10 @@ namespace crisp
 
         m_vertexBufferGroup =
         {
-            { m_buffer.get(), 0 }
+            { m_buffer->get(), 0 }
         };
 
-        m_pipeline = std::make_unique<SkyboxPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
+        m_pipeline = std::make_unique<SkyboxPipeline>(m_renderer, renderPass);
         m_descriptorSetGroup = 
         {
             m_pipeline->allocateDescriptorSet(0)
@@ -64,7 +64,7 @@ namespace crisp
         auto width = cubeMapImages[0]->getWidth();
         auto height = cubeMapImages[0]->getHeight();
 
-        m_texture = m_device->createDeviceImageArray(width, height, cubeMapImages.size(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+        m_texture = m_device->createDeviceImageArray(width, height, static_cast<uint32_t>(cubeMapImages.size()), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
         for (int i = 0; i < cubeMapImages.size(); i++)
         {
@@ -87,7 +87,8 @@ namespace crisp
 
     Skybox::~Skybox()
     {
-
+        vkDestroyImageView(m_device->getHandle(), m_imageView, nullptr);
+        vkDestroySampler(m_device->getHandle(), m_sampler, nullptr);
     }
 
     void Skybox::updateTransforms(const glm::mat4& P, const glm::mat4& V)
@@ -96,6 +97,11 @@ namespace crisp
         m_transforms.MVP = P * m_transforms.MV;
 
         m_transformsBuffer->updateStagingBuffer(&m_transforms, sizeof(Transforms));
+    }
+
+    void Skybox::resize(int width, int height)
+    {
+        m_pipeline->resize(width, height);
     }
 
     void Skybox::updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex)

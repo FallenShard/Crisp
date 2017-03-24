@@ -10,6 +10,7 @@ namespace crisp
 {
     class VulkanRenderer;
     class VulkanDevice;
+    class VulkanRenderPass;
 
     class IndexBuffer;
     class SkyboxPipeline;
@@ -17,10 +18,12 @@ namespace crisp
     class Skybox
     {
     public:
-        Skybox(VulkanRenderer* renderer);
+        Skybox(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
         ~Skybox();
 
         void updateTransforms(const glm::mat4& P, const glm::mat4& V);
+
+        void resize(int width, int height);
 
         void updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex);
         void draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex) const;

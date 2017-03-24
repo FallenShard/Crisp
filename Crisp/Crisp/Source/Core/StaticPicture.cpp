@@ -41,12 +41,6 @@ namespace crisp
         // create sampler
         m_vkSampler = renderer.getDevice().createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        // get vertex buffer
-        m_vertexBuffer = renderer.getFullScreenQuadVertexBuffer();
-
-        // get index buffer
-        m_indexBuffer = renderer.getFullScreenQuadIndexBuffer();
-
         // descriptor set
         m_descriptorSet = m_pipeline->allocateDescriptorSet(0);
 
@@ -78,20 +72,6 @@ namespace crisp
         m_drawItem.pipelineLayout      = m_pipeline->getPipelineLayout();
         m_drawItem.descriptorSetOffset = 0;
         m_drawItem.descriptorSets.push_back(m_descriptorSet);
-
-        m_drawItem.vertexBufferBindingOffset = 0;
-        m_drawItem.vertexBuffers.push_back(m_vertexBuffer);
-        m_drawItem.vertexBufferOffsets.push_back(0);
-
-        m_drawItem.indexBuffer       = m_indexBuffer;
-        m_drawItem.indexType         = VK_INDEX_TYPE_UINT16;
-        m_drawItem.indexBufferOffset = 0;
-
-        m_drawItem.indexCount    = 6;
-        m_drawItem.instanceCount = 1;
-        m_drawItem.firstIndex    = 0;
-        m_drawItem.vertexOffset  = 0;
-        m_drawItem.firstInstance = 0;
     }
 
     StaticPicture::~StaticPicture()
@@ -130,12 +110,10 @@ namespace crisp
             vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(),
                 0, 1, &m_descriptorSet, 0, nullptr);
 
-            vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBuffer, m_drawItem.vertexBufferOffsets.data());
-            vkCmdBindIndexBuffer(cmdBuffer, m_drawItem.indexBuffer, m_drawItem.indexBufferOffset, m_drawItem.indexType);
-
             unsigned int pushConst = 0;
             vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-            vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
+
+            m_renderer->drawFullScreenQuad(cmdBuffer);
         }, VulkanRenderer::DefaultRenderPassId);
     }
 }

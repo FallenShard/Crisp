@@ -36,9 +36,6 @@ namespace crisp
         std::unique_ptr<FullScreenQuadPipeline> m_pipeline;
         VkDescriptorSet m_descriptorSet;
 
-        VkBuffer m_vertexBuffer;
-        VkBuffer m_indexBuffer;
-
         VkExtent2D m_extent;
         VkImage m_tex;
         VkImageView m_texView;

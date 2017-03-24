@@ -17,6 +17,7 @@ namespace crisp
         Panel::~Panel()
         {
             m_renderSystem->unregisterTransformResource(m_transformId);
+            m_renderSystem->unregisterColorResource(m_colorId);
         }
 
         void Panel::validate()
