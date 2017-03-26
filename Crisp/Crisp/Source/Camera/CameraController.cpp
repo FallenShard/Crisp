@@ -61,7 +61,17 @@ namespace crisp
         
         m_animator->update(dt);
 
-        return m_targetCamera.update(dt);
+        bool viewChanged = m_targetCamera.update(dt);
+
+        if (viewChanged)
+        {
+            m_cameraParameters.P = m_targetCamera.getProjectionMatrix();
+            m_cameraParameters.V = m_targetCamera.getViewMatrix();
+            m_cameraParameters.nearFar = { 0.5f, 100.0f };
+            m_cameraParameters.screenSize = m_screenSize;
+        }
+
+        return viewChanged;
     }
 
     void CameraController::onMousePressed(int button, int mods, double xPos, double yPos)
