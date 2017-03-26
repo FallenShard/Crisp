@@ -15,6 +15,7 @@ namespace crisp
     class Application;
     class VulkanRenderer;
     class UniformColorPipeline;
+    class LiquidPipeline;
     class PointSphereSpritePipeline;
     class FullScreenQuadPipeline;
 
@@ -56,13 +57,14 @@ namespace crisp
 
         std::unique_ptr<Skybox> m_skybox;
 
-        std::unique_ptr<UniformColorPipeline> m_pipeline;
+        std::unique_ptr<LiquidPipeline> m_pipeline;
 
         std::unique_ptr<PointSphereSpritePipeline> m_psPipeline;
-        DescriptorSetGroup m_descriptorSetGroup;
+        std::vector<DescriptorSetGroup> m_descriptorSetGroups;
 
         VertexBufferBindingGroup m_vertexBufferGroup;
         std::unique_ptr<VertexBuffer> m_buffer;
+        std::unique_ptr<IndexBuffer> m_indexBuffer;
 
         struct Transforms
         {
@@ -81,8 +83,9 @@ namespace crisp
             float screenSpaceScale;
         };
 
-        ParticleParams m_params;
-        std::unique_ptr<UniformBuffer> m_particleParamsBuffer;
+        //ParticleParams m_params;
+        //std::unique_ptr<UniformBuffer> m_particleParamsBuffer;
+        std::unique_ptr<UniformBuffer> m_cameraBuffer;
 
 
         std::unique_ptr<SceneRenderPass> m_scenePass;

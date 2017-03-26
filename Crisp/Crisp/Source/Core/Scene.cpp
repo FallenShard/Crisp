@@ -6,6 +6,7 @@
 #include "vulkan/Pipelines/UniformColorPipeline.hpp"
 #include "vulkan/Pipelines/PointSphereSpritePipeline.hpp"
 #include "vulkan/Pipelines/FullScreenQuadPipeline.hpp"
+#include "vulkan/Pipelines/LiquidPipeline.hpp"
 #include "vulkan/IndexBuffer.hpp"
 #include "vulkan/UniformBuffer.hpp"
 
@@ -29,6 +30,30 @@ namespace crisp
         glm::mat4 invertYaxis = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
 
         unsigned int particles = 0;
+
+        unsigned int numFaces = 0;
+
+        struct Vertex
+        {
+            glm::vec3 position;
+            glm::vec3 normal;
+
+            Vertex() {}
+            Vertex(const glm::vec3& pos, const glm::vec3& n) : position(pos), normal(n) {}
+
+            static std::vector<Vertex> interleave(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals)
+            {
+                std::vector<Vertex> result;
+                result.reserve(positions.size());
+
+                for (size_t i = 0; i < positions.size(); ++i)
+                {
+                    result.emplace_back(positions[i], normals[i]);
+                }
+
+                return result;
+            }
+        };
     }
 
     Scene::Scene(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app)
@@ -50,32 +75,36 @@ namespace crisp
         vesper::MeshLoader meshLoader;
         meshLoader.load("sphere.obj", positions, normals, texCoords, faces);
 
-        float cubeSize = 1.0f;
-        float increment = 0.05f;
-        for (float x = -cubeSize; x <= cubeSize; x += increment)
-            for (float y = -cubeSize / 2; y <= cubeSize / 2; y += increment)
-                for (float z = -cubeSize; z <= cubeSize; z += increment)
-                    positions.emplace_back(x, y, z);
+        auto vertices = Vertex::interleave(positions, normals);
 
-        particles = static_cast<unsigned int>(positions.size());
-
-        std::cout << "Num particles: " << particles << std::endl;
+        //float cubeSize = 1.0f;
+        //float increment = 0.05f;
+        //for (float x = -cubeSize; x <= cubeSize; x += increment)
+        //    for (float y = -cubeSize / 2; y <= cubeSize / 2; y += increment)
+        //        for (float z = -cubeSize; z <= cubeSize; z += increment)
+        //            positions.emplace_back(x, y, z);
 
         m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get());
 
-        m_buffer      = std::make_unique<VertexBuffer>(m_device, positions);
+        m_indexBuffer = std::make_unique<IndexBuffer>(m_device, faces);
+        numFaces = faces.size();
+        m_buffer      = std::make_unique<VertexBuffer>(m_device, vertices);
         m_vertexBufferGroup =
         {
             { m_buffer->get(), 0 }
         };
 
-
-        m_psPipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, m_scenePass.get());
-        m_descriptorSetGroup =
-        {
-            m_psPipeline->allocateDescriptorSet(0),
-            m_psPipeline->allocateDescriptorSet(1)
-        };
+        m_pipeline = std::make_unique<LiquidPipeline>(m_renderer, m_scenePass.get());
+        //m_psPipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, m_scenePass.get());
+        //m_descriptorSetGroup =
+        //{
+        //    m_psPipeline->allocateDescriptorSet(0),
+        //    m_psPipeline->allocateDescriptorSet(1)
+        //};
+        auto set = m_pipeline->allocateDescriptorSet(0);
+        auto sets = m_pipeline->allocateDescriptorSet(1, VulkanRenderer::NumVirtualFrames);
+        for (size_t i = 0; i < sets.size(); ++i)
+            m_descriptorSetGroups.push_back({ set, sets[i] });
 
         // Transform uniform buffer
         auto extent = m_renderer->getSwapChainExtent();
@@ -87,24 +116,34 @@ namespace crisp
 
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(Transforms), BufferUpdatePolicy::PerFrame);
 
-        // Color descriptor
-        m_params.radius           = 0.025f;
-        m_params.screenSpaceScale = proj[1][1] * extent.height;
+        m_cameraBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-        m_particleParamsBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame);
-        m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
+        // Color descriptor
+        //m_params.radius           = 0.025f;
+        //m_params.screenSpaceScale = proj[1][1] * extent.height;
+
+        //m_particleParamsBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame);
+        //m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
 
         // Update descriptor sets
-        m_descriptorSetGroup.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
-        m_descriptorSetGroup.postBufferUpdate(1, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_particleParamsBuffer->get(), 0, sizeof(ParticleParams) });
-        m_descriptorSetGroup.flushUpdates(m_device);
+        m_descriptorSetGroups[0].postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
+        m_descriptorSetGroups[0].postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_cameraBuffer->get(), 0, sizeof(CameraParameters) });
+        m_descriptorSetGroups[0].postImageUpdate(0, 2, VK_DESCRIPTOR_TYPE_SAMPLER, { m_linearClampSampler, 0, VK_IMAGE_LAYOUT_UNDEFINED });
+        m_descriptorSetGroups[0].postImageUpdate(0, 3, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, { m_linearClampSampler, m_skybox->getSkyboxView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+
+        for (uint32_t i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        {
+            m_descriptorSetGroups[i].postImageUpdate(1, 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, { m_linearClampSampler, m_scenePass->getAttachmentView(SceneRenderPass::Opaque, i), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            m_descriptorSetGroups[i].flushUpdates(m_device);
+        }
 
         m_cameraController = std::make_unique<CameraController>(inputDispatcher);
     }
 
     Scene::~Scene()
     {
-
+        vkDestroyImageView(m_device->getHandle(), m_sceneImageView, nullptr);
+        vkDestroySampler(m_device->getHandle(), m_linearClampSampler, nullptr);
     }
 
     void Scene::resize(int width, int height)
@@ -114,13 +153,13 @@ namespace crisp
 
         m_skybox->resize(width, height);
 
-        m_params.screenSpaceScale = m_cameraController->getCamera().getProjectionMatrix()[1][1] * m_renderer->getSwapChainExtent().height;
-        m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
+        //m_params.screenSpaceScale = m_cameraController->getCamera().getProjectionMatrix()[1][1] * m_renderer->getSwapChainExtent().height;
+        //m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
 
         m_scenePass->recreate();
         m_fsQuadPipeline->resize(width, height);
         vkDestroyImageView(m_device->getHandle(), m_sceneImageView, nullptr);
-        m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(0), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(SceneRenderPass::Composited), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
 
         VkDescriptorImageInfo imageInfo = {};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -135,6 +174,7 @@ namespace crisp
         if (viewChanged)
         {
             m_transformsBuffer->updateStagingBuffer(&m_transforms, sizeof(Transforms));
+            m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
         }
 
         auto& V = m_cameraController->getCamera().getViewMatrix();
@@ -152,25 +192,52 @@ namespace crisp
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
-            m_transformsBuffer->updateDeviceBuffer(commandBuffer, m_renderer->getCurrentVirtualFrameIndex());
-            m_particleParamsBuffer->updateDeviceBuffer(commandBuffer, m_renderer->getCurrentVirtualFrameIndex());
+            m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
+            m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
+            //m_particleParamsBuffer->updateDeviceBuffer(commandBuffer, m_renderer->getCurrentVirtualFrameIndex());
 
-            m_skybox->updateDeviceBuffers(commandBuffer, m_renderer->getCurrentVirtualFrameIndex());
+            m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
         });
 
         m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_psPipeline->getHandle());
-            m_descriptorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
-            m_descriptorSetGroup.setDynamicOffset(1, m_particleParamsBuffer->getDynamicOffset(frameIdx));
-            m_descriptorSetGroup.bind(commandBuffer, m_psPipeline->getPipelineLayout());
             
-            m_vertexBufferGroup.bind(commandBuffer);
-            vkCmdDraw(commandBuffer, particles, 1, 0, 0);
+            m_skybox->draw(commandBuffer, frameIdx);
+            //m_descriptorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
+            //m_descriptorSetGroup.setDynamicOffset(1, m_particleParamsBuffer->getDynamicOffset(frameIdx));
+            //m_descriptorSetGroup.bind(commandBuffer, m_psPipeline->getPipelineLayout());
+            //m_vertexBufferGroup.bind(commandBuffer);
+            //vkCmdDraw(commandBuffer, particles, 1, 0, 0);
 
-            m_skybox->draw(commandBuffer, m_renderer->getCurrentVirtualFrameIndex());
+            VkImageMemoryBarrier transBarrier = {};
+            transBarrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            transBarrier.oldLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            transBarrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            transBarrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            transBarrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            transBarrier.srcAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            transBarrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
+            transBarrier.image                           = m_scenePass->getColorAttachment(SceneRenderPass::Opaque);
+            transBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            transBarrier.subresourceRange.baseMipLevel   = 0;
+            transBarrier.subresourceRange.levelCount     = 1;
+            transBarrier.subresourceRange.baseArrayLayer = frameIdx;
+            transBarrier.subresourceRange.layerCount     = 1;
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &transBarrier);
+
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
+            m_descriptorSetGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
+            m_descriptorSetGroups[frameIdx].setDynamicOffset(1, m_cameraBuffer->getDynamicOffset(frameIdx));
+            m_descriptorSetGroups[frameIdx].bind(commandBuffer, m_pipeline->getPipelineLayout());
+
+            m_vertexBufferGroup.bind(commandBuffer);
+            m_indexBuffer->bind(commandBuffer, 0);
+            vkCmdDrawIndexed(commandBuffer, numFaces * 3, 1, 0, 0, 0);
+
+            m_skybox->draw(commandBuffer, frameIdx);
 
         }, SceneRenderPassId);
 
@@ -203,7 +270,7 @@ namespace crisp
         };
 
         // Create a view to the render target
-        m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(SceneRenderPass::Composited), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
 
         VkDescriptorImageInfo imageInfo = {};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
