@@ -119,4 +119,9 @@ namespace crisp
         m_indexBuffer->bind(cmdBuffer, 0);
         vkCmdDrawIndexed(cmdBuffer, 36, 1, 0, 0, 0);
     }
+
+    VkImageView Skybox::getSkyboxView() const
+    {
+        return m_imageView;
+    }
 }

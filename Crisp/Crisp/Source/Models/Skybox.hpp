@@ -28,6 +28,8 @@ namespace crisp
         void updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex);
         void draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex) const;
 
+        VkImageView getSkyboxView() const;
+
     private:
         VulkanRenderer* m_renderer;
         VulkanDevice* m_device;
