@@ -80,15 +80,15 @@ namespace crisp
         // Descriptor Pool, transforms and color come from GuiColorQuadPipeline
         std::vector<VkDescriptorPoolSize> poolSizes =
         {
-            { VK_DESCRIPTOR_TYPE_SAMPLER, 1 },
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 }
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 5 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 5 }
         };
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
-        poolInfo.maxSets       = 1;
+        poolInfo.maxSets       = 5;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-text-vert");

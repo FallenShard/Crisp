@@ -137,4 +137,14 @@ namespace crisp
         depthStencilState.back                  = {};
         return depthStencilState;
     }
+
+    void VulkanPipeline::createDescriptorSetLayout(size_t index, const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags)
+    {
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+        layoutInfo.pBindings    = bindings.data();
+        layoutInfo.flags        = flags;
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts.at(index));
+    }
 }

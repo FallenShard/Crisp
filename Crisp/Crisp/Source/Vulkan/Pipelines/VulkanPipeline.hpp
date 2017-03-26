@@ -35,6 +35,8 @@ namespace crisp
     protected:
         virtual void create(int width, int height) = 0;
 
+        void createDescriptorSetLayout(size_t index, const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
+
         VulkanRenderer* m_renderer;
         VulkanRenderPass* m_renderPass;
 

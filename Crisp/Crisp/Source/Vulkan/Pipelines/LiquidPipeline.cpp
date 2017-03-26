@@ -5,7 +5,7 @@
 namespace crisp
 {
     LiquidPipeline::LiquidPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
-        : VulkanPipeline(renderer, 1, renderPass)
+        : VulkanPipeline(renderer, 2, renderPass)
     {
         VkDescriptorSetLayoutBinding transformBinding = {};
         transformBinding.binding            = 0;
@@ -16,7 +16,7 @@ namespace crisp
 
         VkDescriptorSetLayoutBinding cameraBinding = {};
         cameraBinding.binding            = 1;
-        cameraBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        cameraBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         cameraBinding.descriptorCount    = 1;
         cameraBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         cameraBinding.pImmutableSamplers = nullptr;
@@ -28,8 +28,15 @@ namespace crisp
         samplerBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         samplerBinding.pImmutableSamplers = nullptr;
 
+        VkDescriptorSetLayoutBinding cubeMapBinding = {};
+        cubeMapBinding.binding            = 3;
+        cubeMapBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        cubeMapBinding.descriptorCount    = 1;
+        cubeMapBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+        cubeMapBinding.pImmutableSamplers = nullptr;
+
         VkDescriptorSetLayoutBinding sceneTextureBinding = {};
-        sceneTextureBinding.binding            = 3;
+        sceneTextureBinding.binding            = 0;
         sceneTextureBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         sceneTextureBinding.descriptorCount    = 1;
         sceneTextureBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -40,41 +47,43 @@ namespace crisp
             transformBinding,
             cameraBinding,
             samplerBinding,
+            cubeMapBinding
+        };
+        createDescriptorSetLayout(0, firstSetBindings);
+
+        std::vector<VkDescriptorSetLayoutBinding> secondSetBindings = 
+        {
             sceneTextureBinding
         };
-        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(firstSetBindings.size());
-        layoutInfo.pBindings    = firstSetBindings.data();
-        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[0]);
+        createDescriptorSetLayout(1, secondSetBindings);
 
         // Pipeline layout
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-        pipelineLayoutInfo.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
-        pipelineLayoutInfo.pSetLayouts    = m_descriptorSetLayouts.data();
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
         vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         // Descriptor Pool
         std::array<VkDescriptorPoolSize, 4> poolSizes = {};
         poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         poolSizes[0].descriptorCount = 1;
-        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         poolSizes[1].descriptorCount = 1;
         poolSizes[2].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
         poolSizes[2].descriptorCount = 1;
         poolSizes[3].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        poolSizes[3].descriptorCount = 3;
+        poolSizes[3].descriptorCount = 4;
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
-        poolInfo.maxSets       = 1;
+        poolInfo.maxSets       = 4;
         vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
-        m_vertShader = renderer->getShaderModule("unif-col-vert");
-        m_fragShader = renderer->getShaderModule("unif-col-frag");
+        m_vertShader = renderer->getShaderModule("liquid-vert");
+        m_fragShader = renderer->getShaderModule("liquid-frag");
 
         create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
     }
@@ -101,15 +110,20 @@ namespace crisp
         };
 
         VkVertexInputBindingDescription bindingDescription = {};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(glm::vec3);
+        bindingDescription.binding   = 0;
+        bindingDescription.stride    = 2 * sizeof(glm::vec3);
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(1);
-        attributeDescriptions[0].binding = 0;
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
+        attributeDescriptions[0].binding  = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = 0;
+        attributeDescriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset   = 0;
+
+        attributeDescriptions[1].binding  = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset   = sizeof(glm::vec3);
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -152,22 +166,22 @@ namespace crisp
         auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
 
         VkGraphicsPipelineCreateInfo pipelineInfo = {};
-        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipelineInfo.pStages = shaderStages.data();
-        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount          = static_cast<uint32_t>(shaderStages.size());
+        pipelineInfo.pStages             = shaderStages.data();
+        pipelineInfo.pVertexInputState   = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState = &inputAssembly;
-        pipelineInfo.pViewportState = &viewportState;
+        pipelineInfo.pViewportState      = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizationState;
-        pipelineInfo.pMultisampleState = &multisampleState;
-        pipelineInfo.pColorBlendState = &colorBlendState;
-        pipelineInfo.pDepthStencilState = &depthStencilState;
-        pipelineInfo.pDynamicState = nullptr;
-        pipelineInfo.layout = m_pipelineLayout;
-        pipelineInfo.renderPass = m_renderPass->getHandle();
-        pipelineInfo.subpass = 0;
-        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-        pipelineInfo.basePipelineIndex = -1;
+        pipelineInfo.pMultisampleState   = &multisampleState;
+        pipelineInfo.pColorBlendState    = &colorBlendState;
+        pipelineInfo.pDepthStencilState  = &depthStencilState;
+        pipelineInfo.pDynamicState       = nullptr;
+        pipelineInfo.layout              = m_pipelineLayout;
+        pipelineInfo.renderPass          = m_renderPass->getHandle();
+        pipelineInfo.subpass             = 1;
+        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex   = -1;
 
         vkCreateGraphicsPipelines(m_renderer->getDevice().getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
     }
