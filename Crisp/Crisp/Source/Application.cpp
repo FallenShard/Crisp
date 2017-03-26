@@ -24,7 +24,7 @@ namespace crisp
     Application::Application()
         : m_window(nullptr, glfwDestroyWindow)
         , m_tracerProgress(0.0f)
-        , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(500.0))
+        , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(200.0))
         , m_numRayTracedChannels(4)
     {
         std::cout << "Initializing application...\n";
