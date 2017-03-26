@@ -19,6 +19,11 @@ namespace crisp
             void setClickCallback(std::function<void()> callback);
             void click();
             void setText(const std::string& text);
+            void setFontSize(unsigned int fontSize);
+
+            void setIdleColor(const glm::vec3& color);
+            void setPressedColor(const glm::vec3& color);
+            void setHoverColor(const glm::vec3& color);
 
             virtual void onMouseEntered() override;
             virtual void onMouseExited() override;
@@ -42,6 +47,10 @@ namespace crisp
             State m_state;
 
             std::function<void()> m_clickCallback;
+
+            glm::vec3 m_hoverColor;
+            glm::vec3 m_idleColor;
+            glm::vec3 m_pressedColor;
 
             std::shared_ptr<PropertyAnimation<glm::vec4>> m_colorAnim;
 

@@ -13,6 +13,9 @@ namespace crisp
             : Control(parentForm)
             , m_state(State::Idle)
             , m_label(std::make_unique<Label>(parentForm, "Button"))
+            , m_hoverColor(0.4f, 0.4f, 0.4f)
+            , m_idleColor(0.3f, 0.3f, 0.3f)
+            , m_pressedColor(0.2f, 0.2f, 0.2f)
         {
             m_transformId = m_renderSystem->registerTransformResource();
             m_M           = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_size, 1.0f));
@@ -27,8 +30,9 @@ namespace crisp
 
         Button::~Button()
         {
-            m_renderSystem->unregisterTransformResource(m_transformId);
             m_form->getAnimator()->remove(m_colorAnim);
+            m_renderSystem->unregisterTransformResource(m_transformId);
+            m_renderSystem->unregisterColorResource(m_transformId);
         }
 
         void Button::setClickCallback(std::function<void()> callback)
@@ -45,6 +49,31 @@ namespace crisp
         void Button::setText(const std::string& text)
         {
             m_label->setText(text);
+        }
+
+        void Button::setFontSize(unsigned int fontSize)
+        {
+            m_label->setFontSize(fontSize);
+        }
+
+        void Button::setIdleColor(const glm::vec3& color)
+        {
+            m_idleColor = color;
+            m_color.r = color.r;
+            m_color.g = color.g;
+            m_color.b = color.b;
+
+            setValidationFlags(Validation::Color);
+        }
+
+        void Button::setPressedColor(const glm::vec3& color)
+        {
+            m_pressedColor = color;
+        }
+
+        void Button::setHoverColor(const glm::vec3& color)
+        {
+            m_hoverColor = color;
         }
 
         void Button::onMouseEntered()
@@ -123,15 +152,15 @@ namespace crisp
 
             if (m_state == State::Idle)
             {
-                targetColor = glm::vec4(glm::vec3(0.3f), m_opacity);
+                targetColor = glm::vec4(m_idleColor, m_opacity);
             }
             else if (m_state == State::Hover)
             {
-                targetColor = glm::vec4(glm::vec3(0.4f), m_opacity);
+                targetColor = glm::vec4(m_hoverColor, m_opacity);
             }
             else
             {
-                targetColor = glm::vec4(glm::vec3(0.2f), m_opacity);
+                targetColor = glm::vec4(m_pressedColor, m_opacity);
             }
 
             if (m_colorAnim == nullptr)

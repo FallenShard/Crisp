@@ -7,7 +7,7 @@ namespace crisp
 {
     namespace gui
     {
-        Label::Label(Form* parentForm, const std::string& text)
+        Label::Label(Form* parentForm, const std::string& text, unsigned int fontSize)
             : Control(parentForm)
             , m_text(text)
             , m_textResourceId(-1)
@@ -19,7 +19,7 @@ namespace crisp
             m_colorId = m_renderSystem->registerColorResource();
             m_renderSystem->updateColorResource(m_colorId, m_color);
 
-            m_fontId         = m_renderSystem->getFont("SegoeUI.ttf", 14);
+            m_fontId         = m_renderSystem->getFont("SegoeUI.ttf", fontSize);
             m_textResourceId = m_renderSystem->registerTextResource(m_text, m_fontId);
             m_textExtent     = m_renderSystem->queryTextExtent(m_text, m_fontId);
         }
@@ -28,6 +28,7 @@ namespace crisp
         {
             m_renderSystem->unregisterTextResource(m_textResourceId);
             m_renderSystem->unregisterTransformResource(m_transformId);
+            m_renderSystem->unregisterColorResource(m_colorId);
         }
 
         float Label::getWidth() const
@@ -38,6 +39,15 @@ namespace crisp
         float Label::getHeight() const
         {
             return m_textExtent.y;
+        }
+
+        void Label::setFontSize(unsigned int fontSize)
+        {
+            m_fontId = m_renderSystem->getFont("SegoeUI.ttf", fontSize);
+
+            m_textExtent = m_renderSystem->updateTextResource(m_textResourceId, m_text, m_fontId);
+
+            setValidationFlags(Validation::Transform);
         }
 
         void Label::setText(const std::string& text)

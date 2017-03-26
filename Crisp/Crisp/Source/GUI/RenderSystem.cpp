@@ -216,6 +216,7 @@ namespace crisp
 
         glm::vec2 RenderSystem::updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId)
         {
+            m_textResources.at(textResId)->descSets[0] = m_fonts.at(fontId)->descSet;
             m_textResources.at(textResId)->updateStagingBuffer(text, m_fonts.at(fontId)->font.get(), m_renderer);
             m_textResources.at(textResId)->isUpdatedOnDevice = false;
             return m_textResources.at(textResId)->extent;
@@ -522,14 +523,11 @@ namespace crisp
             // Vertex buffer
             std::vector<glm::vec2> quadVerts = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
             m_quadGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_device, quadVerts);
-            //m_quadGeometry.vertexBuffer = m_device->createDeviceBuffer(quadVerts.size() * sizeof(glm::vec2), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-            //m_device->fillDeviceBuffer(m_quadGeometry.vertexBuffer, quadVerts.data(), quadVerts.size() * sizeof(glm::vec2));
 
             // Index buffer
             std::vector<glm::u16vec3> quadFaces = { { 0, 1, 2 }, { 0, 2, 3 } };
-            //m_quadGeometry.indexBuffer = m_device->createDeviceBuffer(sizeof(glm::u16vec3) * quadFaces.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-            //m_device->fillDeviceBuffer(m_quadGeometry.indexBuffer, quadFaces.data(), sizeof(glm::u16vec3) * quadFaces.size());
             m_quadGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_device, quadFaces);
+
             m_quadGeometry.vertexBufferGroup = {
                 { m_quadGeometry.vertexBuffer->get(), 0 }
             };
@@ -746,8 +744,6 @@ namespace crisp
 
             geomData.vertexBuffer->updateStagingBuffer(textVertices);
             geomData.indexBuffer->updateStagingBuffer(textFaces);
-            //renderer->getDevice().fillStagingBuffer(stagingVertexBuffer, textVertices.data(), vertexCount * sizeof(glm::vec4));
-            //renderer->getDevice().fillStagingBuffer(stagingIndexBuffer, textFaces.data(), faceCount * sizeof(glm::u16vec3));
         }
 
         //void RenderSystem::TexCoordResource::generate(const glm::vec2& min, const glm::vec2& max, VulkanRenderer* renderer)

@@ -263,14 +263,14 @@ namespace crisp
             auto panel = std::make_shared<gui::Panel>(this);
             panel->setId("welcomePanel");
             panel->setSize({ 300, 500 });
-            panel->setPadding({ 10, 10 });
+            panel->setPadding({ 20, 20 });
             panel->setAnchor(Anchor::Center);
             panel->setHeightSizingBehavior(Sizing::WrapContent);
             panel->setWidthSizingBehavior(Sizing::WrapContent);
             panel->setOpacity(0.0f);
 
-            auto welcomeLabel = std::make_shared<gui::Label>(this, "Welcome to Crisp!");
-            welcomeLabel->setPosition({ 0, 20 });
+            auto welcomeLabel = std::make_shared<gui::Label>(this, "Welcome to Crisp!", 22);
+            welcomeLabel->setPosition({ 0, 0 });
             welcomeLabel->setAnchor(Anchor::CenterHorizontally);
             panel->addControl(welcomeLabel);
 
@@ -282,16 +282,24 @@ namespace crisp
             auto button = std::make_shared<gui::Button>(this);
             button->setId("crispButton");
             button->setText("Crisp (Real-time Renderer)");
+            button->setFontSize(18);
             button->setPosition({ 0, 80 });
-            button->setSize({ 180, 30 });
+            button->setSize({ 250, 50 });
+            button->setIdleColor({ 0.3f, 0.5f, 0.3f });
+            button->setPressedColor({ 0.2f, 0.3f, 0.2f });
+            button->setHoverColor({ 0.4f, 0.7f, 0.4f });
             button->setAnchor(Anchor::CenterHorizontally);
             panel->addControl(button);
             
             button = std::make_shared<gui::Button>(this);
             button->setId("vesperButton");
             button->setText("Vesper (Offline Ray Tracer)");
-            button->setPosition({ 0, 120 });
-            button->setSize({ 180, 30 });
+            button->setFontSize(18);
+            button->setPosition({ 0, 150 });
+            button->setSize({ 250, 50 });
+            button->setIdleColor({ 0.3f, 0.3f, 0.5f });
+            button->setPressedColor({ 0.2f, 0.2f, 0.3f });
+            button->setHoverColor({ 0.4f, 0.4f, 0.7f });
             button->setAnchor(Anchor::CenterHorizontally);
             panel->addControl(button);
 
