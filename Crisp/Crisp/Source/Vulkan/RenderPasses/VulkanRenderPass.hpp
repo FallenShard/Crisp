@@ -7,6 +7,7 @@
 namespace crisp
 {
     class VulkanRenderer;
+    class VulkanDevice;
 
     class VulkanRenderPass
     {
@@ -21,6 +22,7 @@ namespace crisp
         void end(VkCommandBuffer cmdBuffer) const;
 
         virtual VkImage getColorAttachment(unsigned int index) const = 0;
+        virtual VkImageView getAttachmentView(unsigned int index, unsigned int frameIndex) const = 0;
 
     protected:
         virtual void createRenderPass() = 0;
@@ -28,7 +30,7 @@ namespace crisp
         virtual void freeResources() = 0;
 
         VulkanRenderer* m_renderer;
-        VkDevice m_device;
-        VkRenderPass m_renderPass;
+        VulkanDevice*   m_device;
+        VkRenderPass    m_renderPass;
     };
 }

@@ -6,15 +6,16 @@ namespace crisp
 {
     SceneRenderPass::SceneRenderPass(VulkanRenderer* renderer)
         : VulkanRenderPass(renderer)
-        , m_renderTargetViews(VulkanRenderer::NumVirtualFrames)
-        , m_depthTargetViews(VulkanRenderer::NumVirtualFrames)
+        , m_renderTargets(RenderTarget::Count)
+        , m_renderTargetViews(RenderTarget::Count, std::vector<VkImageView>(VulkanRenderer::NumVirtualFrames, VK_NULL_HANDLE))
         , m_framebuffers(VulkanRenderer::NumVirtualFrames)
-        , m_clearValues(2)
+        , m_clearValues(RenderTarget::Count)
         , m_colorFormat(VK_FORMAT_R8G8B8A8_UNORM)
         , m_depthFormat(VK_FORMAT_D32_SFLOAT)
     {
         m_clearValues[0].color        = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_clearValues[1].depthStencil = { 1.0f, 0 };
+        m_clearValues[2].color        = { 0.0f, 0.0f, 0.0f, 0.0f };
 
         createRenderPass();
         createResources();
@@ -22,8 +23,8 @@ namespace crisp
 
     SceneRenderPass::~SceneRenderPass()
     {
+        vkDestroyRenderPass(m_device->getHandle(), m_renderPass, nullptr);
         freeResources();
-        vkDestroyRenderPass(m_device, m_renderPass, nullptr);
     }
 
     void SceneRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
@@ -37,7 +38,7 @@ namespace crisp
         transBarrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
         transBarrier.srcAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
         transBarrier.dstAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        transBarrier.image                           = m_renderTarget;
+        transBarrier.image                           = m_renderTargets[RenderTarget::Composited];
         transBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
         transBarrier.subresourceRange.baseMipLevel   = 0;
         transBarrier.subresourceRange.levelCount     = 1;
@@ -59,7 +60,12 @@ namespace crisp
 
     VkImage SceneRenderPass::getColorAttachment(unsigned int index) const
     {
-        return m_renderTarget;
+        return m_renderTargets.at(index);
+    }
+
+    VkImageView SceneRenderPass::getAttachmentView(unsigned int index, unsigned int frameIndex) const
+    {
+        return m_renderTargetViews.at(index).at(frameIndex);
     }
 
     VkFormat SceneRenderPass::getColorFormat() const
@@ -69,41 +75,71 @@ namespace crisp
 
     void SceneRenderPass::createRenderPass()
     {
-        // Description for color attachment
-        VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format         = m_colorFormat;
-        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        std::vector<VkAttachmentDescription> attachments(RenderTarget::Count, VkAttachmentDescription{});
+        attachments[Opaque].format         = m_colorFormat;
+        attachments[Opaque].samples        = VK_SAMPLE_COUNT_1_BIT;
+        attachments[Opaque].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachments[Opaque].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        attachments[Opaque].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachments[Opaque].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachments[Opaque].initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachments[Opaque].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        // Description for depth attachment
-        VkAttachmentDescription depthAttachment = {};
-        depthAttachment.format         = m_depthFormat;
-        depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[Depth].format         = m_depthFormat;
+        attachments[Depth].samples        = VK_SAMPLE_COUNT_1_BIT;
+        attachments[Depth].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachments[Depth].storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachments[Depth].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachments[Depth].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachments[Depth].initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[Depth].finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        VkAttachmentReference colorAttachmentRef = {};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachments[Composited].format         = m_colorFormat;
+        attachments[Composited].samples        = VK_SAMPLE_COUNT_1_BIT;
+        attachments[Composited].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachments[Composited].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        attachments[Composited].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachments[Composited].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachments[Composited].initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachments[Composited].finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-        VkAttachmentReference depthAttachmentRef = {};
-        depthAttachmentRef.attachment = 1;
-        depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        VkAttachmentReference opaqueSubpassColorAttachmentRef = {};
+        opaqueSubpassColorAttachmentRef.attachment = RenderTarget::Opaque;
+        opaqueSubpassColorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        VkSubpassDescription subPass = {};
-        subPass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subPass.colorAttachmentCount    = 1;
-        subPass.pColorAttachments       = &colorAttachmentRef;
-        subPass.pDepthStencilAttachment = &depthAttachmentRef;
+        VkAttachmentReference opaqueSubpassDepthAttachmentRef = {};
+        opaqueSubpassDepthAttachmentRef.attachment = RenderTarget::Depth;
+        opaqueSubpassDepthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription opaqueSubpass = {};
+        opaqueSubpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        opaqueSubpass.colorAttachmentCount    = 1;
+        opaqueSubpass.pColorAttachments       = &opaqueSubpassColorAttachmentRef;
+        opaqueSubpass.pDepthStencilAttachment = &opaqueSubpassDepthAttachmentRef;
+
+        std::vector<VkAttachmentReference> compositeRefs =
+        {
+            { RenderTarget::Composited, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+        };
+
+        std::vector<VkAttachmentReference> compositeInputRefs =
+        {
+            { RenderTarget::Opaque, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+        };
+
+        VkSubpassDescription compositeSubpass = {};
+        compositeSubpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        //compositeSubpass.inputAttachmentCount    = static_cast<uint32_t>(compositeInputRefs.size());
+        //compositeSubpass.pInputAttachments       = compositeInputRefs.data();
+        compositeSubpass.colorAttachmentCount    = static_cast<uint32_t>(compositeRefs.size());
+        compositeSubpass.pColorAttachments       = compositeRefs.data();
+        compositeSubpass.pDepthStencilAttachment = &opaqueSubpassDepthAttachmentRef;
+
+        std::vector<VkSubpassDescription> subpasses =
+        {
+            opaqueSubpass,
+            compositeSubpass
+        };
 
         VkSubpassDependency dependency = {};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
@@ -113,40 +149,57 @@ namespace crisp
         dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-        std::vector<VkAttachmentDescription> attachments = { colorAttachment, depthAttachment };
+        VkSubpassDependency opaqueToCompositeDependency = {};
+        opaqueToCompositeDependency.srcSubpass    = 0;
+        opaqueToCompositeDependency.dstSubpass    = 1;
+        opaqueToCompositeDependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        opaqueToCompositeDependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        opaqueToCompositeDependency.dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        opaqueToCompositeDependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+
+        std::vector<VkSubpassDependency> deps = { dependency, opaqueToCompositeDependency };
+
         VkRenderPassCreateInfo renderPassInfo = {};
         renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         renderPassInfo.pAttachments    = attachments.data();
-        renderPassInfo.subpassCount    = 1;
-        renderPassInfo.pSubpasses      = &subPass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies   = &dependency;
+        renderPassInfo.subpassCount    = static_cast<uint32_t>(subpasses.size());
+        renderPassInfo.pSubpasses      = subpasses.data();
+        renderPassInfo.dependencyCount = static_cast<uint32_t>(deps.size());
+        renderPassInfo.pDependencies   = deps.data();
 
-        vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
+        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_renderPass);
     }
 
     void SceneRenderPass::createResources()
     {
-        m_renderTarget = m_renderer->getDevice().createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
-            VulkanRenderer::NumVirtualFrames, m_colorFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
-        m_renderer->getDevice().transitionImageLayout(m_renderTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VulkanRenderer::NumVirtualFrames);
+        auto width  = m_renderer->getSwapChainExtent().width;
+        auto height = m_renderer->getSwapChainExtent().height;
+        auto numVirtualFrames = VulkanRenderer::NumVirtualFrames;
 
-        m_depthTarget = m_renderer->getDevice().createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
-            VulkanRenderer::NumVirtualFrames, m_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
-        m_renderer->getDevice().transitionImageLayout(m_depthTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VulkanRenderer::NumVirtualFrames);
+        m_renderTargets[Opaque] = m_device->createDeviceImageArray(width, height, numVirtualFrames, m_colorFormat,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
+        m_device->transitionImageLayout(m_renderTargets[Opaque], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, numVirtualFrames);
 
-        m_renderTargetViews.resize(VulkanRenderer::NumVirtualFrames);
-        m_depthTargetViews.resize(VulkanRenderer::NumVirtualFrames);
-        m_framebuffers.resize(VulkanRenderer::NumVirtualFrames);
-        for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        m_renderTargets[Depth] = m_device->createDeviceImageArray(width, height, numVirtualFrames, m_depthFormat,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
+        m_device->transitionImageLayout(m_renderTargets[Depth], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, numVirtualFrames);
+
+        m_renderTargets[Composited] = m_device->createDeviceImageArray(width, height, numVirtualFrames, m_colorFormat,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
+        m_device->transitionImageLayout(m_renderTargets[Composited], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, numVirtualFrames);
+
+        for (uint32_t i = 0; i < numVirtualFrames; i++)
         {
-            m_renderTargetViews[i] = m_renderer->getDevice().createImageView(m_renderTarget, VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
-            m_depthTargetViews[i]  = m_renderer->getDevice().createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
+            m_renderTargetViews[Opaque    ][i] = m_device->createImageView(m_renderTargets[Opaque],     VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
+            m_renderTargetViews[Depth     ][i] = m_device->createImageView(m_renderTargets[Depth],      VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
+            m_renderTargetViews[Composited][i] = m_device->createImageView(m_renderTargets[Composited], VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
+
             std::vector<VkImageView> attachmentViews =
             {
-                m_renderTargetViews[i],
-                m_depthTargetViews[i]
+                m_renderTargetViews[Opaque][i],
+                m_renderTargetViews[Depth][i],
+                m_renderTargetViews[Composited][i]
             };
 
             VkFramebufferCreateInfo framebufferInfo = {};
@@ -157,7 +210,7 @@ namespace crisp
             framebufferInfo.width           = m_renderer->getSwapChainExtent().width;
             framebufferInfo.height          = m_renderer->getSwapChainExtent().height;
             framebufferInfo.layers          = 1;
-            vkCreateFramebuffer(m_renderer->getDevice().getHandle(), &framebufferInfo, nullptr, &m_framebuffers[i]);
+            vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_framebuffers[i]);
         }
     }
 
@@ -165,18 +218,20 @@ namespace crisp
     {
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {
-            vkDestroyFramebuffer(m_device, m_framebuffers[i], nullptr);
-            vkDestroyImageView(m_device, m_renderTargetViews[i], nullptr);
-            vkDestroyImageView(m_device, m_depthTargetViews[i], nullptr);
-            m_framebuffers[i]      = VK_NULL_HANDLE;
-            m_renderTargetViews[i] = VK_NULL_HANDLE;
-            m_depthTargetViews[i]  = VK_NULL_HANDLE;
+            vkDestroyFramebuffer(m_device->getHandle(), m_framebuffers[i], nullptr);
+            m_framebuffers[i] = VK_NULL_HANDLE;
+
+            for (auto rt = 0; rt < RenderTarget::Count; rt++)
+            {
+                vkDestroyImageView(m_device->getHandle(), m_renderTargetViews[rt][i], nullptr);
+                m_renderTargetViews[rt][i] = VK_NULL_HANDLE;
+            }
         }
 
-        m_renderer->getDevice().destroyDeviceImage(m_renderTarget);
-        m_renderer->getDevice().destroyDeviceImage(m_depthTarget);
-
-        m_renderTarget = VK_NULL_HANDLE;
-        m_depthTarget  = VK_NULL_HANDLE;
+        for (auto rt = 0; rt < RenderTarget::Count; rt++)
+        {
+            m_device->destroyDeviceImage(m_renderTargets[rt]);
+            m_renderTargets[rt] = VK_NULL_HANDLE;
+        }
     }
 }

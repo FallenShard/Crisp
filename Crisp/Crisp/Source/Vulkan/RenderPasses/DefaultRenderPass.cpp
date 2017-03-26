@@ -19,7 +19,7 @@ namespace crisp
 
     DefaultRenderPass::~DefaultRenderPass()
     {
-        vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+        vkDestroyRenderPass(m_device->getHandle(), m_renderPass, nullptr);
         freeResources();
     }
 
@@ -39,7 +39,12 @@ namespace crisp
 
     VkImage DefaultRenderPass::getColorAttachment(unsigned int index) const
     {
-        return nullptr;
+        return VK_NULL_HANDLE;
+    }
+
+    VkImageView DefaultRenderPass::getAttachmentView(unsigned int index, unsigned int frameIndex) const
+    {
+        return VK_NULL_HANDLE;
     }
 
     void DefaultRenderPass::createRenderPass()
@@ -98,7 +103,7 @@ namespace crisp
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies   = &dependency;
 
-        vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
+        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_renderPass);
     }
 
     void DefaultRenderPass::createResources()

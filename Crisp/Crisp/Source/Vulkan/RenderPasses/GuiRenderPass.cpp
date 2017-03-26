@@ -22,8 +22,8 @@ namespace crisp
 
     GuiRenderPass::~GuiRenderPass()
     {
+        vkDestroyRenderPass(m_device->getHandle(), m_renderPass, nullptr);
         freeResources();
-        vkDestroyRenderPass(m_device, m_renderPass, nullptr);
     }
 
     void GuiRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
@@ -60,6 +60,11 @@ namespace crisp
     VkImage GuiRenderPass::getColorAttachment(unsigned int index) const
     {
         return m_renderTarget;
+    }
+
+    VkImageView GuiRenderPass::getAttachmentView(unsigned int index, unsigned int frameIndex) const
+    {
+        return m_renderTargetViews.at(frameIndex);
     }
 
     VkFormat GuiRenderPass::getColorFormat() const
@@ -123,7 +128,7 @@ namespace crisp
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies   = &dependency;
 
-        vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
+        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_renderPass);
     }
 
     void GuiRenderPass::createResources()
@@ -165,9 +170,9 @@ namespace crisp
     {
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {
-            vkDestroyFramebuffer(m_device, m_framebuffers[i], nullptr);
-            vkDestroyImageView(m_device, m_renderTargetViews[i], nullptr);
-            vkDestroyImageView(m_device, m_depthTargetViews[i], nullptr);
+            vkDestroyFramebuffer(m_device->getHandle(), m_framebuffers[i], nullptr);
+            vkDestroyImageView(m_device->getHandle(), m_renderTargetViews[i], nullptr);
+            vkDestroyImageView(m_device->getHandle(), m_depthTargetViews[i], nullptr);
             m_framebuffers[i]      = VK_NULL_HANDLE;
             m_renderTargetViews[i] = VK_NULL_HANDLE;
             m_depthTargetViews[i]  = VK_NULL_HANDLE;

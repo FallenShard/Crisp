@@ -1,12 +1,13 @@
 #include "VulkanRenderPass.hpp"
 
 #include "Vulkan/VulkanRenderer.hpp"
+#include "vulkan/VulkanDevice.hpp"
 
 namespace crisp
 {
     VulkanRenderPass::VulkanRenderPass(VulkanRenderer* renderer)
         : m_renderer(renderer)
-        , m_device(renderer->getDevice().getHandle())
+        , m_device(&renderer->getDevice())
         , m_renderPass(VK_NULL_HANDLE)
     {
     }
