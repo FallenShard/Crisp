@@ -181,10 +181,12 @@ namespace crisp
 
     void Application::writeImageToExr()
     {
+        std::string outputDirectory = "Output";
+        FileUtils::createDirectory(outputDirectory);
         OpenEXRWriter writer;
         auto imageSize = m_rayTracer->getImageSize();
         std::cout << "Writing EXR image..." << std::endl;
-        writer.write(m_projectName + ".exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
+        writer.write(outputDirectory + "/" + m_projectName + ".exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
     }
 
     gui::Form* Application::getForm() const
