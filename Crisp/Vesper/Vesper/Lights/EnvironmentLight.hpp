@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "Light.hpp"
-#include "Math/DiscretePdf.hpp"
+#include "Math/Distribution1D.hpp"
 #include "Core/MipMap.hpp"
 
 namespace vesper
@@ -27,8 +27,8 @@ namespace vesper
         std::unique_ptr<MipMap<Spectrum>> m_probe;
         float m_scale;
 
-        std::vector<DiscretePdf> m_phiPdfs;
-        DiscretePdf m_thetaPdf;
+        std::vector<Distribution1D> m_phiPdfs;
+        Distribution1D m_thetaPdf;
 
         glm::vec3 m_sceneCenter;
         float m_sceneRadius;

@@ -5,11 +5,11 @@
 
 namespace vesper
 {
-    class DiscretePdf
+    class Distribution1D
     {
     public:
-        DiscretePdf(size_t numEntries = 0);
-        ~DiscretePdf();
+        Distribution1D(size_t numEntries = 0);
+        ~Distribution1D();
 
         void reserve(size_t numEntries);
         void clear();

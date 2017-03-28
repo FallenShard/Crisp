@@ -78,9 +78,6 @@
     <ClCompile Include="Vesper\Lights\PointLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Vesper\Math\DiscretePdf.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Vesper\Math\Warp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -142,6 +139,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Vesper\Lights\EnvironmentLight.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\Math\Distribution1D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -233,9 +233,6 @@
     <ClInclude Include="Vesper\Math\CoordinateFrame.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vesper\Math\DiscretePdf.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Vesper\Math\Operations.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -324,6 +321,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Core\MipMap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Math\Distribution1D.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

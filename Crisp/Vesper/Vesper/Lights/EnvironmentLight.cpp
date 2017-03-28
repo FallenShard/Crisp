@@ -3,7 +3,7 @@
 #include <glm/gtx/norm.hpp>
 
 #include "Math/Operations.hpp"
-#include "Math/DiscretePdf.hpp"
+#include "Math/Distribution1D.hpp"
 #include "Math/Warp.hpp"
 
 #include "Shapes/Shape.hpp"

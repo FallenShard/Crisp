@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Shapes/Shape.hpp"
-#include "Math/DiscretePdf.hpp"
+#include "Math/Distribution1D.hpp"
 
 namespace vesper
 {
@@ -36,6 +36,6 @@ namespace vesper
         std::vector<glm::vec2> m_texCoords;
         std::vector<glm::uvec3> m_faces;
 
-        DiscretePdf m_pdf;
+        Distribution1D m_pdf;
     };
 }

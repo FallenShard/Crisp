@@ -163,7 +163,7 @@
     <ClInclude Include="Vesper\Math\BoundingBox.hpp" />
     <ClInclude Include="Vesper\Math\Constants.hpp" />
     <ClInclude Include="Vesper\Math\CoordinateFrame.hpp" />
-    <ClInclude Include="Vesper\Math\DiscretePdf.hpp" />
+    <ClInclude Include="Vesper\Math\Distribution1D.hpp" />
     <ClInclude Include="Vesper\Math\Operations.hpp" />
     <ClInclude Include="Vesper\Math\Ray.hpp" />
     <ClInclude Include="Vesper\Math\Transform.hpp" />
@@ -216,7 +216,7 @@
     <ClCompile Include="Vesper\Lights\EnvironmentLight.cpp" />
     <ClCompile Include="Vesper\Lights\LightFactory.cpp" />
     <ClCompile Include="Vesper\Lights\PointLight.cpp" />
-    <ClCompile Include="Vesper\Math\DiscretePdf.cpp" />
+    <ClCompile Include="Vesper\Math\Distribution1D.cpp" />
     <ClCompile Include="Vesper\Math\Warp.cpp" />
     <ClCompile Include="Vesper\RayTracer.cpp" />
     <ClCompile Include="Vesper\ReconstructionFilters\GaussianFilter.cpp" />
