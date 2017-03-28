@@ -77,7 +77,7 @@ namespace vesper
         sample.wi.x = sinf(theta) * sinf(phi);
         sample.wi.y = cosf(theta);
         sample.wi.z = -sinf(theta) * cosf(phi);
-        sample.pdf = m_thetaPdf[thetaIdx] * m_phiPdfs[thetaIdx][phiIdx];
+        sample.pdf = m_thetaPdf[thetaIdx] * m_phiPdfs[thetaIdx][phiIdx] * InvTwoPI * InvPI / sinf(theta);
 
         // Uniform
         //sample.wi = Warp::squareToUniformSphere(point);
@@ -90,13 +90,14 @@ namespace vesper
 
     float EnvironmentLight::pdf(const Light::Sample& sample) const
     {
+        float theta = acosf(sample.wi.y);
         float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI) * 0.5f;
-        float v = acosf(sample.wi.y) * InvPI;
+        float v = theta * InvPI;
         
         auto vSample = m_thetaPdf.sample(v);
         auto uSample = m_phiPdfs[vSample].sample(u);
         
-        return m_thetaPdf[vSample] * m_phiPdfs[vSample][uSample];
+        return m_thetaPdf[vSample] * m_phiPdfs[vSample][uSample] * InvTwoPI * InvPI / sinf(theta);
         //return Warp::squareToUniformSpherePdf();
     }
 
