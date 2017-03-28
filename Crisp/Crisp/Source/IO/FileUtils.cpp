@@ -107,4 +107,9 @@ namespace crisp
         SetCurrentDirectory(oldDir);
         return std::string(fileName);
     }
+
+    void FileUtils::createDirectory(const std::string& path)
+    {
+        CreateDirectory(path.c_str(), nullptr);
+    }
 }
