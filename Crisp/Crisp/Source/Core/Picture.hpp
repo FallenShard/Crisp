@@ -9,7 +9,7 @@
 
 #include <Vesper/RayTracerUpdate.hpp>
 
-#include "Vulkan/DrawItem.hpp"
+#include "vulkan/DescriptorSetGroup.hpp"
 
 namespace crisp
 {
@@ -39,7 +39,7 @@ namespace crisp
         VulkanDevice*   m_device;
 
         std::unique_ptr<FullScreenQuadPipeline> m_pipeline;
-        VkDescriptorSet                         m_descriptorSet;
+        DescriptorSetGroup m_descSets;
 
         VkExtent2D m_extent;
         uint32_t   m_numChannels;
@@ -48,14 +48,10 @@ namespace crisp
         VkBuffer     m_stagingTexBuffer;
         unsigned int m_updatedImageIndex;
 
-        VkBuffer     m_vertexBuffer;
-        VkBuffer     m_indexBuffer;
-
         VkImage      m_imageArray;
         VkImageView  m_imageArrayView;
         VkSampler    m_sampler;
 
-        DrawItem     m_drawItem;
         VkViewport   m_viewport;
     };
 }

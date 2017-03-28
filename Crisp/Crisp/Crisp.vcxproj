@@ -232,7 +232,6 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     <ClInclude Include="Source\Models\Skybox.hpp" />
     <ClInclude Include="Source\Vulkan\BufferUpdatePolicy.hpp" />
     <ClInclude Include="Source\Vulkan\DescriptorSetGroup.hpp" />
-    <ClInclude Include="Source\Vulkan\DrawItem.hpp" />
     <ClInclude Include="Source\Vulkan\IndexBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp" />

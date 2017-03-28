@@ -13,8 +13,6 @@
 #include "VertexBufferBindingGroup.hpp"
 #include "RenderPasses/DefaultRenderPass.hpp"
 
-#include "DrawItem.hpp"
-
 namespace crisp
 {
     struct DrawItem;

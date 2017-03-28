@@ -9,7 +9,7 @@
 
 #include <Vesper/RayTracerUpdate.hpp>
 
-#include "Vulkan/DrawItem.hpp"
+#include "vulkan/DescriptorSetGroup.hpp"
 
 namespace crisp
 {
@@ -34,7 +34,7 @@ namespace crisp
         VulkanRenderer* m_renderer;
 
         std::unique_ptr<FullScreenQuadPipeline> m_pipeline;
-        VkDescriptorSet m_descriptorSet;
+        DescriptorSetGroup m_descSetGroup;
 
         VkExtent2D m_extent;
         VkImage m_tex;
@@ -43,7 +43,5 @@ namespace crisp
 
         VkViewport m_viewport;
         float m_aspectRatio;
-
-        DrawItem m_drawItem;
     };
 }

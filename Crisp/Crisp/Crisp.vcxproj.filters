@@ -236,9 +236,6 @@
     <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Vulkan\DrawItem.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

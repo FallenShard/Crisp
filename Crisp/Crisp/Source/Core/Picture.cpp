@@ -44,71 +44,19 @@ namespace crisp
         // create sampler
         m_sampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        // create vertex buffer
-        std::vector<glm::vec2> vertices =
-        {
-            { -1.0f, -1.0f },
-            { +1.0f, -1.0f },
-            { +1.0f, +1.0f },
-            { -1.0f, +1.0f }
-        };
-        m_vertexBuffer = m_device->createDeviceBuffer(sizeof(glm::vec2) * vertices.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        m_device->fillDeviceBuffer(m_vertexBuffer, vertices.data(), sizeof(glm::vec2) * vertices.size());
-
-        // create index buffer
-        std::vector<glm::u16vec3> faces =
-        {
-            { 0, 1, 2 },
-            { 0, 2, 3 }
-        };
-        m_indexBuffer = m_device->createDeviceBuffer(sizeof(glm::u16vec3) * faces.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-        m_device->fillDeviceBuffer(m_indexBuffer, faces.data(), sizeof(glm::u16vec3) * faces.size());
-
         // descriptor set
-        m_descriptorSet = m_pipeline->allocateDescriptorSet(0);
+        m_descSets =
+        {
+            m_pipeline->allocateDescriptorSet(0)
+        };
 
         VkDescriptorImageInfo imageInfo = {};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView   = m_imageArrayView;
         imageInfo.sampler     = m_sampler;
-
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-        descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet          = m_descriptorSet;
-        descriptorWrites[0].dstBinding      = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pImageInfo      = &imageInfo;
-
-        descriptorWrites[1].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet          = m_descriptorSet;
-        descriptorWrites[1].dstBinding      = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo      = &imageInfo;
-
-        vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-
-        m_drawItem.pipeline            = m_pipeline->getHandle();
-        m_drawItem.pipelineLayout      = m_pipeline->getPipelineLayout();
-        m_drawItem.descriptorSetOffset = 0;
-        m_drawItem.descriptorSets.push_back(m_descriptorSet);
-
-        m_drawItem.vertexBufferBindingOffset = 0;
-        m_drawItem.vertexBuffers.push_back(m_vertexBuffer);
-        m_drawItem.vertexBufferOffsets.push_back(0);
-
-        m_drawItem.indexBuffer       = m_indexBuffer;
-        m_drawItem.indexType         = VK_INDEX_TYPE_UINT16;
-        m_drawItem.indexBufferOffset = 0;
-
-        m_drawItem.indexCount    = 6;
-        m_drawItem.instanceCount = 1;
-        m_drawItem.firstIndex    = 0;
-        m_drawItem.vertexOffset  = 0;
-        m_drawItem.firstInstance = 0;
+        m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, imageInfo);
+        m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, imageInfo);
+        m_descSets.flushUpdates(&m_renderer->getDevice());
     }
 
     Picture::~Picture()
@@ -118,9 +66,6 @@ namespace crisp
 
         m_device->destroyDeviceImage(m_imageArray);
         m_device->destroyStagingBuffer(m_stagingTexBuffer);
-
-        m_device->destroyDeviceBuffer(m_vertexBuffer);
-        m_device->destroyDeviceBuffer(m_indexBuffer);
     }
 
     void Picture::postTextureUpdate(vesper::RayTracerUpdate update)
@@ -215,25 +160,19 @@ namespace crisp
         m_renderer->addDrawAction([this](VkCommandBuffer& cmdBuffer)
         {
             vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
-            vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(),
-                0, 1, &m_descriptorSet, 0, nullptr);
+            m_descSets.bind(cmdBuffer, m_pipeline->getPipelineLayout());
 
             vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
 
-            vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBuffer, m_drawItem.vertexBufferOffsets.data());
-            vkCmdBindIndexBuffer(cmdBuffer, m_drawItem.indexBuffer, m_drawItem.indexBufferOffset, m_drawItem.indexType);
+            vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &m_updatedImageIndex);
 
-            unsigned int pushConst = m_updatedImageIndex;
-            vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-            vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
+            m_renderer->drawFullScreenQuad(cmdBuffer);
         }, VulkanRenderer::DefaultRenderPassId);
     }
 
     void Picture::resize(int width, int height)
     {
         m_pipeline->resize(width, height);
-        m_drawItem.pipeline       = m_pipeline->getHandle();
-        m_drawItem.pipelineLayout = m_pipeline->getPipelineLayout();
         recalculateViewport(width, height);
     }
 

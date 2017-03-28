@@ -18,12 +18,12 @@ namespace crisp
         m_renderer = &renderer;
         m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
 
-        Image image(fileName);
+        std::shared_ptr<Image> image = std::make_shared<Image>(fileName);
 
         // create texture image
         unsigned int numChannels = 4;
-        m_extent.width  = image.getWidth();
-        m_extent.height = image.getHeight();
+        m_extent.width  = image->getWidth();
+        m_extent.height = image->getHeight();
         m_aspectRatio = static_cast<float>(m_extent.width) / m_extent.height;
         auto byteSize = m_extent.width * m_extent.height * numChannels * sizeof(unsigned char);
 
@@ -32,46 +32,79 @@ namespace crisp
         resize(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height);
 
         m_tex = renderer.getDevice().createDeviceImage(m_extent.width, m_extent.height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        renderer.getDevice().fillDeviceImage(m_tex, image.getData(), byteSize, { m_extent.width, m_extent.height, 1u }, 1);
-        renderer.getDevice().transitionImageLayout(m_tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+        renderer.addCopyAction([this, byteSize, image, format](VkCommandBuffer& cmdBuffer)
+        {
+            auto device = &m_renderer->getDevice();
+            auto stagingBufferInfo = device->createBuffer(device->getStagingBufferHeap(), byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-        // create view
-        m_texView = renderer.getDevice().createImageView(m_tex, VK_IMAGE_VIEW_TYPE_2D_ARRAY, format, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
+            memcpy(static_cast<char*>(device->getStagingMemoryPtr()) + stagingBufferInfo.second.offset, image->getData(), static_cast<size_t>(byteSize));
 
-        // create sampler
-        m_vkSampler = renderer.getDevice().createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+            VkImageMemoryBarrier barrier = {};
+            barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.oldLayout                       = VK_IMAGE_LAYOUT_PREINITIALIZED;
+            barrier.newLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.srcAccessMask                   = VK_ACCESS_HOST_WRITE_BIT;
+            barrier.dstAccessMask                   = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image                           = m_tex;
+            barrier.subresourceRange.baseMipLevel   = 0;
+            barrier.subresourceRange.levelCount     = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount     = 1;
+            barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
 
-        // descriptor set
-        m_descriptorSet = m_pipeline->allocateDescriptorSet(0);
+            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView   = m_texView;
-        imageInfo.sampler     = m_vkSampler;
+            VkBufferImageCopy copyRegion = {};
+            copyRegion.bufferOffset                    = 0;
+            copyRegion.bufferRowLength                 = image->getWidth();
+            copyRegion.bufferImageHeight               = image->getHeight();
+            copyRegion.imageExtent                     = { image->getWidth(), image->getHeight() };
+            copyRegion.imageOffset                     = { 0, 0, 0 };
+            copyRegion.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.imageSubresource.baseArrayLayer = 0;
+            copyRegion.imageSubresource.layerCount     = 1;
+            vkCmdCopyBufferToImage(cmdBuffer, stagingBufferInfo.first, m_tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-        descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet          = m_descriptorSet;
-        descriptorWrites[0].dstBinding      = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pImageInfo      = &imageInfo;
+            barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.oldLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            barrier.srcAccessMask                   = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
+            barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image                           = m_tex;
+            barrier.subresourceRange.baseMipLevel   = 0;
+            barrier.subresourceRange.levelCount     = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount     = 1;
+            barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
 
-        descriptorWrites[1].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet          = m_descriptorSet;
-        descriptorWrites[1].dstBinding      = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo      = &imageInfo;
+            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-        vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            m_renderer->scheduleStagingBufferForRemoval(stagingBufferInfo.first, stagingBufferInfo.second);
 
-        m_drawItem.pipeline            = m_pipeline->getHandle();
-        m_drawItem.pipelineLayout      = m_pipeline->getPipelineLayout();
-        m_drawItem.descriptorSetOffset = 0;
-        m_drawItem.descriptorSets.push_back(m_descriptorSet);
+            // create view
+            m_texView = device->createImageView(m_tex, VK_IMAGE_VIEW_TYPE_2D_ARRAY, format, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
+
+            // create sampler
+            m_vkSampler = device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+            // descriptor set
+            m_descSetGroup =
+            {
+                m_pipeline->allocateDescriptorSet(0)
+            };
+
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView   = m_texView;
+            imageInfo.sampler     = m_vkSampler;
+            m_descSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, imageInfo);
+            m_descSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, imageInfo);
+            m_descSetGroup.flushUpdates(device);
+        });
     }
 
     StaticPicture::~StaticPicture()
@@ -107,8 +140,7 @@ namespace crisp
         {
             vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
             vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
-            vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(),
-                0, 1, &m_descriptorSet, 0, nullptr);
+            m_descSetGroup.bind(cmdBuffer, m_pipeline->getPipelineLayout());
 
             unsigned int pushConst = 0;
             vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
