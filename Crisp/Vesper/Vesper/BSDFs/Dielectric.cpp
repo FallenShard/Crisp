@@ -8,8 +8,8 @@ namespace vesper
 {
     DielectricBSDF::DielectricBSDF(const VariantMap& params)
     {
-        m_intIOR = params.get("intIOR", 1.5046f);
-        m_extIOR = params.get("extIOR", 1.000277f);
+        m_intIOR = params.get("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
+        m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
     }
 
     DielectricBSDF::~DielectricBSDF()
@@ -28,7 +28,7 @@ namespace vesper
         float reflCoeff = Fresnel::dielectric(cosThetaI, m_extIOR, m_intIOR);
 
         // Set the measure to discrete
-        bsdfSample.measure = Measure::Discrete;
+        bsdfSample.measure     = Measure::Discrete;
         bsdfSample.sampledType = BSDF::Type::Delta;
 
         float sample = sampler.next1D();
