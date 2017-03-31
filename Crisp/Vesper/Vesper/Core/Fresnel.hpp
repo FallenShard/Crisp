@@ -47,7 +47,7 @@ namespace vesper
             return (Rs * Rs + Rp * Rp) / 2.0f;
         }
 
-        float getIOR(IndexOfRefraction iorMaterial)
+        inline static float getIOR(IndexOfRefraction iorMaterial)
         {
             switch (iorMaterial)
             {
