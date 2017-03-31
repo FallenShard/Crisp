@@ -74,6 +74,35 @@ namespace vesper
         return m_sum;
     }
 
+    float Distribution1D::sampleContinuous(float sampleValue) const
+    {
+        auto entry = std::lower_bound(m_cdf.begin(), m_cdf.end(), sampleValue);
+        size_t index = static_cast<size_t>(std::max(static_cast<ptrdiff_t>(0), entry - m_cdf.begin() - 1));
+        index = std::min(index, m_cdf.size() - 2);
+
+        float du = sampleValue - m_cdf[index];
+        auto pdf = operator[](index);
+        if (pdf > 0.0f)
+            du /= pdf;
+
+        return (index + du) / static_cast<float>(getSize());
+    }
+
+    float Distribution1D::sampleContinuous(float sampleValue, float& pdf) const
+    {
+        auto entry = std::lower_bound(m_cdf.begin(), m_cdf.end(), sampleValue);
+        size_t index = static_cast<size_t>(std::max(static_cast<ptrdiff_t>(0), entry - m_cdf.begin() - 1));
+        index = std::min(index, m_cdf.size() - 2);
+
+        pdf = operator[](index);
+
+        float du = sampleValue - m_cdf[index];
+        if (pdf > 0.0f)
+            du /= pdf;
+
+        return (index + du) / static_cast<float>(getSize());
+    }
+
     size_t Distribution1D::sample(float sampleValue) const
     {
         auto entry = std::lower_bound(m_cdf.begin(), m_cdf.end(), sampleValue);
