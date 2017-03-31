@@ -53,16 +53,18 @@ namespace vesper
         bsdfSample.sampledType = Type::Diffuse;
         bsdfSample.eta         = 1.0f;
         bsdfSample.wo          = Warp::squareToCosineHemisphere(sampler.next2D());
+
         // eval() * cosThetaO / pdf() = albedo * invPI / (cosThetaI * invPI) * cosThetaI(subtension)
-        // account for cosine subtension = just albedo :)
+        // account for cosine subtension = just albedo
         return m_albedo->eval(bsdfSample.uv);
     }
 
     float LambertianBSDF::pdf(const BSDF::Sample& bsdfSample) const
     {
         auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
+        auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
         if (bsdfSample.measure != Measure::SolidAngle ||
-            cosThetaO <= 0.0f)
+            cosThetaO <= 0.0f || cosThetaI <= 0.0f)
         {
             return 0.0f;
         }
