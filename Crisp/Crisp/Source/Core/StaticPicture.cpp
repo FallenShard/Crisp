@@ -60,8 +60,8 @@ namespace crisp
             copyRegion.bufferOffset                    = 0;
             copyRegion.bufferRowLength                 = image->getWidth();
             copyRegion.bufferImageHeight               = image->getHeight();
-            copyRegion.imageExtent                     = { image->getWidth(), image->getHeight() };
             copyRegion.imageOffset                     = { 0, 0, 0 };
+            copyRegion.imageExtent                     = { image->getWidth(), image->getHeight(), 1 };
             copyRegion.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
             copyRegion.imageSubresource.baseArrayLayer = 0;
             copyRegion.imageSubresource.layerCount     = 1;
