@@ -26,7 +26,7 @@ namespace crisp
         void resize(int width, int height);
 
         void updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex);
-        void draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex) const;
+        void draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex, uint32_t subpassIndex) const;
 
         VkImageView getSkyboxView() const;
 
@@ -39,6 +39,7 @@ namespace crisp
         std::unique_ptr<IndexBuffer> m_indexBuffer;
 
         std::unique_ptr<SkyboxPipeline> m_pipeline;
+        std::unique_ptr<SkyboxPipeline> m_nextPipeline;
         DescriptorSetGroup m_descriptorSetGroup;
 
         struct Transforms

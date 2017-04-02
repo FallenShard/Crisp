@@ -37,6 +37,7 @@ namespace crisp
         };
 
         m_pipeline = std::make_unique<SkyboxPipeline>(m_renderer, renderPass);
+        m_nextPipeline = std::make_unique<SkyboxPipeline>(m_renderer, renderPass, 1);
         m_descriptorSetGroup = 
         {
             m_pipeline->allocateDescriptorSet(0)
@@ -102,6 +103,7 @@ namespace crisp
     void Skybox::resize(int width, int height)
     {
         m_pipeline->resize(width, height);
+        m_nextPipeline->resize(width, height);
     }
 
     void Skybox::updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex)
@@ -109,11 +111,20 @@ namespace crisp
         m_transformsBuffer->updateDeviceBuffer(cmdBuffer, currentFrameIndex);
     }
 
-    void Skybox::draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex) const
+    void Skybox::draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex, uint32_t subpassIndex) const
     {
-        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
         m_descriptorSetGroup.setDynamicOffset(0, currentFrameIndex * sizeof(Transforms));
-        m_descriptorSetGroup.bind(cmdBuffer, m_pipeline->getPipelineLayout());
+
+        if (subpassIndex == 1)
+        {
+            vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_nextPipeline->getHandle());
+            m_descriptorSetGroup.bind(cmdBuffer, m_nextPipeline->getPipelineLayout());
+        }
+        else
+        {
+            vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
+            m_descriptorSetGroup.bind(cmdBuffer, m_pipeline->getPipelineLayout());
+        }
 
         m_vertexBufferGroup.bind(cmdBuffer);
         m_indexBuffer->bind(cmdBuffer, 0);

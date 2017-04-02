@@ -4,8 +4,9 @@
 
 namespace crisp
 {
-    SkyboxPipeline::SkyboxPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    SkyboxPipeline::SkyboxPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
         : VulkanPipeline(renderer, 1, renderPass)
+        , m_subpass(subpass)
     {
         // Descriptor Set Layout
         VkDescriptorSetLayoutBinding transformBinding = {};
@@ -146,7 +147,7 @@ namespace crisp
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = m_pipelineLayout;
         pipelineInfo.renderPass          = m_renderPass->getHandle();
-        pipelineInfo.subpass             = 0;
+        pipelineInfo.subpass             = m_subpass;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
