@@ -149,15 +149,24 @@ namespace crisp
     void Scene::resize(int width, int height)
     {
         m_cameraController->resize(width, height);
-        m_psPipeline->resize(width, height);
 
+        m_scenePass->recreate();
+
+        m_pipeline->resize(width, height);
         m_skybox->resize(width, height);
 
+        m_fsQuadPipeline->resize(width, height);
+
+        for (uint32_t i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        {
+            m_descriptorSetGroups[i].postImageUpdate(1, 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, { m_linearClampSampler, m_scenePass->getAttachmentView(SceneRenderPass::Opaque, i), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            m_descriptorSetGroups[i].flushUpdates(m_device);
+        }
+
+        //m_psPipeline->resize(width, height);
         //m_params.screenSpaceScale = m_cameraController->getCamera().getProjectionMatrix()[1][1] * m_renderer->getSwapChainExtent().height;
         //m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
 
-        m_scenePass->recreate();
-        m_fsQuadPipeline->resize(width, height);
         vkDestroyImageView(m_device->getHandle(), m_sceneImageView, nullptr);
         m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(SceneRenderPass::Composited), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
 
@@ -173,17 +182,17 @@ namespace crisp
         auto viewChanged = m_cameraController->update(dt);
         if (viewChanged)
         {
+            auto& V = m_cameraController->getCamera().getViewMatrix();
+            auto& P = m_cameraController->getCamera().getProjectionMatrix();
+
+            m_transforms.MV = V * m_transforms.M;
+            m_transforms.MVP = invertYaxis * P * m_transforms.MV;
+
             m_transformsBuffer->updateStagingBuffer(&m_transforms, sizeof(Transforms));
             m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
+
+            m_skybox->updateTransforms(invertYaxis * P, V);
         }
-
-        auto& V = m_cameraController->getCamera().getViewMatrix();
-        auto& P = m_cameraController->getCamera().getProjectionMatrix();
-
-        m_transforms.MV = V * m_transforms.M;
-        m_transforms.MVP = invertYaxis * P * m_transforms.MV;
-
-        m_skybox->updateTransforms(invertYaxis * P, V);
     }
 
     void Scene::render()
@@ -203,7 +212,7 @@ namespace crisp
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
             
-            m_skybox->draw(commandBuffer, frameIdx);
+            m_skybox->draw(commandBuffer, frameIdx, 0);
             //m_descriptorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
             //m_descriptorSetGroup.setDynamicOffset(1, m_particleParamsBuffer->getDynamicOffset(frameIdx));
             //m_descriptorSetGroup.bind(commandBuffer, m_psPipeline->getPipelineLayout());
@@ -232,12 +241,12 @@ namespace crisp
             m_descriptorSetGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
             m_descriptorSetGroups[frameIdx].setDynamicOffset(1, m_cameraBuffer->getDynamicOffset(frameIdx));
             m_descriptorSetGroups[frameIdx].bind(commandBuffer, m_pipeline->getPipelineLayout());
-
+            
             m_vertexBufferGroup.bind(commandBuffer);
             m_indexBuffer->bind(commandBuffer, 0);
             vkCmdDrawIndexed(commandBuffer, numFaces * 3, 1, 0, 0, 0);
 
-            m_skybox->draw(commandBuffer, frameIdx);
+            m_skybox->draw(commandBuffer, frameIdx, 1);
 
         }, SceneRenderPassId);
 
