@@ -28,7 +28,7 @@ namespace crisp
         m_deviceBufferHeap = std::make_unique<MemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceBufferMemoryType(m_device), m_device, "Device Buffer Heap");
 
         // Device image memory
-        m_deviceImageHeap = std::make_unique<MemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
+        m_deviceImageHeap = std::make_unique<MemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 2 * DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
 
         // Staging memory
         m_stagingBufferHeap = std::make_unique<MemoryHeap>(stagingMemoryBits, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
