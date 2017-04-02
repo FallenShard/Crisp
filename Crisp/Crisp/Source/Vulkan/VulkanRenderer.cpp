@@ -295,6 +295,10 @@ namespace crisp
     void VulkanRenderer::drawFrame()
     {
         auto cmdBuffer = acquireCommandBuffer();
+
+        // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
+        destroyObjectsScheduledForRemoval();
+        
         auto swapChainImgIndex = acquireNextImageIndex();
         if (swapChainImgIndex == -1)
         {
@@ -313,8 +317,6 @@ namespace crisp
         for (auto& item : m_renderPasses)
             item.second.second.clear();
         m_currentFrameIndex = (m_currentFrameIndex + 1) % NumVirtualFrames;
-
-        destroyObjectsScheduledForRemoval();
     }
 
     void VulkanRenderer::recreateSwapChain()
