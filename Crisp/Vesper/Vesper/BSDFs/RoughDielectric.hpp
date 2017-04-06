@@ -5,18 +5,23 @@
 
 namespace vesper
 {
-    class LambertianBSDF : public BSDF
+    class RoughDielectricBSDF : public BSDF
     {
     public:
-        LambertianBSDF(const VariantMap& params);
-        ~LambertianBSDF();
+        RoughDielectricBSDF(const VariantMap& params);
+        ~RoughDielectricBSDF();
 
-        virtual void setTexture(std::shared_ptr<Texture<Spectrum>> texture) override;
         virtual Spectrum eval(const BSDF::Sample& bsdfSample) const override;
         virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const override;
         virtual float pdf(const BSDF::Sample& bsdfSample) const override;
 
     private:
-        std::shared_ptr<Texture<Spectrum>> m_albedo;
+        float evalBeckmann(const glm::vec3& m) const;
+        float smithBeckmannG1(const glm::vec3& v, const glm::vec3& m) const;
+
+
+        float m_intIOR;
+        float m_extIOR;
+        float m_alpha;
     };
 }

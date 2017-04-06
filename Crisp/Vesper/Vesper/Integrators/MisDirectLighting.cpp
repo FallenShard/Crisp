@@ -68,7 +68,7 @@ namespace vesper
         if (lightSample.pdf <= 0.0f || cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
             return Li;
 
-        BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
+        BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         bsdfSample.eta     = 1.0f;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
@@ -83,7 +83,7 @@ namespace vesper
     {
         Spectrum Li(0.0f);
 
-        BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
+        BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
         auto bsdfSpec = its.shape->getBSDF()->sample(bsdfSample, sampler);
         
         Intersection bsdfIts;

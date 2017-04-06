@@ -8,6 +8,7 @@ namespace vesper
 {
     MirrorBSDF::MirrorBSDF(const VariantMap& params)
     {
+        m_lobe = Lobe::Delta;
     }
 
     MirrorBSDF::~MirrorBSDF()
@@ -21,11 +22,11 @@ namespace vesper
 
     Spectrum MirrorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
     {
-        // Set the measure to discrete
-        bsdfSample.eta = 1.0f;
-        bsdfSample.measure = Measure::Discrete;
-        bsdfSample.sampledType = BSDF::Type::Delta;
-        bsdfSample.wo = glm::vec3(-bsdfSample.wi.x, -bsdfSample.wi.y, bsdfSample.wi.z);
+        bsdfSample.wo          = glm::vec3(-bsdfSample.wi.x, -bsdfSample.wi.y, bsdfSample.wi.z);
+        bsdfSample.pdf         = 1.0f;
+        bsdfSample.measure     = Measure::Discrete;
+        bsdfSample.sampledLobe = Lobe::Delta;
+        bsdfSample.eta         = 1.0f;
 
         return Spectrum(1.0f);
     }
@@ -33,10 +34,5 @@ namespace vesper
     float MirrorBSDF::pdf(const BSDF::Sample& bsdfSample) const
     {
         return 0.0f;
-    }
-
-    unsigned int MirrorBSDF::getType() const
-    {
-        return BSDF::Type::Delta;
     }
 }

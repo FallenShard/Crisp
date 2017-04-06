@@ -10,6 +10,8 @@ namespace vesper
 {
     LambertianBSDF::LambertianBSDF(const VariantMap& params)
     {
+        m_lobe = Lobe::Diffuse;
+
         VariantMap texParams;
         Spectrum albedo(1.0f);
         if (params.contains("albedo")) 
@@ -49,11 +51,12 @@ namespace vesper
 
     Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
     {
-        bsdfSample.measure     = Measure::SolidAngle;
-        bsdfSample.sampledType = Type::Diffuse;
-        bsdfSample.eta         = 1.0f;
         bsdfSample.wo          = Warp::squareToCosineHemisphere(sampler.next2D());
-
+        bsdfSample.pdf         = Warp::squareToCosineHemispherePdf(bsdfSample.wo);
+        bsdfSample.measure     = Measure::SolidAngle;
+        bsdfSample.sampledLobe = Lobe::Diffuse;
+        bsdfSample.eta         = 1.0f;
+        
         // eval() * cosThetaO / pdf() = albedo * invPI / (cosThetaI * invPI) * cosThetaI(subtension)
         // account for cosine subtension = just albedo
         return m_albedo->eval(bsdfSample.uv);
@@ -70,10 +73,5 @@ namespace vesper
         }
 
         return InvPI * cosThetaO;
-    }
-
-    unsigned int LambertianBSDF::getType() const
-    {
-        return Type::Diffuse;
     }
 }

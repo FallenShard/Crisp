@@ -4,6 +4,7 @@
 
 #include "Spectrums/Spectrum.hpp"
 #include "Core/VariantMap.hpp"
+#include "Core/BitFlags.hpp"
 #include "Textures/Texture.hpp"
 
 namespace vesper
@@ -20,32 +21,33 @@ namespace vesper
             Discrete
         };
 
-        enum Type
+        enum class Lobe
         {
-            Passthrough,
-            Diffuse,
-            Glossy,
-            Delta
+            Passthrough  = 1 << 0,
+            Diffuse      = 1 << 1,
+            Glossy       = 1 << 2,
+            Delta        = 1 << 3
         };
+
+        using LobeFlags = BitFlags<Lobe>;
 
         struct Sample
         {
             glm::vec3 p;
+            glm::vec2 uv;
             glm::vec3 wi;
+
             glm::vec3 wo;
+            float pdf;
+            
+            Measure measure;
+            Lobe    sampledLobe;
 
             float eta;
-            glm::vec2 uv;
-
-            Measure measure;
-            unsigned int requestedType;
-            unsigned int sampledType;
 
             Sample() {}
-            Sample(const glm::vec3& p, const glm::vec3& wi) : p(p), wi(wi) {}
-            Sample(const glm::vec3& p, const glm::vec3& wi, const glm::vec2& uv) : p(p), wi(wi), uv(uv) {}
-            Sample(const glm::vec3& p, const glm::vec3& wi, const glm::vec3& wo) : p(p), wi(wi), wo(wo) {}
-            Sample(const glm::vec3& p, const glm::vec3& wi, const glm::vec3& wo, const glm::vec2& uv) : p(p), wi(wi), wo(wo), uv(uv) {}
+            Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi) : p(p), wi(wi), uv(uv) {}
+            Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi, const glm::vec3& wo) : p(p), uv(uv), wi(wi), wo(wo) {}
         };
 
         virtual ~BSDF() {};
@@ -54,6 +56,10 @@ namespace vesper
         virtual Spectrum eval(const BSDF::Sample& bsdfSample) const = 0;
         virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const = 0;
         virtual float pdf(const BSDF::Sample& bsdfSample) const = 0;
-        virtual unsigned int getType() const = 0;
+        
+        LobeFlags getLobeType() const { return m_lobe; }
+
+    protected:
+        LobeFlags m_lobe;
     };
 }

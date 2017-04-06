@@ -54,7 +54,7 @@ namespace vesper
             }
 
             // If we did not hit a delta BRDF (mirror, glass etc.), sample the light
-            if (its.shape->getBSDF()->getType() != BSDF::Type::Delta)
+            if (!(its.shape->getBSDF()->getLobeType() & BSDF::Lobe::Delta))
             {
                 Light::Sample lightSample(its.p);
                 auto lightSpec = scene->sampleLight(its, sampler, lightSample);
@@ -62,7 +62,7 @@ namespace vesper
                 float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
                 if (!(cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)))
                 {
-                    BSDF::Sample bsdfSam(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
+                    BSDF::Sample bsdfSam(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
                     bsdfSam.measure = BSDF::Measure::SolidAngle;
                     auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSam);
 
@@ -73,7 +73,7 @@ namespace vesper
             }
 
             // Sample the BSDF to continue bouncing
-            BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
+            BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
             auto bsdf = its.shape->getBSDF()->sample(bsdfSample, sampler);
             Intersection bsdfIts;
             Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
@@ -100,7 +100,7 @@ namespace vesper
                     L += throughput * bsdf * lightSpec * miWeight(pdfBsdf, pdfEm);
             }
 
-            isSpecular = its.shape->getBSDF()->getType() == BSDF::Type::Delta;
+            isSpecular = its.shape->getBSDF()->getLobeType() & BSDF::Lobe::Delta;
             throughput *= bsdf;
             ray = bsdfRay;
 

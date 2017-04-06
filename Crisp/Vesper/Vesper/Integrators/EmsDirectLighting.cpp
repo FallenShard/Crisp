@@ -47,7 +47,7 @@ namespace vesper
             return L;
 
         // Evaluate the BSDF at the intersection
-        BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
+        BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
         bsdfSample.eta = 1.0f;
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);

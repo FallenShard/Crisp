@@ -8,6 +8,7 @@ namespace vesper
 {
     DielectricBSDF::DielectricBSDF(const VariantMap& params)
     {
+        m_lobe = LobeFlags(Lobe::Delta);
         m_intIOR = params.get("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
         m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
     }
@@ -25,47 +26,44 @@ namespace vesper
     {
         // Get the fresnel coefficient
         float cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
-        float reflCoeff = Fresnel::dielectric(cosThetaI, m_extIOR, m_intIOR);
+        float cosThetaT = 0.0f;
+        float fresnel = Fresnel::dielectric(cosThetaI, m_extIOR, m_intIOR, cosThetaT);
 
         // Set the measure to discrete
         bsdfSample.measure     = Measure::Discrete;
-        bsdfSample.sampledType = BSDF::Type::Delta;
+        bsdfSample.sampledLobe = Lobe::Delta;
+        bsdfSample.pdf         = 1.0f;
 
-        float sample = sampler.next1D();
-
-        // If sample is less than fresnelCoeff, reflect
-        if (sample <= reflCoeff)
+        // If sample is less than fresnel, reflect, otherwise refract
+        if (sampler.next1D() <= fresnel)
         {
             // Reflection in local coordinates
-            bsdfSample.wo = glm::vec3(-bsdfSample.wi.x, -bsdfSample.wi.y, bsdfSample.wi.z);
+            bsdfSample.wo  = glm::vec3(-bsdfSample.wi.x, -bsdfSample.wi.y, bsdfSample.wi.z);
             bsdfSample.eta = 1.0f;
 
             return Spectrum(1.0f);
         }
 
-        // otherwise, refract
         // These may be swapped if we come "from the inside"
-        float etaExt = m_extIOR, etaInt = m_intIOR;
+        float etaI = m_extIOR, etaT = m_intIOR;
 
         // Normal to use for refraction direction formula
         glm::vec3 n(0.0f, 0.0f, 1.0f);
-        glm::vec3 wi = bsdfSample.wi;
 
         // If the angle was negative, we're coming from the inside, update relevant variables
         if (cosThetaI < 0.0f)
         {
-            std::swap(etaExt, etaInt);
+            std::swap(etaI, etaT);
             cosThetaI = -cosThetaI;
             n = -n;
         }
 
         // Set eta ratio
-        float etaRatio = etaExt / etaInt;
-        bsdfSample.eta = etaRatio;
-
+        float etaRatio = etaI / etaT;
+        
         // Set outgoing direction
-        float sinThetaTSqr = etaRatio * etaRatio * (1.0f - cosThetaI * cosThetaI);
-        bsdfSample.wo = -etaRatio * (wi - cosThetaI * n) - n * sqrtf(1.0f - sinThetaTSqr);
+        bsdfSample.wo  = -etaRatio * (bsdfSample.wi - cosThetaI * n) - n * cosThetaT;
+        bsdfSample.eta = etaRatio;
 
         // Return the bsdf sample
         return Spectrum(etaRatio * etaRatio);
@@ -74,10 +72,5 @@ namespace vesper
     float DielectricBSDF::pdf(const BSDF::Sample& bsdfSample) const
     {
         return 0.0f;
-    }
-
-    unsigned int DielectricBSDF::getType() const
-    {
-        return BSDF::Type::Delta;
     }
 }

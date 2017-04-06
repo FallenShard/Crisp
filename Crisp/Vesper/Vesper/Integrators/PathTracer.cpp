@@ -40,7 +40,7 @@ namespace vesper
                 L += throughput * its.shape->getLight()->eval(lightSample);
             }
 
-            BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
+            BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
             throughput *= its.shape->getBSDF()->sample(bsdfSample, sampler);
 
             ray.o = its.p;

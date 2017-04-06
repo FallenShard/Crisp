@@ -36,7 +36,7 @@ namespace vesper
             L += its.shape->getLight()->eval(sample);
         }
 
-        BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.uv);
+        BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
         auto bsdfSpec = its.shape->getBSDF()->sample(bsdfSample, sampler);
 
         Intersection sampledRayIts;

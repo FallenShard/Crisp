@@ -37,7 +37,7 @@ namespace vesper
         if (cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
             return Spectrum(0.0f);
 
-        BSDF::Sample bsdfSample(its.p, its.toLocal(-ray.d), its.toLocal(lightSample.wi), its.uv);
+        BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
 

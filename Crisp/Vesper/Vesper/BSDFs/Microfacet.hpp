@@ -14,7 +14,6 @@ namespace vesper
         virtual Spectrum eval(const BSDF::Sample& bsdfSample) const override;
         virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const override;
         virtual float pdf(const BSDF::Sample& bsdfSample) const override;
-        virtual unsigned int getType() const override;
 
     private:
         float evalBeckmann(const glm::vec3& m) const;

@@ -5,6 +5,7 @@
 #include "Dielectric.hpp"
 #include "Mirror.hpp"
 #include "Microfacet.hpp"
+#include "RoughDielectric.hpp"
 
 namespace vesper
 {
@@ -25,6 +26,10 @@ namespace vesper
         else if (type == "microfacet")
         {
             return std::make_unique<MicrofacetBSDF>(parameters);
+        }
+        else if (type == "rough-dielectric")
+        {
+            return std::make_unique<RoughDielectricBSDF>(parameters);
         }
         else
         {
