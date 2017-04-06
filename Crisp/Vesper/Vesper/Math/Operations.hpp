@@ -39,4 +39,9 @@ namespace vesper
 
         return value;
     }
+
+    inline static float sign(float value)
+    {
+        return value < 0.0f ? -1.0f : 1.0f;
+    }
 }
