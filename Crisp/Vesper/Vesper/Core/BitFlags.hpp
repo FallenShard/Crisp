@@ -4,7 +4,25 @@
 
 namespace vesper
 {
-    template <typename EnumBits, typename MaskType = std::underlying_type<EnumBits>::type>
+    template <typename Enum>
+    struct IsBitFlag
+    {
+        static constexpr bool value = false;
+    };
+
+    template <typename EnumBits, typename = std::enable_if_t<IsBitFlag<EnumBits>::value>, typename MaskType = std::underlying_type<EnumBits>::type>
+    MaskType operator|(EnumBits bit1, EnumBits bit2)
+    {
+        return static_cast<MaskType>(bit1) | static_cast<MaskType>(bit2);
+    }
+
+    template <typename EnumBits, typename = std::enable_if_t<IsBitFlag<EnumBits>::value>, typename MaskType = std::underlying_type<EnumBits>::type>
+    MaskType operator|(MaskType bits, EnumBits bit)
+    {
+        return bits | static_cast<MaskType>(bit);
+    }
+
+    template <typename EnumBits, typename = std::enable_if_t<IsBitFlag<EnumBits>::value>, typename MaskType = std::underlying_type<EnumBits>::type>
     class BitFlags
     {
     public:
@@ -59,6 +77,11 @@ namespace vesper
         inline bool operator&(const EnumBits bits) const
         {
             return m_mask & static_cast<MaskType>(bits);
+        }
+
+        void print()
+        {
+            std::cout << m_mask << '\n';
         }
 
     private:

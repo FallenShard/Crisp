@@ -54,7 +54,7 @@ namespace vesper
             }
 
             // If we did not hit a delta BRDF (mirror, glass etc.), sample the light
-            if (!(its.shape->getBSDF()->getLobeType() & BSDF::Lobe::Delta))
+            if (!(its.shape->getBSDF()->getLobeType() & Lobe::Delta))
             {
                 Light::Sample lightSample(its.p);
                 auto lightSpec = scene->sampleLight(its, sampler, lightSample);
@@ -100,7 +100,7 @@ namespace vesper
                     L += throughput * bsdf * lightSpec * miWeight(pdfBsdf, pdfEm);
             }
 
-            isSpecular = its.shape->getBSDF()->getLobeType() & BSDF::Lobe::Delta;
+            isSpecular = its.shape->getBSDF()->getLobeType() & Lobe::Delta;
             throughput *= bsdf;
             ray = bsdfRay;
 

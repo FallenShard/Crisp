@@ -44,29 +44,18 @@ namespace vesper
             return Spectrum(1.0f);
         }
 
-        // These may be swapped if we come "from the inside"
-        float etaI = m_extIOR, etaT = m_intIOR;
-
         // Normal to use for refraction direction formula
         glm::vec3 n(0.0f, 0.0f, 1.0f);
 
         // If the angle was negative, we're coming from the inside, update relevant variables
-        if (cosThetaI < 0.0f)
-        {
-            std::swap(etaI, etaT);
-            cosThetaI = -cosThetaI;
-            n = -n;
-        }
-
-        // Set eta ratio
-        float etaRatio = etaI / etaT;
+        float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
         
         // Set outgoing direction
-        bsdfSample.wo  = -etaRatio * (bsdfSample.wi - cosThetaI * n) - n * cosThetaT;
-        bsdfSample.eta = etaRatio;
+        bsdfSample.wo  = n * (eta * cosThetaI - sign(cosThetaI) * cosThetaT) - eta * bsdfSample.wi;
+        bsdfSample.eta = eta;
 
         // Return the bsdf sample
-        return Spectrum(etaRatio * etaRatio);
+        return Spectrum(eta * eta);
     }
 
     float DielectricBSDF::pdf(const BSDF::Sample& bsdfSample) const

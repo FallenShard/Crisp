@@ -11,6 +11,16 @@ namespace vesper
 {
     class Sampler;
 
+    enum class Lobe
+    {
+        Passthrough = 1 << 0,
+        Diffuse     = 1 << 1,
+        Glossy      = 1 << 2,
+        Delta       = 1 << 3
+    };
+    
+    template <> struct IsBitFlag<Lobe> { static constexpr bool value = true; };
+
     class BSDF
     {
     public:
@@ -19,14 +29,6 @@ namespace vesper
             Unknown,
             SolidAngle,
             Discrete
-        };
-
-        enum class Lobe
-        {
-            Passthrough  = 1 << 0,
-            Diffuse      = 1 << 1,
-            Glossy       = 1 << 2,
-            Delta        = 1 << 3
         };
 
         using LobeFlags = BitFlags<Lobe>;
