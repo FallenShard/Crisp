@@ -14,7 +14,7 @@ namespace crisp
         {
             form->getControlById<gui::Button>("openButton")->setClickCallback([app]()
             {
-                app->openSceneFile();
+                app->openSceneFileFromDialog();
             });
             
             form->getControlById<gui::Button>("renderButton")->setClickCallback([app]()

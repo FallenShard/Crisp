@@ -133,9 +133,13 @@
     <ClInclude Include="Vesper\BSDFs\Lambertian.hpp" />
     <ClInclude Include="Vesper\BSDFs\Microfacet.hpp" />
     <ClInclude Include="Vesper\BSDFs\Mirror.hpp" />
+    <ClInclude Include="Vesper\BSDFs\OrenNayar.hpp" />
+    <ClInclude Include="Vesper\BSDFs\RoughDielectric.hpp" />
+    <ClInclude Include="Vesper\BSDFs\SmoothConductor.hpp" />
     <ClInclude Include="Vesper\Cameras\Camera.hpp" />
     <ClInclude Include="Vesper\Cameras\CameraFactory.hpp" />
     <ClInclude Include="Vesper\Cameras\Perspective.hpp" />
+    <ClInclude Include="Vesper\Core\BitFlags.hpp" />
     <ClInclude Include="Vesper\Core\Fresnel.hpp" />
     <ClInclude Include="Vesper\Core\Intersection.hpp" />
     <ClInclude Include="Vesper\Core\JsonSceneParser.hpp" />
@@ -194,6 +198,9 @@
     <ClCompile Include="Vesper\BSDFs\Lambertian.cpp" />
     <ClCompile Include="Vesper\BSDFs\Microfacet.cpp" />
     <ClCompile Include="Vesper\BSDFs\Mirror.cpp" />
+    <ClCompile Include="Vesper\BSDFs\OrenNayar.cpp" />
+    <ClCompile Include="Vesper\BSDFs\RoughDielectric.cpp" />
+    <ClCompile Include="Vesper\BSDFs\SmoothConductor.cpp" />
     <ClCompile Include="Vesper\Cameras\Camera.cpp" />
     <ClCompile Include="Vesper\Cameras\CameraFactory.cpp" />
     <ClCompile Include="Vesper\Cameras\Perspective.cpp" />

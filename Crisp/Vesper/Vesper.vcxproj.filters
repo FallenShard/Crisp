@@ -144,6 +144,15 @@
     <ClCompile Include="Vesper\Math\Distribution1D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\SmoothConductor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\OrenNayar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\RoughDielectric.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp">
@@ -324,6 +333,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Math\Distribution1D.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSDFs\SmoothConductor.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSDFs\OrenNayar.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSDFs\RoughDielectric.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Core\BitFlags.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
