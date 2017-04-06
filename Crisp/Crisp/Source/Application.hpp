@@ -51,7 +51,8 @@ namespace crisp
 
         void startRayTracing();
         void stopRayTracing();
-        void openSceneFile();
+        void openSceneFileFromDialog();
+        void openSceneFile(std::string filename);
         void writeImageToExr();
 
         gui::Form* getForm() const;

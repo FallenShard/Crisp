@@ -88,7 +88,9 @@ namespace crisp
             form->fadeOutAndRemove("welcomePanel", 0.5f);
         });
 
-        //crispButton->click();
+        //vesperButton->click();
+        vesperButton->click();
+        openSceneFile("env-light-test-mis.xml");
     }
 
     Application::~Application()
@@ -165,14 +167,19 @@ namespace crisp
         m_rayTracer->stop();
     }
 
-    void Application::openSceneFile()
+    void Application::openSceneFileFromDialog()
     {
         auto openedFile = FileUtils::openFileDialog();
         if (openedFile == "")
             return;
 
-        m_projectName = openedFile.substr(0, openedFile.length() - 4);
-        m_rayTracer->initializeScene("Resources/VesperScenes/" + openedFile);
+        openSceneFile(openedFile);
+    }
+
+    void Application::openSceneFile(std::string filename)
+    {
+        m_projectName = filename.substr(0, filename.length() - 4);
+        m_rayTracer->initializeScene("Resources/VesperScenes/" + filename);
 
         auto imageSize = m_rayTracer->getImageSize();
         m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
