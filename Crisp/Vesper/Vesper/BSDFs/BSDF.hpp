@@ -18,7 +18,7 @@ namespace vesper
         Glossy      = 1 << 2,
         Delta       = 1 << 3
     };
-    
+
     template <> struct IsBitFlag<Lobe> { static constexpr bool value = true; };
 
     class BSDF
