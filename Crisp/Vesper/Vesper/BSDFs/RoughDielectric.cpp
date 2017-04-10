@@ -6,37 +6,43 @@
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
 
+#include "Samplers/SamplerFactory.hpp"
+
+#include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
+
 namespace vesper
 {
     namespace
     {
-        inline glm::vec3 squareToBeckmann(const glm::vec2& sample, float alpha)
+        inline float jacobianReflect(float cosThetaO)
         {
-            float theta = atan(sqrt(-alpha * alpha * log(1 - sample.x)));
-            float phi = 2 * PI * sample.y;
-
-            float sinTheta = sin(theta);
-
-            return glm::vec3(sinTheta * cosf(phi), sinTheta * sinf(phi), cos(theta));
+            return 1.0f / (4.0f * std::abs(cosThetaO));
         }
 
-        inline float mPdf(const glm::vec3& m)
+        inline float jacobianRefract(float eta, float cosThetaIm, float cosThetaOm)
         {
-
+            float a = eta * cosThetaIm + cosThetaOm;
+            return std::abs(cosThetaOm / (a * a));
         }
 
-        inline float chiPlus(float alpha)
+        inline glm::vec3 hR(const glm::vec3& wi, const glm::vec3& wo)
         {
-            return alpha > 0.0f ? 1.0f : 0.0f;
+            return glm::normalize(wi + wo);
         }
 
-        inline float D(const glm::vec3& m, const glm::vec3& n, float alpha)
+        inline glm::vec3 hT(const glm::vec3& wi, const glm::vec3& wo, float eta)
         {
-            float temp = CoordinateFrame::tanTheta(m) / alpha;
-            float cosTheta = CoordinateFrame::cosTheta(m);
-            float alphaCosTheta2 = cosTheta * cosTheta * alpha;
+            return glm::normalize(eta * wi + wo);
+        }
 
-            return chiPlus(glm::dot(m, n)) * std::exp(-temp * temp) * InvPI / (alphaCosTheta2 * alphaCosTheta2);
+        inline glm::vec3 reflect(const glm::vec3& wi, const glm::vec3& n, float cosThetaI)
+        {
+            return 2.0f * cosThetaI * n - wi;
+        }
+
+        inline glm::vec3 refract(const glm::vec3& wi, const glm::vec3& n, float eta, float cosThetaI, float cosThetaT)
+        {
+            return n * (eta * cosThetaI - sign(cosThetaI) * cosThetaT) - eta * wi;
         }
     }
 
@@ -45,9 +51,36 @@ namespace vesper
     {
         m_lobe = Lobe::Glossy;
 
-        m_alpha = params.get<float>("alpha", 0.1f);
         m_intIOR = params.get<float>("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
         m_extIOR = params.get<float>("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
+
+        std::string distribType = params.get<std::string>("distribution", "beckmann");
+
+        m_distrib = MicrofacetDistributionFactory::create(distribType, params);
+
+        auto sam = SamplerFactory::create("fixed", VariantMap());
+
+        BSDF::Sample s;
+        s.p = glm::vec3(0, 0, 0);
+        s.wi = glm::normalize(glm::vec3(0.5f, 0.5f, 0.5f));
+        auto sampledVal = sample(s, *sam);
+
+        auto cosThetaO = CoordinateFrame::cosTheta(s.wo);
+
+
+        auto ev = eval(s);
+        auto pdf = this->pdf(s);
+
+        BSDF::Sample s2;
+        s2.p = glm::vec3(0, 0, 0);
+        s2.wi = glm::normalize(-glm::vec3(0.5f, 0.5f, 0.5f));
+        sampledVal = sample(s2, *sam);
+
+        cosThetaO = CoordinateFrame::cosTheta(s2.wo);
+
+
+        ev = eval(s2);
+        pdf = this->pdf(s2);
     }
 
     RoughDielectricBSDF::~RoughDielectricBSDF()
@@ -56,51 +89,44 @@ namespace vesper
 
     Spectrum RoughDielectricBSDF::eval(const BSDF::Sample& bsdfSample) const
     {
-        auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
-        auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
-
-        bool isReflection = cosThetaI * cosThetaI >= 0.0f;
-
         if (bsdfSample.measure != Measure::SolidAngle)
             return Spectrum(0.0f);
 
-        float etaExt = m_extIOR, etaInt = m_intIOR;
+        auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
+        auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
 
-        // If the angle was negative, we're coming from the inside, update relevant variables
-        if (cosThetaI < 0.0f)
-        {
-            std::swap(etaExt, etaInt);
-        }
+        bool isReflection = cosThetaI * cosThetaO > 0.0f;
 
-        float eta = etaExt / etaInt;
+        // If the angle is negative, we're coming from the inside
+        float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
 
         glm::vec3 m;
         if (isReflection)
         {
-            float sgn = cosThetaI < 0.0f ? -1.0f : 1.0f;
-            m = sgn * glm::normalize(bsdfSample.wi + bsdfSample.wo);
+            m = sign(cosThetaI) * hR(bsdfSample.wi, bsdfSample.wo);
         }
         else
         {
-            m = -glm::normalize(bsdfSample.wi * eta + bsdfSample.wo);
+            m = -hT(bsdfSample.wi, bsdfSample.wo, eta);
         }
 
         float cosThetaIm = glm::dot(bsdfSample.wi, m);
         float cosThetaOm = glm::dot(bsdfSample.wo, m);
 
-        float cosThetaT = 0.0f;
-        float fresnel = Fresnel::dielectric(cosThetaIm, etaExt, etaInt, cosThetaT);
-        float G = smithBeckmannG1(bsdfSample.wi, m) * smithBeckmannG1(bsdfSample.wo, m);
-        float D = evalBeckmann(m);
+        m *= sign(CoordinateFrame::cosTheta(m));
+
+        float F = Fresnel::dielectric(cosThetaIm, m_extIOR, m_intIOR);
+        float D = m_distrib->D(m);
+        float G = m_distrib->G(bsdfSample.wi, bsdfSample.wo, m);
 
         if (isReflection)
         {
-            return fresnel * G * D * 0.25f / std::abs(cosThetaI);
+            return F * D * G * jacobianReflect(cosThetaI) / std::abs(cosThetaO);
         }
         else
         {
-            return std::abs(cosThetaIm * cosThetaOm) * (1 - fresnel) * G * D
-                / (std::sqrt(eta * cosThetaIm + cosThetaOm) * std::abs(cosThetaI));
+            float val = (1.0f - F) * D * G * jacobianRefract(eta, cosThetaIm, cosThetaOm);
+            return val * std::abs(cosThetaIm / (cosThetaI * cosThetaO)) * eta * eta;
         }
     }
 
@@ -110,135 +136,80 @@ namespace vesper
         bsdfSample.sampledLobe = Lobe::Glossy;
 
         auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
-        bool inside = false;
 
-        // These may be swapped if we come "from the inside"
-        float etaExt = m_extIOR, etaInt = m_intIOR;
+        auto m = m_distrib->sampleNormal(sampler.next2D());
+        auto mPdf = m_distrib->pdf(m);
 
-        // If the angle was negative, we're coming from the inside, update relevant variables
-        if (cosThetaI < 0.0f)
-        {
-            std::swap(etaExt, etaInt);
-            inside = true;
-        }
-
-        auto m = squareToBeckmann(sampler.next2D(), m_alpha); // m
-        auto mPdf = Warp::squareToBeckmannPdf(m, m_alpha); // D(m) * |m * n|
-
-        auto cosThetaIm = glm::dot(bsdfSample.wi, m);
-        float cosThetaT = 0.0f;
-        float fresnel = Fresnel::dielectric(cosThetaIm, m_extIOR, m_intIOR, cosThetaT);
+        float cosThetaIm = glm::dot(bsdfSample.wi, m);
+        float cosThetaTm = 0.0f;
+        float fresnel = Fresnel::dielectric(cosThetaIm, m_extIOR, m_intIOR, cosThetaTm);
         float etaM = cosThetaIm < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
 
-        bool isReflection = sampler.next1D() <= fresnel ? true : false;
-
-        glm::vec3 wo;
-        float woPdf;
-
-        if (isReflection)
+        float weight = 1.0f;
+        if (sampler.next1D() <= fresnel)
         {
-            wo    = 2.0f * glm::dot(m, bsdfSample.wi) * m - bsdfSample.wi;
-            woPdf = mPdf * 0.25f / std::abs(cosThetaIm);
-            woPdf *= fresnel;
+            bsdfSample.wo  = reflect(bsdfSample.wi, m, cosThetaIm);
+            bsdfSample.pdf = fresnel * mPdf * jacobianReflect(cosThetaIm);
+            bsdfSample.eta = 1.0f;
+
+            // Check if we reflected "into" the surface
+            if (CoordinateFrame::cosTheta(bsdfSample.wo) * cosThetaI < 0.0f)
+                return Spectrum(0.0f);
         }
         else
         {
-            auto refrM = inside ? -m : m;
-            auto refrCosThetaIm = inside ? -cosThetaIm : cosThetaIm;
-            auto eta = etaExt / etaInt;
+            bsdfSample.wo  = refract(bsdfSample.wi, m, etaM, cosThetaIm, cosThetaTm);
+            bsdfSample.pdf = (1.0f - fresnel) * mPdf * jacobianRefract(etaM, cosThetaIm, glm::dot(bsdfSample.wo, m));
+            bsdfSample.eta = etaM;
 
-            wo    = eta * (refrCosThetaIm * refrM - bsdfSample.wi) - refrM * cosThetaT;
-            float cosThetaOm = glm::dot(wo, m);
-            woPdf = mPdf * std::abs(cosThetaOm) / std::sqrt(eta * cosThetaIm + cosThetaOm);
-            woPdf *= 1 - fresnel;
+            weight = etaM * etaM;
+
+            if (CoordinateFrame::cosTheta(bsdfSample.wo) * cosThetaI >= 0.0f)
+                return Spectrum(0.0f);
         }
 
-        //float cosThetaO = CoordinateFrame::cosTheta(wo);
-        //if ((cosThetaO * cosThetaI > 0.0f) != isReflection)
-        //    return Spectrum(0.0f);
+        float G = m_distrib->G(bsdfSample.wi, bsdfSample.wo, m);
 
-        float G1wi = smithBeckmannG1(bsdfSample.wi, m);
-        float G1wo = smithBeckmannG1(bsdfSample.wo, m);
-        float D = evalBeckmann(m);
-
-        Spectrum throughput = std::abs(cosThetaIm) * G1wi * G1wo / (std::abs(cosThetaI) * mPdf);
-
-        return throughput;
+        return std::abs(cosThetaIm / (cosThetaI * CoordinateFrame::cosTheta(m))) * weight * G;
     }
 
     float RoughDielectricBSDF::pdf(const BSDF::Sample& bsdfSample) const
     {
-        auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
-        auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
-
-        bool isReflection = cosThetaI * cosThetaI >= 0.0f;
-
         if (bsdfSample.measure != Measure::SolidAngle)
             return 0.0f;
 
-        float etaExt = m_extIOR, etaInt = m_intIOR;
+        auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
+        auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
 
-        // If the angle was negative, we're coming from the inside, update relevant variables
-        if (cosThetaI < 0.0f)
-        {
-            std::swap(etaExt, etaInt);
-        }
+        bool isReflection = cosThetaI * cosThetaO > 0.0f;
 
-        float eta = etaExt / etaInt;
+        // If the angle is positive, we're coming from the "proper" side
+        float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
 
         glm::vec3 m;
         if (isReflection)
         {
-            float sgn = cosThetaI < 0.0f ? -1.0f : 1.0f;
-            m = sgn * glm::normalize(bsdfSample.wi + bsdfSample.wo);
+            m = sign(cosThetaI) * hR(bsdfSample.wi, bsdfSample.wo);
         }
         else
         {
-            m = -glm::normalize(bsdfSample.wi * eta + bsdfSample.wo);
+            m = -hT(bsdfSample.wi, bsdfSample.wo, eta);
         }
 
         float cosThetaIm = glm::dot(bsdfSample.wi, m);
         float cosThetaOm = glm::dot(bsdfSample.wo, m);
+        float F = Fresnel::dielectric(cosThetaIm, m_extIOR, m_intIOR);
 
-        float cosThetaT = 0.0f;
-        float fresnel = Fresnel::dielectric(cosThetaIm, etaExt, etaInt, cosThetaT);
-        float mPdf = Warp::squareToBeckmannPdf(m, m_alpha);
+        m *= sign(CoordinateFrame::cosTheta(m));
+        float mPdf = m_distrib->pdf(m);
 
         if (isReflection)
         {
-            return fresnel * mPdf * 0.25f / std::abs(cosThetaIm);
+            return std::abs(F * mPdf * jacobianReflect(cosThetaIm));
         }
         else
         {
-            return (1.0f - fresnel) * mPdf * std::abs(cosThetaOm) / std::sqrt(eta * cosThetaIm + cosThetaOm);
+            return std::abs((1.0f - F) * mPdf * jacobianRefract(eta, cosThetaIm, cosThetaOm));
         }
-    }
-
-    float RoughDielectricBSDF::evalBeckmann(const glm::vec3& m) const
-    {
-        float temp = CoordinateFrame::tanTheta(m) / m_alpha;
-        float cosTheta = CoordinateFrame::cosTheta(m);
-        float cosTheta2 = cosTheta * cosTheta;
-
-        return std::exp(-temp * temp) / (PI * m_alpha * m_alpha * cosTheta2 * cosTheta2);
-    }
-
-    float RoughDielectricBSDF::smithBeckmannG1(const glm::vec3& v, const glm::vec3& m) const
-    {
-        float tanTheta = CoordinateFrame::tanTheta(v);
-        if (tanTheta == 0.0f)
-            return 1.0f;
-
-        // Back-surface check
-        if (glm::dot(v, m) * CoordinateFrame::cosTheta(v) <= 0)
-            return 0.0f;
-
-        float b = 1.0f / (m_alpha * tanTheta);
-        if (b >= 1.6f)
-            return 1.0f;
-
-        float b2 = b * b;
-
-        return (3.535f * b + 2.181f * b2) / (1.0f + 2.276f * b + 2.577f * b2);
     }
 }
