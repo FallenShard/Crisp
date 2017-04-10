@@ -84,7 +84,8 @@ namespace vesper
     {
         if (!radiance.isValid())
         {
-            std::cerr << "Integrator computed an invalid radiance value!\n";
+            std::cerr << "Integrator computed an invalid radiance value! ";
+            std::cerr << radiance << '\n';
             return;
         }
 

@@ -59,4 +59,5 @@ namespace vesper
 
     const RgbSpectrum operator+(float scalar, const RgbSpectrum& rgbSpectrum);
     const RgbSpectrum operator*(float scalar, const RgbSpectrum& rgbSpectrum);
+    std::ostream& operator<<(std::ostream& stream, const RgbSpectrum& spec);
 }

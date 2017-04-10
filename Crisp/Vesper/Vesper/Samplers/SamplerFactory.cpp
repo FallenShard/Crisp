@@ -2,6 +2,7 @@
 
 #include "Sampler.hpp"
 #include "Independent.hpp"
+#include "Fixed.hpp"
 
 namespace vesper
 {
@@ -10,6 +11,10 @@ namespace vesper
         if (type == "independent")
         {
             return std::make_unique<IndependentSampler>(parameters);
+        }
+        else if (type == "fixed")
+        {
+            return std::make_unique<FixedSampler>(parameters);
         }
         else
         {

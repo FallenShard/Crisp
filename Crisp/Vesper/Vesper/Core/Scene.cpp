@@ -105,7 +105,7 @@ namespace vesper
         return m_camera.get();
     }
 
-    const Light* Scene::getRandomLight(float sample) const
+    Light* Scene::getRandomLight(float sample) const
     {
         auto numLights = m_lights.size();
         auto index = std::min(static_cast<size_t>(std::floor(numLights * sample)), numLights - 1);
@@ -134,6 +134,7 @@ namespace vesper
         {
             lightContrib *= 1.0f / getLightPdf();
             lightSample.pdf *= getLightPdf();
+            lightSample.light = light;
             return lightContrib;
         }
 

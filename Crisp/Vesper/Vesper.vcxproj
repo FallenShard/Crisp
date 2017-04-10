@@ -135,8 +135,14 @@
     <ClInclude Include="Vesper\BSDFs\Dielectric.hpp" />
     <ClInclude Include="Vesper\BSDFs\Lambertian.hpp" />
     <ClInclude Include="Vesper\BSDFs\Microfacet.hpp" />
+    <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\Beckmann.hpp" />
+    <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\GGX.hpp" />
+    <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\MicrofacetDistribution.hpp" />
+    <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\MicrofacetDistributionFactory.hpp" />
+    <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\Phong.hpp" />
     <ClInclude Include="Vesper\BSDFs\Mirror.hpp" />
     <ClInclude Include="Vesper\BSDFs\OrenNayar.hpp" />
+    <ClInclude Include="Vesper\BSDFs\RoughConductor.hpp" />
     <ClInclude Include="Vesper\BSDFs\RoughDielectric.hpp" />
     <ClInclude Include="Vesper\BSDFs\SmoothConductor.hpp" />
     <ClInclude Include="Vesper\Cameras\Camera.hpp" />
@@ -171,6 +177,7 @@
     <ClInclude Include="Vesper\Math\Constants.hpp" />
     <ClInclude Include="Vesper\Math\CoordinateFrame.hpp" />
     <ClInclude Include="Vesper\Math\Distribution1D.hpp" />
+    <ClInclude Include="Vesper\Math\Distribution2D.hpp" />
     <ClInclude Include="Vesper\Math\Operations.hpp" />
     <ClInclude Include="Vesper\Math\Ray.hpp" />
     <ClInclude Include="Vesper\Math\Transform.hpp" />
@@ -179,6 +186,7 @@
     <ClInclude Include="Vesper\RayTracerUpdate.hpp" />
     <ClInclude Include="Vesper\ReconstructionFilters\GaussianFilter.hpp" />
     <ClInclude Include="Vesper\ReconstructionFilters\ReconstructionFilter.hpp" />
+    <ClInclude Include="Vesper\Samplers\Fixed.hpp" />
     <ClInclude Include="Vesper\Samplers\Independent.hpp" />
     <ClInclude Include="Vesper\Samplers\Sampler.hpp" />
     <ClInclude Include="Vesper\Samplers\SamplerFactory.hpp" />
@@ -200,8 +208,13 @@
     <ClCompile Include="Vesper\BSDFs\Dielectric.cpp" />
     <ClCompile Include="Vesper\BSDFs\Lambertian.cpp" />
     <ClCompile Include="Vesper\BSDFs\Microfacet.cpp" />
+    <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\Beckmann.cpp" />
+    <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\GGX.cpp" />
+    <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\MicrofacetDistributionFactory.cpp" />
+    <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\Phong.cpp" />
     <ClCompile Include="Vesper\BSDFs\Mirror.cpp" />
     <ClCompile Include="Vesper\BSDFs\OrenNayar.cpp" />
+    <ClCompile Include="Vesper\BSDFs\RoughConductor.cpp" />
     <ClCompile Include="Vesper\BSDFs\RoughDielectric.cpp" />
     <ClCompile Include="Vesper\BSDFs\SmoothConductor.cpp" />
     <ClCompile Include="Vesper\Cameras\Camera.cpp" />
@@ -227,10 +240,12 @@
     <ClCompile Include="Vesper\Lights\LightFactory.cpp" />
     <ClCompile Include="Vesper\Lights\PointLight.cpp" />
     <ClCompile Include="Vesper\Math\Distribution1D.cpp" />
+    <ClCompile Include="Vesper\Math\Distribution2D.cpp" />
     <ClCompile Include="Vesper\Math\Warp.cpp" />
     <ClCompile Include="Vesper\RayTracer.cpp" />
     <ClCompile Include="Vesper\ReconstructionFilters\GaussianFilter.cpp" />
     <ClCompile Include="Vesper\ReconstructionFilters\ReconstructionFilter.cpp" />
+    <ClCompile Include="Vesper\Samplers\Fixed.cpp" />
     <ClCompile Include="Vesper\Samplers\Independent.cpp" />
     <ClCompile Include="Vesper\Samplers\Sampler.cpp" />
     <ClCompile Include="Vesper\Samplers\SamplerFactory.cpp" />

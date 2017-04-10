@@ -42,7 +42,7 @@ namespace vesper
         const Integrator* getIntegrator() const;
         const Camera* getCamera() const;
 
-        const Light* getRandomLight(float sample) const;
+        Light* getRandomLight(float sample) const;
         float getLightPdf() const;
         Spectrum sampleLight(const Intersection& its, Sampler& sampler, Light::Sample& lightSample) const;
 

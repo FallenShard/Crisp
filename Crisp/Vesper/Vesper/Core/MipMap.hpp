@@ -40,6 +40,9 @@ namespace vesper
 
         T fetch(int x, int y) const
         {
+            x = std::max(0, std::min(x, m_resolution.x - 1));
+            y = std::max(0, std::min(y, m_resolution.y - 1));
+
             return m_texels[y][x];
         }
 
@@ -53,21 +56,21 @@ namespace vesper
 
         T evalLerp(float u, float v) const
         {
-            auto rU = u * m_resolution.x;
-            auto rV = v * m_resolution.y;
+            auto fullU = u * m_resolution.x - 0.5f;
+            auto fullV = v * m_resolution.y - 0.5f;
 
-            auto fU = std::max(0, std::min(static_cast<int>(std::floorf(rU)), m_resolution.x - 1));
-            auto cU = std::max(0, std::min(static_cast<int>(std::ceilf(rU)), m_resolution.x - 1));
-            auto fV = std::max(0, std::min(static_cast<int>(std::floorf(rV)), m_resolution.y - 1));
-            auto cV = std::max(0, std::min(static_cast<int>(std::ceilf(rV)), m_resolution.y - 1));
+            auto u0 = std::max(0, std::min(static_cast<int>(std::floorf(fullU)), m_resolution.x - 1));
+            auto u1 = std::max(0, std::min(u0 + 1, m_resolution.x - 1));
+            auto v0 = std::max(0, std::min(static_cast<int>(std::floorf(fullV)), m_resolution.y - 1));
+            auto v1 = std::max(0, std::min(v0 + 1, m_resolution.y - 1));
 
-            auto tU = rU - fU;
-            auto tV = rV - fV;
+            auto du = fullU - u0;
+            auto dv = fullV - v0;
 
-            auto a0 = m_texels[fV][fU] * (1.0f - tU) + m_texels[fV][cU] * tU;
-            auto a1 = m_texels[cV][fU] * (1.0f - tU) + m_texels[cV][cU] * tU;
+            auto a0 = m_texels[v0][u0] * (1.0f - du) + m_texels[v0][u1] * du;
+            auto a1 = m_texels[v1][u0] * (1.0f - du) + m_texels[v1][u1] * du;
 
-            return a0 * (1 - tV) + a1 * tV;
+            return a0 * (1.0f - dv) + a1 * dv;
         }
 
     private:

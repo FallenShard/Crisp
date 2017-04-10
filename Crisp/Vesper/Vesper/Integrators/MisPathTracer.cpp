@@ -59,15 +59,15 @@ namespace vesper
                 Light::Sample lightSample(its.p);
                 auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
-                float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
-                if (!(cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)))
+                float cosFactor = std::abs(glm::dot(its.shFrame.n, lightSample.wi));
+                if (!(lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)))
                 {
                     BSDF::Sample bsdfSam(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
                     bsdfSam.measure = BSDF::Measure::SolidAngle;
                     auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSam);
 
                     float pdfEm = lightSample.pdf;
-                    float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSam);
+                    float pdfBsdf = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSam);
                     L += throughput * bsdfSpec * lightSpec * cosFactor * miWeight(pdfEm, pdfBsdf);
                 }
             }
@@ -79,9 +79,11 @@ namespace vesper
             Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
             const Light* hitLight = nullptr;
 
+            bool terminate = false;
             if (!scene->rayIntersect(bsdfRay, bsdfIts))
             {
                 hitLight = scene->getEnvironmentLight();
+                terminate = true;
             }
             else if (bsdfIts.shape->getLight())
             {
@@ -103,6 +105,11 @@ namespace vesper
             isSpecular = its.shape->getBSDF()->getLobeType() & Lobe::Delta;
             throughput *= bsdf;
             ray = bsdfRay;
+
+            if (terminate && !isSpecular)
+            {
+                break;
+            }
 
             bounces++;
             if (bounces > 5)

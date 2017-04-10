@@ -41,7 +41,7 @@ namespace vesper
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))
-            return Spectrum(0.0f);
+            return scene->evalEnvLight(ray);
 
         Spectrum L(0.0f);
 
@@ -64,8 +64,8 @@ namespace vesper
         Light::Sample lightSample(its.p);
         auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
-        float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
-        if (lightSample.pdf <= 0.0f || cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
+        float cosFactor = std::abs(glm::dot(its.shFrame.n, lightSample.wi));
+        if (lightSample.pdf <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
             return Li;
 
         BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
@@ -75,7 +75,7 @@ namespace vesper
         Li = bsdfSpec * lightSpec * cosFactor;
 
         float pdfLight = lightSample.pdf;
-        float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
+        float pdfBsdf = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSample);
         return Li * powerHeuristic(pdfLight, pdfBsdf);
     }
 
@@ -88,20 +88,28 @@ namespace vesper
         
         Intersection bsdfIts;
         Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
+        const Light* hitLight = nullptr;
+
         if (!scene->rayIntersect(bsdfRay, bsdfIts))
+        {
+            hitLight = scene->getEnvironmentLight();
+        }
+        else if (bsdfIts.shape->getLight())
+        {
+            hitLight = bsdfIts.shape->getLight();
+        }
+        else
+        {
             return Li;
+        }
 
-        if (!bsdfIts.shape->getLight())
-            return Li;
-
-        auto light = bsdfIts.shape->getLight();
         Light::Sample lightSam(its.p, bsdfIts.p, bsdfIts.shFrame.n);
         lightSam.wi = bsdfRay.d;
-        auto lightSpec = light->eval(lightSam);
+        auto lightSpec = hitLight->eval(lightSam);
         Li = bsdfSpec * lightSpec;
 
         float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
-        float pdfLight = light->pdf(lightSam) * scene->getLightPdf();
+        float pdfLight = hitLight->pdf(lightSam) * scene->getLightPdf();
         return Li * powerHeuristic(pdfBsdf, pdfLight);
     }
 }

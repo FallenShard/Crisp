@@ -1,6 +1,8 @@
 #define NOMINMAX
 #include "RgbSpectrum.hpp"
 
+#include <iostream>
+
 namespace vesper
 {
     RgbSpectrum::RgbSpectrum(float value)
@@ -205,6 +207,7 @@ namespace vesper
 
         return result;
     }
+
     const RgbSpectrum operator+(float scalar, const RgbSpectrum& rgbSpectrum)
     {
         return rgbSpectrum + scalar;
@@ -213,5 +216,11 @@ namespace vesper
     const RgbSpectrum operator*(float scalar, const RgbSpectrum& rgbSpectrum)
     {
         return rgbSpectrum * scalar;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const RgbSpectrum& spec)
+    {
+        stream << "[ " << spec.r << ", " << spec.g << ", " << spec.b << "]";
+        return stream;
     }
 }

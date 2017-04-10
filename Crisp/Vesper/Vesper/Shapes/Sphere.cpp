@@ -71,10 +71,11 @@ namespace vesper
                 return true;
         }
     }
+
     Sphere::Sphere(const VariantMap& params)
     {
         m_center = params.get<glm::vec3>("center", glm::vec3(0.0f));
-        m_radius = params.get<float>("radius", 0.2f);
+        m_radius = params.get<float>("radius", 1.0f);
 
         m_boundingBox.expandBy(m_center);
         m_boundingBox.expandBy(m_radius);

@@ -352,6 +352,7 @@ namespace vesper
         }
         
         scene->finishInitialization();
+
         return std::move(scene);
     }
 }
