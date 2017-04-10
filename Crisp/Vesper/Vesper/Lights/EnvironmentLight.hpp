@@ -22,13 +22,25 @@ namespace vesper
         virtual Spectrum samplePhoton(Ray3& ray, Sampler& sampler) const override;
 
         virtual void setBoundingSphere(const glm::vec4& sphereParams) override;
+        virtual bool isDelta() const override;
 
     private:
+        glm::vec2 sampleContinuous(const glm::vec2& point, float& pdf) const;
+        float distributionPdf(float u, float v) const;
+
         std::unique_ptr<MipMap<Spectrum>> m_probe;
         float m_scale;
 
-        std::vector<Distribution1D> m_phiPdfs;
-        Distribution1D m_thetaPdf;
+        std::vector<float> m_cdfCols;
+        std::vector<float> m_cdfRows;
+
+        //std::vector<Distribution1D> m_phiPdfs;
+        //Distribution1D m_thetaPdf;
+        std::vector<float> m_rowWeights;
+        float m_normalization;
+        glm::vec2 m_pixelSize;
+
+        Spectrum m_power;
 
         glm::vec3 m_sceneCenter;
         float m_sceneRadius;

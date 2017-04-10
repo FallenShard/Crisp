@@ -43,4 +43,9 @@ namespace vesper
     {
         return Spectrum();
     }
+
+    bool PointLight::isDelta() const
+    {
+        return true;
+    }
 }

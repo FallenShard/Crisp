@@ -15,6 +15,7 @@ namespace vesper
         virtual float pdf(const Light::Sample& emitterSample) const override;
 
         virtual Spectrum samplePhoton(Ray3& ray, Sampler& sampler) const override;
+        virtual bool isDelta() const override;
 
     private:
         glm::vec3 m_direction;

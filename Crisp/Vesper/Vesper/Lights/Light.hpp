@@ -25,6 +25,8 @@ namespace vesper
 
             Ray3 shadowRay; // Out(sample) - Accompanying shadow ray
 
+            Light* light;
+
             Sample() {}
 
             // To be used when sampling the emitter
@@ -45,6 +47,7 @@ namespace vesper
         virtual float pdf(const Light::Sample& sample) const = 0;
 
         virtual Spectrum samplePhoton(Ray3& ray, Sampler& sampler) const = 0;
+        virtual bool isDelta() const = 0;
 
     protected:
         Shape* m_shape;

@@ -40,4 +40,9 @@ namespace vesper
     {
         return Spectrum();
     }
+
+    bool DirectionalLight::isDelta() const
+    {
+        return true;
+    }
 }

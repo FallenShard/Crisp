@@ -72,4 +72,9 @@ namespace vesper
     {
         return Spectrum();
     }
+
+    bool AreaLight::isDelta() const
+    {
+        return false;
+    }
 }
