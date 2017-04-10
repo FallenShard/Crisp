@@ -47,7 +47,7 @@ namespace vesper
         // Normal to use for refraction direction formula
         glm::vec3 n(0.0f, 0.0f, 1.0f);
 
-        // If the angle was negative, we're coming from the inside, update relevant variables
+        // If the angle is negative, we're coming from the inside
         float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
         
         // Set outgoing direction

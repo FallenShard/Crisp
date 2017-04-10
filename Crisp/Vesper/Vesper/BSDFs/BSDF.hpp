@@ -16,7 +16,9 @@ namespace vesper
         Passthrough = 1 << 0,
         Diffuse     = 1 << 1,
         Glossy      = 1 << 2,
-        Delta       = 1 << 3
+        Delta       = 1 << 3,
+
+        Smooth = Lobe::Diffuse | Lobe::Glossy
     };
 
     template <> struct IsBitFlag<Lobe> { static constexpr bool value = true; };

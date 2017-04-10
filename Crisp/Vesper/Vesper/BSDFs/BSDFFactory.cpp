@@ -6,6 +6,8 @@
 #include "Mirror.hpp"
 #include "Microfacet.hpp"
 #include "RoughDielectric.hpp"
+#include "SmoothConductor.hpp"
+#include "RoughConductor.hpp"
 
 namespace vesper
 {
@@ -30,6 +32,14 @@ namespace vesper
         else if (type == "rough-dielectric")
         {
             return std::make_unique<RoughDielectricBSDF>(parameters);
+        }
+        else if (type == "smooth-conductor")
+        {
+            return std::make_unique<SmoothConductorBSDF>(parameters);
+        }
+        else if (type == "rough-conductor")
+        {
+            return std::make_unique<RoughConductorBSDF>(parameters);
         }
         else
         {
