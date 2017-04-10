@@ -3,13 +3,15 @@
 #include "BSDF.hpp"
 #include "Core/Fresnel.hpp"
 
+#include "MicrofacetDistributions/MicrofacetDistribution.hpp"
+
 namespace vesper
 {
-    class SmoothConductorBSDF : public BSDF
+    class RoughConductorBSDF : public BSDF
     {
     public:
-        SmoothConductorBSDF(const VariantMap& params = VariantMap());
-        ~SmoothConductorBSDF();
+        RoughConductorBSDF(const VariantMap& params = VariantMap());
+        ~RoughConductorBSDF();
 
         virtual Spectrum eval(const BSDF::Sample& bsdfSample) const override;
         virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const override;
@@ -17,5 +19,6 @@ namespace vesper
 
     private:
         ComplexIOR m_IOR;
+        std::unique_ptr<MicrofacetDistribution> m_distrib;
     };
 }
