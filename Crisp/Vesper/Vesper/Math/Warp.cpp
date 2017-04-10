@@ -70,25 +70,6 @@ namespace vesper
         return v.z * InvPI;
     }
 
-    glm::vec3 Warp::squareToBeckmann(const glm::vec2& sample, float alpha)
-    {
-        float denominator = 1.0f - alpha * alpha * log(1.0f - sample.y);
-        float cosTheta = sqrtf(fabs(1.0f / denominator));
-        float theta = acosf(cosTheta);
-        float phi = 2.0f * PI * sample.x;
-        float sinTheta = sinf(theta);
-
-        return glm::vec3(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
-    }
-
-    float Warp::squareToBeckmannPdf(const glm::vec3& m, float alpha)
-    {
-        float cosTheta2 = m.z * m.z;
-        float alpha2 = alpha * alpha;
-
-        return exp((cosTheta2 - 1.0f) / (cosTheta2 * alpha2)) / (PI * alpha2 * cosTheta2 * m.z);
-    }
-
     glm::vec3 Warp::squareToUniformTriangle(const glm::vec2& sample)
     {
         float val = sqrtf(sample.x);

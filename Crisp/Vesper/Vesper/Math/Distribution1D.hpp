@@ -26,6 +26,7 @@ namespace vesper
 
         float sampleContinuous(float sampleValue) const;
         float sampleContinuous(float sampleValue, float& pdf) const;
+        float sampleContinuous(float sampleValue, float& pdf, size_t& offset) const;
 
         size_t sample(float sampleValue) const;
         size_t sample(float sampleValue, float& pdf) const;

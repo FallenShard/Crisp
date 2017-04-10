@@ -25,9 +25,6 @@ namespace vesper
         static glm::vec3 squareToCosineHemisphere(const glm::vec2& sample);
         static float squareToCosineHemispherePdf(const glm::vec3& v);
 
-        static glm::vec3 squareToBeckmann(const glm::vec2& sample, float alpha);
-        static float squareToBeckmannPdf(const glm::vec3& v, float alpha);
-
         static glm::vec3 squareToUniformTriangle(const glm::vec2& sample);
 
         static glm::vec3 squareToUniformCylinder(const glm::vec2& sample, float cosThetaMin, float cosThetaMax);
