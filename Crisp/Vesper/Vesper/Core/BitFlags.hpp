@@ -11,7 +11,7 @@ namespace vesper
     };
 
     template <typename EnumBits, typename = std::enable_if_t<IsBitFlag<EnumBits>::value>, typename MaskType = std::underlying_type<EnumBits>::type>
-    MaskType operator|(EnumBits bit1, EnumBits bit2)
+    constexpr MaskType operator|(EnumBits bit1, EnumBits bit2)
     {
         return static_cast<MaskType>(bit1) | static_cast<MaskType>(bit2);
     }
