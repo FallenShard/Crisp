@@ -8,19 +8,19 @@
 
 namespace crisp
 {
-    VulkanSwapChain::VulkanSwapChain(const VulkanContext& context, const VulkanDevice& device)
+    VulkanSwapChain::VulkanSwapChain(VulkanDevice* device)
         : m_swapChain(VK_NULL_HANDLE)
-        , m_device(device.getHandle())
+        , m_device(device)
     {
-        createSwapChain(context);
-        createSwapImageViews(device);
+        createSwapChain();
+        createSwapImageViews();
     }
 
     VulkanSwapChain::~VulkanSwapChain()
     {
         for (auto imageView : m_imageViews)
-            vkDestroyImageView(m_device, imageView, nullptr);
-        vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
+            vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
+        vkDestroySwapchainKHR(m_device->getHandle(), m_swapChain, nullptr);
     }
 
     VkSwapchainKHR VulkanSwapChain::getHandle() const
@@ -43,17 +43,18 @@ namespace crisp
         return m_imageViews.at(index);
     }
 
-    void VulkanSwapChain::recreate(const VulkanContext& context, const VulkanDevice& device)
+    void VulkanSwapChain::recreate()
     {
         for (auto imageView : m_imageViews)
-            vkDestroyImageView(m_device, imageView, nullptr);
-        createSwapChain(context);
-        createSwapImageViews(device);
+            vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
+        createSwapChain();
+        createSwapImageViews();
     }
 
-    void VulkanSwapChain::createSwapChain(const VulkanContext& context)
+    void VulkanSwapChain::createSwapChain()
     {
-        SwapChainSupportDetails swapChainSupport = context.querySwapChainSupport();
+        auto context = m_device->getContext();
+        SwapChainSupportDetails swapChainSupport = context->querySwapChainSupport();
 
         VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes);
@@ -65,16 +66,16 @@ namespace crisp
             imageCount = swapChainSupport.capabilities.maxImageCount;
 
         VkSwapchainCreateInfoKHR createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = context.getSurface();
-        createInfo.minImageCount = imageCount;
-        createInfo.imageFormat = surfaceFormat.format;
-        createInfo.imageColorSpace = surfaceFormat.colorSpace;
-        createInfo.imageExtent = extent;
+        createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface          = context->getSurface();
+        createInfo.minImageCount    = imageCount;
+        createInfo.imageFormat      = surfaceFormat.format;
+        createInfo.imageColorSpace  = surfaceFormat.colorSpace;
+        createInfo.imageExtent      = extent;
         createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Render directly to swap chain image
+        createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Render directly to swap chain image
 
-        QueueFamilyIndices indices = context.findQueueFamilies();
+        QueueFamilyIndices indices = context->findQueueFamilies();
         std::array<uint32_t, 2> queueFamilyIndices =
         { 
             static_cast<uint32_t>(indices.graphicsFamily),
@@ -93,31 +94,32 @@ namespace crisp
             createInfo.pQueueFamilyIndices = nullptr;
         }
 
-        createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+        createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode = presentMode;
-        createInfo.clipped = VK_TRUE;
-        createInfo.oldSwapchain = m_swapChain;
+        createInfo.presentMode    = presentMode;
+        createInfo.clipped        = VK_TRUE;
+        createInfo.oldSwapchain   = m_swapChain;
 
-        vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain);
+        auto deviceHandle = m_device->getHandle();
+        vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_swapChain);
 
         if (createInfo.oldSwapchain != VK_NULL_HANDLE)
-            vkDestroySwapchainKHR(m_device, createInfo.oldSwapchain, nullptr);
+            vkDestroySwapchainKHR(deviceHandle, createInfo.oldSwapchain, nullptr);
 
-        vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(deviceHandle, m_swapChain, &imageCount, nullptr);
         m_images.resize(imageCount);
-        vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_images.data());
+        vkGetSwapchainImagesKHR(deviceHandle, m_swapChain, &imageCount, m_images.data());
 
         m_imageFormat = surfaceFormat.format;
-        m_extent = extent;
+        m_extent      = extent;
     }
 
-    void VulkanSwapChain::createSwapImageViews(const VulkanDevice& device)
+    void VulkanSwapChain::createSwapImageViews()
     {
-        m_imageViews.resize(m_images.size(), { VK_NULL_HANDLE });
+        m_imageViews.resize(m_images.size(), VK_NULL_HANDLE);
 
         for (uint32_t i = 0; i < m_images.size(); i++)
-            m_imageViews[i] = device.createImageView(m_images[i], VK_IMAGE_VIEW_TYPE_2D, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
+            m_imageViews[i] = m_device->createImageView(m_images[i], VK_IMAGE_VIEW_TYPE_2D, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
     }
 
     VkSurfaceFormatKHR VulkanSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const

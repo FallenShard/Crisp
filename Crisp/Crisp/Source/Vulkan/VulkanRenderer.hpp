@@ -15,7 +15,6 @@
 
 namespace crisp
 {
-    struct DrawItem;
     class FullScreenQuadPipeline;
 
     class VulkanRenderer
@@ -32,10 +31,10 @@ namespace crisp
         VulkanRenderer& operator=(const VulkanRenderer& other) = delete;
         VulkanRenderer& operator=(VulkanRenderer&& other) = delete;
 
-        VulkanContext& getContext();
-        VulkanDevice& getDevice();
-        VulkanSwapChain& getSwapChain();
-        VulkanRenderPass& getDefaultRenderPass() const;
+        VulkanContext* getContext() const;
+        VulkanDevice* getDevice() const;
+        VulkanSwapChain* getSwapChain() const;
+        VulkanRenderPass* getDefaultRenderPass() const;
         VkShaderModule getShaderModule(std::string&& key) const;
         VkExtent2D getSwapChainExtent() const;
 

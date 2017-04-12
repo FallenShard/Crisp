@@ -4,7 +4,7 @@
 namespace crisp
 {
     VulkanPipeline::VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass)
-        : m_device(renderer->getDevice().getHandle())
+        : m_device(renderer->getDevice()->getHandle())
         , m_renderer(renderer)
         , m_renderPass(renderPass)
         , m_pipelineLayout(VK_NULL_HANDLE)
@@ -47,7 +47,7 @@ namespace crisp
         descSetInfo.pSetLayouts        = &m_descriptorSetLayouts.at(setId);
 
         VkDescriptorSet descSet;
-        vkAllocateDescriptorSets(m_renderer->getDevice().getHandle(), &descSetInfo, &descSet);
+        vkAllocateDescriptorSets(m_renderer->getDevice()->getHandle(), &descSetInfo, &descSet);
         return descSet;
     }
 
@@ -61,7 +61,7 @@ namespace crisp
         descSetInfo.pSetLayouts        = layouts.data();
 
         std::vector<VkDescriptorSet> descSets(count, nullptr);
-        vkAllocateDescriptorSets(m_renderer->getDevice().getHandle(), &descSetInfo, descSets.data());
+        vkAllocateDescriptorSets(m_renderer->getDevice()->getHandle(), &descSetInfo, descSets.data());
         return descSets;
     }
 

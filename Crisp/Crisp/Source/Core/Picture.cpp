@@ -11,19 +11,20 @@
 #include "Vulkan/VulkanSwapChain.hpp"
 #include "Vulkan/Pipelines/FullScreenQuadPipeline.hpp"
 
+#include "vulkan/FormatTraits.hpp"
+
 namespace crisp
 {
-    Picture::Picture(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer& renderer)
-        : m_renderer(&renderer)
-        , m_device(&renderer.getDevice())
+    Picture::Picture(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer* renderer)
+        : m_renderer(renderer)
+        , m_device(renderer->getDevice())
         , m_extent({ width, height })
-        , m_numChannels(4)
-        
+        , m_numChannels(getNumChannels(format))
     {
         m_viewport.minDepth = 0.0f;
         m_viewport.maxDepth = 1.0f;
         recalculateViewport(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height);
-        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass(), true);
+        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
 
         // create texture image
         auto byteSize = m_extent.width * m_extent.height * m_numChannels * sizeof(float);
@@ -56,7 +57,7 @@ namespace crisp
         imageInfo.sampler     = m_sampler;
         m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, imageInfo);
         m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, imageInfo);
-        m_descSets.flushUpdates(&m_renderer->getDevice());
+        m_descSets.flushUpdates(m_renderer->getDevice());
     }
 
     Picture::~Picture()
@@ -80,7 +81,7 @@ namespace crisp
             uint32_t dstOffset = (m_extent.width * (update.y + localflipY) + update.x) * m_numChannels * sizeof(float);
             uint32_t srcIndex = i * update.width * m_numChannels;
 
-            m_renderer->getDevice().updateStagingBuffer(m_stagingTexBuffer, &update.data[srcIndex], dstOffset, rowSize);
+            m_renderer->getDevice()->updateStagingBuffer(m_stagingTexBuffer, &update.data[srcIndex], dstOffset, rowSize);
         }
     }
 

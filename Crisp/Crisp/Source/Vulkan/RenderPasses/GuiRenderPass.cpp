@@ -133,21 +133,21 @@ namespace crisp
 
     void GuiRenderPass::createResources()
     {
-        m_renderTarget = m_renderer->getDevice().createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
+        m_renderTarget = m_device->createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
             VulkanRenderer::NumVirtualFrames, m_colorFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
-        m_renderer->getDevice().transitionImageLayout(m_renderTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VulkanRenderer::NumVirtualFrames);
+        m_device->transitionImageLayout(m_renderTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VulkanRenderer::NumVirtualFrames);
 
-        m_depthTarget = m_renderer->getDevice().createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
+        m_depthTarget = m_device->createDeviceImageArray(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height,
             VulkanRenderer::NumVirtualFrames, m_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_LAYOUT_UNDEFINED);
-        m_renderer->getDevice().transitionImageLayout(m_depthTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VulkanRenderer::NumVirtualFrames);
+        m_device->transitionImageLayout(m_depthTarget, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VulkanRenderer::NumVirtualFrames);
 
         m_renderTargetViews.resize(VulkanRenderer::NumVirtualFrames);
         m_depthTargetViews.resize(VulkanRenderer::NumVirtualFrames);
         m_framebuffers.resize(VulkanRenderer::NumVirtualFrames);
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {
-            m_renderTargetViews[i] = m_renderer->getDevice().createImageView(m_renderTarget, VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
-            m_depthTargetViews[i] = m_renderer->getDevice().createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
+            m_renderTargetViews[i] = m_device->createImageView(m_renderTarget, VK_IMAGE_VIEW_TYPE_2D, m_colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, i, 1);
+            m_depthTargetViews[i]  = m_device->createImageView(m_depthTarget, VK_IMAGE_VIEW_TYPE_2D, m_depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, i, 1);
             std::vector<VkImageView> attachmentViews =
             {
                 m_renderTargetViews[i],
@@ -162,7 +162,7 @@ namespace crisp
             framebufferInfo.width           = m_renderer->getSwapChainExtent().width;
             framebufferInfo.height          = m_renderer->getSwapChainExtent().height;
             framebufferInfo.layers          = 1;
-            vkCreateFramebuffer(m_renderer->getDevice().getHandle(), &framebufferInfo, nullptr, &m_framebuffers[i]);
+            vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_framebuffers[i]);
         }
     }
 
@@ -178,8 +178,8 @@ namespace crisp
             m_depthTargetViews[i]  = VK_NULL_HANDLE;
         }
 
-        m_renderer->getDevice().destroyDeviceImage(m_renderTarget);
-        m_renderer->getDevice().destroyDeviceImage(m_depthTarget);
+        m_device->destroyDeviceImage(m_renderTarget);
+        m_device->destroyDeviceImage(m_depthTarget);
 
         m_renderTarget = VK_NULL_HANDLE;
         m_depthTarget  = VK_NULL_HANDLE;

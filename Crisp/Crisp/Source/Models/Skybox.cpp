@@ -14,7 +14,7 @@ namespace crisp
 {
     Skybox::Skybox(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
         : m_renderer(renderer)
-        , m_device(&renderer->getDevice())
+        , m_device(renderer->getDevice())
     {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;

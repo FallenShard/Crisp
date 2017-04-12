@@ -13,10 +13,10 @@
 
 namespace crisp
 {
-    StaticPicture::StaticPicture(std::string fileName, VkFormat format, VulkanRenderer& renderer)
+    StaticPicture::StaticPicture(std::string fileName, VkFormat format, VulkanRenderer* renderer)
     {
-        m_renderer = &renderer;
-        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
+        m_renderer = renderer;
+        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
 
         std::shared_ptr<Image> image = std::make_shared<Image>(fileName);
 
@@ -31,10 +31,10 @@ namespace crisp
         m_viewport.maxDepth = 1;
         resize(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height);
 
-        m_tex = renderer.getDevice().createDeviceImage(m_extent.width, m_extent.height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        renderer.addCopyAction([this, byteSize, image, format](VkCommandBuffer& cmdBuffer)
+        m_tex = m_renderer->getDevice()->createDeviceImage(m_extent.width, m_extent.height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        m_renderer->addCopyAction([this, byteSize, image, format](VkCommandBuffer& cmdBuffer)
         {
-            auto device = &m_renderer->getDevice();
+            auto device = m_renderer->getDevice();
             auto stagingBufferInfo = device->createBuffer(device->getStagingBufferHeap(), byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             memcpy(static_cast<char*>(device->getStagingMemoryPtr()) + stagingBufferInfo.second.offset, image->getData(), static_cast<size_t>(byteSize));
@@ -109,8 +109,8 @@ namespace crisp
 
     StaticPicture::~StaticPicture()
     {
-        vkDestroySampler(m_renderer->getDevice().getHandle(), m_vkSampler, nullptr);
-        vkDestroyImageView(m_renderer->getDevice().getHandle(), m_texView, nullptr);
+        vkDestroySampler(m_renderer->getDevice()->getHandle(), m_vkSampler, nullptr);
+        vkDestroyImageView(m_renderer->getDevice()->getHandle(), m_texView, nullptr);
     }
 
     void StaticPicture::resize(int width, int height)

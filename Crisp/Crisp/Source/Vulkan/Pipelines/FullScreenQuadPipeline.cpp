@@ -8,19 +8,18 @@ namespace crisp
         : VulkanPipeline(renderer, 1, renderPass)
     {
         // Descriptor pool
-        std::array<VkDescriptorPoolSize, 2> poolSizes = {};
-        poolSizes[0].type            = VK_DESCRIPTOR_TYPE_SAMPLER;
-        poolSizes[0].descriptorCount = 1;
-
-        poolSizes[1].type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        poolSizes[1].descriptorCount = 1;
+        std::vector<VkDescriptorPoolSize> poolSizes =
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLER,       1 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 }
+        };
 
         VkDescriptorPoolCreateInfo poolInfo = {};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
         poolInfo.maxSets       = 2;
-        vkCreateDescriptorPool(m_renderer->getDevice().getHandle(), &poolInfo, nullptr, &m_descriptorPool);
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         // Descriptor Set Layout
         VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
@@ -46,7 +45,7 @@ namespace crisp
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
         layoutInfo.pBindings    = bindings.data();
-        vkCreateDescriptorSetLayout(m_renderer->getDevice().getHandle(), &layoutInfo, nullptr, &m_descriptorSetLayouts[DisplayedImage]);
+        vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayouts[DisplayedImage]);
 
         VkPushConstantRange pushConstantRange = {};
         pushConstantRange.offset     = 0;
@@ -59,7 +58,7 @@ namespace crisp
         pipelineLayoutInfo.pSetLayouts            = m_descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges    = &pushConstantRange;
-        vkCreatePipelineLayout(m_renderer->getDevice().getHandle(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
+        vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout);
 
         if (useGammaCorrection)
         {
@@ -180,6 +179,6 @@ namespace crisp
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-        vkCreateGraphicsPipelines(m_renderer->getDevice().getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
+        vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
     }
 }

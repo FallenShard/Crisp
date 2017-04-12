@@ -23,7 +23,7 @@ namespace crisp
     class StaticPicture
     {
     public:
-        StaticPicture(std::string fileName, VkFormat format, VulkanRenderer& renderer);
+        StaticPicture(std::string fileName, VkFormat format, VulkanRenderer* renderer);
         ~StaticPicture();
 
         void resize(int width, int height);

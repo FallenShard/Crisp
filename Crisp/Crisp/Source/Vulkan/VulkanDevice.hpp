@@ -31,6 +31,7 @@ namespace crisp
         VkQueue getGraphicsQueue() const;
         VkQueue getPresentQueue() const;
         VkCommandPool getCommandPool() const;
+        VulkanContext* getContext() const;
 
         MemoryChunk getStagingBufferChunk(VkBuffer buffer);
         void fillDeviceBuffer(VkBuffer dstBuffer, const void* srcData, VkDeviceSize size);

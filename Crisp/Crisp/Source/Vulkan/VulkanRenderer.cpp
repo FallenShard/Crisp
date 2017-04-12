@@ -12,6 +12,11 @@
 
 namespace crisp
 {
+    namespace
+    {
+        static constexpr auto shadersDir = "Resources/Shaders/";
+    }
+
     VulkanRenderer::VulkanRenderer(SurfaceCreator surfCreatorCallback, std::vector<const char*>&& extensions)
         : m_depthImageArray(VK_NULL_HANDLE)
         , m_depthImageViews(NumVirtualFrames, VK_NULL_HANDLE)
@@ -19,9 +24,9 @@ namespace crisp
         , m_currentFrameIndex(0)
     {
         // Create fundamental objects for the API
-        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<const char*>>(extensions));
+        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<const char*>&&>(extensions));
         m_device            = std::make_unique<VulkanDevice>(m_context.get());
-        m_swapChain         = std::make_unique<VulkanSwapChain>(*m_context, *m_device);
+        m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get());
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
         // Depth images and views creation
@@ -52,8 +57,7 @@ namespace crisp
         }
 
         // Creates a map of all shaders
-        std::string searchDir = "Resources/Shaders/";
-        loadShaders(searchDir);
+        loadShaders(shadersDir);
 
         // create vertex buffer
         std::vector<glm::vec2> vertices =
@@ -105,19 +109,19 @@ namespace crisp
         }
     }
 
-    VulkanContext& VulkanRenderer::getContext()
+    VulkanContext* VulkanRenderer::getContext() const
     {
-        return *m_context;
+        return m_context.get();
     }
 
-    VulkanDevice& VulkanRenderer::getDevice()
+    VulkanDevice* VulkanRenderer::getDevice() const
     {
-        return *m_device;
+        return m_device.get();
     }
 
-    VulkanSwapChain& VulkanRenderer::getSwapChain()
+    VulkanSwapChain* VulkanRenderer::getSwapChain() const
     {
-        return *m_swapChain;
+        return m_swapChain.get();
     }
 
     void VulkanRenderer::loadShaders(std::string dirPath)
@@ -323,7 +327,7 @@ namespace crisp
     {
         vkDeviceWaitIdle(m_device->getHandle());
 
-        m_swapChain->recreate(*m_context, *m_device);
+        m_swapChain->recreate();
         m_defaultRenderPass->recreate();
 
         VkFormat depthFormat = m_context->findSupportedDepthFormat();
@@ -423,9 +427,9 @@ namespace crisp
         m_renderPasses.erase(key);
     }
 
-    VulkanRenderPass& VulkanRenderer::getDefaultRenderPass() const
+    VulkanRenderPass* VulkanRenderer::getDefaultRenderPass() const
     {
-        return *m_defaultRenderPass;
+        return m_defaultRenderPass.get();
     }
 
     VkShaderModule VulkanRenderer::getShaderModule(std::string&& key) const

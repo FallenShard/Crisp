@@ -118,6 +118,11 @@ namespace crisp
         return m_commandPool;
     }
 
+    VulkanContext* VulkanDevice::getContext() const
+    {
+        return m_context;
+    }
+
     MemoryChunk VulkanDevice::getStagingBufferChunk(VkBuffer buffer)
     {
         return m_stagingBuffers.at(buffer);

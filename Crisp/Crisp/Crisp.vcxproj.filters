@@ -350,6 +350,9 @@
     <ClInclude Include="Source\Vulkan\Pipelines\SkyboxPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Vulkan\FormatTraits.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Core\StringUtils.hpp" />

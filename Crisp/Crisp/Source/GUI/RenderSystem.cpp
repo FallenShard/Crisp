@@ -28,7 +28,7 @@ namespace crisp
     {
         RenderSystem::RenderSystem(VulkanRenderer* renderer)
             : m_renderer(renderer)
-            , m_device(&renderer->getDevice())
+            , m_device(renderer->getDevice())
         {
             auto width  = static_cast<float>(m_renderer->getSwapChainExtent().width);
             auto height = static_cast<float>(m_renderer->getSwapChainExtent().height);
@@ -515,7 +515,7 @@ namespace crisp
             m_textPipeline      = std::make_unique<GuiTextPipeline>(m_renderer, m_guiPass.get());
             m_texQuadPipeline   = std::make_unique<GuiTexQuadPipeline>(m_renderer, m_guiPass.get());
 
-            m_fsQuadPipeline    = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
+            m_fsQuadPipeline    = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
         }
 
         void RenderSystem::initGeometryBuffers()

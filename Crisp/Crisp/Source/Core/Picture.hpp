@@ -24,7 +24,7 @@ namespace crisp
     class Picture
     {
     public:
-        Picture(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer& renderer);
+        Picture(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer* renderer);
         ~Picture();
 
         void postTextureUpdate(vesper::RayTracerUpdate rayTracerUpdate);

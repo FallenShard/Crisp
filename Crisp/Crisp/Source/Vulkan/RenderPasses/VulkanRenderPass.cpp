@@ -7,7 +7,7 @@ namespace crisp
 {
     VulkanRenderPass::VulkanRenderPass(VulkanRenderer* renderer)
         : m_renderer(renderer)
-        , m_device(&renderer->getDevice())
+        , m_device(renderer->getDevice())
         , m_renderPass(VK_NULL_HANDLE)
     {
     }

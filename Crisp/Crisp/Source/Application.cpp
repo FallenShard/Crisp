@@ -35,7 +35,7 @@ namespace crisp
         m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
         m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
 
-        m_backgroundPicture = std::make_unique<StaticPicture>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, *m_renderer);
+        m_backgroundPicture = std::make_unique<StaticPicture>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, m_renderer.get());
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
@@ -89,8 +89,7 @@ namespace crisp
         });
 
         //vesperButton->click();
-        vesperButton->click();
-        openSceneFile("env-light-test-mis.xml");
+        //openSceneFile("env-light-test-mis.xml");
     }
 
     Application::~Application()
@@ -182,7 +181,7 @@ namespace crisp
         m_rayTracer->initializeScene("Resources/VesperScenes/" + filename);
 
         auto imageSize = m_rayTracer->getImageSize();
-        m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, *m_renderer);
+        m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer.get());
         m_rayTracedImageData.resize(m_numRayTracedChannels * imageSize.x * imageSize.y);
     }
 

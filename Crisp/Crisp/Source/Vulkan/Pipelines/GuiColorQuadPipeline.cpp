@@ -62,7 +62,7 @@ namespace crisp
         poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
         poolInfo.pPoolSizes    = poolSizes.data();
         poolInfo.maxSets       = 3;
-        vkCreateDescriptorPool(m_renderer->getDevice().getHandle(), &poolInfo, nullptr, &m_descriptorPool);
+        vkCreateDescriptorPool(m_renderer->getDevice()->getHandle(), &poolInfo, nullptr, &m_descriptorPool);
 
         m_vertShader = renderer->getShaderModule("gui-quad-unif-col-vert");
         m_fragShader = renderer->getShaderModule("gui-quad-unif-col-frag");
@@ -160,6 +160,6 @@ namespace crisp
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-        vkCreateGraphicsPipelines(m_renderer->getDevice().getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
+        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
     }
 }

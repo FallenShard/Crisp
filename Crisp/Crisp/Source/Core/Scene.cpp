@@ -59,7 +59,7 @@ namespace crisp
     Scene::Scene(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app)
         : m_renderer(renderer)
         , m_app(app)
-        , m_device(&m_renderer->getDevice())
+        , m_device(m_renderer->getDevice())
     {
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         m_renderer->registerRenderPass(SceneRenderPassId, m_scenePass.get());
@@ -87,7 +87,7 @@ namespace crisp
         m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get());
 
         m_indexBuffer = std::make_unique<IndexBuffer>(m_device, faces);
-        numFaces = faces.size();
+        numFaces = static_cast<unsigned int>(faces.size());
         m_buffer      = std::make_unique<VertexBuffer>(m_device, vertices);
         m_vertexBufferGroup =
         {
@@ -271,7 +271,7 @@ namespace crisp
 
     void Scene::initRenderTargetResources()
     {
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, &m_renderer->getDefaultRenderPass());
+        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
         // Create descriptor set for the image
         m_sceneDescSetGroup =
         {

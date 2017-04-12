@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9D88A03A-1EFC-45FD-BDD1-7073DA4DD133}</ProjectGuid>
     <RootNamespace>Crisp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -235,6 +235,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     <ClInclude Include="Source\Models\Skybox.hpp" />
     <ClInclude Include="Source\Vulkan\BufferUpdatePolicy.hpp" />
     <ClInclude Include="Source\Vulkan\DescriptorSetGroup.hpp" />
+    <ClInclude Include="Source\Vulkan\FormatTraits.hpp" />
     <ClInclude Include="Source\Vulkan\IndexBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\MemoryHeap.hpp" />
     <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp" />

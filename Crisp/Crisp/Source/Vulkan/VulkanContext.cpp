@@ -98,6 +98,7 @@ namespace crisp
         }
 
         VkPhysicalDeviceFeatures deviceFeatures = {};
+        vkGetPhysicalDeviceFeatures(m_physicalDevice, &deviceFeatures);
 
         VkDeviceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -398,6 +399,12 @@ namespace crisp
         {
             if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 indices.graphicsFamily = i;
+
+            if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+                indices.computeFamily = i;
+
+            if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+                indices.transferFamily = i;
 
             VkBool32 presentSupport = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
