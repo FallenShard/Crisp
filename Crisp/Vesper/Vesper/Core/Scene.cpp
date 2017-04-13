@@ -130,15 +130,13 @@ namespace vesper
 
         Spectrum lightContrib = light->sample(lightSample, sampler);
 
-        if (lightSample.pdf != 0)
-        {
-            lightContrib *= 1.0f / getLightPdf();
-            lightSample.pdf *= getLightPdf();
-            lightSample.light = light;
-            return lightContrib;
-        }
+        if (lightSample.pdf == 0.0f)
+            return Spectrum(0.0f);
 
-        return Spectrum(0.0f);
+        lightContrib /= getLightPdf();
+        lightSample.pdf *= getLightPdf();
+        lightSample.light = light;
+        return lightContrib;
     }
 
     Spectrum Scene::evalEnvLight(const Ray3& ray) const

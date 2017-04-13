@@ -57,30 +57,6 @@ namespace vesper
         std::string distribType = params.get<std::string>("distribution", "beckmann");
 
         m_distrib = MicrofacetDistributionFactory::create(distribType, params);
-
-        auto sam = SamplerFactory::create("fixed", VariantMap());
-
-        BSDF::Sample s;
-        s.p = glm::vec3(0, 0, 0);
-        s.wi = glm::normalize(glm::vec3(0.5f, 0.5f, 0.5f));
-        auto sampledVal = sample(s, *sam);
-
-        auto cosThetaO = CoordinateFrame::cosTheta(s.wo);
-
-
-        auto ev = eval(s);
-        auto pdf = this->pdf(s);
-
-        BSDF::Sample s2;
-        s2.p = glm::vec3(0, 0, 0);
-        s2.wi = glm::normalize(-glm::vec3(0.5f, 0.5f, 0.5f));
-        sampledVal = sample(s2, *sam);
-
-        cosThetaO = CoordinateFrame::cosTheta(s2.wo);
-
-
-        ev = eval(s2);
-        pdf = this->pdf(s2);
     }
 
     RoughDielectricBSDF::~RoughDielectricBSDF()
@@ -121,12 +97,12 @@ namespace vesper
 
         if (isReflection)
         {
-            return F * D * G * jacobianReflect(cosThetaI) / std::abs(cosThetaO);
+            return F * D * G * jacobianReflect(cosThetaI);
         }
         else
         {
             float val = (1.0f - F) * D * G * jacobianRefract(eta, cosThetaIm, cosThetaOm);
-            return val * std::abs(cosThetaIm / (cosThetaI * cosThetaO)) * eta * eta;
+            return val * std::abs(cosThetaIm / cosThetaI) * eta * eta;
         }
     }
 

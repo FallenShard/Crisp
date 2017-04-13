@@ -42,8 +42,7 @@ namespace vesper
         auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
         // Check if light sample gives any contribution
-        float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
-        if (cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
+        if (lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
             return L;
 
         // Evaluate the BSDF at the intersection
@@ -52,7 +51,7 @@ namespace vesper
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
 
-        L += lightSpec * bsdfSpec * cosFactor;
+        L += lightSpec * bsdfSpec;
 
         return L;
     }

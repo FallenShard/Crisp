@@ -59,7 +59,6 @@ namespace vesper
                 Light::Sample lightSample(its.p);
                 auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
-                float cosFactor = std::abs(glm::dot(its.shFrame.n, lightSample.wi));
                 if (!(lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)))
                 {
                     BSDF::Sample bsdfSam(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
@@ -68,7 +67,7 @@ namespace vesper
 
                     float pdfEm = lightSample.pdf;
                     float pdfBsdf = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSam);
-                    L += throughput * bsdfSpec * lightSpec * cosFactor * miWeight(pdfEm, pdfBsdf);
+                    L += throughput * bsdfSpec * lightSpec * miWeight(pdfEm, pdfBsdf);
                 }
             }
 

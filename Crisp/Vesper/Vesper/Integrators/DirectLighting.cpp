@@ -33,15 +33,14 @@ namespace vesper
         Light::Sample lightSample(its.p);
         auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
-        float cosFactor = glm::dot(its.shFrame.n, lightSample.wi);
-        if (cosFactor <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
+        if (lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
             return Spectrum(0.0f);
 
         BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
 
-        L += lightSpec * bsdfSpec * cosFactor;
+        L += lightSpec * bsdfSpec;
 
         return L;
     }

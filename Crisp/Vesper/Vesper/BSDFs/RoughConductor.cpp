@@ -37,7 +37,7 @@ namespace vesper
         float D = m_distrib->D(m);
         float G = m_distrib->G(bsdfSample.wi, bsdfSample.wo, m);
 
-        return F * D * G / (4.0f * cosThetaI * cosThetaO);
+        return F * D * G / (4.0f * cosThetaI);
     }
 
     Spectrum RoughConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const

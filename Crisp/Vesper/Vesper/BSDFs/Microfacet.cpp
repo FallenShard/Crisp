@@ -43,9 +43,9 @@ namespace vesper
         float G = m_distrib->G(bsdfSample.wi, bsdfSample.wo, m);
 
         Spectrum specular = m_ks * F * D * G;
-        float specDenom = 4.0f * cosThetaI * cosThetaO;
+        float specDenom = 4.0f * cosThetaI;
 
-        return diffuse + specular / specDenom;
+        return diffuse * cosThetaO + specular / specDenom;
     }
 
     Spectrum MicrofacetBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const

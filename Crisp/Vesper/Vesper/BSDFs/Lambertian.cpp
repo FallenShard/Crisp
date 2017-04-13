@@ -46,7 +46,7 @@ namespace vesper
             CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f)
             return 0.0f;
 
-        return m_albedo->eval(bsdfSample.uv) * InvPI;
+        return m_albedo->eval(bsdfSample.uv) * InvPI * CoordinateFrame::cosTheta(bsdfSample.wo);
     }
 
     Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
