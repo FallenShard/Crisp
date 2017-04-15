@@ -91,7 +91,7 @@ namespace vesper
             case IndexOfRefraction::Air:      return 1.00029f;
             case IndexOfRefraction::Ice:      return 1.31f;
             case IndexOfRefraction::Water:    return 1.33f;
-            case IndexOfRefraction::Glass:    return 1.52f;
+            case IndexOfRefraction::Glass:    return 1.5046f;
             case IndexOfRefraction::Sapphire: return 1.77f;
             case IndexOfRefraction::Diamond:  return 2.417f;
             default:                          return 1.0f;
