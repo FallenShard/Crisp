@@ -98,6 +98,12 @@ namespace vesper
         }
 
         template<>
+        std::string parse<std::string>(const std::string& string)
+        {
+            return string;
+        }
+
+        template<>
         glm::vec2 parse<glm::vec2>(const std::string& string)
         {
             glm::vec2 result(0.0f);
@@ -147,7 +153,14 @@ namespace vesper
             return result;
         }
 
-        Transform parseTransform(xml_node<char>* node)
+        template <typename T>
+        inline VariantMap::VariantType parse(xml_node<char>* node)
+        {
+            return VariantMap::VariantType(parse<T>(std::string(node->first_attribute("value")->value())));
+        }
+
+        template <>
+        inline VariantMap::VariantType parse<Transform>(xml_node<char>* node)
         {
             Transform transform;
             for (auto child = node->first_node(); child != nullptr; child = child->next_sibling())
@@ -170,11 +183,24 @@ namespace vesper
                     transform = Transform::createRotation(angle, axis) * transform;
                 }
             }
-            return transform;
+            return VariantMap::VariantType(transform);
         }
 
         void parseParameters(VariantMap& params, xml_node<char>* node)
         {
+            static std::map<std::string, std::function<VariantMap::VariantType(xml_node<char>*)>> keyValueParser =
+            {
+                { "bool",      [](xml_node<char>* node) { return parse<bool>(node);        } },
+                { "int",       [](xml_node<char>* node) { return parse<int>(node);         } },
+                { "float",     [](xml_node<char>* node) { return parse<float>(node);       } },
+                { "string",    [](xml_node<char>* node) { return parse<std::string>(node); } },
+                { "vec3",      [](xml_node<char>* node) { return parse<glm::vec3>(node);   } },
+                { "vec2",      [](xml_node<char>* node) { return parse<glm::vec2>(node);   } },
+                { "ivec2",     [](xml_node<char>* node) { return parse<glm::ivec2>(node);  } },
+                { "spectrum",  [](xml_node<char>* node) { return parse<Spectrum>(node);    } },
+                { "transform", [](xml_node<char>* node) { return parse<Transform>(node);   } }
+            };
+
             if (node == nullptr)
                 return;
 
@@ -182,6 +208,14 @@ namespace vesper
             {
                 std::string paramType = child->name();
 
+                // Check if the node is a key value type
+                auto itemIter = keyValueParser.find(paramType);
+                if (itemIter == keyValueParser.end())
+                {
+                    continue;
+                }
+
+                // Extract the name
                 auto nameAttrib = child->first_attribute("name");
                 if (nameAttrib == nullptr)
                 {
@@ -190,54 +224,15 @@ namespace vesper
                 }
                 std::string paramName = nameAttrib->value();
 
+                // Check if value is present (unless "transform" type)
                 auto valueAttrib = child->first_attribute("value");
                 if (paramType != "transform" && valueAttrib == nullptr)
                 {
                     std::cerr << "Parameter " + paramName + " specified without a value!" << std::endl;
                     continue;
                 }
-                std::string paramValue = valueAttrib ? valueAttrib->value() : "";
 
-                if (paramType == "bool")
-                {
-                    params.insert(paramName, parse<bool>(paramValue));
-                }
-                else if (paramType == "int")
-                {
-                    params.insert(paramName, parse<int>(paramValue));
-                }
-                else if (paramType == "float")
-                {
-                    params.insert(paramName, parse<float>(paramValue));
-                }
-                else if (paramType == "string")
-                {
-                    params.insert(paramName, paramValue);
-                }
-                else if (paramType == "vec2")
-                {
-                    params.insert(paramName, parse<glm::vec2>(paramValue));
-                }
-                else if (paramType == "vec3")
-                {
-                    params.insert(paramName, parse<glm::vec3>(paramValue));
-                }
-                else if (paramType == "ivec2")
-                {
-                    params.insert(paramName, parse<glm::ivec2>(paramValue));
-                }
-                else if (paramType == "spectrum")
-                {
-                    params.insert(paramName, parse<Spectrum>(paramValue));
-                }
-                else if (paramType == "transform")
-                {
-                    params.insert(paramName, parseTransform(child));
-                }
-                else
-                {
-                    std::cerr << paramName << " has specified unrecognized type!" << std::endl;
-                }
+                params.insert(paramName, itemIter->second(child));
             }
         }
 
@@ -248,35 +243,31 @@ namespace vesper
             VariantMap params;
             if (node != nullptr)
             {
-                parseParameters(params, node->first_node("parameters"));
+                parseParameters(params, node);
 
                 auto typeAttrib = node->first_attribute("type");
                 if (typeAttrib != nullptr)
-                {
                     type = typeAttrib->value();
-                }
             }
             return FactoryType::create(type, params);
         }
 
         template <typename DataType>
-        std::unique_ptr<Texture<DataType>> createTexture(xml_node<char>* node)
+        std::unique_ptr<Texture<DataType>> create(xml_node<char>* node)
         {
             std::string type = "default";
             std::string dataType = "float";
             VariantMap params;
             if (node != nullptr)
             {
-                parseParameters(params, node->first_node("parameters"));
+                parseParameters(params, node);
 
                 auto typeAttrib = node->first_attribute("type");
                 if (typeAttrib != nullptr)
                     type = typeAttrib->value();
-
-                
             }
 
-            return TextureFactory::create<(type, params);
+            return TextureFactory::create<DataType>(type, params);
         }
     }
 
@@ -312,20 +303,21 @@ namespace vesper
 
 
                 std::unique_ptr<BSDF> bsdf = create<BSDF, BSDFFactory>(shapeNode->first_node("bsdf"));
-                if (shapeNode->first_node("bsdf")->first_node("texture") != nullptr)
+
+                auto texNode = shapeNode->first_node("bsdf")->first_node("texture");
+                if (texNode != nullptr)
                 {
-                    std::string dataType = "float";
-                    auto dataAttrib = shapeNode->first_node("bsdf")->first_node("texture")->first_attribute("data");
-                    if (dataAttrib != nullptr)
-                        dataType = dataAttrib->value();
+                    std::string dataType = "spectrum";
+                    if (texNode->first_attribute("data") != nullptr)
+                        dataType = texNode->first_attribute("data")->value();
 
                     if (dataType == "float")
                     {
-                        bsdf->setTexture(create<Texture<float>, TextureFactory<float>>(shapeNode->first_node("bsdf")->first_node("texture")));
+                        bsdf->setTexture(create<float>(shapeNode->first_node("bsdf")->first_node("texture")));
                     }
-                    else if (dataType == "spectrum")
+                    else
                     {
-                        bsdf->setTexture(create<Texture<Spectrum>, TextureFactory<Spectrum>>(shapeNode->first_node("bsdf")->first_node("texture")));
+                        bsdf->setTexture(create<Spectrum>(shapeNode->first_node("bsdf")->first_node("texture")));
                     }
                 }
 

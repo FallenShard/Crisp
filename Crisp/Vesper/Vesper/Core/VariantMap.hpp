@@ -15,10 +15,28 @@ namespace vesper
     class VariantMap
     {
     public:
+        using VariantType = mapbox::util::variant
+        <
+            bool,
+            int,
+            float,
+            std::string,
+            Spectrum,
+            glm::vec2,
+            glm::ivec2,
+            glm::vec3,
+            Transform
+        >;
+
         template <typename T>
         void insert(const std::string& key, T value)
         {
             m_map.insert_or_assign(key, VariantType(value));
+        }
+
+        void insert(const std::string& key, VariantType&& value)
+        {
+            m_map.insert_or_assign(key, std::forward<VariantType&&>(value));
         }
 
         void remove(const std::string& key)
@@ -53,19 +71,6 @@ namespace vesper
         }
 
     private:
-        using VariantType = mapbox::util::variant
-        <
-            bool, 
-            int,
-            float,
-            std::string,
-            Spectrum,
-            glm::vec2,
-            glm::ivec2,
-            glm::vec3,
-            Transform
-        >;
-
         std::map<std::string, VariantType> m_map;
     };
 }

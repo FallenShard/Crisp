@@ -47,8 +47,6 @@ namespace vesper
         if (m_renderStatus == RenderStatus::Busy)
             return;
 
-        //JsonSceneParser parser;
-        //m_scene = parser.parse(fileName);
         XmlSceneParser xmlParser;
         m_scene = xmlParser.parse(fileName);
         if (m_scene)

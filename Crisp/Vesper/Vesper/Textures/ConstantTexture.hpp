@@ -10,7 +10,7 @@ namespace vesper
     public:
         ConstantTexture(const VariantMap& variantMap = VariantMap());
 
-        virtual T eval(const glm::vec2& uv) override
+        virtual T eval(const glm::vec2& uv) const override
         {
             return m_value;
         }

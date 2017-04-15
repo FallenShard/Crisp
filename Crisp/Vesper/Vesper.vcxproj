@@ -202,6 +202,7 @@
     <ClInclude Include="Vesper\Textures\ConstantTexture.hpp" />
     <ClInclude Include="Vesper\Textures\Texture.hpp" />
     <ClInclude Include="Vesper\Textures\TextureFactory.hpp" />
+    <ClInclude Include="Vesper\Textures\UVTexture.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp" />
@@ -257,6 +258,7 @@
     <ClCompile Include="Vesper\Spectrums\RgbSpectrum.cpp" />
     <ClCompile Include="Vesper\Textures\CheckerboardTexture.cpp" />
     <ClCompile Include="Vesper\Textures\ConstantTexture.cpp" />
+    <ClCompile Include="Vesper\Textures\UVTexture.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

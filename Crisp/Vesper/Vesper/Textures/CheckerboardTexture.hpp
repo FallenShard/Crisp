@@ -15,7 +15,7 @@ namespace vesper
     public:
         CheckerboardTexture(const VariantMap& variantMap = VariantMap());
 
-        virtual T eval(const glm::vec2& uv) override
+        virtual T eval(const glm::vec2& uv) const override
         {
             float u = std::fmodf(uv.x + m_offset.x * m_scale.x, 2.0f * m_scale.x);
             float v = std::fmodf(uv.y + m_offset.y * m_scale.y, 2.0f * m_scale.y);

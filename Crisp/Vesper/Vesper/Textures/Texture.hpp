@@ -20,7 +20,7 @@ namespace vesper
 
         virtual ~Texture() {}
 
-        virtual T eval(const glm::vec2& uv) = 0;
+        virtual T eval(const glm::vec2& uv) const = 0;
 
         std::string getName() const
         {
