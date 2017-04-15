@@ -36,9 +36,6 @@
     <ClCompile Include="Vesper\Cameras\Perspective.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Vesper\Core\JsonSceneParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Vesper\Core\Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -207,9 +204,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Core\Intersection.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Core\JsonSceneParser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Core\Scene.hpp">

@@ -151,7 +151,6 @@
     <ClInclude Include="Vesper\Core\BitFlags.hpp" />
     <ClInclude Include="Vesper\Core\Fresnel.hpp" />
     <ClInclude Include="Vesper\Core\Intersection.hpp" />
-    <ClInclude Include="Vesper\Core\JsonSceneParser.hpp" />
     <ClInclude Include="Vesper\Core\MipMap.hpp" />
     <ClInclude Include="Vesper\Core\Scene.hpp" />
     <ClInclude Include="Vesper\Core\VariantMap.hpp" />
@@ -221,7 +220,6 @@
     <ClCompile Include="Vesper\Cameras\Camera.cpp" />
     <ClCompile Include="Vesper\Cameras\CameraFactory.cpp" />
     <ClCompile Include="Vesper\Cameras\Perspective.cpp" />
-    <ClCompile Include="Vesper\Core\JsonSceneParser.cpp" />
     <ClCompile Include="Vesper\Core\Scene.cpp" />
     <ClCompile Include="Vesper\Core\XmlSceneParser.cpp" />
     <ClCompile Include="Vesper\ImageBlock.cpp" />
