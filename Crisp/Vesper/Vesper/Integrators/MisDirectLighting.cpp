@@ -59,31 +59,29 @@ namespace vesper
 
     Spectrum MisDirectLightingIntegrator::lightImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
     {
-        Spectrum Li(0.0f);
-
         Light::Sample lightSample(its.p);
-        auto lightSpec = scene->sampleLight(its, sampler, lightSample);
-
-        if (lightSample.pdf <= 0.0f || lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
-            return Li;
+        Spectrum Li = scene->sampleLight(its, sampler, lightSample);
+        if (lightSample.pdf <= 0.0f || Li.isZero() || scene->rayIntersect(lightSample.shadowRay))
+            return Spectrum(0.0f);
 
         BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         bsdfSample.eta     = 1.0f;
-        auto bsdfSpec = its.shape->getBSDF()->eval(bsdfSample);
-        Li = bsdfSpec * lightSpec;
+        auto f = its.shape->getBSDF()->eval(bsdfSample);
+        if (f.isZero())
+            return Spectrum(0.0f);
 
         float pdfLight = lightSample.pdf;
         float pdfBsdf = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSample);
-        return Li * powerHeuristic(pdfLight, pdfBsdf);
+        return f * Li * powerHeuristic(pdfLight, pdfBsdf);
     }
 
     Spectrum MisDirectLightingIntegrator::bsdfImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
     {
-        Spectrum Li(0.0f);
-
         BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
-        auto bsdfSpec = its.shape->getBSDF()->sample(bsdfSample, sampler);
+        auto f = its.shape->getBSDF()->sample(bsdfSample, sampler);
+        if (f.isZero())
+            return Spectrum(0.0f);
         
         Intersection bsdfIts;
         Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
@@ -92,6 +90,8 @@ namespace vesper
         if (!scene->rayIntersect(bsdfRay, bsdfIts))
         {
             hitLight = scene->getEnvironmentLight();
+            if (!hitLight)
+                return Spectrum(0.0f);
         }
         else if (bsdfIts.shape->getLight())
         {
@@ -99,16 +99,17 @@ namespace vesper
         }
         else
         {
-            return Li;
+            return Spectrum(0.0f);
         }
 
         Light::Sample lightSam(its.p, bsdfIts.p, bsdfIts.shFrame.n);
         lightSam.wi = bsdfRay.d;
-        auto lightSpec = hitLight->eval(lightSam);
-        Li = bsdfSpec * lightSpec;
+        auto Li = hitLight->eval(lightSam);
+        if (Li.isZero())
+            return Spectrum(0.0f);
 
-        float pdfBsdf = its.shape->getBSDF()->pdf(bsdfSample);
-        float pdfLight = hitLight->pdf(lightSam) * scene->getLightPdf();
-        return Li * powerHeuristic(pdfBsdf, pdfLight);
+        float pdfBsdf = bsdfSample.pdf;
+        float pdfLight = bsdfSample.sampledLobe == Lobe::Delta ? 0.0f : hitLight->pdf(lightSam) * scene->getLightPdf();
+        return f * Li * powerHeuristic(pdfBsdf, pdfLight);
     }
 }
