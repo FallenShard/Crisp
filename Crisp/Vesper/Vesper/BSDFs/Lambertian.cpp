@@ -24,7 +24,7 @@ namespace vesper
         }
         texParams.insert("value", albedo);
 
-        m_albedo = TextureFactory<Spectrum>::create("constant", texParams);
+        m_albedo = TextureFactory::create<Spectrum>("constant-spectrum", texParams);
     }
 
     LambertianBSDF::~LambertianBSDF()
