@@ -10,7 +10,7 @@ namespace vesper
 {
     Mesh::Mesh(const VariantMap& params)
     {
-        std::string filename = params.get<std::string>("fileName");
+        std::string filename = params.get<std::string>("filename");
 
         m_toWorld = params.get<Transform>("toWorld");
 
