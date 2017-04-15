@@ -26,6 +26,7 @@ namespace vesper
         Spectrum throughput(1.0f);
 
         Intersection its;
+        unsigned int numBounces = 0;
         while (true)
         {
             if (!scene->rayIntersect(ray, its))
@@ -43,15 +44,18 @@ namespace vesper
             BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
             throughput *= its.shape->getBSDF()->sample(bsdfSample, sampler);
 
-            ray.o = its.p;
-            ray.d = its.toWorld(bsdfSample.wo);
-            ray.update();
+            ray = Ray3(its.p, its.toWorld(bsdfSample.wo));
 
-            float q = 1.0f - std::min(throughput.maxCoeff(), 0.99f);
-            if (sampler.next1D() > q)
-                throughput /= 1.0f - q;
-            else
-                break;
+            numBounces++;
+
+            if (numBounces > 5)
+            {
+                float q = 1.0f - std::min(throughput.maxCoeff(), 0.99f);
+                if (sampler.next1D() > q)
+                    throughput /= 1.0f - q;
+                else
+                    break;
+            }
         }
 
         return L;
