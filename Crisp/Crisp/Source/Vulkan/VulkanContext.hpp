@@ -7,13 +7,15 @@
 
 namespace crisp
 {
+    class VulkanQueueConfiguration;
+
     using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)>;
 
     struct QueueFamilyIndices
     {
         int graphicsFamily = -1;
-        int presentFamily = -1;
-        int computeFamily = -1;
+        int presentFamily  = -1;
+        int computeFamily  = -1;
         int transferFamily = -1;
 
         bool isComplete()
@@ -32,16 +34,19 @@ namespace crisp
     class VulkanContext
     {
     public:
-        VulkanContext(SurfaceCreator surfaceCreator, std::vector<const char*> reqPlatformExtensions);
+        VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions);
         ~VulkanContext();
 
         VkPhysicalDevice getPhysicalDevice() const;
         VkSurfaceKHR getSurface() const;
-        VkDevice createLogicalDevice();
+        VkDevice createLogicalDevice(const VulkanQueueConfiguration& config) const;
 
+        bool getQueueFamilyPresentationSupport(uint32_t familyIndex) const;
+        std::vector<VkQueueFamilyProperties> getQueueFamilyProperties() const;
         QueueFamilyIndices findQueueFamilies() const;
         bool checkDeviceExtensionSupport() const;
         SwapChainSupportDetails querySwapChainSupport() const;
+
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
         uint32_t findMemoryType(VkMemoryPropertyFlags properties) const;
         uint32_t findDeviceImageMemoryType(VkDevice device);
@@ -54,7 +59,7 @@ namespace crisp
         VkPhysicalDeviceProperties getDeviceProperties() const;
 
     private:
-        void createInstance(std::vector<const char*> reqPlatformExtensions);
+        void createInstance(std::vector<std::string>&& reqPlatformExtensions);
         void setupDebugCallback();
         void createSurface(SurfaceCreator surfaceCreator);
         void pickPhysicalDevice();
@@ -64,6 +69,7 @@ namespace crisp
 
         bool isDeviceSuitable(VkPhysicalDevice device);
 
+        std::vector<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice device) const;
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;
         bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;
         SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const;
@@ -71,10 +77,9 @@ namespace crisp
         const static std::vector<const char*> validationLayers;
         const static std::vector<const char*> deviceExtensions;
 
-        VkInstance m_instance;
+        VkInstance               m_instance;
         VkDebugReportCallbackEXT m_callback;
-        VkSurfaceKHR m_surface;
-
-        VkPhysicalDevice m_physicalDevice; // Implicitly cleaned up with VkInstance
+        VkSurfaceKHR             m_surface;
+        VkPhysicalDevice         m_physicalDevice; // Implicitly cleaned up with VkInstance
     };
 }

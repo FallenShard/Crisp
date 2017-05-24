@@ -61,7 +61,7 @@ namespace crisp
             virtual void setOpacity(float opacity);
             float getOpacity() const;
 
-            Rect<float> getAbsoluteBounds() const;
+            virtual Rect<float> getAbsoluteBounds() const;
             const glm::mat4& getModelMatrix() const;
 
             virtual void onMouseMoved(float x, float y);

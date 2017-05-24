@@ -21,6 +21,7 @@ namespace vesper
     class Light;
     class Sampler;
     class Scene;
+    class Medium;
 
     class Shape
     {
@@ -52,9 +53,13 @@ namespace vesper
         void setBSDF(BSDF* bsdf);
         const BSDF* getBSDF() const;
 
+        void setMedium(Medium* medium);
+        const Medium* getMedium() const;
+
     protected:
         Light* m_light;
         BSDF* m_bsdf;
+        Medium* m_medium;
 
         Transform m_toWorld;
 

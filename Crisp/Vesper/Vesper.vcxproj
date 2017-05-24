@@ -166,6 +166,7 @@
     <ClInclude Include="Vesper\Integrators\MisPathTracer.hpp" />
     <ClInclude Include="Vesper\Integrators\Normals.hpp" />
     <ClInclude Include="Vesper\Integrators\PathTracer.hpp" />
+    <ClInclude Include="Vesper\Integrators\VolumePathTracer.hpp" />
     <ClInclude Include="Vesper\Lights\AreaLight.hpp" />
     <ClInclude Include="Vesper\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Vesper\Lights\EnvironmentLight.hpp" />
@@ -181,6 +182,12 @@
     <ClInclude Include="Vesper\Math\Ray.hpp" />
     <ClInclude Include="Vesper\Math\Transform.hpp" />
     <ClInclude Include="Vesper\Math\Warp.hpp" />
+    <ClInclude Include="Vesper\Media\Homogeneous.hpp" />
+    <ClInclude Include="Vesper\Media\Medium.hpp" />
+    <ClInclude Include="Vesper\Media\MediumFactory.hpp" />
+    <ClInclude Include="Vesper\PhaseFunctions\Isotropic.hpp" />
+    <ClInclude Include="Vesper\PhaseFunctions\PhaseFunction.hpp" />
+    <ClInclude Include="Vesper\PhaseFunctions\PhaseFunctionFactory.hpp" />
     <ClInclude Include="Vesper\RayTracer.hpp" />
     <ClInclude Include="Vesper\RayTracerUpdate.hpp" />
     <ClInclude Include="Vesper\ReconstructionFilters\GaussianFilter.hpp" />
@@ -233,6 +240,7 @@
     <ClCompile Include="Vesper\Integrators\MisPathTracer.cpp" />
     <ClCompile Include="Vesper\Integrators\Normals.cpp" />
     <ClCompile Include="Vesper\Integrators\PathTracer.cpp" />
+    <ClCompile Include="Vesper\Integrators\VolumePathTracer.cpp" />
     <ClCompile Include="Vesper\Lights\AreaLight.cpp" />
     <ClCompile Include="Vesper\Lights\DirectionalLight.cpp" />
     <ClCompile Include="Vesper\Lights\EnvironmentLight.cpp" />
@@ -241,6 +249,11 @@
     <ClCompile Include="Vesper\Math\Distribution1D.cpp" />
     <ClCompile Include="Vesper\Math\Distribution2D.cpp" />
     <ClCompile Include="Vesper\Math\Warp.cpp" />
+    <ClCompile Include="Vesper\Media\Homogeneous.cpp" />
+    <ClCompile Include="Vesper\Media\Medium.cpp" />
+    <ClCompile Include="Vesper\Media\MediumFactory.cpp" />
+    <ClCompile Include="Vesper\PhaseFunctions\Isotropic.cpp" />
+    <ClCompile Include="Vesper\PhaseFunctions\PhaseFunctionFactory.cpp" />
     <ClCompile Include="Vesper\RayTracer.cpp" />
     <ClCompile Include="Vesper\ReconstructionFilters\GaussianFilter.cpp" />
     <ClCompile Include="Vesper\ReconstructionFilters\ReconstructionFilter.cpp" />

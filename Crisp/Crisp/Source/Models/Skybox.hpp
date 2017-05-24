@@ -3,8 +3,8 @@
 #include <memory>
 
 #include "Math/Headers.hpp"
-#include "vulkan/VertexBufferBindingGroup.hpp"
-#include "vulkan/DescriptorSetGroup.hpp"
+#include "Renderer/VertexBufferBindingGroup.hpp"
+#include "Renderer/DescriptorSetGroup.hpp"
 
 namespace crisp
 {
@@ -12,6 +12,9 @@ namespace crisp
     class VulkanDevice;
     class VulkanRenderPass;
 
+    class Texture;
+    class TextureView;
+    class UniformBuffer;
     class IndexBuffer;
     class SkyboxPipeline;
 
@@ -22,8 +25,6 @@ namespace crisp
         ~Skybox();
 
         void updateTransforms(const glm::mat4& P, const glm::mat4& V);
-
-        void resize(int width, int height);
 
         void updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex);
         void draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex, uint32_t subpassIndex) const;
@@ -53,8 +54,8 @@ namespace crisp
         Transforms m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
-        VkImage m_texture;
-        VkImageView m_imageView;
+        std::unique_ptr<Texture> m_texture;
+        std::unique_ptr<TextureView> m_textureView;
         VkSampler m_sampler;
     };
 }

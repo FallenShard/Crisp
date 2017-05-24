@@ -90,17 +90,14 @@ namespace vesper
         if (!scene->rayIntersect(bsdfRay, bsdfIts))
         {
             hitLight = scene->getEnvironmentLight();
-            if (!hitLight)
-                return Spectrum(0.0f);
         }
         else if (bsdfIts.shape->getLight())
         {
             hitLight = bsdfIts.shape->getLight();
         }
-        else
-        {
+
+        if (!hitLight)
             return Spectrum(0.0f);
-        }
 
         Light::Sample lightSam(its.p, bsdfIts.p, bsdfIts.shFrame.n);
         lightSam.wi = bsdfRay.d;

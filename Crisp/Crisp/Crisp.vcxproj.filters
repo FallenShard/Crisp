@@ -24,9 +24,6 @@
     <ClCompile Include="Source\Vulkan\VulkanContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Vulkan\VulkanRenderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Vulkan\VulkanDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -63,28 +60,7 @@
     <ClCompile Include="Source\Vulkan\VulkanSwapChain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\VulkanPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\GuiTextPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\GUI\RenderSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\RenderPasses\VulkanRenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\RenderPasses\DefaultRenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\IO\FileUtils.cpp">
@@ -93,16 +69,7 @@
     <ClCompile Include="Source\IO\FontLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Picture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\IO\Image.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Core\Scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\UniformColorPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Camera\AbstractCamera.cpp">
@@ -120,16 +87,10 @@
     <ClCompile Include="Source\Core\StringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\IO\OpenEXRWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\ApplicationEnvironment.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Core\StaticPicture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\GUI\Form.cpp">
@@ -138,34 +99,119 @@
     <ClCompile Include="Source\GUI\VesperGui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Vulkan\VertexBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\IndexBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\UniformBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\UniformMultiBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\DescriptorSetGroup.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\RenderPasses\SceneRenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\LiquidPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Vulkan\RenderPasses\GuiRenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Models\Skybox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Vulkan\Pipelines\SkyboxPipeline.cpp">
+    <ClCompile Include="Source\Geometry\TriangleMeshBatch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Geometry\TriangleMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Geometry\MeshGeometry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanQueue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanQueueConfiguration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VulkanRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPasses\DefaultRenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPasses\GuiRenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPasses\SceneRenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\BlinnPhongPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\GuiColorQuadPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\GuiTexQuadPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\GuiTextPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\LiquidPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\PointSphereSpritePipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\SkyboxPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\UniformColorPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VertexBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\UniformMultiBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\UniformBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\IndexBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\DescriptorSetGroup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPasses\VulkanRenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\VulkanPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\TextureView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\BackgroundImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\RaytracedImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\IO\ImageFileBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanDescriptorSetLayout.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPasses\ShadowPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\ShadowMapPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI\CrispGui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -174,9 +220,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\VulkanRenderer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Vulkan\VulkanDevice.hpp">
@@ -233,28 +276,7 @@
     <ClInclude Include="Source\Vulkan\VulkanSwapChain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\FullScreenQuadPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\VulkanPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\GuiColorQuadPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\GuiTextPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\GUI\RenderSystem.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\GuiTexQuadPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\RenderPasses\VulkanRenderPass.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\RenderPasses\DefaultRenderPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\IO\FileUtils.hpp">
@@ -263,19 +285,10 @@
     <ClInclude Include="Source\IO\FontLoader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Picture.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Core\FrameTimeLogger.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\IO\Image.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Core\Scene.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\UniformColorPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Math\Headers.hpp">
@@ -293,16 +306,10 @@
     <ClInclude Include="Source\Camera\TargetCamera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\PointSphereSpritePipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\IO\OpenEXRWriter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\ApplicationEnvironment.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Core\StaticPicture.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\Form.hpp">
@@ -314,43 +321,133 @@
     <ClInclude Include="Source\GUI\VesperGui.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Vulkan\VertexBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\VertexBufferBindingGroup.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\IndexBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\UniformBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\UniformMultiBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\DescriptorSetGroup.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\BufferUpdatePolicy.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\RenderPasses\SceneRenderPass.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\LiquidPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Vulkan\RenderPasses\GuiRenderPass.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Models\Skybox.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Vulkan\Pipelines\SkyboxPipeline.hpp">
+    <ClInclude Include="Source\Vulkan\FormatTraits.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Vulkan\FormatTraits.hpp">
+    <ClInclude Include="Source\Geometry\TriangleMesh.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Geometry\MeshGeometry.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanImage.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanQueue.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanQueueConfiguration.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\BitFlags.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VulkanRenderer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\DefaultRenderPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\GuiRenderPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\SceneRenderPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\BlinnPhongPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\GuiColorQuadPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\GuiTexQuadPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\GuiTextPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\LiquidPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\PointSphereSpritePipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\SkyboxPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\UniformColorPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VertexBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VertexBufferBindingGroup.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\UniformMultiBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\UniformBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\IndexBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\DescriptorSetGroup.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\BufferUpdatePolicy.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\VulkanRenderPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\VulkanPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Texture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextureView.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\BackgroundImage.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\RaytracedImage.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IO\ImageFileBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\DynamicUniformBufferResource.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Profiler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanDescriptorSetLayout.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\ShadowPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\ShadowMapPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\CrispGui.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Window.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -374,6 +471,11 @@
     <None Include="Source\Shaders\liquid-frag.glsl" />
     <None Include="Source\Shaders\skybox-vert.glsl" />
     <None Include="Source\Shaders\skybox-frag.glsl" />
+    <None Include="Source\Shaders\blinn-phong-vert.glsl" />
+    <None Include="Source\Shaders\blinn-phong-frag.glsl" />
+    <None Include="Source\Geometry\TriangleMeshBatch.hpp" />
+    <None Include="Source\Shaders\shadow-map-vert.glsl" />
+    <None Include="Source\Shaders\shadow-map-frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />

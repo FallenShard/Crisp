@@ -11,12 +11,11 @@ namespace crisp
         ~FreeCamera();
 
         virtual bool update(float dt) override;
+        virtual void rotate(float dx, float dy) override;
         
-        void walk(float dt);
-        void strafe(float dt);
-        void lift(float dt);
-
-        void rotate(float dx, float dy);
+        virtual void walk(float dt) override;
+        virtual void strafe(float dt) override;
+        virtual void lift(float dt) override;
         
         void setTranslation(const glm::vec3& translation);
         glm::vec3 getTranslation() const;
@@ -30,7 +29,6 @@ namespace crisp
 
         glm::vec3 m_yawPitchRoll;
 
-        bool m_needsViewUpdate;
         unsigned int m_normalizationCount;
     };
 }

@@ -15,14 +15,15 @@
 #include "Math/Headers.hpp"
 #include "Core/Timer.hpp"
 #include "Core/FrameTimeLogger.hpp"
-#include "Core/Scene.hpp"
-#include "Core/StaticPicture.hpp"
 
 namespace crisp
 {
+    class Window;
     class InputDispatcher;
     class VulkanRenderer;
-    class Picture;
+    class BackgroundImage;
+    class RayTracedImage;
+    class Scene;
 
     namespace gui
     {
@@ -37,7 +38,7 @@ namespace crisp
         static constexpr int DefaultWindowWidth  = 1280;
         static constexpr int DefaultWindowHeight = 720;
 
-        Application();
+        Application(ApplicationEnvironment* environment);
         ~Application();
 
         Application(const Application& other) = delete;
@@ -67,17 +68,17 @@ namespace crisp
 
         std::unique_ptr<FrameTimeLogger<Timer<std::milli>>> m_frameTimeLogger;
 
-        std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)> m_window;
-        std::unique_ptr<VulkanRenderer> m_renderer;
+        std::unique_ptr<Window>          m_window;
+        std::unique_ptr<VulkanRenderer>  m_renderer;
         std::unique_ptr<InputDispatcher> m_inputDispatcher;
 
-        std::unique_ptr<StaticPicture> m_backgroundPicture;
+        std::unique_ptr<BackgroundImage> m_backgroundImage;
 
         std::unique_ptr<gui::Form> m_guiForm;
 
         uint32_t m_numRayTracedChannels;
         std::string m_projectName;
-        std::unique_ptr<Picture> m_rayTracedImage;
+        std::unique_ptr<RayTracedImage> m_rayTracedImage;
         tbb::concurrent_queue<vesper::RayTracerUpdate> m_rayTracerUpdateQueue;
         std::atomic<float> m_tracerProgress;
         std::atomic<float> m_timeSpentRendering;

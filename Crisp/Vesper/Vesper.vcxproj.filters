@@ -174,6 +174,24 @@
     <ClCompile Include="Vesper\Textures\UVTexture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vesper\Integrators\VolumePathTracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\Media\Homogeneous.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\PhaseFunctions\Isotropic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\PhaseFunctions\PhaseFunctionFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\Media\MediumFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\Media\Medium.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp">
@@ -390,6 +408,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Textures\UVTexture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Integrators\VolumePathTracer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\PhaseFunctions\PhaseFunction.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Media\Medium.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Media\Homogeneous.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\PhaseFunctions\Isotropic.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\PhaseFunctions\PhaseFunctionFactory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Media\MediumFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

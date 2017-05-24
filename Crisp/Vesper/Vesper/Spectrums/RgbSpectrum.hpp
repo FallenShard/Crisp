@@ -24,6 +24,7 @@ namespace vesper
         RgbSpectrum(const glm::vec3& vec);
 
         float& operator[](int index);
+        const float& operator[](int index) const;
         RgbSpectrum& operator=(const RgbSpectrum& rgbSpectrum);
         RgbSpectrum& operator+=(const RgbSpectrum& rgbSpectrum);
         RgbSpectrum& operator-=(const RgbSpectrum& rgbSpectrum);

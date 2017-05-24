@@ -40,15 +40,6 @@ namespace crisp
             m_fpsLabel             = m_rootControlGroup->getTypedControlById<Label>("fpsLabel");
             m_progressLabel        = m_rootControlGroup->getTypedControlById<Label>("progressLabel");
             m_progressBar          = m_rootControlGroup->getTypedControlById<Panel>("progressBar");
-
-            
-
-            //
-            //auto checkBox = m_mainGroup->getTypedControlById<gui::CheckBox>("hideGuiCheckbox");
-            //checkBox->setCheckCallback([this](bool isChecked)
-            //{
-            //    m_guiHidingEnabled = isChecked;
-            //});
         }
 
         Form::~Form()
@@ -201,63 +192,6 @@ namespace crisp
             m_animator->add(colorAnim);
         }
 
-            //rootControlGroup->addControl(buildStatusBar());
-            //rootControlGroup->addControl(buildMemoryUsagePanel());
-
-            /*
-            
-            auto checkBox = std::make_shared<gui::CheckBox>(m_renderSystem.get());
-            checkBox->setId("hideGuiCheckbox");
-            checkBox->setPosition({0, currY });
-            checkBox->setText("Hide GUI");
-            panel->addControl(checkBox);
-            currY += 40.0f;
-
-            auto cameraLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Camera");
-            cameraLabel->setPosition({ 0, currY });
-            cameraLabel->setColor(Green);
-            panel->addControl(cameraLabel);
-            currY += 25.0f;
-
-            auto camPosLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Position:");
-            camPosLabel->setPosition({ 0, currY });
-            camPosLabel->setColor(DarkGreen);
-            panel->addControl(camPosLabel);
-
-            auto camPosValueLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "0.00, 0.05, 0.08");
-            camPosValueLabel->setId("camPosValueLabel");
-            camPosValueLabel->setPosition({ 80, currY });
-            camPosValueLabel->setColor(Green);
-            panel->addControl(camPosValueLabel);
-            currY += 20.0f;
-
-            auto camOrientationLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Orientation:");
-            camOrientationLabel->setPosition({ 0, currY });
-            camOrientationLabel->setColor(DarkGreen);
-            panel->addControl(camOrientationLabel);
-
-            auto camOrientValueLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "0.00, 0.05, 0.06");
-            camOrientValueLabel->setId("camOrientValueLabel");
-            camOrientValueLabel->setPosition({ 80, currY });
-            camOrientValueLabel->setColor(Green);
-            panel->addControl(camOrientValueLabel);
-            currY += 20.0f;
-
-            auto camUpLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "Up direction:");
-            camUpLabel->setPosition({ 0, currY });
-            camUpLabel->setColor(DarkGreen);
-            panel->addControl(camUpLabel);
-
-            auto camUpValueLabel = std::make_shared<gui::Label>(m_renderSystem.get(), "0.00, 0.05, 0.06");
-            camUpValueLabel->setId("camUpValueLabel");
-            camUpValueLabel->setPosition({ 80, currY });
-            camUpValueLabel->setColor(Green);
-            panel->addControl(camUpValueLabel);
-            currY += 20.0f;*/
-
-        //    return rootControlGroup;
-        //}
-
         std::shared_ptr<ControlGroup> Form::buildWelcomeScreen()
         {
             auto panel = std::make_shared<gui::Panel>(this);
@@ -302,6 +236,12 @@ namespace crisp
             button->setHoverColor({ 0.4f, 0.4f, 0.7f });
             button->setAnchor(Anchor::CenterHorizontally);
             panel->addControl(button);
+
+            auto cb = std::make_shared<gui::CheckBox>(this);
+            cb->setId("fancyCB");
+            cb->setPosition({ 20, 250 });
+            cb->setText("Debug Check Box");
+            panel->addControl(cb);
 
             return panel;
         }

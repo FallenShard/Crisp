@@ -304,7 +304,7 @@ namespace vesper
 
                 std::unique_ptr<BSDF> bsdf = create<BSDF, BSDFFactory>(shapeNode->first_node("bsdf"));
 
-                auto texNode = shapeNode->first_node("bsdf")->first_node("texture");
+                auto texNode = shapeNode->first_node("bsdf") ? shapeNode->first_node("bsdf")->first_node("texture") : nullptr;
                 if (texNode != nullptr)
                 {
                     std::string dataType = "spectrum";

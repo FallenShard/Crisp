@@ -2,13 +2,16 @@
 
 #include "Application.hpp"
 
-#include "vulkan/VulkanRenderer.hpp"
-#include "vulkan/Pipelines/UniformColorPipeline.hpp"
-#include "vulkan/Pipelines/PointSphereSpritePipeline.hpp"
-#include "vulkan/Pipelines/FullScreenQuadPipeline.hpp"
-#include "vulkan/Pipelines/LiquidPipeline.hpp"
-#include "vulkan/IndexBuffer.hpp"
-#include "vulkan/UniformBuffer.hpp"
+#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Pipelines/UniformColorPipeline.hpp"
+#include "Renderer/Pipelines/PointSphereSpritePipeline.hpp"
+#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+#include "Renderer/Pipelines/LiquidPipeline.hpp"
+#include "Renderer/Pipelines/BlinnPhongPipeline.hpp"
+#include "Renderer/Pipelines/ShadowMapPipeline.hpp"
+#include "Renderer/IndexBuffer.hpp"
+#include "Renderer/UniformBuffer.hpp"
+#include "Renderer/TextureView.hpp"
 
 #include "Camera/CameraController.hpp"
 #include "Core/InputDispatcher.hpp"
@@ -19,9 +22,18 @@
 #include "Core/StringUtils.hpp"
 #include "Vesper/Shapes/MeshLoader.hpp"
 
+#include <future>
+#include <algorithm>
+#include <numeric>
+
 #include "Models/Skybox.hpp"
 
-#include "vulkan/RenderPasses/SceneRenderPass.hpp"
+#include "Renderer/RenderPasses/SceneRenderPass.hpp"
+#include "Renderer/RenderPasses/ShadowPass.hpp"
+
+#include "Geometry/TriangleMesh.hpp"
+#include "Geometry/TriangleMeshBatch.hpp"
+#include "Geometry/MeshGeometry.hpp"
 
 namespace crisp
 {
@@ -29,31 +41,38 @@ namespace crisp
     {
         glm::mat4 invertYaxis = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
 
-        unsigned int particles = 0;
-
-        unsigned int numFaces = 0;
-
-        struct Vertex
+        std::ostream& operator<<(std::ostream& out, const glm::vec3& vec)
         {
-            glm::vec3 position;
-            glm::vec3 normal;
+            out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]\n";
+            return out;
+        }
 
-            Vertex() {}
-            Vertex(const glm::vec3& pos, const glm::vec3& n) : position(pos), normal(n) {}
+        std::vector<glm::vec3> getFrustumPoints(float fovY, float aspectRatio, float zNear, float zFar, const glm::mat4& cameraToWorld)
+        {
+            auto tanA = std::tan(fovY / 2.0f);
 
-            static std::vector<Vertex> interleave(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals)
+            auto halfNearH = zNear * tanA;
+            auto halfNearW = halfNearH * aspectRatio;
+
+            auto halfFarH = zFar * tanA;
+            auto halfFarW = halfFarH * aspectRatio;
+
+            std::vector<glm::vec3> frustumPoints =
             {
-                std::vector<Vertex> result;
-                result.reserve(positions.size());
+                glm::vec3(-halfNearW, -halfNearH, -zNear),
+                glm::vec3(+halfNearW, -halfNearH, -zNear),
+                glm::vec3(-halfNearW, +halfNearH, -zNear),
+                glm::vec3(+halfNearW, +halfNearH, -zNear),
+                glm::vec3(-halfFarW, -halfFarH, -zFar),
+                glm::vec3(+halfFarW, -halfFarH, -zFar),
+                glm::vec3(-halfFarW, +halfFarH, -zFar),
+                glm::vec3(+halfFarW, +halfFarH, -zFar)
+            };
 
-                for (size_t i = 0; i < positions.size(); ++i)
-                {
-                    result.emplace_back(positions[i], normals[i]);
-                }
-
-                return result;
-            }
-        };
+            std::vector<glm::vec3> result;
+            std::transform(frustumPoints.begin(), frustumPoints.end(), std::back_inserter(result), [cameraToWorld](const glm::vec3& pt) { return glm::vec3(cameraToWorld * glm::vec4(pt, 1.0f)); });
+            return result;
+        }
     }
 
     Scene::Scene(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app)
@@ -61,88 +80,97 @@ namespace crisp
         , m_app(app)
         , m_device(m_renderer->getDevice())
     {
+        m_cameraController = std::make_unique<CameraController>(inputDispatcher);
+
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         m_renderer->registerRenderPass(SceneRenderPassId, m_scenePass.get());
+
+        m_shadowPass = std::make_unique<ShadowPass>(m_renderer);
+        m_shadowMapPipelines.resize(3);
+        m_shadowMapPipelines[0] = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), 0);
+        m_shadowMapPipelines[1] = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), 1);
+        m_shadowMapPipelines[2] = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), 2);
+        m_shadowMapDescGroup = 
+        {
+            m_shadowMapPipelines[0]->allocateDescriptorSet(0)
+        };
 
         m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         initRenderTargetResources();
 
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec2> texCoords;
-        std::vector<glm::uvec3> faces;
-
-        vesper::MeshLoader meshLoader;
-        meshLoader.load("sphere.obj", positions, normals, texCoords, faces);
-
-        auto vertices = Vertex::interleave(positions, normals);
-
-        //float cubeSize = 1.0f;
-        //float increment = 0.05f;
-        //for (float x = -cubeSize; x <= cubeSize; x += increment)
-        //    for (float y = -cubeSize / 2; y <= cubeSize / 2; y += increment)
-        //        for (float z = -cubeSize; z <= cubeSize; z += increment)
-        //            positions.emplace_back(x, y, z);
-
         m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get());
 
-        m_indexBuffer = std::make_unique<IndexBuffer>(m_device, faces);
-        numFaces = static_cast<unsigned int>(faces.size());
-        m_buffer      = std::make_unique<VertexBuffer>(m_device, vertices);
-        m_vertexBufferGroup =
+        m_blinnPhongPipeline = std::make_unique<BlinnPhongPipeline>(m_renderer, m_scenePass.get());
+
+        auto firstSet = m_blinnPhongPipeline->allocateDescriptorSet(0);
+        m_blinnPhongDescGroups[0] = 
         {
-            { m_buffer->get(), 0 }
+            firstSet,
+            m_blinnPhongPipeline->allocateDescriptorSet(1)
+        };
+        m_blinnPhongDescGroups[1] =
+        {
+            firstSet,
+            m_blinnPhongPipeline->allocateDescriptorSet(1)
         };
 
-        m_pipeline = std::make_unique<LiquidPipeline>(m_renderer, m_scenePass.get());
-        //m_psPipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, m_scenePass.get());
-        //m_descriptorSetGroup =
-        //{
-        //    m_psPipeline->allocateDescriptorSet(0),
-        //    m_psPipeline->allocateDescriptorSet(1)
-        //};
-        auto set = m_pipeline->allocateDescriptorSet(0);
-        auto sets = m_pipeline->allocateDescriptorSet(1, VulkanRenderer::NumVirtualFrames);
-        for (size_t i = 0; i < sets.size(); ++i)
-            m_descriptorSetGroups.push_back({ set, sets[i] });
-
-        // Transform uniform buffer
-        auto extent = m_renderer->getSwapChainExtent();
-        auto aspect = static_cast<float>(extent.width) / extent.height;
-        auto proj   = glm::perspective(glm::radians(35.0f), aspect, 1.0f, 100.0f);
-
-        m_transforms.MV  = glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
-        m_transforms.MVP = invertYaxis * proj * m_transforms.MV;
-
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(Transforms), BufferUpdatePolicy::PerFrame);
-
-        m_cameraBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-
-        // Color descriptor
-        //m_params.radius           = 0.025f;
-        //m_params.screenSpaceScale = proj[1][1] * extent.height;
-
-        //m_particleParamsBuffer = std::make_unique<UniformBuffer>(m_device, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame);
-        //m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
-
-        // Update descriptor sets
-        m_descriptorSetGroups[0].postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
-        m_descriptorSetGroups[0].postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_cameraBuffer->get(), 0, sizeof(CameraParameters) });
-        m_descriptorSetGroups[0].postImageUpdate(0, 2, VK_DESCRIPTOR_TYPE_SAMPLER, { m_linearClampSampler, 0, VK_IMAGE_LAYOUT_UNDEFINED });
-        m_descriptorSetGroups[0].postImageUpdate(0, 3, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, { m_linearClampSampler, m_skybox->getSkyboxView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-
-        for (uint32_t i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        m_blinnPhongDescGroups[2] =
         {
-            m_descriptorSetGroups[i].postImageUpdate(1, 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, { m_linearClampSampler, m_scenePass->getAttachmentView(SceneRenderPass::Opaque, i), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-            m_descriptorSetGroups[i].flushUpdates(m_device);
+            firstSet,
+            m_blinnPhongPipeline->allocateDescriptorSet(1)
+        };
+
+        m_sphereGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("sphere.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
+        m_planeGeometry  = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("plane.obj",  { VertexAttribute::Position, VertexAttribute::Normal }));
+        m_bunnyGeometry  = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("bunny.obj",  { VertexAttribute::Position, VertexAttribute::Normal }));
+
+        m_transforms.resize(33);
+        m_transforms[0].M = glm::mat4(1.0f);
+        m_transforms[1].M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
+        m_transforms[2].M = glm::translate(glm::vec3(3.0f, -0.5f, 0.0f));
+
+        for (int i = 3; i < 33; ++i)
+        {
+            m_transforms[i].M = glm::translate(glm::vec3(3.0f * float(i % 6 + 1), 0.0f, 3.0f * float(i / 6 + 1))) * glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
         }
 
-        m_cameraController = std::make_unique<CameraController>(inputDispatcher);
+        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(Transforms), BufferUpdatePolicy::PerFrame);
+
+        m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+
+        
+        m_shadowParameters[0].lightView = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //shadowParameters.lightProjection = invertYaxis * glm::perspective(glm::radians(70.0f), 1.0f, 0.1f, 50.0f);
+        m_shadowParameters[1].lightProjection = invertYaxis * glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 1.0f, 20.0f);
+        m_shadowParameters[2].lightViewProjection = m_shadowParameters[0].lightProjection * m_shadowParameters[1].lightView;
+
+        m_shadowTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, 3 * sizeof(ShadowParameters), BufferUpdatePolicy::PerFrame, m_shadowParameters);
+
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_shadowTransformsBuffer->get(), 0, 3 * sizeof(ShadowParameters) });
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_cameraBuffer->get(),     0, sizeof(CameraParameters) });
+        m_blinnPhongDescGroups[0].postImageUpdate(1, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(0, 0), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[0].postImageUpdate(1, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(1, 0), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[0].postImageUpdate(1, 0, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(2, 0), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[0].flushUpdates(m_device);
+
+        m_blinnPhongDescGroups[1].postImageUpdate(1, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(0, 1), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[1].postImageUpdate(1, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(1, 1), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[1].postImageUpdate(1, 0, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(2, 1), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[1].flushUpdates(m_device);
+
+        m_blinnPhongDescGroups[2].postImageUpdate(1, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(0, 2), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[2].postImageUpdate(1, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(1, 2), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[2].postImageUpdate(1, 0, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(2, 2), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+        m_blinnPhongDescGroups[2].flushUpdates(m_device);
+
+        m_shadowMapDescGroup.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
+        m_shadowMapDescGroup.postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_shadowTransformsBuffer->get(), 0, sizeof(ShadowParameters) });
+        m_shadowMapDescGroup.flushUpdates(m_device);
     }
 
     Scene::~Scene()
     {
-        vkDestroyImageView(m_device->getHandle(), m_sceneImageView, nullptr);
         vkDestroySampler(m_device->getHandle(), m_linearClampSampler, nullptr);
     }
 
@@ -152,28 +180,8 @@ namespace crisp
 
         m_scenePass->recreate();
 
-        m_pipeline->resize(width, height);
-        m_skybox->resize(width, height);
-
-        m_fsQuadPipeline->resize(width, height);
-
-        for (uint32_t i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
-        {
-            m_descriptorSetGroups[i].postImageUpdate(1, 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, { m_linearClampSampler, m_scenePass->getAttachmentView(SceneRenderPass::Opaque, i), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-            m_descriptorSetGroups[i].flushUpdates(m_device);
-        }
-
-        //m_psPipeline->resize(width, height);
-        //m_params.screenSpaceScale = m_cameraController->getCamera().getProjectionMatrix()[1][1] * m_renderer->getSwapChainExtent().height;
-        //m_particleParamsBuffer->updateStagingBuffer(&m_params, sizeof(ParticleParams));
-
-        vkDestroyImageView(m_device->getHandle(), m_sceneImageView, nullptr);
-        m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(SceneRenderPass::Composited), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
-
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView   = m_sceneImageView;
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, imageInfo);
+        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Composited);
+        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
     }
 
@@ -183,15 +191,26 @@ namespace crisp
         if (viewChanged)
         {
             auto& V = m_cameraController->getCamera().getViewMatrix();
-            auto& P = m_cameraController->getCamera().getProjectionMatrix();
+            auto invertedP = invertYaxis * m_cameraController->getCamera().getProjectionMatrix();
 
-            m_transforms.MV = V * m_transforms.M;
-            m_transforms.MVP = invertYaxis * P * m_transforms.MV;
+            auto zNear = m_cameraController->getCamera().getNearPlaneDistance();
+            auto zFar = m_cameraController->getCamera().getFarPlaneDistance();
 
-            m_transformsBuffer->updateStagingBuffer(&m_transforms, sizeof(Transforms));
+            calculateFrustumOBB(m_shadowParameters[0], zNear, 15.0f);
+            calculateFrustumOBB(m_shadowParameters[1], 15.0f, 45.0f);
+            calculateFrustumOBB(m_shadowParameters[2], 45.0f, zFar);
+            m_shadowTransformsBuffer->updateStagingBuffer(m_shadowParameters, 3 * sizeof(ShadowParameters));
+
+            for (auto& trans : m_transforms)
+            {
+                trans.MV  = V * trans.M;
+                trans.MVP = invertedP * trans.MV;
+            }
+
+            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(Transforms));
             m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
 
-            m_skybox->updateTransforms(invertYaxis * P, V);
+            m_skybox->updateTransforms(invertedP, V);
         }
     }
 
@@ -200,24 +219,57 @@ namespace crisp
         m_renderer->addCopyAction([this](VkCommandBuffer& commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-
             m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
             m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-            //m_particleParamsBuffer->updateDeviceBuffer(commandBuffer, m_renderer->getCurrentVirtualFrameIndex());
-
+            m_shadowTransformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
             m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
         });
 
         m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-            
-            m_skybox->draw(commandBuffer, frameIdx, 0);
-            //m_descriptorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
-            //m_descriptorSetGroup.setDynamicOffset(1, m_particleParamsBuffer->getDynamicOffset(frameIdx));
-            //m_descriptorSetGroup.bind(commandBuffer, m_psPipeline->getPipelineLayout());
-            //m_vertexBufferGroup.bind(commandBuffer);
-            //vkCmdDraw(commandBuffer, particles, 1, 0, 0);
+
+            m_shadowPass->begin(commandBuffer);
+
+            auto drawStuff = [this](VkCommandBuffer commandBuffer, uint32_t frameIdx, uint32_t cascadeIdx)
+            {
+                m_shadowMapPipelines[cascadeIdx]->bind(commandBuffer);
+                m_shadowMapDescGroup.setDynamicOffset(1, m_shadowTransformsBuffer->getDynamicOffset(frameIdx) + cascadeIdx * sizeof(ShadowParameters));
+                m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 0 * sizeof(Transforms));
+                m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipelines[cascadeIdx]->getPipelineLayout());
+
+                m_sphereGeometry->bindGeometryBuffers(commandBuffer);
+                m_sphereGeometry->draw(commandBuffer);
+
+                for (int i = 3; i < 33; ++i)
+                {
+                    m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                    m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipelines[cascadeIdx]->getPipelineLayout());
+
+                    m_sphereGeometry->bindGeometryBuffers(commandBuffer);
+                    m_sphereGeometry->draw(commandBuffer);
+                }
+
+                m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 2 * sizeof(Transforms));
+                m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipelines[cascadeIdx]->getPipelineLayout());
+                m_bunnyGeometry->bindGeometryBuffers(commandBuffer);
+                m_bunnyGeometry->draw(commandBuffer);
+            };
+
+            drawStuff(commandBuffer, frameIdx, 0);
+
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+            drawStuff(commandBuffer, frameIdx, 1);
+
+            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+            drawStuff(commandBuffer, frameIdx, 2);
+
+            m_shadowPass->end(commandBuffer);
+        });
+
+        m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
+        {
+            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
             VkImageMemoryBarrier transBarrier = {};
             transBarrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -237,56 +289,111 @@ namespace crisp
 
             vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
-            m_descriptorSetGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
-            m_descriptorSetGroups[frameIdx].setDynamicOffset(1, m_cameraBuffer->getDynamicOffset(frameIdx));
-            m_descriptorSetGroups[frameIdx].bind(commandBuffer, m_pipeline->getPipelineLayout());
-            
-            m_vertexBufferGroup.bind(commandBuffer);
-            m_indexBuffer->bind(commandBuffer, 0);
-            vkCmdDrawIndexed(commandBuffer, numFaces * 3, 1, 0, 0, 0);
+            m_blinnPhongPipeline->bind(commandBuffer);
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(1, m_shadowTransformsBuffer->getDynamicOffset(frameIdx));
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(2, m_cameraBuffer->getDynamicOffset(frameIdx));
+
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 0 * sizeof(Transforms));
+            m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+            m_sphereGeometry->bindGeometryBuffers(commandBuffer);
+            m_sphereGeometry->draw(commandBuffer);
+
+            for (int i = 3; i < 33; ++i)
+            {
+                m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+
+                m_sphereGeometry->bindGeometryBuffers(commandBuffer);
+                m_sphereGeometry->draw(commandBuffer);
+            }
+
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(Transforms));
+            m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+            m_planeGeometry->bindGeometryBuffers(commandBuffer);
+            m_planeGeometry->draw(commandBuffer);
+
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 2 * sizeof(Transforms));
+            m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+            m_bunnyGeometry->bindGeometryBuffers(commandBuffer);
+            m_bunnyGeometry->draw(commandBuffer);
 
             m_skybox->draw(commandBuffer, frameIdx, 1);
-
         }, SceneRenderPassId);
 
         m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
         {
-            VkViewport viewport;
-            viewport.x = viewport.y = 0;
-            viewport.width    = static_cast<float>(m_renderer->getSwapChainExtent().width);
-            viewport.height   = static_cast<float>(m_renderer->getSwapChainExtent().height);
-            viewport.minDepth = 0;
-            viewport.maxDepth = 1;
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getHandle());
-            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+            m_fsQuadPipeline->bind(commandBuffer);
+            m_renderer->setDefaultViewport(commandBuffer);
             m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout());
-
+        
             unsigned int pushConst = m_renderer->getCurrentVirtualFrameIndex();
             vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-
+            
             m_renderer->drawFullScreenQuad(commandBuffer);
         }, VulkanRenderer::DefaultRenderPassId);
     }
 
     void Scene::initRenderTargetResources()
     {
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
-        // Create descriptor set for the image
-        m_sceneDescSetGroup =
-        {
-            m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage)
-        };
+        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
+        m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        // Create a view to the render target
-        m_sceneImageView = m_device->createImageView(m_scenePass->getColorAttachment(SceneRenderPass::Composited), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_scenePass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
-
-        VkDescriptorImageInfo imageInfo = {};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView   = m_sceneImageView;
-        imageInfo.sampler     = m_linearClampSampler;
-        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, imageInfo);
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, imageInfo);
+        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Composited);
+        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler));
+        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
+    }
+
+    void Scene::calculateFrustumOBB(ShadowParameters& shadowParams, float zNear, float zFar)
+    {
+        // 1. obtain world space frustum points 
+        auto fov = m_cameraController->getCamera().getFov();
+        auto aspect = m_cameraController->getCamera().getAspectRatio();
+
+        auto worldFrustumPoints = getFrustumPoints(fov, aspect, zNear, zFar, glm::inverse(m_cameraController->getCamera().getViewMatrix()));
+
+        // 2. get center of frustum in world space
+        auto frustumCenter = std::accumulate(worldFrustumPoints.begin(), worldFrustumPoints.end(), glm::vec3(0.0f)) * (1.0f / worldFrustumPoints.size());
+
+        // 3. set up orthonormal basis for light space
+        auto lightDir   = glm::normalize(glm::vec3(0.0f, -1.0f, -1.0f));
+        auto lightUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+        auto lightRight = glm::normalize(glm::cross(lightDir, lightUp));
+        lightUp = glm::normalize(glm::cross(lightRight, lightDir));
+
+        auto lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
+        shadowParams.lightView = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        // 4. Calculate light's OBB
+        glm::vec3 minCorner(1000.0f);
+        glm::vec3 maxCorner(-1000.0f);
+        for (auto& pt : worldFrustumPoints)
+        {
+            auto lightViewPt = shadowParams.lightView * glm::vec4(pt, 1.0f);
+
+            minCorner = glm::min(minCorner, glm::vec3(lightViewPt));
+            maxCorner = glm::max(maxCorner, glm::vec3(lightViewPt));
+        }
+
+        glm::vec3 lengths(maxCorner - minCorner);
+        auto cubeCenter = (minCorner + maxCorner) / 2.0f;
+        auto squareSize = std::max(lengths.x, lengths.y);
+
+        auto lightProj = glm::ortho(
+            cubeCenter.x - (squareSize / 2.0f), cubeCenter.x + (squareSize / 2.0f),
+            cubeCenter.y - (squareSize / 2.0f), cubeCenter.y + (squareSize / 2.0f),
+            -maxCorner.z, -minCorner.z);
+
+        shadowParams.lightProjection = invertYaxis * lightProj;
+
+        shadowParams.lightViewProjection = shadowParams.lightProjection * shadowParams.lightView;
+        //m_transforms[32].M = glm::translate(cubeCenter);
+
+        //std::cout << "MIN: " << minCorner;
+        //std::cout << "MAX: " << maxCorner;
+        //std::cout << "FRUSTUM CENTER: " << frustumCenter;
+        //std::cout << "FRUSTUM CENTER VIEW: " << m_shadowParameters.lightView * glm::vec4(frustumCenter, 1.0f);
+        //std::cout << "FRUSTUM CENTER PROJ: " << m_shadowParameters.lightViewProjection * glm::vec4(frustumCenter, 1.0f);
+        //std::cout << "=================================\n";
     }
 }

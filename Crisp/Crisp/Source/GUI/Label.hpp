@@ -17,6 +17,7 @@ namespace crisp
 
             virtual float getWidth() const override;
             virtual float getHeight() const override;
+            virtual Rect<float> getAbsoluteBounds() const override;
 
             void setFontSize(unsigned int fontSize);
             void setText(const std::string& text);

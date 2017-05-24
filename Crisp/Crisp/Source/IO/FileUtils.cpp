@@ -105,7 +105,21 @@ namespace crisp
             fileName[i - openFile.nFileOffset] = fileNameBuffer[i];
 
         SetCurrentDirectory(oldDir);
-        return std::string(fileName);
+        return std::string(fileNameBuffer);
+    }
+
+    std::string FileUtils::getFileNameFromPath(const std::string& filePath)
+    {
+        auto result = filePath;
+        auto indexPos = result.find_last_of("\\/");
+        if (indexPos != std::string::npos)
+            result.erase(0, indexPos + 1);
+
+        auto extensionDotPos = result.rfind('.');
+        if (extensionDotPos != std::string::npos)
+            result.erase(extensionDotPos);
+
+        return result;
     }
 
     void FileUtils::createDirectory(const std::string& path)

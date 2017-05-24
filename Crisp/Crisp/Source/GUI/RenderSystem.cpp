@@ -4,23 +4,25 @@
 #include <algorithm>
 #include <iostream>
 
-#include "Vulkan/VulkanRenderer.hpp"
-#include "vulkan/Pipelines/VulkanPipeline.hpp"
 #include "IO/FontLoader.hpp"
+#include "IO/ImageFileBuffer.hpp"
 
-#include "vulkan/Pipelines/FullScreenQuadPipeline.hpp"
-#include "vulkan/Pipelines/GuiColorQuadPipeline.hpp"
-#include "vulkan/Pipelines/GuiTextPipeline.hpp"
-#include "vulkan/Pipelines/GuiTexQuadPipeline.hpp"
-#include "vulkan/RenderPasses/GuiRenderPass.hpp"
+#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Pipelines/VulkanPipeline.hpp"
+#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+#include "Renderer/Pipelines/GuiColorQuadPipeline.hpp"
+#include "Renderer/Pipelines/GuiTextPipeline.hpp"
+#include "Renderer/Pipelines/GuiTexQuadPipeline.hpp"
+#include "Renderer/RenderPasses/GuiRenderPass.hpp"
+#include "Renderer/Texture.hpp"
+#include "Renderer/TextureView.hpp"
 
 #include "GUI/Control.hpp"
 #include "GUI/Panel.hpp"
 #include "GUI/Label.hpp"
 #include "GUI/Button.hpp"
 #include "GUI/CheckBox.hpp"
-
-#include "IO/Image.hpp"
+#include "GUI/DynamicUniformBufferResource.hpp"
 
 namespace crisp
 {
@@ -39,23 +41,41 @@ namespace crisp
 
             // Create pipelines for different types of drawable objects
             createPipelines();
+
+            // Gui texture atlas
+            loadTextureAtlas();
+            m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+            // Initialize gui render target rendering resources
+            initGuiRenderTargetResources();
             
             // [0..1] Quad geometries for GUI elements
             initGeometryBuffers();
 
             // Initialize resources to support dynamic addition of MVP transform resources
-            initTransformsResources();
+            auto transformAndColorSets = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor, VulkanRenderer::NumVirtualFrames);
+            m_transforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
             // Initialize resources to support dynamic addition of color resources
-            initColorResources();
+            m_colors = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
-            // Initialize gui render target rendering resources
-            m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-            initGuiRenderTargetResources();
+            // Initialize resources to support dynamic addition of textured controls
+            auto tcSets = m_texQuadPipeline->allocateDescriptorSet(1, VulkanRenderer::NumVirtualFrames);
+            for (auto& set : tcSets)
+            {
+                const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler);
 
-            m_nnClampSampler = m_device->createSampler(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-
-            //loadTextures();
+                VkWriteDescriptorSet descWrite = {};
+                descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descWrite.dstSet          = set;
+                descWrite.dstBinding      = 0;
+                descWrite.dstArrayElement = 0;
+                descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descWrite.descriptorCount = 1;
+                descWrite.pImageInfo      = &imageInfo;
+                vkUpdateDescriptorSets(m_device->getHandle(), 1, &descWrite, 0, nullptr);
+            }
+            m_tcTransforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, tcSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
             
             // Register the render pass into the renderer's draw loop
             m_renderer->registerRenderPass(GuiRenderPassId, m_guiPass.get());
@@ -63,14 +83,7 @@ namespace crisp
 
         RenderSystem::~RenderSystem()
         {
-            //vkDestroyImageView(m_renderer->getDevice().getHandle(), m_checkBoxImageView, nullptr);
-
-            for (auto& font : m_fonts)
-                vkDestroyImageView(m_device->getHandle(), font->imageView, nullptr);
-
-            vkDestroySampler(m_device->getHandle(), m_nnClampSampler, nullptr);
             vkDestroySampler(m_device->getHandle(), m_linearClampSampler, nullptr);
-            vkDestroyImageView(m_device->getHandle(), m_guiImageView, nullptr);
         }
 
         const glm::mat4& RenderSystem::getProjectionMatrix() const
@@ -80,110 +93,47 @@ namespace crisp
 
         unsigned int RenderSystem::registerTransformResource()
         {
-            auto freeTransformId = *m_transformsResourceIdPool.begin(); // Smallest element in a set is at .begin()
-            m_transformsResourceIdPool.erase(freeTransformId);
-            m_numRegisteredTransformResources++;
-
-            // If we use up all free resource ids, resize the buffers
-            if (m_transformsResourceIdPool.empty())
-            {
-                for (unsigned int i = 0; i < MatricesPerGranularity; i++)
-                {
-                    m_transformsResourceIdPool.insert(m_numRegisteredTransformResources + i);
-                }
-
-                auto numTransforms = m_numRegisteredTransformResources + m_transformsResourceIdPool.size();
-                auto multiplier = (numTransforms - 1) / MatricesPerGranularity + 1;
-
-                // Create the new staging buffer, prepare previous one to be destroyed and set the new one as main
-                auto prevSize = m_transformsStagingBufferSize;
-                m_transformsStagingBufferSize = UniformBufferGranularity * multiplier;
-
-                auto newStagingBuffer = m_device->createStagingBuffer(m_transformsStagingBuffer, prevSize, m_transformsStagingBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-                m_renderer->scheduleStagingBufferForRemoval(m_transformsStagingBuffer);
-                m_transformsStagingBuffer = newStagingBuffer;
-
-                // Invalidate current device-backed uniform buffers
-                for (auto& res : m_transformsResources)
-                {
-                    res.isUpdated = false;
-                }
-            }
-
-            return freeTransformId;
+            return m_transforms->registerResource();
         }
 
         void RenderSystem::updateTransformResource(unsigned int transformId, const glm::mat4& M)
         {
-            m_device->updateStagingBuffer(m_transformsStagingBuffer, glm::value_ptr(m_P * M), transformId * MatrixSize, MatrixSize);
+            m_transforms->updateResource(transformId, glm::value_ptr(m_P * M));
         }
 
         void RenderSystem::unregisterTransformResource(unsigned int transformId)
         {
-            m_transformsResourceIdPool.insert(transformId);
-            m_numRegisteredTransformResources--;
+            m_transforms->unregisterResource(transformId);
         }
 
         unsigned int RenderSystem::registerColorResource()
         {
-            auto freeColorId = *m_colorsResourceIdPool.begin(); // Smallest element in a set is at .begin()
-            m_colorsResourceIdPool.erase(freeColorId);
-            m_numRegisteredColorResources++;
-
-            // If we use up all free resource ids, resize the buffers
-            if (m_colorsResourceIdPool.empty())
-            {
-                for (unsigned int i = 0; i < MatricesPerGranularity; i++)
-                {
-                    m_colorsResourceIdPool.insert(m_numRegisteredColorResources + i);
-                }
-
-                auto numTransforms = m_numRegisteredColorResources + m_colorsResourceIdPool.size();
-                auto multiplier = (numTransforms - 1) / ColorsPerGranularity + 1;
-
-                // Create the new staging buffer, prepare previous one to be destroyed and set the new one as main
-                auto prevSize = m_colorsStagingBufferSize;
-                m_colorsStagingBufferSize = UniformBufferGranularity * multiplier;
-
-                auto newStagingBuffer = m_device->createStagingBuffer(m_colorsStagingBuffer, prevSize, m_colorsStagingBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-                m_renderer->scheduleStagingBufferForRemoval(m_colorsStagingBuffer);
-                m_colorsStagingBuffer = newStagingBuffer;
-
-                // Invalidate current device-backed uniform buffers
-                for (auto& res : m_colorsResources)
-                {
-                    res.isUpdated = false;
-                }
-            }
-
-            return freeColorId;
+            return m_colors->registerResource();
         }
         
         void RenderSystem::updateColorResource(unsigned int colorId, const glm::vec4& color)
         {
-            m_device->updateStagingBuffer(m_colorsStagingBuffer, glm::value_ptr(color), colorId * ColorSize, ColorSize);
+            m_colors->updateResource(colorId, glm::value_ptr(color));
         }
 
         void RenderSystem::unregisterColorResource(unsigned int colorId)
         {
-            m_colorsResourceIdPool.insert(colorId);
-            m_numRegisteredColorResources--;
+            m_colors->unregisterResource(colorId);
         }
 
         unsigned int RenderSystem::registerTexCoordResource()
         {
-            return 0;
+            return m_tcTransforms->registerResource();
         }
 
-        void RenderSystem::updateTexCoordResource(unsigned int, const glm::vec2&, const glm::vec2&)
+        void RenderSystem::updateTexCoordResource(unsigned int tcTransId, const glm::vec4& tcTrans)
         {
-            //m_texCoordResources.at(resourceId)->generate(min, max, m_renderer);
-            //m_texCoordResources.at(resourceId)->needsUpdateToDevice = true;
+            m_tcTransforms->updateResource(tcTransId, glm::value_ptr(tcTrans));
         }
 
-        void RenderSystem::unregisterTexCoordResource(unsigned int)
+        void RenderSystem::unregisterTexCoordResource(unsigned int tcTransId)
         {
-            //m_freeTexCoordResourceIds.insert(resourceId);
+            m_tcTransforms->unregisterResource(tcTransId);
         }
 
         unsigned int RenderSystem::registerTextResource(std::string text, unsigned int fontId)
@@ -201,12 +151,12 @@ namespace crisp
             textRes->allocatedFaceCount          = TextGeometryResource::NumInitialAllocatedCharacters * 2; // 2 Triangles per letter
             textRes->updatedBufferIndex          = 0;
             textRes->isUpdatedOnDevice           = false;
-            textRes->geomData.vertexBuffer       = std::make_unique<VertexBuffer>(m_device, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
-            textRes->geomData.indexBuffer        = std::make_unique<IndexBuffer>(m_device, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
+            textRes->geomData.vertexBuffer       = std::make_unique<VertexBuffer>(m_renderer, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
+            textRes->geomData.indexBuffer        = std::make_unique<IndexBuffer>(m_renderer, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
             textRes->geomData.vertexBufferGroup  = { { textRes->geomData.vertexBuffer->get(), 0 } };
             textRes->geomData.indexBufferOffset  = 0;
             textRes->geomData.indexCount         = 32;
-            textRes->descSets.emplace_back(m_fonts.at(fontId)->descSet);
+            textRes->descSet                     = m_fonts.at(fontId)->descSet;
             textRes->updateStagingBuffer(text, m_fonts.at(fontId)->font.get(), m_renderer);
 
             m_textResources.emplace_back(std::move(textRes));
@@ -216,7 +166,7 @@ namespace crisp
 
         glm::vec2 RenderSystem::updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId)
         {
-            m_textResources.at(textResId)->descSets[0] = m_fonts.at(fontId)->descSet;
+            m_textResources.at(textResId)->descSet = m_fonts.at(fontId)->descSet;
             m_textResources.at(textResId)->updateStagingBuffer(text, m_fonts.at(fontId)->font.get(), m_renderer);
             m_textResources.at(textResId)->isUpdatedOnDevice = false;
             return m_textResources.at(textResId)->extent;
@@ -240,31 +190,19 @@ namespace crisp
             return extent;
         }
 
-        void RenderSystem::draw(const CheckBox&)
-        {
-            //auto texRes = m_texCoordResources.at(checkBox.getTexCoordResourceId()).get();
-            //m_drawCommands.emplace_back(
-            //    m_texQuadPipeline.get(),
-            //    m_texQuadDescSets.data(),
-            //    1, 1,
-            //    &texRes->geom,
-            //    checkBox.getTransformId(),
-            //    checkBox.getColor(),
-            //    checkBox.getDepth()
-            //);
-        }
-
         void RenderSystem::drawQuad(unsigned int transformResourceId, uint32_t colorId, float depth) const
         {
-            m_drawCommands.emplace_back(m_colorQuadPipeline.get(), nullptr, 0, 0, &m_quadGeometry,
-                static_cast<uint16_t>(transformResourceId), static_cast<uint16_t>(colorId), depth);
+            m_drawCommands.emplace_back(&RenderSystem::renderQuad, transformResourceId, colorId, depth);
         }
 
-        void RenderSystem::drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorId, float depth)
+        void RenderSystem::drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth)
         {
-            auto textRes = m_textResources.at(textRenderResourceId).get();
-            m_drawCommands.emplace_back(m_textPipeline.get(), textRes->descSets.data(), static_cast<uint8_t>(1), static_cast<uint8_t>(textRes->descSets.size()), &textRes->geomData,
-                static_cast<uint16_t>(transformResourceId), static_cast<uint16_t>(colorId), depth);
+            m_drawCommands.emplace_back(&RenderSystem::renderTexture, transformId, colorId, texCoordId, depth);
+        }
+
+        void RenderSystem::drawText(unsigned int textResId, unsigned int transformId, uint32_t colorId, float depth)
+        {
+            m_drawCommands.emplace_back(&RenderSystem::renderText, transformId, colorId, textResId, depth);
         }
 
         void RenderSystem::submitDrawRequests()
@@ -273,33 +211,9 @@ namespace crisp
             {
                 auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
-                // Update device uniform buffer for the current command buffer
-                auto& currTransRes = m_transformsResources[currentFrame];
-
-                if (!currTransRes.isUpdated)
-                {
-                    updateTransformUniformBuffer(currentFrame);
-                }
-
-                VkBufferCopy copyRegion = {};
-                copyRegion.srcOffset = 0;
-                copyRegion.dstOffset = 0;
-                copyRegion.size = m_transformsStagingBufferSize;
-                vkCmdCopyBuffer(commandBuffer, m_transformsStagingBuffer, currTransRes.uniformBuffer, 1, &copyRegion);
-
-                // Color
-                auto& currColorRes = m_colorsResources[currentFrame];
-
-                if (!currColorRes.isUpdated)
-                {
-                    updateColorBuffer(currentFrame);
-                }
-
-                copyRegion = {};
-                copyRegion.srcOffset = 0;
-                copyRegion.dstOffset = 0;
-                copyRegion.size = m_colorsStagingBufferSize;
-                vkCmdCopyBuffer(commandBuffer, m_colorsStagingBuffer, currColorRes.uniformBuffer, 1, &copyRegion);
+                m_transforms->update(commandBuffer, currentFrame);
+                m_colors->update(commandBuffer, currentFrame);
+                m_tcTransforms->update(commandBuffer, currentFrame);
 
                 // Text resources
                 for (auto& textResource : m_textResources)
@@ -316,23 +230,6 @@ namespace crisp
                         textRes->isUpdatedOnDevice = true;
                     }
                 }
-
-                //for (auto& texCoordRes : m_texCoordResources)
-                //{
-                //    auto texRes = texCoordRes.get();
-                //    if (texRes->needsUpdateToDevice)
-                //    {
-                //        texRes->updatedBufferIndex = (texRes->updatedBufferIndex + 1) % VulkanRenderer::NumVirtualFrames;
-                //        texRes->geom.vertexBufferOffset = texRes->updatedBufferIndex * 4 * sizeof(glm::vec4);
-                //        VkBufferCopy copyVertexRegion = {};
-                //        copyVertexRegion.srcOffset = 0;
-                //        copyVertexRegion.dstOffset = texRes->geom.vertexBufferOffset;
-                //        copyVertexRegion.size = 4 * sizeof(glm::vec4);
-                //        vkCmdCopyBuffer(commandBuffer, texRes->stagingVertexBuffer, texRes->geom.vertexBuffer, 1, &copyVertexRegion);
-                //
-                //        texRes->needsUpdateToDevice = false;
-                //    }
-                //}
             });
 
             m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
@@ -346,29 +243,7 @@ namespace crisp
 
                 for (auto& cmd : m_drawCommands)
                 {
-                    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getHandle());
-                    if (cmd.descriptorSets)
-                        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
-                            cmd.firstSet, cmd.descSetCount, cmd.descriptorSets, 0, nullptr);
-                    
-                    // Latest updated buffer
-                    uint32_t dynamicOffsets[2];
-                    dynamicOffsets[0] = static_cast<uint32_t>(UniformBufferGranularity * (cmd.transformId / MatricesPerGranularity)); // order is important!
-                    dynamicOffsets[1] = static_cast<uint32_t>(UniformBufferGranularity * (cmd.colorId / ColorsPerGranularity)); // order is important!
-
-                    int pushConstants[2];
-                    pushConstants[0] = cmd.transformId % MatricesPerGranularity;
-                    pushConstants[1] = cmd.colorId % ColorsPerGranularity;
-
-                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cmd.pipeline->getPipelineLayout(),
-                        0, 1, &m_transformsResources[currentFrame].descSet, 2, dynamicOffsets);
-                
-                    vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int), &pushConstants[0]);
-                    vkCmdPushConstants(commandBuffer, cmd.pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
-                
-                    cmd.geom->vertexBufferGroup.bind(commandBuffer);
-                    cmd.geom->indexBuffer->bind(commandBuffer, cmd.geom->indexBufferOffset);
-                    vkCmdDrawIndexed(commandBuffer, cmd.geom->indexCount, 1, 0, 0, 0);
+                    (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
                 }
 
                 auto size = m_drawCommands.size();
@@ -402,20 +277,11 @@ namespace crisp
             m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f, static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
             m_guiPass->recreate();
-            m_colorQuadPipeline->resize(width, height);
-            m_textPipeline->resize(width, height);
-            m_texQuadPipeline->resize(width, height);
-            m_fsQuadPipeline->resize(width, height);
+            m_guiRenderTargetView = m_guiPass->createRenderTargetView();
 
-            vkDestroyImageView(m_device->getHandle(), m_guiImageView, nullptr);
-            m_guiImageView = m_device->createImageView(m_guiPass->getColorAttachment(0), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_guiPass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
-
-            VkDescriptorImageInfo imageInfo = {};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView   = m_guiImageView;
+            VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo();
 
             std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
-
             descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet          = m_fsQuadDescSet;
             descriptorWrites[0].dstBinding      = 1;
@@ -426,24 +292,6 @@ namespace crisp
 
             vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
-
-        //    //
-        //    //// Dynamic tex coords
-        //    //auto numTexCoords = *m_freeTexCoordResourceIds.begin();
-        //    //m_texCoordResources.reserve(numTexCoords);
-        //    //for (unsigned int i = 0; i < numTexCoords; i++)
-        //    //{
-        //    //    m_texCoordResources.emplace_back(std::make_unique<TexCoordResource>());
-        //    //    m_texCoordResources[i]->geom.vertexBuffer   = m_renderer->getDevice().createDeviceBuffer(VulkanRenderer::NumVirtualFrames * 4 * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        //    //    m_texCoordResources[i]->stagingVertexBuffer = m_renderer->getDevice().createStagingBuffer(4 * sizeof(glm::vec4), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-        //    //    m_texCoordResources[i]->geom.indexBuffer    = m_quadGeometry.indexBuffer;
-        //    //    m_texCoordResources[i]->geom.indexBufferOffset = 0;
-        //    //    m_texCoordResources[i]->geom.vertexBufferOffset = 0;
-        //    //    m_texCoordResources[i]->geom.indexCount = 6;
-        //    //    m_texCoordResources[i]->updatedBufferIndex = 0;
-        //    //    m_texCoordResources[i]->needsUpdateToDevice = true;
-        //    //}
-        //}
 
         DeviceMemoryMetrics RenderSystem::getDeviceMemoryUsage()
         {
@@ -473,23 +321,22 @@ namespace crisp
             auto height   = fontTexture->font->height;
             auto byteSize = width * height  * numChannels * sizeof(unsigned char);
 
-            fontTexture->image = m_device->createDeviceImage(width, height, VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-            m_device->fillDeviceImage(fontTexture->image, fontTexture->font->textureData.data(), byteSize, { width, height, 1u }, 1);
-            m_device->transitionImageLayout(fontTexture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
-            fontTexture->imageView = m_device->createImageView(fontTexture->image, VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
+            fontTexture->texture = std::make_unique<Texture>(m_renderer, VkExtent3D{ width, height, 1 }, 1, VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+            fontTexture->texture->fill(fontTexture->font->textureData.data(), byteSize);
+            fontTexture->textureView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
             VkDescriptorImageInfo imageInfo = {};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView   = fontTexture->imageView;
+            imageInfo.imageView   = fontTexture->textureView->getHandle();
             imageInfo.sampler     = m_linearClampSampler;
 
             fontTexture->descSet = m_textPipeline->allocateDescriptorSet(GuiTextPipeline::FontAtlas);
 
             std::vector<VkWriteDescriptorSet> descWrites(2, VkWriteDescriptorSet{});
-            descWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descWrites[0].dstSet = fontTexture->descSet;
-            descWrites[0].dstBinding = 0;
-            descWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+            descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descWrites[0].dstSet          = fontTexture->descSet;
+            descWrites[0].dstBinding      = 0;
+            descWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
             descWrites[0].dstArrayElement = 0;
             descWrites[0].descriptorCount = 1;
             descWrites[0].pImageInfo      = &imageInfo;
@@ -522,70 +369,19 @@ namespace crisp
         {
             // Vertex buffer
             std::vector<glm::vec2> quadVerts = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
-            m_quadGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_device, quadVerts);
+            m_quadGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, quadVerts);
 
             // Index buffer
-            std::vector<glm::u16vec3> quadFaces = { { 0, 1, 2 }, { 0, 2, 3 } };
-            m_quadGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_device, quadFaces);
+            std::vector<glm::u16vec3> quadFaces = { { 0, 2, 1 }, { 0, 3, 2 } };
+            m_quadGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_renderer, quadFaces);
 
-            m_quadGeometry.vertexBufferGroup = {
+            m_quadGeometry.vertexBufferGroup =
+            {
                 { m_quadGeometry.vertexBuffer->get(), 0 }
             };
 
             m_quadGeometry.indexBufferOffset  = 0;
             m_quadGeometry.indexCount         = 6;
-        }
-
-        void RenderSystem::initTransformsResources()
-        {
-            for (unsigned int i = 0; i < MatricesPerGranularity; i++)
-            {
-                m_transformsResourceIdPool.insert(i); // unoccupied mvp transform ids
-            }
-
-            // Minimum multiples of granularity to store TransformsResourceIncrement matrices
-            auto multiplier = (m_transformsResourceIdPool.size() - 1) / MatricesPerGranularity + 1;
-
-            // Single staging buffer, will always contain latest data
-            m_transformsStagingBufferSize = UniformBufferGranularity * multiplier;
-            m_transformsStagingBuffer     = m_device->createStagingBuffer(m_transformsStagingBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-
-            // Per-frame buffers and descriptor sets, because each unprocessed command buffer may hold onto its own unique version when the current one is modified
-            for (unsigned int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
-            {
-                auto& res = m_transformsResources[i];
-
-                // Create the descriptor set
-                res.descSet = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor);
-
-                // Create the buffer and link it with descriptor set
-                res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize, 0);
-            }
-        }
-
-        void RenderSystem::initColorResources()
-        {
-            for (unsigned int i = 0; i < ColorsPerGranularity; i++)
-            {
-                m_colorsResourceIdPool.insert(i); // unoccupiedcolor ids
-            }
-
-            // Minimum multiples of granularity to store colors
-            auto multiplier = (m_colorsResourceIdPool.size() - 1) / ColorsPerGranularity + 1;
-
-            m_colorsStagingBufferSize = UniformBufferGranularity * multiplier;
-            m_colorsStagingBuffer     = m_device->createStagingBuffer(m_colorsStagingBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-
-            // Per-frame buffers and descriptor sets, because each unprocessed command buffer may hold onto its own unique version when the current one is modified
-            for (unsigned int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
-            {
-                auto& res = m_colorsResources[i];
-
-                res.descSet = m_transformsResources[i].descSet;
-
-                // Create the buffer and link it with descriptor set
-                res.createBufferAndUpdateSet(m_device, m_colorsStagingBufferSize, 1);
-            }
         }
 
         void RenderSystem::initGuiRenderTargetResources()
@@ -594,12 +390,9 @@ namespace crisp
             m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage);
 
             // Create a view to the render target
-            m_guiImageView = m_device->createImageView(m_guiPass->getColorAttachment(), VK_IMAGE_VIEW_TYPE_2D_ARRAY, m_guiPass->getColorFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 0, VulkanRenderer::NumVirtualFrames);
+            m_guiRenderTargetView = m_guiPass->createRenderTargetView();
             
-            VkDescriptorImageInfo imageInfo = {};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView   = m_guiImageView;
-            imageInfo.sampler     = m_linearClampSampler;
+            VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler);
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
             descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -621,83 +414,101 @@ namespace crisp
             vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
 
-        void RenderSystem::loadTextures()
+        void RenderSystem::loadTextureAtlas()
         {
-            //auto cbImage = std::make_unique<Image>("Resources/Textures/Gui/check-box.png");
-            //auto numChannels = cbImage->getNumComponents();
-            //auto width = cbImage->getWidth();
-            //auto height = cbImage->getHeight();
-            //auto byteSize = width * height  * numChannels * sizeof(unsigned char);
-            //
-            //m_checkBoxImage = m_renderer->getDevice().createDeviceImage(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-            //m_renderer->getDevice().fillDeviceImage(m_checkBoxImage, cbImage->getData(), byteSize, { width, height, 1u }, 1);
-            //m_renderer->getDevice().transitionImageLayout(m_checkBoxImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
-            //m_checkBoxImageView = m_renderer->getDevice().createImageView(m_checkBoxImage, VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
-            //
-            //// CheckBoxSampler
-            //VkSamplerCreateInfo samplerInfo = {};
-            //samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            //samplerInfo.magFilter               = VK_FILTER_LINEAR;
-            //samplerInfo.minFilter               = VK_FILTER_LINEAR;
-            //samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            //samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            //samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            //samplerInfo.anisotropyEnable        = VK_FALSE;
-            //samplerInfo.maxAnisotropy           = 1.0f;
-            //samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            //samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            //samplerInfo.compareEnable           = VK_FALSE;
-            //samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
-            //samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            //samplerInfo.mipLodBias              = 0.0f;
-            //samplerInfo.minLod                  = 0.0f;
-            //samplerInfo.maxLod                  = 0.0f;
-            //vkCreateSampler(m_renderer->getDevice().getHandle(), &samplerInfo, nullptr, &m_checkBoxSampler);
+            auto imageBuffer = std::make_shared<ImageFileBuffer>("Resources/Textures/Gui/Atlas.png");
+            auto byteSize = imageBuffer->getWidth() * imageBuffer->getHeight() * 4;
+            m_guiAtlas     = std::make_unique<Texture>(m_renderer, VkExtent3D{ imageBuffer->getWidth(), imageBuffer->getHeight(), 1u }, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+            m_guiAtlasView = m_guiAtlas->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
+            m_guiAtlas->fill(imageBuffer->getData(), byteSize);
         }
 
-        void RenderSystem::updateTransformUniformBuffer(uint32_t frameId)
+        void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
         {
-            auto& res = m_transformsResources[frameId];
+            m_colorQuadPipeline->bind(cmdBuffer);
+
+            // Latest updated buffer
+            VkDescriptorSet descSets[] =
+            {
+                m_transforms->getDescriptorSet(frameIdx)
+            }; 
+            uint32_t dynamicOffsets[] =
+            {
+                m_transforms->getDynamicOffset(cmd.transformId),
+                m_colors->getDynamicOffset(cmd.colorId)
+            };
+            uint32_t pushConstants[2] =
+            {
+                m_transforms->getPushConstantValue(cmd.transformId),
+                m_colors->getPushConstantValue(cmd.colorId)
+            };
+
+            vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_colorQuadPipeline->getPipelineLayout(),
+                0, 1, descSets, 2, dynamicOffsets);
+            vkCmdPushConstants(cmdBuffer, m_colorQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
+            vkCmdPushConstants(cmdBuffer, m_colorQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
             
-            // Destroy the old buffer to free memory 
-            m_device->destroyDeviceBuffer(res.uniformBuffer);
-
-            // Create a new buffer and link it to descriptor set
-            res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize, 0);
+            m_quadGeometry.drawIndexed(cmdBuffer);
         }
 
-        void RenderSystem::updateColorBuffer(uint32_t frameId)
+        void RenderSystem::renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
         {
-            auto& res = m_colorsResources[frameId];
+            const auto textRes = m_textResources.at(cmd.textId).get();
+            m_textPipeline->bind(cmdBuffer);
 
-            // Destroy the old buffer to free memory 
-            m_device->destroyDeviceBuffer(res.uniformBuffer);
+            VkDescriptorSet descSets[] =
+            {
+                m_transforms->getDescriptorSet(frameIdx),
+                textRes->descSet
+            };
+            uint32_t dynamicOffsets[] =
+            {
+                m_transforms->getDynamicOffset(cmd.transformId),
+                m_colors->getDynamicOffset(cmd.colorId)
+            };
+            int pushConstants[2] =
+            {
+                m_transforms->getPushConstantValue(cmd.transformId),
+                m_colors->getPushConstantValue(cmd.colorId)
+            };
 
-            // Create a new buffer and link it to descriptor set
-            res.createBufferAndUpdateSet(m_device, m_transformsStagingBufferSize, 1);
+            vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->getPipelineLayout(),
+                0, 2, descSets, 2, dynamicOffsets);
+
+            vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
+            vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
+            
+            textRes->geomData.drawIndexed(cmdBuffer);
         }
 
-        void RenderSystem::UniformBufferFrameResource::createBufferAndUpdateSet(VulkanDevice* device, VkDeviceSize size, uint32_t binding)
+        void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
         {
-            bufferSize = size;
-            uniformBuffer = device->createDeviceBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            m_texQuadPipeline->bind(cmdBuffer);
 
-            VkDescriptorBufferInfo transBufferInfo = {};
-            transBufferInfo.buffer = uniformBuffer;
-            transBufferInfo.offset = 0;
-            transBufferInfo.range  = UniformBufferGranularity; // Because we use UNIFORM_BUFFER_DYNAMIC, it stays the same size
+            VkDescriptorSet descSets[] =
+            {
+                m_transforms->getDescriptorSet(frameIdx),
+                m_tcTransforms->getDescriptorSet(frameIdx)
+            };
+            uint32_t dynamicOffsets[] =
+            {
+                m_transforms->getDynamicOffset(cmd.transformId),
+                m_colors->getDynamicOffset(cmd.colorId),
+                m_tcTransforms->getDynamicOffset(cmd.textId)
+            };
+            int pushConstants[3] =
+            {
+                m_transforms->getPushConstantValue(cmd.transformId),
+                m_colors->getPushConstantValue(cmd.colorId),
+                m_tcTransforms->getPushConstantValue(cmd.textId)
+            };
 
-            VkWriteDescriptorSet descWrite = {};
-            descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descWrite.dstSet          = descSet;
-            descWrite.dstBinding      = binding;
-            descWrite.dstArrayElement = 0;
-            descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-            descWrite.descriptorCount = 1;
-            descWrite.pBufferInfo     = &transBufferInfo;
+            vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_texQuadPipeline->getPipelineLayout(),
+                0, 2, descSets, 3, dynamicOffsets);
+            vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0,     sizeof(int), &pushConstants[0]);
+            vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2 * sizeof(int), &pushConstants[1]);
 
-            vkUpdateDescriptorSets(device->getHandle(), 1, &descWrite, 0, nullptr);
-            isUpdated = true;
+            m_quadGeometry.drawIndexed(cmdBuffer);
         }
 
         void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, Font* font, VulkanRenderer* renderer)
@@ -746,17 +557,11 @@ namespace crisp
             geomData.indexBuffer->updateStagingBuffer(textFaces);
         }
 
-        //void RenderSystem::TexCoordResource::generate(const glm::vec2& min, const glm::vec2& max, VulkanRenderer* renderer)
-        //{
-        //    std::vector<glm::vec4> vertices;
-        //    vertices.emplace_back(0.0f, 0.0f, min.x, min.y);
-        //    vertices.emplace_back(1.0f, 0.0f, max.x, min.y);
-        //    vertices.emplace_back(1.0f, 1.0f, max.x, max.y);
-        //    vertices.emplace_back(0.0f, 1.0f, min.x, max.y);
-
-        //    renderer->getDevice().fillStagingBuffer(stagingVertexBuffer, vertices.data(), vertices.size() * sizeof(glm::vec4));
-        //}
-
-        
+        void RenderSystem::GeometryData::drawIndexed(VkCommandBuffer cmdBuffer) const
+        {
+            vertexBufferGroup.bind(cmdBuffer);
+            indexBuffer->bind(cmdBuffer, indexBufferOffset);
+            vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);
+        }
     }
 }

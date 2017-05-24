@@ -31,6 +31,11 @@ namespace vesper
         return values[index];
     }
 
+    const float& RgbSpectrum::operator[](int index) const
+    {
+        return values[index];
+    }
+
     RgbSpectrum& RgbSpectrum::operator=(const RgbSpectrum & rgbSpectrum)
     {
         r = rgbSpectrum.r;

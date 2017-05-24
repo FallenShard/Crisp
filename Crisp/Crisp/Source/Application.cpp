@@ -5,13 +5,16 @@
 #include <string>
 #include <chrono>
 
-#include "Vulkan/VulkanRenderer.hpp"
+#include "Renderer/VulkanRenderer.hpp"
+#include "Core/Window.hpp"
 #include "Core/InputDispatcher.hpp"
 #include "Core/Timer.hpp"
-#include "Core/Picture.hpp"
+#include "Core/RaytracedImage.hpp"
+#include "Core/BackgroundImage.hpp"
+#include "Core/Scene.hpp"
 
 #include "IO/FileUtils.hpp"
-#include "IO/Image.hpp"
+#include "IO/ImageFileBuffer.hpp"
 #include "IO/OpenEXRWriter.hpp"
 
 #include "GUI/RenderSystem.hpp"
@@ -21,9 +24,15 @@
 
 namespace crisp
 {
-    Application::Application()
-        : m_window(nullptr, glfwDestroyWindow)
-        , m_tracerProgress(0.0f)
+    namespace
+    {
+        void logFpsToConsole(const std::string& str)
+        {
+            std::cout << str << '\r';
+        }
+    }
+    Application::Application(ApplicationEnvironment* environment)
+        : m_tracerProgress(0.0f)
         , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(200.0))
         , m_numRayTracedChannels(4)
     {
@@ -32,10 +41,10 @@ namespace crisp
         createWindow();
         createRenderer();
 
-        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
+        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window->getHandle());
         m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
 
-        m_backgroundPicture = std::make_unique<StaticPicture>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, m_renderer.get());
+        m_backgroundImage = std::make_unique<BackgroundImage>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, m_renderer.get());
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
@@ -43,7 +52,8 @@ namespace crisp
         m_inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
         m_inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
         m_frameTimeLogger->onLoggerUpdated.subscribe<gui::Form, &gui::Form::setFpsString>(m_guiForm.get());
-
+        //m_frameTimeLogger->onLoggerUpdated.subscribe<&logFpsToConsole>();
+        
         // Create ray tracer and add a handler for image block updates
         m_rayTracer = std::make_unique<vesper::RayTracer>();
         m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
@@ -54,7 +64,6 @@ namespace crisp
             m_rayTracerUpdateQueue.emplace(update);
             rayTracerProgressed(m_tracerProgress, m_timeSpentRendering);
         });
-        
 
         auto crispButton = m_guiForm->getControlById<gui::Button>("crispButton");
         crispButton->setClickCallback([this, form = m_guiForm.get()]()
@@ -63,13 +72,13 @@ namespace crisp
             {
                 form->addMemoryUsagePanel();
                 form->addStatusBar();
-
+        
                 m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
             });
-
+        
             form->fadeOutAndRemove("welcomePanel", 0.5f);
         });
-
+        
         auto vesperButton = m_guiForm->getControlById<gui::Button>("vesperButton");
         vesperButton->setClickCallback([this, form = m_guiForm.get()]()
         {
@@ -77,19 +86,16 @@ namespace crisp
             {
                 form->addMemoryUsagePanel();
                 form->addStatusBar();
-
+        
                 gui::VesperGui vesperGui;
                 form->add(vesperGui.buildSceneOptions(form));
                 form->add(vesperGui.buildProgressBar(form));
-
+        
                 vesperGui.setupInputCallbacks(form, this);
             });
-
+        
             form->fadeOutAndRemove("welcomePanel", 0.5f);
         });
-
-        //vesperButton->click();
-        //openSceneFile("env-light-test-mis.xml");
     }
 
     Application::~Application()
@@ -100,17 +106,19 @@ namespace crisp
     {
         std::cout << "Hello world from Crisp! The application is up and running!\n";
 
+        m_renderer->flushResourceUpdates();
+
         m_frameTimeLogger->restart();
         Timer<std::milli> updateTimer;
         double timeSinceLastUpdate = 0.0;
-        while (!glfwWindowShouldClose(m_window.get()))
+        while (!m_window->shouldClose())
         {
             auto timeDelta = updateTimer.restart() / 1000.0;
             timeSinceLastUpdate += timeDelta;
 
             while (timeSinceLastUpdate > TimePerFrame)
             {
-                glfwPollEvents();
+                Window::pollEvents();
 
                 m_guiForm->update(TimePerFrame);
 
@@ -125,7 +133,7 @@ namespace crisp
             if (m_scene)
                 m_scene->render();
             else
-                m_backgroundPicture->draw();
+                m_backgroundImage->draw();
 
             if (m_rayTracedImage)
                 m_rayTracedImage->draw();
@@ -145,9 +153,10 @@ namespace crisp
         std::cout << "New window dims: (" << width << ", " << height << ")\n";
 
         m_renderer->resize(width, height);
-        m_backgroundPicture->resize(width, height);
+        m_backgroundImage->resize(width, height);
 
-        m_guiForm->resize(width, height);
+        if (m_guiForm)
+            m_guiForm->resize(width, height);
         
         if (m_scene)
             m_scene->resize(width, height);
@@ -177,11 +186,11 @@ namespace crisp
 
     void Application::openSceneFile(std::string filename)
     {
-        m_projectName = filename.substr(0, filename.length() - 4);
-        m_rayTracer->initializeScene("Resources/VesperScenes/" + filename);
+        m_projectName = FileUtils::getFileNameFromPath(filename);
+        m_rayTracer->initializeScene(filename);
 
         auto imageSize = m_rayTracer->getImageSize();
-        m_rayTracedImage = std::make_unique<Picture>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer.get());
+        m_rayTracedImage = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer.get());
         m_rayTracedImageData.resize(m_numRayTracedChannels * imageSize.x * imageSize.y);
     }
 
@@ -202,28 +211,24 @@ namespace crisp
 
     void Application::createWindow()
     {
-        // This hint is needed for Vulkan-based renderers
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        m_window.reset(glfwCreateWindow(DefaultWindowWidth, DefaultWindowHeight, Title, nullptr, nullptr));
+        auto desktopRes = Window::getDesktopResolution();
+
+        m_window = std::make_unique<Window>((desktopRes.x - DefaultWindowWidth) / 2, (desktopRes.y - DefaultWindowHeight) / 2,
+            DefaultWindowWidth, DefaultWindowHeight, Title);
     }
 
     void Application::createRenderer()
     {
         // Extensions required by the windowing library (GLFW)
-        std::vector<const char*> extensions;
-        unsigned int glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        for (unsigned int i = 0; i < glfwExtensionCount; i++)
-            extensions.push_back(glfwExtensions[i]);
+        auto extensions = Window::getVulkanExtensions();
 
         // Window creation surface callback from the windowing library
-        auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) -> VkResult
+        auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface)
         {
-            return glfwCreateWindowSurface(instance, this->m_window.get(), allocCallbacks, surface);
+            return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
         
-        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, std::forward<std::vector<const char*>>(extensions));
+        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, std::forward<std::vector<std::string>>(extensions));
     }
 
     void Application::processRayTracerUpdates()

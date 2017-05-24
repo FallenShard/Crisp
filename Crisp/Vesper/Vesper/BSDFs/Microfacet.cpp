@@ -5,7 +5,7 @@
 #include "Math/Warp.hpp"
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
-#include "MicrofacetDistributions/Beckmann.hpp"
+#include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 
 namespace vesper
 {
@@ -14,7 +14,9 @@ namespace vesper
         m_lobe = Lobe::Diffuse;
         m_lobe |= Lobe::Glossy;
 
-        m_distrib = std::make_unique<BeckmannDistribution>(params);
+        std::string distribType = params.get<std::string>("distribution", "beckmann");
+        m_distrib = MicrofacetDistributionFactory::create(distribType, params);
+
         m_intIOR = params.get<float>("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
         m_extIOR = params.get<float>("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
         m_kd = params.get<Spectrum>("kd", Spectrum(0.5f));

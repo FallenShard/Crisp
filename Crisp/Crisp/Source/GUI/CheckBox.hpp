@@ -14,7 +14,7 @@ namespace crisp
         class CheckBox : public Control
         {
         public:
-            CheckBox(RenderSystem* renderSystem);
+            CheckBox(Form* parentForm);
             virtual ~CheckBox();
 
             bool isChecked() const;
@@ -22,7 +22,7 @@ namespace crisp
             void setText(const std::string& text);
 
             virtual glm::vec2 getSize() const;
-            virtual Rect<float> getBounds() const;
+            virtual Rect<float> getAbsoluteBounds() const;
 
             virtual void onMouseEntered() override;
             virtual void onMouseExited() override;
@@ -31,12 +31,14 @@ namespace crisp
 
             virtual void validate() override;
 
-            ColorPalette getColor() const;
+            //ColorPalette getColor() const;
             virtual void draw(RenderSystem& visitor) override;
 
             unsigned int getTexCoordResourceId() const;
 
         private:
+            void updateTexCoordResource();
+
             enum class State
             {
                 Idle,
@@ -46,7 +48,6 @@ namespace crisp
 
             State m_state;
             bool m_isChecked;
-            bool m_prevCheckedState;
 
             std::function<void(bool)> m_checkCallback;
 

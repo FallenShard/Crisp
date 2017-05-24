@@ -13,8 +13,8 @@ namespace crisp
         , tag(tag)
     {
         VkMemoryAllocateInfo devAllocInfo = {};
-        devAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        devAllocInfo.allocationSize = size;
+        devAllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        devAllocInfo.allocationSize  = size;
         devAllocInfo.memoryTypeIndex = memoryTypeIndex;
 
         vkAllocateMemory(device, &devAllocInfo, nullptr, &memory);

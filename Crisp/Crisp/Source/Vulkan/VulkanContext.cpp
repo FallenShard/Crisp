@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "Application.hpp"
+#include "VulkanQueueConfiguration.hpp"
 
 #ifndef _DEBUG
 const bool enableValidationLayers = false;
@@ -35,7 +36,6 @@ namespace crisp
                 return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
-
         void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
         {
             auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
@@ -50,13 +50,13 @@ namespace crisp
         }
     }
 
-    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<const char*> reqPlatformExtensions)
+    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions)
         : m_instance(VK_NULL_HANDLE)
         , m_callback(VK_NULL_HANDLE)
         , m_surface(VK_NULL_HANDLE)
         , m_physicalDevice(VK_NULL_HANDLE)
     {
-        createInstance(reqPlatformExtensions);
+        createInstance(std::forward<std::vector<std::string>>(reqPlatformExtensions));
         setupDebugCallback();
         createSurface(surfaceCreator);
         pickPhysicalDevice();
@@ -79,50 +79,46 @@ namespace crisp
         return m_surface;
     }
 
-    VkDevice VulkanContext::createLogicalDevice()
+    VkDevice VulkanContext::createLogicalDevice(const VulkanQueueConfiguration& config) const
     {
-        QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
-
-        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
-
-        float queuePriority = 1.f;
-        for (auto queueFamily : uniqueQueueFamilies)
-        {
-            VkDeviceQueueCreateInfo queueCreateInfo = {};
-            queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueFamilyIndex = queueFamily;
-            queueCreateInfo.queueCount       = 1;
-            queueCreateInfo.pQueuePriorities = &queuePriority;
-            queueCreateInfos.push_back(queueCreateInfo);
-        }
-
         VkPhysicalDeviceFeatures deviceFeatures = {};
         vkGetPhysicalDeviceFeatures(m_physicalDevice, &deviceFeatures);
 
         VkDeviceCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pEnabledFeatures = &deviceFeatures;
-        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-        createInfo.pQueueCreateInfos = queueCreateInfos.data();
+        createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.pEnabledFeatures     = &deviceFeatures;
+        createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.getQueueCreateInfos().size());
+        createInfo.pQueueCreateInfos    = config.getQueueCreateInfos().data();
 
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+        createInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
         createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
         if (enableValidationLayers)
         {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
         }
         else
         {
-            createInfo.enabledLayerCount = 0;
+            createInfo.enabledLayerCount   = 0;
             createInfo.ppEnabledLayerNames = nullptr;
         }
 
         VkDevice device(VK_NULL_HANDLE);
         vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &device);
         return device;
+    }
+
+    bool VulkanContext::getQueueFamilyPresentationSupport(uint32_t familyIndex) const
+    {
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, familyIndex, m_surface, &presentSupport);
+        return static_cast<bool>(presentSupport);
+    }
+
+    std::vector<VkQueueFamilyProperties> VulkanContext::getQueueFamilyProperties() const
+    {
+        return getQueueFamilyProperties(m_physicalDevice);
     }
 
     QueueFamilyIndices VulkanContext::findQueueFamilies() const
@@ -171,20 +167,20 @@ namespace crisp
     uint32_t VulkanContext::findDeviceImageMemoryType(VkDevice device)
     {
         VkImageCreateInfo imageInfo = {};
-        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width = 1;
+        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width  = 1;
         imageInfo.extent.height = 1;
-        imageInfo.extent.depth = 1;
-        imageInfo.mipLevels = 1;
-        imageInfo.arrayLayers = 1;
-        imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.extent.depth  = 1;
+        imageInfo.mipLevels     = 1;
+        imageInfo.arrayLayers   = 1;
+        imageInfo.format        = VK_FORMAT_R8G8B8A8_UNORM;
+        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-        imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags = 0;
+        imageInfo.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.flags         = 0;
 
         VkImage dummyImage(VK_NULL_HANDLE);
         vkCreateImage(device, &imageInfo, nullptr, &dummyImage);
@@ -215,9 +211,9 @@ namespace crisp
     uint32_t VulkanContext::findStagingBufferMemoryType(VkDevice device)
     {
         VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = 1;
-        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size        = 1;
+        bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VkBuffer dummyBuffer(VK_NULL_HANDLE);
@@ -226,10 +222,10 @@ namespace crisp
         vkGetBufferMemoryRequirements(device, dummyBuffer, &memRequirements);
         vkDestroyBuffer(device, dummyBuffer, nullptr);
 
-        return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
 
-    void VulkanContext::createInstance(std::vector<const char*> reqPlatformExtensions)
+    void VulkanContext::createInstance(std::vector<std::string>&& reqPlatformExtensions)
     {
         VkApplicationInfo appInfo = {};
         appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -242,11 +238,15 @@ namespace crisp
         if (enableValidationLayers)
             reqPlatformExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
+        std::vector<const char*> enabledExtensions;
+        std::transform(reqPlatformExtensions.begin(), reqPlatformExtensions.end(), std::back_inserter(enabledExtensions), [](const auto& ext) { return ext.c_str(); });
+
+
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo        = &appInfo;
-        createInfo.enabledExtensionCount   = static_cast<uint32_t>(reqPlatformExtensions.size());
-        createInfo.ppEnabledExtensionNames = reqPlatformExtensions.data();
+        createInfo.enabledExtensionCount   = static_cast<uint32_t>(enabledExtensions.size());
+        createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
         if (enableValidationLayers)
         {
@@ -267,7 +267,7 @@ namespace crisp
         std::vector<VkExtensionProperties> extensionProps(extensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data());
 
-        bool supportsAllExtensions = checkRequiredExtensions(reqPlatformExtensions, extensionProps);
+        bool supportsAllExtensions = checkRequiredExtensions(enabledExtensions, extensionProps);
         bool supportsValidationLayers = !enableValidationLayers || checkValidationLayerSupport();
 
         if (!supportsAllExtensions)
@@ -281,9 +281,9 @@ namespace crisp
         if (!enableValidationLayers) return;
 
         VkDebugReportCallbackCreateInfoEXT createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        createInfo.pfnCallback = (PFN_vkDebugReportCallbackEXT)debugCallback;
+        createInfo.sType       = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        createInfo.flags       = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        createInfo.pfnCallback = reinterpret_cast<PFN_vkDebugReportCallbackEXT>(debugCallback);
 
         CreateDebugReportCallbackEXT(m_instance, &createInfo, nullptr, &m_callback);
     }
@@ -384,15 +384,22 @@ namespace crisp
         return isDiscreteGpu && indices.isComplete() && extensionsSupported && swapChainAdequate;
     }
 
-    QueueFamilyIndices VulkanContext::findQueueFamilies(VkPhysicalDevice device) const
+    std::vector<VkQueueFamilyProperties> VulkanContext::getQueueFamilyProperties(VkPhysicalDevice device) const
     {
-        QueueFamilyIndices indices;
-
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+        return queueFamilies;
+    }
+
+    QueueFamilyIndices VulkanContext::findQueueFamilies(VkPhysicalDevice device) const
+    {
+        QueueFamilyIndices indices;
+
+        auto queueFamilies = getQueueFamilyProperties(device);
 
         int i = 0;
         for (const auto& queueFamily : queueFamilies)
@@ -482,6 +489,7 @@ namespace crisp
     {
         return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
     }
+
     VkPhysicalDeviceProperties VulkanContext::getDeviceProperties() const
     {
         VkPhysicalDeviceProperties deviceProps;

@@ -405,6 +405,25 @@ namespace crisp
 
                 return absPos;
             }
+
+            case Anchor::CenterVertically:
+            {
+                auto parentSize = m_parent ? m_parent->getSize() : glm::vec2(0.0f);
+                auto size = getSize();
+
+                auto absPos = parentAbsPos;
+
+                absPos.x += parentPadding.x;
+
+                if (m_heightSizingBehavior == Sizing::FillParent)
+                    absPos.y += parentPadding.y;
+                else
+                    absPos.y += (parentSize.y - size.y) / 2.0f;
+
+                absPos += m_position;
+
+                return absPos;
+            }
             }
         }
 

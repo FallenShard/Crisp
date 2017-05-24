@@ -8,9 +8,10 @@
 
 namespace crisp
 {
-    VulkanSwapChain::VulkanSwapChain(VulkanDevice* device)
+    VulkanSwapChain::VulkanSwapChain(VulkanDevice* device, uint32_t numVirtualFrames)
         : m_swapChain(VK_NULL_HANDLE)
         , m_device(device)
+        , m_numVirtualFrames(numVirtualFrames)
     {
         createSwapChain();
         createSwapImageViews();
@@ -43,6 +44,11 @@ namespace crisp
         return m_imageViews.at(index);
     }
 
+    uint32_t VulkanSwapChain::getNumSwapChainImages() const
+    {
+        return static_cast<uint32_t>(m_imageViews.size());
+    }
+
     void VulkanSwapChain::recreate()
     {
         for (auto imageView : m_imageViews)
@@ -61,7 +67,7 @@ namespace crisp
         VkExtent2D extent                = chooseExtent(swapChainSupport.capabilities);
 
         // minImageCount + 1 to support triple-buffering with MAILBOX present mode
-        uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+        uint32_t imageCount = m_numVirtualFrames;
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
             imageCount = swapChainSupport.capabilities.maxImageCount;
 
@@ -119,7 +125,24 @@ namespace crisp
         m_imageViews.resize(m_images.size(), VK_NULL_HANDLE);
 
         for (uint32_t i = 0; i < m_images.size(); i++)
-            m_imageViews[i] = m_device->createImageView(m_images[i], VK_IMAGE_VIEW_TYPE_2D, m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 0, 1);
+        {
+            VkImageViewCreateInfo viewInfo = {};
+            viewInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            viewInfo.image        = m_images[i];
+            viewInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.format       = m_imageFormat;
+            viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewInfo.subresourceRange.baseMipLevel   = 0;
+            viewInfo.subresourceRange.levelCount     = 1;
+            viewInfo.subresourceRange.baseArrayLayer = 0;
+            viewInfo.subresourceRange.layerCount     = 1;
+
+            vkCreateImageView(m_device->getHandle(), &viewInfo, nullptr, &m_imageViews[i]);
+        }
     }
 
     VkSurfaceFormatKHR VulkanSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const

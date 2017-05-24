@@ -40,6 +40,7 @@ namespace crisp
         const CameraParameters* getCameraParameters() const;
 
     private:
+        void checkKeyboardInput(float dt);
         glm::vec2 filterMouseMoves();
 
         GLFWwindow* m_window;
@@ -49,16 +50,7 @@ namespace crisp
 
         CameraParameters m_cameraParameters;
 
-        //enum class CameraState
-        //{
-        //    Free,
-        //    Target
-        //};
-        //
-        //CameraState m_cameraState;
-        //FreeCamera m_freeCamera;
-        TargetCamera m_targetCamera;
-        
+        FreeCamera m_camera;
 
         float m_deltaX;
         float m_deltaY;
@@ -66,7 +58,6 @@ namespace crisp
         glm::vec2 m_rotationValues;
 
         bool m_isMoving;
-
         glm::vec2 m_prevMousePos;
 
         float m_moveSpeed;
@@ -76,7 +67,7 @@ namespace crisp
         static constexpr float  MouseFilterWeightDecay = 0.2f;
 
         bool m_useMouseFiltering;
-        bool m_refreshDeltasWithUpdate;
+        bool m_refreshDeltasOnUpdate;
         std::list<glm::vec2> m_mouseDeltas;
     };
 }

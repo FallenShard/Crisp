@@ -30,6 +30,8 @@ namespace crisp
     {
         m_fov = glm::radians(fovY);
         m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+
+        m_recalculateViewMatrix = true;
     }
 
     float AbstractCamera::getFov() const
@@ -41,11 +43,39 @@ namespace crisp
     {
         m_aspectRatio = aspectRatio;
         m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+
+        m_recalculateViewMatrix = true;
     }
 
     float AbstractCamera::getAspectRatio() const
     {
         return m_aspectRatio;
+    }
+
+    void AbstractCamera::setNearPlaneDistance(float zNear)
+    {
+        m_zNear = zNear;
+        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+
+        m_recalculateViewMatrix = true;
+    }
+
+    float AbstractCamera::getNearPlaneDistance() const
+    {
+        return m_zNear;
+    }
+
+    void AbstractCamera::setFarPlaneDistance(float zFar)
+    {
+        m_zFar = zFar;
+        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+
+        m_recalculateViewMatrix = true;
+    }
+
+    float AbstractCamera::getFarPlaneDistance() const
+    {
+        return m_zFar;
     }
 
     void AbstractCamera::setPosition(const glm::vec3& position)
@@ -81,7 +111,6 @@ namespace crisp
 
     void AbstractCamera::calculateFrustumPlanes() const
     {
-        // TODO
     }
 
     bool AbstractCamera::isPointInFrustum(const glm::vec3& point)

@@ -11,7 +11,7 @@ namespace crisp
     class VulkanSwapChain
     {
     public:
-        VulkanSwapChain(VulkanDevice* device);
+        VulkanSwapChain(VulkanDevice* device, uint32_t numVirtualFrames);
         ~VulkanSwapChain();
 
         VulkanSwapChain(const VulkanSwapChain& other) = delete;
@@ -22,6 +22,7 @@ namespace crisp
         VkFormat getImageFormat() const;
         VkExtent2D getExtent() const;
         VkImageView getImageView(size_t index) const;
+        uint32_t getNumSwapChainImages() const;
 
         void recreate();
 
@@ -35,6 +36,7 @@ namespace crisp
 
         VulkanDevice* m_device;
         VkSwapchainKHR m_swapChain;
+        uint32_t m_numVirtualFrames;
 
         VkFormat m_imageFormat;
         VkExtent2D m_extent;

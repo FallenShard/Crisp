@@ -12,7 +12,7 @@ namespace vesper
         {
             return std::make_unique<Mesh>(parameters);
         }
-        if (type == "sphere")
+        else if (type == "sphere")
         {
             return std::make_unique<Sphere>(parameters);
         }

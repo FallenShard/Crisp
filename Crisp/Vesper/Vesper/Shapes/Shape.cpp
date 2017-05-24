@@ -32,4 +32,13 @@ namespace vesper
     {
         return m_bsdf;
     }
+
+    void Shape::setMedium(Medium* medium)
+    {
+        m_medium = medium;
+    }
+    const Medium* Shape::getMedium() const
+    {
+        return m_medium;
+    }
 }

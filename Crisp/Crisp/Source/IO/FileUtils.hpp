@@ -12,6 +12,7 @@ namespace crisp
         static std::string fileToString(const std::string& filePath);
         static std::vector<char> readBinaryFile(const std::string& filePath);
         static std::string openFileDialog();
+        static std::string getFileNameFromPath(const std::string& filePath);
         static void createDirectory(const std::string& path);
     };
 }

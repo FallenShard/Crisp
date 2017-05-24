@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     auto environment = std::make_shared<crisp::ApplicationEnvironment>();
     
-    auto application = std::make_shared<crisp::Application>();
+    auto application = std::make_shared<crisp::Application>(environment.get());
     application->run();
 
     return 0;

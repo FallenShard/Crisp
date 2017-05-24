@@ -15,7 +15,6 @@
 #include "Samplers/Sampler.hpp"
 #include "Integrators/Integrator.hpp"
 
-#include "Core/JsonSceneParser.hpp"
 #include "Core/XmlSceneParser.hpp"
 
 namespace vesper

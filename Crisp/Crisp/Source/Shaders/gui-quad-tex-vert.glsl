@@ -1,6 +1,6 @@
 #version 450 core
  
-layout(location = 0) in vec4 posCoord;
+layout(location = 0) in vec2 position;
 
 layout(location = 0) out vec2 fsTexCoord;
 
@@ -11,11 +11,11 @@ layout(set = 0, binding = 0) uniform GuiTransform
 
 layout(push_constant) uniform PushConstant
 {
-    layout(offset = 0) int index;
-} pushConsts;
+    layout(offset = 0) int value;
+} transformIndex;
  
 void main()
 {
-    fsTexCoord  = posCoord.zw;
-    gl_Position = guiTransform.MVP[pushConsts.index] * vec4(posCoord.xy, 0.0f, 1.0f);
+    fsTexCoord  = position;
+    gl_Position = guiTransform.MVP[transformIndex.value] * vec4(position, 0.0f, 1.0f);
 }

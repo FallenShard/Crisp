@@ -16,6 +16,11 @@ namespace crisp
         virtual ~AbstractCamera();
 
         virtual bool update(float dt) = 0;
+        virtual void rotate(float dx, float dy) = 0;
+        
+        virtual void walk(float dt) = 0;
+        virtual void strafe(float dt) = 0;
+        virtual void lift(float dt) = 0;
 
         void setupProjection(float fovY, float aspectRatio, float zNear = 0.1f, float zFar = 1000.0f);
         const glm::mat4& getProjectionMatrix() const;
@@ -25,6 +30,12 @@ namespace crisp
 
         void setApectRatio(float aspectRatio);
         float getAspectRatio() const;
+
+        void setNearPlaneDistance(float zNear);
+        float getNearPlaneDistance() const;
+
+        void setFarPlaneDistance(float zFar);
+        float getFarPlaneDistance() const;
 
         void setPosition(const glm::vec3& position);
         glm::vec3 getPosition() const;
@@ -55,6 +66,9 @@ namespace crisp
         glm::vec3 m_right;
         glm::vec3 m_up;
         glm::mat4 m_V;
+
+        glm::vec3 m_absPos;
+        glm::vec3 m_absTarget;
 
         bool m_recalculateViewMatrix;
 

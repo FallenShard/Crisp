@@ -41,6 +41,11 @@ namespace crisp
             return m_textExtent.y;
         }
 
+        Rect<float> Label::getAbsoluteBounds() const
+        {
+            return{ m_M[3][0], m_M[3][1], m_textExtent.x, m_textExtent.y };
+        }
+
         void Label::setFontSize(unsigned int fontSize)
         {
             m_fontId = m_renderSystem->getFont("SegoeUI.ttf", fontSize);

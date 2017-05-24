@@ -1,9 +1,9 @@
 #include "Button.hpp"
-#include "Form.hpp"
 
 #include <iostream>
 
 #include "Animation/PropertyAnimation.hpp"
+#include "Form.hpp"
 
 namespace crisp
 {
