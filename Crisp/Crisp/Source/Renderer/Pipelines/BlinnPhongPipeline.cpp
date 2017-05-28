@@ -18,7 +18,7 @@ namespace crisp
 
         m_descriptorSetLayouts[1] = createDescriptorSetLayout(
         {
-            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3, VK_SHADER_STAGE_FRAGMENT_BIT }
+            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, VK_SHADER_STAGE_FRAGMENT_BIT }
         });
 
         m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts);
@@ -26,7 +26,7 @@ namespace crisp
         m_descriptorPool = createDescriptorPool(
         {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 3 },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 9 }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 12 }
         }, 4);
 
         m_vertShader = renderer->getShaderModule("blinn-phong-vert");

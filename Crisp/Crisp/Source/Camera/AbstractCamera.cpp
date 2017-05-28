@@ -137,4 +137,33 @@ namespace crisp
     {
         return m_frustumPlanes.at(index);
     }
+
+    std::array<glm::vec3, 8> AbstractCamera::getFrustumPoints(float zNear, float zFar) const
+    {
+        auto tanA = std::tan(m_fov / 2.0f);
+
+        auto halfNearH = zNear * tanA;
+        auto halfNearW = halfNearH * m_aspectRatio;
+
+        auto halfFarH = zFar * tanA;
+        auto halfFarW = halfFarH * m_aspectRatio;
+
+        std::array<glm::vec3, 8> frustumPoints =
+        {
+            glm::vec3(-halfNearW, -halfNearH, -zNear),
+            glm::vec3(+halfNearW, -halfNearH, -zNear),
+            glm::vec3(-halfNearW, +halfNearH, -zNear),
+            glm::vec3(+halfNearW, +halfNearH, -zNear),
+            glm::vec3(-halfFarW, -halfFarH, -zFar),
+            glm::vec3(+halfFarW, -halfFarH, -zFar),
+            glm::vec3(-halfFarW, +halfFarH, -zFar),
+            glm::vec3(+halfFarW, +halfFarH, -zFar)
+        };
+
+        auto camToWorld = glm::inverse(m_V);
+
+        std::array<glm::vec3, 8> result;
+        std::transform(frustumPoints.begin(), frustumPoints.end(), result.begin(), [&camToWorld](const glm::vec3& pt) { return glm::vec3(camToWorld * glm::vec4(pt, 1.0f)); });
+        return result;
+    }
 }

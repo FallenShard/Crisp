@@ -13,7 +13,7 @@ namespace crisp
     class ShadowPass : public VulkanRenderPass
     {
     public:
-        ShadowPass(VulkanRenderer* renderer);
+        ShadowPass(VulkanRenderer* renderer, unsigned int shadowMapSize, unsigned int numCascades);
         ~ShadowPass();
 
         virtual void begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer = nullptr) const override;
@@ -36,5 +36,7 @@ namespace crisp
         std::vector<VkClearValue> m_clearValues;
 
         std::vector<VkFramebuffer> m_framebuffers;
+
+        unsigned int m_numCascades;
     };
 }

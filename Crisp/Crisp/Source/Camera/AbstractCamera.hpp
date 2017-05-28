@@ -54,6 +54,8 @@ namespace crisp
         std::array<glm::vec4, NumFrustumPlanes> getFrustumPlanes() const;
         glm::vec4 getFrustumPlane(size_t index) const;
 
+        std::array<glm::vec3, 8> getFrustumPoints(float zNear, float zFar) const;
+
     protected:
         float m_fov;
         float m_aspectRatio;

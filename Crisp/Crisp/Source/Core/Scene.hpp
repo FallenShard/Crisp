@@ -12,6 +12,7 @@
 
 namespace crisp
 {
+    class CascadedShadowMapper;
     class Application;
     class VulkanRenderer;
     class UniformColorPipeline;
@@ -55,14 +56,8 @@ namespace crisp
     private:
         void initRenderTargetResources();
 
-        struct ShadowParameters
-        {
-            glm::mat4 lightViewProjection;
-            glm::mat4 lightView;
-            glm::mat4 lightProjection;
-            glm::mat4 padding;
-        };
-        void calculateFrustumOBB(ShadowParameters& shadowParams, float zNear, float zFar);
+        
+        //void calculateFrustumOBB(ShadowParameters& shadowParams, float zNear, float zFar);
 
         VulkanRenderer* m_renderer;
         VulkanDevice* m_device;
@@ -85,13 +80,15 @@ namespace crisp
             glm::mat4 N;
         };
 
-        ShadowParameters m_shadowParameters[3];
+        std::unique_ptr<CascadedShadowMapper> m_shadowMapper;
+
+        //ShadowParameters m_shadowParameters[3];
 
         std::vector<Transforms> m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
         std::unique_ptr<UniformBuffer> m_cameraBuffer;
-        std::unique_ptr<UniformBuffer> m_shadowTransformsBuffer;
-        std::vector<std::shared_ptr<TextureView>> m_shadowMapViews;
+        //std::unique_ptr<UniformBuffer> m_shadowTransformsBuffer;
+        //std::vector<std::shared_ptr<TextureView>> m_shadowMapViews;
 
         std::unique_ptr<SceneRenderPass> m_scenePass;
 
@@ -102,10 +99,10 @@ namespace crisp
         //std::vector<DescriptorSetGroup> m_descriptorSetGroups;
         //
         //std::unique_ptr<LiquidPipeline> m_dielectricPipeline;
-        std::unique_ptr<ShadowPass> m_shadowPass;
-
-        std::vector<std::shared_ptr<ShadowMapPipeline>> m_shadowMapPipelines;
-        DescriptorSetGroup m_shadowMapDescGroup;
+        //std::unique_ptr<ShadowPass> m_shadowPass;
+        //
+        //std::vector<std::shared_ptr<ShadowMapPipeline>> m_shadowMapPipelines;
+        //DescriptorSetGroup m_shadowMapDescGroup;
 
         std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
         DescriptorSetGroup m_sceneDescSetGroup;

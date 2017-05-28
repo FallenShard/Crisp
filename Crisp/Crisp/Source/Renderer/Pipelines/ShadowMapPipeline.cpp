@@ -15,7 +15,12 @@ namespace crisp
             { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT }
         });
 
-        m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts);
+        std::vector<VkPushConstantRange> pushConstants =
+        {
+            { VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t) }
+        };
+
+        m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts, pushConstants);
 
         m_descriptorPool = createDescriptorPool(
         {

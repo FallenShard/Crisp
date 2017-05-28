@@ -12,12 +12,15 @@ layout(set = 0, binding = 0) uniform Transforms
 
 layout(set = 0, binding = 1) uniform LightTransforms
 {
-    mat4 lightViewProjection;
-    mat4 lightView;
-    mat4 lightProjection;
+    mat4 LVP[4];
 };
+
+layout(push_constant) uniform PushConstant
+{
+	layout(offset = 0) uint value;
+} lightTransformIndex;
 
 void main()
 {
-    gl_Position = lightViewProjection * M * vec4(position, 1.0f);
+    gl_Position = LVP[lightTransformIndex.value] * M * vec4(position, 1.0f);
 }

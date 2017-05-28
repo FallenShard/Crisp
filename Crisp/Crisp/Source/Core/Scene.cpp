@@ -35,6 +35,10 @@
 #include "Geometry/TriangleMeshBatch.hpp"
 #include "Geometry/MeshGeometry.hpp"
 
+#include "Lights/DirectionalLight.hpp"
+
+#include "Techniques/CascadedShadowMapper.hpp"
+
 namespace crisp
 {
     namespace
@@ -45,33 +49,6 @@ namespace crisp
         {
             out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]\n";
             return out;
-        }
-
-        std::vector<glm::vec3> getFrustumPoints(float fovY, float aspectRatio, float zNear, float zFar, const glm::mat4& cameraToWorld)
-        {
-            auto tanA = std::tan(fovY / 2.0f);
-
-            auto halfNearH = zNear * tanA;
-            auto halfNearW = halfNearH * aspectRatio;
-
-            auto halfFarH = zFar * tanA;
-            auto halfFarW = halfFarH * aspectRatio;
-
-            std::vector<glm::vec3> frustumPoints =
-            {
-                glm::vec3(-halfNearW, -halfNearH, -zNear),
-                glm::vec3(+halfNearW, -halfNearH, -zNear),
-                glm::vec3(-halfNearW, +halfNearH, -zNear),
-                glm::vec3(+halfNearW, +halfNearH, -zNear),
-                glm::vec3(-halfFarW, -halfFarH, -zFar),
-                glm::vec3(+halfFarW, -halfFarH, -zFar),
-                glm::vec3(-halfFarW, +halfFarH, -zFar),
-                glm::vec3(+halfFarW, +halfFarH, -zFar)
-            };
-
-            std::vector<glm::vec3> result;
-            std::transform(frustumPoints.begin(), frustumPoints.end(), std::back_inserter(result), [cameraToWorld](const glm::vec3& pt) { return glm::vec3(cameraToWorld * glm::vec4(pt, 1.0f)); });
-            return result;
         }
     }
 
@@ -84,16 +61,6 @@ namespace crisp
 
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         m_renderer->registerRenderPass(SceneRenderPassId, m_scenePass.get());
-
-        m_shadowPass = std::make_unique<ShadowPass>(m_renderer);
-        m_shadowMapPipelines.resize(3);
-        m_shadowMapPipelines[0] = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), 0);
-        m_shadowMapPipelines[1] = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), 1);
-        m_shadowMapPipelines[2] = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), 2);
-        m_shadowMapDescGroup = 
-        {
-            m_shadowMapPipelines[0]->allocateDescriptorSet(0)
-        };
 
         m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         initRenderTargetResources();
@@ -138,35 +105,21 @@ namespace crisp
 
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-        
-        m_shadowParameters[0].lightView = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        //shadowParameters.lightProjection = invertYaxis * glm::perspective(glm::radians(70.0f), 1.0f, 0.1f, 50.0f);
-        m_shadowParameters[1].lightProjection = invertYaxis * glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 1.0f, 20.0f);
-        m_shadowParameters[2].lightViewProjection = m_shadowParameters[0].lightProjection * m_shadowParameters[1].lightView;
+        uint32_t numCascades = 4;
+        DirectionalLight light(glm::normalize(glm::vec3(0.0f, -1.0f, -1.0f)));
+        m_shadowMapper = std::make_unique<CascadedShadowMapper>(m_renderer, light, numCascades, m_transformsBuffer.get());
 
-        m_shadowTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, 3 * sizeof(ShadowParameters), BufferUpdatePolicy::PerFrame, m_shadowParameters);
-
-        m_blinnPhongDescGroups[0].postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
-        m_blinnPhongDescGroups[0].postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_shadowTransformsBuffer->get(), 0, 3 * sizeof(ShadowParameters) });
-        m_blinnPhongDescGroups[0].postBufferUpdate(0, 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_cameraBuffer->get(),     0, sizeof(CameraParameters) });
-        m_blinnPhongDescGroups[0].postImageUpdate(1, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(0, 0), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[0].postImageUpdate(1, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(1, 0), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[0].postImageUpdate(1, 0, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(2, 0), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[0].flushUpdates(m_device);
-
-        m_blinnPhongDescGroups[1].postImageUpdate(1, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(0, 1), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[1].postImageUpdate(1, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(1, 1), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[1].postImageUpdate(1, 0, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(2, 1), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[1].flushUpdates(m_device);
-
-        m_blinnPhongDescGroups[2].postImageUpdate(1, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(0, 2), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[2].postImageUpdate(1, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(1, 2), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[2].postImageUpdate(1, 0, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowPass->getAttachmentView(2, 2), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-        m_blinnPhongDescGroups[2].flushUpdates(m_device);
-
-        m_shadowMapDescGroup.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_transformsBuffer->get(), 0, sizeof(Transforms) });
-        m_shadowMapDescGroup.postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, { m_shadowTransformsBuffer->get(), 0, sizeof(ShadowParameters) });
-        m_shadowMapDescGroup.flushUpdates(m_device);
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_shadowMapper->getLightTransformsBuffer()->getDescriptorInfo());
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_cameraBuffer->getDescriptorInfo());
+        for (uint32_t frameIdx = 0; frameIdx < VulkanRenderer::NumVirtualFrames; frameIdx++)
+        {
+            for (uint32_t cascadeIdx = 0; cascadeIdx < numCascades; cascadeIdx++)
+            {
+                m_blinnPhongDescGroups[frameIdx].postImageUpdate(1, 0, cascadeIdx, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_linearClampSampler, m_shadowMapper->getRenderPass()->getAttachmentView(cascadeIdx, frameIdx), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            }
+            m_blinnPhongDescGroups[frameIdx].flushUpdates(m_device);
+        }
     }
 
     Scene::~Scene()
@@ -193,13 +146,7 @@ namespace crisp
             auto& V = m_cameraController->getCamera().getViewMatrix();
             auto invertedP = invertYaxis * m_cameraController->getCamera().getProjectionMatrix();
 
-            auto zNear = m_cameraController->getCamera().getNearPlaneDistance();
-            auto zFar = m_cameraController->getCamera().getFarPlaneDistance();
-
-            calculateFrustumOBB(m_shadowParameters[0], zNear, 15.0f);
-            calculateFrustumOBB(m_shadowParameters[1], 15.0f, 45.0f);
-            calculateFrustumOBB(m_shadowParameters[2], 45.0f, zFar);
-            m_shadowTransformsBuffer->updateStagingBuffer(m_shadowParameters, 3 * sizeof(ShadowParameters));
+            m_shadowMapper->recalculateLightProjections(m_cameraController->getCamera(), 150.0f, ParallelSplit::Logarithmic);
 
             for (auto& trans : m_transforms)
             {
@@ -221,50 +168,41 @@ namespace crisp
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
             m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
             m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-            m_shadowTransformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
             m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
+
+            m_shadowMapper->update(commandBuffer, frameIdx);
         });
 
         m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
-            m_shadowPass->begin(commandBuffer);
-
-            auto drawStuff = [this](VkCommandBuffer commandBuffer, uint32_t frameIdx, uint32_t cascadeIdx)
+            m_shadowMapper->draw(commandBuffer, frameIdx, [this](VkCommandBuffer commandBuffer, uint32_t frameIdx, DescriptorSetGroup& descSets, VulkanPipeline* pipeline, uint32_t cascadeIdx)
             {
-                m_shadowMapPipelines[cascadeIdx]->bind(commandBuffer);
-                m_shadowMapDescGroup.setDynamicOffset(1, m_shadowTransformsBuffer->getDynamicOffset(frameIdx) + cascadeIdx * sizeof(ShadowParameters));
-                m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 0 * sizeof(Transforms));
-                m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipelines[cascadeIdx]->getPipelineLayout());
-
+                uint32_t cascade = cascadeIdx;
+                pipeline->bind(commandBuffer);
+                
+                descSets.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 0 * sizeof(Transforms));
+                descSets.bind(commandBuffer, pipeline->getPipelineLayout());
+                vkCmdPushConstants(commandBuffer, pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &cascade);
                 m_sphereGeometry->bindGeometryBuffers(commandBuffer);
                 m_sphereGeometry->draw(commandBuffer);
 
                 for (int i = 3; i < 33; ++i)
                 {
-                    m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
-                    m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipelines[cascadeIdx]->getPipelineLayout());
-
+                    descSets.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                    descSets.bind(commandBuffer, pipeline->getPipelineLayout());
+                    vkCmdPushConstants(commandBuffer, pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &cascade);
                     m_sphereGeometry->bindGeometryBuffers(commandBuffer);
                     m_sphereGeometry->draw(commandBuffer);
                 }
 
-                m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 2 * sizeof(Transforms));
-                m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipelines[cascadeIdx]->getPipelineLayout());
+                descSets.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 2 * sizeof(Transforms));
+                descSets.bind(commandBuffer, pipeline->getPipelineLayout());
+                vkCmdPushConstants(commandBuffer, pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &cascade);
                 m_bunnyGeometry->bindGeometryBuffers(commandBuffer);
                 m_bunnyGeometry->draw(commandBuffer);
-            };
-
-            drawStuff(commandBuffer, frameIdx, 0);
-
-            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-            drawStuff(commandBuffer, frameIdx, 1);
-
-            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-            drawStuff(commandBuffer, frameIdx, 2);
-
-            m_shadowPass->end(commandBuffer);
+            });
         });
 
         m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
@@ -290,7 +228,7 @@ namespace crisp
             vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
             m_blinnPhongPipeline->bind(commandBuffer);
-            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(1, m_shadowTransformsBuffer->getDynamicOffset(frameIdx));
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(1, m_shadowMapper->getLightTransformsBuffer()->getDynamicOffset(frameIdx));
             m_blinnPhongDescGroups[frameIdx].setDynamicOffset(2, m_cameraBuffer->getDynamicOffset(frameIdx));
 
             m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 0 * sizeof(Transforms));
@@ -342,58 +280,5 @@ namespace crisp
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
-    }
-
-    void Scene::calculateFrustumOBB(ShadowParameters& shadowParams, float zNear, float zFar)
-    {
-        // 1. obtain world space frustum points 
-        auto fov = m_cameraController->getCamera().getFov();
-        auto aspect = m_cameraController->getCamera().getAspectRatio();
-
-        auto worldFrustumPoints = getFrustumPoints(fov, aspect, zNear, zFar, glm::inverse(m_cameraController->getCamera().getViewMatrix()));
-
-        // 2. get center of frustum in world space
-        auto frustumCenter = std::accumulate(worldFrustumPoints.begin(), worldFrustumPoints.end(), glm::vec3(0.0f)) * (1.0f / worldFrustumPoints.size());
-
-        // 3. set up orthonormal basis for light space
-        auto lightDir   = glm::normalize(glm::vec3(0.0f, -1.0f, -1.0f));
-        auto lightUp    = glm::vec3(0.0f, 1.0f, 0.0f);
-        auto lightRight = glm::normalize(glm::cross(lightDir, lightUp));
-        lightUp = glm::normalize(glm::cross(lightRight, lightDir));
-
-        auto lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
-        shadowParams.lightView = glm::lookAt(lightPos, lightPos + lightDir, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        // 4. Calculate light's OBB
-        glm::vec3 minCorner(1000.0f);
-        glm::vec3 maxCorner(-1000.0f);
-        for (auto& pt : worldFrustumPoints)
-        {
-            auto lightViewPt = shadowParams.lightView * glm::vec4(pt, 1.0f);
-
-            minCorner = glm::min(minCorner, glm::vec3(lightViewPt));
-            maxCorner = glm::max(maxCorner, glm::vec3(lightViewPt));
-        }
-
-        glm::vec3 lengths(maxCorner - minCorner);
-        auto cubeCenter = (minCorner + maxCorner) / 2.0f;
-        auto squareSize = std::max(lengths.x, lengths.y);
-
-        auto lightProj = glm::ortho(
-            cubeCenter.x - (squareSize / 2.0f), cubeCenter.x + (squareSize / 2.0f),
-            cubeCenter.y - (squareSize / 2.0f), cubeCenter.y + (squareSize / 2.0f),
-            -maxCorner.z, -minCorner.z);
-
-        shadowParams.lightProjection = invertYaxis * lightProj;
-
-        shadowParams.lightViewProjection = shadowParams.lightProjection * shadowParams.lightView;
-        //m_transforms[32].M = glm::translate(cubeCenter);
-
-        //std::cout << "MIN: " << minCorner;
-        //std::cout << "MAX: " << maxCorner;
-        //std::cout << "FRUSTUM CENTER: " << frustumCenter;
-        //std::cout << "FRUSTUM CENTER VIEW: " << m_shadowParameters.lightView * glm::vec4(frustumCenter, 1.0f);
-        //std::cout << "FRUSTUM CENTER PROJ: " << m_shadowParameters.lightViewProjection * glm::vec4(frustumCenter, 1.0f);
-        //std::cout << "=================================\n";
     }
 }

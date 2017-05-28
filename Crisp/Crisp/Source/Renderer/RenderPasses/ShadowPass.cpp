@@ -9,20 +9,15 @@
 
 namespace crisp
 {
-    namespace
-    {
-        constexpr int shadowMapSize = 1024;
-        constexpr int numCascades   = 3;
-    }
-
-    ShadowPass::ShadowPass(VulkanRenderer* renderer)
+    ShadowPass::ShadowPass(VulkanRenderer* renderer, unsigned int shadowMapSize, unsigned int numCascades)
         : VulkanRenderPass(renderer)
         , m_clearValues(numCascades)
         , m_depthFormat(VK_FORMAT_D32_SFLOAT)
+        , m_numCascades(numCascades)
     {
-        m_clearValues[0].depthStencil = { 1.0f, 0 };
-        m_clearValues[1].depthStencil = { 1.0f, 0 };
-        m_clearValues[2].depthStencil = { 1.0f, 0 };
+        for (auto& clearValue : m_clearValues)
+            clearValue.depthStencil = { 1.0f, 0 };
+
         m_renderArea = { shadowMapSize, shadowMapSize };
 
         createRenderPass();
@@ -71,7 +66,7 @@ namespace crisp
 
     void ShadowPass::createRenderPass()
     {
-        std::vector<VkAttachmentDescription> attachments(3, VkAttachmentDescription{});
+        std::vector<VkAttachmentDescription> attachments(m_numCascades, VkAttachmentDescription{});
         for (auto& attachment : attachments)
         {
             attachment.format         = m_depthFormat;
@@ -84,15 +79,12 @@ namespace crisp
             attachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
 
-        std::vector<VkAttachmentReference> depthAttachmentRefs = 
-        {
-            { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL },
-            { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL },
-            { 2, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL }
-        };
+        std::vector<VkAttachmentReference> depthAttachmentRefs(m_numCascades);
+        for (uint32_t i = 0; i < depthAttachmentRefs.size(); i++)
+            depthAttachmentRefs[i] = { i, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-        std::vector<VkSubpassDescription> subpasses(numCascades);
-        for (int i = 0; i < numCascades; i++)
+        std::vector<VkSubpassDescription> subpasses(m_numCascades);
+        for (size_t i = 0; i < m_numCascades; i++)
         {
             subpasses[i].pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
             subpasses[i].colorAttachmentCount    = 0;
@@ -100,8 +92,8 @@ namespace crisp
             subpasses[i].pDepthStencilAttachment = &depthAttachmentRefs[i];
         }
 
-        std::vector<VkSubpassDependency> dependencies(numCascades);
-        for (int i = 0; i < numCascades; i++)
+        std::vector<VkSubpassDependency> dependencies(m_numCascades);
+        for (size_t i = 0; i < m_numCascades; i++)
         {
             dependencies[i].srcSubpass    = VK_SUBPASS_EXTERNAL;
             dependencies[i].dstSubpass    = 0;
@@ -125,7 +117,7 @@ namespace crisp
 
     void ShadowPass::createResources()
     {
-        m_renderTargets.resize(numCascades);
+        m_renderTargets.resize(m_numCascades);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
         auto numLayers = VulkanRenderer::NumVirtualFrames;
 
@@ -139,19 +131,16 @@ namespace crisp
                 rt->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames);
         });
 
-        m_renderTargetViews.resize(numCascades, std::vector<std::shared_ptr<TextureView>>(VulkanRenderer::NumVirtualFrames));
+        m_renderTargetViews.resize(m_numCascades, std::vector<std::shared_ptr<TextureView>>(VulkanRenderer::NumVirtualFrames));
         m_framebuffers.resize(VulkanRenderer::NumVirtualFrames);
         for (uint32_t i = 0; i < numLayers; i++)
         {
-            for (uint32_t j = 0; j < numCascades; j++)
-                m_renderTargetViews[j][i] = m_renderTargets[j]->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1);
-
-            std::vector<VkImageView> attachmentViews =
+            std::vector<VkImageView> attachmentViews;
+            for (uint32_t j = 0; j < m_numCascades; j++)
             {
-                m_renderTargetViews[0][i]->getHandle(),
-                m_renderTargetViews[1][i]->getHandle(),
-                m_renderTargetViews[2][i]->getHandle()
-            };
+                m_renderTargetViews[j][i] = m_renderTargets[j]->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1);
+                attachmentViews.push_back(m_renderTargetViews[j][i]->getHandle());
+            }
 
             VkFramebufferCreateInfo framebufferInfo = {};
             framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
