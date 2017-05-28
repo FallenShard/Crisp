@@ -196,7 +196,7 @@ namespace crisp
         m_renderTargets[Composited] = std::make_shared<Texture>(m_renderer, extent, numLayers, VK_FORMAT_R32G32B32A32_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
 
-        m_renderer->addImageTransition([this](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
         {
             m_renderTargets[Opaque]->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames);
             m_renderTargets[Depth]->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames);

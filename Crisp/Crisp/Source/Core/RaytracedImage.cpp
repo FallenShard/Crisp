@@ -74,7 +74,7 @@ namespace crisp
     {
         if (!m_textureUpdates.empty())
         {
-            m_renderer->addCopyAction([this](VkCommandBuffer& cmdBuffer)
+            m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
             {
                 m_updatedImageIndex = (m_updatedImageIndex + 1) % VulkanRenderer::NumVirtualFrames;
 
@@ -143,7 +143,7 @@ namespace crisp
             });
         }
 
-        m_renderer->addDrawAction([this](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer cmdBuffer)
         {
             m_pipeline->bind(cmdBuffer);
             m_descSets.bind(cmdBuffer, m_pipeline->getPipelineLayout());
@@ -152,7 +152,7 @@ namespace crisp
             vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &m_updatedImageIndex);
 
             m_renderer->drawFullScreenQuad(cmdBuffer);
-        }, VulkanRenderer::DefaultRenderPassId);
+        });
     }
 
     void RayTracedImage::resize(int width, int height)

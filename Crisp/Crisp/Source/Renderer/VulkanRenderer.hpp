@@ -50,24 +50,19 @@ namespace crisp
 
         VkShaderModule    getShaderModule(std::string&& key) const;
 
-        void setDefaultViewport(VkCommandBuffer& cmdBuffer) const;
-
-        void drawFullScreenQuad(VkCommandBuffer& cmdBuffer) const;
+        void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
+        void drawFullScreenQuad(VkCommandBuffer cmdBuffer) const;
 
         uint32_t getCurrentVirtualFrameIndex() const;
 
         void resize(int width, int height);
 
-        void registerRenderPass(uint32_t key, VulkanRenderPass* renderPass);
-        void unregisterRenderPass(uint32_t key);
-
         void registerPipeline(VulkanPipeline* pipeline);
         void unregisterPipeline(VulkanPipeline* pipeline);
 
-        void addImageTransition(std::function<void(VkCommandBuffer&)> imageTransition);
-        void addCopyAction(std::function<void(VkCommandBuffer&)> copyAction);
-        void addDrawAction(std::function<void(VkCommandBuffer&)> drawAction, uint32_t renderPassId);
-        void addDrawAction(std::function<void(VkCommandBuffer&)> drawAction);
+        void enqueueResourceUpdate(std::function<void(VkCommandBuffer)> imageTransition);
+        void enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
+        void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 
         void flushResourceUpdates();
 
@@ -78,19 +73,20 @@ namespace crisp
         void fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 
         void scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive = NumVirtualFrames);
-        void destroyObjectsScheduledForRemoval();
 
     private:
         void loadShaders(std::string dirPath);
 
         VkCommandBuffer acquireCommandBuffer();
-        uint32_t acquireNextImageIndex();
-        void resetCommandBuffer(VkCommandBuffer cmdBuffer);
-        VkFramebuffer recreateFramebuffer(uint32_t swapChainImgIndex);
-        void record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer);
-        void present(uint32_t swapChainImageIndex);
+        uint32_t        acquireSwapChainImageIndex();
+        void            resetCommandBuffer(VkCommandBuffer cmdBuffer);
+        VkFramebuffer   recreateFramebuffer(uint32_t swapChainImgIndex);
+        void            record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer);
+        void            present(uint32_t swapChainImageIndex);
 
         void recreateSwapChain();
+
+        void destroyResourcesScheduledForRemoval();
 
         std::unique_ptr<VulkanContext> m_context;
         std::unique_ptr<VulkanDevice>  m_device;
@@ -118,16 +114,15 @@ namespace crisp
 
         std::unordered_map<std::string, VkShaderModule> m_shaderModules;
 
-        using ActionVector = std::vector<std::function<void(VkCommandBuffer&)>>;
-        ActionVector m_imageTransitions;
-        ActionVector m_copyActions;
-        ActionVector m_renderActions;
+        using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
+        FunctionVector m_resourceUpdates;
+        FunctionVector m_drawCommands;
+        FunctionVector m_defaultPassDrawCommands;
 
         std::unique_ptr<VertexBuffer> m_fsQuadVertexBuffer;
         std::unique_ptr<IndexBuffer>  m_fsQuadIndexBuffer;
         VertexBufferBindingGroup      m_fsQuadVertexBufferBindingGroup;
         
-        std::map<uint32_t, std::pair<VulkanRenderPass*, ActionVector>> m_renderPasses;
         std::unordered_set<VulkanPipeline*> m_pipelines;
 
         std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;

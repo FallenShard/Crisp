@@ -60,7 +60,6 @@ namespace crisp
         m_cameraController = std::make_unique<CameraController>(inputDispatcher);
 
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
-        m_renderer->registerRenderPass(SceneRenderPassId, m_scenePass.get());
 
         m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         initRenderTargetResources();
@@ -106,7 +105,7 @@ namespace crisp
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
         uint32_t numCascades = 4;
-        DirectionalLight light(glm::normalize(glm::vec3(0.0f, -1.0f, -1.0f)));
+        DirectionalLight light(glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f)));
         m_shadowMapper = std::make_unique<CascadedShadowMapper>(m_renderer, light, numCascades, m_transformsBuffer.get());
 
         m_blinnPhongDescGroups[0].postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
@@ -163,7 +162,7 @@ namespace crisp
 
     void Scene::render()
     {
-        m_renderer->addCopyAction([this](VkCommandBuffer& commandBuffer)
+        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
             m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
@@ -173,7 +172,7 @@ namespace crisp
             m_shadowMapper->update(commandBuffer, frameIdx);
         });
 
-        m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
+        m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
@@ -205,8 +204,10 @@ namespace crisp
             });
         });
 
-        m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
+        m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
         {
+            m_scenePass->begin(commandBuffer);
+
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
             VkImageMemoryBarrier transBarrier = {};
@@ -256,9 +257,11 @@ namespace crisp
             m_bunnyGeometry->draw(commandBuffer);
 
             m_skybox->draw(commandBuffer, frameIdx, 1);
-        }, SceneRenderPassId);
 
-        m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
+            m_scenePass->end(commandBuffer);
+        });
+
+        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
         {
             m_fsQuadPipeline->bind(commandBuffer);
             m_renderer->setDefaultViewport(commandBuffer);
@@ -268,7 +271,7 @@ namespace crisp
             vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
             
             m_renderer->drawFullScreenQuad(commandBuffer);
-        }, VulkanRenderer::DefaultRenderPassId);
+        });
     }
 
     void Scene::initRenderTargetResources()

@@ -33,7 +33,7 @@ namespace crisp
     }
     Application::Application(ApplicationEnvironment* environment)
         : m_tracerProgress(0.0f)
-        , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(200.0))
+        , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(1000.0))
         , m_numRayTracedChannels(4)
     {
         std::cout << "Initializing application...\n";
@@ -52,7 +52,7 @@ namespace crisp
         m_inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
         m_inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
         m_frameTimeLogger->onLoggerUpdated.subscribe<gui::Form, &gui::Form::setFpsString>(m_guiForm.get());
-        //m_frameTimeLogger->onLoggerUpdated.subscribe<&logFpsToConsole>();
+        m_frameTimeLogger->onLoggerUpdated.subscribe<&logFpsToConsole>();
         
         // Create ray tracer and add a handler for image block updates
         m_rayTracer = std::make_unique<vesper::RayTracer>();
@@ -121,10 +121,10 @@ namespace crisp
                 Window::pollEvents();
 
                 m_guiForm->update(TimePerFrame);
-
+                
                 if (m_scene)
                     m_scene->update(static_cast<float>(TimePerFrame));
-
+                
                 processRayTracerUpdates();
 
                 timeSinceLastUpdate -= TimePerFrame;
@@ -134,7 +134,7 @@ namespace crisp
                 m_scene->render();
             else
                 m_backgroundImage->draw();
-
+            
             if (m_rayTracedImage)
                 m_rayTracedImage->draw();
 

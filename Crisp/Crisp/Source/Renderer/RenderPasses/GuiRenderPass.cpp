@@ -147,7 +147,7 @@ namespace crisp
         m_renderTargets[1] = std::make_shared<Texture>(m_renderer, extent, VulkanRenderer::NumVirtualFrames, m_depthFormat,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-        m_renderer->addImageTransition([this](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
         {
             m_renderTargets[0]->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames);
             m_renderTargets[1]->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames);

@@ -38,7 +38,7 @@ namespace crisp
         auto buffer = std::make_shared<VulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         buffer->updateFromHost(data, size);
 
-        m_renderer->addCopyAction([this, buffer](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueResourceUpdate([this, buffer](VkCommandBuffer cmdBuffer)
         {
             m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
             m_image->copyFrom(cmdBuffer, *buffer, 0, 1);
@@ -53,7 +53,7 @@ namespace crisp
         auto buffer = std::make_shared<VulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);// | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         buffer->updateFromHost(data, size);
 
-        m_renderer->addCopyAction([this, buffer, baseLayer, numLayers](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueResourceUpdate([this, buffer, baseLayer, numLayers](VkCommandBuffer cmdBuffer)
         {
             m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, baseLayer, numLayers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
             m_image->copyFrom(cmdBuffer, *buffer, baseLayer, numLayers);
@@ -65,7 +65,7 @@ namespace crisp
 
     void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize size)
     {
-        m_renderer->addCopyAction([this, &buffer](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueResourceUpdate([this, &buffer](VkCommandBuffer cmdBuffer)
         {
             m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
             m_image->copyFrom(cmdBuffer, buffer, 0, 1);
@@ -75,7 +75,7 @@ namespace crisp
 
     void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize size, uint32_t baseLayer, uint32_t numLayers)
     {
-        m_renderer->addCopyAction([this, &buffer, baseLayer, numLayers](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueResourceUpdate([this, &buffer, baseLayer, numLayers](VkCommandBuffer cmdBuffer)
         {
             m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, baseLayer, numLayers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
             m_image->copyFrom(cmdBuffer, buffer, baseLayer, numLayers);

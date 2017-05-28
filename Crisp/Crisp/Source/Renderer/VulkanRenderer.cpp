@@ -36,16 +36,11 @@ namespace crisp
         m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), NumVirtualFrames);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
-        m_defaultViewport.x        = 0.0f;
-        m_defaultViewport.y        = 0.0f;
-        m_defaultViewport.width    = static_cast<float>(m_swapChain->getExtent().width);
-        m_defaultViewport.height   = static_cast<float>(m_swapChain->getExtent().height);
-        m_defaultViewport.minDepth = 0.0f;
-        m_defaultViewport.maxDepth = 1.0f;
+        m_defaultViewport = { 0.0f, 0.0f, static_cast<float>(m_swapChain->getExtent().width), static_cast<float>(m_swapChain->getExtent().height), 0.0f, 1.0f };
 
         // Depth images and views creation
         m_depthTexture = std::make_unique<Texture>(this, VkExtent3D{ m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1u }, NumVirtualFrames, m_context->findSupportedDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
-        addImageTransition([this](VkCommandBuffer& cmdBuffer) { m_depthTexture->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, NumVirtualFrames); });
+        enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) { m_depthTexture->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, NumVirtualFrames); });
         for (unsigned int i = 0; i < NumVirtualFrames; i++)
             m_depthTexViews.emplace_back(m_depthTexture->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
 
@@ -90,8 +85,6 @@ namespace crisp
             { 0, 3, 2 }
         };
         m_fsQuadIndexBuffer = std::make_unique<IndexBuffer>(this, faces);
-
-        registerRenderPass(DefaultRenderPassId, m_defaultRenderPass.get());
     }
 
     VulkanRenderer::~VulkanRenderer()
@@ -128,6 +121,197 @@ namespace crisp
         return m_swapChain.get();
     }
 
+    VkExtent2D VulkanRenderer::getSwapChainExtent() const
+    {
+        return m_swapChain->getExtent();
+    }
+
+    VulkanRenderPass* VulkanRenderer::getDefaultRenderPass() const
+    {
+        return m_defaultRenderPass.get();
+    }
+
+    VkViewport VulkanRenderer::getDefaultViewport() const
+    {
+        return m_defaultViewport;
+    }
+
+    VkShaderModule VulkanRenderer::getShaderModule(std::string&& key) const
+    {
+        return m_shaderModules.at(key);
+    }
+
+    void VulkanRenderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const
+    {
+        vkCmdSetViewport(cmdBuffer, 0, 1, &m_defaultViewport);
+    }
+
+    void VulkanRenderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const
+    {
+        m_fsQuadVertexBufferBindingGroup.bind(cmdBuffer);
+        m_fsQuadIndexBuffer->bind(cmdBuffer, 0);
+        vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
+    }
+
+    uint32_t VulkanRenderer::getCurrentVirtualFrameIndex() const
+    {
+        return m_currentFrameIndex;
+    }
+
+    void VulkanRenderer::resize(int width, int height)
+    {
+        recreateSwapChain();
+
+        m_defaultViewport.width = static_cast<float>(m_swapChain->getExtent().width);
+        m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
+
+        for (auto& pipeline : m_pipelines)
+            pipeline->resize(width, height);
+
+        flushResourceUpdates();
+    }
+
+    void VulkanRenderer::registerPipeline(VulkanPipeline* pipeline)
+    {
+        m_pipelines.insert(pipeline);
+    }
+
+    void VulkanRenderer::unregisterPipeline(VulkanPipeline* pipeline)
+    {
+        m_pipelines.erase(pipeline);
+    }
+
+    void VulkanRenderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
+    {
+        m_resourceUpdates.emplace_back(resourceUpdate);
+    }
+
+    void VulkanRenderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
+    {
+        m_defaultPassDrawCommands.emplace_back(drawAction);
+    }
+
+    void VulkanRenderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
+    {
+        m_drawCommands.emplace_back(drawAction);
+    }
+
+    void VulkanRenderer::flushResourceUpdates()
+    {
+        if (m_resourceUpdates.empty())
+            return;
+
+        auto generalQueue = m_device->getGeneralQueue();
+        auto cmdPool = generalQueue->createCommandPoolFromFamily(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        VkCommandBufferAllocateInfo allocInfo = {};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool        = cmdPool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        for (const auto& update : m_resourceUpdates)
+            update(commandBuffer);
+
+        vkEndCommandBuffer(commandBuffer);
+
+        generalQueue->submit(commandBuffer);
+        generalQueue->waitIdle();
+
+        vkFreeCommandBuffers(m_device->getHandle(), cmdPool, 1, &commandBuffer);
+        vkDestroyCommandPool(m_device->getHandle(), cmdPool, nullptr);
+
+        m_resourceUpdates.clear();
+    }
+
+    void VulkanRenderer::drawFrame()
+    {
+        auto cmdBuffer = acquireCommandBuffer();
+
+        // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
+        destroyResourcesScheduledForRemoval();
+
+        m_device->flushMappedRanges();
+
+        auto swapChainImgIndex = acquireSwapChainImageIndex();
+        if (swapChainImgIndex == -1)
+        {
+            std::cerr << "Failed to acquire swap chain image!" << std::endl;
+            return;
+        }
+
+        resetCommandBuffer(cmdBuffer);
+
+        auto framebuffer = recreateFramebuffer(swapChainImgIndex);
+        record(cmdBuffer, framebuffer);
+
+        const auto& frameRes = m_frameResources[m_currentFrameIndex];
+        m_device->getGeneralQueue()->submit(
+            frameRes.imageAvailableSemaphore,
+            frameRes.renderFinishedSemaphore,
+            frameRes.cmdBuffer,
+            frameRes.bufferFinishedFence
+        );
+        present(swapChainImgIndex);
+
+        m_resourceUpdates.clear();
+        m_drawCommands.clear();
+        m_defaultPassDrawCommands.clear();
+
+        m_currentFrameIndex = (m_currentFrameIndex + 1) % NumVirtualFrames;
+    }
+
+    void VulkanRenderer::finish()
+    {
+        vkDeviceWaitIdle(m_device->getHandle());
+    }
+
+    void VulkanRenderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
+    {
+        auto stagingBuffer = std::make_shared<VulkanBuffer>(m_device.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        stagingBuffer->updateFromHost(data, size, offset);
+
+        m_resourceUpdates.emplace_back([this, stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
+        {
+            buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
+
+            scheduleBufferForRemoval(stagingBuffer);
+        });
+    }
+
+    void VulkanRenderer::scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive)
+    {
+        if (m_removedBuffers.find(buffer) == m_removedBuffers.end())
+            m_removedBuffers.emplace(buffer, framesToLive);
+    }
+
+    void VulkanRenderer::destroyResourcesScheduledForRemoval()
+    {
+        if (!m_removedBuffers.empty())
+        {
+            // Decrement remaining age of removed buffers
+            for (auto& el : m_removedBuffers)
+                el.second--;
+
+            // Remove those with 0 frames remaining
+            for (auto iter = m_removedBuffers.begin(), end = m_removedBuffers.end(); iter != end;)
+            {
+                if (iter->second <= 0) // time to die, no frames remaining
+                    iter = m_removedBuffers.erase(iter); // Free memory and destroy buffer in destructor
+                else
+                    ++iter;
+            }
+        }
+    }
+
     void VulkanRenderer::loadShaders(std::string dirPath)
     {
         auto files = FileUtils::enumerateFiles(dirPath, "spv");
@@ -162,7 +346,7 @@ namespace crisp
         return m_frameResources[m_currentFrameIndex].cmdBuffer;
     }
 
-    uint32_t VulkanRenderer::acquireNextImageIndex()
+    uint32_t VulkanRenderer::acquireSwapChainImageIndex()
     {
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(), std::numeric_limits<uint64_t>::max(), m_frameResources[m_currentFrameIndex].imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
@@ -189,13 +373,13 @@ namespace crisp
     {
         if (m_frameResources[m_currentFrameIndex].framebuffer != VK_NULL_HANDLE)
             vkDestroyFramebuffer(m_device->getHandle(), m_frameResources[m_currentFrameIndex].framebuffer, nullptr);
-
+        
         std::vector<VkImageView> attachmentViews =
         {
             m_swapChain->getImageView(swapChainImageViewIndex),
             m_depthTexViews[m_currentFrameIndex]->getHandle()
         };
-
+        
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass      = m_defaultRenderPass->getHandle();
@@ -205,8 +389,31 @@ namespace crisp
         framebufferInfo.height          = m_swapChain->getExtent().height;
         framebufferInfo.layers          = 1;
         vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_frameResources[m_currentFrameIndex].framebuffer);
-
+        
         return m_frameResources[m_currentFrameIndex].framebuffer;
+    }
+
+    void VulkanRenderer::record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer)
+    {
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        beginInfo.pInheritanceInfo = nullptr;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        for (const auto& update : m_resourceUpdates)
+            update(commandBuffer);
+        
+        for (const auto& drawCommand : m_drawCommands)
+            drawCommand(commandBuffer);
+
+        m_defaultRenderPass->begin(commandBuffer, framebuffer);
+        for (const auto& drawCommand : m_defaultPassDrawCommands)
+            drawCommand(commandBuffer);
+        m_defaultRenderPass->end(commandBuffer);
+        
+        vkEndCommandBuffer(commandBuffer);
     }
 
     void VulkanRenderer::present(uint32_t swapChainImageIndex)
@@ -225,145 +432,6 @@ namespace crisp
         }
     }
 
-    void VulkanRenderer::addDrawAction(std::function<void(VkCommandBuffer&)> drawAction, uint32_t renderPassId)
-    {
-        m_renderPasses.at(renderPassId).second.emplace_back(drawAction);
-    }
-
-    void VulkanRenderer::addDrawAction(std::function<void(VkCommandBuffer&)> drawAction)
-    {
-        m_renderActions.emplace_back(drawAction);
-    }
-
-    void VulkanRenderer::flushResourceUpdates()
-    {
-        if (m_imageTransitions.empty() && m_copyActions.empty())
-            return;
-
-        auto generalQueue = m_device->getGeneralQueue();
-        auto cmdPool = generalQueue->createCommandPoolFromFamily(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        VkCommandBufferAllocateInfo allocInfo = {};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool        = cmdPool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        for (const auto& transition : m_imageTransitions)
-            transition(commandBuffer);
-
-        for (auto& command : m_copyActions)
-            command(commandBuffer);
-
-        vkEndCommandBuffer(commandBuffer);
-
-        generalQueue->submit(commandBuffer);
-        generalQueue->waitIdle();
-
-        vkFreeCommandBuffers(m_device->getHandle(), cmdPool, 1, &commandBuffer);
-        vkDestroyCommandPool(m_device->getHandle(), cmdPool, nullptr);
-
-        m_imageTransitions.clear();
-        m_copyActions.clear();
-    }
-
-    void VulkanRenderer::addCopyAction(std::function<void(VkCommandBuffer&)> copyAction)
-    {
-        m_copyActions.emplace_back(copyAction);
-    }
-
-    void VulkanRenderer::addImageTransition(std::function<void(VkCommandBuffer&)> imageTransition)
-    {
-        m_imageTransitions.emplace_back(imageTransition);
-    }
-
-    void VulkanRenderer::record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer)
-    {
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        beginInfo.pInheritanceInfo = nullptr;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        for (auto& transition : m_imageTransitions)
-            transition(commandBuffer);
-
-        for (auto& action : m_copyActions)
-            action(commandBuffer);
-
-        for (auto& action : m_renderActions)
-            action(commandBuffer);
-
-        for (auto& item : m_renderPasses)
-        {
-            auto pass = item.second.first;
-
-            if (!item.second.second.empty())
-            {
-                pass->begin(commandBuffer, framebuffer);
-
-                for (auto& action : item.second.second)
-                    action(commandBuffer);
-
-                pass->end(commandBuffer);
-            }
-        }
-
-        vkEndCommandBuffer(commandBuffer);
-    }
-
-    uint32_t VulkanRenderer::getCurrentVirtualFrameIndex() const
-    {
-        return m_currentFrameIndex;
-    }
-
-    void VulkanRenderer::drawFrame()
-    {
-        auto cmdBuffer = acquireCommandBuffer();
-
-        // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
-        destroyObjectsScheduledForRemoval();
-
-        m_device->flushMappedRanges();
-        
-        auto swapChainImgIndex = acquireNextImageIndex();
-        if (swapChainImgIndex == -1)
-        {
-            std::cerr << "Failed to acquire swap chain image!" << std::endl;
-            return;
-        }
-
-        resetCommandBuffer(cmdBuffer);
-
-        auto framebuffer = recreateFramebuffer(swapChainImgIndex);
-        record(cmdBuffer, framebuffer);
-
-        const auto& frameRes = m_frameResources[m_currentFrameIndex];
-        m_device->getGeneralQueue()->submit(
-            frameRes.imageAvailableSemaphore,
-            frameRes.renderFinishedSemaphore,
-            frameRes.cmdBuffer,
-            frameRes.bufferFinishedFence
-        );
-        present(swapChainImgIndex);
-
-        m_imageTransitions.clear();
-        m_copyActions.clear();
-        m_renderActions.clear();
-        for (auto& item : m_renderPasses)
-            item.second.second.clear();
-        m_currentFrameIndex = (m_currentFrameIndex + 1) % NumVirtualFrames;
-    }
-
     void VulkanRenderer::recreateSwapChain()
     {
         vkDeviceWaitIdle(m_device->getHandle());
@@ -374,124 +442,11 @@ namespace crisp
         if (m_depthTexture)
         {
             m_depthTexture = std::make_unique<Texture>(this, VkExtent3D{ m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1u }, NumVirtualFrames, m_context->findSupportedDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
-            addImageTransition([this](VkCommandBuffer& cmdBuffer) { m_depthTexture->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, NumVirtualFrames); });
+            enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) { m_depthTexture->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, NumVirtualFrames); });
 
             m_depthTexViews.clear();
             for (unsigned int i = 0; i < NumVirtualFrames; i++)
                 m_depthTexViews.emplace_back(m_depthTexture->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
         }
-    }
-
-    void VulkanRenderer::finish()
-    {
-        vkDeviceWaitIdle(m_device->getHandle());
-    }
-
-    void VulkanRenderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
-    {
-        auto stagingBuffer = std::make_shared<VulkanBuffer>(m_device.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        stagingBuffer->updateFromHost(data, size, offset);
-
-        m_copyActions.emplace_back([this, stagingBuffer, buffer, offset, size](VkCommandBuffer& cmdBuffer)
-        {
-            buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
-
-            scheduleBufferForRemoval(stagingBuffer);
-        });
-    }
-
-    void VulkanRenderer::scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive)
-    {
-        if (m_removedBuffers.find(buffer) == m_removedBuffers.end())
-            m_removedBuffers.emplace(buffer, framesToLive);
-    }
-
-    void VulkanRenderer::destroyObjectsScheduledForRemoval()
-    {
-        if (!m_removedBuffers.empty())
-        {
-            // Decrement remaining age of removed buffers
-            for (auto& el : m_removedBuffers)
-                el.second--;
-
-            // Remove those with 0 frames remaining
-            for (auto iter = m_removedBuffers.begin(), end = m_removedBuffers.end(); iter != end;)
-            {
-                if (iter->second <= 0) // time to die, no frames remaining
-                {
-                    // Free memory and destroy buffer in destructor
-                    iter = m_removedBuffers.erase(iter);
-                }
-                else
-                {
-                    ++iter;
-                }
-            }
-        }
-    }
-
-    void VulkanRenderer::resize(int width, int height)
-    {
-        recreateSwapChain();
-
-        m_defaultViewport.width  = static_cast<float>(m_swapChain->getExtent().width);
-        m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
-
-        for (auto& pipeline : m_pipelines)
-            pipeline->resize(width, height);
-
-        flushResourceUpdates();
-    }
-
-    void VulkanRenderer::registerRenderPass(uint32_t key, VulkanRenderPass* renderPass)
-    {
-        m_renderPasses[key] = std::make_pair(renderPass, ActionVector());
-    }
-
-    void VulkanRenderer::unregisterRenderPass(uint32_t key)
-    {
-        m_renderPasses.erase(key);
-    }
-
-    void VulkanRenderer::registerPipeline(VulkanPipeline* pipeline)
-    {
-        m_pipelines.insert(pipeline);
-    }
-
-    void VulkanRenderer::unregisterPipeline(VulkanPipeline* pipeline)
-    {
-        m_pipelines.erase(pipeline);
-    }
-
-    VulkanRenderPass* VulkanRenderer::getDefaultRenderPass() const
-    {
-        return m_defaultRenderPass.get();
-    }
-
-    VkShaderModule VulkanRenderer::getShaderModule(std::string&& key) const
-    {
-        return m_shaderModules.at(key);
-    }
-
-    VkExtent2D VulkanRenderer::getSwapChainExtent() const
-    {
-        return m_swapChain->getExtent();
-    }
-
-    VkViewport VulkanRenderer::getDefaultViewport() const
-    {
-        return m_defaultViewport;
-    }
-
-    void VulkanRenderer::setDefaultViewport(VkCommandBuffer& cmdBuffer) const
-    {
-        vkCmdSetViewport(cmdBuffer, 0, 1, &m_defaultViewport);
-    }
-
-    void VulkanRenderer::drawFullScreenQuad(VkCommandBuffer& cmdBuffer) const
-    {
-        m_fsQuadVertexBufferBindingGroup.bind(cmdBuffer);
-        m_fsQuadIndexBuffer->bind(cmdBuffer, 0);
-        vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
     }
 }

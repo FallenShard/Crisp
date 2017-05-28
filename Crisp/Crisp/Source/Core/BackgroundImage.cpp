@@ -64,7 +64,7 @@ namespace crisp
 
     void BackgroundImage::draw()
     {
-        m_renderer->addDrawAction([this](VkCommandBuffer& cmdBuffer)
+        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer cmdBuffer)
         {
             m_pipeline->bind(cmdBuffer);
             vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
@@ -74,6 +74,6 @@ namespace crisp
             vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
 
             m_renderer->drawFullScreenQuad(cmdBuffer);
-        }, VulkanRenderer::DefaultRenderPassId);
+        });
     }
 }

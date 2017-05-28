@@ -76,9 +76,6 @@ namespace crisp
                 vkUpdateDescriptorSets(m_device->getHandle(), 1, &descWrite, 0, nullptr);
             }
             m_tcTransforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, tcSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
-            
-            // Register the render pass into the renderer's draw loop
-            m_renderer->registerRenderPass(GuiRenderPassId, m_guiPass.get());
         }
 
         RenderSystem::~RenderSystem()
@@ -207,7 +204,7 @@ namespace crisp
 
         void RenderSystem::submitDrawRequests()
         {
-            m_renderer->addCopyAction([this](VkCommandBuffer& commandBuffer)
+            m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer)
             {
                 auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
@@ -232,7 +229,7 @@ namespace crisp
                 }
             });
 
-            m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
+            m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
             {
                 std::sort(m_drawCommands.begin(), m_drawCommands.end(), [](const GuiDrawCommand& a, const GuiDrawCommand& b)
                 {
@@ -241,18 +238,20 @@ namespace crisp
 
                 auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
+                m_guiPass->begin(commandBuffer);
                 for (auto& cmd : m_drawCommands)
                 {
                     (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
                 }
+                m_guiPass->end(commandBuffer);
 
                 auto size = m_drawCommands.size();
                 m_drawCommands.clear();
                 m_drawCommands.reserve(size);
 
-            }, GuiRenderPassId);
+            });
 
-            m_renderer->addDrawAction([this](VkCommandBuffer& commandBuffer)
+            m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
             {
                 VkViewport viewport;
                 viewport.x = viewport.y = 0;
@@ -269,7 +268,7 @@ namespace crisp
                 vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
                 
                 m_renderer->drawFullScreenQuad(commandBuffer);
-            }, VulkanRenderer::DefaultRenderPassId);
+            });
         }
 
         void RenderSystem::resize(int width, int height)
