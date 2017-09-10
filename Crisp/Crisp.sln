@@ -1,14 +1,20 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Crisp", "Crisp\Crisp.vcxproj", "{9D88A03A-1EFC-45FD-BDD1-7073DA4DD133}"
 	ProjectSection(ProjectDependencies) = postProject
 		{2DD8E45D-10BF-4CB8-9C70-3882E6962AB7} = {2DD8E45D-10BF-4CB8-9C70-3882E6962AB7}
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0} = {F4D67E72-A50D-4005-870F-9757D49F1FA0}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Vesper", "Vesper\Vesper.vcxproj", "{2DD8E45D-10BF-4CB8-9C70-3882E6962AB7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0} = {F4D67E72-A50D-4005-870F-9757D49F1FA0}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CrispCore", "CrispCore\CrispCore.vcxproj", "{F4D67E72-A50D-4005-870F-9757D49F1FA0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,8 +40,19 @@ Global
 		{2DD8E45D-10BF-4CB8-9C70-3882E6962AB7}.Release|x64.Build.0 = Release|x64
 		{2DD8E45D-10BF-4CB8-9C70-3882E6962AB7}.Release|x86.ActiveCfg = Release|Win32
 		{2DD8E45D-10BF-4CB8-9C70-3882E6962AB7}.Release|x86.Build.0 = Release|Win32
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Debug|x64.ActiveCfg = Debug|x64
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Debug|x64.Build.0 = Debug|x64
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Debug|x86.ActiveCfg = Debug|Win32
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Debug|x86.Build.0 = Debug|Win32
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Release|x64.ActiveCfg = Release|x64
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Release|x64.Build.0 = Release|x64
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Release|x86.ActiveCfg = Release|Win32
+		{F4D67E72-A50D-4005-870F-9757D49F1FA0}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {391404F6-8D74-4F11-B74B-7E97BA13FB2D}
 	EndGlobalSection
 EndGlobal
