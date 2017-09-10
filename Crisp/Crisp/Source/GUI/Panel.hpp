@@ -23,6 +23,9 @@ namespace crisp
 
         private:
             std::function<void()> m_clickCallback;
+
+            unsigned int m_transformId;
+            unsigned int m_colorId;
         };
     }
 }

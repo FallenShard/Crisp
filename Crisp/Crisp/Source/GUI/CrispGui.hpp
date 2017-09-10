@@ -7,22 +7,22 @@ namespace crisp
 {
     class Application;
     class Scene;
+}
 
-    namespace gui
+namespace crisp::gui
+{
+    class Control;
+    class ControlGroup;
+    class Form;
+
+    class CrispGui
     {
-        class Control;
-        class ControlGroup;
-        class Form;
+    public:
+        void setupInputCallbacks(Form* form, Application* app, Scene* scene);
 
-        class CrispGui
-        {
-        public:
-            void setupInputCallbacks(Form* form, Application* app, Scene* scene);
+        std::shared_ptr<Control> buildCameraInfoPanel(Form* form);
 
-            std::shared_ptr<Control> buildCameraInfoPanel(Form* form);
-
-        private:
-            void buildVectorDisplayInfo(Form* form, std::shared_ptr<ControlGroup> parent, std::string labelName, std::string dataLabelName, float verticalOffset);
-        };
-    }
+    private:
+        void buildVectorDisplayInfo(Form* form, std::shared_ptr<ControlGroup> parent, std::string labelName, std::string&& dataLabelName, float verticalOffset);
+    };
 }

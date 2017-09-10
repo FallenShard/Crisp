@@ -28,6 +28,7 @@ namespace crisp
 
     class IndexBuffer;
     class UniformBuffer;
+    class VulkanSampler;
     class Texture;
     class TextureView;
 
@@ -76,7 +77,7 @@ namespace crisp
             void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth);
             void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth);
 
-            void submitDrawRequests();
+            void submitDrawCommands();
 
             void resize(int width, int height);
 
@@ -126,7 +127,7 @@ namespace crisp
             std::unique_ptr<TextureView> m_guiAtlasView;
 
             // Sampler
-            VkSampler m_linearClampSampler;
+            std::unique_ptr<VulkanSampler> m_linearClampSampler;
             
             // Gui render target
             VkDescriptorSet m_fsQuadDescSet;

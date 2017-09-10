@@ -1,10 +1,11 @@
 #include "VesperGui.hpp"
 
-#include "Application.hpp"
+#include "Core/Application.hpp"
 #include "Control.hpp"
 #include "Panel.hpp"
 #include "Button.hpp"
 #include "Form.hpp"
+#include "Label.hpp"
 
 namespace crisp
 {
@@ -12,22 +13,22 @@ namespace crisp
     {
         void VesperGui::setupInputCallbacks(Form* form, Application* app)
         {
-            form->getControlById<gui::Button>("openButton")->setClickCallback([app]()
+            form->getControlById<gui::Button>("openButton")->clicked.subscribe([app]()
             {
                 app->openSceneFileFromDialog();
             });
             
-            form->getControlById<gui::Button>("renderButton")->setClickCallback([app]()
+            form->getControlById<gui::Button>("renderButton")->clicked.subscribe([app]()
             {
                 app->startRayTracing();
             });
             
-            form->getControlById<gui::Button>("stopButton")->setClickCallback([app]()
+            form->getControlById<gui::Button>("stopButton")->clicked.subscribe([app]()
             {
                 app->stopRayTracing();
             });
             
-            form->getControlById<gui::Button>("saveButton")->setClickCallback([app]()
+            form->getControlById<gui::Button>("saveButton")->clicked.subscribe([app]()
             {
                 app->writeImageToExr();
             });
@@ -42,7 +43,7 @@ namespace crisp
                 std::stringstream stringStream;
                 stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
                 progressLabel->setText(stringStream.str());
-                progressBar->setWidthSizingBehavior(Sizing::FillParent, percentage);
+                progressBar->setHorizontalSizingPolicy(SizingPolicy::FillParent, percentage);
             });
         }
 
@@ -51,40 +52,40 @@ namespace crisp
             auto panel = std::make_shared<gui::Panel>(form);
             panel->setId("vesperOptionsPanel");
             panel->setPosition({ 10, 30 });
-            panel->setSize({ 200, 500 });
+            panel->setSizeHint({ 200, 500 });
             panel->setPadding({ 10, 10 });
             panel->setAnchor(Anchor::TopLeft);
-            panel->setHeightSizingBehavior(Sizing::WrapContent);
+            panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
 
             auto button = std::make_shared<gui::Button>(form);
             button->setId("openButton");
             button->setText("Open XML Scene");
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
+            button->setSizeHint({ 100, 30 });
+            button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
             panel->addControl(button);
 
             button = std::make_shared<gui::Button>(form);
             button->setId("renderButton");
             button->setText("Start Raytracing");
             button->setPosition({ 0, 40 });
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
+            button->setSizeHint({ 100, 30 });
+            button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
             panel->addControl(button);
 
             button = std::make_shared<gui::Button>(form);
             button->setId("stopButton");
             button->setText("Stop Raytracing");
             button->setPosition({ 0, 80 });
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
+            button->setSizeHint({ 100, 30 });
+            button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
             panel->addControl(button);
 
             button = std::make_shared<gui::Button>(form);
             button->setId("saveButton");
             button->setText("Save as EXR");
             button->setPosition({ 0, 120 });
-            button->setSize({ 100, 30 });
-            button->setWidthSizingBehavior(Sizing::FillParent);
+            button->setSizeHint({ 100, 30 });
+            button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
             panel->addControl(button);
 
             return panel;
@@ -95,20 +96,20 @@ namespace crisp
             auto progressBarBg = std::make_shared<gui::Panel>(form);
             progressBarBg->setId("progressBarBg");
             progressBarBg->setPosition({ 0, 0 });
-            progressBarBg->setSize({ 500, 20 });
+            progressBarBg->setSizeHint({ 500, 20 });
             progressBarBg->setPadding({ 3, 3 });
             progressBarBg->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
             progressBarBg->setAnchor(Anchor::BottomLeft);
-            progressBarBg->setWidthSizingBehavior(Sizing::FillParent);
+            progressBarBg->setHorizontalSizingPolicy(SizingPolicy::FillParent);
 
             auto progressBar = std::make_shared<gui::Panel>(form);
             progressBar->setId("progressBar");
             progressBar->setPosition({ 0, 0 });
-            progressBar->setSize({ 500, 20 });
+            progressBar->setSizeHint({ 500, 20 });
             progressBar->setPadding({ 3, 3 });
             progressBar->setColor(glm::vec4(0.1f, 0.5f, 0.1f, 1.0f));
             progressBar->setAnchor(Anchor::BottomLeft);
-            progressBar->setWidthSizingBehavior(Sizing::FillParent, 0.0);
+            progressBar->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.0);
             progressBarBg->addControl(progressBar);
 
             auto label = std::make_shared<gui::Label>(form, "100.0%");

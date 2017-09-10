@@ -6,39 +6,36 @@
 
 #include "Control.hpp"
 
-namespace crisp
+namespace crisp::gui
 {
-    namespace gui
+    class ControlGroup : public Control
     {
-        class ControlGroup : public Control
-        {
-        public:
-            ControlGroup(Form* parentForm);
+    public:
+        ControlGroup(Form* parentForm);
+        virtual ~ControlGroup();
 
-            void addControl(std::shared_ptr<Control> control);
-            void removeControl(const std::string& id);
+        void addControl(std::shared_ptr<Control> control);
+        void removeControl(const std::string& id);
 
-            virtual float getWidth() const;
-            virtual float getHeight() const;
+        virtual float getWidth() const;
+        virtual float getHeight() const;
 
-            virtual void onMouseMoved(float x, float y);
-            virtual void onMouseEntered();
-            virtual void onMouseExited();
-            virtual void onMousePressed(float x, float y);
-            virtual void onMouseReleased(float x, float y);
+        virtual void onMouseMoved(float x, float y);
+        virtual void onMouseEntered();
+        virtual void onMouseExited();
+        virtual void onMousePressed(float x, float y);
+        virtual void onMouseReleased(float x, float y);
 
-            virtual void setValidationFlags(Validation validation) override;
-            virtual bool needsValidation() override;
-            virtual void validate() override;
+        virtual void setValidationFlags(ValidationFlags validationFlags) override;
+        virtual bool needsValidation() override;
+        virtual void validate() override;
 
-            virtual void draw(RenderSystem& renderSystem) override;
+        virtual void draw(RenderSystem& renderSystem) override;
 
-            virtual Control* getControlById(const std::string& id);
+        virtual Control* getControlById(const std::string& id);
 
-        protected:
-            glm::vec2 m_prevMousePos;
-            std::vector<std::shared_ptr<Control>> m_children;
-            glm::vec2 m_cachedChildrenSize;
-        };
-    }
+    protected:
+        glm::vec2 m_prevMousePos;
+        std::vector<std::shared_ptr<Control>> m_children;
+    };
 }

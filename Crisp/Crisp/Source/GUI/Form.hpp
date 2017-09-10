@@ -2,94 +2,62 @@
 
 #include <memory>
 #include <string>
+#include <vector>
+#include <set>
 
 #include "Math/Headers.hpp"
+#include "Animation/Animator.hpp"
+#include "GUI/ControlGroup.hpp"
 
-#include <Animation/Animator.hpp>
-#include <GUI/ControlGroup.hpp>
-
-namespace crisp
+namespace crisp::gui
 {
-    class FontLoader;
+    class RenderSystem;
+    class StopWatch;
+    class ControlGroup;
 
-    namespace gui
+    class Form
     {
-        class CheckBox;
-        class Label;
-        class Button;
-        class ControlGroup;
-        class DrawingVisitor;
-        class RenderSystem;
-        class Panel;
+    public:
+        Form(std::unique_ptr<RenderSystem> drawingVisitor);
+        ~Form();
 
-        class Form
+        Form(const Form& other) = delete;
+        Form& operator=(const Form& other) = delete;
+        Form& operator=(Form&& other) = delete;
+
+        RenderSystem* getRenderSystem();
+        Animator*     getAnimator();
+
+        void addStopWatch(StopWatch* stopWatch);
+        void removeStopWatch(StopWatch* stopWatch);
+
+        void postGuiUpdate(std::function<void()>&& guiUpdateCallback);
+        void add(std::shared_ptr<Control> control);
+        void remove(std::string controlId, float duration = 1.0f);
+
+        template <typename T>
+        T* getControlById(std::string id)
         {
-        public:
-            Form(std::unique_ptr<RenderSystem> drawingVisitor);
-            ~Form();
+            return m_rootControlGroup->getTypedControlById<T>(id);
+        }
 
-            Form(const Form& other) = delete;
-            Form& operator=(const Form& other) = delete;
-            Form& operator=(Form&& other) = delete;
+        void resize(int width, int height);
+        void onMouseMoved(double mouseX, double mouseY);
+        void onMousePressed(int button, int mods, double mouseX, double mouseY);
+        void onMouseReleased(int button, int mods, double mouseX, double mouseY);
 
-            RenderSystem* getRenderSystem();
-            Animator* getAnimator();
+        void update(double dt);
+        void draw();
 
-            void postGuiUpdate(std::function<void()>&& guiUpdateCallback);
+    private:
+        std::shared_ptr<Control> fadeIn(std::shared_ptr<Control> controlGroup, float duration = 1.0f);
 
-            void update(double dt);
+        std::unique_ptr<RenderSystem>      m_renderSystem;
+        std::unique_ptr<Animator>          m_animator;
 
-            void resize(int width, int height);
-            void onMouseMoved(double mouseX, double mouseY);
-            void onMousePressed(int button, int mods, double mouseX, double mouseY);
-            void onMouseReleased(int button, int mods, double mouseX, double mouseY);
+        std::vector<std::function<void()>> m_guiUpdates;
+        std::set<StopWatch*>               m_stopWatches;
 
-            void draw();
-
-            void setFpsString(const std::string& fps);
-
-            template <typename T>
-            T* getControlById(std::string id)
-            {
-                return m_rootControlGroup->getTypedControlById<T>(id);
-            }
-
-            void addMemoryUsagePanel();
-            void addStatusBar();
-            void add(std::shared_ptr<Control> control);
-            
-            void fadeOutAndRemove(std::string controlId, float duration = 1.0f);
-
-        private:
-            std::shared_ptr<ControlGroup> buildWelcomeScreen();
-            std::shared_ptr<ControlGroup> buildStatusBar();
-            std::shared_ptr<ControlGroup> buildMemoryUsagePanel();
-            void buildProgressBar(std::shared_ptr<ControlGroup> parent, float verticalOffset, std::string name, std::string tag);
-            std::shared_ptr<Control> fadeIn(std::shared_ptr<Control> controlGroup, float duration = 1.0f);
-            void updateMemoryMetrics();
-
-            glm::vec2 m_prevMousePos;
-            bool m_guiHidden;
-            bool m_guiHidingEnabled;
-
-            double m_timePassed;
-
-            std::unique_ptr<RenderSystem> m_renderSystem;
-            std::unique_ptr<Animator> m_animator;
-
-            std::shared_ptr<ControlGroup> m_rootControlGroup;
-
-            Label* m_fpsLabel;
-            Label* m_progressLabel;
-            Panel* m_progressBar;
-            Panel* m_bufferMemUsage;
-            Label* m_bufferMemUsageLabel;
-            Panel* m_imageMemUsage;
-            Label* m_imageMemUsageLabel;
-            Panel* m_stagingMemUsage;
-            Label* m_stagingMemUsageLabel;
-
-            std::vector<std::function<void()>> m_guiUpdates;
-        };
-    }
+        std::shared_ptr<ControlGroup>      m_rootControlGroup;
+    };
 }

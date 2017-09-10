@@ -30,7 +30,7 @@ namespace crisp
 
             ControlGroup::validate();
 
-            if (m_validationFlags & Validation::Transform)
+            if (m_validationFlags & Validation::Geometry)
             {
                 m_renderSystem->updateTransformResource(m_transformId, m_M);
             }

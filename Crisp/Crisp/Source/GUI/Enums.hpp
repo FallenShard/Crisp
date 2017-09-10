@@ -2,48 +2,36 @@
 
 #include <type_traits>
 
-namespace crisp
+#include <CrispCore/BitFlags.hpp>
+
+namespace crisp::gui
 {
-    namespace gui
+    enum class SizingPolicy
     {
-        enum class Sizing
-        {
-            Fixed,
-            FillParent,
-            WrapContent
-        };
+        Fixed,
+        FillParent,
+        WrapContent
+    };
 
-        enum class Anchor
-        {
-            TopLeft,
-            BottomLeft,
-            TopRight,
-            BottomRight,
-            TopCenter,
-            LeftCenter,
-            BottomCenter,
-            RightCenter,
-            Center,
-            CenterVertically,
-            CenterHorizontally
-        };
+    enum class Anchor
+    {
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+        Center,
+        CenterTop,
+        CenterBottom,
+        CenterLeft,
+        CenterRight
+    };
 
-        enum class Validation
-        {
-            None = 0,
-            Transform = 1,
-            Color = 2,
-            All = Transform | Color
-        };
-
-        static Validation operator|(Validation f1, Validation f2)
-        {
-            return static_cast<Validation>(static_cast<std::underlying_type<Validation>::type>(f1) | static_cast<std::underlying_type<Validation>::type>(f2));
-        }
-
-        static bool operator&(Validation f1, Validation f2)
-        {
-            return static_cast<std::underlying_type<Validation>::type>(f1) & static_cast<std::underlying_type<Validation>::type>(f2);
-        }
-    }
+    enum class Validation
+    {
+        None      = 0,
+        Geometry  = 1,
+        Color     = 2,
+        All       = Geometry | Color
+    };
+    DECLARE_BITFLAG(Validation)
 }

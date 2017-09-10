@@ -16,12 +16,9 @@
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/TextureView.hpp"
+#include "Vulkan/VulkanSampler.hpp"
+#include "vulkan/VulkanDescriptorSet.hpp"
 
-#include "GUI/Control.hpp"
-#include "GUI/Panel.hpp"
-#include "GUI/Label.hpp"
-#include "GUI/Button.hpp"
-#include "GUI/CheckBox.hpp"
 #include "GUI/DynamicUniformBufferResource.hpp"
 
 namespace crisp
@@ -44,7 +41,7 @@ namespace crisp
 
             // Gui texture atlas
             loadTextureAtlas();
-            m_linearClampSampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+            m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
             // Initialize gui render target rendering resources
             initGuiRenderTargetResources();
@@ -53,17 +50,27 @@ namespace crisp
             initGeometryBuffers();
 
             // Initialize resources to support dynamic addition of MVP transform resources
-            auto transformAndColorSets = m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor, VulkanRenderer::NumVirtualFrames);
+            std::array<VkDescriptorSet, VulkanRenderer::NumVirtualFrames> transformAndColorSets =
+            {
+                m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle(),
+                m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle(),
+                m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle()
+            };
             m_transforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
             // Initialize resources to support dynamic addition of color resources
             m_colors = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
             // Initialize resources to support dynamic addition of textured controls
-            auto tcSets = m_texQuadPipeline->allocateDescriptorSet(1, VulkanRenderer::NumVirtualFrames);
+            std::array<VkDescriptorSet, VulkanRenderer::NumVirtualFrames> tcSets =
+            {
+                m_texQuadPipeline->allocateDescriptorSet(1).getHandle(),
+                m_texQuadPipeline->allocateDescriptorSet(1).getHandle(),
+                m_texQuadPipeline->allocateDescriptorSet(1).getHandle()
+            };
             for (auto& set : tcSets)
             {
-                const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler);
+                const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
                 VkWriteDescriptorSet descWrite = {};
                 descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -80,7 +87,6 @@ namespace crisp
 
         RenderSystem::~RenderSystem()
         {
-            vkDestroySampler(m_device->getHandle(), m_linearClampSampler, nullptr);
         }
 
         const glm::mat4& RenderSystem::getProjectionMatrix() const
@@ -202,7 +208,7 @@ namespace crisp
             m_drawCommands.emplace_back(&RenderSystem::renderText, transformId, colorId, textResId, depth);
         }
 
-        void RenderSystem::submitDrawRequests()
+        void RenderSystem::submitDrawCommands()
         {
             m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer)
             {
@@ -324,12 +330,9 @@ namespace crisp
             fontTexture->texture->fill(fontTexture->font->textureData.data(), byteSize);
             fontTexture->textureView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
-            VkDescriptorImageInfo imageInfo = {};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView   = fontTexture->textureView->getHandle();
-            imageInfo.sampler     = m_linearClampSampler;
+            auto imageInfo = fontTexture->textureView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
-            fontTexture->descSet = m_textPipeline->allocateDescriptorSet(GuiTextPipeline::FontAtlas);
+            fontTexture->descSet = m_textPipeline->allocateDescriptorSet(GuiTextPipeline::FontAtlas).getHandle();
 
             std::vector<VkWriteDescriptorSet> descWrites(2, VkWriteDescriptorSet{});
             descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -386,12 +389,12 @@ namespace crisp
         void RenderSystem::initGuiRenderTargetResources()
         {
             // Create descriptor set for the image
-            m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage);
+            m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage).getHandle();
 
             // Create a view to the render target
             m_guiRenderTargetView = m_guiPass->createRenderTargetView();
             
-            VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler);
+            VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
             descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -467,8 +470,8 @@ namespace crisp
             };
             int pushConstants[2] =
             {
-                m_transforms->getPushConstantValue(cmd.transformId),
-                m_colors->getPushConstantValue(cmd.colorId)
+                static_cast<int>(m_transforms->getPushConstantValue(cmd.transformId)),
+                static_cast<int>(m_colors->getPushConstantValue(cmd.colorId))
             };
 
             vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->getPipelineLayout(),
