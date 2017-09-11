@@ -9,8 +9,7 @@
 namespace crisp
 {
     VulkanSwapChain::VulkanSwapChain(VulkanDevice* device, uint32_t numVirtualFrames)
-        : m_swapChain(VK_NULL_HANDLE)
-        , m_device(device)
+        : VulkanResource(device)
         , m_numVirtualFrames(numVirtualFrames)
     {
         createSwapChain();
@@ -21,12 +20,7 @@ namespace crisp
     {
         for (auto imageView : m_imageViews)
             vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
-        vkDestroySwapchainKHR(m_device->getHandle(), m_swapChain, nullptr);
-    }
-
-    VkSwapchainKHR VulkanSwapChain::getHandle() const
-    {
-        return m_swapChain;
+        vkDestroySwapchainKHR(m_device->getHandle(), m_handle, nullptr);
     }
 
     VkFormat VulkanSwapChain::getImageFormat() const
@@ -104,17 +98,17 @@ namespace crisp
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         createInfo.presentMode    = presentMode;
         createInfo.clipped        = VK_TRUE;
-        createInfo.oldSwapchain   = m_swapChain;
+        createInfo.oldSwapchain   = m_handle;
 
         auto deviceHandle = m_device->getHandle();
-        vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_swapChain);
+        vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle);
 
         if (createInfo.oldSwapchain != VK_NULL_HANDLE)
             vkDestroySwapchainKHR(deviceHandle, createInfo.oldSwapchain, nullptr);
 
-        vkGetSwapchainImagesKHR(deviceHandle, m_swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, nullptr);
         m_images.resize(imageCount);
-        vkGetSwapchainImagesKHR(deviceHandle, m_swapChain, &imageCount, m_images.data());
+        vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data());
 
         m_imageFormat = surfaceFormat.format;
         m_extent      = extent;
@@ -180,7 +174,7 @@ namespace crisp
         {
             VkExtent2D actualExtent = { 960, 540 };
 
-            actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+            actualExtent.width  = std::max(capabilities.minImageExtent.width,  std::min(capabilities.maxImageExtent.width,  actualExtent.width));
             actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
             return actualExtent;

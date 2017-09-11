@@ -6,12 +6,11 @@
 namespace crisp
 {
     VulkanQueue::VulkanQueue(VulkanDevice* device, uint32_t familyIndex, uint32_t queueIndex)
-        : m_device(device)
-        , m_queue(VK_NULL_HANDLE)
+        : VulkanResource(device)
         , m_familyIndex(familyIndex)
         , m_index(queueIndex)
     {
-        vkGetDeviceQueue(m_device->getHandle(), m_familyIndex, m_index, &m_queue);
+        vkGetDeviceQueue(m_device->getHandle(), m_familyIndex, m_index, &m_handle);
     }
 
     VulkanQueue::VulkanQueue(VulkanDevice* device, QueueIdentifier queueId)
@@ -36,7 +35,7 @@ namespace crisp
         submitInfo.pCommandBuffers      = &commandBuffer;
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores    = &signalSemaphore;
-        return vkQueueSubmit(m_queue, 1, &submitInfo, fence);
+        return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
     }
 
     VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer) const
@@ -45,7 +44,7 @@ namespace crisp
         submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount   = 1;
         submitInfo.pCommandBuffers      = &cmdBuffer;
-        return vkQueueSubmit(m_queue, 1, &submitInfo, VK_NULL_HANDLE);
+        return vkQueueSubmit(m_handle, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
     VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR swapChain, uint32_t imageIndex) const
@@ -58,12 +57,12 @@ namespace crisp
         presentInfo.pSwapchains        = &swapChain;
         presentInfo.pImageIndices      = &imageIndex;
         presentInfo.pResults           = nullptr;
-        return vkQueuePresentKHR(m_queue, &presentInfo);
+        return vkQueuePresentKHR(m_handle, &presentInfo);
     }
 
     void VulkanQueue::waitIdle() const
     {
-        vkQueueWaitIdle(m_queue);
+        vkQueueWaitIdle(m_handle);
     }
 
     VkCommandPool VulkanQueue::createCommandPoolFromFamily(VkCommandPoolCreateFlags flags) const

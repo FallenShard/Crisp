@@ -7,7 +7,7 @@
 #include <functional>
 
 #include <vulkan/vulkan.h>
-#include "MemoryHeap.hpp"
+#include "VulkanMemoryHeap.hpp"
 
 namespace crisp
 {
@@ -38,18 +38,16 @@ namespace crisp
         void invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
         void flushMappedRanges();
 
-        VkSampler createSampler(VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode);
-
         VkSemaphore createSemaphore() const;
         VkFence createFence(VkFenceCreateFlags flags) const;
 
         void printMemoryStatus();
         DeviceMemoryMetrics getDeviceMemoryUsage();
 
-        MemoryHeap* getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
-        MemoryHeap* getDeviceBufferHeap() const;
-        MemoryHeap* getDeviceImageHeap() const;
-        MemoryHeap* getStagingBufferHeap() const;
+        VulkanMemoryHeap* getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
+        VulkanMemoryHeap* getDeviceBufferHeap() const;
+        VulkanMemoryHeap* getDeviceImageHeap() const;
+        VulkanMemoryHeap* getStagingBufferHeap() const;
         void* getStagingMemoryPtr() const;
 
     private:
@@ -62,9 +60,9 @@ namespace crisp
         std::unique_ptr<VulkanQueue> m_generalQueue;
         std::unique_ptr<VulkanQueue> m_transferQueue;
 
-        std::unique_ptr<MemoryHeap> m_deviceBufferHeap;
-        std::unique_ptr<MemoryHeap> m_deviceImageHeap;
-        std::unique_ptr<MemoryHeap> m_stagingBufferHeap;
+        std::unique_ptr<VulkanMemoryHeap> m_deviceBufferHeap;
+        std::unique_ptr<VulkanMemoryHeap> m_deviceImageHeap;
+        std::unique_ptr<VulkanMemoryHeap> m_stagingBufferHeap;
         void* m_mappedStagingPtr;
 
         std::vector<VkMappedMemoryRange> m_unflushedRanges;

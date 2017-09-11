@@ -7,7 +7,7 @@
 namespace crisp
 {
     VulkanBuffer::VulkanBuffer(VulkanDevice* device, size_t size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps)
-        : m_device(device)
+        : VulkanResource(device)
         , m_size(size)
     {
         // Create a buffer handle
@@ -16,27 +16,22 @@ namespace crisp
         bufferInfo.size        = size;
         bufferInfo.usage       = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_device->getHandle(), &bufferInfo, nullptr, &m_buffer);
+        vkCreateBuffer(m_device->getHandle(), &bufferInfo, nullptr, &m_handle);
 
         // Assign the buffer to a suitable memory heap by giving it a free chunk
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(m_device->getHandle(), m_buffer, &memRequirements);
+        vkGetBufferMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
 
-        auto heap = m_device->getHeapFromMemProps(m_buffer, memProps, memRequirements.memoryTypeBits);
+        auto heap = m_device->getHeapFromMemProps(m_handle, memProps, memRequirements.memoryTypeBits);
         m_memoryChunk = heap->allocateChunk(memRequirements.size, memRequirements.alignment);
 
-        vkBindBufferMemory(m_device->getHandle(), m_buffer, heap->memory, m_memoryChunk.offset);
+        vkBindBufferMemory(m_device->getHandle(), m_handle, heap->memory, m_memoryChunk.offset);
     }
 
     VulkanBuffer::~VulkanBuffer()
     {
         m_memoryChunk.free();
-        vkDestroyBuffer(m_device->getHandle(), m_buffer, nullptr);
-    }
-
-    VkBuffer VulkanBuffer::getHandle() const
-    {
-        return m_buffer;
+        vkDestroyBuffer(m_device->getHandle(), m_handle, nullptr);
     }
 
     VkDeviceSize VulkanBuffer::getSize() const
@@ -64,6 +59,6 @@ namespace crisp
         copyRegion.srcOffset = srcOffset;
         copyRegion.dstOffset = dstOffset;
         copyRegion.size      = size;
-        vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_buffer, m_buffer, 1, &copyRegion);
+        vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
     }
 }

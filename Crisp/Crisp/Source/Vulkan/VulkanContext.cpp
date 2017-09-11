@@ -3,7 +3,8 @@
 #include <set>
 #include <iostream>
 
-#include "Application.hpp"
+#include <CrispCore/ConsoleUtils.hpp>
+#include "Core/Application.hpp"
 #include "VulkanQueueConfiguration.hpp"
 
 #ifndef _DEBUG
@@ -45,7 +46,8 @@ namespace crisp
 
         VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* message, void* userData)
         {
-            std::cerr << "Validation layer: " << message << std::endl;
+            ConsoleColorizer colorizer(ConsoleColor::LightRed);
+            std::cerr << "Vulkan validation layer: " << message << "\n\n";
             return VK_FALSE;
         }
     }
@@ -317,24 +319,29 @@ namespace crisp
     bool VulkanContext::checkRequiredExtensions(std::vector<const char*> reqExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
     {
         std::set<std::string> reqExtsSet;
-        std::cout << "Platform-required Vulkan extensions: " << std::endl;
+
+        ConsoleColorizer colorizer(ConsoleColor::Yellow);
+        std::cout << "Platform-required Vulkan extensions: \n";
         for (auto extensionName : reqExtensions)
         {
-            std::cout << "\t" << extensionName << std::endl;
+            std::cout << "\t" << extensionName << '\n';
             reqExtsSet.insert(std::string(extensionName));
         }
 
-        std::cout << "Supported extensions: " << std::endl;
+        colorizer.set(ConsoleColor::Green);
+        std::cout << "Supported extensions: " << '\n';
         for (const auto& ext : supportedExtensions)
         {
-            std::cout << "\t" << ext.extensionName << std::endl;
+
+            std::cout << "\t" << ext.extensionName << '\n';
             reqExtsSet.erase(ext.extensionName); // Will hold unsupported required extensions, if any
         }
 
         size_t numSupportedReqExts = reqExtensions.size() - reqExtsSet.size();
 
-        std::cout << numSupportedReqExts << "/" << reqExtensions.size() << " required extensions supported." << std::endl;
-        std::cout << supportedExtensions.size() << " extensions supported total." << std::endl;
+        colorizer.set(ConsoleColor::LightGreen);
+        std::cout << numSupportedReqExts << "/" << reqExtensions.size() << " required extensions supported." << '\n';
+        std::cout << supportedExtensions.size() << " extensions supported total." << '\n';
 
         return numSupportedReqExts == reqExtensions.size();
     }
@@ -355,7 +362,7 @@ namespace crisp
             if (availableLayersSet.find(validationLayer) == availableLayersSet.end())
                 return false;
 
-        std::cout << "Validation layers are supported!" << std::endl;
+        std::cout << "Validation layers are supported!\n";
 
         return true;
     }
@@ -481,7 +488,7 @@ namespace crisp
                 return format;
         }
 
-        std::cerr << "Could not find supported format!" << std::endl;
+        std::cerr << "Could not find supported format!\n";
         return VkFormat();
     }
 

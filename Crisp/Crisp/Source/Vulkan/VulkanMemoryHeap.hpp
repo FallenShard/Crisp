@@ -7,17 +7,17 @@
 
 namespace crisp
 {
-    struct MemoryHeap;
-    struct MemoryChunk
+    struct VulkanMemoryHeap;
+    struct VulkanMemoryChunk
     {
-        MemoryHeap* memoryHeap;
+        VulkanMemoryHeap* memoryHeap;
         uint64_t offset;
         uint64_t size;
 
         inline void free();
     };
 
-    struct MemoryHeap
+    struct VulkanMemoryHeap
     {
         VkDeviceMemory        memory;
         VkMemoryPropertyFlags properties;
@@ -29,15 +29,15 @@ namespace crisp
         
         std::string tag;
 
-        MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize size, uint32_t memoryTypeIndex, VkDevice device, std::string tag);
+        VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize size, uint32_t memoryTypeIndex, VkDevice device, std::string tag);
 
         void coalesce();
-        inline void free(const MemoryChunk& chunk) { free(chunk.offset, chunk.size); }
+        inline void free(const VulkanMemoryChunk& chunk) { free(chunk.offset, chunk.size); }
         void free(uint64_t offset, uint64_t size);
-        MemoryChunk allocateChunk(uint64_t size, uint64_t alignment);
+        VulkanMemoryChunk allocateChunk(uint64_t size, uint64_t alignment);
     };
 
-    inline void MemoryChunk::free()
+    inline void VulkanMemoryChunk::free()
     {
         memoryHeap->free(offset, size);
     }

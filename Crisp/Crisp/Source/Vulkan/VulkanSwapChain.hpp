@@ -2,13 +2,13 @@
 
 #include <vector>
 
-#include <vulkan/vulkan.h>
+#include "VulkanResource.hpp"
 
 namespace crisp
 {
     class VulkanDevice;
 
-    class VulkanSwapChain
+    class VulkanSwapChain : public VulkanResource<VkSwapchainKHR>
     {
     public:
         VulkanSwapChain(VulkanDevice* device, uint32_t numVirtualFrames);
@@ -18,7 +18,6 @@ namespace crisp
         VulkanSwapChain& operator=(const VulkanSwapChain& other) = delete;
         VulkanSwapChain& operator=(VulkanSwapChain&& other) = delete;
 
-        VkSwapchainKHR getHandle() const;
         VkFormat getImageFormat() const;
         VkExtent2D getExtent() const;
         VkImageView getImageView(size_t index) const;
@@ -34,13 +33,11 @@ namespace crisp
         VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
         VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
-        VulkanDevice* m_device;
-        VkSwapchainKHR m_swapChain;
         uint32_t m_numVirtualFrames;
 
-        VkFormat m_imageFormat;
+        VkFormat   m_imageFormat;
         VkExtent2D m_extent;
-        std::vector<VkImage> m_images;
+        std::vector<VkImage>     m_images;
         std::vector<VkImageView> m_imageViews;
     };
 }

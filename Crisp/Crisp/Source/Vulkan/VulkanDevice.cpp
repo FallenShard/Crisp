@@ -14,7 +14,7 @@ namespace crisp
     {
         VulkanQueueConfiguration config =
         {
-            QueueType::General | QueueType::Present,
+            QueueTypeFlags(QueueType::General | QueueType::Present),
             QueueType::Transfer
         };
         config.buildQueueCreateInfos(vulkanContext);
@@ -24,13 +24,13 @@ namespace crisp
         m_transferQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(1));
 
         // Device buffer memory
-        m_deviceBufferHeap = std::make_unique<MemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceBufferMemoryType(m_device), m_device, "Device Buffer Heap");
+        m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceBufferMemoryType(m_device), m_device, "Device Buffer Heap");
 
         // Device image memory
-        m_deviceImageHeap = std::make_unique<MemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 2 * DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
+        m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 2 * DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
 
         // Staging memory
-        m_stagingBufferHeap = std::make_unique<MemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
+        m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
         vkMapMemory(m_device, m_stagingBufferHeap->memory, 0, m_stagingBufferHeap->size, 0, &m_mappedStagingPtr);
     }
 
@@ -84,31 +84,6 @@ namespace crisp
         }
     }
 
-    VkSampler VulkanDevice::createSampler(VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
-    {
-        VkSamplerCreateInfo samplerInfo = {};
-        samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter               = magFilter;
-        samplerInfo.minFilter               = minFilter;
-        samplerInfo.addressModeU            = addressMode;
-        samplerInfo.addressModeV            = addressMode;
-        samplerInfo.addressModeW            = addressMode;
-        samplerInfo.anisotropyEnable        = VK_FALSE;
-        samplerInfo.maxAnisotropy           = 1.0f;
-        samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.compareEnable           = VK_FALSE;
-        samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
-        samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerInfo.mipLodBias              = 0.0f;
-        samplerInfo.minLod                  = 0.0f;
-        samplerInfo.maxLod                  = 0.0f;
-
-        VkSampler sampler = VK_NULL_HANDLE;
-        vkCreateSampler(m_device, &samplerInfo, nullptr, &sampler);
-        return sampler;
-    }
-
     VkSemaphore VulkanDevice::createSemaphore() const
     {
         VkSemaphoreCreateInfo semInfo = {};
@@ -131,11 +106,11 @@ namespace crisp
         return fence;
     }
 
-    MemoryHeap* VulkanDevice::getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
+    VulkanMemoryHeap* VulkanDevice::getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
     {
         uint32_t supportedHeapIndex = m_context->findMemoryType(memoryTypeBits, flags);
 
-        MemoryHeap* heap = nullptr;
+        VulkanMemoryHeap* heap = nullptr;
         if (supportedHeapIndex == m_deviceBufferHeap->memoryTypeIndex)
         {
             heap = m_deviceBufferHeap.get();
@@ -159,17 +134,17 @@ namespace crisp
         return heap;
     }
 
-    MemoryHeap* VulkanDevice::getDeviceBufferHeap() const
+    VulkanMemoryHeap* VulkanDevice::getDeviceBufferHeap() const
     {
         return m_deviceBufferHeap.get();
     }
 
-    MemoryHeap* VulkanDevice::getDeviceImageHeap() const
+    VulkanMemoryHeap* VulkanDevice::getDeviceImageHeap() const
     {
         return m_deviceImageHeap.get();
     }
 
-    MemoryHeap* VulkanDevice::getStagingBufferHeap() const
+    VulkanMemoryHeap* VulkanDevice::getStagingBufferHeap() const
     {
         return m_stagingBufferHeap.get();
     }
@@ -181,7 +156,7 @@ namespace crisp
 
     void VulkanDevice::printMemoryStatus()
     {
-        auto printSingleHeap = [](MemoryHeap* heap)
+        auto printSingleHeap = [](VulkanMemoryHeap* heap)
         {
             std::cout << heap->tag << "\n";
             std::cout << "  Free chunks: \n";

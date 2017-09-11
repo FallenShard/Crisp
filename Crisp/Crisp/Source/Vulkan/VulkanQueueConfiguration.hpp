@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Core/BitFlags.hpp"
+#include <CrispCore/BitFlags.hpp>
 
 #include "vulkan/VulkanContext.hpp"
 
@@ -20,8 +20,7 @@ namespace crisp
         Present  = 0x08,
         General  = Graphics | Compute | Transfer,
     };
-
-    template<> struct IsBitFlag<QueueType> { static constexpr bool value = true; };
+    DECLARE_BITFLAG(QueueType)
 
     struct QueueIdentifier
     {
@@ -32,7 +31,7 @@ namespace crisp
     class VulkanQueueConfiguration
     {
     public:
-        VulkanQueueConfiguration(std::initializer_list<BitFlags<QueueType>> requestedQueuesList);
+        VulkanQueueConfiguration(std::initializer_list<QueueTypeFlags> requestedQueuesList);
 
         void buildQueueCreateInfos(const VulkanContext* context);
         const std::vector<VkDeviceQueueCreateInfo>& getQueueCreateInfos() const;
@@ -41,9 +40,9 @@ namespace crisp
     private:
         std::vector<QueueIdentifier> findQueueIds(const VulkanContext* context) const;
         int findQueueFamilyIndex(BitFlags<QueueType> queueType, const VulkanContext* context, const std::vector<VkQueueFamilyProperties>& exposedQueueFamilies, std::vector<uint32_t>& usedQueueFamilyCounts) const;
-        BitFlags<QueueType> getFamilyType(const VulkanContext* context, uint32_t familyIndex, VkQueueFlags queueFlags) const;
+        QueueTypeFlags getFamilyType(const VulkanContext* context, uint32_t familyIndex, VkQueueFlags queueFlags) const;
 
-        std::vector<BitFlags<QueueType>> m_requestedQueues;
+        std::vector<QueueTypeFlags> m_requestedQueues;
         
         std::vector<std::vector<float>> m_queuePriorities;
         std::vector<VkDeviceQueueCreateInfo> m_createInfos;

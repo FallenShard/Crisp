@@ -1,10 +1,12 @@
-#include "MemoryHeap.hpp"
+#include "VulkanMemoryHeap.hpp"
 
 #include <iostream>
 
+#include <CrispCore/ConsoleUtils.hpp>
+
 namespace crisp
 {
-    MemoryHeap::MemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize allocSize, uint32_t memTypeIdx, VkDevice device, std::string tag)
+    VulkanMemoryHeap::VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize allocSize, uint32_t memTypeIdx, VkDevice device, std::string tag)
         : memory(VK_NULL_HANDLE)
         , properties(memProps)
         , size(allocSize)
@@ -22,7 +24,7 @@ namespace crisp
         freeChunks.insert(std::make_pair(0, allocSize));
     }
 
-    void MemoryHeap::free(uint64_t offset, uint64_t size)
+    void VulkanMemoryHeap::free(uint64_t offset, uint64_t size)
     {
         usedSize -= size;
         freeChunks[offset] = size;
@@ -32,11 +34,12 @@ namespace crisp
 
         if (freeChunks.size() > 10)
         {
-            std::cout << "WARNING: Possible memory fragmentation in " << tag << std::endl;
+            ConsoleColorizer colorizer(ConsoleColor::LightRed);
+            std::cout << "WARNING: Possible memory fragmentation in " << tag << '\n';
         }
     }
 
-    void MemoryHeap::coalesce()
+    void VulkanMemoryHeap::coalesce()
     {
         std::map<uint64_t, uint64_t> newFreeMap;
         auto current = freeChunks.begin();
@@ -57,9 +60,9 @@ namespace crisp
         }
     }
 
-    MemoryChunk MemoryHeap::allocateChunk(uint64_t size, uint64_t alignment)
+    VulkanMemoryChunk VulkanMemoryHeap::allocateChunk(uint64_t size, uint64_t alignment)
     {
-        MemoryChunk allocResult = { this, 0, 0 };
+        VulkanMemoryChunk allocResult = { this, 0, 0 };
         uint64_t foundChunkOffset = 0;
         uint64_t foundChunkSize = 0;
         for (auto& freeChunk : freeChunks)
