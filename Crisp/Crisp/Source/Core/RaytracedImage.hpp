@@ -14,6 +14,7 @@ namespace crisp
     class VulkanRenderer;
     class VulkanDevice;
     class VulkanBuffer;
+    class VulkanSampler;
     class Texture;
     class TextureView;
     class FullScreenQuadPipeline;
@@ -45,7 +46,7 @@ namespace crisp
 
         std::unique_ptr<Texture> m_texture;
         std::unique_ptr<TextureView> m_textureView;
-        VkSampler    m_sampler;
+        std::unique_ptr<VulkanSampler> m_sampler;
 
         VkViewport   m_viewport;
     };

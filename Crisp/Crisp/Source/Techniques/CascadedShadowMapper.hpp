@@ -39,6 +39,10 @@ namespace crisp
 
         void update(VkCommandBuffer cmdBuffer, unsigned int frameIndex);
         void draw(VkCommandBuffer cmdBuffer, unsigned int frameIndex, std::function<void(VkCommandBuffer commandBuffer, uint32_t frameIdx, DescriptorSetGroup& descSets, VulkanPipeline* pipeline, uint32_t cascadeTransformOffset)> callback);
+       
+        glm::mat4 getLightTransform(uint32_t index) const;
+
+        const DirectionalLight* getLight() const;
 
     private:
         VulkanRenderer* m_renderer;

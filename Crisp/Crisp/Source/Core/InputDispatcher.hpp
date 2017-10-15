@@ -2,7 +2,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Event.hpp"
+#include <CrispCore/Event.hpp>
 
 namespace crisp
 {
@@ -14,28 +14,28 @@ namespace crisp
 
         GLFWwindow* getWindow() const;
 
-        InputDispatcher(const InputDispatcher& other) = delete;
+        InputDispatcher(const InputDispatcher& other)            = delete;
         InputDispatcher& operator=(const InputDispatcher& other) = delete;
-        InputDispatcher& operator=(InputDispatcher&& other) = delete;
+        InputDispatcher& operator=(InputDispatcher&& other)      = delete;
 
         static void resizeCallback(GLFWwindow* window, int width, int height);
-        Event<void, int, int> windowResized;
+        Event<int, int> windowResized;
 
         static void keyboardCallback(GLFWwindow* window, int key, int scanCode, int action, int mode);
-        Event<void, int, int> keyPressed;
+        Event<int, int> keyPressed;
 
         static void mouseMoveCallback(GLFWwindow* window, double xPos, double yPos);
-        Event<void, double, double> mouseMoved;
+        Event<double, double> mouseMoved;
         
         static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-        Event<void, int, int, double, double> mouseButtonPressed;
-        Event<void, int, int, double, double> mouseButtonReleased;
+        Event<int, int, double, double> mouseButtonPressed;
+        Event<int, int, double, double> mouseButtonReleased;
 
         static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
-        Event<void, double> mouseWheelScrolled;
+        Event<double> mouseWheelScrolled;
 
         static void closeCallback(GLFWwindow* window);
-        Event<void> windowClosed;
+        Event<> windowClosed;
 
     private:
         GLFWwindow* m_window;

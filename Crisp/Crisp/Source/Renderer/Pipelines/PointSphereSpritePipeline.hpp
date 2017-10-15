@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VulkanPipeline.hpp"
+#include "Vulkan/VulkanPipeline.hpp"
 
 namespace crisp
 {

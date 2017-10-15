@@ -100,6 +100,6 @@ namespace crisp
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
+        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
     }
 }

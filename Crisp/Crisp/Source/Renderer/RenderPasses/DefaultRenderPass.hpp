@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Renderer/RenderPasses/VulkanRenderPass.hpp"
+#include "Vulkan/VulkanRenderPass.hpp"
 
 namespace crisp
 {

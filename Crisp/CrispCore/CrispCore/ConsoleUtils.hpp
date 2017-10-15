@@ -1,5 +1,6 @@
 #pragma once
 
+#define NOMINMAX
 #include <rlutil/rlutil.h>
 
 namespace crisp

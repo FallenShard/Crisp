@@ -4,7 +4,7 @@
 
 #include "Math/Headers.hpp"
 
-#include "Vulkan/MemoryHeap.hpp"
+#include "Vulkan/VulkanMemoryHeap.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 #include "Renderer/BufferUpdatePolicy.hpp"
 

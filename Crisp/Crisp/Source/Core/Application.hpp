@@ -12,8 +12,8 @@
 #include <Vesper/RayTracer.hpp>
 #include <Vesper/RayTracerUpdate.hpp>
 
+#include <CrispCore/Timer.hpp>
 #include "Math/Headers.hpp"
-#include "Core/Timer.hpp"
 #include "Core/FrameTimeLogger.hpp"
 
 namespace crisp
@@ -47,8 +47,11 @@ namespace crisp
         Application& operator=(Application&& other) = delete;
 
         void run();
+        void quit();
 
         void onResize(int width, int height);
+
+        void createScene();
 
         void startRayTracing();
         void stopRayTracing();
@@ -58,7 +61,7 @@ namespace crisp
 
         gui::Form* getForm() const;
 
-        Event<void, float, float> rayTracerProgressed;
+        Event<float, float> rayTracerProgressed;
 
     private:
         void createWindow();
@@ -66,11 +69,11 @@ namespace crisp
 
         void processRayTracerUpdates();
 
-        std::unique_ptr<FrameTimeLogger<Timer<std::milli>>> m_frameTimeLogger;
+        FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;
 
         std::unique_ptr<Window>          m_window;
-        std::unique_ptr<VulkanRenderer>  m_renderer;
         std::unique_ptr<InputDispatcher> m_inputDispatcher;
+        std::unique_ptr<VulkanRenderer>  m_renderer;
 
         std::unique_ptr<BackgroundImage> m_backgroundImage;
 

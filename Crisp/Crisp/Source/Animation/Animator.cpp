@@ -11,6 +11,7 @@ namespace crisp
 
     Animator::~Animator()
     {
+        std::cout << "Deleting animator!" << '\n';
         clearAllAnimations();
     }
 
@@ -36,11 +37,14 @@ namespace crisp
 
         // Advance all animations by a step
         bool hasFinishedAnimations = false;
-        for (auto& item : m_activeAnimations)
+        for (auto& animation : m_activeAnimations)
         {
-            item->update(dt);
-            if (item->isFinished())
+            animation->update(dt);
+            if (animation->isFinished())
+            {
+                animation->setActive(false);
                 hasFinishedAnimations = true;
+            }
         }
 
         // Remove all finished animations
@@ -57,6 +61,7 @@ namespace crisp
     void Animator::add(std::shared_ptr<Animation> anim)
     {
         m_pendingAnimations.emplace_back(anim);
+        anim->setActive(true);
     }
 
     void Animator::remove(std::shared_ptr<Animation> anim)

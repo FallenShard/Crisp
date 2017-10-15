@@ -7,8 +7,11 @@
 #include "IO/FontLoader.hpp"
 #include "IO/ImageFileBuffer.hpp"
 
+#include "Vulkan/VulkanPipeline.hpp"
+#include "Vulkan/VulkanSampler.hpp"
+#include "vulkan/VulkanDescriptorSet.hpp"
+
 #include "Renderer/VulkanRenderer.hpp"
-#include "Renderer/Pipelines/VulkanPipeline.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/GuiColorQuadPipeline.hpp"
 #include "Renderer/Pipelines/GuiTextPipeline.hpp"
@@ -16,8 +19,6 @@
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/TextureView.hpp"
-#include "Vulkan/VulkanSampler.hpp"
-#include "vulkan/VulkanDescriptorSet.hpp"
 
 #include "GUI/DynamicUniformBufferResource.hpp"
 

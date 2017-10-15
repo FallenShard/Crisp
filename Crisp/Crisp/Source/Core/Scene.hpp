@@ -7,20 +7,25 @@
 
 #include "Math/Headers.hpp"
 
+#include "Renderer/Transforms.hpp"
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
+
+#include "vulkan/VulkanSampler.hpp"
+#include "Renderer/VulkanRenderer.hpp"
 
 namespace crisp
 {
     class CascadedShadowMapper;
     class Application;
-    class VulkanRenderer;
     class UniformColorPipeline;
     class LiquidPipeline;
     class PointSphereSpritePipeline;
     class FullScreenQuadPipeline;
     class BlinnPhongPipeline;
     class ShadowMapPipeline;
+    class OutlinePipeline;
+    class NormalPipeline;
 
     class CameraController;
     class InputDispatcher;
@@ -34,6 +39,10 @@ namespace crisp
 
     class SceneRenderPass;
     class ShadowPass;
+    class LiquidRenderPass;
+
+    class BoxVisualizer;
+    class FluidSimulation;
 
     namespace gui
     {
@@ -56,15 +65,15 @@ namespace crisp
     private:
         void initRenderTargetResources();
 
-        
-        //void calculateFrustumOBB(ShadowParameters& shadowParams, float zNear, float zFar);
-
         VulkanRenderer* m_renderer;
-        VulkanDevice* m_device;
-        Application* m_app;
+        VulkanDevice*   m_device;
+        Application*    m_app;
         std::unique_ptr<CameraController> m_cameraController;
 
-        VkSampler m_linearClampSampler;
+        uint32_t m_renderMode;
+
+        std::unique_ptr<VulkanSampler> m_linearClampSampler;
+        std::unique_ptr<VulkanSampler> m_nearestNeighborSampler;
 
         std::unique_ptr<Skybox> m_skybox;
 
@@ -72,40 +81,36 @@ namespace crisp
         std::unique_ptr<MeshGeometry> m_planeGeometry;
         std::unique_ptr<MeshGeometry> m_bunnyGeometry;
 
-        struct Transforms
-        {
-            glm::mat4 MVP;
-            glm::mat4 MV;
-            glm::mat4 M;
-            glm::mat4 N;
-        };
+        std::unique_ptr<IndexBuffer> m_indexBuffer;
+        uint32_t m_numIndices;
+
+        std::unique_ptr<BoxVisualizer> m_boxVisualizer;
+        std::unique_ptr<FluidSimulation> m_fluidSimulation;
+        
+        std::unique_ptr<VertexBuffer> m_cubeVertexBuffer;
+        VertexBufferBindingGroup m_cubeVertexBindingGroup;
 
         std::unique_ptr<CascadedShadowMapper> m_shadowMapper;
-
-        //ShadowParameters m_shadowParameters[3];
 
         std::vector<Transforms> m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
         std::unique_ptr<UniformBuffer> m_cameraBuffer;
-        //std::unique_ptr<UniformBuffer> m_shadowTransformsBuffer;
-        //std::vector<std::shared_ptr<TextureView>> m_shadowMapViews;
 
         std::unique_ptr<SceneRenderPass> m_scenePass;
-
         std::unique_ptr<BlinnPhongPipeline> m_blinnPhongPipeline;
-        DescriptorSetGroup m_blinnPhongDescGroups[3];
+        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_blinnPhongDescGroups;
 
-        //std::unique_ptr<PointSphereSpritePipeline> m_psPipeline;
-        //std::vector<DescriptorSetGroup> m_descriptorSetGroups;
-        //
-        //std::unique_ptr<LiquidPipeline> m_dielectricPipeline;
-        //std::unique_ptr<ShadowPass> m_shadowPass;
-        //
-        //std::vector<std::shared_ptr<ShadowMapPipeline>> m_shadowMapPipelines;
-        //DescriptorSetGroup m_shadowMapDescGroup;
+        DescriptorSetGroup m_normalDesc;
 
         std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
         DescriptorSetGroup m_sceneDescSetGroup;
         std::unique_ptr<TextureView> m_sceneImageView;
+
+        std::unique_ptr<LiquidRenderPass> m_liquidPass;
+
+        std::unique_ptr<NormalPipeline> m_liquidNormalPipeline;
+        std::unique_ptr<LiquidPipeline> m_liquidPipeline;
+
+        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_liquidDesc;
     };
 }

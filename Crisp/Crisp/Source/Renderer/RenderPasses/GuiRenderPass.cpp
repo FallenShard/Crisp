@@ -24,32 +24,14 @@ namespace crisp
 
     GuiRenderPass::~GuiRenderPass()
     {
-        vkDestroyRenderPass(m_device->getHandle(), m_renderPass, nullptr);
         freeResources();
     }
 
     void GuiRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
     {
-        // Transition the destination image layer into attachment layout
-        VkImageMemoryBarrier transBarrier = {};
-        transBarrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        transBarrier.oldLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        transBarrier.newLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        transBarrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        transBarrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        transBarrier.srcAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
-        transBarrier.dstAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        transBarrier.image                           = m_renderTargets[0]->getImage()->getHandle();
-        transBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        transBarrier.subresourceRange.baseMipLevel   = 0;
-        transBarrier.subresourceRange.levelCount     = 1;
-        transBarrier.subresourceRange.baseArrayLayer = m_renderer->getCurrentVirtualFrameIndex();
-        transBarrier.subresourceRange.layerCount     = 1;
-        vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &transBarrier);
-
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = m_renderPass;
+        renderPassInfo.renderPass        = m_handle;
         renderPassInfo.framebuffer       = m_framebuffers[m_renderer->getCurrentVirtualFrameIndex()];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = m_renderer->getSwapChainExtent();;
@@ -89,7 +71,7 @@ namespace crisp
         colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         // Description for depth attachment
@@ -135,7 +117,7 @@ namespace crisp
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies   = &dependency;
 
-        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_renderPass);
+        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_handle);
     }
 
     void GuiRenderPass::createResources()
@@ -168,7 +150,7 @@ namespace crisp
         
             VkFramebufferCreateInfo framebufferInfo = {};
             framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass      = m_renderPass;
+            framebufferInfo.renderPass      = m_handle;
             framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
             framebufferInfo.pAttachments    = attachmentViews.data();
             framebufferInfo.width           = m_renderer->getSwapChainExtent().width;

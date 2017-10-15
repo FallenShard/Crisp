@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include "Vulkan/MemoryHeap.hpp"
+#include "Vulkan/VulkanMemoryHeap.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 #include "Renderer/BufferUpdatePolicy.hpp"
 
@@ -30,6 +30,12 @@ namespace crisp
         void updateStagingBuffer(const std::vector<T>& vec)
         {
             updateStagingBuffer(vec.data(), vec.size() * sizeof(T));
+        }
+
+        template <typename T, size_t N>
+        void updateStagingBuffer(const std::array<T, N>& array)
+        {
+            updateStagingBuffer(array.data(), N * sizeof(T));
         }
 
         void updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex);

@@ -81,7 +81,7 @@ namespace crisp::gui
             {
                 gui::VesperGui vesperGui;
                 parentForm->add(vesperGui.buildSceneOptions(parentForm));
-                //form->add(vesperGui.buildProgressBar(form));
+                parentForm->add(vesperGui.buildProgressBar(parentForm));
 
                 vesperGui.setupInputCallbacks(parentForm, app);
             });

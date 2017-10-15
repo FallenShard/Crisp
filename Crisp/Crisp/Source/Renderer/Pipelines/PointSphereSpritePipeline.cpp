@@ -41,12 +41,14 @@ namespace crisp
 
         std::vector<VkVertexInputBindingDescription> vertexInputBindings =
         {
-            { 0, FormatSizeof<VK_FORMAT_R32G32B32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX }
+            { 0, FormatSizeof<VK_FORMAT_R32G32B32A32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX },
+            { 1, FormatSizeof<VK_FORMAT_R32G32B32A32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX }
         };
         
         std::vector<VkVertexInputAttributeDescription> attributes =
         {
-            { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 0 },
+            { 1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }
         };
 
         VkPipelineVertexInputStateCreateInfo vertexInput = {};
@@ -101,6 +103,6 @@ namespace crisp
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
+        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
     }
 }

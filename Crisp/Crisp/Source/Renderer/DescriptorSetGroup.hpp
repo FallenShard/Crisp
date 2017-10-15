@@ -4,6 +4,7 @@
 #include <list>
 
 #include <vulkan/vulkan.h>
+#include "vulkan/VulkanDescriptorSet.hpp"
 
 namespace crisp
 {
@@ -13,11 +14,13 @@ namespace crisp
     {
     public:
         DescriptorSetGroup();
-        DescriptorSetGroup(std::initializer_list<VkDescriptorSet> setBindings);
+        DescriptorSetGroup(std::initializer_list<VulkanDescriptorSet> sets);
         ~DescriptorSetGroup();
 
         void postBufferUpdate(uint32_t setIndex, uint32_t binding, VkDescriptorType type, VkDescriptorBufferInfo bufferInfo);
         void postImageUpdate(uint32_t setIndex, uint32_t binding, VkDescriptorType type, VkDescriptorImageInfo imageInfo);
+        void postBufferUpdate(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo bufferInfo);
+        void postImageUpdate(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo imageInfo);
         void postImageUpdate(uint32_t setIndex, uint32_t binding, uint32_t dstArrayElement, VkDescriptorType type, VkDescriptorImageInfo imageInfo);
 
         void flushUpdates(VulkanDevice* device);
@@ -27,9 +30,12 @@ namespace crisp
         void bind(VkCommandBuffer& cmdBuffer, VkPipelineLayout layout) const;
         void bind(VkCommandBuffer& cmdBuffer, VkPipelineLayout layout, uint32_t firstSet, uint32_t numSets) const;
 
+        VkDescriptorSet getHandle(unsigned int index) const;
+
     private:
-        std::vector<VkDescriptorSet> m_sets;
-        mutable std::vector<uint32_t> m_dynamicOffsets;
+        std::vector<VkDescriptorSet>     m_setHandles;
+        std::vector<VulkanDescriptorSet> m_sets;
+        mutable std::vector<uint32_t>    m_dynamicOffsets;
 
         std::list<VkDescriptorBufferInfo> m_bufferInfos;
         std::list<VkDescriptorImageInfo>  m_imageInfos;

@@ -153,6 +153,16 @@ namespace crisp
         return &m_cameraParameters;
     }
 
+    const glm::mat4& CameraController::getViewMatrix() const
+    {
+        return m_camera.getViewMatrix();
+    }
+
+    const glm::mat4& CameraController::getProjectionMatrix() const
+    {
+        return m_camera.getProjectionMatrix();
+    }
+
     void CameraController::checkKeyboardInput(float dt)
     {
         //if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)

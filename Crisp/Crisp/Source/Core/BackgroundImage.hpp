@@ -12,6 +12,7 @@
 namespace crisp
 {
     class VulkanRenderer;
+    class VulkanSampler;
     class Texture;
     class TextureView;
 
@@ -37,7 +38,7 @@ namespace crisp
         std::unique_ptr<TextureView> m_textureView;
         
         VkExtent2D m_extent;
-        VkSampler m_vkSampler;
+        std::unique_ptr<VulkanSampler> m_sampler;
         VkViewport m_viewport;
         float m_aspectRatio;
     };

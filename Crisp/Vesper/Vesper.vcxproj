@@ -88,8 +88,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;$(SolutionDir)CrispCore\;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/std:c++latest</AdditionalOptions>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Lib>
       <AdditionalDependencies>embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -118,7 +121,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;$(SolutionDir)CrispCore\;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/std:c++latest</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -148,7 +153,6 @@
     <ClInclude Include="Vesper\Cameras\Camera.hpp" />
     <ClInclude Include="Vesper\Cameras\CameraFactory.hpp" />
     <ClInclude Include="Vesper\Cameras\Perspective.hpp" />
-    <ClInclude Include="Vesper\Core\BitFlags.hpp" />
     <ClInclude Include="Vesper\Core\Fresnel.hpp" />
     <ClInclude Include="Vesper\Core\Intersection.hpp" />
     <ClInclude Include="Vesper\Core\MipMap.hpp" />

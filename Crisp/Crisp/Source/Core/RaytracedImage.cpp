@@ -1,9 +1,10 @@
 #include "RayTracedImage.hpp"
 
-#include "vulkan/VulkanDevice.hpp"
-#include "vulkan/FormatTraits.hpp"
-#include "vulkan/VulkanBuffer.hpp"
-#include "vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanDevice.hpp"
+#include "Vulkan/VulkanFormatTraits.hpp"
+#include "Vulkan/VulkanBuffer.hpp"
+#include "Vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanSampler.hpp"
 
 #include "Renderer/Texture.hpp"
 #include "Renderer/TextureView.hpp"
@@ -40,18 +41,17 @@ namespace crisp
         m_updatedImageIndex = 0;
        
         // create sampler
-        m_sampler = m_device->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_descSets = { m_pipeline->allocateDescriptorSet(0) };
-        m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_textureView->getDescriptorInfo(m_sampler));
+        m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_textureView->getDescriptorInfo(m_sampler->getHandle()));
         m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_textureView->getDescriptorInfo());
         m_descSets.flushUpdates(m_renderer->getDevice());
     }
 
     RayTracedImage::~RayTracedImage()
     {
-        vkDestroySampler(m_device->getHandle(), m_sampler, nullptr);
     }
 
     void RayTracedImage::postTextureUpdate(vesper::RayTracerUpdate update)

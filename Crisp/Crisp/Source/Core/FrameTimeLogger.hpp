@@ -5,10 +5,18 @@
 #include <iomanip>
 #include <chrono>
 
-#include "Core/Event.hpp"
+#include <CrispCore/Event.hpp>
 
 namespace crisp
 {
+    namespace internal
+    {
+        template <typename T> struct StringRepresentation;
+        template <>           struct StringRepresentation<std::nano>  { static constexpr char* value = "ns"; };
+        template <>           struct StringRepresentation<std::micro> { static constexpr char* value = "us"; };
+        template <>           struct StringRepresentation<std::milli> { static constexpr char* value = "ms"; };
+    }
+
     template <typename Timer>
     class FrameTimeLogger : public Timer
     {
@@ -18,7 +26,7 @@ namespace crisp
 
         void update();
 
-        Event<void, const std::string&> onLoggerUpdated;
+        Event<double, double> onLoggerUpdated;
 
     private:
         double m_accumulatedTime;
@@ -27,7 +35,7 @@ namespace crisp
     };
 
     template <typename Timer>
-    FrameTimeLogger<Timer>::FrameTimeLogger(double msUpdatePeriod = 250.0)
+    FrameTimeLogger<Timer>::FrameTimeLogger(double msUpdatePeriod)
         : m_accumulatedTime(0.0)
         , m_accumulatedFrames(0.0)
         , m_updatePeriod(msUpdatePeriod)
@@ -47,11 +55,9 @@ namespace crisp
             double spillOverFrac = spillOver / frameTime;
 
             double avgMillis = m_updatePeriod / (m_accumulatedFrames - spillOverFrac);
-            double avgFrames = 1000.0 / avgMillis;
+            double avgFrames = static_cast<double>(Timer::TimeRatio::den) / avgMillis;
 
-            std::stringstream stringStream;
-            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << avgMillis << " ms, " << std::setfill('0') << avgFrames << " fps";
-            onLoggerUpdated(stringStream.str());
+            onLoggerUpdated(avgMillis, avgFrames);
 
             m_accumulatedTime = spillOver;
             m_accumulatedFrames = spillOverFrac;

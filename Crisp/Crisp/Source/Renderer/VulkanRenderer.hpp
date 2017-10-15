@@ -3,6 +3,7 @@
 #include <memory>
 #include <array>
 #include <vector>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -77,8 +78,8 @@ namespace crisp
     private:
         void loadShaders(std::string dirPath);
 
-        VkCommandBuffer acquireCommandBuffer();
-        uint32_t        acquireSwapChainImageIndex();
+        VkCommandBuffer         acquireCommandBuffer();
+        std::optional<uint32_t> acquireSwapChainImageIndex();
         void            resetCommandBuffer(VkCommandBuffer cmdBuffer);
         VkFramebuffer   recreateFramebuffer(uint32_t swapChainImgIndex);
         void            record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer);

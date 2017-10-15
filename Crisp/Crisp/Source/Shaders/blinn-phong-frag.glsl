@@ -29,14 +29,27 @@ layout(set = 1, binding = 0) uniform sampler2D shadowMaps[4];
 #define InvSqrtTwo 0.70710678118654752440
 const vec4 lightPos = vec4(5.0f, 5.0f, 5.0f, 1.0f);
 //const vec4 lightDir = vec4(normalize(vec3(0.0f, 0.0f, 5.0f)), 0.0f);
-const vec4 lightDir = vec4(normalize(vec3(0.0f, 1.0f, 1.0f)), 0.0f);
+const vec4 lightDir = vec4(normalize(vec3(1.0f, 1.0f, 1.0f)), 0.0f);
 
 const vec3 ndcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 
+const vec4 splitNear = vec4(0.1f, 10.0f, 30.0f, 70.0f);
+const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
+
 vec3 shadowEstimate(vec3 worldPos, float bias, in sampler2D sMap, in mat4 lvp)
 {
     vec4 lsPos = lvp * vec4(worldPos, 1.0f);
+    vec4 lsPos1 = LVP[1] * vec4(worldPos, 1.0f);
+    vec4 lsPos2 = LVP[2] * vec4(worldPos, 1.0f);
+    vec4 lsPos3 = LVP[3] * vec4(worldPos, 1.0f);
+
+    // eyeDist = abs(eyePos.zzzz);
+    // weight = vec4(eyeDist > splitNear) * vec4(eyeDist < splitFar);
+
+    // lsPos = lsPos0 * weight.x + lsPos1 * weight.y + lsPos2 * weight.z + lsPos3 * weight.w;
+
+
     vec3 projPos = lsPos.xyz / lsPos.w;
 
     if (any(lessThan(projPos, ndcMin)) || any(greaterThan(projPos, ndcMax)))
@@ -51,11 +64,28 @@ vec3 shadowEstimate(vec3 worldPos, float bias, in sampler2D sMap, in mat4 lvp)
     //if (projPos.z < 0.0f)
     //	return vec3(10000.0f, 10000.0f, 0.0f);
     //
-    float shadowDepth = texture(sMap, projPos.xy * 0.5f + 0.5f).r;
-    if (projPos.z > shadowDepth + bias)
-        return vec3(0.5f);
 
-    return vec3(1.0f);
+    ivec2 texSize = textureSize(sMap, 0);
+    vec2 texelSize = vec2(1.0f) / texSize;
+    int radius = 3;
+    float taps = (2 * radius + 1) * (2 * radius + 1);
+    float sum = 0.0f;
+    for (int i = -radius; i <= radius; i++)
+    {
+        for (int j = -radius; j <= radius; j++)
+        {
+            vec2 texCoord = projPos.xy * 0.5f + 0.5f + vec2(i, j) * texelSize;
+            float shadowDepth = texture(sMap, texCoord).r;
+            if (projPos.z > shadowDepth + bias)
+                sum += 1.0f;
+        }
+    }
+
+    //float shadowDepth = texture(sMap, projPos.xy * 0.5f + 0.5f).r;
+    //if (projPos.z > shadowDepth + bias)
+    //    return vec3(0.2f);
+
+    return vec3(1.0f - 0.8f * sum / taps);
 }
 
 vec3 shadowDebug(vec3 worldPos)
@@ -78,12 +108,14 @@ vec3 shadowDebug(vec3 worldPos)
 vec3 getColor(vec3 pos)
 {
     float dist = abs(pos.z);
-    if (dist > 45.0f)
-        return vec3(0.75, 0.25, 0.25) * InvPI;
-    else if (dist > 15.0f)
-        return vec3(0.25, 0.75, 0.25) * InvPI;
+    if (dist > 20.0f)
+        return vec3(0.75, 0.15, 0.15) * InvPI;
+    else if (dist > 10.0f)
+        return vec3(0.75, 0.75, 0.15) * InvPI;
+    else if (dist > 5.0f)
+        return vec3(0.15, 0.75, 0.15) * InvPI;
     else
-        return vec3(0.25, 0.25, 0.75) * InvPI;
+        return vec3(0.15, 0.15, 0.75) * InvPI;
 }
 
 void main()
@@ -120,15 +152,15 @@ void main()
 
     float eyeDist = abs(eyePos.z);
     int sam = 0;
-    if (eyeDist > 70.0f)
+    if (eyeDist > 20.0f)
     {
         sam = 3;
     }
-    else if (eyeDist > 30.0f)
+    else if (eyeDist > 10.0f)
     {
         sam = 2;
     }
-    else if (eyeDist > 10.0f)
+    else if (eyeDist > 5.0f)
     {
         sam = 1;
     }

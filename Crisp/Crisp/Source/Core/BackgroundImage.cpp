@@ -8,6 +8,8 @@
 #include "Renderer/TextureView.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 
+#include "vulkan/VulkanSampler.hpp"
+
 namespace crisp
 {
     BackgroundImage::BackgroundImage(std::string fileName, VkFormat format, VulkanRenderer* renderer)
@@ -29,18 +31,17 @@ namespace crisp
         m_textureView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, 1);
         m_texture->fill(imageBuffer->getData(), byteSize);
 
-        m_vkSampler = m_renderer->getDevice()->createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_sampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
         m_descSetGroup = { m_pipeline->allocateDescriptorSet(0) };
-        m_descSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_textureView->getDescriptorInfo(m_vkSampler));
-        m_descSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_textureView->getDescriptorInfo(m_vkSampler));
+        m_descSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_textureView->getDescriptorInfo(m_sampler->getHandle()));
+        m_descSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_textureView->getDescriptorInfo(m_sampler->getHandle()));
         m_descSetGroup.flushUpdates(m_renderer->getDevice());
     }
 
     BackgroundImage::~BackgroundImage()
     {
-        vkDestroySampler(m_renderer->getDevice()->getHandle(), m_vkSampler, nullptr);
     }
 
     void BackgroundImage::resize(int width, int height)

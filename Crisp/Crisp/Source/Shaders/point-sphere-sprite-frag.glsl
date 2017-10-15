@@ -1,9 +1,6 @@
 #version 450 core
 
-in VsOut
-{
-    vec3 eyePos;
-} fsIn;
+layout(location = 0) in vec3 inColor;
 
 layout(location = 0) out vec4 finalColor;
 
@@ -23,5 +20,7 @@ void main()
 
     normal.z = sqrt(1.0 - r2);
 
-    finalColor = vec4(normal, 1.0f);
+    float cosTheta = max(0, dot(normal, vec3(0, 0, 1)));
+
+    finalColor = vec4(cosTheta * inColor, 1.0f);
 }

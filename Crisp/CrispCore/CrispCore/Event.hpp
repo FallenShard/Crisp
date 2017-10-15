@@ -37,6 +37,12 @@ namespace crisp
             m_functors.emplace_back(std::forward<FuncType>(func));
         }
 
+        template <typename FuncType>
+        void operator+=(FuncType&& func)
+        {
+            m_functors.emplace_back(std::forward<FuncType>(func));
+        }
+
         template<typename T>
         void subscribe(Delegate<void, ParamTypes...> del)
         {

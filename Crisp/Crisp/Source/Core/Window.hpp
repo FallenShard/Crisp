@@ -18,6 +18,7 @@ namespace crisp
         static void pollEvents();
 
         bool shouldClose() const;
+        void close();
 
         GLFWwindow* getHandle() const;
 

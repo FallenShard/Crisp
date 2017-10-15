@@ -37,11 +37,13 @@ namespace crisp
 
         glm::vec3 lengths(maxCorner - minCorner);
         auto cubeCenter = (minCorner + maxCorner) / 2.0f;
-        auto squareSize = std::max(lengths.x, lengths.y);
+        auto squareSize = std::max(lengths.x, lengths.y) * 2.0f;
+
+        lengths.z *= 2.0f;
 
         m_projection = glm::ortho(
             cubeCenter.x - (squareSize / 2.0f), cubeCenter.x + (squareSize / 2.0f),
             cubeCenter.y - (squareSize / 2.0f), cubeCenter.y + (squareSize / 2.0f),
-            -maxCorner.z * 1.3f, -minCorner.z * 1.3f);
+            -cubeCenter.z - lengths.z / 2.0f, -cubeCenter.z + lengths.z / 2.0f);
     }
 }

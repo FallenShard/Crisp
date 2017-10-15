@@ -13,7 +13,7 @@ namespace crisp
 
         using VertexBufferBindingGroupItem = std::pair<VkBuffer, VkDeviceSize>;
 
-        VertexBufferBindingGroup(uint32_t firstBinding, uint32_t bindingCount, std::initializer_list<VertexBufferBindingGroupItem>&& bindings)
+        VertexBufferBindingGroup(uint32_t firstBinding, uint32_t bindingCount, std::initializer_list<VertexBufferBindingGroupItem> bindings)
             : firstBinding(firstBinding)
             , bindingCount(bindingCount)
         {
@@ -24,13 +24,13 @@ namespace crisp
             }
         }
 
-        VertexBufferBindingGroup(uint32_t bindingCount, std::initializer_list<VertexBufferBindingGroupItem>&& bindings)
-            : VertexBufferBindingGroup(0, bindingCount, std::forward<decltype(bindings)&&>(bindings))
+        VertexBufferBindingGroup(uint32_t bindingCount, std::initializer_list<VertexBufferBindingGroupItem> bindings)
+            : VertexBufferBindingGroup(0, bindingCount, bindings)
         {
         }
 
-        VertexBufferBindingGroup(std::initializer_list<VertexBufferBindingGroupItem>&& bindings)
-            : VertexBufferBindingGroup(0, static_cast<uint32_t>(bindings.size()), std::forward<decltype(bindings)&&>(bindings))
+        VertexBufferBindingGroup(std::initializer_list<VertexBufferBindingGroupItem> bindings)
+            : VertexBufferBindingGroup(0, static_cast<uint32_t>(bindings.size()), bindings)
         {
         }
 

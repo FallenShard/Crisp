@@ -5,7 +5,7 @@
 
 #include "Math/Headers.hpp"
 
-#include "Vulkan/MemoryHeap.hpp"
+#include "Vulkan/VulkanMemoryHeap.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 #include "Renderer/BufferUpdatePolicy.hpp"
 
@@ -15,7 +15,8 @@ namespace crisp
 
     namespace internal
     {
-        template <typename T> struct IndexTypeTrait               { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32; };
+        template <typename T> struct IndexTypeTrait;
+        template <>           struct IndexTypeTrait<glm::u16vec2> { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16; };
         template <>           struct IndexTypeTrait<glm::u16vec3> { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16; };
         template <>           struct IndexTypeTrait<glm::uvec3>   { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32; };
     }

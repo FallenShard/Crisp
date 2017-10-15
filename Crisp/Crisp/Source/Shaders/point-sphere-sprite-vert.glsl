@@ -1,6 +1,7 @@
 #version 450 core
 
-layout(location = 0) in vec3 position;
+layout(location = 0) in vec4 position;
+layout(location = 1) in vec4 color;
 
 layout(set = 0, binding = 0) uniform Transforms
 {
@@ -16,20 +17,13 @@ layout(set = 1, binding = 0) uniform ParticleParams
 	float screenSpaceScale;
 };
 
-out VsOut
-{
-	vec3 eyePos;
-} vsOut;
-
-layout(push_constant) uniform PushConstant
-{
-	layout(offset = 0) int value;
-} paramIndex;
+layout(location = 0) out vec3 outColor;
 
 void main()
 {
-	vsOut.eyePos = (MV * vec4(position, 1.0f)).xyz;
+	vec3 eyePos   = (MV * position).xyz;
+	outColor = color.xyz;
 
-	gl_PointSize = radius * screenSpaceScale / -vsOut.eyePos.z;
-	gl_Position = MVP * vec4(position, 1.0f);
+	gl_PointSize = radius * screenSpaceScale / -eyePos.z;
+	gl_Position  = MVP * position;
 }

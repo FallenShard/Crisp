@@ -99,8 +99,8 @@ namespace crisp
             progressBarBg->setSizeHint({ 500, 20 });
             progressBarBg->setPadding({ 3, 3 });
             progressBarBg->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
-            progressBarBg->setAnchor(Anchor::BottomLeft);
-            progressBarBg->setHorizontalSizingPolicy(SizingPolicy::FillParent);
+            progressBarBg->setAnchor(Anchor::BottomRight);
+            progressBarBg->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.5f);
 
             auto progressBar = std::make_shared<gui::Panel>(form);
             progressBar->setId("progressBar");
@@ -114,7 +114,6 @@ namespace crisp
 
             auto label = std::make_shared<gui::Label>(form, "100.0%");
             label->setId("progressLabel");
-            label->setPosition({ 6, 3 });
             label->setAnchor(Anchor::Center);
             label->setColor(glm::vec4(1.0f));
             progressBarBg->addControl(label);

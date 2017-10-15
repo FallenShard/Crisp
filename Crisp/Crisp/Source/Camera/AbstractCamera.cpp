@@ -2,6 +2,11 @@
 
 namespace crisp
 {
+    namespace
+    {
+        glm::mat4 invertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
+    }
+
     AbstractCamera::AbstractCamera()
         : m_recalculateViewMatrix(true)
     {
@@ -18,7 +23,7 @@ namespace crisp
         m_zNear       = zNear;
         m_zFar        = zFar;
 
-        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
     }
 
     const glm::mat4& AbstractCamera::getProjectionMatrix() const
@@ -29,7 +34,7 @@ namespace crisp
     void AbstractCamera::setFov(float fovY)
     {
         m_fov = glm::radians(fovY);
-        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
         m_recalculateViewMatrix = true;
     }
@@ -42,7 +47,7 @@ namespace crisp
     void AbstractCamera::setApectRatio(float aspectRatio)
     {
         m_aspectRatio = aspectRatio;
-        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
         m_recalculateViewMatrix = true;
     }
@@ -55,7 +60,7 @@ namespace crisp
     void AbstractCamera::setNearPlaneDistance(float zNear)
     {
         m_zNear = zNear;
-        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
         m_recalculateViewMatrix = true;
     }
@@ -68,7 +73,7 @@ namespace crisp
     void AbstractCamera::setFarPlaneDistance(float zFar)
     {
         m_zFar = zFar;
-        m_P = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
         m_recalculateViewMatrix = true;
     }
@@ -152,12 +157,12 @@ namespace crisp
         {
             glm::vec3(-halfNearW, -halfNearH, -zNear),
             glm::vec3(+halfNearW, -halfNearH, -zNear),
-            glm::vec3(-halfNearW, +halfNearH, -zNear),
             glm::vec3(+halfNearW, +halfNearH, -zNear),
+            glm::vec3(-halfNearW, +halfNearH, -zNear),
             glm::vec3(-halfFarW, -halfFarH, -zFar),
             glm::vec3(+halfFarW, -halfFarH, -zFar),
-            glm::vec3(-halfFarW, +halfFarH, -zFar),
-            glm::vec3(+halfFarW, +halfFarH, -zFar)
+            glm::vec3(+halfFarW, +halfFarH, -zFar),
+            glm::vec3(-halfFarW, +halfFarH, -zFar)
         };
 
         auto camToWorld = glm::inverse(m_V);

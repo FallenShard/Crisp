@@ -11,6 +11,7 @@ namespace crisp
     {
     public:
         static constexpr size_t NumFrustumPlanes = 6;
+        static constexpr size_t NumFrustumPoints = 8;
 
         AbstractCamera();
         virtual ~AbstractCamera();

@@ -6,12 +6,12 @@ namespace crisp
         : m_window(window)
     {
         glfwSetWindowUserPointer(m_window, this);
-        glfwSetWindowSizeCallback(m_window, InputDispatcher::resizeCallback);
-        glfwSetKeyCallback(m_window, InputDispatcher::keyboardCallback);
-        glfwSetCursorPosCallback(m_window, InputDispatcher::mouseMoveCallback);
+        glfwSetWindowSizeCallback(m_window,  InputDispatcher::resizeCallback);
+        glfwSetKeyCallback(m_window,         InputDispatcher::keyboardCallback);
+        glfwSetCursorPosCallback(m_window,   InputDispatcher::mouseMoveCallback);
         glfwSetMouseButtonCallback(m_window, InputDispatcher::mouseButtonCallback);
         glfwSetWindowCloseCallback(m_window, InputDispatcher::closeCallback);
-        glfwSetScrollCallback(m_window, InputDispatcher::mouseWheelCallback);
+        glfwSetScrollCallback(m_window,      InputDispatcher::mouseWheelCallback);
     }
 
     GLFWwindow* InputDispatcher::getWindow() const

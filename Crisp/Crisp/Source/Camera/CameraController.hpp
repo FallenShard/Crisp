@@ -39,6 +39,9 @@ namespace crisp
         const AbstractCamera& getCamera() const;
         const CameraParameters* getCameraParameters() const;
 
+        const glm::mat4& getViewMatrix() const;
+        const glm::mat4& getProjectionMatrix() const;
+
     private:
         void checkKeyboardInput(float dt);
         glm::vec2 filterMouseMoves();

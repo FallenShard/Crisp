@@ -162,7 +162,7 @@ namespace crisp
     {
         recreateSwapChain();
 
-        m_defaultViewport.width = static_cast<float>(m_swapChain->getExtent().width);
+        m_defaultViewport.width  = static_cast<float>(m_swapChain->getExtent().width);
         m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
 
         for (auto& pipeline : m_pipelines)
@@ -235,22 +235,20 @@ namespace crisp
     void VulkanRenderer::drawFrame()
     {
         auto cmdBuffer = acquireCommandBuffer();
-
+        
         // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
         destroyResourcesScheduledForRemoval();
-
+        
         m_device->flushMappedRanges();
 
-        auto swapChainImgIndex = acquireSwapChainImageIndex();
-        if (swapChainImgIndex == -1)
+        std::optional<uint32_t> swapChainImageIndex = acquireSwapChainImageIndex();
+        if (!swapChainImageIndex.has_value())
         {
             std::cerr << "Failed to acquire swap chain image!" << std::endl;
             return;
         }
 
-        resetCommandBuffer(cmdBuffer);
-
-        auto framebuffer = recreateFramebuffer(swapChainImgIndex);
+        auto framebuffer = recreateFramebuffer(swapChainImageIndex.value());
         record(cmdBuffer, framebuffer);
 
         const auto& frameRes = m_frameResources[m_currentFrameIndex];
@@ -260,7 +258,7 @@ namespace crisp
             frameRes.cmdBuffer,
             frameRes.bufferFinishedFence
         );
-        present(swapChainImgIndex);
+        present(swapChainImageIndex.value());
 
         m_resourceUpdates.clear();
         m_drawCommands.clear();
@@ -277,8 +275,7 @@ namespace crisp
     void VulkanRenderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
         auto stagingBuffer = std::make_shared<VulkanBuffer>(m_device.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        stagingBuffer->updateFromHost(data, size, offset);
-
+        stagingBuffer->updateFromHost(data, size, 0);
         m_resourceUpdates.emplace_back([this, stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
         {
             buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
@@ -346,19 +343,19 @@ namespace crisp
         return m_frameResources[m_currentFrameIndex].cmdBuffer;
     }
 
-    uint32_t VulkanRenderer::acquireSwapChainImageIndex()
+    std::optional<uint32_t> VulkanRenderer::acquireSwapChainImageIndex()
     {
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(), std::numeric_limits<uint64_t>::max(), m_frameResources[m_currentFrameIndex].imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             recreateSwapChain();
-            return -1;
+            return {};
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
             std::cerr << "Unable to acquire optimal swapchain image!\n";
-            return -1;
+            return {};
         }
 
         return imageIndex;
@@ -404,7 +401,7 @@ namespace crisp
 
         for (const auto& update : m_resourceUpdates)
             update(commandBuffer);
-        
+
         for (const auto& drawCommand : m_drawCommands)
             drawCommand(commandBuffer);
 

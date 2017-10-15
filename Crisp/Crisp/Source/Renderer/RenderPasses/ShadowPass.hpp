@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include "Renderer/RenderPasses/VulkanRenderPass.hpp"
+#include "Vulkan/VulkanRenderPass.hpp"
 
 namespace crisp
 {

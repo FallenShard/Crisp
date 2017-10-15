@@ -6,6 +6,7 @@ namespace crisp
         : m_startDelay(startDelay)
         , m_duration(duration)
         , m_isLooped(isLooped)
+        , m_isActive(false)
         , m_isFinished(false)
         , m_loopCount(loopCount == 0 ? std::numeric_limits<int>::max() : loopCount)
         , m_loopsCompleted(0)
@@ -48,6 +49,16 @@ namespace crisp
     bool Animation::isFinished() const
     {
         return m_isFinished;
+    }
+
+    void Animation::setActive(bool active)
+    {
+        m_isActive = active;
+    }
+
+    bool Animation::isActive() const
+    {
+        return m_isActive;
     }
 
     void Animation::reset()

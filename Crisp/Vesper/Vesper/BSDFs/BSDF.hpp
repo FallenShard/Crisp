@@ -2,26 +2,26 @@
 
 #include <glm/glm.hpp>
 
+#include <CrispCore/BitFlags.hpp>
 #include "Spectrums/Spectrum.hpp"
 #include "Core/VariantMap.hpp"
-#include "Core/BitFlags.hpp"
 #include "Textures/Texture.hpp"
 
 namespace vesper
 {
-    class Sampler;
-
     enum class Lobe
     {
         Passthrough = 1 << 0,
-        Diffuse     = 1 << 1,
-        Glossy      = 1 << 2,
-        Delta       = 1 << 3,
+        Diffuse = 1 << 1,
+        Glossy = 1 << 2,
+        Delta = 1 << 3,
 
         Smooth = Diffuse | Glossy
     };
 
-    template <> struct IsBitFlag<Lobe> { static constexpr bool value = true; };
+    DECLARE_BITFLAG(Lobe)
+
+    class Sampler;
 
     class BSDF
     {
@@ -32,8 +32,6 @@ namespace vesper
             SolidAngle,
             Discrete
         };
-
-        using LobeFlags = BitFlags<Lobe>;
 
         struct Sample
         {

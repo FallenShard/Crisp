@@ -5,10 +5,11 @@
 #include <string>
 #include <chrono>
 
+#include <CrispCore/ConsoleUtils.hpp>
+
 #include "Renderer/VulkanRenderer.hpp"
 #include "Core/Window.hpp"
 #include "Core/InputDispatcher.hpp"
-#include "Core/Timer.hpp"
 #include "Core/RaytracedImage.hpp"
 #include "Core/BackgroundImage.hpp"
 #include "Core/Scene.hpp"
@@ -21,19 +22,28 @@
 #include "GUI/Form.hpp"
 #include "GUI/Button.hpp"
 #include "GUI/VesperGui.hpp"
+#include "GUI/StatusBar.hpp"
+#include "GUI/MemoryUsageBar.hpp"
+#include "GUI/IntroductionPanel.hpp"
 
 namespace crisp
 {
     namespace
     {
-        void logFpsToConsole(const std::string& str)
+        void logFpsToConsole(double frameTime, double fps)
         {
-            std::cout << str << '\r';
+            std::ostringstream stringStream;
+            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << frameTime << " ms"
+                << ", " << std::setfill('0') << fps << " fps";
+
+            ConsoleColorizer color(ConsoleColor::Yellow);
+            std::cout << stringStream.str() << '\r';
         }
     }
+
     Application::Application(ApplicationEnvironment* environment)
         : m_tracerProgress(0.0f)
-        , m_frameTimeLogger(std::make_unique<FrameTimeLogger<Timer<std::milli>>>(1000.0))
+        , m_frameTimeLogger(1000.0)
         , m_numRayTracedChannels(4)
     {
         std::cout << "Initializing application...\n";
@@ -51,8 +61,7 @@ namespace crisp
         m_inputDispatcher->mouseMoved.subscribe<gui::Form, &gui::Form::onMouseMoved>(m_guiForm.get());
         m_inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
         m_inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
-        m_frameTimeLogger->onLoggerUpdated.subscribe<gui::Form, &gui::Form::setFpsString>(m_guiForm.get());
-        m_frameTimeLogger->onLoggerUpdated.subscribe<&logFpsToConsole>();
+        //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
         
         // Create ray tracer and add a handler for image block updates
         m_rayTracer = std::make_unique<vesper::RayTracer>();
@@ -65,37 +74,15 @@ namespace crisp
             rayTracerProgressed(m_tracerProgress, m_timeSpentRendering);
         });
 
-        auto crispButton = m_guiForm->getControlById<gui::Button>("crispButton");
-        crispButton->setClickCallback([this, form = m_guiForm.get()]()
-        {
-            form->postGuiUpdate([this, form]()
-            {
-                form->addMemoryUsagePanel();
-                form->addStatusBar();
-        
-                m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
-            });
-        
-            form->fadeOutAndRemove("welcomePanel", 0.5f);
-        });
-        
-        auto vesperButton = m_guiForm->getControlById<gui::Button>("vesperButton");
-        vesperButton->setClickCallback([this, form = m_guiForm.get()]()
-        {
-            form->postGuiUpdate([this, form]()
-            {
-                form->addMemoryUsagePanel();
-                form->addStatusBar();
-        
-                gui::VesperGui vesperGui;
-                form->add(vesperGui.buildSceneOptions(form));
-                form->add(vesperGui.buildProgressBar(form));
-        
-                vesperGui.setupInputCallbacks(form, this);
-            });
-        
-            form->fadeOutAndRemove("welcomePanel", 0.5f);
-        });
+        auto statusBar = std::make_shared<gui::StatusBar>(m_guiForm.get());
+        m_frameTimeLogger.onLoggerUpdated.subscribe<gui::StatusBar, &gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
+        m_guiForm->add(statusBar);
+
+        auto memoryUsageBar = std::make_shared<gui::MemoryUsageBar>(m_guiForm.get());
+        m_guiForm->add(memoryUsageBar);
+
+        auto introPanel = std::make_shared<gui::IntroductionPanel>(m_guiForm.get(), this);
+        m_guiForm->add(introPanel);
     }
 
     Application::~Application()
@@ -108,7 +95,7 @@ namespace crisp
 
         m_renderer->flushResourceUpdates();
 
-        m_frameTimeLogger->restart();
+        m_frameTimeLogger.restart();
         Timer<std::milli> updateTimer;
         double timeSinceLastUpdate = 0.0;
         while (!m_window->shouldClose())
@@ -139,13 +126,17 @@ namespace crisp
                 m_rayTracedImage->draw();
 
             m_guiForm->draw();
-
             m_renderer->drawFrame();
 
-            m_frameTimeLogger->update();
+            m_frameTimeLogger.update();
         }
 
         m_renderer->finish();
+    }
+
+    void Application::quit()
+    {
+        m_window->close();
     }
 
     void Application::onResize(int width, int height)
@@ -163,6 +154,11 @@ namespace crisp
 
         if (m_rayTracedImage)
             m_rayTracedImage->resize(width, height);
+    }
+
+    void Application::createScene()
+    {
+        m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
     }
 
     void Application::startRayTracing()
@@ -219,16 +215,12 @@ namespace crisp
 
     void Application::createRenderer()
     {
-        // Extensions required by the windowing library (GLFW)
-        auto extensions = Window::getVulkanExtensions();
-
-        // Window creation surface callback from the windowing library
         auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface)
         {
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
         
-        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, std::forward<std::vector<std::string>>(extensions));
+        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, Window::getVulkanExtensions());
     }
 
     void Application::processRayTracerUpdates()

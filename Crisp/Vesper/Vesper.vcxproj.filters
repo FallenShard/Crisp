@@ -380,9 +380,6 @@
     <ClInclude Include="Vesper\BSDFs\RoughDielectric.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vesper\Core\BitFlags.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\MicrofacetDistribution.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

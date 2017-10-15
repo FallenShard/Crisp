@@ -30,6 +30,11 @@ namespace crisp
         return glfwWindowShouldClose(m_window);
     }
 
+    void Window::close()
+    {
+        glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+    }
+
     GLFWwindow* Window::getHandle() const
     {
         return m_window;

@@ -3,7 +3,7 @@
 #include <functional>
 
 #include "Math/Headers.hpp"
-#include "Core/Event.hpp"
+#include <CrispCore/Event.hpp>
 
 namespace crisp
 {
@@ -13,8 +13,8 @@ namespace crisp
         Animation(double startDelay, double duration, bool isLooped = false, int loopCount = 1);
         ~Animation();
 
-        Event<void> started;
-        Event<void> finished;
+        Event<> started;
+        Event<> finished;
 
         void setDuration(double duration);
         double getDuration() const;
@@ -25,6 +25,9 @@ namespace crisp
         double getElapsedTime() const;
         bool isFinished() const;
 
+        void setActive(bool active);
+        bool isActive() const;
+
         virtual void update(double dt) = 0;
 
         virtual void reset();
@@ -34,6 +37,9 @@ namespace crisp
         double m_startDelay;
         double m_elapsedTime;
         double m_elapsedDelayTime;
+
+        bool m_isActive;
+
         bool m_isFinished;
         bool m_isLooped;
         int m_loopCount;

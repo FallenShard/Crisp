@@ -13,7 +13,7 @@ namespace crisp
 
         for (auto& buffer : m_buffers)
         {
-            buffer = std::make_shared<VulkanBuffer>(device, initialSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            buffer = std::make_unique<VulkanBuffer>(device, initialSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         }
 
         m_stagingBuffer = std::make_unique<VulkanBuffer>(device, initialSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -54,6 +54,6 @@ namespace crisp
         auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         auto device = m_renderer->getDevice();
 
-        m_buffers[index] = std::make_shared<VulkanBuffer>(device, m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_buffers[index] = std::make_unique<VulkanBuffer>(device, m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 }

@@ -12,7 +12,7 @@ namespace crisp
         , m_depthFormat(m_renderer->getContext()->findSupportedDepthFormat())
         , m_clearValues(2)
     {
-        m_clearValues[0].color        = { 0.5f, 0.1f, 0.1f, 1.0f };
+        m_clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
         m_clearValues[1].depthStencil = { 1.0f, 0 };
 
         createRenderPass();
@@ -21,7 +21,6 @@ namespace crisp
 
     DefaultRenderPass::~DefaultRenderPass()
     {
-        vkDestroyRenderPass(m_device->getHandle(), m_renderPass, nullptr);
         freeResources();
     }
 
@@ -29,7 +28,7 @@ namespace crisp
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = m_renderPass;
+        renderPassInfo.renderPass        = m_handle;
         renderPassInfo.framebuffer       = framebuffer;
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = m_renderer->getSwapChainExtent();
@@ -105,7 +104,7 @@ namespace crisp
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies   = &dependency;
 
-        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_renderPass);
+        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_handle);
     }
 
     void DefaultRenderPass::createResources()

@@ -1,6 +1,6 @@
 #include "BlinnPhongPipeline.hpp"
 
-#include "vulkan/FormatTraits.hpp"
+#include "Vulkan/VulkanFormatTraits.hpp"
 #include "Vulkan/VulkanDevice.hpp"
 #include "Renderer/VulkanRenderer.hpp"
 
@@ -21,7 +21,12 @@ namespace crisp
             { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4, VK_SHADER_STAGE_FRAGMENT_BIT }
         });
 
-        m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts);
+        std::vector<VkPushConstantRange> pushConstants =
+        {
+            { VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t) }
+        };
+
+        m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts, pushConstants);
 
         m_descriptorPool = createDescriptorPool(
         {
@@ -102,10 +107,10 @@ namespace crisp
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = m_pipelineLayout;
         pipelineInfo.renderPass          = m_renderPass->getHandle();
-        pipelineInfo.subpass             = 1;
+        pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline);
+        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
     }
 }

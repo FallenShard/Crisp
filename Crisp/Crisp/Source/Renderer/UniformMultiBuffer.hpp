@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include "Vulkan/MemoryHeap.hpp"
+#include "Vulkan/VulkanMemoryHeap.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 
 namespace crisp
@@ -30,7 +30,7 @@ namespace crisp
     private:
         VulkanRenderer* m_renderer;
 
-        std::vector<std::shared_ptr<VulkanBuffer>> m_buffers;
+        std::vector<std::unique_ptr<VulkanBuffer>> m_buffers;
         std::unique_ptr<VulkanBuffer>              m_stagingBuffer;
 
         VkDeviceSize m_singleRegionSize;

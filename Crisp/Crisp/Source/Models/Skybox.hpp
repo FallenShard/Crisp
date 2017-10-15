@@ -11,12 +11,13 @@ namespace crisp
     class VulkanRenderer;
     class VulkanDevice;
     class VulkanRenderPass;
+    class VulkanSampler;
 
     class Texture;
     class TextureView;
     class UniformBuffer;
-    class IndexBuffer;
     class SkyboxPipeline;
+    class MeshGeometry;
 
     class Skybox
     {
@@ -26,21 +27,18 @@ namespace crisp
 
         void updateTransforms(const glm::mat4& P, const glm::mat4& V);
 
-        void updateDeviceBuffers(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex);
-        void draw(VkCommandBuffer& cmdBuffer, uint32_t currentFrameIndex, uint32_t subpassIndex) const;
+        void updateDeviceBuffers(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex);
+        void draw(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const;
 
-        VkImageView getSkyboxView() const;
+        TextureView* getSkyboxView() const;
 
     private:
         VulkanRenderer* m_renderer;
-        VulkanDevice* m_device;
+        VulkanDevice*   m_device;
 
-        VertexBufferBindingGroup m_vertexBufferGroup;
-        std::unique_ptr<VertexBuffer> m_buffer;
-        std::unique_ptr<IndexBuffer> m_indexBuffer;
+        std::unique_ptr<MeshGeometry> m_cubeGeometry;
 
         std::unique_ptr<SkyboxPipeline> m_pipeline;
-        std::unique_ptr<SkyboxPipeline> m_nextPipeline;
         DescriptorSetGroup m_descriptorSetGroup;
 
         struct Transforms
@@ -54,8 +52,8 @@ namespace crisp
         Transforms m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
-        std::unique_ptr<Texture> m_texture;
-        std::unique_ptr<TextureView> m_textureView;
-        VkSampler m_sampler;
+        std::unique_ptr<Texture>       m_cubeMap;
+        std::unique_ptr<TextureView>   m_cubeMapView;
+        std::unique_ptr<VulkanSampler> m_sampler;
     };
 }

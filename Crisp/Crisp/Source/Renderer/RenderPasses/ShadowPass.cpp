@@ -26,7 +26,6 @@ namespace crisp
 
     ShadowPass::~ShadowPass()
     {
-        vkDestroyRenderPass(m_device->getHandle(), m_renderPass, nullptr);
         freeResources();
     }
 
@@ -34,7 +33,7 @@ namespace crisp
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = m_renderPass;
+        renderPassInfo.renderPass        = m_handle;
         renderPassInfo.framebuffer       = m_framebuffers[m_renderer->getCurrentVirtualFrameIndex()];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = m_renderArea;
@@ -112,7 +111,7 @@ namespace crisp
         renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
         renderPassInfo.pDependencies   = dependencies.data();
 
-        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_renderPass);
+        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_handle);
     }
 
     void ShadowPass::createResources()
@@ -144,7 +143,7 @@ namespace crisp
 
             VkFramebufferCreateInfo framebufferInfo = {};
             framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass      = m_renderPass;
+            framebufferInfo.renderPass      = m_handle;
             framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
             framebufferInfo.pAttachments    = attachmentViews.data();
             framebufferInfo.width           = m_renderArea.width;
