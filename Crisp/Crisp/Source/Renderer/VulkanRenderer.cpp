@@ -40,7 +40,7 @@ namespace crisp
 
         // Depth images and views creation
         m_depthTexture = std::make_unique<Texture>(this, VkExtent3D{ m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1u }, NumVirtualFrames, m_context->findSupportedDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
-        enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) { m_depthTexture->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, NumVirtualFrames); });
+        enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) { m_depthTexture->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, NumVirtualFrames, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT); });
         for (unsigned int i = 0; i < NumVirtualFrames; i++)
             m_depthTexViews.emplace_back(m_depthTexture->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
 
