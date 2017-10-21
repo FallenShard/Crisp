@@ -11,6 +11,7 @@ namespace crisp
     class Window
     {
     public:
+        Window(const glm::ivec2& position, const glm::ivec2& size, std::string title);
         Window(int x, int y, int width, int height, std::string title);
         ~Window();
 

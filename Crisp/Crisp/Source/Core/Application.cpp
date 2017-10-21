@@ -41,7 +41,7 @@ namespace crisp
         }
     }
 
-    Application::Application(ApplicationEnvironment* environment)
+    Application::Application(ApplicationEnvironment*)
         : m_tracerProgress(0.0f)
         , m_frameTimeLogger(1000.0)
         , m_numRayTracedChannels(4)
@@ -103,10 +103,10 @@ namespace crisp
             auto timeDelta = updateTimer.restart() / 1000.0;
             timeSinceLastUpdate += timeDelta;
 
+            Window::pollEvents();
+
             while (timeSinceLastUpdate > TimePerFrame)
             {
-                Window::pollEvents();
-
                 m_guiForm->update(TimePerFrame);
                 
                 if (m_scene)
@@ -208,9 +208,9 @@ namespace crisp
     void Application::createWindow()
     {
         auto desktopRes = Window::getDesktopResolution();
+        auto size = glm::ivec2(DefaultWindowWidth, DefaultWindowHeight);
 
-        m_window = std::make_unique<Window>((desktopRes.x - DefaultWindowWidth) / 2, (desktopRes.y - DefaultWindowHeight) / 2,
-            DefaultWindowWidth, DefaultWindowHeight, Title);
+        m_window = std::make_unique<Window>((desktopRes - size) / 2, size, Title);
     }
 
     void Application::createRenderer()

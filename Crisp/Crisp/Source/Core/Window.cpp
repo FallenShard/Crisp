@@ -2,6 +2,11 @@
 
 namespace crisp
 {
+    Window::Window(const glm::ivec2& position, const glm::ivec2 & size, std::string title)
+        : Window(position.x, position.y, size.x, size.y, title)
+    {
+    }
+
     Window::Window(int x, int y, int width, int height, std::string title)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -48,7 +53,7 @@ namespace crisp
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         for (unsigned int i = 0; i < glfwExtensionCount; i++)
             extensions.push_back(glfwExtensions[i]);
-        
+
         return extensions;
     }
 
