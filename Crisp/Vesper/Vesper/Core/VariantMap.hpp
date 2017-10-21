@@ -2,8 +2,9 @@
 
 #include <iostream>
 #include <map>
+#include <string>
+#include <variant>
 
-#include <mapbox/variant.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
@@ -15,7 +16,7 @@ namespace vesper
     class VariantMap
     {
     public:
-        using VariantType = mapbox::util::variant
+        using VariantType = std::variant
         <
             bool,
             int,
@@ -49,14 +50,14 @@ namespace vesper
         {
             if (m_map.find(key) != m_map.end())
             {
-                auto var = m_map.at(key);
+                auto variant = m_map.at(key);
                 
                 try
                 {
-                    T value = var.get<T>();
+                    T value = std::get<T>(variant);
                     return value;
                 }
-                catch (mapbox::util::bad_variant_access ex)
+                catch (std::bad_variant_access ex)
                 {
                     std::cerr << "Could not access variant variable with name: " + key << std::endl;
                 }

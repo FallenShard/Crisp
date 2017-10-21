@@ -1,5 +1,8 @@
 #include "Mesh.hpp"
 
+#include <iostream>
+#include <string>
+
 #include "Samplers/Sampler.hpp"
 #include "Math/Warp.hpp"
 #include "Core/Scene.hpp"
