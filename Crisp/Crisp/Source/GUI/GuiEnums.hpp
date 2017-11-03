@@ -34,4 +34,14 @@ namespace crisp::gui
         All       = Geometry | Color
     };
     DECLARE_BITFLAG(Validation)
+
+    enum class State
+    {
+        Idle,
+        Hover,
+        Pressed,
+        Disabled,
+
+        Count
+    };
 }

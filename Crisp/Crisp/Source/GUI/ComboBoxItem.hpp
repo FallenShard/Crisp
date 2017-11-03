@@ -11,11 +11,11 @@ namespace crisp::gui
 {
     class Label;
 
-    class Button : public Control
+    class ComboBoxItem : public Control
     {
     public:
-        Button(Form* parentForm, std::string = "Button");
-        virtual ~Button();
+        ComboBoxItem(Form* parentForm, std::string = "Button");
+        virtual ~ComboBoxItem();
 
         const std::string& getText() const;
         void setText(const std::string& text);

@@ -12,6 +12,7 @@ namespace crisp
         glfwSetMouseButtonCallback(m_window, InputDispatcher::mouseButtonCallback);
         glfwSetWindowCloseCallback(m_window, InputDispatcher::closeCallback);
         glfwSetScrollCallback(m_window,      InputDispatcher::mouseWheelCallback);
+        glfwSetCursorEnterCallback(m_window, InputDispatcher::mouseEnterCallback);
     }
 
     GLFWwindow* InputDispatcher::getWindow() const
@@ -68,6 +69,20 @@ namespace crisp
     {
         auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
         if (dispatcher) dispatcher->mouseWheelScrolled(yOffset);
+    }
+
+    void InputDispatcher::mouseEnterCallback(GLFWwindow* window, int entered)
+    {
+        auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
+        if (dispatcher)
+        {
+            double xPos, yPos;
+            glfwGetCursorPos(window, &xPos, &yPos);
+            if (entered)
+                dispatcher->mouseEntered(xPos, yPos);
+            else
+                dispatcher->mouseExited(xPos, yPos);
+        }
     }
 
     void InputDispatcher::closeCallback(GLFWwindow* window)

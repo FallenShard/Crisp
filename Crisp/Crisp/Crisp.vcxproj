@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9D88A03A-1EFC-45FD-BDD1-7073DA4DD133}</ProjectGuid>
     <RootNamespace>Crisp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -100,7 +100,7 @@
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
+      <Command>xcopy "$(SolutionDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
 xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <Link>
@@ -152,7 +152,7 @@ popd</Command>
       <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;cudart.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
+      <Command>xcopy "$(SolutionDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
 xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <PreBuildEvent>
@@ -180,6 +180,8 @@ popd</Command>
     <ClCompile Include="Source\Geometry\MeshGeometry.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMesh.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMeshBatch.cpp" />
+    <ClCompile Include="Source\GUI\ComboBox.cpp" />
+    <ClCompile Include="Source\GUI\ComboBoxItem.cpp" />
     <ClCompile Include="Source\GUI\CrispGui.cpp" />
     <ClCompile Include="Source\GUI\DebugRect.cpp" />
     <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp" />
@@ -216,6 +218,7 @@ popd</Command>
     <ClCompile Include="Source\Renderer\Pipelines\ClearHashGridPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ComputePressurePipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ComputeTestPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\GuiDebugPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\HashGridPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\MeshThicknessPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\NormalPipeline.cpp" />
@@ -268,6 +271,11 @@ popd</Command>
     <ClInclude Include="Source\Camera\TargetCamera.hpp" />
     <ClInclude Include="Source\Camera\FreeCamera.hpp" />
     <ClInclude Include="Source\Core\Mouse.hpp" />
+    <ClInclude Include="Source\GUI\ComboBoxItem.hpp" />
+    <ClInclude Include="Source\GUI\DrawComponents\ColorRectDrawComponent.hpp" />
+    <ClInclude Include="Source\GUI\ComboBox.hpp" />
+    <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\GuiDebugPipeline.hpp" />
     <ClInclude Include="Source\Simulation\PropertyBuffer.hpp" />
     <ClInclude Include="Source\Core\Scene.hpp" />
     <ClInclude Include="Source\Core\BackgroundImage.hpp" />
@@ -277,7 +285,7 @@ popd</Command>
     <ClInclude Include="Source\GUI\CrispGui.hpp" />
     <ClInclude Include="Source\GUI\DebugRect.hpp" />
     <ClInclude Include="Source\GUI\DynamicUniformBufferResource.hpp" />
-    <ClInclude Include="Source\GUI\Enums.hpp" />
+    <ClInclude Include="Source\GUI\GuiEnums.hpp" />
     <ClInclude Include="Source\GUI\FluidSimulationPanel.hpp" />
     <ClInclude Include="Source\GUI\IntroductionPanel.hpp" />
     <ClInclude Include="Source\GUI\MemoryUsageBar.hpp" />

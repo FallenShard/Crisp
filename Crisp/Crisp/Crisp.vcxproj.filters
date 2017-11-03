@@ -283,6 +283,15 @@
     <ClCompile Include="Source\Vulkan\VulkanMemoryHeap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\GUI\ComboBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI\ComboBoxItem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\GuiDebugPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp">
@@ -361,9 +370,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\Form.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\GUI\Enums.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\VesperGui.hpp">
@@ -590,6 +596,24 @@
     </ClInclude>
     <ClInclude Include="Source\Simulation\FluidSimulationKernels.cuh" />
     <ClInclude Include="Source\Simulation\PropertyBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\GuiEnums.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\ComboBox.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\DrawComponents\ColorRectDrawComponent.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\ComboBoxItem.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\GuiDebugPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

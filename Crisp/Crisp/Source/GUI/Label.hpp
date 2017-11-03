@@ -4,6 +4,8 @@
 
 #include "Control.hpp"
 
+#include "DrawComponents/TextDrawComponent.hpp"
+
 namespace crisp::gui
 {
     class Label : public Control
@@ -12,6 +14,7 @@ namespace crisp::gui
         Label(Form* parentForm, const std::string& text = "Example Text", unsigned int fontSize = 14);
         ~Label();
 
+        const std::string& getText() const;
         void setFontSize(unsigned int fontSize);
         void setText(const std::string& text);
         glm::vec2 getTextExtent() const;
@@ -21,16 +24,13 @@ namespace crisp::gui
         virtual Rect<float> getAbsoluteBounds() const override;
 
         virtual void validate() override;
-        virtual void draw(RenderSystem& visitor) override;
+        virtual void draw(const RenderSystem& renderSystem) const override;
 
     private:
         std::string m_fontName;
         std::string m_text;
         glm::vec2   m_textExtent;
 
-        unsigned int m_fontId;
-        unsigned int m_transformId;
-        unsigned int m_colorId;
-        unsigned int m_textResourceId;
+        TextDrawComponent m_drawComponent;
     };
 }

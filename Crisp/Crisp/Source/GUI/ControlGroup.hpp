@@ -20,9 +20,10 @@ namespace crisp::gui
         virtual float getWidth() const;
         virtual float getHeight() const;
 
+        virtual Rect<float> getInteractionBounds() const;
         virtual void onMouseMoved(float x, float y);
-        virtual void onMouseEntered();
-        virtual void onMouseExited();
+        virtual void onMouseEntered(float x, float y);
+        virtual void onMouseExited(float x, float y);
         virtual void onMousePressed(float x, float y);
         virtual void onMouseReleased(float x, float y);
 
@@ -30,7 +31,7 @@ namespace crisp::gui
         virtual bool needsValidation() override;
         virtual void validate() override;
 
-        virtual void draw(RenderSystem& renderSystem) override;
+        virtual void draw(const RenderSystem& renderSystem) const override;
 
         virtual Control* getControlById(const std::string& id);
 

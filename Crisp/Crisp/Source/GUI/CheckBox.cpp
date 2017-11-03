@@ -96,7 +96,7 @@ namespace crisp::gui
         return bounds.merge(m_label->getAbsoluteBounds());
     }
 
-    void CheckBox::onMouseEntered()
+    void CheckBox::onMouseEntered(float x, float y)
     {
         if (m_state == State::Disabled || m_state != State::Idle)
             return;
@@ -104,7 +104,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void CheckBox::onMouseExited()
+    void CheckBox::onMouseExited(float x, float y)
     {
         if (m_state == State::Disabled || m_state != State::Hover)
             return;
@@ -161,7 +161,7 @@ namespace crisp::gui
         m_label->clearValidationFlags();
     }
 
-    void CheckBox::draw(RenderSystem& renderSystem)
+    void CheckBox::draw(const RenderSystem& renderSystem) const
     {
         renderSystem.drawTexture(m_transformId, m_colorId, m_texCoordResourceId, m_M[3][2]);
         m_label->draw(renderSystem);

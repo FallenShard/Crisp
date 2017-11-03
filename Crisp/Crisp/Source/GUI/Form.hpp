@@ -18,7 +18,7 @@ namespace crisp::gui
     class Form
     {
     public:
-        Form(std::unique_ptr<RenderSystem> drawingVisitor);
+        Form(std::unique_ptr<RenderSystem> renderSystem);
         ~Form();
 
         Form(const Form& other) = delete;
@@ -32,16 +32,17 @@ namespace crisp::gui
         void removeStopWatch(StopWatch* stopWatch);
 
         void postGuiUpdate(std::function<void()>&& guiUpdateCallback);
-        void add(std::shared_ptr<Control> control);
+        void add(std::shared_ptr<Control> control, bool useFadeInAnimation = true);
         void remove(std::string controlId, float duration = 1.0f);
 
         template <typename T>
-        T* getControlById(std::string id)
-        {
-            return m_rootControlGroup->getTypedControlById<T>(id);
-        }
+        T* getControlById(std::string id) { return m_rootControlGroup->getTypedControlById<T>(id); }
 
         void resize(int width, int height);
+
+        void setFocusedControl(Control* control);
+        void onMouseEntered(double mouseX, double mouseY);
+        void onMouseExited(double mouseX, double mouseY);
         void onMouseMoved(double mouseX, double mouseY);
         void onMousePressed(int button, int mods, double mouseX, double mouseY);
         void onMouseReleased(int button, int mods, double mouseX, double mouseY);
@@ -59,5 +60,7 @@ namespace crisp::gui
         std::set<StopWatch*>               m_stopWatches;
 
         std::shared_ptr<ControlGroup>      m_rootControlGroup;
+
+        Control* m_focusedControl;
     };
 }

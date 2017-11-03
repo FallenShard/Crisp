@@ -240,15 +240,20 @@ namespace crisp::gui
         return m_M;
     }
 
+    Rect<float> Control::getInteractionBounds() const
+    {
+        return getAbsoluteBounds();
+    }
+
     void Control::onMouseMoved(float x, float y)
     {
     }
 
-    void Control::onMouseEntered()
+    void Control::onMouseEntered(float x, float y)
     {
     }
 
-    void Control::onMouseExited()
+    void Control::onMouseExited(float x, float y)
     {
     }
 

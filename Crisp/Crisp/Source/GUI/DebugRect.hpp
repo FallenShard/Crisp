@@ -11,7 +11,7 @@ namespace crisp::gui
         ~DebugRect();
 
         virtual void validate() override;
-        virtual void draw(RenderSystem& visitor) override;
+        virtual void draw(const RenderSystem& renderSystem) const override;
 
     private:
         std::unique_ptr<Label> m_label;

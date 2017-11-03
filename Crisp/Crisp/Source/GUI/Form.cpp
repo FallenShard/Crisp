@@ -14,8 +14,8 @@ namespace crisp::gui
     Form::Form(std::unique_ptr<RenderSystem> renderSystem)
         : m_animator(std::make_unique<Animator>())
         , m_renderSystem(std::move(renderSystem))
+        , m_rootControlGroup(std::make_shared<ControlGroup>(this))
     {
-        m_rootControlGroup = std::make_shared<ControlGroup>(this);
         m_rootControlGroup->setId("rootControlGroup");
         m_rootControlGroup->setDepthOffset(-32.0f);
         m_rootControlGroup->setSizeHint(m_renderSystem->getScreenSize());
@@ -50,9 +50,9 @@ namespace crisp::gui
         m_guiUpdates.emplace_back(std::forward<std::function<void()>>(guiUpdateCallback));
     }
 
-    void Form::add(std::shared_ptr<Control> control)
+    void Form::add(std::shared_ptr<Control> control, bool useFadeInAnimation)
     {
-        m_rootControlGroup->addControl(fadeIn(control));
+        m_rootControlGroup->addControl(useFadeInAnimation ? fadeIn(control) : control);
     }
 
     void Form::remove(std::string controlId, float duration)
@@ -114,14 +114,35 @@ namespace crisp::gui
         m_rootControlGroup->setSizeHint({ width, height });
     }
 
+    void Form::setFocusedControl(Control* control)
+    {
+        m_focusedControl = control;
+    }
+
+    void Form::onMouseEntered(double mouseX, double mouseY)
+    {
+        m_rootControlGroup->onMouseEntered(static_cast<float>(mouseX), static_cast<float>(mouseY));
+    }
+
+    void Form::onMouseExited(double mouseX, double mouseY)
+    {
+        m_rootControlGroup->onMouseExited(static_cast<float>(mouseX), static_cast<float>(mouseY));
+    }
+
     void Form::onMouseMoved(double x, double y)
     {
-        m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
+        if (m_focusedControl && m_focusedControl->getInteractionBounds().contains(x, y))
+            m_focusedControl->onMouseMoved(x, y);
+        else
+            m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
     }
 
     void Form::onMousePressed(int buttonId, int mods, double x, double y)
     {
-        m_rootControlGroup->onMousePressed(static_cast<float>(x), static_cast<float>(y));
+        if (m_focusedControl && m_focusedControl->getInteractionBounds().contains(x, y))
+            m_focusedControl->onMousePressed(x, y);
+        else
+            m_rootControlGroup->onMousePressed(static_cast<float>(x), static_cast<float>(y));
     }
 
     void Form::onMouseReleased(int buttonId, int mods, double x, double y)

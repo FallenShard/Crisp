@@ -16,6 +16,7 @@
 #include "Renderer/Pipelines/GuiColorQuadPipeline.hpp"
 #include "Renderer/Pipelines/GuiTextPipeline.hpp"
 #include "Renderer/Pipelines/GuiTexQuadPipeline.hpp"
+#include "Renderer/Pipelines/GuiDebugPipeline.hpp"
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/TextureView.hpp"
@@ -181,7 +182,7 @@ namespace crisp
             m_textResourceIdPool.insert(textResId);
         }
 
-        glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId)
+        glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) const
         {
             glm::vec2 extent = glm::vec2(0.0f, 0.0f);
             auto font = m_fonts.at(fontId)->font.get();
@@ -199,14 +200,19 @@ namespace crisp
             m_drawCommands.emplace_back(&RenderSystem::renderQuad, transformResourceId, colorId, depth);
         }
 
-        void RenderSystem::drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth)
+        void RenderSystem::drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const
         {
             m_drawCommands.emplace_back(&RenderSystem::renderTexture, transformId, colorId, texCoordId, depth);
         }
 
-        void RenderSystem::drawText(unsigned int textResId, unsigned int transformId, uint32_t colorId, float depth)
+        void RenderSystem::drawText(unsigned int textResId, unsigned int transformId, uint32_t colorId, float depth) const
         {
             m_drawCommands.emplace_back(&RenderSystem::renderText, transformId, colorId, textResId, depth);
+        }
+
+        void RenderSystem::drawDebugRect(Rect<float> rect) const
+        {
+            m_debugRects.emplace_back(rect);
         }
 
         void RenderSystem::submitDrawCommands()
@@ -250,12 +256,19 @@ namespace crisp
                 {
                     (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
                 }
+
+                for (auto& rect : m_debugRects)
+                {
+                    renderDebugRect(commandBuffer, rect);
+                }
+
                 m_guiPass->end(commandBuffer);
 
                 auto size = m_drawCommands.size();
                 m_drawCommands.clear();
                 m_drawCommands.reserve(size);
 
+                m_debugRects.clear();
             });
 
             m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
@@ -364,7 +377,7 @@ namespace crisp
             m_colorQuadPipeline = std::make_unique<GuiColorQuadPipeline>(m_renderer, m_guiPass.get());
             m_textPipeline      = std::make_unique<GuiTextPipeline>(m_renderer, m_guiPass.get());
             m_texQuadPipeline   = std::make_unique<GuiTexQuadPipeline>(m_renderer, m_guiPass.get());
-
+            m_debugRectPipeline = std::make_unique<GuiDebugPipeline>(m_renderer, m_guiPass.get());
             m_fsQuadPipeline    = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
         }
 
@@ -385,6 +398,16 @@ namespace crisp
 
             m_quadGeometry.indexBufferOffset  = 0;
             m_quadGeometry.indexCount         = 6;
+
+            m_lineLoopGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, quadVerts);
+            std::vector<glm::u16vec2> loopIndices = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 } };
+            m_lineLoopGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_renderer, loopIndices);
+            m_lineLoopGeometry.vertexBufferGroup = 
+            {
+                { m_lineLoopGeometry.vertexBuffer->get(), 0 }
+            };
+            m_lineLoopGeometry.indexBufferOffset = 0;
+            m_lineLoopGeometry.indexCount        = 8;
         }
 
         void RenderSystem::initGuiRenderTargetResources()
@@ -512,6 +535,14 @@ namespace crisp
             vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2 * sizeof(int), &pushConstants[1]);
 
             m_quadGeometry.drawIndexed(cmdBuffer);
+        }
+
+        void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect) const
+        {
+            glm::mat4 transform = glm::translate(glm::vec3{ rect.x, rect.y, -1.0f }) * glm::scale(glm::vec3{ rect.width, rect.height, 1.0f });
+            m_debugRectPipeline->bind(cmdBuffer);
+            m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, m_P * transform);
+            m_lineLoopGeometry.drawIndexed(cmdBuffer);
         }
 
         void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, Font* font, VulkanRenderer* renderer)

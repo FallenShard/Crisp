@@ -34,6 +34,10 @@ namespace crisp
         static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
         Event<double> mouseWheelScrolled;
 
+        static void mouseEnterCallback(GLFWwindow* window, int entered);
+        Event<double, double> mouseEntered;
+        Event<double, double> mouseExited;
+
         static void closeCallback(GLFWwindow* window);
         Event<> windowClosed;
 

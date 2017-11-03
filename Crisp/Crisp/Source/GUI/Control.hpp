@@ -8,7 +8,8 @@
 #include "Math/Rect.hpp"
 #include "RenderSystem.hpp"
 
-#include "GUI/Enums.hpp"
+#include "GUI/GuiEnums.hpp"
+#include <CrispCore/ConsoleUtils.hpp>
 
 namespace crisp::gui
 {
@@ -58,15 +59,16 @@ namespace crisp::gui
         void setColor(glm::vec4 color);
         glm::vec4 getColor() const;
 
-        virtual void setOpacity(float opacity);
+        void setOpacity(float opacity);
         float getOpacity() const;
 
         virtual Rect<float> getAbsoluteBounds() const;
         const glm::mat4& getModelMatrix() const;
 
+        virtual Rect<float> getInteractionBounds() const;
         virtual void onMouseMoved(float x, float y);
-        virtual void onMouseEntered();
-        virtual void onMouseExited();
+        virtual void onMouseEntered(float x, float y);
+        virtual void onMouseExited(float x, float y);
         virtual void onMousePressed(float x, float y);
         virtual void onMouseReleased(float x, float y);
 
@@ -76,7 +78,7 @@ namespace crisp::gui
         virtual bool needsValidation();
         virtual void validate() = 0;
 
-        virtual void draw(RenderSystem& renderSystem) = 0;
+        virtual void draw(const RenderSystem& renderSystem) const = 0;
 
         template <typename T>
         T* getTypedControlById(std::string id) { return static_cast<T*>(getControlById(id)); }

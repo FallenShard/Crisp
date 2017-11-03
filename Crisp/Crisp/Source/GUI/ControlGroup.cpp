@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include <CrispCore/ConsoleUtils.hpp>
+
 namespace crisp::gui
 {
     ControlGroup::ControlGroup(Form* parentForm)
@@ -79,46 +81,71 @@ namespace crisp::gui
         }
     }
 
+    Rect<float> ControlGroup::getInteractionBounds() const
+    {
+        Rect<float> interactionBounds = getAbsoluteBounds();
+        for (auto& child : m_children)
+        {
+            Rect<float> childBounds = child->getInteractionBounds();
+            interactionBounds = interactionBounds.merge(childBounds);
+        }
+
+        return interactionBounds;
+    }
+
     void ControlGroup::onMouseMoved(float x, float y)
     {
         for (auto& child : m_children)
         {
-            auto bounds = child->getAbsoluteBounds();
+            auto bounds = child->getInteractionBounds();
 
             bool containsPrevCoords = bounds.contains(m_prevMousePos.x, m_prevMousePos.y);
             bool containsCurrCoords = bounds.contains(x, y);
 
             if (!containsPrevCoords && containsCurrCoords)
-                child->onMouseEntered();
+                child->onMouseEntered(x, y);
 
             if (containsPrevCoords && containsCurrCoords)
                 child->onMouseMoved(x, y);
 
             if (containsPrevCoords && !containsCurrCoords)
-                child->onMouseExited();
+                child->onMouseExited(x, y);
         }
 
-        m_prevMousePos.x = x;
-        m_prevMousePos.y = y;
+        m_prevMousePos = { x, y };
     }
 
-    void ControlGroup::onMouseEntered()
-    {
-    }
-
-    void ControlGroup::onMouseExited()
+    void ControlGroup::onMouseEntered(float x, float y)
     {
         for (auto& child : m_children)
         {
-            child->onMouseExited();
+            auto bounds = child->getInteractionBounds();
+
+            bool containsPrevCoords = bounds.contains(m_prevMousePos.x, m_prevMousePos.y);
+            bool containsCurrCoords = bounds.contains(x, y);
+
+            if (!containsPrevCoords && containsCurrCoords)
+                child->onMouseEntered(x, y);
         }
+
+        m_prevMousePos = { x, y };
+    }
+
+    void ControlGroup::onMouseExited(float x, float y)
+    {
+        for (auto& child : m_children)
+        {
+            child->onMouseExited(x, y);
+        }
+
+        m_prevMousePos = { -1.0f, -1.0f };
     }
 
     void ControlGroup::onMousePressed(float x, float y)
     {
         for (auto& child : m_children)
         {
-            if (child->getAbsoluteBounds().contains(x, y))
+            if (child->getInteractionBounds().contains(x, y))
                 child->onMousePressed(x, y);
         }
     }
@@ -169,10 +196,12 @@ namespace crisp::gui
         }
     }
 
-    void ControlGroup::draw(RenderSystem& visitor)
+    void ControlGroup::draw(const RenderSystem& visitor) const
     {
         for (auto& child : m_children)
+        {
             child->draw(visitor);
+        }
     }
 
     Control* ControlGroup::getControlById(const std::string& id)

@@ -29,14 +29,14 @@ namespace crisp::gui
         virtual glm::vec2 getSize() const;
         virtual Rect<float> getAbsoluteBounds() const;
 
-        virtual void onMouseEntered() override;
-        virtual void onMouseExited() override;
+        virtual void onMouseEntered(float x, float y) override;
+        virtual void onMouseExited(float x, float y) override;
         virtual void onMousePressed(float x, float y) override;
         virtual void onMouseReleased(float x, float y) override;
 
         virtual void validate() override;
 
-        virtual void draw(RenderSystem& renderSystem) override;
+        virtual void draw(const RenderSystem& renderSystem) const override;
 
         Event<bool> checked;
 

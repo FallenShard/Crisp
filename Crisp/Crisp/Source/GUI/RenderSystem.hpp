@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Math/Headers.hpp"
+#include "Math/Rect.hpp"
 #include "IO/FontLoader.hpp"
 
 #include "Renderer/VulkanRenderer.hpp"
@@ -24,6 +25,7 @@ namespace crisp
     class GuiColorQuadPipeline;
     class GuiTextPipeline;
     class GuiTexQuadPipeline;
+    class GuiDebugPipeline;
     class FullScreenQuadPipeline;
 
     class IndexBuffer;
@@ -71,11 +73,12 @@ namespace crisp
             unsigned int registerTextResource(std::string text, unsigned int fontId);
             glm::vec2 updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId);
             void unregisterTextResource(unsigned int textResId);
-            glm::vec2 queryTextExtent(std::string text, unsigned int fontId);
+            glm::vec2 queryTextExtent(std::string text, unsigned int fontId) const;
 
             void drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const;
-            void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth);
-            void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth);
+            void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const;
+            void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth) const;
+            void drawDebugRect(Rect<float> rect) const;
 
             void submitDrawCommands();
 
@@ -102,7 +105,9 @@ namespace crisp
             std::unique_ptr<GuiColorQuadPipeline>   m_colorQuadPipeline;
             std::unique_ptr<GuiTextPipeline>        m_textPipeline;
             std::unique_ptr<GuiTexQuadPipeline>     m_texQuadPipeline;
+            std::unique_ptr<GuiDebugPipeline>       m_debugRectPipeline;
             std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
+            
 
             // Geometry
             struct GeometryData
@@ -118,6 +123,7 @@ namespace crisp
 
             // canonical square [0,1]x[0,1] quad geometry
             GeometryData m_quadGeometry;
+            GeometryData m_lineLoopGeometry;
             
             std::unique_ptr<DynamicUniformBufferResource> m_transforms;
             std::unique_ptr<DynamicUniformBufferResource> m_colors;
@@ -186,8 +192,11 @@ namespace crisp
             void renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
             void renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
             void renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
+            void renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect) const;
 
             mutable std::vector<GuiDrawCommand> m_drawCommands;
+
+            mutable std::vector<Rect<float>> m_debugRects;
         };
     }
 }

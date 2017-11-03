@@ -2,6 +2,7 @@
 
 #include <random>
 #include <sstream>
+#include <iostream>
 
 #include "Label.hpp"
 
@@ -43,7 +44,7 @@ namespace crisp::gui
         m_label->clearValidationFlags();
     }
 
-    void DebugRect::draw(RenderSystem& renderSystem)
+    void DebugRect::draw(const RenderSystem& renderSystem) const
     {
         Panel::draw(renderSystem);
         m_label->draw(renderSystem);

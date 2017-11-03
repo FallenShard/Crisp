@@ -21,15 +21,15 @@ namespace crisp::gui
         void setMaxValue(int maxValue);
         void setValue(int value);
 
-        virtual void onMouseEntered() override;
-        virtual void onMouseExited() override;
+        virtual void onMouseEntered(float x, float y) override;
+        virtual void onMouseExited(float x, float y) override;
         virtual void onMousePressed(float x, float y) override;
         virtual void onMouseMoved(float x, float y) override;
         virtual void onMouseReleased(float x, float y) override;
 
         virtual void validate() override;
 
-        virtual void draw(RenderSystem& visitor) override;
+        virtual void draw(const RenderSystem& visitor) const override;
 
         Event<int> valueChanged;
 
@@ -51,9 +51,10 @@ namespace crisp::gui
 
         std::shared_ptr<PropertyAnimation<glm::vec4>> m_colorAnim;
 
-        std::unique_ptr<Label> m_currLabel;
-        std::unique_ptr<Panel> m_currRect;
-        std::unique_ptr<Panel> m_sliderLine;
+        std::unique_ptr<Label> m_label;
+        std::unique_ptr<Panel> m_backgroundRect;
+        std::unique_ptr<Panel> m_foregroundRect;
+        std::unique_ptr<Panel> m_indicatorRect;
 
         int m_minValue;
         int m_maxValue;

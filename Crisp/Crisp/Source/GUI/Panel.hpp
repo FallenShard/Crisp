@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "ControlGroup.hpp"
+#include "DrawComponents/ColorRectDrawComponent.hpp"
 
 namespace crisp
 {
@@ -16,7 +17,7 @@ namespace crisp
 
             virtual void validate() override;
 
-            virtual void draw(RenderSystem& visitor) override;
+            virtual void draw(const RenderSystem& renderSystem) const override;
 
             void setClickCallback(std::function<void()> callback);
             virtual void onMouseReleased(float x, float y) override;
@@ -24,8 +25,7 @@ namespace crisp
         private:
             std::function<void()> m_clickCallback;
 
-            unsigned int m_transformId;
-            unsigned int m_colorId;
+            ColorRectDrawComponent m_drawComponent;
         };
     }
 }
