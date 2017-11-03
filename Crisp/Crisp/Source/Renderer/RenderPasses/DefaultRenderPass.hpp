@@ -20,8 +20,6 @@ namespace crisp
         virtual void freeResources() override;
 
         VkFormat m_colorFormat;
-        VkFormat m_depthFormat;
-
-        std::vector<VkClearValue> m_clearValues;
+        VkClearValue m_clearValue;
     };
 }

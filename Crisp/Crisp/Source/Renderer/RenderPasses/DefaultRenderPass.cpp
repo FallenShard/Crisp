@@ -9,19 +9,14 @@ namespace crisp
     DefaultRenderPass::DefaultRenderPass(VulkanRenderer* renderer)
         : VulkanRenderPass(renderer)
         , m_colorFormat(m_renderer->getSwapChain()->getImageFormat())
-        , m_depthFormat(m_renderer->getContext()->findSupportedDepthFormat())
-        , m_clearValues(2)
     {
-        m_clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
-        m_clearValues[1].depthStencil = { 1.0f, 0 };
+        m_clearValue.color        = { 0.1f, 0.1f, 0.1f, 1.0f };
 
         createRenderPass();
-        createResources();
     }
 
     DefaultRenderPass::~DefaultRenderPass()
     {
-        freeResources();
     }
 
     void DefaultRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
@@ -32,8 +27,8 @@ namespace crisp
         renderPassInfo.framebuffer       = framebuffer;
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = m_renderer->getSwapChainExtent();
-        renderPassInfo.clearValueCount   = static_cast<uint32_t>(m_clearValues.size());
-        renderPassInfo.pClearValues      = m_clearValues.data();
+        renderPassInfo.clearValueCount   = 1;
+        renderPassInfo.pClearValues      = &m_clearValue;
 
         vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
@@ -61,30 +56,14 @@ namespace crisp
         colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
         colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        //// Description for depth attachment
-        VkAttachmentDescription depthAttachment = {};
-        depthAttachment.format         = m_depthFormat;
-        depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
         VkAttachmentReference colorAttachmentRef = {};
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depthAttachmentRef = {};
-        depthAttachmentRef.attachment = 1;
-        depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subPass = {};
         subPass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subPass.colorAttachmentCount    = 1;
         subPass.pColorAttachments       = &colorAttachmentRef;
-        subPass.pDepthStencilAttachment = &depthAttachmentRef;
 
         VkSubpassDependency dependency = {};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
@@ -94,11 +73,10 @@ namespace crisp
         dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-        std::vector<VkAttachmentDescription> attachments = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo = {};
         renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        renderPassInfo.pAttachments    = attachments.data();
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments    = &colorAttachment;
         renderPassInfo.subpassCount    = 1;
         renderPassInfo.pSubpasses      = &subPass;
         renderPassInfo.dependencyCount = 1;

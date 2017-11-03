@@ -25,6 +25,8 @@
 
 #include "glfw/glfw3.h"
 
+#include "CrispCore/Profiler.hpp"
+
 namespace crisp
 {
     namespace
@@ -41,7 +43,7 @@ namespace crisp
         , m_gravity(0.0f, -9.81f, 0.0f)
     {
         m_workGroupSize = { 1, 1, 1 };
-        m_fluidDim      = m_workGroupSize * glm::uvec3(16, 32, 16);
+        m_fluidDim      = m_workGroupSize * glm::uvec3(48, 32, 32);
         m_numParticles  = m_fluidDim.x * m_fluidDim.y * m_fluidDim.z;
         m_fluidSpaceMin = glm::vec3(0.0f);
         m_fluidSpaceMax = glm::vec3(m_fluidDim) * 2.0f * particleDiameter;
@@ -61,7 +63,6 @@ namespace crisp
                 }
 
         m_positions = positions;
-                    
 
         m_colors = std::vector<glm::vec4>(positions.size(), glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
 
@@ -88,6 +89,8 @@ namespace crisp
         m_veloBuffer->setHostBuffer(velocities);
         m_veloBuffer->copyToGpu();
         m_forceBuffer = std::make_unique<PropertyBuffer<glm::vec3>>(m_numParticles);
+
+        m_normalsBuffer = std::make_unique<PropertyBuffer<glm::vec4>>(m_numParticles);
         
 
         int numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
@@ -371,36 +374,31 @@ namespace crisp
         //}
 
         // compute grid index for each particle
-        for (int i = 0; i < 5 && run; i++)
+        
+        for (int i = 0; i < 6 && run; i++)
         {
             int3 gridParams = { m_gridParams.dim.x, m_gridParams.dim.y, m_gridParams.dim.z };
+
+                
             FluidSimulationKernels::computeGridLocations(*m_gridLocationBuffer, *m_particleIndexBuffer, *m_posBuffer, *m_simulationParams);
-
             FluidSimulationKernels::sortParticleIndicesByGridLocation(*m_gridLocationBuffer, *m_particleIndexBuffer);
-
             FluidSimulationKernels::computeGridCellOffsets(*m_gridCellOffsets, *m_gridLocationBuffer, *m_gridCellIndexBuffer);
-
-            FluidSimulationKernels::computeDensityAndPressure(*m_densityCudaBuffer, *m_pressureCudaBuffer,
+            FluidSimulationKernels::computeDensityAndPressure(*m_densityCudaBuffer, *m_pressureCudaBuffer, *m_normalsBuffer,
                 *m_posBuffer, *m_gridCellOffsets, *m_gridLocationBuffer, *m_particleIndexBuffer,
                 *m_simulationParams);
-
             FluidSimulationKernels::computeForces(*m_forceBuffer, *m_colorCudaBuffer,
                 *m_posBuffer, *m_gridCellOffsets, *m_gridLocationBuffer, *m_particleIndexBuffer,
-                *m_densityCudaBuffer, *m_pressureCudaBuffer, *m_veloBuffer, gridParams, m_gridParams.cellSize, m_gravity, m_viscosity);
-
-
-
+                *m_densityCudaBuffer, *m_pressureCudaBuffer, *m_veloBuffer, *m_normalsBuffer, gridParams, m_gridParams.cellSize, m_gravity, m_viscosity);
             float3 worldSpace;
             worldSpace.x = m_fluidSpaceMax.x;
             worldSpace.y = m_fluidSpaceMax.y;
             worldSpace.z = m_fluidSpaceMax.z;
             FluidSimulationKernels::integrate(*m_posBuffer, *m_veloBuffer, *m_forceBuffer, *m_densityCudaBuffer, worldSpace, dt * timeStepFraction);
-
+                
         }
 
         m_colorCudaBuffer->copyToCpu();
         m_posBuffer->copyToCpu();
-
         m_stagingBuffer->updateFromHost(m_posBuffer->getHostBuffer());
         m_stagingColorBuffer->updateFromHost(m_colorCudaBuffer->getHostBuffer());
     }
@@ -467,12 +465,12 @@ namespace crisp
         m_descriptorSetGroup.setDynamicOffset(1, m_paramsBuffer->getDynamicOffset(currentFrameIndex));
         m_drawPipeline->bind(cmdBuffer);
         m_descriptorSetGroup.bind(cmdBuffer, m_drawPipeline->getPipelineLayout());
-
+        
         VkDeviceSize offsets[] = { currentFrameIndex * m_vertexBufferSize, currentFrameIndex * m_vertexBufferSize };
         VkBuffer buffers[] = { m_vertexBuffer->getHandle(), m_colorBuffer->getHandle() };
         vkCmdBindVertexBuffers(cmdBuffer, 0, 2, buffers, offsets);
         vkCmdDraw(cmdBuffer, m_numParticles, 1, 0, 0);
-
+        
         m_boxDrawer->render(cmdBuffer, currentFrameIndex);
     }
 

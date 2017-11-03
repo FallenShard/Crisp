@@ -9,7 +9,7 @@ namespace crisp
     class ApplicationEnvironment
     {
     public:
-        ApplicationEnvironment();
+        ApplicationEnvironment(int argc, char** argv);
         ~ApplicationEnvironment();
     };
 }

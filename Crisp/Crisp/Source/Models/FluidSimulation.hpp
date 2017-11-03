@@ -139,6 +139,7 @@ namespace crisp
         std::unique_ptr<PropertyBuffer<glm::vec4>> m_colorCudaBuffer;
         std::unique_ptr<PropertyBuffer<glm::vec3>> m_veloBuffer;
         std::unique_ptr<PropertyBuffer<glm::vec3>> m_forceBuffer;
+        std::unique_ptr<PropertyBuffer<glm::vec4>> m_normalsBuffer;
 
         std::unique_ptr<PropertyBuffer<int>> m_gridCellIndexBuffer;
         std::unique_ptr<PropertyBuffer<int>> m_gridCellOffsets;

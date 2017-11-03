@@ -54,6 +54,23 @@ namespace crisp
         {
             return z * gridDims.y * gridDims.x + y * gridDims.x + x;
         }
+
+        __device__ __forceinline__ glm::vec3 getHeatMapColor(float value) {
+            if (value > 250.0f) {
+                return glm::vec3(1.0f, 0.0f, 0.0f);
+            }
+            else if (value > 150) {
+                return glm::mix(glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), (value - 150) / 100.0f);
+            }
+            else if (value > 100) {
+                return glm::mix(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 0.0f), (value - 100) / 50.0f);
+            }
+            else if (value > 50) {
+                return glm::mix(glm::vec3(0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), (value - 50) / 50.0f);
+            }
+            else
+                return glm::mix(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 1.0f), (value) / 50.0f);
+        }
     }
 
     __global__ void computeGridIndex(int* gridIndices, int* particleIndices, const glm::vec4* positions, SimulationParams params)
@@ -152,7 +169,7 @@ namespace crisp
         debugNbrs<<<gridSize, blockSize>>>(colors.getDeviceBuffer(), pos.getDeviceBuffer(), gridOffsets.getDeviceBuffer(), n, gridDims, cellSize);
     }
 
-    __global__ void computeDensityAndPressureKernel(float* densities, float* pressures,
+    __global__ void computeDensityAndPressureKernel(float* densities, float* pressures, glm::vec4* normals,
         const glm::vec4* positions, const int* gridOffsets, const int* gridLocations, const int* particleIndices,
         SimulationParams params)
     {
@@ -180,6 +197,7 @@ namespace crisp
         glm::vec3 posI = position;
         float density = 0.0f;
         
+        glm::vec3 ni;
         for (int z = lower.z; z <= upper.z; ++z)
         {
             for (int y = lower.y; y <= upper.y; ++y)
@@ -198,6 +216,9 @@ namespace crisp
                         float dist = glm::length(diff);
 
                         density += mass * poly6(dist);
+
+                        //if (dist > 0.0f && dist < h)
+                        //    ni += mass / densities[idx] * spikyGrad(diff, dist);
                     }
                 }
             }
@@ -205,10 +226,11 @@ namespace crisp
 
         densities[idx] = density;
         pressures[idx] = max(0.0f, stiffness * (density - restDensity));
+        normals[idx] = glm::vec4(h * ni, 1.0f);
         //pressures[idx] = stiffness * (density - restDensity);
     }
 
-    void FluidSimulationKernels::computeDensityAndPressure(PropertyBuffer<float>& densities,           PropertyBuffer<float>& pressures,
+    void FluidSimulationKernels::computeDensityAndPressure(PropertyBuffer<float>& densities,           PropertyBuffer<float>& pressures, PropertyBuffer<glm::vec4>& normals,
                                             const PropertyBuffer<glm::vec4>& positions, const PropertyBuffer<int>& gridOffsets,
                                             const PropertyBuffer<int>& gridLocations,   const PropertyBuffer<int>& particleIndices,
                                             const SimulationParams& params)
@@ -216,14 +238,14 @@ namespace crisp
         int numParticles = static_cast<int>(positions.getSize());
         int blockSize = 256;
         int gridSize = (numParticles - 1) / blockSize + 1;
-        computeDensityAndPressureKernel<<<gridSize, blockSize>>>(densities.getDeviceBuffer(), pressures.getDeviceBuffer(),
+        computeDensityAndPressureKernel<<<gridSize, blockSize>>>(densities.getDeviceBuffer(), pressures.getDeviceBuffer(), normals.getDeviceBuffer(),
             positions.getDeviceBuffer(), gridOffsets.getDeviceBuffer(), gridLocations.getDeviceBuffer(), particleIndices.getDeviceBuffer(),
             params);
     }
 
     __global__ void computeForcesKernel(glm::vec3* forces, glm::vec4* colors,
         const glm::vec4* positions, const int* gridOffsets, const int* gridLocations, const int* particleIndices,
-        const float* densities, const float* pressures, const glm::vec3* velocities,
+        const float* densities, const float* pressures, const glm::vec3* velocities, const glm::vec4* normals,
         int numParticles, int3 gridDims, float cellSize, const glm::vec3 gravity, float viscosity)
     {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -249,6 +271,8 @@ namespace crisp
         float pressureI = pressures[idx];
         float densityI  = densities[idx];
 
+        glm::vec3 ni;
+        int nbrs = 0;
         glm::vec3 fPressure(0.0f);
         glm::vec3 fVisco(0.0f);
         for (int z = lower.z; z <= upper.z; ++z)
@@ -272,11 +296,11 @@ namespace crisp
                         {
                             float volJ = mass / densities[j];
 
-                            fPressure += -volJ * (pressureI + pressures[j]) / 2.0f * spikyGrad(diff, dist);
-
-                            //fVisco += volJ * velocities[j] - velI * viscoLaplacian(dist);
-                            fVisco += volJ * (velocities[j] - velI) * viscoLaplacian(dist);
+                            fPressure += -volJ * (pressureI + pressures[j]) * 0.5f  * spikyGrad(diff, dist);
+                            fVisco    +=  volJ * (velocities[j] - velI) * viscoLaplacian(dist);
+                            ni += volJ * spikyGrad(diff, dist);
                         }
+                        nbrs++;
                     }
                 }
             }
@@ -296,11 +320,15 @@ namespace crisp
             colors[idx] = glm::vec4((restDensity - densityI) / 500.0f + 0.5f, 0.5f, 0.5f, 1.0f);
         else
             colors[idx] = glm::vec4(0.5f, 0.5f, (densityI - restDensity) / 500.0f + 0.5f, 1.0f);
+
+        float norm = float(nbrs) / 255;
+        //colors[idx] = glm::vec4(getHeatMapColor(float(nbrs)), 1.0f);
+        colors[idx] = glm::vec4(glm::vec3(glm::length(ni * h)), 1.0f);
     }
 
     void FluidSimulationKernels::computeForces(PropertyBuffer<glm::vec3>& forces, PropertyBuffer<glm::vec4>& colors,
         const PropertyBuffer<glm::vec4>& positions, const PropertyBuffer<int>& gridOffsets, const PropertyBuffer<int>& gridLocations, const PropertyBuffer<int>& particleIndices,
-        const PropertyBuffer<float>& densities, const PropertyBuffer<float>& pressures, const PropertyBuffer<glm::vec3>& velocities,
+        const PropertyBuffer<float>& densities, const PropertyBuffer<float>& pressures, const PropertyBuffer<glm::vec3>& velocities, const PropertyBuffer<glm::vec4>& normals,
         int3 gridDims, float cellSize, const glm::vec3& gravity, float viscosity)
     {
         int numParticles = static_cast<int>(positions.getSize());
@@ -308,7 +336,7 @@ namespace crisp
         int gridSize = (numParticles - 1) / blockSize + 1;
         computeForcesKernel<<<gridSize, blockSize>>>(forces.getDeviceBuffer(), colors.getDeviceBuffer(),
             positions.getDeviceBuffer(), gridOffsets.getDeviceBuffer(), gridLocations.getDeviceBuffer(), particleIndices.getDeviceBuffer(),
-            densities.getDeviceBuffer(), pressures.getDeviceBuffer(), velocities.getDeviceBuffer(), numParticles, gridDims, cellSize, gravity, viscosity);
+            densities.getDeviceBuffer(), pressures.getDeviceBuffer(), velocities.getDeviceBuffer(), normals.getDeviceBuffer(), numParticles, gridDims, cellSize, gravity, viscosity);
     }
 
     __global__ void integrateKernel(glm::vec4* positions, glm::vec3* velocities, glm::vec3* forces, float* densities, int numParticles, float3 fluidSpace, float timeStep)

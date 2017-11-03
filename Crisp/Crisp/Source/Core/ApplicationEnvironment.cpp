@@ -4,7 +4,7 @@
 
 namespace crisp
 {
-    ApplicationEnvironment::ApplicationEnvironment()
+    ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
     {
         ConsoleColorizer::saveDefault();
         

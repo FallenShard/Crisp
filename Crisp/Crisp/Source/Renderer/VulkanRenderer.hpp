@@ -94,9 +94,6 @@ namespace crisp
         std::unique_ptr<VulkanSwapChain> m_swapChain;
         std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
 
-        std::unique_ptr<Texture> m_depthTexture;
-        std::vector<std::shared_ptr<TextureView>> m_depthTexViews;
-
         VkViewport m_defaultViewport;
 
         uint32_t m_framesRendered;

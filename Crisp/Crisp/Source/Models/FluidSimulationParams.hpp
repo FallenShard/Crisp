@@ -28,7 +28,7 @@ namespace crisp
     
     
 
-    static constexpr float stiffness = 100.0f;// 1000.0f;
+    static constexpr float stiffness = 100.0f;
     static constexpr float restDensity =  1000.0f;
     static constexpr float mass = particleVolume * restDensity;
 
@@ -36,6 +36,6 @@ namespace crisp
     static constexpr float gY = -9.81f;
     static constexpr float gZ = 0.0f;
 
-    static constexpr float timeStepFraction = 0.1f;
+    static constexpr float timeStepFraction = 0.16f;
     static constexpr int integrationSteps = 1;
 }

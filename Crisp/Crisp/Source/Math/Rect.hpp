@@ -15,8 +15,13 @@ namespace crisp
         template <typename U>
         bool contains(U x, U y)
         {
-            return x >= this->x && x <= this->x + width &&
-                   y >= this->y && y <= this->y + height;
+            return x >= this->x && x < this->x + width &&
+                   y >= this->y && y < this->y + height;
+        }
+
+        bool operator!=(const Rect& other)
+        {
+            return x != other.x || y != other.y || width != other.width || height != other.height;
         }
 
         Rect merge(const Rect& other)
@@ -28,4 +33,11 @@ namespace crisp
             return { resLeft, resTop, resRight - resLeft, resBottom - resTop };
         }
     };
+
+    template <typename T>
+    std::ostream& operator<<(std::ostream& out, const Rect<T>& rect)
+    {
+        std::cout << "[ " << rect.x << ", " << rect.y << ", " << rect.width << ", " << rect.height << " ]";
+        return out;
+    }
 }

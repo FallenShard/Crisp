@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv)
 {
-    auto environment = std::make_unique<crisp::ApplicationEnvironment>();
+    auto environment = std::make_unique<crisp::ApplicationEnvironment>(argc, argv);
     auto application = std::make_unique<crisp::Application>(environment.get());
     application->run();
 

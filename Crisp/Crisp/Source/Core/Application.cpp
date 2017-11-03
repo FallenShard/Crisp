@@ -41,7 +41,7 @@ namespace crisp
         }
     }
 
-    Application::Application(ApplicationEnvironment*)
+    Application::Application(ApplicationEnvironment* env)
         : m_tracerProgress(0.0f)
         , m_frameTimeLogger(1000.0)
         , m_numRayTracedChannels(4)
@@ -61,6 +61,8 @@ namespace crisp
         m_inputDispatcher->mouseMoved.subscribe<gui::Form, &gui::Form::onMouseMoved>(m_guiForm.get());
         m_inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
         m_inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
+        m_inputDispatcher->mouseEntered.subscribe<gui::Form, &gui::Form::onMouseEntered>(m_guiForm.get());
+        m_inputDispatcher->mouseExited.subscribe<gui::Form, &gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
         
         // Create ray tracer and add a handler for image block updates

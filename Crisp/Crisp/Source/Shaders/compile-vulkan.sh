@@ -1,6 +1,6 @@
-mkdir -p "../../Resources/Shaders"
+mkdir -p "../../../Resources/Shaders"
 
-#rm -r ../../Resources/Shaders/*
+echo "Compiling GLSL shaders into SPIR-V..."
 
 errorPrefix="ERROR"
 
@@ -18,7 +18,7 @@ do
     shaderType=${shaderType:1:4}
     techniqueName=$(echo "$entry" | grep -o '.*\.')
     techniqueName=${techniqueName:0:${#techniqueName}-6}
-    output="../../Resources/Shaders/"$techniqueName"-"$shaderType".spv"
+    output="../../../Resources/Shaders/"$techniqueName"-"$shaderType".spv"
     rm "$output"
 
     maxMessageLength=60
@@ -41,3 +41,5 @@ do
         printf "Success!\n"
     fi
 done
+
+echo "Done."

@@ -30,14 +30,14 @@ namespace crisp
 
         static void debugNeighborCount(PropertyBuffer<glm::vec4>& colors, const PropertyBuffer<glm::vec4>& pos, const PropertyBuffer<int>& gridOffsets, int3 gridDims, float cellSize);
 
-        static void computeDensityAndPressure(PropertyBuffer<float>& densities,           PropertyBuffer<float>& pressures,
+        static void computeDensityAndPressure(PropertyBuffer<float>& densities,           PropertyBuffer<float>& pressures, PropertyBuffer<glm::vec4>& normals,
                                               const PropertyBuffer<glm::vec4>& positions, const PropertyBuffer<int>& gridOffsets,
                                               const PropertyBuffer<int>& gridLocations,   const PropertyBuffer<int>& particleIndices,
                                               const SimulationParams& params);
         
         static void computeForces(PropertyBuffer<glm::vec3>& forces, PropertyBuffer<glm::vec4>& colors,
                                   const PropertyBuffer<glm::vec4>& positions, const PropertyBuffer<int>& gridOffsets, const PropertyBuffer<int>& gridLocations, const PropertyBuffer<int>& particleIndices,
-                                  const PropertyBuffer<float>& densities, const PropertyBuffer<float>& pressures, const PropertyBuffer<glm::vec3>& velocities,
+                                  const PropertyBuffer<float>& densities, const PropertyBuffer<float>& pressures, const PropertyBuffer<glm::vec3>& velocities, const PropertyBuffer<glm::vec4>& normals,
                                   int3 gridDims, float cellSize, const glm::vec3& gravity, float viscosity);
 
         static void integrate(PropertyBuffer<glm::vec4>& pos, PropertyBuffer<glm::vec3>& vel,

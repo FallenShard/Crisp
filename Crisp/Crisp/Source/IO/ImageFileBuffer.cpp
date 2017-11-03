@@ -16,6 +16,9 @@ namespace crisp
         m_data = stbi_load(fileName.c_str(), &width, &height, &numComps, STBI_rgb_alpha);
         stbi_set_flip_vertically_on_load(false);
 
+        if (!m_data)
+            throw std::runtime_error("Failed to load image " + fileName);
+
         m_width         = static_cast<unsigned int>(width);
         m_height        = static_cast<unsigned int>(height);
         m_numComponents = static_cast<unsigned int>(numComps);
