@@ -367,8 +367,7 @@ namespace crisp
         
         std::vector<VkImageView> attachmentViews =
         {
-            m_swapChain->getImageView(swapChainImageViewIndex),
-            //m_depthTexViews[m_currentFrameIndex]->getHandle()
+            m_swapChain->getImageView(swapChainImageViewIndex)
         };
         
         VkFramebufferCreateInfo framebufferInfo = {};
