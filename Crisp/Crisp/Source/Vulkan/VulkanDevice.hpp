@@ -52,7 +52,7 @@ namespace crisp
 
     private:
         static constexpr VkDeviceSize DeviceHeapSize  = 256 << 20; // 256 MB
-        static constexpr VkDeviceSize StagingHeapSize = 128 << 20; // 128 MB
+        static constexpr VkDeviceSize StagingHeapSize = 256 << 20; // 256 MB
 
         VulkanContext* m_context;
 

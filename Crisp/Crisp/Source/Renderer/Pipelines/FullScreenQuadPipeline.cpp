@@ -98,6 +98,8 @@ namespace crisp
         colorBlendState.pAttachments    = &colorBlendAttachment;
 
         auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
+        //depthStencilState.depthTestEnable = false;
+        //depthStencilState.depthWriteEnable = false;
 
         std::vector<VkDynamicState> dynamicStates;
         dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);

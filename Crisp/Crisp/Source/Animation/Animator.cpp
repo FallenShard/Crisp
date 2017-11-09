@@ -11,7 +11,6 @@ namespace crisp
 
     Animator::~Animator()
     {
-        std::cout << "Deleting animator!" << '\n';
         clearAllAnimations();
     }
 

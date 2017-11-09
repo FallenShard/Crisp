@@ -9,22 +9,28 @@ namespace crisp
     DefaultRenderPass::DefaultRenderPass(VulkanRenderer* renderer)
         : VulkanRenderPass(renderer)
         , m_colorFormat(m_renderer->getSwapChain()->getImageFormat())
+        , m_framebuffers(VulkanRenderer::NumVirtualFrames)
     {
-        m_clearValue.color        = { 0.1f, 0.1f, 0.1f, 1.0f };
-
+        m_clearValue.color = { 0.1f, 0.1f, 0.1f, 1.0f };
         createRenderPass();
+        createResources();
     }
 
     DefaultRenderPass::~DefaultRenderPass()
     {
+        freeResources();
+
+        for (auto& framebuffer : m_framebuffers)
+            if (framebuffer != VK_NULL_HANDLE)
+                vkDestroyFramebuffer(m_device->getHandle(), framebuffer, nullptr);
     }
 
-    void DefaultRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
+    void DefaultRenderPass::begin(VkCommandBuffer cmdBuffer) const
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass        = m_handle;
-        renderPassInfo.framebuffer       = framebuffer;
+        renderPassInfo.framebuffer       = m_framebuffers[m_renderer->getCurrentVirtualFrameIndex()];
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = m_renderer->getSwapChainExtent();
         renderPassInfo.clearValueCount   = 1;
@@ -41,6 +47,25 @@ namespace crisp
     VkImageView DefaultRenderPass::getAttachmentView(unsigned int index, unsigned int frameIndex) const
     {
         return VK_NULL_HANDLE;
+    }
+
+    void DefaultRenderPass::recreateFramebuffer(VkImageView swapChainImageView)
+    {
+        const uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+        if (m_framebuffers[frameIdx] != VK_NULL_HANDLE)
+            vkDestroyFramebuffer(m_device->getHandle(), m_framebuffers[frameIdx], nullptr);
+
+        std::vector<VkImageView> attachmentViews = { swapChainImageView };
+
+        VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+        framebufferInfo.renderPass = m_handle;
+        framebufferInfo.width      = m_renderer->getSwapChainExtent().width;
+        framebufferInfo.height     = m_renderer->getSwapChainExtent().height;
+        framebufferInfo.layers     = 1;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
+        framebufferInfo.pAttachments    = attachmentViews.data();
+        
+        vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_framebuffers[frameIdx]);
     }
 
     void DefaultRenderPass::createRenderPass()
@@ -60,25 +85,25 @@ namespace crisp
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        VkSubpassDescription subPass = {};
-        subPass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subPass.colorAttachmentCount    = 1;
-        subPass.pColorAttachments       = &colorAttachmentRef;
+        VkSubpassDescription subpass = {};
+        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount    = 1;
+        subpass.pColorAttachments       = &colorAttachmentRef;
 
         VkSubpassDependency dependency = {};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
         VkRenderPassCreateInfo renderPassInfo = {};
         renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.attachmentCount = 1;
         renderPassInfo.pAttachments    = &colorAttachment;
         renderPassInfo.subpassCount    = 1;
-        renderPassInfo.pSubpasses      = &subPass;
+        renderPassInfo.pSubpasses      = &subpass;
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies   = &dependency;
 

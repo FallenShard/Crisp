@@ -12,7 +12,7 @@
 
 namespace crisp
 {
-    BackgroundImage::BackgroundImage(std::string fileName, VkFormat format, VulkanRenderer* renderer)
+    BackgroundImage::BackgroundImage(std::string fileName, VkFormat format, VulkanRenderer* renderer, VulkanRenderPass* pass)
         : m_renderer(renderer)
     {
         auto imageBuffer = std::make_shared<ImageFileBuffer>(fileName);
@@ -33,7 +33,7 @@ namespace crisp
 
         m_sampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
+        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, pass ? pass : m_renderer->getDefaultRenderPass());
         m_descSetGroup = { m_pipeline->allocateDescriptorSet(0) };
         m_descSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_textureView->getDescriptorInfo(m_sampler->getHandle()));
         m_descSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_textureView->getDescriptorInfo(m_sampler->getHandle()));
@@ -76,5 +76,17 @@ namespace crisp
 
             m_renderer->drawFullScreenQuad(cmdBuffer);
         });
+    }
+
+    void BackgroundImage::drawDirect(VkCommandBuffer cmdBuffer)
+    {
+        m_pipeline->bind(cmdBuffer);
+        vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
+        m_descSetGroup.bind(cmdBuffer, m_pipeline->getPipelineLayout());
+
+        unsigned int pushConst = 0;
+        vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
+
+        m_renderer->drawFullScreenQuad(cmdBuffer);
     }
 }

@@ -175,6 +175,7 @@ popd</Command>
     <ClCompile Include="Source\Camera\TargetCamera.cpp" />
     <ClCompile Include="Source\Core\Scene.cpp" />
     <ClCompile Include="Source\Core\BackgroundImage.cpp" />
+    <ClCompile Include="Source\Core\SceneContainer.cpp" />
     <ClCompile Include="Source\Core\StringUtils.cpp" />
     <ClCompile Include="Source\Core\Window.cpp" />
     <ClCompile Include="Source\Geometry\MeshGeometry.cpp" />
@@ -228,6 +229,9 @@ popd</Command>
     <ClCompile Include="Source\Renderer\RenderPasses\ShadowPass.cpp" />
     <ClCompile Include="Source\Renderer\Texture.cpp" />
     <ClCompile Include="Source\Renderer\TextureView.cpp" />
+    <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp" />
+    <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
+    <ClCompile Include="Source\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Simulation\SimulationConfigFile.cpp" />
     <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanMemoryHeap.cpp" />
@@ -271,11 +275,16 @@ popd</Command>
     <ClInclude Include="Source\Camera\TargetCamera.hpp" />
     <ClInclude Include="Source\Camera\FreeCamera.hpp" />
     <ClInclude Include="Source\Core\Mouse.hpp" />
+    <ClInclude Include="Source\Core\SceneContainer.hpp" />
     <ClInclude Include="Source\GUI\ComboBoxItem.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\ColorRectDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ComboBox.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\GuiDebugPipeline.hpp" />
+    <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
+    <ClInclude Include="Source\Scenes\IScene.hpp" />
+    <ClInclude Include="Source\Scenes\ShadowMappingScene.hpp" />
+    <ClInclude Include="Source\Scenes\TestScene.hpp" />
     <ClInclude Include="Source\Simulation\PropertyBuffer.hpp" />
     <ClInclude Include="Source\Core\Scene.hpp" />
     <ClInclude Include="Source\Core\BackgroundImage.hpp" />

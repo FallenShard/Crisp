@@ -27,7 +27,7 @@ namespace crisp
         freeResources();
     }
 
-    void SceneRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
+    void SceneRenderPass::begin(VkCommandBuffer cmdBuffer) const
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

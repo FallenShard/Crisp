@@ -148,8 +148,8 @@ namespace crisp
         m_fluidSimulation = std::make_unique<FluidSimulation>(m_renderer, m_scenePass.get());
         inputDispatcher->keyPressed.subscribe<FluidSimulation, &FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
-        auto fluidPanel = std::make_shared<gui::FluidSimulationPanel>(app->getForm(), m_fluidSimulation.get());
-        app->getForm()->add(fluidPanel);
+        auto fluidPanel = std::make_unique<gui::FluidSimulationPanel>(app->getForm(), m_fluidSimulation.get());
+        app->getForm()->add(std::move(fluidPanel));
 
         initRenderTargetResources();
     }

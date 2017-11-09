@@ -19,9 +19,6 @@ namespace crisp
 
             virtual void draw(const RenderSystem& renderSystem) const override;
 
-            void setClickCallback(std::function<void()> callback);
-            virtual void onMouseReleased(float x, float y) override;
-
         private:
             std::function<void()> m_clickCallback;
 

@@ -20,49 +20,49 @@ namespace crisp::gui
 
         int y = 0;
 
-        auto panelLabel = std::make_shared<Label>(parentForm, "Fluid Simulation");
+        auto panelLabel = std::make_unique<Label>(parentForm, "Fluid Simulation");
         panelLabel->setFontSize(18);
         panelLabel->setPosition({ 0, y });
-        addControl(panelLabel);
+        addControl(std::move(panelLabel));
         y += 30;
 
-        auto gxLabel = std::make_shared<Label>(parentForm, "Gravity X");
+        auto gxLabel = std::make_unique<Label>(parentForm, "Gravity X");
         gxLabel->setPosition({ 0, y });
-        addControl(gxLabel);
+        addControl(std::move(gxLabel));
         y += 20;
 
-        auto gravityXSlider = std::make_shared<Slider>(parentForm);
+        auto gravityXSlider = std::make_unique<Slider>(parentForm);
         gravityXSlider->setId("gravityXSlider");
         gravityXSlider->setAnchor(Anchor::CenterTop);
         gravityXSlider->setPosition({ 0, y });
         gravityXSlider->setValue(50);
-        addControl(gravityXSlider);
+        addControl(std::move(gravityXSlider));
         y += 30;
 
-        auto gyLabel = std::make_shared<Label>(parentForm, "Gravity Y");
+        auto gyLabel = std::make_unique<Label>(parentForm, "Gravity Y");
         gyLabel->setPosition({ 0, y });
-        addControl(gyLabel);
+        addControl(std::move(gyLabel));
         y += 20;
 
-        auto gravityYSlider = std::make_shared<Slider>(parentForm);
+        auto gravityYSlider = std::make_unique<Slider>(parentForm);
         gravityYSlider->setId("gravityYSlider");
         gravityYSlider->setAnchor(Anchor::CenterTop);
         gravityYSlider->setPosition({ 0, y });
         gravityYSlider->setValue(99);
-        addControl(gravityYSlider);
+        addControl(std::move(gravityYSlider));
         y += 30;
 
-        auto gzLabel = std::make_shared<Label>(parentForm, "Gravity Z");
+        auto gzLabel = std::make_unique<Label>(parentForm, "Gravity Z");
         gzLabel->setPosition({ 0, y });
-        addControl(gzLabel);
+        addControl(std::move(gzLabel));
         y += 20;
 
-        auto gravityZSlider = std::make_shared<Slider>(parentForm);
+        auto gravityZSlider = std::make_unique<Slider>(parentForm);
         gravityZSlider->setId("gravityZSlider");
         gravityZSlider->setAnchor(Anchor::CenterTop);
         gravityZSlider->setPosition({ 0, y });
         gravityZSlider->setValue(50);
-        addControl(gravityZSlider);
+        addControl(std::move(gravityZSlider));
         y += 30;
 
         gravityXSlider->valueChanged.subscribe([sim](int sliderPos)
@@ -83,17 +83,17 @@ namespace crisp::gui
             sim->setGravityZ(value);
         });
 
-        auto viscoLabel = std::make_shared<Label>(parentForm, "Viscosity");
+        auto viscoLabel = std::make_unique<Label>(parentForm, "Viscosity");
         viscoLabel->setPosition({ 0, y });
-        addControl(viscoLabel);
+        addControl(std::move(viscoLabel));
         y += 20;
 
-        auto viscositySlider = std::make_shared<Slider>(parentForm);
+        auto viscositySlider = std::make_unique<Slider>(parentForm);
         viscositySlider->setId("viscositySlider");
         viscositySlider->setAnchor(Anchor::CenterTop);
         viscositySlider->setPosition({ 0, y });
         viscositySlider->setValue(3);
-        addControl(viscositySlider);
+        addControl(std::move(viscositySlider));
         y += 30;
 
         viscositySlider->valueChanged.subscribe([sim](int sliderPos)
@@ -102,13 +102,13 @@ namespace crisp::gui
             sim->setViscosity(viscosity);
         });
 
-        auto resetButton = std::make_shared<Button>(parentForm);
+        auto resetButton = std::make_unique<Button>(parentForm);
         resetButton->setId("resetButton");
         resetButton->setPosition({ 0, y });
         resetButton->setSizeHint({0, 30});
         resetButton->setText("Reset Simulation");
         resetButton->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-        addControl(resetButton);
+        addControl(std::move(resetButton));
 
         resetButton->clicked.subscribe([sim]()
         {

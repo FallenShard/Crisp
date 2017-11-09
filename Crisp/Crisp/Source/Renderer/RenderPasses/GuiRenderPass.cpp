@@ -27,7 +27,7 @@ namespace crisp
         freeResources();
     }
 
-    void GuiRenderPass::begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer) const
+    void GuiRenderPass::begin(VkCommandBuffer cmdBuffer) const
     {
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -72,7 +72,7 @@ namespace crisp
         colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         // Description for depth attachment
         VkAttachmentDescription depthAttachment = {};
@@ -102,10 +102,10 @@ namespace crisp
         VkSubpassDependency dependency = {};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        dependency.srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
         dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
         std::vector<VkAttachmentDescription> attachments = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo = {};

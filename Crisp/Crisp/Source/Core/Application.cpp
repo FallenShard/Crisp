@@ -12,7 +12,7 @@
 #include "Core/InputDispatcher.hpp"
 #include "Core/RaytracedImage.hpp"
 #include "Core/BackgroundImage.hpp"
-#include "Core/Scene.hpp"
+#include "Core/SceneContainer.hpp"
 
 #include "IO/FileUtils.hpp"
 #include "IO/ImageFileBuffer.hpp"
@@ -42,8 +42,8 @@ namespace crisp
     }
 
     Application::Application(ApplicationEnvironment* env)
-        : m_tracerProgress(0.0f)
-        , m_frameTimeLogger(1000.0)
+        : m_frameTimeLogger(1000.0)
+        , m_tracerProgress(0.0f)
         , m_numRayTracedChannels(4)
     {
         std::cout << "Initializing application...\n";
@@ -51,7 +51,7 @@ namespace crisp
         createWindow();
         createRenderer();
 
-        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window->getHandle());
+        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
         m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
 
         m_backgroundImage = std::make_unique<BackgroundImage>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, m_renderer.get());
@@ -76,15 +76,15 @@ namespace crisp
             rayTracerProgressed(m_tracerProgress, m_timeSpentRendering);
         });
 
-        auto statusBar = std::make_shared<gui::StatusBar>(m_guiForm.get());
+        auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
         m_frameTimeLogger.onLoggerUpdated.subscribe<gui::StatusBar, &gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
-        m_guiForm->add(statusBar);
-
-        auto memoryUsageBar = std::make_shared<gui::MemoryUsageBar>(m_guiForm.get());
-        m_guiForm->add(memoryUsageBar);
-
-        auto introPanel = std::make_shared<gui::IntroductionPanel>(m_guiForm.get(), this);
-        m_guiForm->add(introPanel);
+        m_guiForm->add(std::move(statusBar));
+        
+        auto memoryUsageBar = std::make_unique<gui::MemoryUsageBar>(m_guiForm.get());
+        m_guiForm->add(std::move(memoryUsageBar));
+        
+        auto introPanel = std::make_unique<gui::IntroductionPanel>(m_guiForm.get(), this);
+        m_guiForm->add(std::move(introPanel));
     }
 
     Application::~Application()
@@ -111,22 +111,22 @@ namespace crisp
             {
                 m_guiForm->update(TimePerFrame);
                 
-                if (m_scene)
-                    m_scene->update(static_cast<float>(TimePerFrame));
+                if (m_sceneContainer)
+                    m_sceneContainer->update(static_cast<float>(TimePerFrame));
                 
                 processRayTracerUpdates();
 
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
-            if (m_scene)
-                m_scene->render();
-            else
+            //if (m_sceneContainer)
+            //    m_sceneContainer->render();
+            //else
                 m_backgroundImage->draw();
-            
-            if (m_rayTracedImage)
-                m_rayTracedImage->draw();
-
+            //
+            //if (m_rayTracedImage)
+            //    m_rayTracedImage->draw();
+            //
             m_guiForm->draw();
             m_renderer->drawFrame();
 
@@ -136,7 +136,7 @@ namespace crisp
         m_renderer->finish();
     }
 
-    void Application::quit()
+    void Application::close()
     {
         m_window->close();
     }
@@ -151,8 +151,8 @@ namespace crisp
         if (m_guiForm)
             m_guiForm->resize(width, height);
         
-        if (m_scene)
-            m_scene->resize(width, height);
+        if (m_sceneContainer)
+            m_sceneContainer->resize(width, height);
 
         if (m_rayTracedImage)
             m_rayTracedImage->resize(width, height);
@@ -160,7 +160,7 @@ namespace crisp
 
     void Application::createScene()
     {
-        m_scene = std::make_unique<Scene>(m_renderer.get(), m_inputDispatcher.get(), this);
+        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), m_inputDispatcher.get(), this);
     }
 
     void Application::startRayTracing()

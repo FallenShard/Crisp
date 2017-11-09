@@ -31,8 +31,8 @@ namespace crisp::gui
         void addStopWatch(StopWatch* stopWatch);
         void removeStopWatch(StopWatch* stopWatch);
 
-        void postGuiUpdate(std::function<void()>&& guiUpdateCallback);
-        void add(std::shared_ptr<Control> control, bool useFadeInAnimation = true);
+        void postGuiUpdate(std::function<void()> guiUpdateCallback);
+        void add(std::unique_ptr<Control> control, bool useFadeInAnimation = true);
         void remove(std::string controlId, float duration = 1.0f);
 
         template <typename T>
@@ -50,8 +50,11 @@ namespace crisp::gui
         void update(double dt);
         void draw();
 
+        void printGuiTree();
+        void visit(std::function<void(Control*)> func);
+
     private:
-        std::shared_ptr<Control> fadeIn(std::shared_ptr<Control> controlGroup, float duration = 1.0f);
+        std::unique_ptr<Control> fadeIn(std::unique_ptr<Control> controlGroup, float duration = 1.0f);
 
         std::unique_ptr<RenderSystem>      m_renderSystem;
         std::unique_ptr<Animator>          m_animator;
@@ -59,7 +62,7 @@ namespace crisp::gui
         std::vector<std::function<void()>> m_guiUpdates;
         std::set<StopWatch*>               m_stopWatches;
 
-        std::shared_ptr<ControlGroup>      m_rootControlGroup;
+        std::unique_ptr<ControlGroup>      m_rootControlGroup;
 
         Control* m_focusedControl;
     };

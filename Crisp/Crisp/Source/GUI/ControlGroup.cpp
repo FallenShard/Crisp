@@ -2,10 +2,10 @@
 #include "ControlGroup.hpp"
 
 #include <iostream>
-
 #include <algorithm>
 
 #include <CrispCore/ConsoleUtils.hpp>
+#include "GUI/Form.hpp"
 
 namespace crisp::gui
 {
@@ -19,20 +19,26 @@ namespace crisp::gui
     {
     }
 
-    void ControlGroup::addControl(std::shared_ptr<Control> control)
+    void ControlGroup::addControl(std::unique_ptr<Control> control)
     {
-        m_children.emplace_back(control);
-        control->setParent(this);
-
-        setValidationFlags(Validation::Geometry);
+        m_form->postGuiUpdate([this, cc = control.release()]() mutable
+        {
+            std::unique_ptr<Control> con = std::unique_ptr<Control>(cc);
+            con->setParent(this);
+            m_children.push_back(std::move(con));
+            setValidationFlags(Validation::Geometry);
+        });
     }
 
     void ControlGroup::removeControl(const std::string& id)
     {
-        m_children.erase(std::remove_if(std::begin(m_children), std::end(m_children), [id](const std::shared_ptr<Control>& child)
+        m_form->postGuiUpdate([this, id]()
         {
-            return child->getId() == id;
-        }));
+            m_children.erase(std::remove_if(m_children.begin(), m_children.end(), [id](const std::unique_ptr<Control>& child)
+            {
+                return child->getId() == id;
+            }), m_children.end());
+        });
     }
 
     float ControlGroup::getWidth() const
@@ -154,6 +160,7 @@ namespace crisp::gui
     {
         for (auto& child : m_children)
         {
+            std::cout << __FUNCTION__ << " " << child->getId() << std::endl;
             child->onMouseReleased(x, y);
         }
     }
@@ -204,6 +211,16 @@ namespace crisp::gui
         }
     }
 
+    void ControlGroup::printDebugId() const
+    {
+        Control::printDebugId();
+
+        for (auto& c : m_children)
+        {
+            c->printDebugId();
+        }
+    }
+
     Control* ControlGroup::getControlById(const std::string& id)
     {
         if (m_id == id)
@@ -217,5 +234,13 @@ namespace crisp::gui
         }
 
         return nullptr;
+    }
+
+    void ControlGroup::visit(std::function<void(Control*)> func)
+    {
+        func(this);
+
+        for (auto& child : m_children)
+            func(child.get());
     }
 }

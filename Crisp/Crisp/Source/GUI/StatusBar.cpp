@@ -18,18 +18,18 @@ namespace crisp::gui
         setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
         setHorizontalSizingPolicy(SizingPolicy::FillParent);
 
-        auto fpslabel = std::make_shared<gui::Label>(parentForm, "125.55 FPS");
-        fpslabel->setId("fpsLabel");
-        fpslabel->setAnchor(Anchor::CenterRight);
-        addControl(fpslabel);
-        m_fpsLabel = fpslabel.get();
+        auto fpsLabel = std::make_unique<Label>(parentForm, "125.55 FPS");
+        fpsLabel->setId("fpsLabel");
+        fpsLabel->setAnchor(Anchor::CenterRight);
+        m_fpsLabel = fpsLabel.get();
+        addControl(std::move(fpsLabel));
 
-        auto msLabel = std::make_shared<gui::Label>(parentForm, "12.86 ms");
+        auto msLabel = std::make_unique<Label>(parentForm, "12.86 ms");
         msLabel->setId("msLabel");
         msLabel->setAnchor(Anchor::CenterRight);
         msLabel->setPosition({ 75, 0 });
-        addControl(msLabel);
         m_msLabel = msLabel.get();
+        addControl(std::move(msLabel));
     }
 
     StatusBar::~StatusBar()

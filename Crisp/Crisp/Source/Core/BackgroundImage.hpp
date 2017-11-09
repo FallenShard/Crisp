@@ -16,17 +16,19 @@ namespace crisp
     class Texture;
     class TextureView;
 
+    class VulkanRenderPass;
     class FullScreenQuadPipeline;
 
     class BackgroundImage
     {
     public:
-        BackgroundImage(std::string fileName, VkFormat format, VulkanRenderer* renderer);
+        BackgroundImage(std::string fileName, VkFormat format, VulkanRenderer* renderer, VulkanRenderPass* pass = nullptr);
         ~BackgroundImage();
 
         void resize(int width, int height);
 
         void draw();
+        void drawDirect(VkCommandBuffer cmdBuffer);
 
     private:
         VulkanRenderer* m_renderer;

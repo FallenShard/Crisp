@@ -35,25 +35,26 @@ namespace crisp::gui
         setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
         setHorizontalSizingPolicy(SizingPolicy::FillParent);
 
-        auto bufferLabel = std::make_shared<gui::Label>(parentForm, "");
+        auto bufferLabel = std::make_unique<gui::Label>(parentForm, "");
         bufferLabel->setId("bufferMemoryLabel");
         bufferLabel->setAnchor(Anchor::CenterLeft);
-        addControl(bufferLabel);
         m_bufferMemoryUsageLabel = bufferLabel.get();
+        addControl(std::move(bufferLabel));
+        
 
-        auto imageLabel = std::make_shared<gui::Label>(parentForm, "");
+        auto imageLabel = std::make_unique<gui::Label>(parentForm, "");
         imageLabel->setId("imageMemoryLabel");
         imageLabel->setAnchor(Anchor::CenterLeft);
         imageLabel->setPosition({ 200, 0 });
-        addControl(imageLabel);
         m_imageMemoryUsageLabel = imageLabel.get();
+        addControl(std::move(imageLabel));
 
-        auto stagingLabel = std::make_shared<gui::Label>(parentForm, "");
+        auto stagingLabel = std::make_unique<gui::Label>(parentForm, "");
         stagingLabel->setId("stagingMemoryLabel");
         stagingLabel->setAnchor(Anchor::CenterLeft);
         stagingLabel->setPosition({ 400, 0 });
-        addControl(stagingLabel);
         m_stagingMemoryUsageLabel = stagingLabel.get();
+        addControl(std::move(stagingLabel));
 
         m_stopWatch = std::make_unique<StopWatch>(2.0);
         m_stopWatch->triggered.subscribe([this]()

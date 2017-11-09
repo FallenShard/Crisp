@@ -14,7 +14,7 @@ namespace crisp::gui
     Form::Form(std::unique_ptr<RenderSystem> renderSystem)
         : m_animator(std::make_unique<Animator>())
         , m_renderSystem(std::move(renderSystem))
-        , m_rootControlGroup(std::make_shared<ControlGroup>(this))
+        , m_rootControlGroup(std::make_unique<ControlGroup>(this))
     {
         m_rootControlGroup->setId("rootControlGroup");
         m_rootControlGroup->setDepthOffset(-32.0f);
@@ -45,14 +45,14 @@ namespace crisp::gui
         m_stopWatches.erase(stopWatch);
     }
 
-    void Form::postGuiUpdate(std::function<void()>&& guiUpdateCallback)
+    void Form::postGuiUpdate(std::function<void()> guiUpdateCallback)
     {
-        m_guiUpdates.emplace_back(std::forward<std::function<void()>>(guiUpdateCallback));
+        m_guiUpdates.push_back(guiUpdateCallback);
     }
 
-    void Form::add(std::shared_ptr<Control> control, bool useFadeInAnimation)
+    void Form::add(std::unique_ptr<Control> control, bool useFadeInAnimation)
     {
-        m_rootControlGroup->addControl(useFadeInAnimation ? fadeIn(control) : control);
+        m_rootControlGroup->addControl(std::move(useFadeInAnimation ? fadeIn(std::move(control)) : std::move(control)));
     }
 
     void Form::remove(std::string controlId, float duration)
@@ -72,10 +72,10 @@ namespace crisp::gui
         });
         colorAnim->finished.subscribe([this, control]()
         {
-            postGuiUpdate([this, control]()
-            {
+            //postGuiUpdate([this, control]()
+            //{
                 m_rootControlGroup->removeControl(control->getId());
-            });
+            //});
         });
         m_animator->add(colorAnim);
     }
@@ -106,6 +106,16 @@ namespace crisp::gui
 
         m_rootControlGroup->draw(*m_renderSystem);
         m_renderSystem->submitDrawCommands();
+    }
+
+    void Form::printGuiTree()
+    {
+        m_rootControlGroup->printDebugId();
+    }
+
+    void Form::visit(std::function<void(Control*)> func)
+    {
+        m_rootControlGroup->visit(func);
     }
 
     void Form::resize(int width, int height)
@@ -150,12 +160,12 @@ namespace crisp::gui
         m_rootControlGroup->onMouseReleased(static_cast<float>(x), static_cast<float>(y));
     }
 
-    std::shared_ptr<Control> Form::fadeIn(std::shared_ptr<Control> control, float duration)
+    std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float duration)
     {
         auto anim = std::make_shared<PropertyAnimation<float>>(duration, 0.0f, 1.0f, 0, Easing::SlowOut);
-        anim->setUpdater([this, control](const auto& t)
+        anim->setUpdater([this, con = control.get()](const auto& t)
         {
-            control->setOpacity(t);
+            con->setOpacity(t);
         });
         m_animator->add(anim);
 

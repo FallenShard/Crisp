@@ -1,21 +1,23 @@
 #include "InputDispatcher.hpp"
 
+#include "Window.hpp"
+
 namespace crisp
 {
-    InputDispatcher::InputDispatcher(GLFWwindow* window)
+    InputDispatcher::InputDispatcher(Window* window)
         : m_window(window)
     {
-        glfwSetWindowUserPointer(m_window, this);
-        glfwSetWindowSizeCallback(m_window,  InputDispatcher::resizeCallback);
-        glfwSetKeyCallback(m_window,         InputDispatcher::keyboardCallback);
-        glfwSetCursorPosCallback(m_window,   InputDispatcher::mouseMoveCallback);
-        glfwSetMouseButtonCallback(m_window, InputDispatcher::mouseButtonCallback);
-        glfwSetWindowCloseCallback(m_window, InputDispatcher::closeCallback);
-        glfwSetScrollCallback(m_window,      InputDispatcher::mouseWheelCallback);
-        glfwSetCursorEnterCallback(m_window, InputDispatcher::mouseEnterCallback);
+        glfwSetWindowUserPointer(m_window->getHandle(), this);
+        glfwSetWindowSizeCallback(m_window->getHandle(),  InputDispatcher::resizeCallback);
+        glfwSetKeyCallback(m_window->getHandle(),         InputDispatcher::keyboardCallback);
+        glfwSetCursorPosCallback(m_window->getHandle(),   InputDispatcher::mouseMoveCallback);
+        glfwSetMouseButtonCallback(m_window->getHandle(), InputDispatcher::mouseButtonCallback);
+        glfwSetWindowCloseCallback(m_window->getHandle(), InputDispatcher::closeCallback);
+        glfwSetScrollCallback(m_window->getHandle(),      InputDispatcher::mouseWheelCallback);
+        glfwSetCursorEnterCallback(m_window->getHandle(), InputDispatcher::mouseEnterCallback);
     }
 
-    GLFWwindow* InputDispatcher::getWindow() const
+    Window* InputDispatcher::getWindow() const
     {
         return m_window;
     }

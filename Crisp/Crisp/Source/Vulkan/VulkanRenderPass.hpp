@@ -18,7 +18,7 @@ namespace crisp
 
         VkExtent2D getRenderArea() const;
 
-        virtual void begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer = nullptr) const = 0;
+        virtual void begin(VkCommandBuffer cmdBuffer) const = 0;
         void end(VkCommandBuffer cmdBuffer) const;
         void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
 

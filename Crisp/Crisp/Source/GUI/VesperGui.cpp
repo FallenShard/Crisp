@@ -47,9 +47,9 @@ namespace crisp
             });
         }
 
-        std::shared_ptr<Control> VesperGui::buildSceneOptions(Form* form)
+        std::unique_ptr<Control> VesperGui::buildSceneOptions(Form* form)
         {
-            auto panel = std::make_shared<gui::Panel>(form);
+            auto panel = std::make_unique<gui::Panel>(form);
             panel->setId("vesperOptionsPanel");
             panel->setPosition({ 10, 30 });
             panel->setSizeHint({ 200, 500 });
@@ -57,43 +57,43 @@ namespace crisp
             panel->setAnchor(Anchor::TopLeft);
             panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
 
-            auto button = std::make_shared<gui::Button>(form);
+            auto button = std::make_unique<gui::Button>(form);
             button->setId("openButton");
             button->setText("Open XML Scene");
             button->setSizeHint({ 100, 30 });
             button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-            panel->addControl(button);
+            panel->addControl(std::move(button));
 
-            button = std::make_shared<gui::Button>(form);
+            button = std::make_unique<gui::Button>(form);
             button->setId("renderButton");
             button->setText("Start Raytracing");
             button->setPosition({ 0, 40 });
             button->setSizeHint({ 100, 30 });
             button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-            panel->addControl(button);
+            panel->addControl(std::move(button));
 
-            button = std::make_shared<gui::Button>(form);
+            button = std::make_unique<gui::Button>(form);
             button->setId("stopButton");
             button->setText("Stop Raytracing");
             button->setPosition({ 0, 80 });
             button->setSizeHint({ 100, 30 });
             button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-            panel->addControl(button);
+            panel->addControl(std::move(button));
 
-            button = std::make_shared<gui::Button>(form);
+            button = std::make_unique<gui::Button>(form);
             button->setId("saveButton");
             button->setText("Save as EXR");
             button->setPosition({ 0, 120 });
             button->setSizeHint({ 100, 30 });
             button->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-            panel->addControl(button);
+            panel->addControl(std::move(button));
 
             return panel;
         }
 
-        std::shared_ptr<Control> VesperGui::buildProgressBar(Form* form)
+        std::unique_ptr<Control> VesperGui::buildProgressBar(Form* form)
         {
-            auto progressBarBg = std::make_shared<gui::Panel>(form);
+            auto progressBarBg = std::make_unique<gui::Panel>(form);
             progressBarBg->setId("progressBarBg");
             progressBarBg->setPosition({ 0, 0 });
             progressBarBg->setSizeHint({ 500, 20 });
@@ -102,7 +102,7 @@ namespace crisp
             progressBarBg->setAnchor(Anchor::BottomRight);
             progressBarBg->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.5f);
 
-            auto progressBar = std::make_shared<gui::Panel>(form);
+            auto progressBar = std::make_unique<gui::Panel>(form);
             progressBar->setId("progressBar");
             progressBar->setPosition({ 0, 0 });
             progressBar->setSizeHint({ 500, 20 });
@@ -110,13 +110,13 @@ namespace crisp
             progressBar->setColor(glm::vec4(0.1f, 0.5f, 0.1f, 1.0f));
             progressBar->setAnchor(Anchor::BottomLeft);
             progressBar->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.0);
-            progressBarBg->addControl(progressBar);
+            progressBarBg->addControl(std::move(progressBar));
 
-            auto label = std::make_shared<gui::Label>(form, "100.0%");
+            auto label = std::make_unique<gui::Label>(form, "100.0%");
             label->setId("progressLabel");
             label->setAnchor(Anchor::Center);
             label->setColor(glm::vec4(1.0f));
-            progressBarBg->addControl(label);
+            progressBarBg->addControl(std::move(label));
 
             return progressBarBg;
         }

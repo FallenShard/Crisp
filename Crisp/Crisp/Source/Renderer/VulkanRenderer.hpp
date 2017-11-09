@@ -18,7 +18,6 @@ namespace crisp
     class VulkanImage;
     class VulkanDevice;
     class VulkanSwapChain;
-    class VulkanRenderPass;
     class VulkanPipeline;
     class FullScreenQuadPipeline;
 
@@ -30,7 +29,6 @@ namespace crisp
     class VulkanRenderer
     {
     public:
-        static constexpr uint32_t DefaultRenderPassId = 127;
         static constexpr unsigned int NumVirtualFrames = 3;
 
         VulkanRenderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions);
@@ -80,10 +78,9 @@ namespace crisp
 
         VkCommandBuffer         acquireCommandBuffer();
         std::optional<uint32_t> acquireSwapChainImageIndex();
-        void            resetCommandBuffer(VkCommandBuffer cmdBuffer);
-        VkFramebuffer   recreateFramebuffer(uint32_t swapChainImgIndex);
-        void            record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer);
-        void            present(uint32_t swapChainImageIndex);
+        void resetCommandBuffer(VkCommandBuffer cmdBuffer);
+        void record(VkCommandBuffer commandBuffer);
+        void present(uint32_t swapChainImageIndex);
 
         void recreateSwapChain();
 
@@ -92,7 +89,7 @@ namespace crisp
         std::unique_ptr<VulkanContext> m_context;
         std::unique_ptr<VulkanDevice>  m_device;
         std::unique_ptr<VulkanSwapChain> m_swapChain;
-        std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
+        std::unique_ptr<DefaultRenderPass> m_defaultRenderPass;
 
         VkViewport m_defaultViewport;
 
@@ -106,7 +103,6 @@ namespace crisp
             VkFence         bufferFinishedFence;
             VkSemaphore     imageAvailableSemaphore;
             VkSemaphore     renderFinishedSemaphore;
-            VkFramebuffer   framebuffer;
         };
         std::array<FrameResources, NumVirtualFrames> m_frameResources;
 

@@ -7,13 +7,12 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include "ApplicationEnvironment.hpp"
+#include <CrispCore/Timer.hpp>
 
 #include <Vesper/RayTracer.hpp>
 #include <Vesper/RayTracerUpdate.hpp>
 
-#include <CrispCore/Timer.hpp>
-#include "Math/Headers.hpp"
+#include "ApplicationEnvironment.hpp"
 #include "Core/FrameTimeLogger.hpp"
 
 namespace crisp
@@ -23,7 +22,7 @@ namespace crisp
     class VulkanRenderer;
     class BackgroundImage;
     class RayTracedImage;
-    class Scene;
+    class SceneContainer;
 
     namespace gui
     {
@@ -47,7 +46,7 @@ namespace crisp
         Application& operator=(Application&& other) = delete;
 
         void run();
-        void quit();
+        void close();
 
         void onResize(int width, int height);
 
@@ -89,6 +88,6 @@ namespace crisp
         std::unique_ptr<vesper::RayTracer> m_rayTracer;
         std::vector<float> m_rayTracedImageData;
 
-        std::unique_ptr<Scene> m_scene;
+        std::unique_ptr<SceneContainer> m_sceneContainer;
     };
 }

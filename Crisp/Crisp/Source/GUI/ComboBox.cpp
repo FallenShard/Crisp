@@ -45,7 +45,7 @@ namespace crisp::gui
         std::vector<std::string> labels = { "SSAO", "HBAO+", "SSDO" };
         for (int i = 0; i < 3; i++)
         {
-            auto item = std::make_shared<ComboBoxItem>(parentForm, labels[i]);
+            auto item = std::make_unique<ComboBoxItem>(parentForm, labels[i]);
             item->setId("Item " + std::to_string(i));
             item->setPosition({ 0.0f, i * 20.0f });
             item->setSizeHint({ 100.0f, 20.0f });
@@ -55,7 +55,7 @@ namespace crisp::gui
                 m_label->setText(item->getText());
                 setValidationFlags(Validation::Geometry);
             };
-            m_itemsPanel->addControl(item);
+            m_itemsPanel->addControl(std::move(item));
         }
     }
 
@@ -147,6 +147,7 @@ namespace crisp::gui
             auto absPos = getAbsolutePosition();
             auto absDepth = getAbsoluteDepth();
             auto absSize = getSize();
+            m_itemsPanel->setPosition({ 0.0f, absSize.y });
 
             m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
             m_drawComponent.update(m_M);

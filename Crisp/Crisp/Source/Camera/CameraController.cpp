@@ -6,6 +6,7 @@
 #include "Animation/PropertyAnimation.hpp"
 
 #include "Core/InputDispatcher.hpp"
+#include "Core/Window.hpp"
 
 namespace crisp
 {
@@ -19,7 +20,7 @@ namespace crisp
     }
 
     CameraController::CameraController(InputDispatcher* inputDispatcher)
-        : m_window(inputDispatcher->getWindow())
+        : m_window(inputDispatcher->getWindow()->getHandle())
         , m_useMouseFiltering(false)
         , m_isMoving(false)
         , m_moveSpeed(2.0f)

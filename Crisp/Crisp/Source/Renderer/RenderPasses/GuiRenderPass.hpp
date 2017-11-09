@@ -16,7 +16,7 @@ namespace crisp
         GuiRenderPass(VulkanRenderer* renderer);
         ~GuiRenderPass();
 
-        virtual void begin(VkCommandBuffer cmdBuffer, VkFramebuffer framebuffer = nullptr) const override;
+        virtual void begin(VkCommandBuffer cmdBuffer) const override;
         virtual VkImage getColorAttachment(unsigned int index = 0) const override;
         virtual VkImageView getAttachmentView(unsigned int index, unsigned int frameIndex) const override;
 

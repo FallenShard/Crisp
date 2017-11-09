@@ -303,6 +303,11 @@ namespace crisp::gui
         std::cout << m_id << '\n';
     }
 
+    void Control::visit(std::function<void(Control*)> func)
+    {
+        func(this);
+    }
+
     glm::vec2 Control::getParentAbsolutePosition() const
     {
         return m_parent ? glm::vec2(m_parent->m_M[3][0], m_parent->m_M[3][1]) : glm::vec2(0.0f);

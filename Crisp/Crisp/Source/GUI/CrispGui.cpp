@@ -47,9 +47,9 @@ namespace crisp::gui
         });
     }
 
-    std::shared_ptr<Control> CrispGui::buildCameraInfoPanel(Form* form)
+    std::unique_ptr<Control> CrispGui::buildCameraInfoPanel(Form* form)
     {
-        auto panel = std::make_shared<gui::Panel>(form);
+        auto panel = std::make_unique<gui::Panel>(form);
         panel->setId("cameraInfoPanel");
         panel->setPosition({ 10, 10 });
         panel->setSizeHint({ 200, 500 });
@@ -57,21 +57,21 @@ namespace crisp::gui
         panel->setAnchor(Anchor::TopLeft);
         panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
 
-        buildVectorDisplayInfo(form, panel, "Position", "cameraPositionLabel", 30.0f);
-        buildVectorDisplayInfo(form, panel, "Direction", "cameraDirLabel", 70.0f);
+        buildVectorDisplayInfo(form, *panel, "Position", "cameraPositionLabel", 30.0f);
+        buildVectorDisplayInfo(form, *panel, "Direction", "cameraDirLabel", 70.0f);
 
         return panel;
     }
 
-    void CrispGui::buildVectorDisplayInfo(Form* form, std::shared_ptr<ControlGroup> parent, std::string labelName, std::string&& dataLabelId, float verticalOffset)
+    void CrispGui::buildVectorDisplayInfo(Form* form, ControlGroup& parent, std::string labelName, std::string&& dataLabelId, float verticalOffset)
     {
-        auto propDescLabel = std::make_shared<gui::Label>(form, labelName);
+        auto propDescLabel = std::make_unique<gui::Label>(form, labelName);
         propDescLabel->setPosition({ 0.0f, verticalOffset });
-        parent->addControl(propDescLabel);
+        parent.addControl(std::move(propDescLabel));
 
-        auto dataLabel = std::make_shared<gui::Label>(form, labelName);
+        auto dataLabel = std::make_unique<gui::Label>(form, labelName);
         dataLabel->setPosition({ 0.0f, verticalOffset + 20.0f });
         dataLabel->setId(std::forward<std::string&&>(dataLabelId));
-        parent->addControl(dataLabel);
+        parent.addControl(std::move(dataLabel));
     }
 }

@@ -90,8 +90,6 @@ namespace crisp
             vkDestroyFence(m_device->getHandle(), frameRes.bufferFinishedFence, nullptr);
             vkDestroySemaphore(m_device->getHandle(), frameRes.imageAvailableSemaphore, nullptr);
             vkDestroySemaphore(m_device->getHandle(), frameRes.renderFinishedSemaphore, nullptr);
-            if (frameRes.framebuffer != VK_NULL_HANDLE)
-                vkDestroyFramebuffer(m_device->getHandle(), frameRes.framebuffer, nullptr);
         }
 
         for (auto& shaderModule : m_shaderModules)
@@ -242,9 +240,8 @@ namespace crisp
             return;
         }
 
-        auto framebuffer = recreateFramebuffer(swapChainImageIndex.value());
-        record(cmdBuffer, framebuffer);
-
+        m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapChainImageIndex.value()));
+        record(cmdBuffer);
         const auto& frameRes = m_frameResources[m_currentFrameIndex];
         m_device->getGeneralQueue()->submit(
             frameRes.imageAvailableSemaphore,
@@ -252,6 +249,7 @@ namespace crisp
             frameRes.cmdBuffer,
             frameRes.bufferFinishedFence
         );
+        
         present(swapChainImageIndex.value());
 
         m_resourceUpdates.clear();
@@ -360,30 +358,7 @@ namespace crisp
         vkResetCommandBuffer(cmdBuffer, 0);
     }
 
-    VkFramebuffer VulkanRenderer::recreateFramebuffer(uint32_t swapChainImageViewIndex)
-    {
-        if (m_frameResources[m_currentFrameIndex].framebuffer != VK_NULL_HANDLE)
-            vkDestroyFramebuffer(m_device->getHandle(), m_frameResources[m_currentFrameIndex].framebuffer, nullptr);
-        
-        std::vector<VkImageView> attachmentViews =
-        {
-            m_swapChain->getImageView(swapChainImageViewIndex)
-        };
-        
-        VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass      = m_defaultRenderPass->getHandle();
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
-        framebufferInfo.pAttachments    = attachmentViews.data();
-        framebufferInfo.width           = m_swapChain->getExtent().width;
-        framebufferInfo.height          = m_swapChain->getExtent().height;
-        framebufferInfo.layers          = 1;
-        vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_frameResources[m_currentFrameIndex].framebuffer);
-        
-        return m_frameResources[m_currentFrameIndex].framebuffer;
-    }
-
-    void VulkanRenderer::record(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer)
+    void VulkanRenderer::record(VkCommandBuffer commandBuffer)
     {
         VkCommandBufferBeginInfo beginInfo = {};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -398,7 +373,7 @@ namespace crisp
         for (const auto& drawCommand : m_drawCommands)
             drawCommand(commandBuffer);
 
-        m_defaultRenderPass->begin(commandBuffer, framebuffer);
+        m_defaultRenderPass->begin(commandBuffer);
         for (const auto& drawCommand : m_defaultPassDrawCommands)
             drawCommand(commandBuffer);
         m_defaultRenderPass->end(commandBuffer);

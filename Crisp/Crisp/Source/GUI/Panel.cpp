@@ -37,19 +37,4 @@ namespace crisp::gui
         m_drawComponent.draw(m_M[3][2]);
         ControlGroup::draw(visitor);
     }
-        
-    void Panel::setClickCallback(std::function<void()> callback)
-    {
-        m_clickCallback = callback;
-    }
-
-    void Panel::onMouseReleased(float x, float y)
-    {
-        if (m_clickCallback != nullptr && getInteractionBounds().contains(x, y))
-        {
-            m_clickCallback();
-        }
-
-        ControlGroup::onMouseReleased(x, y);
-    }
 }

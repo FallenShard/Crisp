@@ -16,8 +16,8 @@ namespace crisp
         public:
             void setupInputCallbacks(Form* form, Application* app);
 
-            std::shared_ptr<Control> buildSceneOptions(Form* form);
-            std::shared_ptr<Control> buildProgressBar(Form* form);
+            std::unique_ptr<Control> buildSceneOptions(Form* form);
+            std::unique_ptr<Control> buildProgressBar(Form* form);
         };
     }
 }

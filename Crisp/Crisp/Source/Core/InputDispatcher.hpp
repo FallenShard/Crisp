@@ -6,42 +6,38 @@
 
 namespace crisp
 {
+    class Window;
+
     class InputDispatcher
     {
     public:
-        InputDispatcher(GLFWwindow* window);
+        InputDispatcher(Window* window);
         ~InputDispatcher() = default;
 
-        GLFWwindow* getWindow() const;
+        Window* getWindow() const;
 
         InputDispatcher(const InputDispatcher& other)            = delete;
         InputDispatcher& operator=(const InputDispatcher& other) = delete;
         InputDispatcher& operator=(InputDispatcher&& other)      = delete;
 
-        static void resizeCallback(GLFWwindow* window, int width, int height);
         Event<int, int> windowResized;
-
-        static void keyboardCallback(GLFWwindow* window, int key, int scanCode, int action, int mode);
         Event<int, int> keyPressed;
-
-        static void mouseMoveCallback(GLFWwindow* window, double xPos, double yPos);
         Event<double, double> mouseMoved;
-        
-        static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
         Event<int, int, double, double> mouseButtonPressed;
         Event<int, int, double, double> mouseButtonReleased;
-
-        static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
         Event<double> mouseWheelScrolled;
-
-        static void mouseEnterCallback(GLFWwindow* window, int entered);
         Event<double, double> mouseEntered;
         Event<double, double> mouseExited;
-
-        static void closeCallback(GLFWwindow* window);
         Event<> windowClosed;
 
     private:
-        GLFWwindow* m_window;
+        static void resizeCallback(GLFWwindow* window, int width, int height);
+        static void keyboardCallback(GLFWwindow* window, int key, int scanCode, int action, int mode);
+        static void mouseMoveCallback(GLFWwindow* window, double xPos, double yPos);
+        static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+        static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
+        static void mouseEnterCallback(GLFWwindow* window, int entered);
+        static void closeCallback(GLFWwindow* window);
+        Window* m_window;
     };
 }

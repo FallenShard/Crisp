@@ -14,7 +14,7 @@ namespace crisp::gui
         ControlGroup(Form* parentForm);
         virtual ~ControlGroup();
 
-        void addControl(std::shared_ptr<Control> control);
+        void addControl(std::unique_ptr<Control> control);
         void removeControl(const std::string& id);
 
         virtual float getWidth() const;
@@ -33,10 +33,12 @@ namespace crisp::gui
 
         virtual void draw(const RenderSystem& renderSystem) const override;
 
+        virtual void printDebugId() const override;
         virtual Control* getControlById(const std::string& id);
+        virtual void visit(std::function<void(Control*)> func) override;
 
     protected:
         glm::vec2 m_prevMousePos;
-        std::vector<std::shared_ptr<Control>> m_children;
+        std::vector<std::unique_ptr<Control>> m_children;
     };
 }

@@ -20,9 +20,9 @@ namespace crisp::gui
     public:
         void setupInputCallbacks(Form* form, Application* app, Scene* scene);
 
-        std::shared_ptr<Control> buildCameraInfoPanel(Form* form);
+        std::unique_ptr<Control> buildCameraInfoPanel(Form* form);
 
     private:
-        void buildVectorDisplayInfo(Form* form, std::shared_ptr<ControlGroup> parent, std::string labelName, std::string&& dataLabelName, float verticalOffset);
+        void buildVectorDisplayInfo(Form* form, ControlGroup& parent, std::string labelName, std::string&& dataLabelName, float verticalOffset);
     };
 }

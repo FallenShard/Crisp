@@ -85,7 +85,8 @@ namespace crisp::gui
         virtual Control* getControlById(const std::string& id);
 
         unsigned int getRootDistance() const;
-        void printDebugId() const;
+        virtual void printDebugId() const;
+        virtual void visit(std::function<void(Control*)> func);
 
     protected:
         glm::vec2 getParentAbsolutePosition() const;
