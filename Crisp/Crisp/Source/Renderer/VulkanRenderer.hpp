@@ -44,8 +44,8 @@ namespace crisp
         VulkanSwapChain*  getSwapChain() const;
         VkExtent2D        getSwapChainExtent() const;
 
-        VulkanRenderPass* getDefaultRenderPass() const;
-        VkViewport        getDefaultViewport() const;
+        DefaultRenderPass* getDefaultRenderPass() const;
+        VkViewport         getDefaultViewport() const;
 
         VkShaderModule    getShaderModule(std::string&& key) const;
 
@@ -86,9 +86,9 @@ namespace crisp
 
         void destroyResourcesScheduledForRemoval();
 
-        std::unique_ptr<VulkanContext> m_context;
-        std::unique_ptr<VulkanDevice>  m_device;
-        std::unique_ptr<VulkanSwapChain> m_swapChain;
+        std::unique_ptr<VulkanContext>     m_context;
+        std::unique_ptr<VulkanDevice>      m_device;
+        std::unique_ptr<VulkanSwapChain>   m_swapChain;
         std::unique_ptr<DefaultRenderPass> m_defaultRenderPass;
 
         VkViewport m_defaultViewport;

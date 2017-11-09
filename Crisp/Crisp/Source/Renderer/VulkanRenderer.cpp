@@ -86,7 +86,6 @@ namespace crisp
         for (auto& frameRes : m_frameResources)
         {
             vkDestroyCommandPool(m_device->getHandle(), frameRes.cmdPool, nullptr);
-
             vkDestroyFence(m_device->getHandle(), frameRes.bufferFinishedFence, nullptr);
             vkDestroySemaphore(m_device->getHandle(), frameRes.imageAvailableSemaphore, nullptr);
             vkDestroySemaphore(m_device->getHandle(), frameRes.renderFinishedSemaphore, nullptr);
@@ -118,7 +117,7 @@ namespace crisp
         return m_swapChain->getExtent();
     }
 
-    VulkanRenderPass* VulkanRenderer::getDefaultRenderPass() const
+    DefaultRenderPass* VulkanRenderer::getDefaultRenderPass() const
     {
         return m_defaultRenderPass.get();
     }

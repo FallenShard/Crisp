@@ -541,9 +541,9 @@ namespace crisp::gui
         };
         int pushConstants[3] =
         {
-            m_transforms->getPushConstantValue(cmd.transformId),
-            m_colors->getPushConstantValue(cmd.colorId),
-            m_tcTransforms->getPushConstantValue(cmd.textId)
+            static_cast<int>(m_transforms->getPushConstantValue(cmd.transformId)),
+            static_cast<int>(m_colors->getPushConstantValue(cmd.colorId)),
+            static_cast<int>(m_tcTransforms->getPushConstantValue(cmd.textId))
         };
 
         vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_texQuadPipeline->getPipelineLayout(),
