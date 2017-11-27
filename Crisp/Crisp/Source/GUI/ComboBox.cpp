@@ -177,6 +177,27 @@ namespace crisp::gui
             m_itemsPanel->draw(renderSystem);
     }
 
+    void ComboBox::setItems(const std::vector<std::string>& items)
+    {
+        m_itemsPanel->clearControls();
+        for (int i = 0; i < items.size(); i++)
+        {
+            auto item = std::make_unique<ComboBoxItem>(m_form, items[i]);
+            item->setId("Item " + std::to_string(i));
+            item->setPosition({ 0.0f, i * 20.0f });
+            item->setSizeHint({ 100.0f, 20.0f });
+            item->clicked += [this, item = item.get()]()
+            {
+                itemSelected(item->getText());
+                m_label->setText(item->getText());
+                setValidationFlags(Validation::Geometry);
+            };
+            m_itemsPanel->addControl(std::move(item));
+        }
+
+        m_label->setText(items[0]);
+    }
+
     void ComboBox::setState(State state)
     {
     }

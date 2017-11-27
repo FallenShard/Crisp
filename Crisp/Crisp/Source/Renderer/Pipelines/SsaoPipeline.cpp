@@ -1,35 +1,40 @@
-#include "UniformColorPipeline.hpp"
+#include "SsaoPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
 #include "Renderer/VulkanRenderer.hpp"
 
 namespace crisp
 {
-    UniformColorPipeline::UniformColorPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    SsaoPipeline::SsaoPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 1, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(
         {
-            { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT },
+            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
+            { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
+            { 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_FRAGMENT_BIT },
+            { 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
         });
 
         m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts,
         {
-            { VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4) }
+            { VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(int) + sizeof(float) }
         });
 
         m_descriptorPool = createDescriptorPool(
         {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1 }
-        }, 1);
-        
-        m_vertShader = renderer->getShaderModule("unif-col-vert");
-        m_fragShader = renderer->getShaderModule("unif-col-frag");
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 3 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         3 }
+        }, 3);
+
+        m_vertShader = renderer->getShaderModule("ssao-vert");
+        m_fragShader = renderer->getShaderModule("ssao-frag");
 
         create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
     }
 
-    void UniformColorPipeline::create(int width, int height)
+    void SsaoPipeline::create(int width, int height)
     {
         std::vector<VkPipelineShaderStageCreateInfo> shaderStages =
         {
@@ -39,23 +44,21 @@ namespace crisp
 
         std::vector<VkVertexInputBindingDescription> vertexInputBindings =
         {
-            { 0, FormatSizeof<VK_FORMAT_R32G32B32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX }
-        };
-        
-        std::vector<VkVertexInputAttributeDescription> attributes =
-        {
-            { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            { 0, FormatSizeof<VK_FORMAT_R32G32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX }
         };
 
-        VkPipelineVertexInputStateCreateInfo vertexInput = {};
-        vertexInput.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        std::vector<VkVertexInputAttributeDescription> attributes =
+        {
+            { 0, 0, VK_FORMAT_R32G32_SFLOAT, 0 },
+        };
+
+        VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
         vertexInput.vertexBindingDescriptionCount   = static_cast<uint32_t>(vertexInputBindings.size());
         vertexInput.pVertexBindingDescriptions      = vertexInputBindings.data();
         vertexInput.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
         vertexInput.pVertexAttributeDescriptions    = attributes.data();
 
-        VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-        inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        VkPipelineInputAssemblyStateCreateInfo inputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
         inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
@@ -72,17 +75,26 @@ namespace crisp
         viewportState.scissorCount  = 1;
         viewportState.pScissors     = &scissor;
 
-        auto rasterizationState   = VulkanPipeline::createDefaultRasterizationState();
-        auto multisampleState     = VulkanPipeline::createDefaultMultisampleState();
-        auto colorBlendAttachment = VulkanPipeline::createDefaultColorBlendAttachmentState();
-        auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
+        auto rasterizationState = VulkanPipeline::createDefaultRasterizationState();
+        auto multisampleState = VulkanPipeline::createDefaultMultisampleState();
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable = VK_TRUE;
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        auto colorBlendState = VulkanPipeline::createDefaultColorBlendState();
         colorBlendState.attachmentCount = 1;
         colorBlendState.pAttachments = &colorBlendAttachment;
 
         auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
+        depthStencilState.depthTestEnable = false;
+        depthStencilState.depthWriteEnable = false;
 
-        VkGraphicsPipelineCreateInfo pipelineInfo = {};
-        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        VkGraphicsPipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         pipelineInfo.stageCount          = static_cast<uint32_t>(shaderStages.size());
         pipelineInfo.pStages             = shaderStages.data();
         pipelineInfo.pVertexInputState   = &vertexInput;
@@ -99,6 +111,6 @@ namespace crisp
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
+        vkCreateGraphicsPipelines(m_device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
     }
 }

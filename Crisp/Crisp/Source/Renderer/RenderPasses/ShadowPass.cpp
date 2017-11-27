@@ -74,8 +74,8 @@ namespace crisp
             attachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            attachment.initialLayout  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            attachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         }
 
         std::vector<VkAttachmentReference> depthAttachmentRefs(m_numCascades);
@@ -96,10 +96,10 @@ namespace crisp
         {
             dependencies[i].srcSubpass    = VK_SUBPASS_EXTERNAL;
             dependencies[i].dstSubpass    = 0;
-            dependencies[i].srcStageMask  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-            dependencies[i].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            dependencies[i].srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dependencies[i].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             dependencies[i].dstStageMask  = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependencies[i].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dependencies[i].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         }
 
         VkRenderPassCreateInfo renderPassInfo = {};
@@ -127,7 +127,8 @@ namespace crisp
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
         {
             for (auto& rt : m_renderTargets)
-                rt->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames);
+                rt->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, VulkanRenderer::NumVirtualFrames,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
         m_renderTargetViews.resize(m_numCascades, std::vector<std::shared_ptr<TextureView>>(VulkanRenderer::NumVirtualFrames));

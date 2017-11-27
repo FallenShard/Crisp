@@ -19,39 +19,37 @@ namespace crisp
         }
     }
 
-    CameraController::CameraController(InputDispatcher* inputDispatcher)
-        : m_window(inputDispatcher->getWindow()->getHandle())
+    CameraController::CameraController(Window* window)
+        : m_window(window)
+        , m_inputDispatcher(window->getInputDispatcher())
         , m_useMouseFiltering(false)
         , m_isMoving(false)
         , m_moveSpeed(2.0f)
         , m_refreshDeltasOnUpdate(true)
     {
-        int width, height;
-        glfwGetWindowSize(m_window, &width, &height);
-        m_screenSize.x = static_cast<float>(width);
-        m_screenSize.y = static_cast<float>(height);
-
+        m_screenSize = m_window->getSize();
         float aspectRatio = m_screenSize.x / m_screenSize.y;
         m_camera.setupProjection(35.0f, aspectRatio);
 
-        double x, y;
-        glfwGetCursorPos(m_window, &x, &y);
-        m_prevMousePos.x   = static_cast<float>(x);
-        m_prevMousePos.y   = static_cast<float>(y);
+        m_prevMousePos = m_window->getCursorPosition();
 
         m_animator = std::make_unique<Animator>();
 
         for (int i = 0; i < MouseFilterListSize; i++)
             m_mouseDeltas.push_front(glm::vec2(0.0f, 0.0f));
 
-        inputDispatcher->mouseButtonPressed.subscribe<CameraController, &CameraController::onMousePressed>(this);
-        inputDispatcher->mouseButtonReleased.subscribe<CameraController, &CameraController::onMouseReleased>(this);
-        inputDispatcher->mouseMoved.subscribe<CameraController, &CameraController::onMouseMoved>(this);
-        inputDispatcher->mouseWheelScrolled.subscribe<CameraController, &CameraController::onMouseWheelScrolled>(this);
+        m_inputDispatcher->mouseButtonPressed.subscribe<CameraController, &CameraController::onMousePressed>(this);
+        m_inputDispatcher->mouseButtonReleased.subscribe<CameraController, &CameraController::onMouseReleased>(this);
+        m_inputDispatcher->mouseMoved.subscribe<CameraController, &CameraController::onMouseMoved>(this);
+        m_inputDispatcher->mouseWheelScrolled.subscribe<CameraController, &CameraController::onMouseWheelScrolled>(this);
     }
 
     CameraController::~CameraController()
     {
+        m_inputDispatcher->mouseButtonPressed.unsubscribe<CameraController, &CameraController::onMousePressed>(this);
+        m_inputDispatcher->mouseButtonReleased.unsubscribe<CameraController, &CameraController::onMouseReleased>(this);
+        m_inputDispatcher->mouseMoved.unsubscribe<CameraController, &CameraController::onMouseMoved>(this);
+        m_inputDispatcher->mouseWheelScrolled.unsubscribe<CameraController, &CameraController::onMouseWheelScrolled>(this);
     }
 
     bool CameraController::update(float dt)
@@ -92,7 +90,7 @@ namespace crisp
             m_prevMousePos.x = static_cast<float>(xPos);
             m_prevMousePos.y = static_cast<float>(yPos);
 
-            glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            m_window->setInputMode(GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
 
@@ -105,7 +103,7 @@ namespace crisp
             m_prevMousePos.x = static_cast<float>(xPos);
             m_prevMousePos.y = static_cast<float>(yPos);
 
-            glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            m_window->setInputMode(GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
 
@@ -171,16 +169,16 @@ namespace crisp
         //
         //if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
         //    m_camera.pan(+3.0f * dt, 0.0f);
-        if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
+        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_A))
             m_camera.strafe(-3.0f * dt);
         
-        if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
+        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_D))
             m_camera.strafe(+3.0f * dt);
 
-        if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS)
+        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_S))
             m_camera.walk(-3.0f * dt);
 
-        if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS)
+        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_W))
             m_camera.walk(3.0f * dt);
     }
 

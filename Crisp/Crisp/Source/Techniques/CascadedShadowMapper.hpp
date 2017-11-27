@@ -44,6 +44,8 @@ namespace crisp
 
         const DirectionalLight* getLight() const;
 
+        VkImage getShadowMap(int idx);
+
     private:
         VulkanRenderer* m_renderer;
 

@@ -6,15 +6,13 @@
 
 namespace crisp
 {
-    class Window;
-
     class InputDispatcher
     {
     public:
-        InputDispatcher(Window* window);
+        InputDispatcher(GLFWwindow* window);
         ~InputDispatcher() = default;
 
-        Window* getWindow() const;
+        bool isKeyPressed(int keyCode) const;
 
         InputDispatcher(const InputDispatcher& other)            = delete;
         InputDispatcher& operator=(const InputDispatcher& other) = delete;
@@ -38,6 +36,6 @@ namespace crisp
         static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
         static void mouseEnterCallback(GLFWwindow* window, int entered);
         static void closeCallback(GLFWwindow* window);
-        Window* m_window;
+        GLFWwindow* m_window;
     };
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <string>
 
@@ -8,6 +9,8 @@
 
 namespace crisp
 {
+    class InputDispatcher;
+
     class Window
     {
     public:
@@ -21,12 +24,20 @@ namespace crisp
         bool shouldClose() const;
         void close();
 
-        GLFWwindow* getHandle() const;
+        void setInputMode(int mode, int value);
+
+        glm::ivec2 getSize() const;
+        glm::vec2 getCursorPosition() const;
+        inline GLFWwindow* getHandle() const { return m_window; }
+
+        InputDispatcher* getInputDispatcher();
 
         static std::vector<std::string> getVulkanExtensions();
         VkResult createRenderingSurface(VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) const;
 
     private:
         GLFWwindow* m_window;
+
+        std::unique_ptr<InputDispatcher> m_inputDispatcher;
     };
 }

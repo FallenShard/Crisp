@@ -43,7 +43,7 @@ namespace crisp
 
     VkImage GuiRenderPass::getColorAttachment(unsigned int index) const
     {
-        return m_renderTargets[0]->getImage()->getHandle();
+        return m_renderTargets[index]->getImage()->getHandle();
     }
 
     VkImageView GuiRenderPass::getAttachmentView(unsigned int index, unsigned int frameIndex) const

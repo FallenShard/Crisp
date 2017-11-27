@@ -151,9 +151,6 @@ namespace crisp::gui
         auto freeTextResourceId = *m_textResourceIdPool.begin(); // Smallest element in a set is at .begin()
         m_textResourceIdPool.erase(freeTextResourceId);
 
-        //ConsoleColorizer col(ConsoleColor::LightRed);
-        //std::cout << "Registering: " << freeTextResourceId << std::endl;
-
         auto textRes = std::make_unique<TextGeometryResource>();
         textRes->allocatedVertexCount        = TextGeometryResource::NumInitialAllocatedCharacters * 4; // 4 Vertices per letter
         textRes->allocatedFaceCount          = TextGeometryResource::NumInitialAllocatedCharacters * 2; // 2 Triangles per letter
@@ -182,8 +179,6 @@ namespace crisp::gui
 
     void RenderSystem::unregisterTextResource(unsigned int textResId)
     {
-        //ConsoleColorizer col(ConsoleColor::LightGreen);
-        //std::cout << "Unregistering: " << textResId << std::endl;
         m_textResourceIdPool.insert(textResId);
     }
 

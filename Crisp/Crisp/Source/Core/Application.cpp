@@ -51,18 +51,18 @@ namespace crisp
         createWindow();
         createRenderer();
 
-        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window.get());
-        m_inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
+        auto inputDispatcher = m_window->getInputDispatcher();
+        inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
 
         m_backgroundImage = std::make_unique<BackgroundImage>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, m_renderer.get());
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-        m_inputDispatcher->mouseMoved.subscribe<gui::Form, &gui::Form::onMouseMoved>(m_guiForm.get());
-        m_inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
-        m_inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
-        m_inputDispatcher->mouseEntered.subscribe<gui::Form, &gui::Form::onMouseEntered>(m_guiForm.get());
-        m_inputDispatcher->mouseExited.subscribe<gui::Form, &gui::Form::onMouseExited>(m_guiForm.get());
+        inputDispatcher->mouseMoved.subscribe<gui::Form, &gui::Form::onMouseMoved>(m_guiForm.get());
+        inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
+        inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
+        inputDispatcher->mouseEntered.subscribe<gui::Form, &gui::Form::onMouseEntered>(m_guiForm.get());
+        inputDispatcher->mouseExited.subscribe<gui::Form, &gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
         
         // Create ray tracer and add a handler for image block updates
@@ -113,20 +113,20 @@ namespace crisp
                 
                 if (m_sceneContainer)
                     m_sceneContainer->update(static_cast<float>(TimePerFrame));
-                
+
                 processRayTracerUpdates();
 
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
-            //if (m_sceneContainer)
-            //    m_sceneContainer->render();
-            //else
+            if (m_sceneContainer)
+                m_sceneContainer->render();
+            else
                 m_backgroundImage->draw();
-            //
-            //if (m_rayTracedImage)
-            //    m_rayTracedImage->draw();
-            //
+
+            if (m_rayTracedImage)
+                m_rayTracedImage->draw();
+
             m_guiForm->draw();
             m_renderer->drawFrame();
 
@@ -158,9 +158,11 @@ namespace crisp
             m_rayTracedImage->resize(width, height);
     }
 
-    void Application::createScene()
+    SceneContainer* Application::createSceneContainer()
     {
-        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), m_inputDispatcher.get(), this);
+        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
+        return m_sceneContainer.get();
+
     }
 
     void Application::startRayTracing()
@@ -205,6 +207,11 @@ namespace crisp
     gui::Form* Application::getForm() const
     {
         return m_guiForm.get();
+    }
+
+    Window* Application::getWindow() const
+    {
+        return m_window.get();
     }
 
     void Application::createWindow()

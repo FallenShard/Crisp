@@ -16,6 +16,7 @@ namespace crisp::gui
 
         void addControl(std::unique_ptr<Control> control);
         void removeControl(const std::string& id);
+        void clearControls();
 
         virtual float getWidth() const;
         virtual float getHeight() const;

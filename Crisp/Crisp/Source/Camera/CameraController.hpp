@@ -3,14 +3,13 @@
 #include <memory>
 #include <list>
 
-#include <GLFW/glfw3.h>
-
 #include "FreeCamera.hpp"
 #include "TargetCamera.hpp"
 
 namespace crisp
 {
     class Animator;
+    class Window;
     class InputDispatcher;
 
     struct CameraParameters
@@ -24,7 +23,7 @@ namespace crisp
     class CameraController
     {
     public:
-        CameraController(InputDispatcher* inputDispatcher);
+        CameraController(Window* window);
         ~CameraController();
 
         bool update(float dt);
@@ -46,7 +45,8 @@ namespace crisp
         void checkKeyboardInput(float dt);
         glm::vec2 filterMouseMoves();
 
-        GLFWwindow* m_window;
+        Window* m_window;
+        InputDispatcher* m_inputDispatcher;
         glm::vec2 m_screenSize;
 
         std::unique_ptr<Animator> m_animator;

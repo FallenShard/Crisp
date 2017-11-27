@@ -41,6 +41,14 @@ namespace crisp::gui
         });
     }
 
+    void ControlGroup::clearControls()
+    {
+        m_form->postGuiUpdate([this]()
+        {
+            m_children.clear();
+        });
+    }
+
     float ControlGroup::getWidth() const
     {
         if (m_horizontalSizingPolicy == SizingPolicy::WrapContent)
@@ -160,7 +168,6 @@ namespace crisp::gui
     {
         for (auto& child : m_children)
         {
-            std::cout << __FUNCTION__ << " " << child->getId() << std::endl;
             child->onMouseReleased(x, y);
         }
     }

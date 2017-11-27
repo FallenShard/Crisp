@@ -1,5 +1,7 @@
 #include "Window.hpp"
 
+#include "InputDispatcher.hpp"
+
 namespace crisp
 {
     Window::Window(const glm::ivec2& position, const glm::ivec2 & size, std::string title)
@@ -12,6 +14,8 @@ namespace crisp
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
         glfwSetWindowPos(m_window, x, y);
+
+        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window);
     }
 
     Window::~Window()
@@ -40,9 +44,28 @@ namespace crisp
         glfwSetWindowShouldClose(m_window, GLFW_TRUE);
     }
 
-    GLFWwindow* Window::getHandle() const
+    void Window::setInputMode(int mode, int value)
     {
-        return m_window;
+        glfwSetInputMode(m_window, mode, value);
+    }
+
+    glm::ivec2 Window::getSize() const
+    {
+        glm::ivec2 size;
+        glfwGetWindowSize(m_window, &size.x, &size.y);
+        return size;
+    }
+
+    glm::vec2 Window::getCursorPosition() const
+    {
+        double x, y;
+        glfwGetCursorPos(m_window, &x, &y);
+        return { static_cast<float>(x), static_cast<float>(y) };
+    }
+
+    InputDispatcher* Window::getInputDispatcher()
+    {
+        return m_inputDispatcher.get();
     }
 
     std::vector<std::string> Window::getVulkanExtensions()

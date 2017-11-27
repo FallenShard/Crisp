@@ -50,7 +50,7 @@ namespace crisp
 
         void onResize(int width, int height);
 
-        void createScene();
+        SceneContainer* createSceneContainer();
 
         void startRayTracing();
         void stopRayTracing();
@@ -59,6 +59,7 @@ namespace crisp
         void writeImageToExr();
 
         gui::Form* getForm() const;
+        Window* getWindow() const;
 
         Event<float, float> rayTracerProgressed;
 
@@ -71,7 +72,6 @@ namespace crisp
         FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;
 
         std::unique_ptr<Window>          m_window;
-        std::unique_ptr<InputDispatcher> m_inputDispatcher;
         std::unique_ptr<VulkanRenderer>  m_renderer;
 
         std::unique_ptr<BackgroundImage> m_backgroundImage;

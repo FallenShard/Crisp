@@ -1,12 +1,24 @@
-#include "Slider.hpp"
+#include "DoubleSlider.hpp"
 
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 
 #include "Form.hpp"
 
 namespace crisp::gui
 {
-    Slider::Slider(Form* parentForm)
+    namespace
+    {
+        std::string doubleToString(double value, int precision)
+        {
+            std::stringstream stream;
+            stream << std::fixed << std::setprecision(precision) << value;
+            return stream.str();
+        }
+    }
+
+    DoubleSlider::DoubleSlider(Form* parentForm)
         : Control(parentForm)
         , m_state(State::Idle)
         , m_label(std::make_unique<Label>(parentForm, "50"))
@@ -19,9 +31,10 @@ namespace crisp::gui
         , m_minValue(0)
         , m_value(50)
         , m_maxValue(100)
-        , m_increment(1)
+        , m_precision(2)
+        , m_increment(0.2f)
     {
-        setSizeHint({200.0f, 20.0f});
+        setSizeHint({ 200.0f, 20.0f });
         m_M = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
 
         m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.875f);
@@ -35,8 +48,8 @@ namespace crisp::gui
         m_foregroundRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
         m_foregroundRect->setParent(this);
 
-        m_indicatorRect->setSizeHint({7, 20});
-        m_indicatorRect->setPosition({100 * 0.875f, 0});
+        m_indicatorRect->setSizeHint({ 7, 20 });
+        m_indicatorRect->setPosition({ 100 * 0.875f, 0 });
         m_indicatorRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
         m_indicatorRect->setParent(this);
 
@@ -52,27 +65,27 @@ namespace crisp::gui
             m_foregroundRect->setColor(t);
         }, 0, Easing::SlowOut);
     }
-    
-    Slider::~Slider()
+
+    DoubleSlider::~DoubleSlider()
     {
         m_form->getAnimator()->remove(m_colorAnim);
     }
 
-    void Slider::setMinValue(int minValue)
+    void DoubleSlider::setMinValue(double minValue)
     {
         m_minValue = minValue;
         setValue(m_value);
         m_label->setValidationFlags(Validation::Geometry);
     }
 
-    void Slider::setMaxValue(int maxValue)
+    void DoubleSlider::setMaxValue(double maxValue)
     {
         m_maxValue = maxValue;
         setValue(m_value);
         m_label->setValidationFlags(Validation::Geometry);
     }
 
-    void Slider::setValue(int value)
+    void DoubleSlider::setValue(double value)
     {
         value = std::min(m_maxValue, std::max(m_minValue, value));
         if (m_value == value)
@@ -81,26 +94,23 @@ namespace crisp::gui
         moveIndicators(value);
         setValidationFlags(Validation::Geometry);
 
-        m_label->setText(std::to_string(value));
+        m_label->setText(doubleToString(value, m_precision));
 
         m_value = value;
         valueChanged(m_value);
     }
 
-    void Slider::setIncrement(int increment)
+    void DoubleSlider::setPrecision(int precision)
+    {
+        m_precision = precision;
+    }
+
+    void DoubleSlider::setIncrement(double increment)
     {
         m_increment = increment;
     }
 
-    void Slider::setValues(std::vector<int> values)
-    {
-        m_values = values;
-        setMinValue(0);
-        setMaxValue(m_values.size() - 1);
-        setIncrement(1);
-    }
-
-    void Slider::onMouseEntered(float x, float y)
+    void DoubleSlider::onMouseEntered(float x, float y)
     {
         if (m_state != State::Idle)
             return;
@@ -108,7 +118,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void Slider::onMouseExited(float x, float y)
+    void DoubleSlider::onMouseExited(float x, float y)
     {
         if (m_state != State::Hover)
             return;
@@ -116,11 +126,11 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void Slider::onMousePressed(float x, float y)
+    void DoubleSlider::onMousePressed(float x, float y)
     {
-        int newValue = getValueFromMousePosition(x, y);
+        double newValue = getValueFromMousePosition(x, y);
 
-        m_label->setText(std::to_string(newValue));
+        m_label->setText(doubleToString(newValue, m_precision));
         if (m_value != newValue) {
             m_value = newValue;
             valueChanged(m_value);
@@ -130,13 +140,13 @@ namespace crisp::gui
         m_form->setFocusedControl(this);
     }
 
-    void Slider::onMouseMoved(float x, float y)
+    void DoubleSlider::onMouseMoved(float x, float y)
     {
         if (m_state == State::Pressed)
         {
-            int newValue = getValueFromMousePosition(x, y);
+            double newValue = getValueFromMousePosition(x, y);
 
-            m_label->setText(std::to_string(newValue));
+            m_label->setText(doubleToString(newValue, m_precision));
             if (m_value != newValue) {
                 m_value = newValue;
                 valueChanged(m_value);
@@ -144,7 +154,7 @@ namespace crisp::gui
         }
     }
 
-    void Slider::onMouseReleased(float x, float y)
+    void DoubleSlider::onMouseReleased(float x, float y)
     {
         if (getAbsoluteBounds().contains(x, y) && m_state == State::Pressed)
         {
@@ -161,7 +171,7 @@ namespace crisp::gui
         m_form->setFocusedControl(nullptr);
     }
 
-    void Slider::validate()
+    void DoubleSlider::validate()
     {
         moveIndicators(m_value);
 
@@ -196,7 +206,7 @@ namespace crisp::gui
         m_label->clearValidationFlags();
     }
 
-    void Slider::draw(const RenderSystem& visitor) const
+    void DoubleSlider::draw(const RenderSystem& visitor) const
     {
         m_backgroundRect->draw(visitor);
         m_foregroundRect->draw(visitor);
@@ -204,7 +214,7 @@ namespace crisp::gui
         m_label->draw(visitor);
     }
 
-    void Slider::setState(State state)
+    void DoubleSlider::setState(State state)
     {
         if (m_state == state)
             return;
@@ -233,27 +243,17 @@ namespace crisp::gui
             m_form->getAnimator()->add(m_colorAnim);
         }
     }
-    
-    void Slider::moveIndicators(int value)
-    {
-        if (!m_values.empty())
-        {
-            for (int i = 0; i < m_values.size(); i++)
-                if (m_values[i] == value)
-                {
-                    value = i;
-                    break;
-                }
-        }
 
+    void DoubleSlider::moveIndicators(double value)
+    {
         auto bounds = m_backgroundRect->getAbsoluteBounds();
         float localPos = static_cast<float>((value - m_minValue) * bounds.width) / static_cast<float>(m_maxValue - m_minValue);
         float indicatorPos = localPos - m_indicatorRect->getSize().x / 2.0f;
         m_indicatorRect->setPosition({ indicatorPos, 0.0f });
         m_foregroundRect->setSizeHint({ localPos, 2.0f });
     }
-
-    int Slider::getValueFromMousePosition(float x, float y)
+    
+    double DoubleSlider::getValueFromMousePosition(float x, float y)
     {
         auto bounds = m_backgroundRect->getAbsoluteBounds();
         float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0] - m_indicatorRect->getSize().x / 2.0f, bounds.width));
@@ -261,12 +261,10 @@ namespace crisp::gui
         m_foregroundRect->setSizeHint({ indicatorPos, 2.0f });
         setValidationFlags(Validation::Geometry);
 
-        float t = indicatorPos / bounds.width;
-        float valueSpan = m_maxValue - m_minValue;
+        double t = indicatorPos / bounds.width;
+        double valueSpan = m_maxValue - m_minValue;
 
-        int rawValue = static_cast<int>(std::round(m_minValue + t * valueSpan));
-        int dd = (rawValue - m_minValue + m_increment / 2) / m_increment;
-        int finalValue = std::min(std::max(m_minValue + dd * m_increment, m_minValue), m_maxValue);
-        return m_values.empty() ? finalValue : m_values[finalValue];
+        double rawValue = m_minValue + t * valueSpan;
+        return rawValue + m_increment - std::fmod(rawValue, m_increment);
     }
 }

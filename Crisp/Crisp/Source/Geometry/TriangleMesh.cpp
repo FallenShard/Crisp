@@ -35,6 +35,9 @@ namespace crisp
         vesper::MeshLoader meshLoader;
         meshLoader.load(filename, positions, normals, texCoords, m_faces);
 
+        if (normals.empty())
+            normals = calculateVertexNormals(positions, m_faces);
+
         size_t interleavedVertexFloats = 0;
         for (auto& attrib : interleaved)
         {
@@ -135,5 +138,25 @@ namespace crisp
     std::string TriangleMesh::getMeshName() const
     {
         return m_meshName;
+    }
+
+    std::vector<glm::vec3> TriangleMesh::calculateVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces) const
+    {
+        std::vector<glm::vec3> normals(positions.size());
+
+        for (const auto& face : faces)
+        {
+            glm::vec3 a = positions[face[0]] - positions[face[1]];
+            glm::vec3 b = positions[face[0]] - positions[face[2]];
+            glm::vec3 n = glm::normalize(glm::cross(a, b));
+            normals[face[0]] += n;
+            normals[face[1]] += n;
+            normals[face[2]] += n;
+        }
+
+        for (auto& normal : normals)
+            normal = glm::normalize(normal);
+
+        return normals;
     }
 }

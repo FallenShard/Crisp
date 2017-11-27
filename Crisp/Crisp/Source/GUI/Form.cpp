@@ -141,7 +141,7 @@ namespace crisp::gui
 
     void Form::onMouseMoved(double x, double y)
     {
-        if (m_focusedControl && m_focusedControl->getInteractionBounds().contains(x, y))
+        if (m_focusedControl /*&& m_focusedControl->getInteractionBounds().contains(x, y)*/)
             m_focusedControl->onMouseMoved(x, y);
         else
             m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));

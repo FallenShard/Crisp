@@ -29,6 +29,8 @@ namespace crisp
 
 
     private:
+        std::vector<glm::vec3> calculateVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces) const;
+
         std::vector<std::vector<float>> m_vertices;
         std::vector<glm::uvec3> m_faces;
 

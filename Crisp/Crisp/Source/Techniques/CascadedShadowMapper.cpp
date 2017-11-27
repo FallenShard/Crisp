@@ -13,7 +13,7 @@ namespace crisp
         , m_numCascades(numCascades)
         , m_light(light)
     {
-        m_shadowPass = std::make_unique<ShadowPass>(m_renderer, 1024, m_numCascades);
+        m_shadowPass = std::make_unique<ShadowPass>(m_renderer, 2048, m_numCascades);
         m_pipelines.reserve(m_numCascades);
         for (uint32_t i = 0; i < m_numCascades; i++)
             m_pipelines.emplace_back(std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), i));
@@ -89,6 +89,11 @@ namespace crisp
     const DirectionalLight* CascadedShadowMapper::getLight() const
     {
         return &m_light;
+    }
+
+    VkImage CascadedShadowMapper::getShadowMap(int idx)
+    {
+        return m_shadowPass->getColorAttachment(idx);
     }
 }
 

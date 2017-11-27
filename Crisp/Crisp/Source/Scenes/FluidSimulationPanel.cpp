@@ -2,8 +2,9 @@
 
 #include <iostream>
 
-#include "Slider.hpp"
-#include "Button.hpp"
+#include "GUI/Slider.hpp"
+#include "GUI/DoubleSlider.hpp"
+#include "GUI/Button.hpp"
 
 #include "Models/FluidSimulation.hpp"
 
@@ -20,35 +21,46 @@ namespace crisp::gui
 
         int y = 0;
 
-        auto panelLabel = std::make_unique<Label>(parentForm, "Fluid Simulation");
-        panelLabel->setFontSize(18);
-        panelLabel->setPosition({ 0, y });
-        addControl(std::move(panelLabel));
-        y += 30;
-
         auto gxLabel = std::make_unique<Label>(parentForm, "Gravity X");
         gxLabel->setPosition({ 0, y });
         addControl(std::move(gxLabel));
         y += 20;
 
-        auto gravityXSlider = std::make_unique<Slider>(parentForm);
+        auto gravityXSlider = std::make_unique<DoubleSlider>(parentForm);
         gravityXSlider->setId("gravityXSlider");
         gravityXSlider->setAnchor(Anchor::CenterTop);
         gravityXSlider->setPosition({ 0, y });
-        gravityXSlider->setValue(50);
+        gravityXSlider->setMinValue(-10.0);
+        gravityXSlider->setMaxValue(+10.0);
+        gravityXSlider->setIncrement(0.1);
+        gravityXSlider->setPrecision(1);
+        gravityXSlider->setValue(0.0);
+        gravityXSlider->valueChanged += [sim](double value)
+        {
+            sim->setGravityX(static_cast<float>(value));
+        };
         addControl(std::move(gravityXSlider));
         y += 30;
 
         auto gyLabel = std::make_unique<Label>(parentForm, "Gravity Y");
+        gyLabel->setId("xyz");
         gyLabel->setPosition({ 0, y });
         addControl(std::move(gyLabel));
         y += 20;
 
-        auto gravityYSlider = std::make_unique<Slider>(parentForm);
+        auto gravityYSlider = std::make_unique<DoubleSlider>(parentForm);
         gravityYSlider->setId("gravityYSlider");
         gravityYSlider->setAnchor(Anchor::CenterTop);
         gravityYSlider->setPosition({ 0, y });
-        gravityYSlider->setValue(99);
+        gravityYSlider->setMinValue(-10.0);
+        gravityYSlider->setMaxValue(+10.0);
+        gravityYSlider->setIncrement(0.1);
+        gravityYSlider->setPrecision(1);
+        gravityYSlider->setValue(-9.8);
+        gravityYSlider->valueChanged += [sim](double value)
+        {
+            sim->setGravityY(static_cast<float>(value));
+        };
         addControl(std::move(gravityYSlider));
         y += 30;
 
@@ -57,31 +69,21 @@ namespace crisp::gui
         addControl(std::move(gzLabel));
         y += 20;
 
-        auto gravityZSlider = std::make_unique<Slider>(parentForm);
+        auto gravityZSlider = std::make_unique<DoubleSlider>(parentForm);
         gravityZSlider->setId("gravityZSlider");
         gravityZSlider->setAnchor(Anchor::CenterTop);
         gravityZSlider->setPosition({ 0, y });
-        gravityZSlider->setValue(50);
+        gravityZSlider->setMinValue(-10.0);
+        gravityZSlider->setMaxValue(+10.0);
+        gravityZSlider->setIncrement(0.1);
+        gravityZSlider->setPrecision(1);
+        gravityZSlider->setValue(0.0);
+        gravityZSlider->valueChanged += [sim](double value)
+        {
+            sim->setGravityZ(static_cast<float>(value));
+        };
         addControl(std::move(gravityZSlider));
         y += 30;
-
-        gravityXSlider->valueChanged.subscribe([sim](int sliderPos)
-        {
-            float value = static_cast<float>(sliderPos) / 5.0f - 10.0f;
-            sim->setGravityX(value);
-        });
-
-        gravityYSlider->valueChanged.subscribe([sim](int sliderPos)
-        {
-            float value = static_cast<float>(sliderPos) / 5.0f - 10.0f;
-            sim->setGravityY(value);
-        });
-
-        gravityZSlider->valueChanged.subscribe([sim](int sliderPos)
-        {
-            float value = static_cast<float>(sliderPos) / 5.0f - 10.0f;;
-            sim->setGravityZ(value);
-        });
 
         auto viscoLabel = std::make_unique<Label>(parentForm, "Viscosity");
         viscoLabel->setPosition({ 0, y });
@@ -92,15 +94,15 @@ namespace crisp::gui
         viscositySlider->setId("viscositySlider");
         viscositySlider->setAnchor(Anchor::CenterTop);
         viscositySlider->setPosition({ 0, y });
+        viscositySlider->setMaxValue(50);
+        viscositySlider->setMinValue(2);
         viscositySlider->setValue(3);
+        viscositySlider->valueChanged += [sim](int value)
+        {
+            sim->setViscosity(static_cast<float>(value));
+        };
         addControl(std::move(viscositySlider));
         y += 30;
-
-        viscositySlider->valueChanged.subscribe([sim](int sliderPos)
-        {
-            float viscosity = static_cast<float>(sliderPos);
-            sim->setViscosity(viscosity);
-        });
 
         auto resetButton = std::make_unique<Button>(parentForm);
         resetButton->setId("resetButton");
@@ -108,12 +110,11 @@ namespace crisp::gui
         resetButton->setSizeHint({0, 30});
         resetButton->setText("Reset Simulation");
         resetButton->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-        addControl(std::move(resetButton));
-
-        resetButton->clicked.subscribe([sim]()
+        resetButton->clicked += [sim]()
         {
             sim->reset();
-        });
+        };
+        addControl(std::move(resetButton));
     }
 
     FluidSimulationPanel::~FluidSimulationPanel()

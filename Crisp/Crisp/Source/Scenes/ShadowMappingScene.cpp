@@ -1,0 +1,266 @@
+#include "ShadowMappingScene.hpp"
+
+#include "Core/Application.hpp"
+#include "Core/Window.hpp"
+#include "Core/InputDispatcher.hpp"
+#include "Camera/CameraController.hpp"
+
+#include "Renderer/RenderPasses/ShadowPass.hpp"
+#include "Renderer/RenderPasses/SceneRenderPass.hpp"
+#include "Renderer/Pipelines/BlinnPhongPipeline.hpp"
+#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+#include "Renderer/TextureView.hpp"
+#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/UniformBuffer.hpp"
+#include "vulkan/VulkanSampler.hpp"
+
+#include "Lights/DirectionalLight.hpp"
+
+#include "Techniques/CascadedShadowMapper.hpp"
+#include "Models/BoxVisualizer.hpp"
+#include "Geometry/TriangleMesh.hpp"
+
+#include "Models/Skybox.hpp"
+#include "Geometry/MeshGeometry.hpp"
+
+namespace crisp
+{
+    ShadowMappingScene::ShadowMappingScene(VulkanRenderer* renderer, Application* app)
+        : m_renderer(renderer)
+        , m_app(app)
+        , m_device(m_renderer->getDevice())
+    {
+        m_cameraController = std::make_unique<CameraController>(app->getWindow());
+        m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+        app->getWindow()->getInputDispatcher()->keyPressed.subscribe([this](int key, int mode)
+        {
+            if (key == GLFW_KEY_R)
+            {
+                m_renderMode = m_renderMode == 1 ? 0 : 1;
+            }
+
+            if (key == GLFW_KEY_V)
+            {
+                m_boxVisualizer->updateFrusta(m_shadowMapper.get(), m_cameraController.get());
+            }
+        });
+
+        m_transforms.resize(27);
+        for (uint32_t i = 0; i < 25; i++)
+        {
+            float xTrans = (i / 5) * 5.0f;
+            float zTrans = (i % 5) * 5.0f;
+            m_transforms[i].M = glm::translate(glm::vec3(xTrans - 10.0f, 0.5f, zTrans - 10.0f));
+        }
+        m_transforms[25].M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
+        m_transforms[26].M = glm::translate(glm::vec3(2.5f, -1.0f, 0.0f)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::scale(glm::vec3(3.0f));
+        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(Transforms), BufferUpdatePolicy::PerFrame);
+
+        uint32_t numCascades = 4;
+        DirectionalLight light(glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f)));
+        m_shadowMapper = std::make_unique<CascadedShadowMapper>(m_renderer, light, numCascades, m_transformsBuffer.get());
+
+
+        m_planeGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("plane.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
+        m_sphereGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("sphere.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
+
+        m_nearestNeighborSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+        m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
+        m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get());
+
+        m_blinnPhongPipeline = std::make_unique<BlinnPhongPipeline>(m_renderer, m_scenePass.get());
+        auto firstSet = m_blinnPhongPipeline->allocateDescriptorSet(0);
+        for (auto& descGroup : m_blinnPhongDescGroups)
+            descGroup = { firstSet, m_blinnPhongPipeline->allocateDescriptorSet(1) };
+
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 1, m_shadowMapper->getLightTransformsBuffer()->getDescriptorInfo());
+        m_blinnPhongDescGroups[0].postBufferUpdate(0, 2, m_cameraBuffer->getDescriptorInfo());
+        for (uint32_t frameIdx = 0; frameIdx < VulkanRenderer::NumVirtualFrames; frameIdx++)
+        {
+            for (uint32_t cascadeIdx = 0; cascadeIdx < numCascades; cascadeIdx++)
+            {
+                m_blinnPhongDescGroups[frameIdx].postImageUpdate(1, 0, cascadeIdx, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { m_nearestNeighborSampler->getHandle(), m_shadowMapper->getRenderPass()->getAttachmentView(cascadeIdx, frameIdx), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            }
+            m_blinnPhongDescGroups[frameIdx].flushUpdates(m_device);
+        }
+
+        m_bunnyGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("Nanosuit.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
+        m_boxVisualizer = std::make_unique<BoxVisualizer>(m_renderer, 4, 4, m_scenePass.get());
+
+        initRenderTargetResources();
+    }
+
+    ShadowMappingScene::~ShadowMappingScene()
+    {
+    }
+
+    void ShadowMappingScene::resize(int width, int height)
+    {
+        m_cameraController->resize(width, height);
+
+        m_scenePass->recreate();
+
+        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque);
+        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
+        m_sceneDescSetGroup.flushUpdates(m_device);
+    }
+
+    void ShadowMappingScene::update(float dt)
+    {
+        auto viewChanged = m_cameraController->update(dt);
+        if (viewChanged)
+        {
+            auto& V = m_cameraController->getViewMatrix();
+            auto& P = m_cameraController->getProjectionMatrix();
+
+            m_shadowMapper->recalculateLightProjections(m_cameraController->getCamera(), 50.0f, ParallelSplit::Logarithmic);
+            for (auto& trans : m_transforms)
+            {
+                trans.MV  = V * trans.M;
+                trans.MVP = P * trans.MV;
+            }
+            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(Transforms));
+            m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
+            m_boxVisualizer->update(V, P);
+
+            m_skybox->updateTransforms(P, V);
+        }
+    }
+
+    void ShadowMappingScene::render()
+    {
+        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer)
+        {
+            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+
+            m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
+
+            m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
+            m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
+            m_shadowMapper->update(commandBuffer, frameIdx);
+            m_boxVisualizer->updateDeviceBuffers(commandBuffer, frameIdx);
+        });
+
+        m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
+        {
+            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+
+            m_shadowMapper->draw(commandBuffer, frameIdx, [this](VkCommandBuffer commandBuffer, uint32_t frameIdx, DescriptorSetGroup& descSets, VulkanPipeline* pipeline, uint32_t cascadeIdx)
+            {
+                uint32_t cascade = cascadeIdx;
+                pipeline->bind(commandBuffer);
+                vkCmdPushConstants(commandBuffer, pipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t), &cascade);
+            
+                for (uint32_t i = 0; i < 25; i++)
+                {
+                    descSets.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                    descSets.bind(commandBuffer, pipeline->getPipelineLayout());
+                    m_sphereGeometry->bindGeometryBuffers(commandBuffer);
+                    m_sphereGeometry->draw(commandBuffer);
+                }
+            
+                descSets.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 26 * sizeof(Transforms));
+                descSets.bind(commandBuffer, pipeline->getPipelineLayout());
+                m_bunnyGeometry->bindGeometryBuffers(commandBuffer);
+                m_bunnyGeometry->draw(commandBuffer);
+            });
+
+            std::vector<VkImageMemoryBarrier> barriers(4);
+            for (int i = 0; i < 4; i++) {
+                barriers[i].sType = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                barriers[i].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                barriers[i].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barriers[i].oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                barriers[i].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                barriers[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barriers[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barriers[i].image = m_shadowMapper->getShadowMap(i);
+                barriers[i].subresourceRange.baseMipLevel = 0;
+                barriers[i].subresourceRange.levelCount = 1;
+                barriers[i].subresourceRange.baseArrayLayer = frameIdx;
+                barriers[i].subresourceRange.layerCount = 1;
+                barriers[i].subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            }
+
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0, 0, nullptr, 0, nullptr, barriers.size(), barriers.data());
+        });
+
+        m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
+        {
+            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+
+            m_scenePass->begin(commandBuffer);
+            m_blinnPhongPipeline->bind(commandBuffer);
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(1, m_shadowMapper->getLightTransformsBuffer()->getDynamicOffset(frameIdx));
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(2, m_cameraBuffer->getDynamicOffset(frameIdx));
+
+            for (uint32_t i = 0; i < 25; i++)
+            {
+                m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+                vkCmdPushConstants(commandBuffer, m_blinnPhongPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &m_renderMode);
+                m_sphereGeometry->bindGeometryBuffers(commandBuffer);
+                m_sphereGeometry->draw(commandBuffer);
+            }
+
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 25 * sizeof(Transforms));
+            m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+            m_planeGeometry->bindGeometryBuffers(commandBuffer);
+            m_planeGeometry->draw(commandBuffer);
+
+            m_blinnPhongDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 26 * sizeof(Transforms));
+            m_blinnPhongDescGroups[frameIdx].bind(commandBuffer, m_blinnPhongPipeline->getPipelineLayout());
+            m_bunnyGeometry->bindGeometryBuffers(commandBuffer);
+            m_bunnyGeometry->draw(commandBuffer);
+
+            m_boxVisualizer->render(commandBuffer, frameIdx);
+            m_skybox->draw(commandBuffer, frameIdx);
+
+            m_scenePass->end(commandBuffer);
+
+            VkImageMemoryBarrier imageMemoryBarrier = {};
+            imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageMemoryBarrier.image = m_scenePass->getColorAttachment();
+            imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+            imageMemoryBarrier.subresourceRange.levelCount = 1;
+            imageMemoryBarrier.subresourceRange.baseArrayLayer = frameIdx;
+            imageMemoryBarrier.subresourceRange.layerCount = 1;
+            imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+        });
+
+        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
+        {
+            m_fsQuadPipeline->bind(commandBuffer);
+            m_renderer->setDefaultViewport(commandBuffer);
+            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout());
+
+            unsigned int layerIndex = m_renderer->getCurrentVirtualFrameIndex();
+            m_fsQuadPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, layerIndex);
+            m_renderer->drawFullScreenQuad(commandBuffer);
+        });
+    }
+
+    void ShadowMappingScene::initRenderTargetResources()
+    {
+        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
+        m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
+
+        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque);
+        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
+        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
+        m_sceneDescSetGroup.flushUpdates(m_device);
+    }
+}

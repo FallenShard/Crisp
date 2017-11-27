@@ -1,7 +1,9 @@
 #include "SceneContainer.hpp"
 
 #include "Scenes/TestScene.hpp"
-#include "Scene.hpp"
+#include "Scenes/FluidSimulationScene.hpp"
+#include "Scenes/ShadowMappingScene.hpp"
+#include "Scenes/AmbientOcclusionScene.hpp"
 #include "Application.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/ComboBox.hpp"
@@ -13,24 +15,36 @@ namespace crisp
         template <typename ...Args>
         std::unique_ptr<Scene> createScene(const std::string& name, Args... args)
         {
-            if (name == "liquidSimluation")
-                return std::make_unique<Scene>(args...);
+            if (name == "Liquid Simulation")
+                return std::make_unique<FluidSimulationScene>(args...);
+            else if (name == "Shadow Mapping")
+                return std::make_unique<ShadowMappingScene>(args...);
+            else if (name == "Ambient Occlusion")
+                return std::make_unique<AmbientOcclusionScene>(args...);
             else
-                return std::make_unique<Scene>(args...);
+                return std::make_unique<TestScene>(args...);
         }
     }
 
-    SceneContainer::SceneContainer(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app)
+    SceneContainer::SceneContainer(VulkanRenderer* renderer, Application* app)
         : m_renderer(renderer)
-        , m_inputDispatcher(inputDispatcher)
         , m_application(app)
     {
-        m_sceneComboBox = app->getForm()->getControlById<gui::ComboBox>("sceneComboBox");
-        m_sceneComboBox->itemSelected.subscribe<SceneContainer, &SceneContainer::onSceneSelected>(this);
     }
 
     SceneContainer::~SceneContainer()
     {
+    }
+
+    std::vector<std::string> SceneContainer::getSceneNames()
+    {
+        return 
+        {
+            "Ambient Occlusion",
+            "Liquid Simulation",
+            "Shadow Mapping",
+            "Test"
+        };
     }
 
     void SceneContainer::update(float dt)
@@ -47,13 +61,8 @@ namespace crisp
 
     void SceneContainer::onSceneSelected(std::string sceneName)
     {
-        //m_application->getForm()->postGuiUpdate([this, sceneName] {
-        //    m_scene.reset();
-        //    m_renderer->finish();
-        //    m_scene = std::move(createScene(sceneName, m_renderer, m_inputDispatcher, m_application));
-        //});
-        
-        std::cout << "Selected: " << sceneName << std::endl;
+        m_renderer->finish();
+        m_scene = std::move(createScene(sceneName, m_renderer, m_application));
     }
 
     void SceneContainer::resize(int width, int height)

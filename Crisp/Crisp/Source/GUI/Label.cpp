@@ -18,7 +18,7 @@ namespace crisp::gui
         m_color = glm::vec4(1.0f);
         m_drawComponent.update(m_color);
 
-        m_textExtent = m_drawComponent.getTextExtent(m_text);
+        m_textExtent = m_drawComponent.update(m_text);
     }
 
     Label::~Label()

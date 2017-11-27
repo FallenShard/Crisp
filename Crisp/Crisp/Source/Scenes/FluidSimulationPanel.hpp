@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Panel.hpp"
+#include "GUI/Panel.hpp"
 
 namespace crisp
 {

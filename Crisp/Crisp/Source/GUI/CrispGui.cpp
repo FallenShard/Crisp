@@ -1,7 +1,6 @@
 #include "CrispGui.hpp"
 
 #include "Core/Application.hpp"
-#include "Core/Scene.hpp"
 
 #include "Gui/Control.hpp"
 #include "Gui/Panel.hpp"

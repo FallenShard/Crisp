@@ -30,6 +30,8 @@ namespace crisp::gui
 
         Event<std::string> itemSelected;
 
+        void setItems(const std::vector<std::string>& items);
+
     private:
         void setState(State state);
 

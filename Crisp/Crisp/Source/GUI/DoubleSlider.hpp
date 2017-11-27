@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <vector>
 
 #include <CrispCore/Event.hpp>
 
@@ -12,17 +11,17 @@
 
 namespace crisp::gui
 {
-    class Slider : public Control
+    class DoubleSlider : public Control
     {
     public:
-        Slider(Form* parentForm);
-        virtual ~Slider();
+        DoubleSlider(Form* parentForm);
+        virtual ~DoubleSlider();
 
-        void setMinValue(int minValue);
-        void setMaxValue(int maxValue);
-        void setValue(int value);
-        void setIncrement(int increment);
-        void setValues(std::vector<int> values);
+        void setMinValue(double minValue);
+        void setMaxValue(double maxValue);
+        void setValue(double value);
+        void setPrecision(int precision);
+        void setIncrement(double increment);
 
         virtual void onMouseEntered(float x, float y) override;
         virtual void onMouseExited(float x, float y) override;
@@ -34,7 +33,7 @@ namespace crisp::gui
 
         virtual void draw(const RenderSystem& visitor) const override;
 
-        Event<int> valueChanged;
+        Event<double> valueChanged;
 
     private:
         enum class State
@@ -45,8 +44,8 @@ namespace crisp::gui
         };
 
         void setState(State state);
-        void moveIndicators(int value);
-        int getValueFromMousePosition(float x, float y);
+        void moveIndicators(double value);
+        double getValueFromMousePosition(float x, float y);
 
         State m_state;
 
@@ -61,11 +60,10 @@ namespace crisp::gui
         std::unique_ptr<Panel> m_foregroundRect;
         std::unique_ptr<Panel> m_indicatorRect;
 
-        int m_minValue;
-        int m_maxValue;
-        int m_value;
-        int m_increment;
-
-        std::vector<int> m_values;
+        double m_minValue;
+        double m_maxValue;
+        double m_value;
+        double m_increment;
+        int m_precision;
     };
 }

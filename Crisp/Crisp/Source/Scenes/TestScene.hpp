@@ -1,17 +1,16 @@
 #pragma once
 
-#include "IScene.hpp"
+#include "Scene.hpp"
 
 namespace crisp
 {
     class VulkanRenderer;
-    class InputDispatcher;
     class Application;
 
-    class TestScene : public IScene
+    class TestScene : public Scene
     {
     public:
-        TestScene(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app);
+        TestScene(VulkanRenderer* renderer, Application* app);
         virtual ~TestScene();
 
         virtual void resize(int width, int height) override;

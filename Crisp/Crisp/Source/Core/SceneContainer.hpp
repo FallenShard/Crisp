@@ -1,12 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <string>
 
 namespace crisp
 {
     class VulkanRenderer;
-    class InputDispatcher;
     class Application;
     class Scene;
     class TestScene;
@@ -19,8 +19,10 @@ namespace crisp
     class SceneContainer
     {
     public:
-        SceneContainer(VulkanRenderer* renderer, InputDispatcher* inputDispatcher, Application* app);
+        SceneContainer(VulkanRenderer* renderer, Application* app);
         ~SceneContainer();
+
+        static std::vector<std::string> getSceneNames();
 
         void resize(int width, int height);
         void update(float dt);
@@ -31,9 +33,7 @@ namespace crisp
     private:
         std::unique_ptr<Scene> m_scene;
 
-        gui::ComboBox* m_sceneComboBox;
         VulkanRenderer* m_renderer;
-        InputDispatcher* m_inputDispatcher;
         Application* m_application;
     };
 }
