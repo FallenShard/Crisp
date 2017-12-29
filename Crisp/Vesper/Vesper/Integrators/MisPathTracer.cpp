@@ -3,6 +3,7 @@
 #include "Samplers/Sampler.hpp"
 #include "Core/Scene.hpp"
 #include "BSDFs/BSDF.hpp"
+#include "BSSRDFs/BSSRDF.hpp"
 #include "Core/Intersection.hpp"
 #include "Shapes/Shape.hpp"
 
@@ -25,13 +26,17 @@ namespace vesper
     {
     }
 
-    void MisPathTracerIntegrator::preprocess(const Scene* scene)
+    void MisPathTracerIntegrator::preprocess(Scene* scene)
     {
+        for (auto& shape : scene->getShapes())
+            if (shape->getBSSRDF())
+                shape->getBSSRDF()->preprocess(shape.get(), scene);
     }
 
-    Spectrum MisPathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray) const
+    Spectrum MisPathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
     {
-        Spectrum L(0.f);
+        Spectrum direct(0.f);
+        Spectrum indirect(0.0f);
 
         Intersection its;
 
@@ -41,6 +46,8 @@ namespace vesper
 
         while (true)
         {
+            Spectrum& L = bounces <= 1 ? direct : indirect;
+
             // When there's no intersection, evaluate environment light
             bool foundIntersection = scene->rayIntersect(ray, its);
 
@@ -50,7 +57,7 @@ namespace vesper
             {
                 if (foundIntersection)
                 {
-                    if (its.shape->getLight())
+                    if (its.shape->getLight() && (illumFlags & Illumination::Direct))
                     {
                         Light::Sample lightSample(ray.o, its.p, its.shFrame.n);
                         L += throughput * its.shape->getLight()->eval(lightSample);
@@ -64,6 +71,12 @@ namespace vesper
 
             if (!foundIntersection || bounces >= m_maxDepth)
                 break;
+
+            if (its.shape->getBSSRDF())
+            {
+                BSSRDF::Sample sample(its.p, its.shFrame.n, -ray.d);
+                L += throughput * its.shape->getBSSRDF()->eval(sample);
+            }
 
             // If we did not hit a delta BRDF (mirror, glass etc.), sample the light
             if (!(its.shape->getBSDF()->getLobeType() & Lobe::Delta))
@@ -114,7 +127,7 @@ namespace vesper
             }
         }
 
-        return L;
+        return direct + indirect;
     }
 
     Spectrum MisPathTracerIntegrator::lightImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const

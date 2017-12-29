@@ -18,17 +18,6 @@
 
 namespace crisp::gui
 {
-    template <typename F>
-    struct Holder
-    {
-        void add(F callback)
-        {
-            vec.push_back(callback);
-        }
-
-        std::vector<F> vec;
-    };
-
     IntroductionPanel::IntroductionPanel(Form* parentForm, Application* app)
         : Panel(parentForm)
     {
@@ -63,7 +52,7 @@ namespace crisp::gui
         crispButton->setAnchor(Anchor::CenterTop);
         crispButton->clicked += [app, parentForm, this]
         {
-            auto sceneContainer = app->createSceneContainer();
+            auto sceneContainer = app->getSceneContainer();
 
             parentForm->remove("welcomePanel", 0.5f);
             Panel* statusBar = parentForm->getControlById<Panel>("statusBar");
@@ -74,7 +63,6 @@ namespace crisp::gui
             comboBox->setItems(SceneContainer::getSceneNames());
             comboBox->itemSelected.subscribe<SceneContainer, &SceneContainer::onSceneSelected>(sceneContainer);
             statusBar->addControl(std::move(comboBox));
-
         };
         addControl(std::move(crispButton));
         
@@ -88,16 +76,12 @@ namespace crisp::gui
         vesperButton->setAnchor(Anchor::CenterTop);
         vesperButton->clicked += [parentForm, app]
         {
-            parentForm->remove("welcomePanel", 0.5f);
+            auto sceneContainer = app->getSceneContainer();
 
-            gui::VesperGui vesperGui;
-            parentForm->add(vesperGui.buildSceneOptions(parentForm));
-            parentForm->add(vesperGui.buildProgressBar(parentForm));
+            parentForm->remove("welcomePanel", 0.5f);
+            sceneContainer->onSceneSelected("Ray Tracer");
+
             
-            parentForm->postGuiUpdate([app, parentForm, vesperGui]() mutable
-            {
-                vesperGui.setupInputCallbacks(parentForm, app);
-            });
         };
         addControl(std::move(vesperButton));
 

@@ -18,12 +18,6 @@
     <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Vesper\BSDFs\Dielectric.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Vesper\BSDFs\Lambertian.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Vesper\BSDFs\Mirror.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -117,12 +111,6 @@
     <ClCompile Include="Vesper\RayTracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Vesper\Textures\CheckerboardTexture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Vesper\Textures\ConstantTexture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Vesper\Integrators\MisDirectLighting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -192,18 +180,24 @@
     <ClCompile Include="Vesper\Media\Medium.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\DielectricBSDF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\LambertianBSDF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\BSSRDFs\DipoleBSSRDF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vesper\BSSRDFs\BSSRDFFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\BSDFs\BSDFFactory.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\BSDFs\Dielectric.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\BSDFs\Lambertian.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\BSDFs\Mirror.hpp">
@@ -426,6 +420,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\Media\MediumFactory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSDFs\DielectricBSDF.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSDFs\LambertianBSDF.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSSRDFs\BSSRDF.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSSRDFs\DipoleBSSRDF.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSSRDFs\IrradianceTree.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\Math\Octree.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vesper\BSSRDFs\BSSRDFFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

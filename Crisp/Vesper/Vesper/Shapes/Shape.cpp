@@ -1,10 +1,17 @@
 #include "Shape.hpp"
 
+#include "BSSRDFs/BSSRDF.hpp"
+
 namespace vesper
 {
     Shape::Shape()
         : m_light(nullptr)
         , m_bsdf(nullptr)
+        , m_bssrdf(nullptr)
+    {
+    }
+
+    Shape::~Shape()
     {
     }
 
@@ -31,6 +38,21 @@ namespace vesper
     const BSDF* Shape::getBSDF() const
     {
         return m_bsdf;
+    }
+
+    void Shape::setBSSRDF(std::unique_ptr<BSSRDF> bssrdf)
+    {
+        m_bssrdf = std::move(bssrdf);
+    }
+
+    const BSSRDF* Shape::getBSSRDF() const
+    {
+        return m_bssrdf.get();
+    }
+
+    BSSRDF* Shape::getBSSRDF()
+    {
+        return m_bssrdf.get();
     }
 
     void Shape::setMedium(Medium* medium)

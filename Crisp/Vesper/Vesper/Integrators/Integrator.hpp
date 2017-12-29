@@ -3,18 +3,28 @@
 #include "Spectrums/Spectrum.hpp"
 #include "Math/Ray.hpp"
 #include "Core/VariantMap.hpp"
+#include <CrispCore/BitFlags.hpp>
 
 namespace vesper
 {
     class Scene;
     class Sampler;
 
+    enum class Illumination
+    {
+        Direct   = 1 << 0,
+        Indirect = 1 << 1,
+        Full = Direct | Indirect
+    };
+    DECLARE_BITFLAG(Illumination);
+
+
     class Integrator
     {
     public:
         virtual ~Integrator();
 
-        virtual void preprocess(const Scene* scene) = 0;
-        virtual Spectrum Li(const Scene* scene, Sampler& sampler, Ray3& ray) const = 0;
+        virtual void preprocess(Scene* scene) = 0;
+        virtual Spectrum Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags flags = Illumination::Full) const = 0;
     };
 }

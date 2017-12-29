@@ -5,20 +5,6 @@
 
 namespace vesper
 {
-    RgbSpectrum::RgbSpectrum(float value)
-        : r(value)
-        , g(value)
-        , b(value)
-    {
-    }
-
-    RgbSpectrum::RgbSpectrum(float red, float green, float blue)
-        : r(red)
-        , g(green)
-        , b(blue)
-    {
-    }
-
     RgbSpectrum::RgbSpectrum(const glm::vec3& vec)
         : r(vec.r)
         , g(vec.g)
@@ -148,6 +134,11 @@ namespace vesper
         return RgbSpectrum(*this) /= scalar;
     }
 
+    const RgbSpectrum RgbSpectrum::operator-() const
+    {
+        return {-r, -g, -b};
+    }
+
     float RgbSpectrum::getLuminance() const
     {
         return r * 0.212671f + g * 0.715160f + b * 0.072169f;
@@ -156,6 +147,11 @@ namespace vesper
     float RgbSpectrum::maxCoeff() const
     {
         return std::max(r, std::max(g, b));
+    }
+
+    const RgbSpectrum RgbSpectrum::exp() const
+    {
+        return { std::exp(r), std::exp(g), std::exp(b) };
     }
 
     RgbSpectrum RgbSpectrum::clamp() const

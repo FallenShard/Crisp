@@ -19,6 +19,7 @@
 #include "Shapes/ShapeFactory.hpp"
 #include "Lights/LightFactory.hpp"
 #include "BSDFs/BSDFFactory.hpp"
+#include "BSSRDFs/BSSRDFFactory.hpp"
 #include "Textures/TextureFactory.hpp"
 
 namespace vesper
@@ -301,6 +302,12 @@ namespace vesper
                     light = create<Light, LightFactory>(shapeNode->first_node("light"));
                 }
 
+                std::unique_ptr<BSSRDF> bssrdf = nullptr;
+                if (shapeNode->first_node("bssrdf") != nullptr)
+                {
+                    bssrdf = create<BSSRDF, BSSRDFFactory>(shapeNode->first_node("bssrdf"));
+                }
+
 
                 std::unique_ptr<BSDF> bsdf = create<BSDF, BSDFFactory>(shapeNode->first_node("bsdf"));
 
@@ -321,7 +328,11 @@ namespace vesper
                     }
                 }
 
-                scene->addShape(std::move(create<Shape, ShapeFactory>(shapeNode)), bsdf.get(), light.get());
+                auto shape = create<Shape, ShapeFactory>(shapeNode);
+                shape->setBSSRDF(std::move(bssrdf));
+
+
+                scene->addShape(std::move(shape), bsdf.get(), light.get());
 
                 if (light)
                 {

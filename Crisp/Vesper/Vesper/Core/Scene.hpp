@@ -41,6 +41,7 @@ namespace vesper
         const Sampler* getSampler() const;
         const Integrator* getIntegrator() const;
         const Camera* getCamera() const;
+        std::vector<std::unique_ptr<Shape>>& getShapes();
 
         Light* getRandomLight(float sample) const;
         float getLightPdf() const;

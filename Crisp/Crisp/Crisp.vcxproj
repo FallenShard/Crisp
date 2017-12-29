@@ -23,6 +23,7 @@
     <RootNamespace>Crisp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  <Import Project="$(SolutionDir)\Microsoft.VCToolsVersion.14.11.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -93,10 +94,9 @@
       <ShowIncludes>false</ShowIncludes>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>
-      </AdditionalOptions>
+      <AdditionalOptions>-Bv</AdditionalOptions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <PostBuildEvent>
@@ -116,6 +116,7 @@ popd</Command>
     </PreBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -139,11 +140,10 @@ popd</Command>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\;$(SolutionDir)CrispCore\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>
-      </AdditionalOptions>
+      <AdditionalOptions>-Bv</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -162,6 +162,7 @@ popd</Command>
     </PreBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -234,6 +235,8 @@ popd</Command>
     <ClCompile Include="Source\Renderer\Texture.cpp" />
     <ClCompile Include="Source\Renderer\TextureView.cpp" />
     <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp" />
+    <ClCompile Include="Source\Scenes\RayTracerGui.cpp" />
+    <ClCompile Include="Source\Scenes\RayTracerScene.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Simulation\SimulationConfigFile.cpp" />
@@ -291,11 +294,16 @@ popd</Command>
     <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp" />
     <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
+    <ClInclude Include="Source\Scenes\RayTracerGui.hpp" />
+    <ClInclude Include="Source\Scenes\RayTracerScene.hpp" />
     <ClInclude Include="Source\Scenes\Scene.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingPanel.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingScene.hpp" />
     <ClInclude Include="Source\Scenes\TestScene.hpp" />
-    <ClInclude Include="Source\Simulation\PropertyBuffer.hpp" />
+    <ClInclude Include="Source\Simulation\PropertyBuffer.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Source\Core\BackgroundImage.hpp" />
     <ClInclude Include="Source\Core\Window.hpp" />
     <ClInclude Include="Source\Geometry\MeshGeometry.hpp" />
@@ -463,7 +471,9 @@ popd</Command>
     <Xml Include="Resources\VesperScenes\sponza-direct.xml" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="Source\Simulation\FluidSimulationKernels.cu" />
+    <CudaCompile Include="Source\Simulation\FluidSimulationKernels.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

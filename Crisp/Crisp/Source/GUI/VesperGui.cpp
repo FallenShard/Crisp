@@ -13,38 +13,18 @@ namespace crisp
     {
         void VesperGui::setupInputCallbacks(Form* form, Application* app)
         {
-            form->getControlById<gui::Button>("openButton")->clicked.subscribe([app]()
-            {
-                app->openSceneFileFromDialog();
-            });
-            
-            form->getControlById<gui::Button>("renderButton")->clicked.subscribe([app]()
-            {
-                app->startRayTracing();
-            });
-            
-            form->getControlById<gui::Button>("stopButton")->clicked.subscribe([app]()
-            {
-                app->stopRayTracing();
-            });
-            
-            form->getControlById<gui::Button>("saveButton")->clicked.subscribe([app]()
-            {
-                app->writeImageToExr();
-            });
-
             auto progressLabel = form->getControlById<Label>("progressLabel");
             auto progressBar   = form->getControlById<Panel>("progressBar");
 
-            app->rayTracerProgressed.subscribe([form, progressLabel, progressBar](float percentage, float timeSpent)
-            {
-                float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
-                
-                std::stringstream stringStream;
-                stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
-                progressLabel->setText(stringStream.str());
-                progressBar->setHorizontalSizingPolicy(SizingPolicy::FillParent, percentage);
-            });
+            //app->rayTracerProgressed.subscribe([form, progressLabel, progressBar](float percentage, float timeSpent)
+            //{
+            //    float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
+            //    
+            //    std::stringstream stringStream;
+            //    stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
+            //    progressLabel->setText(stringStream.str());
+            //    progressBar->setHorizontalSizingPolicy(SizingPolicy::FillParent, percentage);
+            //});
         }
 
         std::unique_ptr<Control> VesperGui::buildSceneOptions(Form* form)

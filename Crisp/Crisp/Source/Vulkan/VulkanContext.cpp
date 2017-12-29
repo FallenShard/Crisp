@@ -1,5 +1,6 @@
 #include "VulkanContext.hpp"
 
+#include <algorithm>
 #include <set>
 #include <iostream>
 

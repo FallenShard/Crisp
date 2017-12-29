@@ -25,8 +25,6 @@
 
 #include "glfw/glfw3.h"
 
-#include "CrispCore/Profiler.hpp"
-
 namespace crisp
 {
     namespace
@@ -71,17 +69,17 @@ namespace crisp
         m_posBuffer->copyToGpu();
         
         m_gridLocationBuffer = std::make_unique<PropertyBuffer<int>>(m_numParticles);
-
+        
         std::vector<int> particleIndices(m_numParticles);
         std::iota(particleIndices.begin(), particleIndices.end(), 0);
         m_particleIndexBuffer = std::make_unique<PropertyBuffer<int>>(m_numParticles);
         m_particleIndexBuffer->setHostBuffer(particleIndices);
         m_particleIndexBuffer->copyToGpu();
-
+        
         m_colorCudaBuffer = std::make_unique<PropertyBuffer<glm::vec4>>(m_numParticles);
         m_colorCudaBuffer->setHostBuffer(m_colors);
         m_colorCudaBuffer->copyToGpu();
-
+        
         m_densityCudaBuffer = std::make_unique<PropertyBuffer<float>>(m_numParticles);
         m_pressureCudaBuffer = std::make_unique<PropertyBuffer<float>>(m_numParticles);
         m_veloBuffer = std::make_unique<PropertyBuffer<glm::vec3>>(m_numParticles);
@@ -89,45 +87,45 @@ namespace crisp
         m_veloBuffer->setHostBuffer(velocities);
         m_veloBuffer->copyToGpu();
         m_forceBuffer = std::make_unique<PropertyBuffer<glm::vec3>>(m_numParticles);
-
+        
         m_normalsBuffer = std::make_unique<PropertyBuffer<glm::vec4>>(m_numParticles);
         
-
+        
         int numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
         std::vector<int> gridCellIds(numCells);
         std::iota(gridCellIds.begin(), gridCellIds.end(), 0);
         m_gridCellIndexBuffer = std::make_unique<PropertyBuffer<int>>(numCells);
         m_gridCellIndexBuffer->setHostBuffer(gridCellIds);
         m_gridCellIndexBuffer->copyToGpu();
-
+        
         m_gridCellOffsets = std::make_unique<PropertyBuffer<int>>(numCells);
         m_gridCellOffsets->setHostBuffer(gridCellIds);
         m_gridCellOffsets->copyToGpu();
-
-
+        
+        
         m_grid.resize(m_gridParams.dim.y * m_gridParams.dim.z * m_gridParams.dim.x);
         for (auto& cell : m_grid)
             cell.reserve(1024);
-
+        
         m_gridCounts.resize(m_gridParams.dim.y * m_gridParams.dim.z * m_gridParams.dim.x, 0);
-
+        
         m_densities.resize(m_numParticles);
         m_pressures.resize(m_numParticles);
         m_forces.resize(m_numParticles);
         m_velocities.resize(m_numParticles, glm::vec3(0.0f));
-
+        
         m_gridParamsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(GridParams), BufferUpdatePolicy::Constant, &m_gridParams);
-
-
+        
+        
         m_vertexBufferSize = positions.size() * sizeof(glm::vec4);
         m_vertexBuffer = std::make_unique<VulkanBuffer>(m_device, 3 * m_vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), m_vertexBufferSize);
         m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, m_vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
+        
         m_colorBuffer = std::make_unique<VulkanBuffer>(m_device, 3 * m_vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_stagingColorBuffer = std::make_unique<VulkanBuffer>(m_device, m_vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         m_renderer->fillDeviceBuffer(m_colorBuffer.get(), m_colors.data(), m_vertexBufferSize);
-
+        
         //VkDeviceSize gridBufferSize = m_grid.size() * sizeof(glm::uvec4);
         //m_gridCellsBuffer = std::make_unique<VulkanBuffer>(m_device, gridBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         //m_renderer->fillDeviceBuffer(m_gridCellsBuffer.get(), m_grid.data(), gridBufferSize);
@@ -135,13 +133,13 @@ namespace crisp
         //VkDeviceSize gridCountSize = m_gridCounts.size() * sizeof(uint32_t);
         //m_gridCellCountsBuffer = std::make_unique<VulkanBuffer>(m_device, gridCountSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         //m_renderer->fillDeviceBuffer(m_gridCellCountsBuffer.get(), m_gridCounts.data(), gridCountSize);
-
+        
         VkDeviceSize pressureSize = positions.size() * sizeof(float);
         m_pressureBuffer = std::make_unique<VulkanBuffer>(m_device, pressureSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
+        
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(Transforms), BufferUpdatePolicy::PerFrame);
         m_paramsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame);
-
+        
         m_drawPipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, renderPass);
         m_descriptorSetGroup =
         {
@@ -151,20 +149,20 @@ namespace crisp
         m_descriptorSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo());
         m_descriptorSetGroup.postBufferUpdate(1, 0, m_paramsBuffer->getDescriptorInfo());
         m_descriptorSetGroup.flushUpdates(m_device);
-
+        
         m_particleParams.radius = m_particleRadius;
         m_particleParams.screenSpaceScale = 1.0f;
         m_transformsBuffer->updateStagingBuffer(&m_particleParams, sizeof(ParticleParams));
-
+        
         m_compPipeline = std::make_unique<ComputeTestPipeline>(m_renderer);
-
+        
         m_compSetGroup = { m_compPipeline->allocateDescriptorSet(0) };
-
+        
         VkDescriptorBufferInfo descInfo = {};
         descInfo.buffer = m_vertexBuffer->getHandle();
         descInfo.offset = 0;
         descInfo.range  = positions.size() * sizeof(glm::vec4);
-
+        
         m_compSetGroup.postBufferUpdate(0, 0, descInfo);
         m_compSetGroup.postBufferUpdate(0, 1, { m_colorBuffer->getHandle(), 0, m_colors.size() * sizeof(glm::vec4) });
         //m_compSetGroup.postBufferUpdate(0, 2, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
@@ -172,23 +170,23 @@ namespace crisp
         m_compSetGroup.postBufferUpdate(0, 4, { m_gridParamsBuffer->get(), 0, sizeof(GridParams) });
         m_compSetGroup.postBufferUpdate(0, 5, { m_pressureBuffer->getHandle(),       0, pressureSize });
         m_compSetGroup.flushUpdates(m_device);
-
+        
         m_hashGridPipeline = std::make_unique<HashGridPipeline>(m_renderer);
         m_hashGridSets = { m_hashGridPipeline->allocateDescriptorSet(0) };
-
+        
         m_hashGridSets.postBufferUpdate(0, 0, descInfo);
         //m_hashGridSets.postBufferUpdate(0, 1, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
         //m_hashGridSets.postBufferUpdate(0, 2, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
         m_hashGridSets.postBufferUpdate(0, 3, { m_gridParamsBuffer->get(), 0, sizeof(GridParams) });
         m_hashGridSets.flushUpdates(m_device);
-
+        
         m_clearGridPipeline = std::make_unique<ClearHashGridPipeline>(m_renderer);
         m_clearGridSets = { m_clearGridPipeline->allocateDescriptorSet(0) };
-
+        
         //m_clearGridSets.postBufferUpdate(0, 0, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
         //m_clearGridSets.postBufferUpdate(0, 1, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
         m_clearGridSets.flushUpdates(m_device);
-
+        
         m_pressurePipeline = std::make_unique<ComputePressurePipeline>(m_renderer);
         m_pressureSets = { m_pressurePipeline->allocateDescriptorSet(0) };
         m_pressureSets.postBufferUpdate(0, 0, descInfo);
@@ -197,10 +195,10 @@ namespace crisp
         //m_pressureSets.postBufferUpdate(0, 3, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
         m_pressureSets.postBufferUpdate(0, 4, { m_gridParamsBuffer->get(), 0, sizeof(GridParams) });
         m_pressureSets.flushUpdates(m_device);
-
-
+        
+        
         m_time = 2.0f;
-
+        
         m_boxDrawer = std::make_unique<BoxDrawer>(m_renderer, 1, renderPass);
         std::vector<glm::vec3> centers;
         std::vector<glm::vec3> scales;
@@ -214,13 +212,13 @@ namespace crisp
         //            scales.push_back(h);
         //        }
         m_boxDrawer->setBoxTransforms(centers, scales);
-
+        
         m_viscosity = 3.0f;
-
+        
         m_simulationParams = std::make_unique<SimulationParams>();
         m_simulationParams->numParticles = m_numParticles;
         m_simulationParams->gridDims = m_gridParams.dim;
-
+        
         m_simulationParams->cellSize   = h;
         m_simulationParams->poly6Const = 315.0f / (64.0f * PI * h3 * h3 * h3);
     }
@@ -234,6 +232,7 @@ namespace crisp
         if (code == GLFW_KEY_SPACE)
             run = !run;
     }
+
 
     void FluidSimulation::update(const glm::mat4& V, const glm::mat4& P, float dt)
     {
@@ -379,7 +378,6 @@ namespace crisp
         {
             int3 gridParams = { m_gridParams.dim.x, m_gridParams.dim.y, m_gridParams.dim.z };
 
-                
             FluidSimulationKernels::computeGridLocations(*m_gridLocationBuffer, *m_particleIndexBuffer, *m_posBuffer, *m_simulationParams);
             FluidSimulationKernels::sortParticleIndicesByGridLocation(*m_gridLocationBuffer, *m_particleIndexBuffer);
             FluidSimulationKernels::computeGridCellOffsets(*m_gridCellOffsets, *m_gridLocationBuffer, *m_gridCellIndexBuffer);
@@ -394,9 +392,8 @@ namespace crisp
             worldSpace.y = m_fluidSpaceMax.y;
             worldSpace.z = m_fluidSpaceMax.z;
             FluidSimulationKernels::integrate(*m_posBuffer, *m_veloBuffer, *m_forceBuffer, *m_densityCudaBuffer, worldSpace, dt * timeStepFraction);
-                
         }
-
+        
         m_colorCudaBuffer->copyToCpu();
         m_posBuffer->copyToCpu();
         m_stagingBuffer->updateFromHost(m_posBuffer->getHostBuffer());
@@ -453,7 +450,7 @@ namespace crisp
 
         m_posBuffer->setHostBuffer(positions);
         m_posBuffer->copyToGpu();
-
+        
         std::vector<glm::vec3> velocities(m_numParticles, glm::vec3(0.0f));
         m_veloBuffer->setHostBuffer(velocities);
         m_veloBuffer->copyToGpu();

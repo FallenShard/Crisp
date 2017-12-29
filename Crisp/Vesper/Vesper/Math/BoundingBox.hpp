@@ -43,8 +43,8 @@ namespace vesper
         {
             auto temp = max - min;
             auto result = 1.0f;
-            for (auto& val : temp.length())
-                result *= val;
+            for (int i = 0; i < temp.length(); i++)
+                result *= temp[i];
             return result;
         }
 

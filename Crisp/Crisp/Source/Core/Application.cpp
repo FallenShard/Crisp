@@ -10,18 +10,15 @@
 #include "Renderer/VulkanRenderer.hpp"
 #include "Core/Window.hpp"
 #include "Core/InputDispatcher.hpp"
-#include "Core/RaytracedImage.hpp"
 #include "Core/BackgroundImage.hpp"
 #include "Core/SceneContainer.hpp"
 
 #include "IO/FileUtils.hpp"
 #include "IO/ImageFileBuffer.hpp"
-#include "IO/OpenEXRWriter.hpp"
 
 #include "GUI/RenderSystem.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/Button.hpp"
-#include "GUI/VesperGui.hpp"
 #include "GUI/StatusBar.hpp"
 #include "GUI/MemoryUsageBar.hpp"
 #include "GUI/IntroductionPanel.hpp"
@@ -43,8 +40,6 @@ namespace crisp
 
     Application::Application(ApplicationEnvironment* env)
         : m_frameTimeLogger(1000.0)
-        , m_tracerProgress(0.0f)
-        , m_numRayTracedChannels(4)
     {
         std::cout << "Initializing application...\n";
 
@@ -65,17 +60,6 @@ namespace crisp
         inputDispatcher->mouseExited.subscribe<gui::Form, &gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
         
-        // Create ray tracer and add a handler for image block updates
-        m_rayTracer = std::make_unique<vesper::RayTracer>();
-        m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
-        m_rayTracer->setProgressUpdater([this](vesper::RayTracerUpdate update)
-        {
-            m_tracerProgress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
-            m_timeSpentRendering = update.totalTimeSpentRendering;
-            m_rayTracerUpdateQueue.emplace(update);
-            rayTracerProgressed(m_tracerProgress, m_timeSpentRendering);
-        });
-
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
         m_frameTimeLogger.onLoggerUpdated.subscribe<gui::StatusBar, &gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
         m_guiForm->add(std::move(statusBar));
@@ -85,6 +69,8 @@ namespace crisp
         
         auto introPanel = std::make_unique<gui::IntroductionPanel>(m_guiForm.get(), this);
         m_guiForm->add(std::move(introPanel));
+
+        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
     }
 
     Application::~Application()
@@ -109,12 +95,11 @@ namespace crisp
 
             while (timeSinceLastUpdate > TimePerFrame)
             {
-                m_guiForm->update(TimePerFrame);
+                    m_guiForm->update(TimePerFrame);
+                
                 
                 if (m_sceneContainer)
                     m_sceneContainer->update(static_cast<float>(TimePerFrame));
-
-                processRayTracerUpdates();
 
                 timeSinceLastUpdate -= TimePerFrame;
             }
@@ -124,10 +109,8 @@ namespace crisp
             else
                 m_backgroundImage->draw();
 
-            if (m_rayTracedImage)
-                m_rayTracedImage->draw();
-
             m_guiForm->draw();
+
             m_renderer->drawFrame();
 
             m_frameTimeLogger.update();
@@ -153,55 +136,11 @@ namespace crisp
         
         if (m_sceneContainer)
             m_sceneContainer->resize(width, height);
-
-        if (m_rayTracedImage)
-            m_rayTracedImage->resize(width, height);
     }
 
-    SceneContainer* Application::createSceneContainer()
+    SceneContainer* Application::getSceneContainer() const
     {
-        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
         return m_sceneContainer.get();
-
-    }
-
-    void Application::startRayTracing()
-    {
-        m_rayTracer->start();
-    }
-
-    void Application::stopRayTracing()
-    {
-        m_rayTracer->stop();
-    }
-
-    void Application::openSceneFileFromDialog()
-    {
-        auto openedFile = FileUtils::openFileDialog();
-        if (openedFile == "")
-            return;
-
-        openSceneFile(openedFile);
-    }
-
-    void Application::openSceneFile(std::string filename)
-    {
-        m_projectName = FileUtils::getFileNameFromPath(filename);
-        m_rayTracer->initializeScene(filename);
-
-        auto imageSize = m_rayTracer->getImageSize();
-        m_rayTracedImage = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer.get());
-        m_rayTracedImageData.resize(m_numRayTracedChannels * imageSize.x * imageSize.y);
-    }
-
-    void Application::writeImageToExr()
-    {
-        std::string outputDirectory = "Output";
-        FileUtils::createDirectory(outputDirectory);
-        OpenEXRWriter writer;
-        auto imageSize = m_rayTracer->getImageSize();
-        std::cout << "Writing EXR image..." << std::endl;
-        writer.write(outputDirectory + "/" + m_projectName + ".exr", m_rayTracedImageData.data(), imageSize.x, imageSize.y, true);
     }
 
     gui::Form* Application::getForm() const
@@ -230,32 +169,5 @@ namespace crisp
         };
         
         m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, Window::getVulkanExtensions());
-    }
-
-    void Application::processRayTracerUpdates()
-    {
-        while (!m_rayTracerUpdateQueue.empty())
-        {
-            vesper::RayTracerUpdate update;
-            if (m_rayTracerUpdateQueue.try_pop(update))
-            {
-                m_rayTracedImage->postTextureUpdate(update);
-
-                auto imageSize = m_rayTracer->getImageSize();
-                for (int y = 0; y < update.height; y++)
-                {
-                    for (int x = 0; x < update.width; x++)
-                    {
-                        size_t rowIdx = update.y + y;
-                        size_t colIdx = update.x + x;
-
-                        for (int c = 0; c < 4; c++)
-                        {
-                            m_rayTracedImageData[(rowIdx * imageSize.x + colIdx) * 4 + c] = update.data[(y * update.width + x) * 4 + c];
-                        }
-                    }
-                }
-            }
-        }
     }
 }

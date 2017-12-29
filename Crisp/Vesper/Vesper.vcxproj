@@ -23,6 +23,7 @@
     <RootNamespace>Vesper</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  <Import Project="$(SolutionDir)\Microsoft.VCToolsVersion.14.11.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -71,10 +72,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Vesper\;$(SourcePath)</SourcePath>
+    <IntDir>$(SolutionDir)Intermediate\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Vesper\;$(SourcePath)</SourcePath>
+    <IntDir>$(SolutionDir)Intermediate\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -91,8 +94,9 @@
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;$(SolutionDir)CrispCore\;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/std:c++latest</AdditionalOptions>
+      <AdditionalOptions>-Bv</AdditionalOptions>
       <MinimalRebuild>false</MinimalRebuild>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalDependencies>embree.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -122,8 +126,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;$(SolutionDir)CrispCore\;</AdditionalIncludeDirectories>
-      <AdditionalOptions>/std:c++latest</AdditionalOptions>
+      <AdditionalOptions>-Bv</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -137,8 +142,8 @@
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp" />
     <ClInclude Include="Vesper\BSDFs\BSDFFactory.hpp" />
-    <ClInclude Include="Vesper\BSDFs\Dielectric.hpp" />
-    <ClInclude Include="Vesper\BSDFs\Lambertian.hpp" />
+    <ClInclude Include="Vesper\BSDFs\DielectricBSDF.hpp" />
+    <ClInclude Include="Vesper\BSDFs\LambertianBSDF.hpp" />
     <ClInclude Include="Vesper\BSDFs\Microfacet.hpp" />
     <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\Beckmann.hpp" />
     <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\GGX.hpp" />
@@ -150,6 +155,10 @@
     <ClInclude Include="Vesper\BSDFs\RoughConductor.hpp" />
     <ClInclude Include="Vesper\BSDFs\RoughDielectric.hpp" />
     <ClInclude Include="Vesper\BSDFs\SmoothConductor.hpp" />
+    <ClInclude Include="Vesper\BSSRDFs\BSSRDF.hpp" />
+    <ClInclude Include="Vesper\BSSRDFs\BSSRDFFactory.hpp" />
+    <ClInclude Include="Vesper\BSSRDFs\DipoleBSSRDF.hpp" />
+    <ClInclude Include="Vesper\BSSRDFs\IrradianceTree.hpp" />
     <ClInclude Include="Vesper\Cameras\Camera.hpp" />
     <ClInclude Include="Vesper\Cameras\CameraFactory.hpp" />
     <ClInclude Include="Vesper\Cameras\Perspective.hpp" />
@@ -182,6 +191,7 @@
     <ClInclude Include="Vesper\Math\CoordinateFrame.hpp" />
     <ClInclude Include="Vesper\Math\Distribution1D.hpp" />
     <ClInclude Include="Vesper\Math\Distribution2D.hpp" />
+    <ClInclude Include="Vesper\Math\Octree.hpp" />
     <ClInclude Include="Vesper\Math\Operations.hpp" />
     <ClInclude Include="Vesper\Math\Ray.hpp" />
     <ClInclude Include="Vesper\Math\Transform.hpp" />
@@ -216,8 +226,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp" />
-    <ClCompile Include="Vesper\BSDFs\Dielectric.cpp" />
-    <ClCompile Include="Vesper\BSDFs\Lambertian.cpp" />
+    <ClCompile Include="Vesper\BSDFs\DielectricBSDF.cpp" />
+    <ClCompile Include="Vesper\BSDFs\LambertianBSDF.cpp" />
     <ClCompile Include="Vesper\BSDFs\Microfacet.cpp" />
     <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\Beckmann.cpp" />
     <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\GGX.cpp" />
@@ -228,6 +238,8 @@
     <ClCompile Include="Vesper\BSDFs\RoughConductor.cpp" />
     <ClCompile Include="Vesper\BSDFs\RoughDielectric.cpp" />
     <ClCompile Include="Vesper\BSDFs\SmoothConductor.cpp" />
+    <ClCompile Include="Vesper\BSSRDFs\BSSRDFFactory.cpp" />
+    <ClCompile Include="Vesper\BSSRDFs\DipoleBSSRDF.cpp" />
     <ClCompile Include="Vesper\Cameras\Camera.cpp" />
     <ClCompile Include="Vesper\Cameras\CameraFactory.cpp" />
     <ClCompile Include="Vesper\Cameras\Perspective.cpp" />
@@ -271,8 +283,6 @@
     <ClCompile Include="Vesper\Shapes\ShapeFactory.cpp" />
     <ClCompile Include="Vesper\Shapes\Sphere.cpp" />
     <ClCompile Include="Vesper\Spectrums\RgbSpectrum.cpp" />
-    <ClCompile Include="Vesper\Textures\CheckerboardTexture.cpp" />
-    <ClCompile Include="Vesper\Textures\ConstantTexture.cpp" />
     <ClCompile Include="Vesper\Textures\UVTexture.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

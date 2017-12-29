@@ -1,4 +1,4 @@
-#include "Dielectric.hpp"
+#include "DielectricBSDF.hpp"
 
 #include "Math/CoordinateFrame.hpp"
 #include "Samplers/Sampler.hpp"
@@ -11,10 +11,6 @@ namespace vesper
         m_lobe = LobeFlags(Lobe::Delta);
         m_intIOR = params.get("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
         m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
-    }
-
-    DielectricBSDF::~DielectricBSDF()
-    {
     }
 
     Spectrum DielectricBSDF::eval(const BSDF::Sample& bsdfSample) const

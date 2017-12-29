@@ -18,11 +18,11 @@ namespace vesper
     {
     }
 
-    void MatsDirectLightingIntegrator::preprocess(const Scene* scene)
+    void MatsDirectLightingIntegrator::preprocess(Scene* scene)
     {
     }
 
-    Spectrum MatsDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray) const
+    Spectrum MatsDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))

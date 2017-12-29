@@ -1,8 +1,8 @@
 #include "AreaLight.hpp"
 
-#include <glm/gtx/norm.hpp>
-
+#include "Samplers/Sampler.hpp"
 #include "Math/Operations.hpp"
+#include "Math/Warp.hpp"
 #include "Shapes/Shape.hpp"
 
 namespace vesper
@@ -10,10 +10,6 @@ namespace vesper
     AreaLight::AreaLight(const VariantMap& params)
     {
         m_radiance = params.get("radiance", Spectrum(10.0f));
-    }
-
-    AreaLight::~AreaLight()
-    {
     }
 
     Spectrum AreaLight::eval(const Light::Sample& sample) const
@@ -64,13 +60,22 @@ namespace vesper
         if (cosTheta <= 0.0f)
             return 0.0f;
 
-        float squaredDist = glm::length2(sample.p - sample.ref);
+        glm::vec3 wi = sample.p - sample.ref;
+        float squaredDist = glm::dot(wi, wi);
         return areaPdf * squaredDist / cosTheta;
     }
 
     Spectrum AreaLight::samplePhoton(Ray3& ray, Sampler& sampler) const
     {
-        return Spectrum();
+        Shape::Sample shapeSample;
+        m_shape->sampleSurface(shapeSample, sampler);
+
+        glm::vec3 dir = Warp::squareToCosineHemisphere(sampler.next2D());
+        CoordinateFrame frame(shapeSample.n);
+
+        ray = Ray3(shapeSample.p, frame.toWorld(dir));
+
+        return PI * m_radiance / m_shape->pdfSurface(shapeSample);
     }
 
     bool AreaLight::isDelta() const

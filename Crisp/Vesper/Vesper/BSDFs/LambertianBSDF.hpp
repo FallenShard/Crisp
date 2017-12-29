@@ -1,21 +1,21 @@
 #pragma once
 
 #include "BSDF.hpp"
+#include "Textures/Texture.hpp"
 
 namespace vesper
 {
-    class DielectricBSDF : public BSDF
+    class LambertianBSDF : public BSDF
     {
     public:
-        DielectricBSDF(const VariantMap& params = VariantMap());
-        ~DielectricBSDF();
+        LambertianBSDF(const VariantMap& params);
 
+        virtual void setTexture(std::shared_ptr<Texture<Spectrum>> texture) override;
         virtual Spectrum eval(const BSDF::Sample& bsdfSample) const override;
         virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const override;
         virtual float pdf(const BSDF::Sample& bsdfSample) const override;
 
     private:
-        float m_intIOR;
-        float m_extIOR;
+        std::shared_ptr<Texture<Spectrum>> m_albedo;
     };
 }

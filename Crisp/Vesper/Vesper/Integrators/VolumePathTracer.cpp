@@ -129,11 +129,11 @@ namespace vesper
     {
     }
 
-    void VolumePathTracerIntegrator::preprocess(const Scene* scene)
+    void VolumePathTracerIntegrator::preprocess(Scene* scene)
     {
     }
 
-    Spectrum VolumePathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray) const
+    Spectrum VolumePathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags flags) const
     {
         Spectrum L(0.0f);
 

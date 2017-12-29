@@ -1,6 +1,10 @@
 #include "FluidSimulationKernels.cuh"
 
 #include <device_launch_parameters.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <algorithm>
+#include <cmath>
 
 #include <thrust/sort.h>
 #include <thrust/binary_search.h>
@@ -126,13 +130,13 @@ namespace crisp
         int3 gridPosition = calculateGridPosition(position, cellSize);
 
         int3 lower;
-        lower.x = max(0, gridPosition.x - 1);
-        lower.y = max(0, gridPosition.y - 1);
-        lower.z = max(0, gridPosition.z - 1);
+        lower.x = glm::max(0, gridPosition.x - 1);
+        lower.y = glm::max(0, gridPosition.y - 1);
+        lower.z = glm::max(0, gridPosition.z - 1);
         int3 upper;
-        upper.x = min(gridDims.x - 1, gridPosition.x + 1);
-        upper.y = min(gridDims.y - 1, gridPosition.y + 1);
-        upper.z = min(gridDims.z - 1, gridPosition.z + 1);
+        upper.x = glm::min(gridDims.x - 1, gridPosition.x + 1);
+        upper.y = glm::min(gridDims.y - 1, gridPosition.y + 1);
+        upper.z = glm::min(gridDims.z - 1, gridPosition.z + 1);
 
         int numCells = gridDims.x * gridDims.y * gridDims.z;
         int count = 0;
@@ -185,13 +189,13 @@ namespace crisp
         
 
         int3 lower;
-        lower.x = max(0, gridPosition.x - 1);
-        lower.y = max(0, gridPosition.y - 1);
-        lower.z = max(0, gridPosition.z - 1);
+        lower.x = glm::max(0, gridPosition.x - 1);
+        lower.y = glm::max(0, gridPosition.y - 1);
+        lower.z = glm::max(0, gridPosition.z - 1);
         int3 upper;
-        upper.x = min(gridDims.x - 1, gridPosition.x + 1);
-        upper.y = min(gridDims.y - 1, gridPosition.y + 1);
-        upper.z = min(gridDims.z - 1, gridPosition.z + 1);
+        upper.x = glm::min(gridDims.x - 1, gridPosition.x + 1);
+        upper.y = glm::min(gridDims.y - 1, gridPosition.y + 1);
+        upper.z = glm::min(gridDims.z - 1, gridPosition.z + 1);
 
         int numCells = gridDims.x * gridDims.y * gridDims.z;
         glm::vec3 posI = position;
@@ -257,13 +261,13 @@ namespace crisp
 
 
         int3 lower;
-        lower.x = max(0, gridPosition.x - 1);
-        lower.y = max(0, gridPosition.y - 1);
-        lower.z = max(0, gridPosition.z - 1);
+        lower.x = glm::max(0, gridPosition.x - 1);
+        lower.y = glm::max(0, gridPosition.y - 1);
+        lower.z = glm::max(0, gridPosition.z - 1);
         int3 upper;
-        upper.x = min(gridDims.x - 1, gridPosition.x + 1);
-        upper.y = min(gridDims.y - 1, gridPosition.y + 1);
-        upper.z = min(gridDims.z - 1, gridPosition.z + 1);
+        upper.x = glm::min(gridDims.x - 1, gridPosition.x + 1);
+        upper.y = glm::min(gridDims.y - 1, gridPosition.y + 1);
+        upper.z = glm::min(gridDims.z - 1, gridPosition.z + 1);
 
         int numCells = gridDims.x * gridDims.y * gridDims.z;
         glm::vec3 posI = position;

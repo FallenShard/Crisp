@@ -13,11 +13,11 @@ namespace vesper
     {
     }
 
-    void NormalsIntegrator::preprocess(const Scene* scene)
+    void NormalsIntegrator::preprocess(Scene* scene)
     {
     }
 
-    Spectrum NormalsIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray) const
+    Spectrum NormalsIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))

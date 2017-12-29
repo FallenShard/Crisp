@@ -5,7 +5,9 @@
 #include "Cameras/Perspective.hpp"
 #include "Shapes/Mesh.hpp"
 #include "Lights/PointLight.hpp"
-#include "BSDFs/Lambertian.hpp"
+#include "BSDFs/BSDF.hpp"
+
+#include "Math/Octree.hpp"
 
 namespace vesper
 {
@@ -103,6 +105,11 @@ namespace vesper
     const Camera* Scene::getCamera() const
     {
         return m_camera.get();
+    }
+
+    std::vector<std::unique_ptr<Shape>>& Scene::getShapes()
+    {
+        return m_shapes;
     }
 
     Light* Scene::getRandomLight(float sample) const

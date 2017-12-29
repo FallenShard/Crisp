@@ -9,11 +9,30 @@
 
 namespace vesper
 {
+    namespace internal
+    {
+        template <typename T> struct Default1;
+        template <typename T> struct Default2;
+
+        template <> struct Default1<float> { static constexpr float value = 1.0f; };
+        template <> struct Default2<float> { static constexpr float value = 0.2f; };
+
+        template <> struct Default1<Spectrum> { static constexpr Spectrum value = Spectrum(1.0f, 0.5f, 0.5f); };
+        template <> struct Default2<Spectrum> { static constexpr Spectrum value = Spectrum(0.5f, 0.5f, 1.0f); };
+    }
+
     template <typename T>
     class CheckerboardTexture : public Texture<T>
     {
     public:
-        CheckerboardTexture(const VariantMap& variantMap = VariantMap());
+        CheckerboardTexture(const VariantMap& variantMap = VariantMap())
+            : Texture<T>(variantMap)
+        {
+            m_offset = variantMap.get<glm::vec2>("offset", glm::vec2(0.0f));
+            m_scale  = variantMap.get<glm::vec2>("scale", glm::vec2(1.0f));
+            m_value1 = variantMap.get<T>("value1", internal::Default1<T>::value);
+            m_value2 = variantMap.get<T>("value2", internal::Default2<T>::value);
+        }
 
         virtual T eval(const glm::vec2& uv) const override
         {

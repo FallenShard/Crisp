@@ -1,8 +1,8 @@
 #include "BSDFFactory.hpp"
 
 #include "BSDF.hpp"
-#include "Lambertian.hpp"
-#include "Dielectric.hpp"
+#include "LambertianBSDF.hpp"
+#include "DielectricBSDF.hpp"
 #include "Mirror.hpp"
 #include "Microfacet.hpp"
 #include "RoughDielectric.hpp"

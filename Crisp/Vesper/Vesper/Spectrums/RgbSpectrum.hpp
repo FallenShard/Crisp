@@ -19,8 +19,20 @@ namespace vesper
         };
 #pragma warning(pop)
 
-        RgbSpectrum(float value = 0.0f);
-        RgbSpectrum(float red, float green, float blue);
+        constexpr RgbSpectrum(float value = 0.0f)
+            : r(value)
+            , g(value)
+            , b(value)
+        {
+        }
+
+        constexpr RgbSpectrum(float red, float green, float blue)
+            : r(red)
+            , g(green)
+            , b(blue)
+        {
+        }
+
         RgbSpectrum(const glm::vec3& vec);
 
         float& operator[](int index);
@@ -43,11 +55,14 @@ namespace vesper
         const RgbSpectrum operator-(float scalar) const;
         const RgbSpectrum operator*(float scalar) const;
         const RgbSpectrum operator/(float scalar) const;
+
+        const RgbSpectrum operator-() const;
         
 
         float getLuminance() const;
         float maxCoeff() const;
 
+        const RgbSpectrum exp() const;
         RgbSpectrum clamp() const;
 
         bool isValid() const;

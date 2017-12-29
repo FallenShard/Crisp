@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <glm/glm.hpp>
 
 #include <embree2/rtcore.h>
@@ -22,6 +23,7 @@ namespace vesper
     class Sampler;
     class Scene;
     class Medium;
+    class BSSRDF;
 
     class Shape
     {
@@ -39,6 +41,7 @@ namespace vesper
         };
 
         Shape();
+        ~Shape();
 
         virtual void fillIntersection(unsigned int triangleId, const Ray3& ray, Intersection& its) const = 0;
         virtual void sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const = 0;
@@ -53,12 +56,17 @@ namespace vesper
         void setBSDF(BSDF* bsdf);
         const BSDF* getBSDF() const;
 
+        void setBSSRDF(std::unique_ptr<BSSRDF> bssrdf);
+        const BSSRDF* getBSSRDF() const;
+        BSSRDF* getBSSRDF();
+
         void setMedium(Medium* medium);
         const Medium* getMedium() const;
 
     protected:
         Light* m_light;
         BSDF* m_bsdf;
+        std::unique_ptr<BSSRDF> m_bssrdf;
         Medium* m_medium;
 
         Transform m_toWorld;

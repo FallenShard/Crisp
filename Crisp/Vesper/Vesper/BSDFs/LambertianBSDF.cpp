@@ -1,4 +1,4 @@
-#include "Lambertian.hpp"
+#include "LambertianBSDF.hpp"
 
 #include "Math/CoordinateFrame.hpp"
 #include "Math/Warp.hpp"
@@ -25,10 +25,6 @@ namespace vesper
         texParams.insert("value", albedo);
 
         m_albedo = TextureFactory::create<Spectrum>("constant-spectrum", texParams);
-    }
-
-    LambertianBSDF::~LambertianBSDF()
-    {
     }
 
     void LambertianBSDF::setTexture(std::shared_ptr<Texture<Spectrum>> texture)

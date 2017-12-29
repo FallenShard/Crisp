@@ -105,7 +105,7 @@ namespace vesper
                         update.width  = desc.size.x;
                         update.height = desc.size.y;
                         update.data   = currBlock.getRaw();
-                        updateProgress(update, duration / 1'000'000'000.0f);
+                        updateProgress(std::move(update), duration / 1'000'000'000.0f);
                     }
                 }
             };
@@ -152,12 +152,12 @@ namespace vesper
         return m_image.getSize();
     }
 
-    void RayTracer::setProgressUpdater(std::function<void(RayTracerUpdate)> callback)
+    void RayTracer::setProgressUpdater(std::function<void(RayTracerUpdate&&)> callback)
     {
         m_progressUpdater = callback;
     }
 
-    void RayTracer::updateProgress(RayTracerUpdate& update, float blockRenderTime)
+    void RayTracer::updateProgress(RayTracerUpdate&& update, float blockRenderTime)
     {
         std::lock_guard<std::mutex> lock(m_imageMutex);
 
@@ -170,7 +170,7 @@ namespace vesper
 
         if (m_progressUpdater)
         {
-            m_progressUpdater(update);
+            m_progressUpdater(std::move(update));
         }
     }
 

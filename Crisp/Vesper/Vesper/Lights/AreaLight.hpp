@@ -8,7 +8,6 @@ namespace vesper
     {
     public:
         AreaLight(const VariantMap& params = VariantMap());
-        ~AreaLight();
 
         virtual Spectrum eval(const Light::Sample& emitterSample) const override;
         virtual Spectrum sample(Light::Sample& emitterSample, Sampler& sampler) const override;
