@@ -1,14 +1,13 @@
 #include <iostream>
-#include <memory>
 
 #include "Core/ApplicationEnvironment.hpp"
 #include "Core/Application.hpp"
 
 int main(int argc, char** argv)
 {
-    auto environment = std::make_unique<crisp::ApplicationEnvironment>(argc, argv);
-    auto application = std::make_unique<crisp::Application>(environment.get());
-    application->run();
+    crisp::ApplicationEnvironment environment(argc, argv);
+    crisp::Application application(environment);
+    application.run();
 
     return 0;
 }

@@ -9,7 +9,7 @@ namespace crisp::gui
 {
     Label::Label(Form* parentForm, const std::string& text, unsigned int fontSize)
         : Control(parentForm)
-        , m_fontName("MyriadPro-Cond.otf")
+        , m_fontName("PT Sans Narrow.ttf")
         , m_text(text)
         , m_drawComponent(parentForm->getRenderSystem(), m_text, m_fontName, fontSize)
     {

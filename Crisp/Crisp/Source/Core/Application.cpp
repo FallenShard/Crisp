@@ -38,18 +38,16 @@ namespace crisp
         }
     }
 
-    Application::Application(ApplicationEnvironment* env)
+    Application::Application(const ApplicationEnvironment& env)
         : m_frameTimeLogger(1000.0)
     {
         std::cout << "Initializing application...\n";
 
-        createWindow();
-        createRenderer();
+        m_window   = createWindow();
+        m_renderer = createRenderer();
 
         auto inputDispatcher = m_window->getInputDispatcher();
         inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
-
-        m_backgroundImage = std::make_unique<BackgroundImage>("Resources/Textures/crisp.png", VK_FORMAT_R8G8B8A8_UNORM, m_renderer.get());
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
@@ -106,8 +104,6 @@ namespace crisp
 
             if (m_sceneContainer)
                 m_sceneContainer->render();
-            else
-                m_backgroundImage->draw();
 
             m_guiForm->draw();
 
@@ -129,7 +125,6 @@ namespace crisp
         std::cout << "New window dims: (" << width << ", " << height << ")\n";
 
         m_renderer->resize(width, height);
-        m_backgroundImage->resize(width, height);
 
         if (m_guiForm)
             m_guiForm->resize(width, height);
@@ -153,21 +148,21 @@ namespace crisp
         return m_window.get();
     }
 
-    void Application::createWindow()
+    std::unique_ptr<Window> Application::createWindow()
     {
         auto desktopRes = Window::getDesktopResolution();
         auto size = glm::ivec2(DefaultWindowWidth, DefaultWindowHeight);
 
-        m_window = std::make_unique<Window>((desktopRes - size) / 2, size, Title);
+        return std::make_unique<Window>((desktopRes - size) / 2, size, Title);
     }
 
-    void Application::createRenderer()
+    std::unique_ptr<VulkanRenderer> Application::createRenderer()
     {
         auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface)
         {
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
         
-        m_renderer = std::make_unique<VulkanRenderer>(surfaceCreator, Window::getVulkanExtensions());
+        return std::make_unique<VulkanRenderer>(surfaceCreator, Window::getVulkanExtensions());
     }
 }

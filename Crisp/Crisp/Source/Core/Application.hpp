@@ -31,7 +31,7 @@ namespace crisp
         static constexpr int DefaultWindowWidth  = 1280;
         static constexpr int DefaultWindowHeight = 720;
 
-        Application(ApplicationEnvironment* environment);
+        Application(const ApplicationEnvironment& environment);
         ~Application();
 
         Application(const Application& other) = delete;
@@ -49,15 +49,13 @@ namespace crisp
         SceneContainer* getSceneContainer() const;
 
     private:
-        void createWindow();
-        void createRenderer();
+        std::unique_ptr<Window>         createWindow();
+        std::unique_ptr<VulkanRenderer> createRenderer();
 
         FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;
 
         std::unique_ptr<Window>          m_window;
         std::unique_ptr<VulkanRenderer>  m_renderer;
-
-        std::unique_ptr<BackgroundImage> m_backgroundImage;
 
         std::unique_ptr<gui::Form> m_guiForm;
 
