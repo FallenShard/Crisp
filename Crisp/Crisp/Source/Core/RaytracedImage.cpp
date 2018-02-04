@@ -27,7 +27,6 @@ namespace crisp
         auto byteSize = m_extent.width * m_extent.height * m_numChannels * sizeof(float);
 
         std::vector<float> data(m_extent.width * m_extent.height * m_numChannels, 0.01f);
-        //m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         m_stagingBuffer->updateFromHost(data.data(), byteSize);
 
