@@ -10,7 +10,8 @@ namespace crisp
     {
         m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts,
         {
-            { VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) }
+            { VK_SHADER_STAGE_VERTEX_BIT,                   0, sizeof(glm::mat4) },
+            { VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(glm::vec4) }
         });
 
         m_vertShader = renderer->getShaderModule("gui-quad-debug-col-vert");

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace crisp
 {
@@ -8,16 +9,16 @@ namespace crisp
     {
     public:
         ImageFileBuffer(const std::string& fileName, bool flipY = false);
-        ~ImageFileBuffer();
 
-        unsigned char* getData() const;
+        const unsigned char* getData() const;
         unsigned int getWidth() const;
         unsigned int getHeight() const;
         unsigned int getNumComponents() const;
         uint64_t getByteSize() const;
+        void padComponents(int numComponents);
 
     private:
-        unsigned char* m_data;
+        std::vector<unsigned char> m_data;
         unsigned int m_width;
         unsigned int m_height;
         unsigned int m_numComponents;

@@ -27,7 +27,7 @@ namespace crisp
 
         m_yawPitchRoll = glm::vec3(0.0f, 0.0f, 0.0f);
 
-        m_position = glm::vec3(0.0, 0.0f, 20.0f);
+        m_position = glm::vec3(0.0, 1.0f, 20.0f);
         m_look     = glm::vec3(0.0f, 0.0f, -1.0f);
         m_right    = glm::vec3(1.0f, 0.0f, 0.0f);
         m_up       = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -51,12 +51,12 @@ namespace crisp
             return false;
 
         m_recalculateViewMatrix = false;
-        
+
         auto rotation = glm::yawPitchRoll(m_yawPitchRoll.x, m_yawPitchRoll.y, m_yawPitchRoll.z);
-        
+
         m_position += m_translation * m_speed;
         m_translation = glm::vec3(0.0f);
-        
+
         m_look  = glm::vec3(-rotation[2]);
         m_up    = glm::vec3(rotation[1]);
         m_right = glm::cross(m_look, m_up);

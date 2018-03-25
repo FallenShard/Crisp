@@ -44,7 +44,7 @@ namespace crisp
         static VkPipelineColorBlendAttachmentState    createDefaultColorBlendAttachmentState();
         static VkPipelineColorBlendStateCreateInfo    createDefaultColorBlendState();
         static VkPipelineDepthStencilStateCreateInfo  createDefaultDepthStencilState();
-    
+
         virtual void create(int width, int height) = 0;
 
         std::unique_ptr<VulkanDescriptorSetLayout> createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);

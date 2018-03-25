@@ -127,6 +127,11 @@ namespace crisp
         return m_defaultViewport;
     }
 
+    VkRect2D VulkanRenderer::getDefaultScissor() const
+    {
+        return { {0, 0}, getSwapChainExtent() };
+    }
+
     VkShaderModule VulkanRenderer::getShaderModule(std::string&& key) const
     {
         return m_shaderModules.at(key);
@@ -226,10 +231,10 @@ namespace crisp
     void VulkanRenderer::drawFrame()
     {
         auto cmdBuffer = acquireCommandBuffer();
-        
+
         // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
         destroyResourcesScheduledForRemoval();
-        
+
         m_device->flushMappedRanges();
 
         std::optional<uint32_t> swapChainImageIndex = acquireSwapChainImageIndex();
@@ -248,7 +253,7 @@ namespace crisp
             frameRes.cmdBuffer,
             frameRes.bufferFinishedFence
         );
-        
+
         present(swapChainImageIndex.value());
 
         m_resourceUpdates.clear();
@@ -376,7 +381,7 @@ namespace crisp
         for (const auto& drawCommand : m_defaultPassDrawCommands)
             drawCommand(commandBuffer);
         m_defaultRenderPass->end(commandBuffer);
-        
+
         vkEndCommandBuffer(commandBuffer);
     }
 

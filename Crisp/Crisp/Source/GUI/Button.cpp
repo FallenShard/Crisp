@@ -14,20 +14,32 @@ namespace crisp::gui
         , m_label(std::make_unique<Label>(parentForm, text))
         , m_drawComponent(parentForm->getRenderSystem())
     {
-        setBackgroundColor(glm::vec3(0.3f));
-        setTextColor(glm::vec3(1.0f, 0.6f, 0.0f));
+        m_stateColors[static_cast<std::size_t>(State::Idle)].border = glm::vec3(0.0f);
+        m_stateColors[static_cast<std::size_t>(State::Hover)].border = glm::vec3(0.3f, 0.8f, 1.0f);
+        m_stateColors[static_cast<std::size_t>(State::Pressed)].border = glm::vec3(0.2f, 0.7f, 0.9f);
+
+        setTextColor(glm::vec3(1.0f), State::Idle);
+        setTextColor(glm::vec3(0.3f, 0.8f, 1.0f), State::Hover);
+        setTextColor(glm::vec3(0.2f, 0.7f, 0.9f), State::Pressed);
+
+        setBackgroundColor(glm::vec3(0.15f));
 
         m_M     = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
-        m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.8, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
         }, 0, Easing::SlowOut);
-        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.8, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_label->setColor(t);
+        }, 0, Easing::SlowOut);
+
+        m_borderColorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        {
+            m_borderColor = t;
+            setValidationFlags(Validation::Color);
         }, 0, Easing::SlowOut);
             
         m_label->setParent(this);
@@ -38,6 +50,7 @@ namespace crisp::gui
     {
         m_form->getAnimator()->remove(m_colorAnim);
         m_form->getAnimator()->remove(m_labelColorAnim);
+        m_form->getAnimator()->remove(m_borderColorAnim);
     }
 
     const std::string& Button::getText() const
@@ -142,6 +155,7 @@ namespace crisp::gui
 
     void Button::validate()
     {
+
         if (m_validationFlags & Validation::Geometry)
         {
             auto absPos   = getAbsolutePosition();
@@ -166,6 +180,7 @@ namespace crisp::gui
     void Button::draw(const RenderSystem& renderSystem) const
     {
         m_drawComponent.draw(m_M[3][2]);
+        renderSystem.drawDebugRect(getAbsoluteBounds(), m_borderColor);
         m_label->draw(renderSystem);
     }
 
@@ -184,5 +199,9 @@ namespace crisp::gui
         m_labelColorAnim->reset(m_label->getColor(), glm::vec4(m_stateColors[static_cast<std::size_t>(m_state)].text, m_opacity));
         if (!m_labelColorAnim->isActive())
             m_form->getAnimator()->add(m_labelColorAnim);
+
+        m_borderColorAnim->reset(glm::vec4(m_borderColor.r, m_borderColor.g, m_borderColor.b, m_opacity), glm::vec4(m_stateColors[static_cast<std::size_t>(m_state)].border, m_opacity));
+        if (!m_borderColorAnim->isActive())
+            m_form->getAnimator()->add(m_borderColorAnim);
     }
 }

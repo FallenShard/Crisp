@@ -65,7 +65,7 @@ namespace crisp
         {
             m_refreshDeltasOnUpdate = true;
         }
-        
+
         m_animator->update(dt);
 
         bool viewChanged = m_camera.update(dt);
@@ -171,7 +171,7 @@ namespace crisp
         //    m_camera.pan(+3.0f * dt, 0.0f);
         if (m_inputDispatcher->isKeyPressed(GLFW_KEY_A))
             m_camera.strafe(-3.0f * dt);
-        
+
         if (m_inputDispatcher->isKeyPressed(GLFW_KEY_D))
             m_camera.strafe(+3.0f * dt);
 

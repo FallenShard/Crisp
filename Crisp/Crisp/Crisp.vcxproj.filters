@@ -171,9 +171,6 @@
     <ClCompile Include="Source\Renderer\TextureView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\BackgroundImage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Core\RaytracedImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -320,6 +317,39 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scenes\RayTracerGui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI\ListBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPasses\BlurPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\BlurPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Geometry\SphereMeshGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\NormalMapPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\PipelineBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderPassBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\ShadowMappingPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -487,9 +517,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\TextureView.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Core\BackgroundImage.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\RaytracedImage.hpp">
@@ -682,6 +709,36 @@
     <ClInclude Include="Source\Scenes\RayTracerGui.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\GUI\ListBox.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\BlurPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\BlurPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Geometry\SphereMeshGenerator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\NormalMapPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\PipelineBuilder.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Core\StringUtils.hpp" />
@@ -718,6 +775,14 @@
     <None Include="Source\Shaders\compute-pressure-comp.glsl" />
     <None Include="Source\Shaders\ssao-frag.glsl" />
     <None Include="Source\Shaders\ssao-vert.glsl" />
+    <None Include="Source\Shaders\color-and-shadow-vert.glsl" />
+    <None Include="Source\Shaders\color-and-shadow-frag.glsl" />
+    <None Include="Source\Shaders\blur-frag.glsl" />
+    <None Include="Source\Shaders\blur-vert.glsl" />
+    <None Include="Source\Shaders\variance-shadow-map-vert.glsl" />
+    <None Include="Source\Shaders\variance-shadow-map-frag.glsl" />
+    <None Include="Source\Shaders\normal-map-vert.glsl" />
+    <None Include="Source\Shaders\normal-map-frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />

@@ -91,15 +91,15 @@ namespace crisp
         colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
         colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
         auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
         colorBlendState.attachmentCount = 1;
         colorBlendState.pAttachments    = &colorBlendAttachment;
 
         auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
-        //depthStencilState.depthTestEnable = false;
-        //depthStencilState.depthWriteEnable = false;
+        depthStencilState.depthTestEnable = false;
+        depthStencilState.depthWriteEnable = false;
 
         std::vector<VkDynamicState> dynamicStates;
         dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);

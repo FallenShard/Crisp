@@ -143,7 +143,7 @@ namespace crisp::gui
     {
         if (m_focusedControl /*&& m_focusedControl->getInteractionBounds().contains(x, y)*/)
             m_focusedControl->onMouseMoved(x, y);
-        else
+        else 
             m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
     }
 
@@ -162,7 +162,7 @@ namespace crisp::gui
 
     std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float duration)
     {
-        auto anim = std::make_shared<PropertyAnimation<float>>(duration, 0.0f, 1.0f, 0, Easing::SlowOut);
+        auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f, 0.0, Easing::Linear);
         anim->setUpdater([this, con = control.get()](const auto& t)
         {
             con->setOpacity(t);

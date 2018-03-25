@@ -5,6 +5,11 @@
 namespace crisp
 {
     VulkanSampler::VulkanSampler(VulkanDevice* device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
+        : VulkanSampler(device, minFilter, magFilter, addressMode, 1.0f, 0.0f)
+    {
+    }
+
+    VulkanSampler::VulkanSampler(VulkanDevice* device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod)
         : VulkanResource(device)
     {
         VkSamplerCreateInfo samplerInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -13,8 +18,8 @@ namespace crisp
         samplerInfo.addressModeU            = addressMode;
         samplerInfo.addressModeV            = addressMode;
         samplerInfo.addressModeW            = addressMode;
-        samplerInfo.anisotropyEnable        = VK_FALSE;
-        samplerInfo.maxAnisotropy           = 1.0f;
+        samplerInfo.anisotropyEnable        = anisotropy == 1.0f ? VK_FALSE : VK_TRUE;
+        samplerInfo.maxAnisotropy           = anisotropy;
         samplerInfo.borderColor             = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
         samplerInfo.compareEnable           = VK_FALSE;
@@ -22,7 +27,7 @@ namespace crisp
         samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         samplerInfo.mipLodBias              = 0.0f;
         samplerInfo.minLod                  = 0.0f;
-        samplerInfo.maxLod                  = 0.0f;
+        samplerInfo.maxLod                  = maxLod;
         vkCreateSampler(m_device->getHandle(), &samplerInfo, nullptr, &m_handle);
     }
 

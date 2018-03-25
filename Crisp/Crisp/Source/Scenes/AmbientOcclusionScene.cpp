@@ -214,7 +214,7 @@ namespace crisp
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
 
-            m_renderer->finish();
+            //m_renderer->finish();
 
             m_aoPass->begin(commandBuffer);
 
@@ -223,9 +223,9 @@ namespace crisp
             m_ssaoSetGroups[frameIdx].bind(commandBuffer, m_ssaoPipeline->getPipelineLayout());
             m_ssaoPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, m_numSamples);
             m_ssaoPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(m_numSamples), m_radius);
-            
+
             m_renderer->drawFullScreenQuad(commandBuffer);
-            
+
             m_aoPass->end(commandBuffer);
 
             VkImageMemoryBarrier anotherMemBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -241,7 +241,7 @@ namespace crisp
             anotherMemBarrier.subresourceRange.baseArrayLayer = frameIdx;
             anotherMemBarrier.subresourceRange.layerCount = 1;
             anotherMemBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            
+
             vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 0, 0, nullptr, 0, nullptr, 1, &anotherMemBarrier);
         });

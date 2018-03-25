@@ -10,7 +10,6 @@
 #include "Renderer/VulkanRenderer.hpp"
 #include "Core/Window.hpp"
 #include "Core/InputDispatcher.hpp"
-#include "Core/BackgroundImage.hpp"
 #include "Core/SceneContainer.hpp"
 
 #include "IO/FileUtils.hpp"
@@ -57,14 +56,14 @@ namespace crisp
         inputDispatcher->mouseEntered.subscribe<gui::Form, &gui::Form::onMouseEntered>(m_guiForm.get());
         inputDispatcher->mouseExited.subscribe<gui::Form, &gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
-        
+
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
         m_frameTimeLogger.onLoggerUpdated.subscribe<gui::StatusBar, &gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
         m_guiForm->add(std::move(statusBar));
-        
+
         auto memoryUsageBar = std::make_unique<gui::MemoryUsageBar>(m_guiForm.get());
         m_guiForm->add(std::move(memoryUsageBar));
-        
+
         auto introPanel = std::make_unique<gui::IntroductionPanel>(m_guiForm.get(), this);
         m_guiForm->add(std::move(introPanel));
 
@@ -93,11 +92,10 @@ namespace crisp
 
             while (timeSinceLastUpdate > TimePerFrame)
             {
-                    m_guiForm->update(TimePerFrame);
-                
-                
                 if (m_sceneContainer)
                     m_sceneContainer->update(static_cast<float>(TimePerFrame));
+
+                m_guiForm->update(TimePerFrame);
 
                 timeSinceLastUpdate -= TimePerFrame;
             }
@@ -126,11 +124,11 @@ namespace crisp
 
         m_renderer->resize(width, height);
 
-        if (m_guiForm)
-            m_guiForm->resize(width, height);
-        
         if (m_sceneContainer)
             m_sceneContainer->resize(width, height);
+
+        if (m_guiForm)
+            m_guiForm->resize(width, height);
     }
 
     SceneContainer* Application::getSceneContainer() const
@@ -162,7 +160,7 @@ namespace crisp
         {
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
-        
+
         return std::make_unique<VulkanRenderer>(surfaceCreator, Window::getVulkanExtensions());
     }
 }

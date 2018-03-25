@@ -23,9 +23,9 @@ namespace crisp
         vkGetBufferMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
 
         auto heap = m_device->getHeapFromMemProps(m_handle, memProps, memRequirements.memoryTypeBits);
-        m_memoryChunk = heap->allocateChunk(memRequirements.size, memRequirements.alignment);
+        m_memoryChunk = heap->allocate(memRequirements.size, memRequirements.alignment);
 
-        vkBindBufferMemory(m_device->getHandle(), m_handle, heap->memory, m_memoryChunk.offset);
+        vkBindBufferMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
     }
 
     VulkanBuffer::~VulkanBuffer()
@@ -42,7 +42,7 @@ namespace crisp
     void VulkanBuffer::updateFromHost(const void* srcData, VkDeviceSize size, VkDeviceSize offset)
     {
         memcpy(static_cast<char*>(m_device->getStagingMemoryPtr()) + m_memoryChunk.offset + offset, srcData, static_cast<size_t>(size));
-        m_device->invalidateMappedRange(m_memoryChunk.memoryHeap->memory, m_memoryChunk.offset + offset, size);
+        m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset + offset, size);
     }
 
     void VulkanBuffer::updateFromStaging(const VulkanBuffer& srcBuffer)
@@ -50,7 +50,7 @@ namespace crisp
         memcpy(static_cast<char*>(m_device->getStagingMemoryPtr()) + m_memoryChunk.offset,
                static_cast<char*>(m_device->getStagingMemoryPtr()) + srcBuffer.m_memoryChunk.offset,
                srcBuffer.m_memoryChunk.size);
-        m_device->invalidateMappedRange(m_memoryChunk.memoryHeap->memory, m_memoryChunk.offset, m_memoryChunk.size);
+        m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset, m_memoryChunk.size);
     }
 
     void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size)

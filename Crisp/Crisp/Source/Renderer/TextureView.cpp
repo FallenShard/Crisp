@@ -7,11 +7,11 @@
 
 namespace crisp
 {
-    TextureView::TextureView(VulkanRenderer* renderer, Texture* texture, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers)
+    TextureView::TextureView(VulkanRenderer* renderer, Texture* texture, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
         : m_renderer(renderer)
         , m_texture(texture)
     {
-        m_imageView = texture->getImage()->createView(type, baseLayer, numLayers);
+        m_imageView = texture->getImage()->createView(type, baseLayer, numLayers, baseMipLevel, mipLevels);
     }
 
     TextureView::~TextureView()

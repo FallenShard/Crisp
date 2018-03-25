@@ -47,14 +47,20 @@ namespace crisp::gui
         {
             glm::vec3 background;
             glm::vec3 text;
+            glm::vec3 border;
         };
 
         std::vector<Color> m_stateColors;
+        
+        glm::vec4 m_borderColor;
+        float m_borderOpacity;
 
         std::shared_ptr<PropertyAnimation<glm::vec4>> m_colorAnim;
 
         std::shared_ptr<PropertyAnimation<glm::vec4>> m_labelColorAnim;
         std::unique_ptr<Label> m_label;
+
+        std::shared_ptr<PropertyAnimation<glm::vec4>> m_borderColorAnim;
 
         ColorRectDrawComponent m_drawComponent;
     };

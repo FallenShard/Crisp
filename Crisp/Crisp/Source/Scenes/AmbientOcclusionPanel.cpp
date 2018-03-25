@@ -42,7 +42,7 @@ namespace crisp::gui
         y += 20;
 
         auto radiusSlider = std::make_unique<DoubleSlider>(parentForm);
-        radiusSlider->setId("numSamplesSlider");
+        radiusSlider->setId("radiusSlider");
         radiusSlider->setAnchor(Anchor::CenterTop);
         radiusSlider->setPosition({ 0, y });
         radiusSlider->setMinValue(0.1);

@@ -61,7 +61,7 @@ namespace crisp
         }
 
         m_vertices.resize(numBuffers);
-        
+
         size_t currentBuffer = 0;
         if (!interleaved.empty())
         {

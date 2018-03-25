@@ -11,7 +11,7 @@ namespace crisp
         , m_colorFormat(m_renderer->getSwapChain()->getImageFormat())
         , m_framebuffers(VulkanRenderer::NumVirtualFrames)
     {
-        m_clearValue.color = { 0.1f, 0.1f, 0.1f, 1.0f };
+        m_clearValue.color = { 0.0f };
         createRenderPass();
         createResources();
     }

@@ -77,7 +77,7 @@ namespace crisp
 
         QueueFamilyIndices indices = context->findQueueFamilies();
         std::array<uint32_t, 2> queueFamilyIndices =
-        { 
+        {
             static_cast<uint32_t>(indices.graphicsFamily),
             static_cast<uint32_t>(indices.presentFamily)
         };
@@ -157,7 +157,7 @@ namespace crisp
     {
         for (const auto& availablePresentMode : availablePresentModes)
         {
-            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) // Triple-buffering
+            if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) // Triple-buffering
                 return availablePresentMode;
         }
 

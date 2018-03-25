@@ -102,6 +102,11 @@ public:
         std::cout << m_mask << '\n';
     }
 
+    void disable(const EnumBits bit)
+    {
+        m_mask &= ~(static_cast<MaskType>(bit));
+    }
+
 private:
     MaskType m_mask;
 };

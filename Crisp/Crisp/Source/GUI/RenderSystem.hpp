@@ -78,7 +78,7 @@ namespace crisp
             void drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const;
             void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const;
             void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth) const;
-            void drawDebugRect(Rect<float> rect) const;
+            void drawDebugRect(Rect<float> rect, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)) const;
 
             void submitDrawCommands();
 
@@ -192,11 +192,12 @@ namespace crisp
             void renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
             void renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
             void renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
-            void renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect) const;
+            void renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const;
 
             mutable std::vector<GuiDrawCommand> m_drawCommands;
 
             mutable std::vector<Rect<float>> m_debugRects;
+            mutable std::vector<glm::vec4> m_rectColors;
         };
     }
 }

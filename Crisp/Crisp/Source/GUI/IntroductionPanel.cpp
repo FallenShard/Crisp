@@ -16,8 +16,16 @@
 
 #include "VesperGui.hpp"
 
+#include "Core/Window.hpp"
+#include "Core/InputDispatcher.hpp"
+
 namespace crisp::gui
 {
+    namespace
+    {
+        float opacity = 0.0f;
+    }
+
     IntroductionPanel::IntroductionPanel(Form* parentForm, Application* app)
         : Panel(parentForm)
     {
@@ -42,15 +50,11 @@ namespace crisp::gui
         auto crispButton = std::make_unique<Button>(parentForm);
         crispButton->setId("crispButton");
         crispButton->setText("Crisp (Real-time Renderer)");
-        crispButton->setFontSize(18);
+        crispButton->setFontSize(16);
         crispButton->setPosition({ 0, 80 });
         crispButton->setSizeHint({ 250, 50 });
-        crispButton->setBackgroundColor({ 0.3f, 0.3f, 0.3f });
-        crispButton->setTextColor(glm::vec3(1.0f), State::Idle);
-        crispButton->setTextColor(glm::vec3(1.0f, 0.7f, 0.0f), State::Hover);
-        crispButton->setTextColor(glm::vec3(0.8f, 0.4f, 0.0f), State::Pressed);
         crispButton->setAnchor(Anchor::CenterTop);
-        crispButton->clicked += [app, parentForm, this]
+        crispButton->clicked += [app, parentForm, this, button = crispButton.get()]
         {
             auto sceneContainer = app->getSceneContainer();
 
@@ -62,17 +66,18 @@ namespace crisp::gui
             comboBox->setPosition({ 0, 0 });
             comboBox->setItems(SceneContainer::getSceneNames());
             comboBox->itemSelected.subscribe<SceneContainer, &SceneContainer::onSceneSelected>(sceneContainer);
+            comboBox->itemSelected("Shadow Mapping");
             statusBar->addControl(std::move(comboBox));
+            button->clicked.clear();
         };
         addControl(std::move(crispButton));
         
         auto vesperButton = std::make_unique<Button>(parentForm);
         vesperButton->setId("vesperButton");
         vesperButton->setText("Vesper (Offline Ray Tracer)");
-        vesperButton->setFontSize(18);
+        vesperButton->setFontSize(16);
         vesperButton->setPosition({ 0, 150 });
         vesperButton->setSizeHint({ 250, 50 });
-        vesperButton->setBackgroundColor({ 0.3f, 0.3f, 0.3f });
         vesperButton->setAnchor(Anchor::CenterTop);
         vesperButton->clicked += [parentForm, app]
         {
@@ -91,7 +96,6 @@ namespace crisp::gui
         quitButton->setFontSize(18);
         quitButton->setPosition({ 0, 220 });
         quitButton->setSizeHint({ 250, 50 });
-        quitButton->setBackgroundColor({ 0.3f, 0.3f, 0.3f });
         quitButton->setAnchor(Anchor::CenterTop);
         quitButton->clicked += [app]
         {

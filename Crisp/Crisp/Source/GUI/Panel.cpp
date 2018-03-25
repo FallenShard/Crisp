@@ -9,7 +9,7 @@ namespace crisp::gui
         : ControlGroup(parentForm)
         , m_drawComponent(parentForm->getRenderSystem())
     {
-        m_color = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
+        m_color = glm::vec4(0.125f, 0.125f, 0.125f, 1.0f);
     }
 
     Panel::~Panel()

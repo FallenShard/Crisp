@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include <vulkan/vulkan.h>
 
 namespace crisp

@@ -64,6 +64,12 @@ namespace crisp
                 func(args...);
         }
 
+        void clear()
+        {
+            m_delegates.clear();
+            m_functors.clear();
+        }
+
     private:
         std::set<Delegate<void, ParamTypes...>>         m_delegates;
         std::vector<std::function<void(ParamTypes...)>> m_functors;

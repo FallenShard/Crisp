@@ -17,6 +17,8 @@ namespace crisp
         void recreate();
 
         VkExtent2D getRenderArea() const;
+        VkViewport createViewport() const;
+        VkRect2D createScissor() const;
 
         virtual void begin(VkCommandBuffer cmdBuffer) const = 0;
         void end(VkCommandBuffer cmdBuffer) const;

@@ -46,6 +46,7 @@ namespace crisp
 
         DefaultRenderPass* getDefaultRenderPass() const;
         VkViewport         getDefaultViewport() const;
+        VkRect2D           getDefaultScissor() const;
 
         VkShaderModule    getShaderModule(std::string&& key) const;
 
@@ -66,7 +67,7 @@ namespace crisp
         void flushResourceUpdates();
 
         void drawFrame();
-        
+
         void finish();
 
         void fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
@@ -116,7 +117,7 @@ namespace crisp
         std::unique_ptr<VertexBuffer> m_fsQuadVertexBuffer;
         std::unique_ptr<IndexBuffer>  m_fsQuadIndexBuffer;
         VertexBufferBindingGroup      m_fsQuadVertexBufferBindingGroup;
-        
+
         std::unordered_set<VulkanPipeline*> m_pipelines;
 
         std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;

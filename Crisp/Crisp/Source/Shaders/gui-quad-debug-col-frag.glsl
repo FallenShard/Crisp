@@ -2,8 +2,13 @@
 
 layout(location = 0) out vec4 finalColor;
 
+layout(push_constant) uniform PushConstant
+{
+    layout(offset = 64) vec4 value;
+} colorVec;
+
 void main()
 {
-	vec4 color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-	finalColor = vec4(color.r, color.g, color.b, 1.0f) * color.a;
+    vec4 color = colorVec.value;
+    finalColor = vec4(color.r, color.g, color.b, 1.0f) * color.a;
 }

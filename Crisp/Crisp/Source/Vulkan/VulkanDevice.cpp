@@ -18,7 +18,7 @@ namespace crisp
             //QueueType::Transfer
         };
         config.buildQueueCreateInfos(vulkanContext);
-        m_device = m_context->createLogicalDevice(config); 
+        m_device = m_context->createLogicalDevice(config);
 
         m_generalQueue  = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(0));
         //m_transferQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(1));
@@ -27,20 +27,20 @@ namespace crisp
         m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize / 2, m_context->findDeviceBufferMemoryType(m_device), m_device, "Device Buffer Heap");
 
         // Device image memory
-        m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 4 * DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
+        m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
 
         // Staging memory
         m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
-        vkMapMemory(m_device, m_stagingBufferHeap->memory, 0, m_stagingBufferHeap->size, 0, &m_mappedStagingPtr);
+        m_mappedStagingPtr = m_stagingBufferHeap->mapMemoryBlock(0);
     }
 
     VulkanDevice::~VulkanDevice()
     {
-        vkUnmapMemory(m_device, m_stagingBufferHeap->memory);
-        
-        vkFreeMemory(m_device, m_deviceBufferHeap->memory, nullptr);
-        vkFreeMemory(m_device, m_deviceImageHeap->memory, nullptr);
-        vkFreeMemory(m_device, m_stagingBufferHeap->memory, nullptr);
+        m_stagingBufferHeap->unmapMemoryBlock(0);
+
+        m_deviceBufferHeap->freeVulkanMemoryBlocks();
+        m_deviceImageHeap->freeVulkanMemoryBlocks();
+        m_stagingBufferHeap->freeVulkanMemoryBlocks();
 
         vkDestroyDevice(m_device, nullptr);
     }
@@ -96,9 +96,7 @@ namespace crisp
 
     VkFence VulkanDevice::createFence(VkFenceCreateFlags flags) const
     {
-        VkFenceCreateInfo fenceInfo = {};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.pNext = nullptr;
+        VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
         fenceInfo.flags = flags;
 
         VkFence fence;
@@ -130,7 +128,7 @@ namespace crisp
             std::cerr << "Buffer has requested unallocated memory type!\n";
             return nullptr;
         }
-        
+
         return heap;
     }
 
@@ -156,27 +154,19 @@ namespace crisp
 
     void VulkanDevice::printMemoryStatus()
     {
-        auto printSingleHeap = [](VulkanMemoryHeap* heap)
-        {
-            std::cout << heap->tag << "\n";
-            std::cout << "  Free chunks: \n";
-            for (auto& chunk : heap->freeChunks)
-                std::cout << "    " << chunk.first << " - " << chunk.second << "-" << chunk.first + chunk.second << "\n";
-        };
-
-        printSingleHeap(m_deviceBufferHeap.get());
-        printSingleHeap(m_deviceImageHeap.get());
-        printSingleHeap(m_stagingBufferHeap.get());
+        m_deviceBufferHeap->printFreeChunks();
+        m_deviceImageHeap->printFreeChunks();
+        m_stagingBufferHeap->printFreeChunks();
     }
 
     DeviceMemoryMetrics VulkanDevice::getDeviceMemoryUsage()
     {
         DeviceMemoryMetrics memoryMetrics = {};
-        memoryMetrics.bufferMemorySize  = m_deviceBufferHeap->size;
+        memoryMetrics.bufferMemorySize  = m_deviceBufferHeap->totalSize;
         memoryMetrics.bufferMemoryUsed  = m_deviceBufferHeap->usedSize;
-        memoryMetrics.imageMemorySize   = m_deviceImageHeap->size;
+        memoryMetrics.imageMemorySize   = m_deviceImageHeap->totalSize;
         memoryMetrics.imageMemoryUsed   = m_deviceImageHeap->usedSize;
-        memoryMetrics.stagingMemorySize = m_stagingBufferHeap->size;
+        memoryMetrics.stagingMemorySize = m_stagingBufferHeap->totalSize;
         memoryMetrics.stagingMemoryUsed = m_stagingBufferHeap->usedSize;
         return memoryMetrics;
     }

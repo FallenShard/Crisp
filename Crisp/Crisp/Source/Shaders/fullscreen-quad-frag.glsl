@@ -17,5 +17,6 @@ void main()
     vec3 texCoord;
     texCoord.xy = fsTexCoord;
     texCoord.z = float(texIndex.value);
-    finalColor = texture(sampler2DArray(texArray, s), texCoord);
+    vec4 color = texture(sampler2DArray(texArray, s), texCoord);
+    finalColor = vec4(color.rgb, color.a);
 }

@@ -11,7 +11,7 @@ namespace crisp
     class TextureView
     {
     public:
-        TextureView(VulkanRenderer* m_renderer, Texture* texture, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers);
+        TextureView(VulkanRenderer* m_renderer, Texture* texture, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels);
         ~TextureView();
 
         VkImageView getHandle() const;

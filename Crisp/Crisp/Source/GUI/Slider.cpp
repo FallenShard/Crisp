@@ -52,7 +52,7 @@ namespace crisp::gui
             m_foregroundRect->setColor(t);
         }, 0, Easing::SlowOut);
     }
-    
+
     Slider::~Slider()
     {
         m_form->getAnimator()->remove(m_colorAnim);
@@ -233,7 +233,7 @@ namespace crisp::gui
             m_form->getAnimator()->add(m_colorAnim);
         }
     }
-    
+
     void Slider::moveIndicators(int value)
     {
         if (!m_values.empty())

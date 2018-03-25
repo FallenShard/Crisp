@@ -174,11 +174,11 @@ popd</Command>
     <ClCompile Include="Source\Camera\CameraController.cpp" />
     <ClCompile Include="Source\Camera\FreeCamera.cpp" />
     <ClCompile Include="Source\Camera\TargetCamera.cpp" />
-    <ClCompile Include="Source\Core\BackgroundImage.cpp" />
     <ClCompile Include="Source\Core\SceneContainer.cpp" />
     <ClCompile Include="Source\Core\StringUtils.cpp" />
     <ClCompile Include="Source\Core\Window.cpp" />
     <ClCompile Include="Source\Geometry\MeshGeometry.cpp" />
+    <ClCompile Include="Source\Geometry\SphereMeshGenerator.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMesh.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMeshBatch.cpp" />
     <ClCompile Include="Source\GUI\ComboBox.cpp" />
@@ -187,8 +187,17 @@ popd</Command>
     <ClCompile Include="Source\GUI\DebugRect.cpp" />
     <ClCompile Include="Source\GUI\DoubleSlider.cpp" />
     <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp" />
+    <ClCompile Include="Source\GUI\ListBox.cpp" />
+    <ClCompile Include="Source\Renderer\PipelineBuilder.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\BlurPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\NormalMapPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\SsaoPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPassBuilder.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPasses\BlurPass.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionPanel.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionScene.cpp" />
     <ClCompile Include="Source\Scenes\FluidSimulationPanel.cpp" />
@@ -237,6 +246,7 @@ popd</Command>
     <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp" />
     <ClCompile Include="Source\Scenes\RayTracerGui.cpp" />
     <ClCompile Include="Source\Scenes\RayTracerScene.cpp" />
+    <ClCompile Include="Source\Scenes\ShadowMappingPanel.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Simulation\SimulationConfigFile.cpp" />
@@ -283,14 +293,24 @@ popd</Command>
     <ClInclude Include="Source\Camera\FreeCamera.hpp" />
     <ClInclude Include="Source\Core\Mouse.hpp" />
     <ClInclude Include="Source\Core\SceneContainer.hpp" />
+    <ClInclude Include="Source\Geometry\SphereMeshGenerator.hpp" />
     <ClInclude Include="Source\GUI\ComboBoxItem.hpp" />
     <ClInclude Include="Source\GUI\DoubleSlider.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\ColorRectDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ComboBox.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
+    <ClInclude Include="Source\GUI\ListBox.hpp" />
+    <ClInclude Include="Source\Renderer\PipelineBuilder.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\BlurPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\GuiDebugPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\NormalMapPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\SsaoPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.hpp" />
+    <ClInclude Include="Source\Renderer\RenderPasses\BlurPass.hpp" />
+    <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp" />
     <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
@@ -304,7 +324,6 @@ popd</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="Source\Core\BackgroundImage.hpp" />
     <ClInclude Include="Source\Core\Window.hpp" />
     <ClInclude Include="Source\Geometry\MeshGeometry.hpp" />
     <ClInclude Include="Source\Geometry\TriangleMesh.hpp" />
@@ -405,7 +424,11 @@ popd</Command>
     <None Include="Source\Geometry\TriangleMeshBatch.hpp" />
     <None Include="Source\Shaders\blinn-phong-frag.glsl" />
     <None Include="Source\Shaders\blinn-phong-vert.glsl" />
+    <None Include="Source\Shaders\blur-frag.glsl" />
+    <None Include="Source\Shaders\blur-vert.glsl" />
     <None Include="Source\Shaders\clear-hash-grid-comp.glsl" />
+    <None Include="Source\Shaders\color-and-shadow-frag.glsl" />
+    <None Include="Source\Shaders\color-and-shadow-vert.glsl" />
     <None Include="Source\Shaders\compute-pressure-comp.glsl" />
     <None Include="Source\Shaders\depth-normal-frag.glsl" />
     <None Include="Source\Shaders\depth-normal-vert.glsl" />
@@ -422,6 +445,8 @@ popd</Command>
     <None Include="Source\Shaders\hash-grid-comp.glsl" />
     <None Include="Source\Shaders\liquid-frag.glsl" />
     <None Include="Source\Shaders\liquid-vert.glsl" />
+    <None Include="Source\Shaders\normal-map-frag.glsl" />
+    <None Include="Source\Shaders\normal-map-vert.glsl" />
     <None Include="Source\Shaders\outline-frag.glsl" />
     <None Include="Source\Shaders\outline-vert.glsl" />
     <None Include="Source\Shaders\point-sphere-sprite-frag.glsl" />
@@ -437,6 +462,8 @@ popd</Command>
     <None Include="Source\Shaders\unif-col-frag.glsl" />
     <None Include="Source\Core\StringUtils.hpp" />
     <ClCompile Include="Source\Vulkan\VulkanDescriptorSetLayout.cpp" />
+    <None Include="Source\Shaders\variance-shadow-map-frag.glsl" />
+    <None Include="Source\Shaders\variance-shadow-map-vert.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />

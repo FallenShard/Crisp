@@ -7,6 +7,8 @@
 #include "Renderer/Texture.hpp"
 #include "Renderer/TextureView.hpp"
 
+#include <iostream>
+
 namespace crisp
 {
     GuiRenderPass::GuiRenderPass(VulkanRenderer* renderer)
@@ -29,6 +31,13 @@ namespace crisp
 
     void GuiRenderPass::begin(VkCommandBuffer cmdBuffer) const
     {
+        //static float t = 0.0;
+        //std::cout << t << std::endl;
+        //t += 0.2f * 1.0f / 60.0f;
+        //if (t > 1.0f)
+        //    t = 1.0f;
+        //const_cast<GuiRenderPass*>(this)->m_clearValues[0].color.float32[3] = t;
+
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass        = m_handle;

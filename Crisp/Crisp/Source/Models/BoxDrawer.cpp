@@ -109,7 +109,7 @@ namespace crisp
         m_indexBuffer->bind(commandBuffer, 0);
         m_cubeVertexBindingGroup.bind(commandBuffer);
 
-        for (int i = 0; i < m_numBoxes; i++)
+        for (uint32_t i = 0; i < m_numBoxes; i++)
         {
             m_outlineDesc.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(Transforms));
             m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());

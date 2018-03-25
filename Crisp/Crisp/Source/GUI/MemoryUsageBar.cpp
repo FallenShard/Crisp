@@ -40,7 +40,7 @@ namespace crisp::gui
         bufferLabel->setAnchor(Anchor::CenterLeft);
         m_bufferMemoryUsageLabel = bufferLabel.get();
         addControl(std::move(bufferLabel));
-        
+
 
         auto imageLabel = std::make_unique<gui::Label>(parentForm, "");
         imageLabel->setId("imageMemoryLabel");
@@ -57,12 +57,19 @@ namespace crisp::gui
         addControl(std::move(stagingLabel));
 
         m_stopWatch = std::make_unique<StopWatch>(2.0);
-        m_stopWatch->triggered.subscribe([this]()
+        m_stopWatch->triggered += [this]()
         {
             auto metrics = m_renderSystem->getDeviceMemoryUsage();
 
+            auto transformToMb = [](uint64_t bytes)
+            {
+                uint64_t megaBytes = bytes >> 20;
+                uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0;
+                return std::to_string(megaBytes + remainder);
+            };
+
             std::ostringstream bufferMemStream;
-            bufferMemStream << "Buffer Memory: " << std::to_string(metrics.bufferMemoryUsed >> 20) << " / " << std::to_string(metrics.bufferMemorySize >> 20) << " MB";
+            bufferMemStream << "Buffer Memory: " << transformToMb(metrics.bufferMemoryUsed) << " / " << std::to_string(metrics.bufferMemorySize >> 20) << " MB";
             m_bufferMemoryUsageLabel->setText(bufferMemStream.str());
             m_bufferMemoryUsageLabel->setColor(interpolateColor(static_cast<float>(metrics.bufferMemoryUsed) / static_cast<float>(metrics.bufferMemorySize)));
 
@@ -70,13 +77,12 @@ namespace crisp::gui
             imageMemStream << "Image Memory: " << std::to_string(metrics.imageMemoryUsed >> 20) << " / " << std::to_string(metrics.imageMemorySize >> 20) << " MB";
             m_imageMemoryUsageLabel->setText(imageMemStream.str());
             m_imageMemoryUsageLabel->setColor(interpolateColor(static_cast<float>(metrics.imageMemoryUsed) / static_cast<float>(metrics.imageMemorySize)));
-            
+
             std::ostringstream stagingMemStream;
             stagingMemStream << "Staging Memory: " << std::to_string(metrics.stagingMemoryUsed >> 20) << " / " << std::to_string(metrics.stagingMemorySize >> 20) << " MB";
             m_stagingMemoryUsageLabel->setText(stagingMemStream.str());
             m_stagingMemoryUsageLabel->setColor(interpolateColor(static_cast<float>(metrics.stagingMemoryUsed) / static_cast<float>(metrics.stagingMemorySize)));
-        });
-
+        };
 
         m_form->addStopWatch(m_stopWatch.get());
     }

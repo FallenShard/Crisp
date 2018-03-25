@@ -210,9 +210,10 @@ namespace crisp::gui
         m_drawCommands.emplace_back(&RenderSystem::renderText, transformId, colorId, textResId, depth);
     }
 
-    void RenderSystem::drawDebugRect(Rect<float> rect) const
+    void RenderSystem::drawDebugRect(Rect<float> rect, glm::vec4 color) const
     {
         m_debugRects.emplace_back(rect);
+        m_rectColors.emplace_back(color);
     }
 
     void RenderSystem::submitDrawCommands()
@@ -256,12 +257,11 @@ namespace crisp::gui
             {
                 (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
             }
-            
-            for (auto& rect : m_debugRects)
-            {
-                renderDebugRect(commandBuffer, rect);
-            }
 
+            for (int i = 0; i < m_debugRects.size(); i++) {
+                renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
+            }
+            
             m_guiPass->end(commandBuffer);
 
             auto size = m_drawCommands.size();
@@ -269,6 +269,7 @@ namespace crisp::gui
             m_drawCommands.reserve(size);
 
             m_debugRects.clear();
+            m_rectColors.clear();
 
             VkImageMemoryBarrier imageMemoryBarrier = {};
             imageMemoryBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -480,11 +481,11 @@ namespace crisp::gui
             m_transforms->getPushConstantValue(cmd.transformId),
             m_colors->getPushConstantValue(cmd.colorId)
         };
-
+        
         vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_colorQuadPipeline->getPipelineLayout(),
             0, 1, descSets, 2, dynamicOffsets);
-        vkCmdPushConstants(cmdBuffer, m_colorQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
-        vkCmdPushConstants(cmdBuffer, m_colorQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
+        m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants[0]);
+        m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), pushConstants[1]);
             
         m_quadGeometry.drawIndexed(cmdBuffer);
     }
@@ -549,11 +550,12 @@ namespace crisp::gui
         m_quadGeometry.drawIndexed(cmdBuffer);
     }
 
-    void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect) const
+    void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const
     {
         glm::mat4 transform = glm::translate(glm::vec3{ rect.x, rect.y, -1.0f }) * glm::scale(glm::vec3{ rect.width, rect.height, 1.0f });
         m_debugRectPipeline->bind(cmdBuffer);
         m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, m_P * transform);
+        m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), color);
         m_lineLoopGeometry.drawIndexed(cmdBuffer);
     }
 

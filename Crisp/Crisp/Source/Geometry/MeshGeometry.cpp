@@ -7,21 +7,14 @@
 namespace crisp
 {
     MeshGeometry::MeshGeometry(VulkanRenderer* renderer, const TriangleMesh& mesh)
+        : MeshGeometry(renderer, mesh.getBuffer(), mesh.getFaces())
     {
-        m_vertexBuffer = std::make_unique<VertexBuffer>(renderer, mesh.getBuffer());
-        m_vertexBindingGroup =
-        {
-            { m_vertexBuffer->get(), 0 }
-        };
-
-        m_indexBuffer = std::make_unique<IndexBuffer>(renderer, mesh.getFaces());
-        m_numIndices = mesh.getNumFaces() * 3;
     }
 
     MeshGeometry::~MeshGeometry()
     {
     }
-    
+
     void MeshGeometry::bindGeometryBuffers(VkCommandBuffer commandBuffer) const
     {
         m_vertexBindingGroup.bind(commandBuffer);

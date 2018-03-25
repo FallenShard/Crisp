@@ -15,5 +15,5 @@ layout(push_constant) uniform PushConstant
 void main()
 {
 	vec4 color = guiColor.values[colorIndex.value];
-	finalColor = vec4(color.r, color.g, color.b, 1.0f) * color.a;
+	finalColor = vec4(color.r, color.g, color.b, 1.0f) * color.a;// * color.a;
 }

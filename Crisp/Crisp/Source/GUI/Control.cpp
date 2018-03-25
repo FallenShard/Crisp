@@ -7,7 +7,7 @@
 
 namespace crisp::gui
 {
-    namespace 
+    namespace
     {
         static uint32_t UniqueIdCounter = 0;
     }
@@ -34,7 +34,7 @@ namespace crisp::gui
 
     Control::~Control()
     {
-        std::cout << "Deleting: " << m_id << '\n';
+        //std::cout << "Deleting: " << m_id << '\n';
     }
 
     void Control::setId(std::string&& id)

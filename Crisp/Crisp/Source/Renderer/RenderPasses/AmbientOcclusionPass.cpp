@@ -14,7 +14,7 @@ namespace crisp
         , m_clearValues(1)
         , m_colorFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
     {
-        m_clearValues[0].color = { 0.0f, 1.0f, 0.0f, 1.0f };
+        m_clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
 
         createRenderPass();
         createResources();
