@@ -48,9 +48,8 @@ namespace vesper
 
 
     RoughDielectricBSDF::RoughDielectricBSDF(const VariantMap& params)
+        : BSDF(Lobe::Glossy)
     {
-        m_lobe = Lobe::Glossy;
-
         m_intIOR = params.get<float>("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
         m_extIOR = params.get<float>("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
 

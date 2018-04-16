@@ -9,9 +9,8 @@
 namespace vesper
 {
     RoughConductorBSDF::RoughConductorBSDF(const VariantMap& params)
+        : BSDF(Lobe::Glossy)
     {
-        m_lobe = Lobe::Glossy;
-
         auto materialName = params.get("material", std::string("Au"));
         m_IOR = Fresnel::getComplexIOR(materialName);
 
@@ -61,7 +60,7 @@ namespace vesper
         bsdfSample.sampledLobe = Lobe::Glossy;
         bsdfSample.eta         = 1.0f;
         bsdfSample.pdf         = mPdf / (4.0f * cosThetaIm);
-        
+
         Spectrum F = Fresnel::conductorFull(cosThetaIm, m_IOR);
         float G = m_distrib->G(bsdfSample.wi, bsdfSample.wo, m);
         float D = m_distrib->D(m);

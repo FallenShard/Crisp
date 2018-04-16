@@ -7,8 +7,8 @@
 namespace vesper
 {
     DielectricBSDF::DielectricBSDF(const VariantMap& params)
+        : BSDF(Lobe::Delta)
     {
-        m_lobe = LobeFlags(Lobe::Delta);
         m_intIOR = params.get("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
         m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
     }
@@ -45,7 +45,7 @@ namespace vesper
 
         // If the angle is negative, we're coming from the inside
         float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
-        
+
         // Set outgoing direction
         bsdfSample.wo  = n * (eta * cosThetaI - sign(cosThetaI) * cosThetaT) - eta * bsdfSample.wi;
         bsdfSample.eta = eta;

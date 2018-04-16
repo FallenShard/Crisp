@@ -10,10 +10,8 @@
 namespace vesper
 {
     MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)
+        : BSDF(LobeFlags(Lobe::Diffuse | Lobe::Glossy))
     {
-        m_lobe = Lobe::Diffuse;
-        m_lobe |= Lobe::Glossy;
-
         std::string distribType = params.get<std::string>("distribution", "beckmann");
         m_distrib = MicrofacetDistributionFactory::create(distribType, params);
 

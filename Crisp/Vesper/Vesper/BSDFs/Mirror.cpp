@@ -7,8 +7,8 @@
 namespace vesper
 {
     MirrorBSDF::MirrorBSDF(const VariantMap& params)
+        : BSDF(Lobe::Delta)
     {
-        m_lobe = Lobe::Delta;
     }
 
     MirrorBSDF::~MirrorBSDF()

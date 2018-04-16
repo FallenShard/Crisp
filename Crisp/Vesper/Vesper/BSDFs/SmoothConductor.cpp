@@ -7,9 +7,8 @@
 namespace vesper
 {
     SmoothConductorBSDF::SmoothConductorBSDF(const VariantMap& params)
+        : BSDF(Lobe::Delta)
     {
-        m_lobe = Lobe::Delta;
-
         auto materialName = params.get("material", std::string("Au"));
         m_IOR = Fresnel::getComplexIOR(materialName);
     }

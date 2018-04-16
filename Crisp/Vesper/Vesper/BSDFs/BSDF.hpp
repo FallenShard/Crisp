@@ -41,7 +41,7 @@ namespace vesper
 
             glm::vec3 wo;
             float pdf;
-            
+
             Measure measure;
             Lobe    sampledLobe;
 
@@ -52,14 +52,20 @@ namespace vesper
             Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi, const glm::vec3& wo) : p(p), uv(uv), wi(wi), wo(wo) {}
         };
 
-        virtual ~BSDF() {};
-        virtual void setTexture(std::shared_ptr<Texture<float>> texture) {};
-        virtual void setTexture(std::shared_ptr<Texture<Spectrum>> texture) {};
+        BSDF(LobeFlags lobeFlags);
+        virtual ~BSDF();
+
+        virtual void setTexture(std::shared_ptr<Texture<float>> texture);
+        virtual void setTexture(std::shared_ptr<Texture<Spectrum>> texture);
+
+        // Computes f(x, wi, wo) * cosTheta(wo)
         virtual Spectrum eval(const BSDF::Sample& bsdfSample) const = 0;
+
+        // Samples a direction wo and computes f(x, wi, wo) * cosTheta(wo) / pdf(wo)
         virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const = 0;
         virtual float pdf(const BSDF::Sample& bsdfSample) const = 0;
-        
-        LobeFlags getLobeType() const { return m_lobe; }
+
+        LobeFlags getLobeType() const;
 
     protected:
         LobeFlags m_lobe;
