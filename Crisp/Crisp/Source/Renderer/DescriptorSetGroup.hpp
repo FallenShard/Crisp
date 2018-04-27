@@ -27,8 +27,15 @@ namespace crisp
 
         void setDynamicOffset(uint32_t index, uint32_t offset) const;
 
-        void bind(VkCommandBuffer& cmdBuffer, VkPipelineLayout layout) const;
         void bind(VkCommandBuffer& cmdBuffer, VkPipelineLayout layout, uint32_t firstSet, uint32_t numSets) const;
+
+        template <VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS>
+        void bind(VkCommandBuffer cmdBuffer, VkPipelineLayout layout) const
+        {
+            vkCmdBindDescriptorSets(cmdBuffer, bindPoint, layout,
+                0, static_cast<uint32_t>(m_setHandles.size()), m_setHandles.data(), static_cast<uint32_t>(m_dynamicOffsets.size()), m_dynamicOffsets.data());
+        }
+
 
         VkDescriptorSet getHandle(unsigned int index) const;
 

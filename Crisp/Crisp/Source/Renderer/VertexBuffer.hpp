@@ -25,7 +25,7 @@ namespace crisp
         inline VkBuffer get() const { return m_buffer->getHandle(); }
 
         void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
-        
+
         template <typename T>
         void updateStagingBuffer(const std::vector<T>& vec)
         {

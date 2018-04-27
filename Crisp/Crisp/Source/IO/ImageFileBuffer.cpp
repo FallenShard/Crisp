@@ -5,14 +5,27 @@
 
 namespace crisp
 {
-    ImageFileBuffer::ImageFileBuffer(const std::string& fileName, bool flipY)
+    auto getStbComponentFormat(int numComponents)
+    {
+        switch (numComponents)
+        {
+            case 0:  return STBI_default;
+            case 1:  return STBI_grey;
+            case 2:  return STBI_grey_alpha;
+            case 3:  return STBI_rgb;
+            case 4:  return STBI_rgb_alpha;
+            default: return STBI_default;
+        }
+    }
+
+    ImageFileBuffer::ImageFileBuffer(const std::string& fileName, int requestedComponents, bool flipY)
         : m_width(0)
         , m_height(0)
         , m_numComponents(0)
     {
         int width, height, numComps;
         stbi_set_flip_vertically_on_load(flipY);
-        stbi_uc* data = stbi_load(fileName.c_str(), &width, &height, &numComps, STBI_rgb_alpha);
+        stbi_uc* data = stbi_load(fileName.c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
         stbi_set_flip_vertically_on_load(false);
 
         if (!data)
@@ -20,7 +33,7 @@ namespace crisp
 
         m_width         = static_cast<unsigned int>(width);
         m_height        = static_cast<unsigned int>(height);
-        m_numComponents = static_cast<unsigned int>(numComps);
+        m_numComponents = static_cast<unsigned int>(requestedComponents);
         m_data.resize(m_width * m_height * m_numComponents);
         memcpy(m_data.data(), data, m_width * m_height * m_numComponents);
     }
@@ -48,35 +61,5 @@ namespace crisp
     uint64_t ImageFileBuffer::getByteSize() const
     {
         return m_width * m_height * m_numComponents;
-    }
-
-    void ImageFileBuffer::padComponents(int numComponents)
-    {
-        std::vector<unsigned char> default(numComponents, 0);
-        default.back() = 255;
-
-        if (m_numComponents == numComponents)
-            return;
-
-        std::vector<unsigned char> newData(m_numComponents * m_width * m_height);
-        for (int i = 0; i < m_height; i++)
-        {
-            for (int j = 0; j < m_width; j++)
-            {
-                int texelIdx = i * m_width + j;
-                for (int k = 0; k < m_numComponents; k++)
-                {
-                    newData[numComponents * texelIdx + k] = m_data[m_numComponents * texelIdx + k];
-                }
-
-                for (int k = m_numComponents; k < numComponents; k++)
-                {
-                    newData[numComponents * texelIdx + k] = default[k];
-                }
-            }
-        }
-
-        m_numComponents = numComponents;
-        std::swap(m_data, newData);
     }
 }

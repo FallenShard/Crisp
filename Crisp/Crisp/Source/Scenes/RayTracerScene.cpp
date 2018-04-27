@@ -6,6 +6,7 @@
 
 #include "Core/Application.hpp"
 #include "Core/RaytracedImage.hpp"
+#include "Core/Window.hpp"
 #include "IO/FileUtils.hpp"
 #include "IO/OpenEXRWriter.hpp"
 #include "RayTracerGui.hpp"
@@ -38,13 +39,15 @@ namespace crisp
 
     RayTracerScene::~RayTracerScene()
     {
+        m_app->getForm()->remove("vesperOptionsPanel");
+        m_app->getForm()->remove("progressBarBg");
     }
 
     void RayTracerScene::resize(int width, int height)
     {
         m_image->resize(width, height);
     }
-    
+
     void RayTracerScene::update(float dt)
     {
         while (!m_updateQueue.empty())
@@ -104,16 +107,30 @@ namespace crisp
         OpenEXRWriter writer;
         glm::ivec2 imageSize = m_rayTracer->getImageSize();
         std::cout << "Writing EXR image..." << std::endl;
-        writer.write(outputDirectory + "/" + m_projectName + ".exr", m_imageData.data(), imageSize.x, imageSize.y, true);
+
+        std::string fileName = outputDirectory + "/" + m_projectName + ".exr";
+
+        int i = 0;
+        while (FileUtils::fileExists(fileName))
+            fileName = outputDirectory + "/" + m_projectName + "_" + std::to_string(++i) + ".exr";
+
+        writer.write(fileName, m_imageData.data(), imageSize.x, imageSize.y, true);
     }
 
     void RayTracerScene::openSceneFile(const std::string& filename)
     {
+        m_renderer->finish();
         m_projectName = FileUtils::getFileNameFromPath(filename);
         m_rayTracer->initializeScene(filename);
 
         glm::ivec2 imageSize = m_rayTracer->getImageSize();
         m_image = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer);
         m_imageData.resize(m_numChannels * imageSize.x * imageSize.y);
+        m_app->getWindow()->setTitle(filename);
+    }
+
+    void RayTracerScene::createGui()
+    {
+        gui::Form* form = m_app->getForm();
     }
 }

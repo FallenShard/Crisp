@@ -94,14 +94,33 @@ namespace crisp::gui
         viscositySlider->setId("viscositySlider");
         viscositySlider->setAnchor(Anchor::CenterTop);
         viscositySlider->setPosition({ 0, y });
-        viscositySlider->setMaxValue(50);
-        viscositySlider->setMinValue(2);
+        viscositySlider->setMaxValue(30);
+        viscositySlider->setMinValue(3);
         viscositySlider->setValue(3);
         viscositySlider->valueChanged += [sim](int value)
         {
             sim->setViscosity(static_cast<float>(value));
         };
         addControl(std::move(viscositySlider));
+        y += 30;
+
+        auto surfaceTensionLabel = std::make_unique<Label>(parentForm, "Surface Tension");
+        surfaceTensionLabel->setPosition({ 0, y });
+        addControl(std::move(surfaceTensionLabel));
+        y += 20;
+
+        auto surfaceTensionSlider = std::make_unique<Slider>(parentForm);
+        surfaceTensionSlider->setId("surfaceTensionSlider");
+        surfaceTensionSlider->setAnchor(Anchor::CenterTop);
+        surfaceTensionSlider->setPosition({ 0, y });
+        surfaceTensionSlider->setMaxValue(50);
+        surfaceTensionSlider->setMinValue(1);
+        surfaceTensionSlider->setValue(1);
+        surfaceTensionSlider->valueChanged += [sim](int value)
+        {
+            sim->setSurfaceTension(static_cast<float>(value));
+        };
+        addControl(std::move(surfaceTensionSlider));
         y += 30;
 
         auto resetButton = std::make_unique<Button>(parentForm);

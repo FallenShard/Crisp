@@ -116,7 +116,7 @@ namespace vesper
     {
         auto numLights = m_lights.size();
         auto index = std::min(static_cast<size_t>(std::floor(numLights * sample)), numLights - 1);
-        return m_lights[index].get();
+        return numLights == 0 ? nullptr : m_lights[index].get();
     }
 
     float Scene::getLightPdf() const

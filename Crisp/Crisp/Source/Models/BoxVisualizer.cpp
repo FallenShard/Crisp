@@ -20,7 +20,7 @@ namespace crisp
         , m_numBoxes(numBoxes)
         , m_numFrusta(numFrusta)
     {
-        m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("cube.obj", { VertexAttribute::Position }));
+        m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, "cube.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
 
         std::vector<glm::u16vec2> lines =
         {
@@ -91,14 +91,14 @@ namespace crisp
         m_outlineTransforms[2].M = glm::translate(glm::vec3{ -15.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
         m_outlineTransforms[3].M = glm::translate(glm::vec3{ -25.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
 
-        m_outlineTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_outlineTransforms.size() * sizeof(Transforms), BufferUpdatePolicy::PerFrame);
+        m_outlineTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_outlineTransforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
         m_outlinePipeline = std::make_unique<OutlinePipeline>(m_renderer, renderPass);
         m_outlineDesc =
         {
             m_outlinePipeline->allocateDescriptorSet(0)
         };
-        m_outlineDesc.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_outlineTransformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_outlineDesc.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_outlineTransformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_outlineDesc.flushUpdates(m_renderer->getDevice());
     }
 
@@ -114,7 +114,7 @@ namespace crisp
             trans.MVP = P * trans.MV;
         }
 
-        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(Transforms));
+        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
     }
 
     void BoxVisualizer::updateFrusta(CascadedShadowMapper* shadowMapper, CameraController* cameraController)
@@ -166,7 +166,7 @@ namespace crisp
             trans.MVP = camera.getProjectionMatrix() * trans.MV;
         }
 
-        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(Transforms));
+        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
 
     }
 
@@ -198,7 +198,7 @@ namespace crisp
             m_frusta[i].vertexBindingGroup.offsets[0] = frameIndex * m_frustumPoints.size() * sizeof(glm::vec3);
             m_frusta[i].vertexBindingGroup.bind(commandBuffer);
 
-            m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(Transforms));
+            m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
             m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());
 
             vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &colors[i]);
@@ -210,7 +210,7 @@ namespace crisp
         m_cubeVertexBindingGroup.bind(commandBuffer);
         for (int i = 4; i < 8; i++)
         {
-            m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(Transforms));
+            m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
             m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());
 
             auto color = colors[i - 4] * 0.5f;

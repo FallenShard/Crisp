@@ -3,19 +3,20 @@
 #include <algorithm>
 #include <set>
 #include <iostream>
+#include <sstream>
 
 #include <CrispCore/ConsoleUtils.hpp>
 #include "Core/Application.hpp"
 #include "VulkanQueueConfiguration.hpp"
 
-#ifndef _DEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
-
 namespace crisp
 {
+#ifndef _DEBUG
+    constexpr bool enableValidationLayers = false;
+#else
+    constexpr bool enableValidationLayers = true;
+#endif
+
     const std::vector<const char*> VulkanContext::validationLayers =
     {
         "VK_LAYER_LUNARG_standard_validation"
@@ -45,30 +46,42 @@ namespace crisp
                 func(instance, callback, pAllocator);
         }
 
-        VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* message, void* userData)
+        VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* message, void*)
         {
-            ConsoleColorizer colorizer(ConsoleColor::LightRed);
-            std::cerr << "Vulkan validation layer: " << message << "\n\n";
+            std::stringstream stream;
+            stream << "=== Vulkan Validation Layer ===\n";
+            stream << "Severity: ";
+            if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)         stream << " | Info";
+            if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)             stream << " | Warning";
+            if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) stream << " | Performance";
+            if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)               stream << " | Error";
+            if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)               stream << " | Debug";
+
+            stream << '\n';
+
+            ConsoleColor color = flags & VK_DEBUG_REPORT_ERROR_BIT_EXT ? ConsoleColor::LightRed :
+                flags & VK_DEBUG_REPORT_WARNING_BIT_EXT || flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT ? ConsoleColor::Yellow : ConsoleColor::LightCyan;
+
+            stream << message << '\n\n';
+
+            ConsoleColorizer colorizer(color);
+            std::cerr << stream.str();
             return VK_FALSE;
         }
     }
 
     VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions)
-        : m_instance(VK_NULL_HANDLE)
-        , m_callback(VK_NULL_HANDLE)
-        , m_surface(VK_NULL_HANDLE)
-        , m_physicalDevice(VK_NULL_HANDLE)
+        : m_instance(createInstance(std::forward<std::vector<std::string>>(reqPlatformExtensions)))
+        , m_debugCallback(createDebugCallback())
+        , m_surface(createSurface(surfaceCreator))
+        , m_physicalDevice(pickPhysicalDevice())
     {
-        createInstance(std::forward<std::vector<std::string>>(reqPlatformExtensions));
-        setupDebugCallback();
-        createSurface(surfaceCreator);
-        pickPhysicalDevice();
     }
 
     VulkanContext::~VulkanContext()
     {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-        DestroyDebugReportCallbackEXT(m_instance, m_callback, nullptr);
+        DestroyDebugReportCallbackEXT(m_instance, m_debugCallback, nullptr);
         vkDestroyInstance(m_instance, nullptr);
     }
 
@@ -87,25 +100,14 @@ namespace crisp
         VkPhysicalDeviceFeatures deviceFeatures = {};
         vkGetPhysicalDeviceFeatures(m_physicalDevice, &deviceFeatures);
 
-        VkDeviceCreateInfo createInfo = {};
-        createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pEnabledFeatures     = &deviceFeatures;
-        createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.getQueueCreateInfos().size());
-        createInfo.pQueueCreateInfos    = config.getQueueCreateInfos().data();
-
+        VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+        createInfo.pEnabledFeatures        = &deviceFeatures;
+        createInfo.queueCreateInfoCount    = static_cast<uint32_t>(config.getQueueCreateInfos().size());
+        createInfo.pQueueCreateInfos       = config.getQueueCreateInfos().data();
         createInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
         createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-        if (enableValidationLayers)
-        {
-            createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
-        }
-        else
-        {
-            createInfo.enabledLayerCount   = 0;
-            createInfo.ppEnabledLayerNames = nullptr;
-        }
+        createInfo.enabledLayerCount       = enableValidationLayers ? static_cast<uint32_t>(validationLayers.size()) : 0;
+        createInfo.ppEnabledLayerNames     = enableValidationLayers ? validationLayers.data() : nullptr;
 
         VkDevice device(VK_NULL_HANDLE);
         vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &device);
@@ -139,7 +141,7 @@ namespace crisp
         return querySwapChainSupport(m_physicalDevice);
     }
 
-    uint32_t VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
+    std::optional<uint32_t> VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
     {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
@@ -150,10 +152,10 @@ namespace crisp
                 return i;
         }
 
-        return -1;
+        return {};
     }
 
-    uint32_t VulkanContext::findMemoryType(VkMemoryPropertyFlags properties) const
+    std::optional<uint32_t> VulkanContext::findMemoryType(VkMemoryPropertyFlags properties) const
     {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
@@ -164,13 +166,12 @@ namespace crisp
                 return i;
         }
 
-        return -1;
+        return {};
     }
 
-    uint32_t VulkanContext::findDeviceImageMemoryType(VkDevice device)
+    std::optional<uint32_t> VulkanContext::findDeviceImageMemoryType(VkDevice device)
     {
-        VkImageCreateInfo imageInfo = {};
-        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.imageType     = VK_IMAGE_TYPE_2D;
         imageInfo.extent.width  = 1;
         imageInfo.extent.height = 1;
@@ -194,12 +195,11 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    uint32_t VulkanContext::findDeviceBufferMemoryType(VkDevice device)
+    std::optional<uint32_t> VulkanContext::findDeviceBufferMemoryType(VkDevice device)
     {
-        VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = 1;
-        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        bufferInfo.size        = 1;
+        bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VkBuffer dummyBuffer(VK_NULL_HANDLE);
@@ -211,10 +211,9 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    uint32_t VulkanContext::findStagingBufferMemoryType(VkDevice device)
+    std::optional<uint32_t> VulkanContext::findStagingBufferMemoryType(VkDevice device)
     {
-        VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size        = 1;
         bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -228,10 +227,9 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
 
-    void VulkanContext::createInstance(std::vector<std::string>&& reqPlatformExtensions)
+    VkInstance VulkanContext::createInstance(std::vector<std::string>&& reqPlatformExtensions)
     {
-        VkApplicationInfo appInfo = {};
-        appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
         appInfo.pApplicationName   = Application::Title;
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName        = "CrispEngine";
@@ -245,24 +243,15 @@ namespace crisp
         std::transform(reqPlatformExtensions.begin(), reqPlatformExtensions.end(), std::back_inserter(enabledExtensions), [](const auto& ext) { return ext.c_str(); });
 
 
-        VkInstanceCreateInfo createInfo = {};
-        createInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
         createInfo.pApplicationInfo        = &appInfo;
         createInfo.enabledExtensionCount   = static_cast<uint32_t>(enabledExtensions.size());
         createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+        createInfo.enabledLayerCount       = enableValidationLayers ? static_cast<uint32_t>(validationLayers.size()) : 0;
+        createInfo.ppEnabledLayerNames     = enableValidationLayers ? validationLayers.data() : nullptr;
 
-        if (enableValidationLayers)
-        {
-            createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
-        }
-        else
-        {
-            createInfo.enabledLayerCount   = 0;
-            createInfo.ppEnabledLayerNames = nullptr;
-        }
-
-        vkCreateInstance(&createInfo, nullptr, &m_instance);
+        VkInstance instance;
+        vkCreateInstance(&createInfo, nullptr, &instance);
 
         uint32_t extensionCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -270,33 +259,38 @@ namespace crisp
         std::vector<VkExtensionProperties> extensionProps(extensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data());
 
-        bool supportsAllExtensions = checkRequiredExtensions(enabledExtensions, extensionProps);
+        bool supportsAllExtensions    = checkRequiredExtensions(enabledExtensions, extensionProps);
         bool supportsValidationLayers = !enableValidationLayers || checkValidationLayerSupport();
 
         if (!supportsAllExtensions)
             throw std::exception("Required extensions are not supported!");
         if (!supportsValidationLayers)
             throw std::exception("Validation layers requested are not available!");
+
+        return instance;
     }
 
-    void VulkanContext::setupDebugCallback()
+    VkDebugReportCallbackEXT VulkanContext::createDebugCallback()
     {
-        if (!enableValidationLayers) return;
+        if (!enableValidationLayers) return nullptr;
 
-        VkDebugReportCallbackCreateInfoEXT createInfo = {};
-        createInfo.sType       = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
         createInfo.flags       = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         createInfo.pfnCallback = reinterpret_cast<PFN_vkDebugReportCallbackEXT>(debugCallback);
 
-        CreateDebugReportCallbackEXT(m_instance, &createInfo, nullptr, &m_callback);
+        VkDebugReportCallbackEXT callback;
+        CreateDebugReportCallbackEXT(m_instance, &createInfo, nullptr, &callback);
+        return callback;
     }
 
-    void VulkanContext::createSurface(SurfaceCreator surfaceCreator)
+    VkSurfaceKHR VulkanContext::createSurface(SurfaceCreator surfaceCreator)
     {
-        surfaceCreator(m_instance, nullptr, &m_surface);
+        VkSurfaceKHR surface;
+        surfaceCreator(m_instance, nullptr, &surface);
+        return surface;
     }
 
-    void VulkanContext::pickPhysicalDevice()
+    VkPhysicalDevice VulkanContext::pickPhysicalDevice()
     {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
@@ -304,17 +298,19 @@ namespace crisp
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
 
+        VkPhysicalDevice preferredDevice = VK_NULL_HANDLE;
         for (const auto& device : devices)
         {
             if (isDeviceSuitable(device))
             {
-                m_physicalDevice = device;
+                preferredDevice = device;
                 break;
             }
         }
 
-        if (!m_physicalDevice)
+        if (!preferredDevice)
             throw std::exception("Failed to find a suitable physical device!");
+        return preferredDevice;
     }
 
     bool VulkanContext::checkRequiredExtensions(std::vector<const char*> reqExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)

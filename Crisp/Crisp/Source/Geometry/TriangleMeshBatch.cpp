@@ -13,8 +13,8 @@ namespace crisp
         size_t indicesBatchSize = 0;
         for (auto& mesh : meshes)
         {
-            verticesBatchSize += mesh.getVerticesByteSize();
-            indicesBatchSize += mesh.getIndicesByteSize();
+            //verticesBatchSize += mesh.getVerticesByteSize();
+            //indicesBatchSize += mesh.getIndicesByteSize();
         }
 
         //m_vertexBuffer = std::make_unique<VertexBuffer>(device, verticesBatchSize, BufferUpdatePolicy::Constant);
@@ -23,7 +23,7 @@ namespace crisp
         //{
         //    VertexBufferBindingGroup bindingGroup =
         //    {
-        //        m_vertexBuffer.get(), 
+        //        m_vertexBuffer.get(),
         //    }
         //}
     }

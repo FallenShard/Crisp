@@ -5,7 +5,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Renderer/Transforms.hpp"
+#include "Geometry/TransformPack.hpp"
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 
@@ -43,7 +43,7 @@ namespace crisp
         std::unique_ptr<OutlinePipeline> m_outlinePipeline;
         DescriptorSetGroup m_outlineDesc;
 
-        std::vector<Transforms>        m_transforms;
+        std::vector<TransformPack>     m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
         std::unique_ptr<VertexBuffer> m_cubeVertexBuffer;

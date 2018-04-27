@@ -1,41 +1,32 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 #include "Math/Headers.hpp"
+
+#include "Geometry/VertexAttributeTraits.hpp"
 
 namespace crisp
 {
-    enum class VertexAttribute
-    {
-        Position,
-        Normal,
-        TexCoord
-    };
-
     class TriangleMesh
     {
     public:
-        TriangleMesh(std::string filename, std::vector<VertexAttribute> interleaved, std::vector<VertexAttribute> separate = std::vector<VertexAttribute>());
+        TriangleMesh(std::string filename);
         ~TriangleMesh();
 
-        const std::vector<float>& getBuffer(unsigned int index = 0) const;
+        const std::vector<float>& getAttributeBuffer(VertexAttribute attribute) const;
         const std::vector<glm::uvec3>& getFaces() const;
         uint32_t getNumFaces() const;
-
-        size_t getVerticesByteSize() const;
-        size_t getIndicesByteSize() const;
+        uint32_t getNumVertices() const;
 
         std::string getMeshName() const;
-
 
     private:
         std::vector<glm::vec3> calculateVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces) const;
 
-        std::vector<std::vector<float>> m_vertices;
+        uint32_t m_numVertices;
+        std::unordered_map<VertexAttribute, std::vector<float>> m_vertexAttributes;
         std::vector<glm::uvec3> m_faces;
-
-        size_t m_verticesByteSize;
-        size_t m_indicesByteSize;
 
         std::string m_meshName;
     };

@@ -30,7 +30,7 @@ namespace crisp
         void createSwapImageViews();
 
         VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
-        VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
+        VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;
         VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
         uint32_t m_numVirtualFrames;

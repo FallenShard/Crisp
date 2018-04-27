@@ -4,6 +4,7 @@
 
 #include "Scene.hpp"
 
+#include "Geometry/TransformPack.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 
 namespace crisp
@@ -15,7 +16,7 @@ namespace crisp
 
     class SceneRenderPass;
     class FullScreenQuadPipeline;
-    class TextureView;
+    class VulkanImageView;
     class UniformBuffer;
     class VulkanDevice;
     class VulkanRenderer;
@@ -42,12 +43,26 @@ namespace crisp
 
         std::unique_ptr<FluidSimulation> m_fluidSimulation;
 
+        std::unique_ptr<VulkanPipeline> m_pointSpritePipeline;
+        DescriptorSetGroup m_pointSpriteDescGroup;
+
+        TransformPack m_transforms;
+        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+
+        struct ParticleParams
+        {
+            float radius;
+            float screenSpaceScale;
+        };
+        ParticleParams m_particleParams;
+        std::unique_ptr<UniformBuffer> m_paramsBuffer;
+
         std::unique_ptr<SceneRenderPass> m_scenePass;
         std::unique_ptr<UniformBuffer> m_cameraBuffer;
-        
+
         std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        std::unique_ptr<TextureView> m_sceneImageView;
+        std::unique_ptr<VulkanImageView> m_sceneImageView;
         DescriptorSetGroup m_sceneDescSetGroup;
     };
 }

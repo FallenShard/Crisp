@@ -20,7 +20,7 @@ namespace crisp
 
         void waitIdle() const;
 
-        VkCommandPool createCommandPoolFromFamily(VkCommandPoolCreateFlags flags) const;
+        VkCommandPool createCommandPool(VkCommandPoolCreateFlags flags) const;
         uint32_t getFamilyIndex() const;
 
     private:

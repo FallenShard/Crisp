@@ -21,12 +21,18 @@ namespace crisp
             buffer.resize(attribute.size() * sizeof(T) / sizeof(float));
             memcpy(buffer.data(), attribute.data(), buffer.size() * sizeof(float));
         }
+
+        template <VertexAttribute attribute, typename T>
+        void insertAttribute(std::unordered_map<VertexAttribute, std::vector<float>>& attributes, const std::vector<T>& attribData)
+        {
+            attributes[attribute] = std::vector<float>(attribData.size() * VertexAttributeTraits<attribute>::numComponents);
+            auto& attribBuffer = attributes[attribute];
+            memcpy(attribBuffer.data(), attribData.data(), attribData.size() * sizeof(T));
+        }
     }
 
-    TriangleMesh::TriangleMesh(std::string filename, std::vector<VertexAttribute> interleaved, std::vector<VertexAttribute> separate)
+    TriangleMesh::TriangleMesh(std::string filename)
         : m_meshName(filename.substr(0, filename.length() - 4))
-        , m_verticesByteSize(0)
-        , m_indicesByteSize(0)
     {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
@@ -34,85 +40,23 @@ namespace crisp
 
         vesper::MeshLoader meshLoader;
         meshLoader.load(filename, positions, normals, texCoords, m_faces);
+        m_numVertices = static_cast<uint32_t>(positions.size());
 
         if (normals.empty())
             normals = calculateVertexNormals(positions, m_faces);
 
-        size_t interleavedVertexFloats = 0;
-        for (auto& attrib : interleaved)
-        {
-            if (attrib == VertexAttribute::Position)
-                interleavedVertexFloats += positions.empty() ? 0 : 3;
-            else if (attrib == VertexAttribute::Normal)
-                interleavedVertexFloats += normals.empty() ? 0 : 3;
-            else if (attrib == VertexAttribute::TexCoord)
-                interleavedVertexFloats += texCoords.empty() ? 0 : 2;
-        }
-
-        size_t numBuffers = interleaved.empty() ? 0 : 1;
-        for (auto& separateAttrib : separate)
-        {
-            if (separateAttrib == VertexAttribute::Position && !positions.empty())
-                numBuffers++;
-            else if (separateAttrib == VertexAttribute::Normal && !normals.empty())
-                numBuffers++;
-            else if (separateAttrib == VertexAttribute::TexCoord && !texCoords.empty())
-                numBuffers++;
-        }
-
-        m_vertices.resize(numBuffers);
-
-        size_t currentBuffer = 0;
-        if (!interleaved.empty())
-        {
-            m_vertices[currentBuffer].resize(interleavedVertexFloats * positions.size());
-
-            size_t currentOffset = 0;
-            for (auto& attrib : interleaved)
-            {
-                if (attrib == VertexAttribute::Position)
-                {
-                    fillInterleaved(m_vertices[currentBuffer], positions, interleavedVertexFloats, currentOffset);
-                    currentOffset += 3;
-                }
-                else if (attrib == VertexAttribute::Normal)
-                {
-                    fillInterleaved(m_vertices[currentBuffer], normals, interleavedVertexFloats, currentOffset);
-                    currentOffset += 3;
-                }
-                else if (attrib == VertexAttribute::TexCoord)
-                {
-                    fillInterleaved(m_vertices[currentBuffer], texCoords, interleavedVertexFloats, currentOffset);
-                    currentOffset += 2;
-                }
-            }
-
-            currentBuffer++;
-        }
-
-        for (auto& attrib : separate)
-        {
-            if (attrib == VertexAttribute::Position && !positions.empty())
-                fill(m_vertices[currentBuffer++], positions);
-            else if (attrib == VertexAttribute::Normal && !normals.empty())
-                fill(m_vertices[currentBuffer++], normals);
-            else if (attrib == VertexAttribute::TexCoord && !texCoords.empty())
-                fill(m_vertices[currentBuffer++], texCoords);
-        }
-
-        for (auto& vertBuffer : m_vertices)
-            m_verticesByteSize += vertBuffer.size() * sizeof(float);
-
-        m_indicesByteSize += m_faces.size() * 3 * sizeof(unsigned int);
+        insertAttribute<VertexAttribute::Position>(m_vertexAttributes, positions);
+        insertAttribute<VertexAttribute::Normal>(m_vertexAttributes, normals);
+        insertAttribute<VertexAttribute::TexCoord>(m_vertexAttributes, texCoords);
     }
 
     TriangleMesh::~TriangleMesh()
     {
     }
 
-    const std::vector<float>& TriangleMesh::getBuffer(unsigned int index) const
+    const std::vector<float>& TriangleMesh::getAttributeBuffer(VertexAttribute attribute) const
     {
-        return m_vertices.at(index);
+        return m_vertexAttributes.at(attribute);
     }
 
     const std::vector<glm::uvec3>& TriangleMesh::getFaces() const
@@ -125,14 +69,9 @@ namespace crisp
         return static_cast<uint32_t>(m_faces.size());
     }
 
-    size_t TriangleMesh::getVerticesByteSize() const
+    uint32_t TriangleMesh::getNumVertices() const
     {
-        return m_verticesByteSize;
-    }
-
-    size_t TriangleMesh::getIndicesByteSize() const
-    {
-        return m_indicesByteSize;
+        return m_numVertices;
     }
 
     std::string TriangleMesh::getMeshName() const

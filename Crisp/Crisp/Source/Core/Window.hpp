@@ -25,6 +25,7 @@ namespace crisp
         void close();
 
         void setInputMode(int mode, int value);
+        void setTitle(const std::string& title);
 
         glm::ivec2 getSize() const;
         glm::vec2 getCursorPosition() const;

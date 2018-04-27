@@ -41,12 +41,12 @@ namespace crisp::gui
         welcomeLabel->setPosition({ 0, 0 });
         welcomeLabel->setAnchor(Anchor::CenterTop);
         addControl(std::move(welcomeLabel));
-        
+
         auto selectLabel = std::make_unique<Label>(parentForm, "Select your environment:");
         selectLabel->setPosition({ 0, 50 });
         selectLabel->setAnchor(Anchor::CenterTop);
         addControl(std::move(selectLabel));
-        
+
         auto crispButton = std::make_unique<Button>(parentForm);
         crispButton->setId("crispButton");
         crispButton->setText("Crisp (Real-time Renderer)");
@@ -66,12 +66,12 @@ namespace crisp::gui
             comboBox->setPosition({ 0, 0 });
             comboBox->setItems(SceneContainer::getSceneNames());
             comboBox->itemSelected.subscribe<SceneContainer, &SceneContainer::onSceneSelected>(sceneContainer);
-            comboBox->itemSelected("Shadow Mapping");
+            comboBox->itemSelected(SceneContainer::getDefaultScene());
             statusBar->addControl(std::move(comboBox));
             button->clicked.clear();
         };
         addControl(std::move(crispButton));
-        
+
         auto vesperButton = std::make_unique<Button>(parentForm);
         vesperButton->setId("vesperButton");
         vesperButton->setText("Vesper (Offline Ray Tracer)");
@@ -86,7 +86,7 @@ namespace crisp::gui
             parentForm->remove("welcomePanel", 0.5f);
             sceneContainer->onSceneSelected("Ray Tracer");
 
-            
+
         };
         addControl(std::move(vesperButton));
 

@@ -9,8 +9,8 @@ namespace crisp
     class VulkanRenderer;
     class VulkanDevice;
     class VulkanImage;
+    class VulkanImageView;
     class VulkanBuffer;
-    class TextureView;
 
     class Texture
     {
@@ -30,7 +30,7 @@ namespace crisp
         void fill(const VulkanBuffer& buffer, VkDeviceSize size);
         void fill(const VulkanBuffer& buffer, VkDeviceSize size, uint32_t baseLayer, uint32_t numLayers);
 
-        std::unique_ptr<TextureView> createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel = 0, uint32_t mipLevels = 1);
+        std::unique_ptr<VulkanImageView> createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel = 0, uint32_t mipLevels = 1);
 
     private:
         VulkanRenderer* m_renderer;

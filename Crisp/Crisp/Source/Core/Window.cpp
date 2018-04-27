@@ -49,6 +49,11 @@ namespace crisp
         glfwSetInputMode(m_window, mode, value);
     }
 
+    void Window::setTitle(const std::string& title)
+    {
+        glfwSetWindowTitle(m_window, title.c_str());
+    }
+
     glm::ivec2 Window::getSize() const
     {
         glm::ivec2 size;

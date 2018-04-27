@@ -245,23 +245,23 @@ namespace crisp::gui
         return getAbsoluteBounds();
     }
 
-    void Control::onMouseMoved(float x, float y)
+    void Control::onMouseMoved(float, float)
     {
     }
 
-    void Control::onMouseEntered(float x, float y)
+    void Control::onMouseEntered(float, float)
     {
     }
 
-    void Control::onMouseExited(float x, float y)
+    void Control::onMouseExited(float, float)
     {
     }
 
-    void Control::onMousePressed(float x, float y)
+    void Control::onMousePressed(float, float)
     {
     }
 
-    void Control::onMouseReleased(float x, float y)
+    void Control::onMouseReleased(float, float)
     {
     }
 

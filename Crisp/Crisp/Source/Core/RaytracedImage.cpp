@@ -4,10 +4,10 @@
 #include "Vulkan/VulkanFormatTraits.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 #include "Vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanImageView.hpp"
 #include "Vulkan/VulkanSampler.hpp"
 
 #include "Renderer/Texture.hpp"
-#include "Renderer/TextureView.hpp"
 #include "Renderer/VulkanRenderer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 
@@ -36,16 +36,16 @@ namespace crisp
         m_texture->fill(*m_stagingBuffer, byteSize, 2, 1);
 
         // create view
-        m_textureView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, VulkanRenderer::NumVirtualFrames);
+        m_VulkanImageView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, VulkanRenderer::NumVirtualFrames);
         m_updatedImageIndex = 0;
-       
+
         // create sampler
         m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_descSets = { m_pipeline->allocateDescriptorSet(0) };
-        m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_textureView->getDescriptorInfo(m_sampler->getHandle()));
-        m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_textureView->getDescriptorInfo());
+        m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_VulkanImageView->getDescriptorInfo(m_sampler->getHandle()));
+        m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_VulkanImageView->getDescriptorInfo());
         m_descSets.flushUpdates(m_renderer->getDevice());
     }
 
@@ -57,7 +57,7 @@ namespace crisp
     {
         // Add an update that stretches over three frames
         m_textureUpdates.emplace_back(std::make_pair(VulkanRenderer::NumVirtualFrames, update));
-        
+
         uint32_t rowSize = update.width * m_numChannels * sizeof(float);
         for (int i = 0; i < update.height; i++)
         {
@@ -122,7 +122,7 @@ namespace crisp
                 {
                     return item.first <= 0; // Erase those updates that have been written NumVirtualFrames times already
                 }), m_textureUpdates.end());
-                
+
                 // Transition the destination image back into shader-readable resource
                 VkImageMemoryBarrier readBarrierDst = {};
                 readBarrierDst.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

@@ -12,21 +12,12 @@ namespace crisp
 {
     namespace internal
     {
-        template <int location, int binding, VkFormat format, int offset>
-        VkVertexInputAttributeDescription createVertexAttributeDescription()
-        {
-            return { location, binding, format, offset };
-        }
-
-        template <int loc, int binding, int offset>
-        void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs) {
-        }
-
         template <int loc, int binding, int offset, VkFormat format, VkFormat... formats>
         void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs) {
-            vertexAttribs[loc] = createVertexAttributeDescription<loc, binding, format, offset>();
+            vertexAttribs[loc] = VkVertexInputAttributeDescription{ loc, binding, format, offset };
 
-            fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
+            if constexpr (sizeof...(formats) > 0)
+                fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
         }
 
         template <VkFormat... formats>

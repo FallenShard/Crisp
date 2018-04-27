@@ -192,6 +192,9 @@
     <ClCompile Include="Vesper\BSSRDFs\BSSRDFFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vesper\BSDFs\BSDF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vesper\BSDFs\BSDF.hpp">

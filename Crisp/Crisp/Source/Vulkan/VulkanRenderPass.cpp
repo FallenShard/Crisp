@@ -1,6 +1,9 @@
 #include "VulkanRenderPass.hpp"
 
 #include "vulkan/VulkanDevice.hpp"
+#include "vulkan/VulkanFramebuffer.hpp"
+#include "Vulkan/VulkanImage.hpp"
+#include "vulkan/VulkanImageView.hpp"
 #include "Renderer/VulkanRenderer.hpp"
 
 namespace crisp
@@ -13,6 +16,7 @@ namespace crisp
 
     VulkanRenderPass::~VulkanRenderPass()
     {
+        freeResources();
         vkDestroyRenderPass(m_device->getHandle(), m_handle, nullptr);
     }
 
@@ -37,13 +41,50 @@ namespace crisp
         return { { 0, 0 }, m_renderArea };
     }
 
+    void VulkanRenderPass::begin(VkCommandBuffer cmdBuffer) const
+    {
+        VkRenderPassBeginInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        renderPassInfo.renderPass        = m_handle;
+        renderPassInfo.framebuffer       = m_framebuffers[m_renderer->getCurrentVirtualFrameIndex()]->getHandle();
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = m_renderArea;
+        renderPassInfo.clearValueCount   = static_cast<uint32_t>(m_clearValues.size());
+        renderPassInfo.pClearValues      = m_clearValues.data();
+
+        vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
     void VulkanRenderPass::end(VkCommandBuffer cmdBuffer) const
     {
         vkCmdEndRenderPass(cmdBuffer);
+        for (uint32_t i = 0; i < m_renderTargets.size(); ++i)
+            m_renderTargets[i]->setImageLayout(m_finalLayouts[i], m_renderer->getCurrentVirtualFrameIndex());
     }
 
     void VulkanRenderPass::nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents contents) const
     {
         vkCmdNextSubpass(cmdBuffer, contents);
+    }
+
+    VulkanImage* VulkanRenderPass::getRenderTarget(unsigned int index) const
+    {
+        return m_renderTargets.at(index).get();
+    }
+
+    VulkanImageView* VulkanRenderPass::getRenderTargetView(unsigned int index, unsigned int frameIndex) const
+    {
+        return m_renderTargetViews.at(index).at(frameIndex).get();
+    }
+
+    std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(unsigned int index, unsigned int numFrames) const
+    {
+        return std::make_unique<VulkanImageView>(m_renderer->getDevice(), *m_renderTargets.at(index), numFrames > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D, 0, numFrames, 0, 1);
+    }
+
+    void VulkanRenderPass::freeResources()
+    {
+        m_renderTargets.clear();
+        m_renderTargetViews.clear();
+        m_framebuffers.clear();
     }
 }

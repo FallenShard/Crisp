@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <functional>
+#include <optional>
 
 #include <vulkan/vulkan.h>
 
@@ -47,11 +48,11 @@ namespace crisp
         bool checkDeviceExtensionSupport() const;
         SwapChainSupportDetails querySwapChainSupport() const;
 
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
-        uint32_t findMemoryType(VkMemoryPropertyFlags properties) const;
-        uint32_t findDeviceImageMemoryType(VkDevice device);
-        uint32_t findDeviceBufferMemoryType(VkDevice device);
-        uint32_t findStagingBufferMemoryType(VkDevice device);
+        std::optional<uint32_t> findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+        std::optional<uint32_t> findMemoryType(VkMemoryPropertyFlags properties) const;
+        std::optional<uint32_t> findDeviceImageMemoryType(VkDevice device);
+        std::optional<uint32_t> findDeviceBufferMemoryType(VkDevice device);
+        std::optional<uint32_t> findStagingBufferMemoryType(VkDevice device);
 
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat findSupportedDepthFormat() const;
@@ -59,10 +60,10 @@ namespace crisp
         VkPhysicalDeviceProperties getDeviceProperties() const;
 
     private:
-        void createInstance(std::vector<std::string>&& reqPlatformExtensions);
-        void setupDebugCallback();
-        void createSurface(SurfaceCreator surfaceCreator);
-        void pickPhysicalDevice();
+        VkInstance               createInstance(std::vector<std::string>&& reqPlatformExtensions);
+        VkDebugReportCallbackEXT createDebugCallback();
+        VkSurfaceKHR             createSurface(SurfaceCreator surfaceCreator);
+        VkPhysicalDevice         pickPhysicalDevice();
 
         bool checkRequiredExtensions(std::vector<const char*> reqExtensions, const std::vector<VkExtensionProperties>& supportedExtensions);
         bool checkValidationLayerSupport();
@@ -78,7 +79,7 @@ namespace crisp
         const static std::vector<const char*> deviceExtensions;
 
         VkInstance               m_instance;
-        VkDebugReportCallbackEXT m_callback;
+        VkDebugReportCallbackEXT m_debugCallback;
         VkSurfaceKHR             m_surface;
         VkPhysicalDevice         m_physicalDevice; // Implicitly cleaned up with VkInstance
     };

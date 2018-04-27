@@ -22,6 +22,12 @@ namespace crisp
 
         inline VkBuffer get() const { return m_buffer->getHandle(); }
 
+        template <typename T>
+        void updateStagingBuffer(T&& data)
+        {
+            updateStagingBuffer(&data, sizeof(T));
+        }
+
         void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
         void updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex);
 
@@ -36,7 +42,7 @@ namespace crisp
         VkDeviceSize m_singleRegionSize;
         std::unique_ptr<VulkanBuffer> m_buffer;
         std::unique_ptr<VulkanBuffer> m_stagingBuffer;
-        
+
         uint32_t m_framesToUpdateOnGpu;
     };
 }

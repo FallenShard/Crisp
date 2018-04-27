@@ -27,6 +27,7 @@ namespace crisp::gui
         m_M     = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
+        m_borderColor = glm::vec4(glm::vec3(0.0f), 1.0f);
         m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
@@ -41,7 +42,7 @@ namespace crisp::gui
             m_borderColor = t;
             setValidationFlags(Validation::Color);
         }, 0, Easing::SlowOut);
-            
+
         m_label->setParent(this);
         m_label->setAnchor(Anchor::Center);
     }
@@ -171,7 +172,7 @@ namespace crisp::gui
             m_color.a = getParentAbsoluteOpacity() * m_opacity;
             m_drawComponent.update(m_color);
         }
-            
+
         m_label->setValidationFlags(m_validationFlags);
         m_label->validate();
         m_label->clearValidationFlags();

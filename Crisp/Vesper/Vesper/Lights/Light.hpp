@@ -42,7 +42,10 @@ namespace vesper
         void setShape(Shape* shape) { m_shape = shape; }
         virtual void setBoundingSphere(const glm::vec4& sphereParams) {}
 
+        // Evaluates emitted radiance Le
         virtual Spectrum eval(const Light::Sample& sample) const = 0;
+
+        // Computes emitted radiance divided by probability density -> Le / pdf
         virtual Spectrum sample(Light::Sample& sample, Sampler& sampler) const = 0;
         virtual float pdf(const Light::Sample& sample) const = 0;
 

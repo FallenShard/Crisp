@@ -168,9 +168,6 @@
     <ClCompile Include="Source\Renderer\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\TextureView.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Core\RaytracedImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -226,18 +223,6 @@
     <ClCompile Include="Source\Renderer\Pipelines\ComputeTestPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Pipelines\HashGridPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Renderer\Pipelines\ClearHashGridPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Renderer\Pipelines\ComputePressurePipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Models\FluidSimulation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Models\BoxDrawer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -257,9 +242,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\GUI\IntroductionPanel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Simulation\SimulationConfigFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\GUI\Slider.cpp">
@@ -286,31 +268,19 @@
     <ClCompile Include="Source\Core\SceneContainer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scenes\TestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scenes\FluidSimulationPanel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\GUI\DoubleSlider.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Scenes\AmbientOcclusionScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Pipelines\SsaoPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Scenes\AmbientOcclusionPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scenes\RayTracerScene.cpp">
@@ -350,6 +320,33 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scenes\ShadowMappingPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\PhysicallyBasedMaterialsScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanImageView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\FluidSimulationPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\AmbientOcclusionPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\AmbientOcclusionScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Models\FluidSimulation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\ComputePipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -516,9 +513,6 @@
     <ClInclude Include="Source\Renderer\Texture.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\TextureView.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Core\RaytracedImage.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -561,9 +555,6 @@
     <ClInclude Include="Source\Models\BoxVisualizer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Transforms.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Vulkan\VulkanSampler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -580,18 +571,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Pipelines\ComputeTestPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\Pipelines\HashGridPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\Pipelines\ClearHashGridPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\Pipelines\ComputePressurePipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Models\FluidSimulation.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Models\BoxDrawer.hpp">
@@ -621,16 +600,7 @@
     <ClInclude Include="Source\GUI\IntroductionPanel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Simulation\SimulationConfigFile.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Simulation\FluidSimulationParams.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\GUI\Slider.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Core\Mouse.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Vulkan\VulkanFormatTraits.hpp">
@@ -643,10 +613,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Vulkan\VulkanMemoryHeap.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Simulation\FluidSimulationKernels.cuh" />
-    <ClInclude Include="Source\Simulation\PropertyBuffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\GuiEnums.hpp">
@@ -670,16 +636,10 @@
     <ClInclude Include="Source\Core\SceneContainer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Scenes\ShadowMappingScene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scenes\TestScene.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Scenes\FluidSimulationPanel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scenes\Scene.hpp">
@@ -691,16 +651,10 @@
     <ClInclude Include="Source\GUI\DoubleSlider.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Pipelines\SsaoPipeline.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scenes\RayTracerScene.hpp">
@@ -739,6 +693,39 @@
     <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Geometry\VertexAttributeTraits.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\PhysicallyBasedMaterialsScene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Geometry\TransformPack.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanImageView.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\FluidSimulationPanel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Models\FluidSimulation.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Core\StringUtils.hpp" />
@@ -770,9 +757,7 @@
     <None Include="Source\Shaders\depth-normal-vert.glsl" />
     <None Include="Source\Shaders\depth-normal-frag.glsl" />
     <None Include="Source\Shaders\test-comp.glsl" />
-    <None Include="Source\Shaders\hash-grid-comp.glsl" />
     <None Include="Source\Shaders\clear-hash-grid-comp.glsl" />
-    <None Include="Source\Shaders\compute-pressure-comp.glsl" />
     <None Include="Source\Shaders\ssao-frag.glsl" />
     <None Include="Source\Shaders\ssao-vert.glsl" />
     <None Include="Source\Shaders\color-and-shadow-vert.glsl" />
@@ -783,6 +768,19 @@
     <None Include="Source\Shaders\variance-shadow-map-frag.glsl" />
     <None Include="Source\Shaders\normal-map-vert.glsl" />
     <None Include="Source\Shaders\normal-map-frag.glsl" />
+    <None Include="Source\Shaders\physically-based-vert.glsl" />
+    <None Include="Source\Shaders\physically-based-frag.glsl" />
+    <None Include="Source\Shaders\compute-cell-count-comp.glsl" />
+    <None Include="Source\Shaders\compile-vulkan.sh" />
+    <None Include="Source\Shaders\gui-quad-debug-col-frag.glsl" />
+    <None Include="Source\Shaders\gui-quad-debug-col-vert.glsl" />
+    <None Include="Source\Shaders\integrate-comp.glsl" />
+    <None Include="Source\Shaders\scan-comp.glsl" />
+    <None Include="Source\Shaders\scan-combine-comp.glsl" />
+    <None Include="Source\Shaders\reorder-particles-comp.glsl" />
+    <None Include="Source\Shaders\compute-density-and-pressure-comp.glsl" />
+    <None Include="Source\Shaders\compute-forces-comp.glsl" />
+    <None Include="Source\Shaders\reindex-particles-comp.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />
@@ -805,8 +803,5 @@
     <Xml Include="Resources\VesperScenes\sphere-texture.xml" />
     <Xml Include="Resources\VesperScenes\sponza-av.xml" />
     <Xml Include="Resources\VesperScenes\sponza-direct.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="Source\Simulation\FluidSimulationKernels.cu" />
   </ItemGroup>
 </Project>

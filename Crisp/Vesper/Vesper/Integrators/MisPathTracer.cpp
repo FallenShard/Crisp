@@ -9,12 +9,114 @@
 
 namespace vesper
 {
-    inline float miWeight(float pdf1, float pdf2)
+    namespace
     {
-        pdf1 *= pdf1;
-        pdf2 *= pdf2;
-        return pdf1 / (pdf1 + pdf2);
+        inline float miWeight(float pdf1, float pdf2)
+        {
+            pdf1 *= pdf1;
+            pdf2 *= pdf2;
+            return pdf1 / (pdf1 + pdf2);
+        }
+
+
+
+        Spectrum estimateDirect(const Scene& scene, Sampler& sampler, const Ray3& ray, const Intersection& its, const Light& light, bool specular)
+        {
+            LobeFlags lobe = specular ? LobeFlags(Lobe::Delta | Lobe::Smooth) : LobeFlags(Lobe::Smooth);
+            Spectrum Ld(0.0f);
+
+            Light::Sample lightSample(its.p);
+            Spectrum Li = light.sample(lightSample, sampler);
+            if (lightSample.pdf > 0.0f && !Li.isZero() && !scene.rayIntersect(lightSample.shadowRay))
+            {
+                BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
+                bsdfSample.measure = BSDF::Measure::SolidAngle;
+                bsdfSample.eta = 1.0f;
+                Spectrum f = its.shape->getBSDF()->eval(bsdfSample);
+                float bsdfPdf = its.shape->getBSDF()->pdf(bsdfSample);
+                if (!f.isZero() && bsdfPdf > 0.0f)
+                {
+                    float weight = light.isDelta() ? 1.0f : miWeight(lightSample.pdf, bsdfPdf);
+                    Ld += f * Li * weight;
+                }
+            }
+
+            if (!light.isDelta())
+            {
+                BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
+                Spectrum f = its.shape->getBSDF()->sample(bsdfSample, sampler);
+                bool sampledSpecular = bsdfSample.sampledLobe == Lobe::Delta;
+
+                if (!f.isZero() && bsdfSample.pdf > 0.0f)
+                {
+                    float weight = 1.0f;
+                    if (!sampledSpecular)
+                    {
+                        Intersection bsdfIts;
+                        Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
+                        if (!scene.rayIntersect(bsdfRay, bsdfIts))
+                        {
+                            if (scene.getEnvironmentLight())
+                            {
+                                Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                                lightSample.wi = bsdfRay.d;
+                                float lightPdf = scene.getEnvironmentLight()->pdf(lightSample);
+                                weight = miWeight(bsdfSample.pdf, lightPdf);
+                            }
+                            else
+                                return Ld;
+                        }
+                        else if (bsdfIts.shape->getLight() == &light)
+                        {
+                            Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                            lightSample.wi = bsdfRay.d;
+                            float lightPdf = light.pdf(lightSample);
+                            weight = miWeight(bsdfSample.pdf, lightPdf);
+                        }
+                        else
+                            return Ld;
+                    }
+                    Intersection bsdfIts;
+                    Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
+                    bool foundIntersection = scene.rayIntersect(bsdfRay, bsdfIts);
+
+                    Spectrum Li(0.0f);
+                    if (foundIntersection)
+                    {
+                        if (bsdfIts.shape->getLight() == &light)
+                        {
+                            Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                            lightSample.wi = bsdfRay.d;
+                            Li = light.eval(lightSample);
+                        }
+                    }
+                    else if (scene.getEnvironmentLight())
+                    {
+                        Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                        lightSample.wi = bsdfRay.d;
+                        Li = scene.getEnvironmentLight()->eval(lightSample);
+                    }
+
+                    if (!Li.isZero())
+                        Ld += f * Li * weight;
+                }
+            }
+            return Ld;
+        }
+
+        Spectrum uniformSampleOneLight(const Scene& scene, Sampler& sampler, const Ray3& ray, const Intersection& its)
+        {
+            Light::Sample lightSample(its.p);
+            auto light = scene.getRandomLight(sampler.next1D());
+            if (!light)
+                return Spectrum(0.0f);
+
+            float pickPdf = scene.getLightPdf();
+
+            return estimateDirect(scene, sampler, ray, its, *light, false) / pickPdf;
+        }
     }
+
 
     MisPathTracerIntegrator::MisPathTracerIntegrator(const VariantMap& attribs)
     {
@@ -33,37 +135,31 @@ namespace vesper
                 shape->getBSSRDF()->preprocess(shape.get(), scene);
     }
 
-    Spectrum MisPathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum MisPathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& r, IlluminationFlags illumFlags) const
     {
-        Spectrum direct(0.f);
-        Spectrum indirect(0.0f);
+        Spectrum L(0.0f);
+        Spectrum throughput(1.0f);
+        Ray3 ray(r);
+        unsigned int bounces = 0;
+        bool specularBounce = false;
 
         Intersection its;
 
-        Spectrum throughput(1.0f);
-        bool isDeltaBounce = true;
-        unsigned int bounces = 0;
-
         while (true)
         {
-            Spectrum& L = bounces <= 1 ? direct : indirect;
-
-            // When there's no intersection, evaluate environment light
             bool foundIntersection = scene->rayIntersect(ray, its);
 
-            // If the previous bounce is specular and we hit a light source,
-            // evaluate it because we couldn't otherwise evaluate light from a delta bounce
-            if (isDeltaBounce)
+            if (bounces == 0 || specularBounce)
             {
                 if (foundIntersection)
                 {
-                    if (its.shape->getLight() && (illumFlags & Illumination::Direct))
+                    if (auto light = its.shape->getLight())
                     {
                         Light::Sample lightSample(ray.o, its.p, its.shFrame.n);
-                        L += throughput * its.shape->getLight()->eval(lightSample);
+                        L += throughput * light->eval(lightSample);
                     }
                 }
-                else // check for environment light
+                else
                 {
                     L += throughput * scene->evalEnvLight(ray);
                 }
@@ -72,62 +168,37 @@ namespace vesper
             if (!foundIntersection || bounces >= m_maxDepth)
                 break;
 
-            if (its.shape->getBSSRDF())
-            {
-                BSSRDF::Sample sample(its.p, its.shFrame.n, -ray.d);
-                L += throughput * its.shape->getBSSRDF()->eval(sample);
-            }
-
-            // If we did not hit a delta BRDF (mirror, glass etc.), sample the light
             if (!(its.shape->getBSDF()->getLobeType() & Lobe::Delta))
             {
-                L += throughput * lightImportanceSample(scene, sampler, ray, its);
+                Spectrum lightMis = uniformSampleOneLight(*scene, sampler, ray, its);
+                //L += path.throughput * lightImportanceSample(scene, sampler, ray, its);
+                L += throughput * lightMis;
             }
 
-            // Sample the BSDF to continue bouncing
             BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
-            auto bsdf = its.shape->getBSDF()->sample(bsdfSample, sampler);
-            Intersection bsdfIts;
-            Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
-            const Light* hitLight = nullptr;
+            Spectrum f = its.shape->getBSDF()->sample(bsdfSample, sampler);
+            if (f.isZero() || bsdfSample.pdf == 0.0f)
+                break;
 
-            if (!scene->rayIntersect(bsdfRay, bsdfIts))
-            {
-                hitLight = scene->getEnvironmentLight();
-            }
-            else if (bsdfIts.shape->getLight())
-            {
-                hitLight = bsdfIts.shape->getLight();
-            }
+            throughput *= f;
 
-            if (hitLight)
-            {
-                Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
-                lightSample.wi = bsdfRay.d;
-                auto lightSpec = hitLight->eval(lightSample);
+            specularBounce = bsdfSample.sampledLobe == Lobe::Delta;
 
-                float pdfBsdf = bsdfSample.pdf;
-                float pdfEm = bsdfSample.sampledLobe == Lobe::Delta ? 0.0f : hitLight->pdf(lightSample) * scene->getLightPdf();
-                if (pdfBsdf + pdfEm > 0.0f)
-                    L += throughput * bsdf * lightSpec * miWeight(pdfBsdf, pdfEm);
-            }
+            ray = Ray3(its.p, its.toWorld(bsdfSample.wo));
 
-            isDeltaBounce = bsdfSample.sampledLobe == Lobe::Delta;
-            throughput *= bsdf;
-            ray = bsdfRay;
-
-            bounces++;
             if (bounces > m_rrDepth)
             {
                 float q = 1.0f - std::min(throughput.maxCoeff(), 0.99f);
-                if (sampler.next1D() > q)
-                    throughput /= (1.0f - q);
-                else
+                if (sampler.next1D() < q)
                     break;
+
+                throughput /= (1.0f - q);
             }
+
+            bounces++;
         }
 
-        return direct + indirect;
+        return L;
     }
 
     Spectrum MisPathTracerIntegrator::lightImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
@@ -140,44 +211,45 @@ namespace vesper
         BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
         bsdfSample.measure = BSDF::Measure::SolidAngle;
         bsdfSample.eta     = 1.0f;
-        auto f = its.shape->getBSDF()->eval(bsdfSample);
+        Spectrum f = its.shape->getBSDF()->eval(bsdfSample);
         if (f.isZero())
             return Spectrum(0.0f);
 
         float pdfLight = lightSample.pdf;
-        float pdfBsdf = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSample);
+        float pdfBsdf  = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSample);
         return f * Li * miWeight(pdfLight, pdfBsdf);
     }
 
-    Spectrum MisPathTracerIntegrator::bsdfImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
+    Spectrum MisPathTracerIntegrator::bsdfImportanceSample(const Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its, Path& path) const
     {
         BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
-        auto f = its.shape->getBSDF()->sample(bsdfSample, sampler);
+        Spectrum f = its.shape->getBSDF()->sample(bsdfSample, sampler);
         if (f.isZero())
             return Spectrum(0.0f);
 
         Intersection bsdfIts;
         Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
+
+        path.isSpecular = bsdfSample.sampledLobe == Lobe::Delta;
+        path.bsdfSample = f;
+        path.nextRay = bsdfRay;
+
         const Light* hitLight = nullptr;
 
         if (!scene->rayIntersect(bsdfRay, bsdfIts))
-        {
-            hitLight = scene->getEnvironmentLight();
-        }
-        else if (bsdfIts.shape->getLight())
-        {
+            hitLight = nullptr;// scene->getEnvironmentLight();
+        else
             hitLight = bsdfIts.shape->getLight();
-        }
 
         if (!hitLight)
             return Spectrum(0.0f);
 
         Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
         lightSample.wi = bsdfRay.d;
-        auto Li = hitLight->eval(lightSample);
+        Spectrum Li = hitLight->eval(lightSample);
 
-        float bsdfPdf = bsdfSample.pdf;
-        float lightPdf = bsdfSample.sampledLobe == Lobe::Delta ? 0.0f : hitLight->pdf(lightSample) * scene->getLightPdf();
-        return f * Li * miWeight(bsdfPdf, lightPdf);
+        float pdfBsdf  = bsdfSample.pdf;
+        float pdfLight = path.isSpecular ? 0.0f : hitLight->pdf(lightSample) * scene->getLightPdf();
+        return f * Li * miWeight(pdfBsdf, pdfLight);
     }
 }

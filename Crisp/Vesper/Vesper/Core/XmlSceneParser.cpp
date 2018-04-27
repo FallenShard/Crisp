@@ -62,18 +62,18 @@ namespace vesper
         {
             std::ifstream inputFile(fileName);
             std::string source;
-        
+
             if (inputFile.is_open())
             {
                 std::string line;
                 while (std::getline(inputFile, line))
                     source += line + '\n';
-        
+
                 inputFile.close();
             }
             else
                 std::cerr << "Could not open file " << fileName << std::endl;
-        
+
             return source;
         }
 
@@ -125,7 +125,7 @@ namespace vesper
             stringStream >> value; result.x = static_cast<float>(std::atof(value.c_str()));
             stringStream >> value; result.y = static_cast<float>(std::atof(value.c_str()));
             stringStream >> value; result.z = static_cast<float>(std::atof(value.c_str()));
-            
+
             return result;
         }
 
@@ -290,7 +290,7 @@ namespace vesper
         scene->setIntegrator(std::move(create<Integrator, IntegratorFactory>(sceneNode->first_node("integrator"))));
         scene->setSampler(std::move(create<Sampler, SamplerFactory>(sceneNode->first_node("sampler"))));
         scene->setCamera(std::move(create<Camera, CameraFactory>(sceneNode->first_node("camera"))));
-        
+
         auto shapes = sceneNode->first_node("shapes");
         if (shapes != nullptr)
         {
@@ -341,7 +341,7 @@ namespace vesper
                 scene->addBSDF(std::move(bsdf));
             }
         }
-        
+
         auto lights = sceneNode->first_node("lights");
         if (lights != nullptr)
         {
@@ -353,7 +353,7 @@ namespace vesper
                     scene->addLight(std::move(create<Light, LightFactory>(lightNode)));
             }
         }
-        
+
         scene->finishInitialization();
 
         return std::move(scene);

@@ -22,7 +22,7 @@ namespace crisp
     class FullScreenQuadPipeline;
 
     class Texture;
-    class TextureView;
+    class VulkanImageView;
     class VertexBuffer;
     class IndexBuffer;
 
@@ -60,7 +60,7 @@ namespace crisp
         void registerPipeline(VulkanPipeline* pipeline);
         void unregisterPipeline(VulkanPipeline* pipeline);
 
-        void enqueueResourceUpdate(std::function<void(VkCommandBuffer)> imageTransition);
+        void enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate);
         void enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
         void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 

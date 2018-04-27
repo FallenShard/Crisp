@@ -82,7 +82,7 @@ namespace vesper
         auto f = its.shape->getBSDF()->sample(bsdfSample, sampler);
         if (f.isZero())
             return Spectrum(0.0f);
-        
+
         Intersection bsdfIts;
         Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
         const Light* hitLight = nullptr;

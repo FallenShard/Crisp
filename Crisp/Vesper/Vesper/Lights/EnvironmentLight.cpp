@@ -57,7 +57,7 @@ namespace vesper
 
         int w = m_probe->getWidth();
         int h = m_probe->getHeight();
-        
+
         size_t numEntries = (w + 1) * h;
 
         m_cdfCols.resize(numEntries);
@@ -156,8 +156,8 @@ namespace vesper
     Spectrum EnvironmentLight::eval(const Light::Sample& sample) const
     {
         float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI) * 0.5f;
-        float v = acosf(sample.wi.y) * InvPI;
-        
+        float v = acosf(std::min(1.0f, sample.wi.y)) * InvPI;
+
         return m_scale * m_probe->evalLerp(u, v);
     }
 
@@ -201,7 +201,7 @@ namespace vesper
         sample.wi = dir;
         sample.pdf = pdf;
         sample.shadowRay = Ray3(sample.ref, sample.wi, Ray3::Epsilon, m_sceneRadius * 2.0f);
-        
+
         return val / pdf;
         //auto point = sampler.next2D();
         //

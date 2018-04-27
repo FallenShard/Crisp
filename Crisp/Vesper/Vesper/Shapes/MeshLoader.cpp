@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <sstream>
+#include <experimental/filesystem>
 
 #include <glm/glm.hpp>
 
@@ -79,8 +80,8 @@ namespace vesper
         };
     }
 
-    bool MeshLoader::load(std::string fileName, 
-        std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
+    bool MeshLoader::load(std::string fileName,
+        std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
         std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
         std::string meshFilename = "Resources/Meshes/" + fileName;
@@ -89,28 +90,31 @@ namespace vesper
             return false;
 
         auto tokens = tokenize(meshFilename, ".");
-        std::string ext = tokens[tokens.size() - 1];
+        std::string ext = tokens.back();
 
-        if (loadModelCache(tokens[0], positions, normals, texCoords, faces))
+        std::experimental::filesystem::path modelPath(tokens.front());
+        auto cachedModelPath = modelPath.remove_filename() / "cache" / modelPath.filename();
+
+        if (loadModelCache(cachedModelPath.generic_string(), positions, normals, texCoords, faces))
         {
             std::cout << "Loading Wavefront Obj mesh from cache: " + meshFilename << std::endl;
             return true;
         }
-            
+
 
         if (ext == "obj")
         {
             std::cout << "Loading Wavefront Obj mesh: " + meshFilename << std::endl;
             loadWavefrontObj(meshFile, positions, normals, texCoords, faces);
-            createModelCache(tokens[0], positions, normals, texCoords, faces);
+            createModelCache(cachedModelPath.generic_string(), positions, normals, texCoords, faces);
             return true;
         }
 
         return false;
     }
 
-    void MeshLoader::loadWavefrontObj(std::ifstream& file, 
-        std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
+    void MeshLoader::loadWavefrontObj(std::ifstream& file,
+        std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
         std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
         using VertexMap = std::unordered_map<ObjVertex, unsigned int, ObjVertexHasher>;

@@ -16,10 +16,11 @@
 #include "Renderer/Pipelines/NormalPipeline.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/SsaoPipeline.hpp"
-#include "Renderer/TextureView.hpp"
 #include "Renderer/Texture.hpp"
 
 #include "vulkan/VulkanSampler.hpp"
+#include "vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanImageView.hpp"
 
 #include "Geometry/MeshGeometry.hpp"
 #include "Geometry/TriangleMesh.hpp"
@@ -78,14 +79,14 @@ namespace crisp
 
         m_transforms.resize(2);
         m_transforms[0].M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(Transforms), BufferUpdatePolicy::PerFrame);
+        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         m_aoPass = std::make_unique<AmbientOcclusionPass>(m_renderer);
 
         m_uniformColorPipeline = std::make_unique<UniformColorPipeline>(m_renderer, m_scenePass.get());
         m_unifColorSetGroup = { m_uniformColorPipeline->allocateDescriptorSet(0) };
-        m_unifColorSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_unifColorSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_unifColorSetGroup.flushUpdates(m_device);
 
         m_nearestSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -96,7 +97,7 @@ namespace crisp
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
         {
             m_ssaoSetGroups[i] = { m_ssaoPipeline->allocateDescriptorSet(0) };
-            m_ssaoSetGroups[i].postImageUpdate(0,  0, { m_nearestSampler->getHandle(), m_scenePass->getAttachmentView(0, i), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            m_ssaoSetGroups[i].postImageUpdate(0,  0, m_scenePass->getRenderTargetView(0, i)->getDescriptorInfo(m_nearestSampler->getHandle()));
             m_ssaoSetGroups[i].postBufferUpdate(0, 1, m_cameraBuffer->getDescriptorInfo());
             m_ssaoSetGroups[i].postBufferUpdate(0, 2, m_samplesBuffer->getDescriptorInfo());
             m_ssaoSetGroups[i].postImageUpdate(0, 3, m_noiseMapView->getDescriptorInfo(m_noiseSampler->getHandle()));
@@ -107,14 +108,14 @@ namespace crisp
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        m_sceneImageView = m_aoPass->createRenderTargetView(0);
+        m_sceneImageView = m_aoPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
 
-        m_planeGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("plane.obj", { VertexAttribute::Position }));
+        m_planeGeometry = std::make_unique<MeshGeometry>(m_renderer, "plane.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
 
-        m_buddhaGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("sponza_fixed.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
+        m_buddhaGeometry = std::make_unique<MeshGeometry>(m_renderer, "sponza_fixed.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position, VertexAttribute::Normal });
 
         m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get());
 
@@ -133,9 +134,15 @@ namespace crisp
 
         m_scenePass->recreate();
         m_aoPass->recreate();
-        m_sceneImageView = m_aoPass->createRenderTargetView(0);
+        m_sceneImageView = m_aoPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
+
+        for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        {
+            m_ssaoSetGroups[i].postImageUpdate(0, 0, m_scenePass->getRenderTargetView(0, i)->getDescriptorInfo(m_nearestSampler->getHandle()));
+            m_ssaoSetGroups[i].flushUpdates(m_device);
+        }
     }
 
     void AmbientOcclusionScene::update(float dt)
@@ -151,7 +158,7 @@ namespace crisp
                 trans.MV  = V * trans.M;
                 trans.MVP = P * trans.MV;
             }
-            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(Transforms));
+            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
             m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
 
             m_skybox->updateTransforms(P, V);
@@ -188,7 +195,7 @@ namespace crisp
 
 
             m_normalPipeline->bind(commandBuffer);
-            m_unifColorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(Transforms));
+            m_unifColorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(TransformPack));
             m_unifColorSetGroup.bind(commandBuffer, m_normalPipeline->getPipelineLayout());
             m_buddhaGeometry->bindGeometryBuffers(commandBuffer);
             m_buddhaGeometry->draw(commandBuffer);
@@ -197,24 +204,8 @@ namespace crisp
 
             m_scenePass->end(commandBuffer);
 
-            VkImageMemoryBarrier imageMemoryBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            imageMemoryBarrier.srcAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            imageMemoryBarrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
-            imageMemoryBarrier.oldLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            imageMemoryBarrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageMemoryBarrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier.image                           = m_scenePass->getColorAttachment();
-            imageMemoryBarrier.subresourceRange.baseMipLevel   = 0;
-            imageMemoryBarrier.subresourceRange.levelCount     = 1;
-            imageMemoryBarrier.subresourceRange.baseArrayLayer = frameIdx;
-            imageMemoryBarrier.subresourceRange.layerCount     = 1;
-            imageMemoryBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
-
-            //m_renderer->finish();
+            m_scenePass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
             m_aoPass->begin(commandBuffer);
 
@@ -228,22 +219,8 @@ namespace crisp
 
             m_aoPass->end(commandBuffer);
 
-            VkImageMemoryBarrier anotherMemBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            anotherMemBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            anotherMemBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            anotherMemBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            anotherMemBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            anotherMemBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            anotherMemBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            anotherMemBarrier.image = m_aoPass->getColorAttachment();
-            anotherMemBarrier.subresourceRange.baseMipLevel = 0;
-            anotherMemBarrier.subresourceRange.levelCount = 1;
-            anotherMemBarrier.subresourceRange.baseArrayLayer = frameIdx;
-            anotherMemBarrier.subresourceRange.layerCount = 1;
-            anotherMemBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &anotherMemBarrier);
+            m_aoPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
         m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)

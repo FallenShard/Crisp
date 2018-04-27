@@ -105,4 +105,13 @@ namespace crisp
         vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
         return renderPass;
     }
+
+    std::vector<VkImageLayout> RenderPassBuilder::getFinalLayouts() const
+    {
+        std::vector<VkImageLayout> result(m_attachments.size());
+        for (uint32_t i = 0; i < result.size(); i++)
+            result[i] = m_attachments[i].finalLayout;
+
+        return result;
+    }
 }

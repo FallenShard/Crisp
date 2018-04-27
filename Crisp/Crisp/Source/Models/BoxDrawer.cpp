@@ -61,14 +61,14 @@ namespace crisp
 
         m_transforms.resize(m_numBoxes);
 
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(Transforms), BufferUpdatePolicy::PerFrame);
+        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
         m_outlinePipeline = std::make_unique<OutlinePipeline>(m_renderer, renderPass);
         m_outlineDesc =
         {
             m_outlinePipeline->allocateDescriptorSet(0)
         };
-        m_outlineDesc.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_outlineDesc.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_outlineDesc.flushUpdates(m_renderer->getDevice());
     }
 
@@ -94,7 +94,7 @@ namespace crisp
             trans.MVP = P * trans.MV;
         }
 
-        m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(Transforms));
+        m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
     }
 
     void BoxDrawer::updateDeviceBuffers(VkCommandBuffer commandBuffer, uint32_t frameIndex)
@@ -111,7 +111,7 @@ namespace crisp
 
         for (uint32_t i = 0; i < m_numBoxes; i++)
         {
-            m_outlineDesc.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(Transforms));
+            m_outlineDesc.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
             m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());
             m_outlinePipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::vec4(1.0f, 0.0f, 0.5f, 1.0f));
             vkCmdDrawIndexed(commandBuffer, m_numIndices, 1, 0, 0, 0);

@@ -5,7 +5,7 @@
 
 #include "Scene.hpp"
 
-#include "Renderer/Transforms.hpp"
+#include "Geometry/TransformPack.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 #include "Renderer/VulkanRenderer.hpp"
 
@@ -20,9 +20,9 @@ namespace crisp
     class AmbientOcclusionPass;
     class UniformBuffer;
     class VulkanSampler;
-    class TextureView;
+    class VulkanImageView;
     class Texture;
-    
+
     class VulkanPipeline;
     class MeshGeometry;
 
@@ -58,7 +58,7 @@ namespace crisp
 
         std::unique_ptr<VulkanSampler> m_nearestSampler;
 
-        std::vector<Transforms> m_transforms;
+        std::vector<TransformPack> m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
         std::unique_ptr<VulkanPipeline> m_uniformColorPipeline;
@@ -69,7 +69,7 @@ namespace crisp
 
         std::unique_ptr<VulkanPipeline> m_fsQuadPipeline;
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        std::unique_ptr<TextureView> m_sceneImageView;
+        std::unique_ptr<VulkanImageView> m_sceneImageView;
         DescriptorSetGroup m_sceneDescSetGroup;
 
         std::unique_ptr<MeshGeometry> m_planeGeometry;
@@ -78,7 +78,7 @@ namespace crisp
         std::unique_ptr<Skybox> m_skybox;
 
         std::unique_ptr<Texture>       m_noiseTex;
-        std::unique_ptr<TextureView>   m_noiseMapView;
+        std::unique_ptr<VulkanImageView>   m_noiseMapView;
         std::unique_ptr<VulkanSampler> m_noiseSampler;
 
         int m_numSamples;

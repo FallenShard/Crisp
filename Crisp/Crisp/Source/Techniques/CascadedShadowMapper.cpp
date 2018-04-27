@@ -5,6 +5,7 @@
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/RenderPasses/ShadowPass.hpp"
 #include "Renderer/Pipelines/ShadowMapPipeline.hpp"
+#include "vulkan/VulkanImage.hpp"
 
 namespace crisp
 {
@@ -17,7 +18,7 @@ namespace crisp
         m_pipelines.reserve(m_numCascades);
         for (uint32_t i = 0; i < m_numCascades; i++)
             m_pipelines.emplace_back(std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), i));
-        
+
         m_descGroup =
         {
             m_pipelines[0]->allocateDescriptorSet(0)
@@ -93,7 +94,7 @@ namespace crisp
 
     VkImage CascadedShadowMapper::getShadowMap(int idx)
     {
-        return m_shadowPass->getColorAttachment(idx);
+        return m_shadowPass->getRenderTarget(idx)->getHandle();
     }
 }
 

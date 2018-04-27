@@ -1,121 +1,49 @@
 #include "DefaultRenderPass.hpp"
 
 #include "Renderer/VulkanRenderer.hpp"
-#include "vulkan/VulkanSwapChain.hpp"
+#include "Renderer/RenderPassBuilder.hpp"
 #include "vulkan/VulkanDevice.hpp"
+#include "vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanImageView.hpp"
+#include "vulkan/VulkanFramebuffer.hpp"
+#include "vulkan/VulkanSwapChain.hpp"
 
 namespace crisp
 {
     DefaultRenderPass::DefaultRenderPass(VulkanRenderer* renderer)
         : VulkanRenderPass(renderer)
-        , m_colorFormat(m_renderer->getSwapChain()->getImageFormat())
-        , m_framebuffers(VulkanRenderer::NumVirtualFrames)
     {
-        m_clearValue.color = { 0.0f };
-        createRenderPass();
+        m_clearValues.resize(1);
+        m_clearValues[0].color = { 0.0f };
+
+        m_handle = RenderPassBuilder()
+            .addAttachment(m_renderer->getSwapChain()->getImageFormat(), VK_SAMPLE_COUNT_1_BIT)
+            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+            .addSubpass()
+            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+            .create(m_device->getHandle());
+        m_finalLayouts = { VK_IMAGE_LAYOUT_PRESENT_SRC_KHR };
+
         createResources();
-    }
-
-    DefaultRenderPass::~DefaultRenderPass()
-    {
-        freeResources();
-
-        for (auto& framebuffer : m_framebuffers)
-            if (framebuffer != VK_NULL_HANDLE)
-                vkDestroyFramebuffer(m_device->getHandle(), framebuffer, nullptr);
-    }
-
-    void DefaultRenderPass::begin(VkCommandBuffer cmdBuffer) const
-    {
-        VkRenderPassBeginInfo renderPassInfo = {};
-        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass        = m_handle;
-        renderPassInfo.framebuffer       = m_framebuffers[m_renderer->getCurrentVirtualFrameIndex()];
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = m_renderer->getSwapChainExtent();
-        renderPassInfo.clearValueCount   = 1;
-        renderPassInfo.pClearValues      = &m_clearValue;
-
-        vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    }
-
-    VkImage DefaultRenderPass::getColorAttachment(unsigned int index) const
-    {
-        return VK_NULL_HANDLE;
-    }
-
-    VkImageView DefaultRenderPass::getAttachmentView(unsigned int index, unsigned int frameIndex) const
-    {
-        return VK_NULL_HANDLE;
     }
 
     void DefaultRenderPass::recreateFramebuffer(VkImageView swapChainImageView)
     {
         const uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-        if (m_framebuffers[frameIdx] != VK_NULL_HANDLE)
-            vkDestroyFramebuffer(m_device->getHandle(), m_framebuffers[frameIdx], nullptr);
+        if (m_framebuffers[frameIdx])
+            m_framebuffers[frameIdx].reset();
 
-        std::vector<VkImageView> attachmentViews = { swapChainImageView };
+        auto attachmentViews = { swapChainImageView };
 
-        VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-        framebufferInfo.renderPass = m_handle;
-        framebufferInfo.width      = m_renderer->getSwapChainExtent().width;
-        framebufferInfo.height     = m_renderer->getSwapChainExtent().height;
-        framebufferInfo.layers     = 1;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
-        framebufferInfo.pAttachments    = attachmentViews.data();
-        
-        vkCreateFramebuffer(m_device->getHandle(), &framebufferInfo, nullptr, &m_framebuffers[frameIdx]);
-    }
-
-    void DefaultRenderPass::createRenderPass()
-    {
-        // Description for color attachment
-        VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format         = m_colorFormat;
-        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colorAttachmentRef = {};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = 1;
-        subpass.pColorAttachments       = &colorAttachmentRef;
-
-        VkSubpassDependency dependency = {};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo renderPassInfo = {};
-        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments    = &colorAttachment;
-        renderPassInfo.subpassCount    = 1;
-        renderPassInfo.pSubpasses      = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies   = &dependency;
-
-        vkCreateRenderPass(m_device->getHandle(), &renderPassInfo, nullptr, &m_handle);
+        m_framebuffers[frameIdx] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews);
     }
 
     void DefaultRenderPass::createResources()
     {
-        // Uses image resources given by swap chain
-    }
-
-    void DefaultRenderPass::freeResources()
-    {
+        m_renderArea = m_renderer->getSwapChainExtent();
+        m_framebuffers.resize(VulkanRenderer::NumVirtualFrames);
     }
 }

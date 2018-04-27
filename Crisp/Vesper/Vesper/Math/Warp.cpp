@@ -1,5 +1,7 @@
 #include "Warp.hpp"
 
+#include <algorithm>
+
 #include "Constants.hpp"
 
 namespace vesper
@@ -62,7 +64,8 @@ namespace vesper
         float theta = 2.0f * PI * sample.x;
         float x = radius * cosf(theta);
         float y = radius * sinf(theta);
-        return { x, y, sqrtf(1.0f - x * x - y * y) };
+        float z = std::sqrt(std::max(0.0f, 1.0f - x * x - y * y));
+        return { x, y, z };
     }
 
     float Warp::squareToCosineHemispherePdf(const glm::vec3& v)

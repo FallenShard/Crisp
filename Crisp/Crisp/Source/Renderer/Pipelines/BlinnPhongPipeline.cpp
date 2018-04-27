@@ -42,7 +42,7 @@ namespace crisp
 
     void BlinnPhongPipeline::create(int width, int height)
     {
-        std::vector<VkPipelineShaderStageCreateInfo> shaderStages = 
+        std::vector<VkPipelineShaderStageCreateInfo> shaderStages =
         {
             createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   m_vertShader),
             createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, m_fragShader)

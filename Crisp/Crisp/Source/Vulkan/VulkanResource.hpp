@@ -14,6 +14,7 @@ namespace crisp
         virtual ~VulkanResource() {}
 
         inline T getHandle() const { return m_handle; }
+        operator T() const { return m_handle; }
 
     protected:
         VulkanDevice* m_device;

@@ -11,8 +11,7 @@ namespace crisp
         , m_size(size)
     {
         // Create a buffer handle
-        VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size        = size;
         bufferInfo.usage       = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -41,15 +40,13 @@ namespace crisp
 
     void VulkanBuffer::updateFromHost(const void* srcData, VkDeviceSize size, VkDeviceSize offset)
     {
-        memcpy(static_cast<char*>(m_device->getStagingMemoryPtr()) + m_memoryChunk.offset + offset, srcData, static_cast<size_t>(size));
+        memcpy(m_memoryChunk.getMappedPtr() + offset, srcData, static_cast<size_t>(size));
         m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset + offset, size);
     }
 
     void VulkanBuffer::updateFromStaging(const VulkanBuffer& srcBuffer)
     {
-        memcpy(static_cast<char*>(m_device->getStagingMemoryPtr()) + m_memoryChunk.offset,
-               static_cast<char*>(m_device->getStagingMemoryPtr()) + srcBuffer.m_memoryChunk.offset,
-               srcBuffer.m_memoryChunk.size);
+        memcpy(m_memoryChunk.getMappedPtr(), srcBuffer.m_memoryChunk.getMappedPtr(), srcBuffer.m_memoryChunk.size);
         m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset, m_memoryChunk.size);
     }
 

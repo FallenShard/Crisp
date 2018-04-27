@@ -48,7 +48,6 @@ namespace crisp
         VulkanMemoryHeap* getDeviceBufferHeap() const;
         VulkanMemoryHeap* getDeviceImageHeap() const;
         VulkanMemoryHeap* getStagingBufferHeap() const;
-        void* getStagingMemoryPtr() const;
 
     private:
         static constexpr VkDeviceSize DeviceHeapSize  = 256 << 20; // 256 MB
@@ -63,7 +62,6 @@ namespace crisp
         std::unique_ptr<VulkanMemoryHeap> m_deviceBufferHeap;
         std::unique_ptr<VulkanMemoryHeap> m_deviceImageHeap;
         std::unique_ptr<VulkanMemoryHeap> m_stagingBufferHeap;
-        void* m_mappedStagingPtr;
 
         std::vector<VkMappedMemoryRange> m_unflushedRanges;
     };

@@ -100,7 +100,7 @@ namespace crisp::gui
         float getAbsoluteDepth() const;
 
         std::string m_id;
-            
+
         Control* m_parent;
 
         Anchor       m_anchor;

@@ -16,7 +16,7 @@ namespace crisp
     class VulkanBuffer;
     class VulkanSampler;
     class Texture;
-    class TextureView;
+    class VulkanImageView;
     class FullScreenQuadPipeline;
 
     class RayTracedImage
@@ -44,9 +44,9 @@ namespace crisp
         std::unique_ptr<VulkanBuffer> m_stagingBuffer;
         unsigned int m_updatedImageIndex;
 
-        std::unique_ptr<Texture> m_texture;
-        std::unique_ptr<TextureView> m_textureView;
-        std::unique_ptr<VulkanSampler> m_sampler;
+        std::unique_ptr<Texture>         m_texture;
+        std::unique_ptr<VulkanImageView> m_VulkanImageView;
+        std::unique_ptr<VulkanSampler>   m_sampler;
 
         VkViewport   m_viewport;
     };

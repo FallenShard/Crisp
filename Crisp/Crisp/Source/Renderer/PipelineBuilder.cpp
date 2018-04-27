@@ -18,7 +18,7 @@ namespace crisp
         , m_pipelineStateFlags(PipelineState::Default)
     {
         m_colorBlendState.attachmentCount = static_cast<uint32_t>(m_colorBlendAttachmentStates.size());
-        m_colorBlendState.pAttachments = m_colorBlendAttachmentStates.data();
+        m_colorBlendState.pAttachments    = m_colorBlendAttachmentStates.data();
 
         m_inputAssemblyState.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         m_inputAssemblyState.primitiveRestartEnable = VK_FALSE;

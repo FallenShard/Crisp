@@ -43,7 +43,7 @@ namespace crisp
 
     void UniformBuffer::updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex)
     {
-        if (m_framesToUpdateOnGpu <= 0)
+        if (m_framesToUpdateOnGpu == 0)
             return;
 
         m_buffer->copyFrom(commandBuffer, *m_stagingBuffer, 0, currentFrameIndex * m_singleRegionSize, m_stagingBuffer->getSize());

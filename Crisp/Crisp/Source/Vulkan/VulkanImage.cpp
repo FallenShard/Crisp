@@ -5,6 +5,7 @@
 #include <CrispCore/ConsoleUtils.hpp>
 #include "VulkanDevice.hpp"
 #include "VulkanBuffer.hpp"
+#include "VulkanImageView.hpp"
 
 namespace crisp
 {
@@ -18,8 +19,7 @@ namespace crisp
         , m_aspectMask(aspect)
     {
         // Create an image handle
-        VkImageCreateInfo imageInfo = {};
-        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.flags         = createFlags;
         imageInfo.imageType     = VK_IMAGE_TYPE_2D;
         imageInfo.format        = format;
@@ -36,10 +36,7 @@ namespace crisp
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
-
-        auto heap = m_device->getDeviceImageHeap();
-        m_memoryChunk = heap->allocate(memRequirements.size, memRequirements.alignment);
-
+        m_memoryChunk = m_device->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
         vkBindImageMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
     }
 
@@ -47,6 +44,11 @@ namespace crisp
     {
         m_memoryChunk.free();
         vkDestroyImage(m_device->getHandle(), m_handle, nullptr);
+    }
+
+    void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)
+    {
+        m_layouts[baseLayer][0] = newLayout;
     }
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
@@ -58,8 +60,7 @@ namespace crisp
     {
         auto oldLayout = m_layouts[baseLayer][0];
 
-        VkImageMemoryBarrier barrier = {};
-        barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         barrier.oldLayout           = oldLayout;
         barrier.newLayout           = newLayout;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -70,8 +71,7 @@ namespace crisp
         barrier.subresourceRange.baseArrayLayer = baseLayer;
         barrier.subresourceRange.layerCount     = numLayers;
         barrier.subresourceRange.aspectMask     = m_aspectMask;
-        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessFlags(oldLayout, newLayout);
-
+        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(oldLayout, newLayout);
 
         vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
@@ -84,15 +84,14 @@ namespace crisp
     {
         auto oldLayout = m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel];
 
-        VkImageMemoryBarrier barrier = {};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
+        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        barrier.oldLayout           = oldLayout;
+        barrier.newLayout           = newLayout;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = m_handle;
-        barrier.subresourceRange = subresRange;
-        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessFlags(oldLayout, newLayout);
+        barrier.image               = m_handle;
+        barrier.subresourceRange    = subresRange;
+        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(oldLayout, newLayout);
 
         vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
@@ -122,26 +121,9 @@ namespace crisp
         vkCmdCopyBufferToImage(commandBuffer, buffer.getHandle(), m_handle, m_layouts[baseLayer][0], 1, &copyRegion);
     }
 
-    VkImageView VulkanImage::createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels) const
+    std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels) const
     {
-        VkImageViewCreateInfo viewInfo = {};
-        viewInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image        = m_handle;
-        viewInfo.viewType     = type;
-        viewInfo.format       = m_format;
-        viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewInfo.subresourceRange.aspectMask     = m_aspectMask;
-        viewInfo.subresourceRange.baseMipLevel   = baseMipLevel;
-        viewInfo.subresourceRange.levelCount     = mipLevels;
-        viewInfo.subresourceRange.baseArrayLayer = baseLayer;
-        viewInfo.subresourceRange.layerCount     = numLayers;
-
-        VkImageView imageView(VK_NULL_HANDLE);
-        vkCreateImageView(m_device->getHandle(), &viewInfo, nullptr, &imageView);
-        return imageView;
+        return std::make_unique<VulkanImageView>(m_device, *this, type, baseLayer, numLayers, baseMipLevel, mipLevels);
     }
 
     uint32_t VulkanImage::getMipLevels() const
@@ -159,7 +141,17 @@ namespace crisp
         return m_extent.height;
     }
 
-    std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessFlags(VkImageLayout oldLayout, VkImageLayout newLayout) const
+    VkImageAspectFlags VulkanImage::getAspectMask() const
+    {
+        return m_aspectMask;
+    }
+
+    VkFormat VulkanImage::getFormat() const
+    {
+        return m_format;
+    }
+
+    std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(VkImageLayout oldLayout, VkImageLayout newLayout) const
     {
         if      (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED           && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
             return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
@@ -181,9 +173,11 @@ namespace crisp
             return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
             return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
 
-        ConsoleColorizer console(ConsoleColor::Red);
-        std::cerr << "Unsupported layout transition!\n";
+        ConsoleColorizer console(ConsoleColor::LightRed);
+        std::cerr << "Unsupported layout transition: " << oldLayout << " to " << oldLayout << "!\n";
         return { 0, 0 };
     }
 }

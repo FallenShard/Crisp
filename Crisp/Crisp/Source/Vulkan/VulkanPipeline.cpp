@@ -8,20 +8,23 @@
 
 namespace crisp
 {
-    VulkanPipeline::VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass)
+    VulkanPipeline::VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent)
         : VulkanResource(renderer->getDevice())
         , m_renderer(renderer)
         , m_renderPass(renderPass)
         , m_pipelineLayout(VK_NULL_HANDLE)
         , m_descriptorPool(VK_NULL_HANDLE)
         , m_descriptorSetLayouts(layoutCount)
+        , m_isWindowDependent(isWindowDependent)
     {
-        m_renderer->registerPipeline(this);
+        if (m_isWindowDependent)
+            m_renderer->registerPipeline(this);
     }
 
     VulkanPipeline::~VulkanPipeline()
     {
-        m_renderer->unregisterPipeline(this);
+        if (m_isWindowDependent)
+            m_renderer->unregisterPipeline(this);
 
         if (m_descriptorPool != nullptr)
             vkDestroyDescriptorPool(m_device->getHandle(), m_descriptorPool, nullptr);
@@ -45,7 +48,7 @@ namespace crisp
 
     void VulkanPipeline::resize(int width, int height)
     {
-        if (m_handle != nullptr)
+        if (m_isWindowDependent && m_handle != nullptr)
             vkDestroyPipeline(m_device->getHandle(), m_handle, nullptr);
 
         create(width, height);
@@ -156,14 +159,14 @@ namespace crisp
     {
         std::vector<VkDescriptorSetLayout> rawSetLayouts;
         std::transform(setLayouts.begin(), setLayouts.end(), std::back_inserter(rawSetLayouts), [](const auto& item) { return item->getHandle(); });
-        
+
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(rawSetLayouts.size());
         pipelineLayoutInfo.pSetLayouts            = rawSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
         pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();
-        
+
         VkPipelineLayout layout;
         vkCreatePipelineLayout(m_device->getHandle(), &pipelineLayoutInfo, nullptr, &layout);
         return layout;

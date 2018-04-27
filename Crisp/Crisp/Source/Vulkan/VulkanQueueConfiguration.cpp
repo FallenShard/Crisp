@@ -2,9 +2,15 @@
 
 namespace crisp
 {
-    VulkanQueueConfiguration::VulkanQueueConfiguration(std::initializer_list<BitFlags<QueueType>> requestedQueuesList)
+    VulkanQueueConfiguration::VulkanQueueConfiguration(std::initializer_list<QueueTypeFlags> requestedQueuesList)
         : m_requestedQueues(requestedQueuesList)
     {
+    }
+
+    VulkanQueueConfiguration::VulkanQueueConfiguration(std::initializer_list<QueueTypeFlags> requestedQueuesList, const VulkanContext* context)
+        : m_requestedQueues(requestedQueuesList)
+    {
+        buildQueueCreateInfos(context);
     }
 
     void VulkanQueueConfiguration::buildQueueCreateInfos(const VulkanContext* context)
@@ -28,8 +34,7 @@ namespace crisp
             {
                 m_queuePriorities[idx].resize(familyQueueCounts[idx], 1.0f);
 
-                VkDeviceQueueCreateInfo queueCreateInfo = {};
-                queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
                 queueCreateInfo.queueFamilyIndex = static_cast<uint32_t>(idx);
                 queueCreateInfo.queueCount       = familyQueueCounts[idx];
                 queueCreateInfo.pQueuePriorities = m_queuePriorities[idx].data();

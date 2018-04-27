@@ -11,10 +11,10 @@ namespace crisp
     class VulkanRenderer;
     class VulkanDevice;
     class VulkanRenderPass;
+    class VulkanImageView;
     class VulkanSampler;
 
     class Texture;
-    class TextureView;
     class UniformBuffer;
     class SkyboxPipeline;
     class MeshGeometry;
@@ -30,7 +30,7 @@ namespace crisp
         void updateDeviceBuffers(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex);
         void draw(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const;
 
-        TextureView* getSkyboxView() const;
+        VulkanImageView* getSkyboxView() const;
 
     private:
         VulkanRenderer* m_renderer;
@@ -52,8 +52,8 @@ namespace crisp
         Transforms m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
-        std::unique_ptr<Texture>       m_cubeMap;
-        std::unique_ptr<TextureView>   m_cubeMapView;
-        std::unique_ptr<VulkanSampler> m_sampler;
+        std::unique_ptr<Texture>         m_cubeMap;
+        std::unique_ptr<VulkanImageView> m_cubeMapView;
+        std::unique_ptr<VulkanSampler>   m_sampler;
     };
 }

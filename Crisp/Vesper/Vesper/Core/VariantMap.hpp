@@ -37,7 +37,7 @@ namespace vesper
 
         void insert(const std::string& key, VariantType&& value)
         {
-            m_map.insert_or_assign(key, std::forward<VariantType&&>(value));
+            m_map.insert_or_assign(key, std::forward<VariantType>(value));
         }
 
         void remove(const std::string& key)
@@ -51,7 +51,7 @@ namespace vesper
             if (m_map.find(key) != m_map.end())
             {
                 auto variant = m_map.at(key);
-                
+
                 try
                 {
                     T value = std::get<T>(variant);

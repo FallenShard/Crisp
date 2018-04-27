@@ -15,7 +15,7 @@ namespace crisp
         if (m_updatePolicy == BufferUpdatePolicy::Constant)
         {
             m_buffer = std::make_unique<VulkanBuffer>(device, size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            
+
             if (data != nullptr)
             {
                 m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);

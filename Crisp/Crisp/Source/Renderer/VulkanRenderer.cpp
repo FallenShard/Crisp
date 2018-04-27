@@ -14,7 +14,7 @@
 #include "vulkan/VulkanImage.hpp"
 
 #include "Renderer/Texture.hpp"
-#include "Renderer/TextureView.hpp"
+#include "Vulkan/VulkanImageView.hpp"
 #include "Renderer/VertexBuffer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
@@ -41,14 +41,13 @@ namespace crisp
         // Create frame resources, such as command buffer, fence and semaphores
         for (auto& frameRes : m_frameResources)
         {
-            frameRes.cmdPool = m_device->getGeneralQueue()->createCommandPoolFromFamily(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+            frameRes.cmdPool = m_device->getGeneralQueue()->createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-            VkCommandBufferAllocateInfo cmdBufallocInfo = {};
-            cmdBufallocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            cmdBufallocInfo.commandPool        = frameRes.cmdPool;
-            cmdBufallocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            cmdBufallocInfo.commandBufferCount = 1;
-            vkAllocateCommandBuffers(m_device->getHandle(), &cmdBufallocInfo, &frameRes.cmdBuffer);
+            VkCommandBufferAllocateInfo cmdBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+            cmdBufferAllocInfo.commandPool        = frameRes.cmdPool;
+            cmdBufferAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            cmdBufferAllocInfo.commandBufferCount = 1;
+            vkAllocateCommandBuffers(m_device->getHandle(), &cmdBufferAllocInfo, &frameRes.cmdBuffer);
 
             frameRes.bufferFinishedFence     = m_device->createFence(VK_FENCE_CREATE_SIGNALED_BIT);
             frameRes.imageAvailableSemaphore = m_device->createSemaphore();
@@ -198,9 +197,8 @@ namespace crisp
             return;
 
         auto generalQueue = m_device->getGeneralQueue();
-        auto cmdPool = generalQueue->createCommandPoolFromFamily(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-        VkCommandBufferAllocateInfo allocInfo = {};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        auto cmdPool = generalQueue->createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandPool        = cmdPool;
         allocInfo.commandBufferCount = 1;
@@ -208,8 +206,7 @@ namespace crisp
         VkCommandBuffer commandBuffer;
         vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
 
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
@@ -247,12 +244,8 @@ namespace crisp
         m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapChainImageIndex.value()));
         record(cmdBuffer);
         const auto& frameRes = m_frameResources[m_currentFrameIndex];
-        m_device->getGeneralQueue()->submit(
-            frameRes.imageAvailableSemaphore,
-            frameRes.renderFinishedSemaphore,
-            frameRes.cmdBuffer,
-            frameRes.bufferFinishedFence
-        );
+        m_device->getGeneralQueue()->submit(frameRes.imageAvailableSemaphore, frameRes.renderFinishedSemaphore,
+            frameRes.cmdBuffer, frameRes.bufferFinishedFence);
 
         present(swapChainImageIndex.value());
 
@@ -291,8 +284,8 @@ namespace crisp
         if (!m_removedBuffers.empty())
         {
             // Decrement remaining age of removed buffers
-            for (auto& el : m_removedBuffers)
-                el.second--;
+            for (auto& keyValue : m_removedBuffers)
+                keyValue.second--;
 
             // Remove those with 0 frames remaining
             for (auto iter = m_removedBuffers.begin(), end = m_removedBuffers.end(); iter != end;)
@@ -312,10 +305,9 @@ namespace crisp
         {
             auto shaderCode = FileUtils::readBinaryFile(dirPath + file);
 
-            VkShaderModuleCreateInfo createInfo = {};
-            createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
             createInfo.codeSize = shaderCode.size();
-            createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+            createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
             VkShaderModule shaderModule(VK_NULL_HANDLE);
             vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
@@ -364,8 +356,7 @@ namespace crisp
 
     void VulkanRenderer::record(VkCommandBuffer commandBuffer)
     {
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         beginInfo.pInheritanceInfo = nullptr;
 

@@ -1,14 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -23,21 +15,7 @@
     <RootNamespace>Crisp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\Microsoft.VCToolsVersion.14.11.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -52,16 +30,8 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 9.1.props" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -71,20 +41,15 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Source\;$(SourcePath)</SourcePath>
+    <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Source\;$(SourcePath)</SourcePath>
+    <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -105,7 +70,7 @@ xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;cudart.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>
       </AdditionalOptions>
     </Link>
@@ -115,22 +80,9 @@ bash.exe "$(ProjectDir)Source\Shaders\compile-vulkan.sh"
 popd</Command>
     </PreBuildEvent>
     <CudaCompile>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-    </ClCompile>
-    <Link>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -149,7 +101,7 @@ popd</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;cudart.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)Resources" "$(OutDir)Resources" /E /Y /I /R /S /D
@@ -161,7 +113,7 @@ bash.exe "$(ProjectDir)Source\Shaders\compile-vulkan.sh"
 popd</Command>
     </PreBuildEvent>
     <CudaCompile>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -188,10 +140,13 @@ popd</Command>
     <ClCompile Include="Source\GUI\DoubleSlider.cpp" />
     <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp" />
     <ClCompile Include="Source\GUI\ListBox.cpp" />
+    <ClCompile Include="Source\Models\FluidSimulation.cpp" />
     <ClCompile Include="Source\Renderer\PipelineBuilder.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\BlurPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\ComputePipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\NormalMapPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\SsaoPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.cpp" />
     <ClCompile Include="Source\Renderer\RenderPassBuilder.cpp" />
@@ -224,17 +179,11 @@ popd</Command>
     <ClCompile Include="Source\Core\RaytracedImage.cpp" />
     <ClCompile Include="Source\Models\BoxDrawer.cpp" />
     <ClCompile Include="Source\Models\BoxVisualizer.cpp" />
-    <ClCompile Include="Source\Models\FluidSimulation.cpp">
-      <FileType>CppCode</FileType>
-    </ClCompile>
     <ClCompile Include="Source\Models\Skybox.cpp" />
     <ClCompile Include="Source\Renderer\DescriptorSetGroup.cpp" />
     <ClCompile Include="Source\Renderer\IndexBuffer.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\ClearHashGridPipeline.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\ComputePressurePipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ComputeTestPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\GuiDebugPipeline.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\HashGridPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\MeshThicknessPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\NormalPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\OutlinePipeline.cpp" />
@@ -242,15 +191,15 @@ popd</Command>
     <ClCompile Include="Source\Renderer\RenderPasses\LiquidRenderPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\ShadowPass.cpp" />
     <ClCompile Include="Source\Renderer\Texture.cpp" />
-    <ClCompile Include="Source\Renderer\TextureView.cpp" />
     <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp" />
+    <ClCompile Include="Source\Scenes\PhysicallyBasedMaterialsScene.cpp" />
     <ClCompile Include="Source\Scenes\RayTracerGui.cpp" />
     <ClCompile Include="Source\Scenes\RayTracerScene.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingPanel.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
-    <ClCompile Include="Source\Simulation\SimulationConfigFile.cpp" />
     <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanImageView.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanMemoryHeap.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\BlinnPhongPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.cpp" />
@@ -291,20 +240,23 @@ popd</Command>
     <ClInclude Include="Source\Camera\CameraController.hpp" />
     <ClInclude Include="Source\Camera\TargetCamera.hpp" />
     <ClInclude Include="Source\Camera\FreeCamera.hpp" />
-    <ClInclude Include="Source\Core\Mouse.hpp" />
     <ClInclude Include="Source\Core\SceneContainer.hpp" />
     <ClInclude Include="Source\Geometry\SphereMeshGenerator.hpp" />
+    <ClInclude Include="Source\Geometry\VertexAttributeTraits.hpp" />
     <ClInclude Include="Source\GUI\ComboBoxItem.hpp" />
     <ClInclude Include="Source\GUI\DoubleSlider.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\ColorRectDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ComboBox.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ListBox.hpp" />
+    <ClInclude Include="Source\Models\FluidSimulation.hpp" />
     <ClInclude Include="Source\Renderer\PipelineBuilder.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\BlurPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\GuiDebugPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\NormalMapPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\SsaoPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.hpp" />
     <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp" />
@@ -314,16 +266,13 @@ popd</Command>
     <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp" />
     <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
+    <ClInclude Include="Source\Scenes\PhysicallyBasedMaterialsScene.hpp" />
     <ClInclude Include="Source\Scenes\RayTracerGui.hpp" />
     <ClInclude Include="Source\Scenes\RayTracerScene.hpp" />
     <ClInclude Include="Source\Scenes\Scene.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingPanel.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingScene.hpp" />
     <ClInclude Include="Source\Scenes\TestScene.hpp" />
-    <ClInclude Include="Source\Simulation\PropertyBuffer.hpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="Source\Core\Window.hpp" />
     <ClInclude Include="Source\Geometry\MeshGeometry.hpp" />
     <ClInclude Include="Source\Geometry\TriangleMesh.hpp" />
@@ -358,15 +307,11 @@ popd</Command>
     <ClInclude Include="Source\Core\RaytracedImage.hpp" />
     <ClInclude Include="Source\Models\BoxDrawer.hpp" />
     <ClInclude Include="Source\Models\BoxVisualizer.hpp" />
-    <ClInclude Include="Source\Models\FluidSimulation.hpp" />
     <ClInclude Include="Source\Models\FluidSimulationParams.hpp" />
     <ClInclude Include="Source\Models\Skybox.hpp" />
     <ClInclude Include="Source\Renderer\BufferUpdatePolicy.hpp" />
     <ClInclude Include="Source\Renderer\DescriptorSetGroup.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\ClearHashGridPipeline.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\ComputePressurePipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\ComputeTestPipeline.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\HashGridPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\MeshThicknessPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\NormalPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\OutlinePipeline.hpp" />
@@ -374,14 +319,11 @@ popd</Command>
     <ClInclude Include="Source\Renderer\RenderPasses\LiquidRenderPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\ShadowPass.hpp" />
     <ClInclude Include="Source\Renderer\Texture.hpp" />
-    <ClInclude Include="Source\Renderer\TextureView.hpp" />
-    <ClInclude Include="Source\Renderer\Transforms.hpp" />
-    <ClInclude Include="Source\Simulation\FluidSimulationParams.hpp" />
-    <ClInclude Include="Source\Simulation\SimulationConfigFile.hpp" />
+    <ClInclude Include="Source\Geometry\TransformPack.hpp" />
     <ClInclude Include="Source\Techniques\CascadedShadowMapper.hpp" />
-    <ClInclude Include="Source\Simulation\FluidSimulationKernels.cuh" />
     <ClInclude Include="Source\Vulkan\VulkanFormatTraits.hpp" />
     <ClInclude Include="Source\Renderer\IndexBuffer.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanImageView.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanMemoryHeap.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\BlinnPhongPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.hpp" />
@@ -429,28 +371,39 @@ popd</Command>
     <None Include="Source\Shaders\clear-hash-grid-comp.glsl" />
     <None Include="Source\Shaders\color-and-shadow-frag.glsl" />
     <None Include="Source\Shaders\color-and-shadow-vert.glsl" />
-    <None Include="Source\Shaders\compute-pressure-comp.glsl" />
+    <None Include="Source\Shaders\compile-vulkan.sh" />
+    <None Include="Source\Shaders\compute-cell-count-comp.glsl" />
+    <None Include="Source\Shaders\compute-density-and-pressure-comp.glsl" />
+    <None Include="Source\Shaders\compute-forces-comp.glsl" />
     <None Include="Source\Shaders\depth-normal-frag.glsl" />
     <None Include="Source\Shaders\depth-normal-vert.glsl" />
     <None Include="Source\Shaders\fullscreen-quad-frag.glsl" />
     <None Include="Source\Shaders\fullscreen-quad-vert.glsl" />
     <None Include="Source\Shaders\gamma-correct-frag.glsl" />
     <None Include="Source\Shaders\gamma-correct-vert.glsl" />
+    <None Include="Source\Shaders\gui-quad-debug-col-frag.glsl" />
+    <None Include="Source\Shaders\gui-quad-debug-col-vert.glsl" />
     <None Include="Source\Shaders\gui-quad-tex-frag.glsl" />
     <None Include="Source\Shaders\gui-quad-tex-vert.glsl" />
     <None Include="Source\Shaders\gui-quad-unif-col-frag.glsl" />
     <None Include="Source\Shaders\gui-quad-unif-col-vert.glsl" />
     <None Include="Source\Shaders\gui-text-frag.glsl" />
     <None Include="Source\Shaders\gui-text-vert.glsl" />
-    <None Include="Source\Shaders\hash-grid-comp.glsl" />
+    <None Include="Source\Shaders\integrate-comp.glsl" />
     <None Include="Source\Shaders\liquid-frag.glsl" />
     <None Include="Source\Shaders\liquid-vert.glsl" />
     <None Include="Source\Shaders\normal-map-frag.glsl" />
     <None Include="Source\Shaders\normal-map-vert.glsl" />
     <None Include="Source\Shaders\outline-frag.glsl" />
     <None Include="Source\Shaders\outline-vert.glsl" />
+    <None Include="Source\Shaders\physically-based-frag.glsl" />
+    <None Include="Source\Shaders\physically-based-vert.glsl" />
     <None Include="Source\Shaders\point-sphere-sprite-frag.glsl" />
     <None Include="Source\Shaders\point-sphere-sprite-vert.glsl" />
+    <None Include="Source\Shaders\reindex-particles-comp.glsl" />
+    <None Include="Source\Shaders\reorder-particles-comp.glsl" />
+    <None Include="Source\Shaders\scan-combine-comp.glsl" />
+    <None Include="Source\Shaders\scan-comp.glsl" />
     <None Include="Source\Shaders\shadow-map-frag.glsl" />
     <None Include="Source\Shaders\shadow-map-vert.glsl" />
     <None Include="Source\Shaders\skybox-frag.glsl" />
@@ -497,13 +450,6 @@ popd</Command>
     <Xml Include="Resources\VesperScenes\sponza-av.xml" />
     <Xml Include="Resources\VesperScenes\sponza-direct.xml" />
   </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="Source\Simulation\FluidSimulationKernels.cu">
-      <FileType>Document</FileType>
-    </CudaCompile>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 9.1.targets" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

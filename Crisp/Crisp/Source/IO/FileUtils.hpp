@@ -14,5 +14,6 @@ namespace crisp
         static std::string openFileDialog();
         static std::string getFileNameFromPath(const std::string& filePath);
         static void createDirectory(const std::string& path);
+        static bool fileExists(const std::string& filePath);
     };
 }

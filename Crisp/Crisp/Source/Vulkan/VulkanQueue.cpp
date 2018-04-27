@@ -17,7 +17,7 @@ namespace crisp
         : VulkanQueue(device, queueId.familyIndex, queueId.index)
     {
     }
-    
+
     VulkanQueue::~VulkanQueue()
     {
     }
@@ -26,8 +26,7 @@ namespace crisp
     {
         VkPipelineStageFlags waitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount   = 1;
         submitInfo.pWaitSemaphores      = &waitSemaphore;
         submitInfo.pWaitDstStageMask    = waitStage;
@@ -40,8 +39,7 @@ namespace crisp
 
     VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer) const
     {
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount   = 1;
         submitInfo.pCommandBuffers      = &cmdBuffer;
         return vkQueueSubmit(m_handle, 1, &submitInfo, VK_NULL_HANDLE);
@@ -49,8 +47,7 @@ namespace crisp
 
     VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR swapChain, uint32_t imageIndex) const
     {
-        VkPresentInfoKHR presentInfo = {};
-        presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores    = &waitSemaphore;
         presentInfo.swapchainCount     = 1;
@@ -65,10 +62,9 @@ namespace crisp
         vkQueueWaitIdle(m_handle);
     }
 
-    VkCommandPool VulkanQueue::createCommandPoolFromFamily(VkCommandPoolCreateFlags flags) const
+    VkCommandPool VulkanQueue::createCommandPool(VkCommandPoolCreateFlags flags) const
     {
-        VkCommandPoolCreateInfo poolInfo = {};
-        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
         poolInfo.queueFamilyIndex = m_familyIndex;
         poolInfo.flags            = flags;
 
@@ -76,7 +72,7 @@ namespace crisp
         vkCreateCommandPool(m_device->getHandle(), &poolInfo, nullptr, &pool);
         return pool;
     }
-    
+
     uint32_t VulkanQueue::getFamilyIndex() const
     {
         return m_familyIndex;

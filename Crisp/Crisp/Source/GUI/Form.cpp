@@ -9,11 +9,13 @@
 #include "ControlGroup.hpp"
 #include "Animation/PropertyAnimation.hpp"
 
+#include "Panel.hpp"
+
 namespace crisp::gui
 {
     Form::Form(std::unique_ptr<RenderSystem> renderSystem)
-        : m_animator(std::make_unique<Animator>())
-        , m_renderSystem(std::move(renderSystem))
+        : m_renderSystem(std::move(renderSystem))
+        , m_animator(std::make_unique<Animator>())
         , m_rootControlGroup(std::make_unique<ControlGroup>(this))
     {
         m_rootControlGroup->setId("rootControlGroup");
@@ -64,7 +66,7 @@ namespace crisp::gui
             std::cout << "Attempt to delete a non-existing control with id: " << controlId << '\n';
             return;
         }
-            
+
         auto colorAnim = std::make_shared<PropertyAnimation<float>>(duration, 1.0f, 0.0f, 0, Easing::SlowIn);
         colorAnim->setUpdater([control](const auto& t)
         {
@@ -82,7 +84,7 @@ namespace crisp::gui
 
     void Form::update(double dt)
     {
-        for (auto stopWatch : m_stopWatches)
+        for (auto& stopWatch : m_stopWatches)
             stopWatch->accumulate(dt);
 
         m_animator->update(dt);
@@ -143,7 +145,7 @@ namespace crisp::gui
     {
         if (m_focusedControl /*&& m_focusedControl->getInteractionBounds().contains(x, y)*/)
             m_focusedControl->onMouseMoved(x, y);
-        else 
+        else
             m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
     }
 

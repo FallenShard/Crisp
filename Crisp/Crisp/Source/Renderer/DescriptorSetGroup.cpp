@@ -114,12 +114,6 @@ namespace crisp
         m_dynamicOffsets[index] = offset;
     }
 
-    void DescriptorSetGroup::bind(VkCommandBuffer& cmdBuffer, VkPipelineLayout layout) const
-    {
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
-            0, static_cast<uint32_t>(m_setHandles.size()), m_setHandles.data(), static_cast<uint32_t>(m_dynamicOffsets.size()), m_dynamicOffsets.data());
-    }
-
     void DescriptorSetGroup::bind(VkCommandBuffer& cmdBuffer, VkPipelineLayout layout, uint32_t firstSet, uint32_t numSets) const
     {
         vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout,

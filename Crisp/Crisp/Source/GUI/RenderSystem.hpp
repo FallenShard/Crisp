@@ -22,6 +22,7 @@ namespace crisp
 {
     class VulkanRenderer;
     class VulkanPipeline;
+    class VulkanImageView;
     class GuiColorQuadPipeline;
     class GuiTextPipeline;
     class GuiTexQuadPipeline;
@@ -32,7 +33,6 @@ namespace crisp
     class UniformBuffer;
     class VulkanSampler;
     class Texture;
-    class TextureView;
 
     class GuiRenderPass;
 
@@ -107,7 +107,7 @@ namespace crisp
             std::unique_ptr<GuiTexQuadPipeline>     m_texQuadPipeline;
             std::unique_ptr<GuiDebugPipeline>       m_debugRectPipeline;
             std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
-            
+
 
             // Geometry
             struct GeometryData
@@ -124,32 +124,32 @@ namespace crisp
             // canonical square [0,1]x[0,1] quad geometry
             GeometryData m_quadGeometry;
             GeometryData m_lineLoopGeometry;
-            
+
             std::unique_ptr<DynamicUniformBufferResource> m_transforms;
             std::unique_ptr<DynamicUniformBufferResource> m_colors;
             std::unique_ptr<DynamicUniformBufferResource> m_tcTransforms;
 
-            std::unique_ptr<Texture>     m_guiAtlas;
-            std::unique_ptr<TextureView> m_guiAtlasView;
+            std::unique_ptr<Texture>         m_guiAtlas;
+            std::unique_ptr<VulkanImageView> m_guiAtlasView;
 
             // Sampler
             std::unique_ptr<VulkanSampler> m_linearClampSampler;
-            
+
             // Gui render target
             VkDescriptorSet m_fsQuadDescSet;
-            std::unique_ptr<TextureView> m_guiRenderTargetView;
+            std::unique_ptr<VulkanImageView> m_guiRenderTargetView;
 
             // Font resources
             struct FontTexture
             {
-                std::unique_ptr<Font>        font;
-                std::unique_ptr<Texture>     texture;
-                std::unique_ptr<TextureView> textureView;
+                std::unique_ptr<Font>            font;
+                std::unique_ptr<Texture>         texture;
+                std::unique_ptr<VulkanImageView> VulkanImageView;
                 VkDescriptorSet       descSet;
             };
             std::vector<std::unique_ptr<FontTexture>> m_fonts;
             FontLoader m_fontLoader;
-            
+
             std::vector<VkDescriptorSet> m_texQuadDescSets;
 
             // Text Resources

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "Math/Headers.hpp"
 
 namespace crisp
 {
-    struct Transforms
+    struct TransformPack
     {
         glm::mat4 MVP;
         glm::mat4 MV;

@@ -41,6 +41,7 @@ namespace crisp
 
     private:
         void openSceneFile(const std::string& filename);
+        void createGui();
 
         VulkanRenderer* m_renderer;
         Application* m_app;

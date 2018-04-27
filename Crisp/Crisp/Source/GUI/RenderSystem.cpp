@@ -8,6 +8,8 @@
 #include "IO/ImageFileBuffer.hpp"
 
 #include "Vulkan/VulkanPipeline.hpp"
+#include "vulkan/VulkanImage.hpp"
+#include "vulkan/VulkanImageView.hpp"
 #include "Vulkan/VulkanSampler.hpp"
 #include "vulkan/VulkanDescriptorSet.hpp"
 
@@ -19,7 +21,6 @@
 #include "Renderer/Pipelines/GuiDebugPipeline.hpp"
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
 #include "Renderer/Texture.hpp"
-#include "Renderer/TextureView.hpp"
 
 #include "GUI/DynamicUniformBufferResource.hpp"
 
@@ -47,7 +48,7 @@ namespace crisp::gui
 
         // Initialize gui render target rendering resources
         initGuiRenderTargetResources();
-            
+
         // [0..1] Quad geometries for GUI elements
         initGeometryBuffers();
 
@@ -115,7 +116,7 @@ namespace crisp::gui
     {
         return m_colors->registerResource();
     }
-        
+
     void RenderSystem::updateColorResource(unsigned int colorId, const glm::vec4& color)
     {
         m_colors->updateResource(colorId, glm::value_ptr(color));
@@ -261,7 +262,7 @@ namespace crisp::gui
             for (int i = 0; i < m_debugRects.size(); i++) {
                 renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
             }
-            
+
             m_guiPass->end(commandBuffer);
 
             auto size = m_drawCommands.size();
@@ -271,23 +272,8 @@ namespace crisp::gui
             m_debugRects.clear();
             m_rectColors.clear();
 
-            VkImageMemoryBarrier imageMemoryBarrier = {};
-            imageMemoryBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            imageMemoryBarrier.srcAccessMask       = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            imageMemoryBarrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
-            imageMemoryBarrier.oldLayout           = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            imageMemoryBarrier.newLayout           = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier.image               = m_guiPass->getColorAttachment();
-            imageMemoryBarrier.subresourceRange.baseMipLevel   = 0;
-            imageMemoryBarrier.subresourceRange.levelCount     = 1;
-            imageMemoryBarrier.subresourceRange.baseArrayLayer = currentFrame;
-            imageMemoryBarrier.subresourceRange.layerCount     = 1;
-            imageMemoryBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+            m_guiPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, currentFrame, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
         m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
@@ -299,7 +285,7 @@ namespace crisp::gui
 
             unsigned int pushConst = m_renderer->getCurrentVirtualFrameIndex();
             vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-                
+
             m_renderer->drawFullScreenQuad(commandBuffer);
         });
     }
@@ -309,7 +295,7 @@ namespace crisp::gui
         m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f, static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
         m_guiPass->recreate();
-        m_guiRenderTargetView = m_guiPass->createRenderTargetView();
+        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
 
         VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo();
 
@@ -355,9 +341,9 @@ namespace crisp::gui
 
         fontTexture->texture = std::make_unique<Texture>(m_renderer, VkExtent3D{ width, height, 1 }, 1, VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
         fontTexture->texture->fill(fontTexture->font->textureData.data(), byteSize);
-        fontTexture->textureView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
+        fontTexture->VulkanImageView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
-        auto imageInfo = fontTexture->textureView->getDescriptorInfo(m_linearClampSampler->getHandle());
+        auto imageInfo = fontTexture->VulkanImageView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
         fontTexture->descSet = m_textPipeline->allocateDescriptorSet(GuiTextPipeline::FontAtlas).getHandle();
 
@@ -377,7 +363,7 @@ namespace crisp::gui
         descWrites[1].dstArrayElement = 0;
         descWrites[1].descriptorCount = 1;
         descWrites[1].pImageInfo      = &imageInfo;
-            
+
         vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0, nullptr);
 
         m_fonts.emplace_back(std::move(fontTexture));
@@ -415,7 +401,7 @@ namespace crisp::gui
         m_lineLoopGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, quadVerts);
         std::vector<glm::u16vec2> loopIndices = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 } };
         m_lineLoopGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_renderer, loopIndices);
-        m_lineLoopGeometry.vertexBufferGroup = 
+        m_lineLoopGeometry.vertexBufferGroup =
         {
             { m_lineLoopGeometry.vertexBuffer->get(), 0 }
         };
@@ -429,8 +415,8 @@ namespace crisp::gui
         m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage).getHandle();
 
         // Create a view to the render target
-        m_guiRenderTargetView = m_guiPass->createRenderTargetView();
-            
+        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+
         VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
@@ -470,7 +456,7 @@ namespace crisp::gui
         VkDescriptorSet descSets[] =
         {
             m_transforms->getDescriptorSet(frameIdx)
-        }; 
+        };
         uint32_t dynamicOffsets[] =
         {
             m_transforms->getDynamicOffset(cmd.transformId),
@@ -481,12 +467,12 @@ namespace crisp::gui
             m_transforms->getPushConstantValue(cmd.transformId),
             m_colors->getPushConstantValue(cmd.colorId)
         };
-        
+
         vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_colorQuadPipeline->getPipelineLayout(),
             0, 1, descSets, 2, dynamicOffsets);
         m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants[0]);
         m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), pushConstants[1]);
-            
+
         m_quadGeometry.drawIndexed(cmdBuffer);
     }
 
@@ -516,7 +502,7 @@ namespace crisp::gui
 
         vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
         vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
-            
+
         textRes->geomData.drawIndexed(cmdBuffer);
     }
 
@@ -578,21 +564,21 @@ namespace crisp::gui
             float y1 = currentY - gInfo.bmpTop;
             float x2 = x1 + gInfo.bmpWidth;
             float y2 = y1 + gInfo.bmpHeight;
-            
+
             // Advance the cursor to the start of the next character
             currentX += gInfo.advanceX;
             currentY += gInfo.advanceY;
-            
+
             textVertices.emplace_back(x1, y1, gInfo.atlasOffsetX, 0.0f);
             textVertices.emplace_back(x2, y1, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, 0.0f);
             textVertices.emplace_back(x2, y2, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, gInfo.bmpHeight / atlasHeight);
             textVertices.emplace_back(x1, y2, gInfo.atlasOffsetX, gInfo.bmpHeight / atlasHeight);
-            
+
             textFaces.emplace_back(ind + 0, ind + 2, ind + 1);
             textFaces.emplace_back(ind + 0, ind + 3, ind + 2);
-            
+
             ind += 4;
-            
+
             extent.y = std::max(extent.y, gInfo.bmpHeight);
         }
         extent.x += currentX;

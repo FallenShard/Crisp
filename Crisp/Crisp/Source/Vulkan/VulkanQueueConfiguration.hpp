@@ -32,18 +32,19 @@ namespace crisp
     {
     public:
         VulkanQueueConfiguration(std::initializer_list<QueueTypeFlags> requestedQueuesList);
+        VulkanQueueConfiguration(std::initializer_list<QueueTypeFlags> requestedQueuesList, const VulkanContext* context);
 
         void buildQueueCreateInfos(const VulkanContext* context);
         const std::vector<VkDeviceQueueCreateInfo>& getQueueCreateInfos() const;
         QueueIdentifier getQueueIdentifier(size_t index) const;
-        
+
     private:
         std::vector<QueueIdentifier> findQueueIds(const VulkanContext* context) const;
         int findQueueFamilyIndex(BitFlags<QueueType> queueType, const VulkanContext* context, const std::vector<VkQueueFamilyProperties>& exposedQueueFamilies, std::vector<uint32_t>& usedQueueFamilyCounts) const;
         QueueTypeFlags getFamilyType(const VulkanContext* context, uint32_t familyIndex, VkQueueFlags queueFlags) const;
 
         std::vector<QueueTypeFlags> m_requestedQueues;
-        
+
         std::vector<std::vector<float>> m_queuePriorities;
         std::vector<VkDeviceQueueCreateInfo> m_createInfos;
 

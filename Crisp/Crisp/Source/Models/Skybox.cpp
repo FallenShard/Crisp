@@ -6,9 +6,9 @@
 #include "Renderer/Pipelines/SkyboxPipeline.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/Texture.hpp"
-#include "Renderer/TextureView.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanSampler.hpp"
+#include "vulkan/VulkanImageView.hpp"
 #include "Geometry/MeshGeometry.hpp"
 #include "Geometry/TriangleMesh.hpp"
 
@@ -18,7 +18,7 @@ namespace crisp
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
     {
-        m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("cube.obj", { VertexAttribute::Position }));
+        m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, "cube.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
 
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(Transforms), BufferUpdatePolicy::PerFrame);
 
@@ -49,7 +49,7 @@ namespace crisp
             m_cubeMap->fill(cubeMapImages[i]->getData(), width * height * 4, i, 1);
         }
         m_cubeMapView = m_cubeMap->createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
-        
+
         // create sampler
         m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
@@ -88,7 +88,7 @@ namespace crisp
         m_cubeGeometry->draw(cmdBuffer);
     }
 
-    TextureView* Skybox::getSkyboxView() const
+    VulkanImageView* Skybox::getSkyboxView() const
     {
         return m_cubeMapView.get();
     }

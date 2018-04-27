@@ -25,13 +25,13 @@ namespace crisp::gui
         m_M = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
 
         m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.875f);
-        m_backgroundRect->setSizeHint({ 0.0f, 2.0f });
-        m_backgroundRect->setPosition({ 0, 9 });
+        m_backgroundRect->setSizeHint({ 0.0f, 10.0f });
+        m_backgroundRect->setPosition({ 0, 5 });
         m_backgroundRect->setColor({ 0.5f, 0.5f, 0.5f, 1.0f });
         m_backgroundRect->setParent(this);
 
-        m_foregroundRect->setSizeHint({ 200.0f * 0.875f * 0.5f, 2.0f });
-        m_foregroundRect->setPosition({ 0, 9 });
+        m_foregroundRect->setSizeHint({ 200.0f * 0.875f * 0.5f, 6.0f });
+        m_foregroundRect->setPosition({ 0, 7 });
         m_foregroundRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
         m_foregroundRect->setParent(this);
 
@@ -250,7 +250,7 @@ namespace crisp::gui
         float localPos = static_cast<float>((value - m_minValue) * bounds.width) / static_cast<float>(m_maxValue - m_minValue);
         float indicatorPos = localPos - m_indicatorRect->getSize().x / 2.0f;
         m_indicatorRect->setPosition({ indicatorPos, 0.0f });
-        m_foregroundRect->setSizeHint({ localPos, 2.0f });
+        m_foregroundRect->setSizeHint({ localPos, 6.0f });
     }
 
     int Slider::getValueFromMousePosition(float x, float y)
@@ -258,7 +258,7 @@ namespace crisp::gui
         auto bounds = m_backgroundRect->getAbsoluteBounds();
         float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0] - m_indicatorRect->getSize().x / 2.0f, bounds.width));
         m_indicatorRect->setPosition({ indicatorPos, 0.0f });
-        m_foregroundRect->setSizeHint({ indicatorPos, 2.0f });
+        m_foregroundRect->setSizeHint({ indicatorPos, 6.0f });
         setValidationFlags(Validation::Geometry);
 
         float t = indicatorPos / bounds.width;

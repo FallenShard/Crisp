@@ -26,7 +26,7 @@ namespace crisp::gui
             std::unique_ptr<Control> con = std::unique_ptr<Control>(cc);
             con->setParent(this);
             m_children.push_back(std::move(con));
-            setValidationFlags(Validation::Geometry);
+            setValidationFlags(Validation::All);
         });
     }
 
@@ -175,7 +175,7 @@ namespace crisp::gui
     void ControlGroup::setValidationFlags(ValidationFlags validationFlags)
     {
         m_validationFlags = m_validationFlags | validationFlags;
-            
+
         for (auto& child : m_children)
             child->setValidationFlags(validationFlags);
     }

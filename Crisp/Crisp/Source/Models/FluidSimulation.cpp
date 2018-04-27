@@ -1,27 +1,9 @@
 #include "FluidSimulation.hpp"
 
 #include "Renderer/VulkanRenderer.hpp"
-#include "Renderer/Pipelines/PointSphereSpritePipeline.hpp"
-#include "Renderer/Pipelines/ComputeTestPipeline.hpp"
-#include "Renderer/Pipelines/HashGridPipeline.hpp"
-#include "Renderer/Pipelines/ClearHashGridPipeline.hpp"
-#include "Renderer/Pipelines/ComputePressurePipeline.hpp"
-#include "Renderer/UniformBuffer.hpp"
 
+#include "Renderer/Pipelines/ComputePipeline.hpp"
 
-#include "Models/BoxDrawer.hpp"
-
-#include "Vulkan/VulkanRenderPass.hpp"
-#include "vulkan/VulkanBuffer.hpp"
-#include "vulkan/VulkanDevice.hpp"
-
-#include <iostream>
-#include <numeric>
-
-#include "Models/FluidSimulationParams.hpp"
-
-
-#include "Simulation/FluidSimulationKernels.cuh"
 
 #include "glfw/glfw3.h"
 
@@ -29,387 +11,221 @@ namespace crisp
 {
     namespace
     {
-        bool run = false;
+        static constexpr uint32_t ScanBlockSize = 256;
+        static constexpr uint32_t ScanElementsPerThread = 2;
+        static constexpr uint32_t ScanElementsPerBlock = ScanBlockSize * ScanElementsPerThread;
     }
 
-    FluidSimulation::FluidSimulation(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    FluidSimulation::FluidSimulation(VulkanRenderer* renderer)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
-        , m_particleRadius(particleRadius)
-        , m_runCompute(true)
-        , m_time(0.0f)
-        , m_gravity(0.0f, -9.81f, 0.0f)
+        , m_particleRadius(0.01f)
+        , m_currentSection(0)
+        , m_prevSection(0)
+        , m_runCompute(false)
+        , m_timeDelta(0.0f)
     {
-        m_workGroupSize = { 1, 1, 1 };
-        m_fluidDim      = m_workGroupSize * glm::uvec3(48, 32, 32);
-        m_numParticles  = m_fluidDim.x * m_fluidDim.y * m_fluidDim.z;
-        m_fluidSpaceMin = glm::vec3(0.0f);
-        m_fluidSpaceMax = glm::vec3(m_fluidDim) * 2.0f * particleDiameter;
+        m_fluidDim = glm::uvec3(64, 64, 32);
+        m_numParticles = m_fluidDim.x * m_fluidDim.y * m_fluidDim.z;
 
-        m_gridParams.cellSize  = h;
+        std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
+
+        std::size_t vertexBufferSize = m_numParticles * sizeof(glm::vec4);
+        m_vertexBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * vertexBufferSize,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, 0);
+        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, vertexBufferSize);
+        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, 2 * vertexBufferSize);
+
+        auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
+        m_colorBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * vertexBufferSize,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_renderer->fillDeviceBuffer(m_colorBuffer.get(), colors.data(), vertexBufferSize, 0);
+        m_renderer->fillDeviceBuffer(m_colorBuffer.get(), colors.data(), vertexBufferSize, vertexBufferSize);
+        m_renderer->fillDeviceBuffer(m_colorBuffer.get(), colors.data(), vertexBufferSize, 2 * vertexBufferSize);
+
+        m_reorderedPositionBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * vertexBufferSize,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        m_fluidSpaceMin = glm::vec3(0.0f);
+        //m_fluidSpaceMax = glm::vec3(m_fluidDim) * 2.0f * 2.0f * m_particleRadius;
+        m_fluidSpaceMax = glm::vec3(m_fluidDim.x, m_fluidDim.y / 2, m_fluidDim.z / 2) * 4.0f * m_particleRadius;
+        m_gridParams.cellSize = 4 * m_particleRadius;
         m_gridParams.spaceSize = m_fluidSpaceMax - m_fluidSpaceMin;
         m_gridParams.dim = glm::ivec3(glm::ceil((m_fluidSpaceMax - m_fluidSpaceMin) / m_gridParams.cellSize));
+        m_gridParams.numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
 
-        std::vector<glm::vec4> positions;
-        for (int y = 0; y < m_fluidDim.y; ++y)
-            for (int z = 0; z < m_fluidDim.z; ++z)
-                for (int x = 0; x < m_fluidDim.x; ++x) {
-                    glm::vec3 translation = glm::vec3(m_fluidDim) * m_particleRadius;
-                    translation.x = 0.0f;
-                    glm::vec3 offset = glm::vec3(x, y, z) * particleDiameter + particleRadius + translation;
-                    positions.emplace_back(offset, 1.0f);
-                }
+        m_cellCountBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_gridParams.numCells * sizeof(uint32_t),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_cellIdBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_numParticles * sizeof(uint32_t),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_indexBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_numParticles * sizeof(uint32_t),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        m_positions = positions;
+        m_blockSumRegionSize = static_cast<uint32_t>(std::max(m_gridParams.numCells / ScanElementsPerBlock * sizeof(uint32_t), 32ull));
+        m_blockSumBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_blockSumRegionSize,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        m_colors = std::vector<glm::vec4>(positions.size(), glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
+        m_densityBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_numParticles * sizeof(float),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_pressureBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_numParticles * sizeof(float),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        m_velocityBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_numParticles * sizeof(glm::vec4),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
+        m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 0);
+        m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, vertexBufferSize);
+        m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 2 * vertexBufferSize);
+        m_forcesBuffer = std::make_unique<VulkanBuffer>(m_device, VulkanRenderer::NumVirtualFrames * m_numParticles * sizeof(glm::vec4),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        m_posBuffer = std::make_unique<PropertyBuffer<glm::vec4>>(m_numParticles);
-        m_posBuffer->setHostBuffer(positions);
-        m_posBuffer->copyToGpu();
-        
-        m_gridLocationBuffer = std::make_unique<PropertyBuffer<int>>(m_numParticles);
-        
-        std::vector<int> particleIndices(m_numParticles);
-        std::iota(particleIndices.begin(), particleIndices.end(), 0);
-        m_particleIndexBuffer = std::make_unique<PropertyBuffer<int>>(m_numParticles);
-        m_particleIndexBuffer->setHostBuffer(particleIndices);
-        m_particleIndexBuffer->copyToGpu();
-        
-        m_colorCudaBuffer = std::make_unique<PropertyBuffer<glm::vec4>>(m_numParticles);
-        m_colorCudaBuffer->setHostBuffer(m_colors);
-        m_colorCudaBuffer->copyToGpu();
-        
-        m_densityCudaBuffer = std::make_unique<PropertyBuffer<float>>(m_numParticles);
-        m_pressureCudaBuffer = std::make_unique<PropertyBuffer<float>>(m_numParticles);
-        m_veloBuffer = std::make_unique<PropertyBuffer<glm::vec3>>(m_numParticles);
-        std::vector<glm::vec3> velocities(m_numParticles, glm::vec3(0.0f));
-        m_veloBuffer->setHostBuffer(velocities);
-        m_veloBuffer->copyToGpu();
-        m_forceBuffer = std::make_unique<PropertyBuffer<glm::vec3>>(m_numParticles);
-        
-        m_normalsBuffer = std::make_unique<PropertyBuffer<glm::vec4>>(m_numParticles);
-        
-        
-        int numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
-        std::vector<int> gridCellIds(numCells);
-        std::iota(gridCellIds.begin(), gridCellIds.end(), 0);
-        m_gridCellIndexBuffer = std::make_unique<PropertyBuffer<int>>(numCells);
-        m_gridCellIndexBuffer->setHostBuffer(gridCellIds);
-        m_gridCellIndexBuffer->copyToGpu();
-        
-        m_gridCellOffsets = std::make_unique<PropertyBuffer<int>>(numCells);
-        m_gridCellOffsets->setHostBuffer(gridCellIds);
-        m_gridCellOffsets->copyToGpu();
-        
-        
-        m_grid.resize(m_gridParams.dim.y * m_gridParams.dim.z * m_gridParams.dim.x);
-        for (auto& cell : m_grid)
-            cell.reserve(1024);
-        
-        m_gridCounts.resize(m_gridParams.dim.y * m_gridParams.dim.z * m_gridParams.dim.x, 0);
-        
-        m_densities.resize(m_numParticles);
-        m_pressures.resize(m_numParticles);
-        m_forces.resize(m_numParticles);
-        m_velocities.resize(m_numParticles, glm::vec3(0.0f));
-        
-        m_gridParamsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(GridParams), BufferUpdatePolicy::Constant, &m_gridParams);
-        
-        
-        m_vertexBufferSize = positions.size() * sizeof(glm::vec4);
-        m_vertexBuffer = std::make_unique<VulkanBuffer>(m_device, 3 * m_vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), m_vertexBufferSize);
-        m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, m_vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        
-        m_colorBuffer = std::make_unique<VulkanBuffer>(m_device, 3 * m_vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_stagingColorBuffer = std::make_unique<VulkanBuffer>(m_device, m_vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        m_renderer->fillDeviceBuffer(m_colorBuffer.get(), m_colors.data(), m_vertexBufferSize);
-        
-        //VkDeviceSize gridBufferSize = m_grid.size() * sizeof(glm::uvec4);
-        //m_gridCellsBuffer = std::make_unique<VulkanBuffer>(m_device, gridBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        //m_renderer->fillDeviceBuffer(m_gridCellsBuffer.get(), m_grid.data(), gridBufferSize);
-        //
-        //VkDeviceSize gridCountSize = m_gridCounts.size() * sizeof(uint32_t);
-        //m_gridCellCountsBuffer = std::make_unique<VulkanBuffer>(m_device, gridCountSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        //m_renderer->fillDeviceBuffer(m_gridCellCountsBuffer.get(), m_gridCounts.data(), gridCountSize);
-        
-        VkDeviceSize pressureSize = positions.size() * sizeof(float);
-        m_pressureBuffer = std::make_unique<VulkanBuffer>(m_device, pressureSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(Transforms), BufferUpdatePolicy::PerFrame);
-        m_paramsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame);
-        
-        m_drawPipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, renderPass);
-        m_descriptorSetGroup =
+        m_clearHashGridPipeline = std::make_unique<ComputePipeline>(m_renderer, "clear-hash-grid-comp", 1, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_clearGridDescGroup =
         {
-            m_drawPipeline->allocateDescriptorSet(0),
-            m_drawPipeline->allocateDescriptorSet(1)
+            m_clearHashGridPipeline->allocateDescriptorSet(0)
         };
-        m_descriptorSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo());
-        m_descriptorSetGroup.postBufferUpdate(1, 0, m_paramsBuffer->getDescriptorInfo());
-        m_descriptorSetGroup.flushUpdates(m_device);
-        
-        m_particleParams.radius = m_particleRadius;
-        m_particleParams.screenSpaceScale = 1.0f;
-        m_transformsBuffer->updateStagingBuffer(&m_particleParams, sizeof(ParticleParams));
-        
-        m_compPipeline = std::make_unique<ComputeTestPipeline>(m_renderer);
-        
-        m_compSetGroup = { m_compPipeline->allocateDescriptorSet(0) };
-        
-        VkDescriptorBufferInfo descInfo = {};
-        descInfo.buffer = m_vertexBuffer->getHandle();
-        descInfo.offset = 0;
-        descInfo.range  = positions.size() * sizeof(glm::vec4);
-        
-        m_compSetGroup.postBufferUpdate(0, 0, descInfo);
-        m_compSetGroup.postBufferUpdate(0, 1, { m_colorBuffer->getHandle(), 0, m_colors.size() * sizeof(glm::vec4) });
-        //m_compSetGroup.postBufferUpdate(0, 2, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
-        //m_compSetGroup.postBufferUpdate(0, 3, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
-        m_compSetGroup.postBufferUpdate(0, 4, { m_gridParamsBuffer->get(), 0, sizeof(GridParams) });
-        m_compSetGroup.postBufferUpdate(0, 5, { m_pressureBuffer->getHandle(),       0, pressureSize });
-        m_compSetGroup.flushUpdates(m_device);
-        
-        m_hashGridPipeline = std::make_unique<HashGridPipeline>(m_renderer);
-        m_hashGridSets = { m_hashGridPipeline->allocateDescriptorSet(0) };
-        
-        m_hashGridSets.postBufferUpdate(0, 0, descInfo);
-        //m_hashGridSets.postBufferUpdate(0, 1, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
-        //m_hashGridSets.postBufferUpdate(0, 2, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
-        m_hashGridSets.postBufferUpdate(0, 3, { m_gridParamsBuffer->get(), 0, sizeof(GridParams) });
-        m_hashGridSets.flushUpdates(m_device);
-        
-        m_clearGridPipeline = std::make_unique<ClearHashGridPipeline>(m_renderer);
-        m_clearGridSets = { m_clearGridPipeline->allocateDescriptorSet(0) };
-        
-        //m_clearGridSets.postBufferUpdate(0, 0, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
-        //m_clearGridSets.postBufferUpdate(0, 1, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
-        m_clearGridSets.flushUpdates(m_device);
-        
-        m_pressurePipeline = std::make_unique<ComputePressurePipeline>(m_renderer);
-        m_pressureSets = { m_pressurePipeline->allocateDescriptorSet(0) };
-        m_pressureSets.postBufferUpdate(0, 0, descInfo);
-        m_pressureSets.postBufferUpdate(0, 1, { m_pressureBuffer->getHandle(),       0, pressureSize });
-        //m_pressureSets.postBufferUpdate(0, 2, { m_gridCellsBuffer->getHandle(),      0, gridBufferSize });
-        //m_pressureSets.postBufferUpdate(0, 3, { m_gridCellCountsBuffer->getHandle(), 0, gridCountSize });
-        m_pressureSets.postBufferUpdate(0, 4, { m_gridParamsBuffer->get(), 0, sizeof(GridParams) });
-        m_pressureSets.flushUpdates(m_device);
-        
-        
-        m_time = 2.0f;
-        
-        m_boxDrawer = std::make_unique<BoxDrawer>(m_renderer, 1, renderPass);
-        std::vector<glm::vec3> centers;
-        std::vector<glm::vec3> scales;
-        centers.push_back(m_fluidSpaceMax / 2.0f * vizScale);
-        scales.push_back(m_fluidSpaceMax * vizScale);
-        //for (int y = 0; y < m_gridParams.dim.y; ++y)
-        //    for (int z = 0; z < m_gridParams.dim.z; ++z)
-        //        for (int x = 0; x < m_gridParams.dim.x; ++x)
-        //        {
-        //            centers.push_back(glm::vec3(x * h, y * h, z * h) + glm::vec3(h / 2.0f));
-        //            scales.push_back(h);
-        //        }
-        m_boxDrawer->setBoxTransforms(centers, scales);
-        
-        m_viscosity = 3.0f;
-        
-        m_simulationParams = std::make_unique<SimulationParams>();
-        m_simulationParams->numParticles = m_numParticles;
-        m_simulationParams->gridDims = m_gridParams.dim;
-        
-        m_simulationParams->cellSize   = h;
-        m_simulationParams->poly6Const = 315.0f / (64.0f * PI * h3 * h3 * h3);
+        m_clearGridDescGroup.postBufferUpdate(0, 0, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_clearGridDescGroup.flushUpdates(m_device);
+
+        m_computeCellCountPipeline = std::make_unique<ComputePipeline>(m_renderer, "compute-cell-count-comp", 3, 1, sizeof(glm::uvec3) + sizeof(float) + sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_computeCellCountDescGroup =
+        {
+            m_computeCellCountPipeline->allocateDescriptorSet(0)
+        };
+        m_computeCellCountDescGroup.postBufferUpdate(0, 0, { m_vertexBuffer->getHandle(),    0, vertexBufferSize });
+        m_computeCellCountDescGroup.postBufferUpdate(0, 1, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_computeCellCountDescGroup.postBufferUpdate(0, 2, { m_cellIdBuffer->getHandle(),    0, m_numParticles * sizeof(uint32_t) });
+        m_computeCellCountDescGroup.flushUpdates(m_device);
+
+        // Scan for individual blocks
+        m_scanPipeline = std::make_unique<ComputePipeline>(m_renderer, "scan-comp", 2, 2, sizeof(int32_t) + sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_scanDescGroup =
+        {
+            m_scanPipeline->allocateDescriptorSet(0)
+        };
+        m_scanDescGroup.postBufferUpdate(0, 0, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_scanDescGroup.postBufferUpdate(0, 1, { m_blockSumBuffer->getHandle(),  0, m_blockSumRegionSize });
+        m_scanDescGroup.flushUpdates(m_device);
+
+        // Scan for the block sums
+        m_scanBlockDescGroup =
+        {
+            m_scanPipeline->allocateDescriptorSet(0)
+        };
+        m_scanBlockDescGroup.postBufferUpdate(0, 0, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
+        m_scanBlockDescGroup.postBufferUpdate(0, 1, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
+        m_scanBlockDescGroup.flushUpdates(m_device);
+
+        // Add block prefix sum to intra-block prefix sums
+        m_combineScanPipeline = std::make_unique<ComputePipeline>(m_renderer, "scan-combine-comp", 2, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_combineScanDescGroup =
+        {
+            m_combineScanPipeline->allocateDescriptorSet(0)
+        };
+        m_combineScanDescGroup.postBufferUpdate(0, 0, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_combineScanDescGroup.postBufferUpdate(0, 1, { m_blockSumBuffer->getHandle(),  0, m_blockSumRegionSize });
+        m_combineScanDescGroup.flushUpdates(m_device);
+
+        m_reindexPipeline = std::make_unique<ComputePipeline>(m_renderer, "reindex-particles-comp", 5, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_reindexDescGroup =
+        {
+            m_reindexPipeline->allocateDescriptorSet(0)
+        };
+        m_reindexDescGroup.postBufferUpdate(0, 0, { m_vertexBuffer->getHandle(),              0, vertexBufferSize });
+        m_reindexDescGroup.postBufferUpdate(0, 1, { m_cellCountBuffer->getHandle(),           0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_reindexDescGroup.postBufferUpdate(0, 2, { m_cellIdBuffer->getHandle(),              0, m_numParticles * sizeof(uint32_t) });
+        m_reindexDescGroup.postBufferUpdate(0, 3, { m_indexBuffer->getHandle(),               0, m_numParticles * sizeof(uint32_t) });
+        m_reindexDescGroup.postBufferUpdate(0, 4, { m_reorderedPositionBuffer->getHandle(),   0, m_numParticles * sizeof(glm::vec4) });
+        m_reindexDescGroup.flushUpdates(m_device);
+
+        m_densityPressurePipeline = std::make_unique<ComputePipeline>(m_renderer, "compute-density-and-pressure-comp", 5, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_densityPressureDescGroup =
+        {
+            m_densityPressurePipeline->allocateDescriptorSet(0)
+        };
+        m_densityPressureDescGroup.postBufferUpdate(0, 0, { m_vertexBuffer->getHandle(),              0, vertexBufferSize });
+        m_densityPressureDescGroup.postBufferUpdate(0, 1, { m_cellCountBuffer->getHandle(),           0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_densityPressureDescGroup.postBufferUpdate(0, 2, { m_reorderedPositionBuffer->getHandle(),   0, vertexBufferSize });
+        //m_densityPressureDescGroup.postBufferUpdate(0, 2, { m_indexBuffer->getHandle(),   0, m_numParticles * sizeof(uint32_t) });
+        m_densityPressureDescGroup.postBufferUpdate(0, 3, { m_densityBuffer->getHandle(),             0, m_numParticles * sizeof(float) });
+        m_densityPressureDescGroup.postBufferUpdate(0, 4, { m_pressureBuffer->getHandle(),            0, m_numParticles * sizeof(float) });
+        m_densityPressureDescGroup.flushUpdates(m_device);
+
+        m_forcesPipeline = std::make_unique<ComputePipeline>(m_renderer, "compute-forces-comp", 7, 1, sizeof(GridParams) + sizeof(glm::uvec3) + sizeof(uint32_t) + 2 * sizeof(float), glm::uvec3(256, 1, 1));
+        m_forcesDescGroup =
+        {
+            m_forcesPipeline->allocateDescriptorSet(0)
+        };
+        m_forcesDescGroup.postBufferUpdate(0, 0, { m_vertexBuffer->getHandle(),    0, vertexBufferSize });
+        m_forcesDescGroup.postBufferUpdate(0, 1, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
+        m_forcesDescGroup.postBufferUpdate(0, 2, { m_indexBuffer->getHandle(),     0, m_numParticles * sizeof(uint32_t) });
+        m_forcesDescGroup.postBufferUpdate(0, 3, { m_densityBuffer->getHandle(),   0, m_numParticles * sizeof(float) });
+        m_forcesDescGroup.postBufferUpdate(0, 4, { m_pressureBuffer->getHandle(),  0, m_numParticles * sizeof(float) });
+        m_forcesDescGroup.postBufferUpdate(0, 5, { m_velocityBuffer->getHandle(),  0, m_numParticles * sizeof(glm::vec4) });
+        m_forcesDescGroup.postBufferUpdate(0, 6, { m_forcesBuffer->getHandle(),    0, m_numParticles * sizeof(glm::vec4) });
+        m_forcesDescGroup.flushUpdates(m_device);
+
+        m_integratePipeline = std::make_unique<ComputePipeline>(m_renderer, "integrate-comp", 6, 1, sizeof(GridParams) + sizeof(uint32_t) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_integrateDescGroup =
+        {
+            m_integratePipeline->allocateDescriptorSet(0)
+        };
+        m_integrateDescGroup.postBufferUpdate(0, 0, { m_vertexBuffer->getHandle(),    0, m_numParticles * sizeof(glm::vec4) });
+        m_integrateDescGroup.postBufferUpdate(0, 1, { m_velocityBuffer->getHandle(),  0, m_numParticles * sizeof(glm::vec4) });
+        m_integrateDescGroup.postBufferUpdate(0, 2, { m_forcesBuffer->getHandle(),    0, m_numParticles * sizeof(glm::vec4) });
+        m_integrateDescGroup.postBufferUpdate(0, 3, { m_vertexBuffer->getHandle(),    0, m_numParticles * sizeof(glm::vec4) });
+        m_integrateDescGroup.postBufferUpdate(0, 4, { m_velocityBuffer->getHandle(),  0, m_numParticles * sizeof(glm::vec4) });
+        m_integrateDescGroup.postBufferUpdate(0, 5, { m_colorBuffer->getHandle(),     0, m_numParticles * sizeof(glm::vec4) });
+        m_integrateDescGroup.flushUpdates(m_device);
     }
 
     FluidSimulation::~FluidSimulation()
     {
     }
 
-    void FluidSimulation::onKeyPressed(int code, int modifier)
+    void FluidSimulation::update(float dt)
+    {
+        m_timeDelta = dt;
+        m_runCompute = true;
+    }
+
+    void FluidSimulation::dispatchCompute(VkCommandBuffer cmdBuffer, uint32_t currentFrameIdx) const
+    {
+        if (!m_runSimulation)
+            return;
+
+        if (m_runCompute)
+        {
+            m_runCompute = false;
+
+            m_prevSection = m_currentSection;
+            m_currentSection = currentFrameIdx;
+            for (int i = 0; i < 5; i++)
+            {
+                clearCellCounts(cmdBuffer);
+                computeCellCounts(cmdBuffer);
+                scanCellCounts(cmdBuffer);
+                reindex(cmdBuffer);
+                computeDensityAndPressure(cmdBuffer);
+                computeForces(cmdBuffer);
+                integrate(cmdBuffer, m_timeDelta / 5.0f);
+                insertComputeBarrier(cmdBuffer);
+                m_prevSection = m_currentSection;
+                m_currentSection = (m_currentSection + 1) % 3;
+            }
+
+            VkMemoryBarrier memBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+            memBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            memBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1, &memBarrier, 0, nullptr, 0, nullptr);
+        }
+    }
+
+    void FluidSimulation::onKeyPressed(int code, int)
     {
         if (code == GLFW_KEY_SPACE)
-            run = !run;
-    }
-
-
-    void FluidSimulation::update(const glm::mat4& V, const glm::mat4& P, float dt)
-    {
-        m_boxDrawer->update(V, P);
-        m_transforms.M = glm::scale(glm::vec3(vizScale));
-        m_transforms.MV  = V * m_transforms.M;
-        m_transforms.MVP = P * m_transforms.MV;
-        m_transformsBuffer->updateStagingBuffer(&m_transforms, sizeof(m_transforms));
-
-        m_particleParams.radius = particleRadius * vizScale;
-        m_particleParams.screenSpaceScale = m_renderer->getSwapChainExtent().width * P[0][0];
-        m_paramsBuffer->updateStagingBuffer(&m_particleParams, sizeof(m_particleParams));
-
-        m_time += dt;
-        m_runCompute = true;
-
-
-        //for (int y = 0; y < m_fluidDim.y; ++y)
-        //    for (int z = 0; z < m_fluidDim.z; ++z)
-        //        for (int x = 0; x < m_fluidDim.x; ++x)
-        //        {
-        //            glm::vec3 translation = glm::vec3(m_fluidDim) * m_particleRadius;
-        //            glm::vec3 offset = glm::vec3(x, y, z) * m_particleRadius * 2.0f + m_particleRadius + translation;
-        //            size_t index = getIndex(x, y, z);
-        //            m_positions[index] = glm::vec4(offset, 1.0f);
-        //        }
-
-        //for (auto& v : m_gridCounts) {
-        //    v = 0;
-        //}
-        //
-        //
-        //for (int i = 0; i < m_positions.size(); i++) {
-        //    uint32_t gridIdx = getGridIndex(m_positions[i]);
-        //    uint32_t gridSubIndex = m_gridCounts[gridIdx];
-        //
-        //    m_gridCounts[gridIdx]++;
-        //    m_grid[gridIdx][gridSubIndex] = i;
-        //}
-
-        //for (auto& v : m_gridCounts) {
-        //    v = 0;
-        //}
-        //
-        //for (int i = 0; i < m_numParticles; i++)
-        //{
-        //
-        //}
-        //
-        //for (int i = 0; i < m_numParticles; i++)
-        //{
-        //    glm::vec3 position = m_positions[i];
-        //    float density = 0.0f;
-        //    for (int j = 0; j < m_numParticles; j++)
-        //    {
-        //        glm::vec3 nbr = m_positions[j];
-        //        glm::vec3 diff = position - nbr;
-        //        density += mass * poly6(glm::length(diff));
-        //    }
-        //
-        //    m_densities[i] = density;
-        //    //m_pressures[i] = stiffness * (m_densities[i] - restDensity);
-        //    m_pressures[i] = std::max(0.0f, stiffness * (m_densities[i] - restDensity));
-        //}
-        //
-        //for (int i = 0; i < m_numParticles; i++)
-        //{
-        //    glm::vec3 position = m_positions[i];
-        //    glm::vec3 fPressure(0.0f);
-        //    glm::vec3 fGravity = m_densities[i] * g;
-        //    for (int j = 0; j < m_numParticles; j++)
-        //    {
-        //        glm::vec3 nbrPosition = m_positions[j];
-        //
-        //        glm::vec3 diffVec = position - nbrPosition;
-        //        float dist = glm::length(diffVec);
-        //        if (dist > 0.0f)
-        //            fPressure += -mass / m_densities[j] * (m_pressures[i] + m_pressures[j]) / 2.0f * poly6Grad(dist) * diffVec / dist;
-        //    }
-        //    m_forces[i] = fPressure + fGravity;
-        //}
-        //
-        //static constexpr float deltaT = 0.0016f;
-        //for (int i = 0; i < m_numParticles; i++)
-        //{
-        //    glm::vec3 a = m_forces[i] / m_densities[i];
-        //    m_velocities[i] = m_velocities[i] + dt * a;
-        //    m_positions[i] = m_positions[i] + glm::vec4(dt * m_velocities[i], 0.0f);
-        //    m_positions[i].y = std::max(m_positions[i].y, particleRadius);
-        //    m_positions[i].x = std::max(std::min(m_positions[i].x, 10.0f - particleRadius), particleRadius);
-        //    m_positions[i].z = std::max(std::min(m_positions[i].z, 10.0f - particleRadius), particleRadius);
-        //}
-
-        ////float minDensity = 1000.0f;
-        ////float maxDensity = 1000.0f;
-        //for (int i = 0; i < m_positions.size(); i++) {
-        //    glm::vec3 position = m_positions[i];
-        //
-        //    for (int j = 0; j < m_positions.size(); j++) {
-        //        glm::vec3 nbrPosition = m_positions[j];
-        //
-        //        float dist = glm::length(nbrPosition - position);
-        //        float normDist = dist / h;
-        //        density += mass * cubicSpline(normDist);
-        //    }
-        //
-        //    float density = getDensity(m_positions[i]);
-        //    //minDensity = std::min(minDensity, density);
-        //    //maxDensity = std::max(maxDensity, density);
-        //    m_densities[i] = density;
-        //    m_pressures[i] = stiffness * (pow(density / restDensity, 7.0f) - 1.0f);
-        //}
-        //
-        ////std::cout << minDensity << " " << maxDensity << std::endl;
-        //
-        //constexpr float deltaT = 0.001f;
-        //
-        //for (int i = 0; i < m_numParticles; i++)
-        //{
-        //    glm::vec3 grad = getPressureGrad(i);
-        //    glm::vec3 fPress = -mass / m_densities[i] * grad; // TODO use grad
-        //    glm::vec3 fOther = mass * g;
-        //    m_forces[i] = fPress;// fOther + fPress;
-        //
-        //    glm::vec3 dv = 10.0f * m_forces[i] / mass;
-        //
-        //    //std::cout << grad.x << ", " << grad.y << ", " << grad.z << std::endl;
-        //
-        //    m_velocities[i] = m_velocities[i] + deltaT * dv;
-        //    m_positions[i] = m_positions[i] + glm::vec4(deltaT * m_velocities[i], 0.0f);
-        //}
-
-        //for (int i = 0; i < 5; i++) {
-        //    assignParticlesToGrids();
-        //    computeDensityAndPressure();
-        //    computeForces();
-        //    integrate();
-        //}
-
-        // compute grid index for each particle
-        
-        for (int i = 0; i < 6 && run; i++)
-        {
-            int3 gridParams = { m_gridParams.dim.x, m_gridParams.dim.y, m_gridParams.dim.z };
-
-            FluidSimulationKernels::computeGridLocations(*m_gridLocationBuffer, *m_particleIndexBuffer, *m_posBuffer, *m_simulationParams);
-            FluidSimulationKernels::sortParticleIndicesByGridLocation(*m_gridLocationBuffer, *m_particleIndexBuffer);
-            FluidSimulationKernels::computeGridCellOffsets(*m_gridCellOffsets, *m_gridLocationBuffer, *m_gridCellIndexBuffer);
-            FluidSimulationKernels::computeDensityAndPressure(*m_densityCudaBuffer, *m_pressureCudaBuffer, *m_normalsBuffer,
-                *m_posBuffer, *m_gridCellOffsets, *m_gridLocationBuffer, *m_particleIndexBuffer,
-                *m_simulationParams);
-            FluidSimulationKernels::computeForces(*m_forceBuffer, *m_colorCudaBuffer,
-                *m_posBuffer, *m_gridCellOffsets, *m_gridLocationBuffer, *m_particleIndexBuffer,
-                *m_densityCudaBuffer, *m_pressureCudaBuffer, *m_veloBuffer, *m_normalsBuffer, gridParams, m_gridParams.cellSize, m_gravity, m_viscosity);
-            float3 worldSpace;
-            worldSpace.x = m_fluidSpaceMax.x;
-            worldSpace.y = m_fluidSpaceMax.y;
-            worldSpace.z = m_fluidSpaceMax.z;
-            FluidSimulationKernels::integrate(*m_posBuffer, *m_veloBuffer, *m_forceBuffer, *m_densityCudaBuffer, worldSpace, dt * timeStepFraction);
-        }
-        
-        m_colorCudaBuffer->copyToCpu();
-        m_posBuffer->copyToCpu();
-        m_stagingBuffer->updateFromHost(m_posBuffer->getHostBuffer());
-        m_stagingColorBuffer->updateFromHost(m_colorCudaBuffer->getHostBuffer());
-    }
-
-    void FluidSimulation::updateDeviceBuffers(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex)
-    {
-        m_transformsBuffer->updateDeviceBuffer(cmdBuffer, currentFrameIndex);
-        m_paramsBuffer->updateDeviceBuffer(cmdBuffer, currentFrameIndex);
-
-
-        m_vertexBuffer->copyFrom(cmdBuffer, *m_stagingBuffer, 0, currentFrameIndex * m_vertexBufferSize, m_vertexBufferSize);
-        m_colorBuffer->copyFrom(cmdBuffer, *m_stagingColorBuffer, 0, currentFrameIndex * m_vertexBufferSize, m_vertexBufferSize);
-
-        m_boxDrawer->updateDeviceBuffers(cmdBuffer, currentFrameIndex);
+            m_runSimulation = !m_runSimulation;
     }
 
     void FluidSimulation::setGravityX(float value)
@@ -429,71 +245,206 @@ namespace crisp
 
     void FluidSimulation::setViscosity(float value)
     {
-        m_viscosity = value;
+        m_viscosityFactor = value;
+    }
+
+    void FluidSimulation::setSurfaceTension(float value)
+    {
+        m_kappa = value;
     }
 
     void FluidSimulation::reset()
     {
-        run = false;
+        m_runSimulation = false;
+        m_renderer->finish();
 
-        std::vector<glm::vec4> positions;
-        for (int y = 0; y < m_fluidDim.y; ++y)
-            for (int z = 0; z < m_fluidDim.z; ++z)
-                for (int x = 0; x < m_fluidDim.x; ++x) {
-                    glm::vec3 translation = glm::vec3(m_fluidDim) * m_particleRadius;
-                    translation.x = 0.0f;
-                    glm::vec3 offset = glm::vec3(x, y, z) * particleDiameter + particleRadius + translation;
-                    positions.emplace_back(offset, 1.0f);
-                }
+        std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
 
-        m_positions = positions;
+        std::size_t vertexBufferSize = m_numParticles * sizeof(glm::vec4);
+        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, 0);
+        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, vertexBufferSize);
+        m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, 2 * vertexBufferSize);
 
-        m_posBuffer->setHostBuffer(positions);
-        m_posBuffer->copyToGpu();
-        
-        std::vector<glm::vec3> velocities(m_numParticles, glm::vec3(0.0f));
-        m_veloBuffer->setHostBuffer(velocities);
-        m_veloBuffer->copyToGpu();
+        auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
+        m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 0);
+        m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, vertexBufferSize);
+        m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 2 * vertexBufferSize);
+
+        m_currentSection = 0;
+        m_prevSection = 0;
     }
 
-    void FluidSimulation::draw(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const
+    float FluidSimulation::getParticleRadius() const
     {
-        m_descriptorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(currentFrameIndex));
-        m_descriptorSetGroup.setDynamicOffset(1, m_paramsBuffer->getDynamicOffset(currentFrameIndex));
-        m_drawPipeline->bind(cmdBuffer);
-        m_descriptorSetGroup.bind(cmdBuffer, m_drawPipeline->getPipelineLayout());
-        
-        VkDeviceSize offsets[] = { currentFrameIndex * m_vertexBufferSize, currentFrameIndex * m_vertexBufferSize };
+        return m_particleRadius;
+    }
+
+    void FluidSimulation::drawGeometry(VkCommandBuffer cmdBuffer) const
+    {
+        VkDeviceSize offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
+        VkDeviceSize offsets[] = { offset, offset };
         VkBuffer buffers[] = { m_vertexBuffer->getHandle(), m_colorBuffer->getHandle() };
         vkCmdBindVertexBuffers(cmdBuffer, 0, 2, buffers, offsets);
         vkCmdDraw(cmdBuffer, m_numParticles, 1, 0, 0);
-        
-        m_boxDrawer->render(cmdBuffer, currentFrameIndex);
     }
 
-    void FluidSimulation::clearHashGrid(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const
+    void FluidSimulation::clearCellCounts(VkCommandBuffer cmdBuffer) const
     {
-        m_clearGridPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
-        VkDescriptorSet set = m_clearGridSets.getHandle(0);
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_clearGridPipeline->getPipelineLayout(), 0, 1, &set, 0, nullptr);
+        m_clearHashGridPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_clearHashGridPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells);
+        m_clearGridDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_clearGridDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_clearHashGridPipeline->getPipelineLayout());
 
-        vkCmdDispatch(cmdBuffer, m_gridParams.dim.x / m_workGroupSize.x, m_gridParams.dim.y / m_workGroupSize.y, m_gridParams.dim.z / m_workGroupSize.z);
-    }
-    void FluidSimulation::buildHashGrid(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const
-    {
-        m_hashGridPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
-        VkDescriptorSet set = m_hashGridSets.getHandle(0);
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_hashGridPipeline->getPipelineLayout(), 0, 1, &set, 0, nullptr);
-
-        vkCmdDispatch(cmdBuffer, m_fluidDim.x / m_workGroupSize.x, m_fluidDim.y / m_workGroupSize.y, m_fluidDim.z / m_workGroupSize.z);
+        glm::uvec3 numGroups = (glm::uvec3(m_gridParams.numCells, 1, 1) - glm::uvec3(1)) / m_clearHashGridPipeline->getWorkGroupSize() + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
+        insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::computePressure(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const
+    void FluidSimulation::computeCellCounts(VkCommandBuffer cmdBuffer) const
     {
-        m_pressurePipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
-        VkDescriptorSet set = m_pressureSets.getHandle(0);
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pressurePipeline->getPipelineLayout(), 0, 1, &set, 0, nullptr);
+        m_computeCellCountPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.dim);
+        m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(m_gridParams.dim), m_gridParams.cellSize);
+        m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(m_gridParams.dim) + sizeof(m_gridParams.cellSize), m_numParticles);
+        m_computeCellCountDescGroup.setDynamicOffset(0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_computeCellCountDescGroup.setDynamicOffset(1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_computeCellCountDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
+        m_computeCellCountDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_computeCellCountPipeline->getPipelineLayout());
 
-        vkCmdDispatch(cmdBuffer, m_fluidDim.x / m_workGroupSize.x, m_fluidDim.y / m_workGroupSize.y, m_fluidDim.z / m_workGroupSize.z);
+        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_computeCellCountPipeline->getWorkGroupSize() + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
+        insertComputeBarrier(cmdBuffer);
+    }
+
+    void FluidSimulation::scanCellCounts(VkCommandBuffer cmdBuffer) const
+    {
+        // Intra-block scan
+        m_scanPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_scanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, 1);
+        m_scanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 4, m_gridParams.numCells);
+        m_scanDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_scanDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
+        m_scanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout());
+
+        glm::uvec3 numBlocks = glm::uvec3(m_gridParams.numCells, 1, 1) / glm::uvec3(ScanElementsPerBlock, 1, 1);
+        vkCmdDispatch(cmdBuffer, numBlocks.x, numBlocks.y, numBlocks.z);
+        insertComputeBarrier(cmdBuffer);
+
+        // Block-level scan
+        m_scanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, 0);
+        m_scanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 4, m_gridParams.numCells / ScanElementsPerBlock);
+        m_scanBlockDescGroup.setDynamicOffset(0, m_currentSection * m_blockSumRegionSize);
+        m_scanBlockDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
+        m_scanBlockDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout());
+
+        numBlocks = (glm::uvec3(m_gridParams.numCells / ScanElementsPerBlock, 1, 1) - glm::uvec3(1))
+            / glm::uvec3(ScanElementsPerBlock, 1, 1) + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numBlocks.x, numBlocks.y, numBlocks.z);
+        insertComputeBarrier(cmdBuffer);
+
+        // Fold the block-level scans into intra-block scans
+        m_combineScanPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_combineScanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells);
+        m_combineScanDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_combineScanDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
+        m_combineScanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_combineScanPipeline->getPipelineLayout());
+
+        numBlocks = glm::uvec3(m_gridParams.numCells, 1, 1) / glm::uvec3(ScanElementsPerBlock, 1, 1);
+        vkCmdDispatch(cmdBuffer, numBlocks.x, numBlocks.y, numBlocks.z);
+        insertComputeBarrier(cmdBuffer);
+    }
+
+    void FluidSimulation::reindex(VkCommandBuffer cmdBuffer) const
+    {
+        m_reindexPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_reindexPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams);
+        m_reindexPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(m_gridParams), m_numParticles);
+        m_reindexDescGroup.setDynamicOffset(0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_reindexDescGroup.setDynamicOffset(1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_reindexDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
+        m_reindexDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(uint32_t));
+        m_reindexDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        m_reindexDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_reindexPipeline->getPipelineLayout());
+
+        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_reindexPipeline->getWorkGroupSize() + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
+        insertComputeBarrier(cmdBuffer);
+    }
+
+    void FluidSimulation::computeDensityAndPressure(VkCommandBuffer cmdBuffer) const
+    {
+        m_densityPressurePipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_densityPressurePipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams);
+        m_densityPressurePipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(m_gridParams), m_numParticles);
+        m_densityPressureDescGroup.setDynamicOffset(0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_densityPressureDescGroup.setDynamicOffset(1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_densityPressureDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        //m_densityPressureDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
+        m_densityPressureDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(float));
+        m_densityPressureDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(float));
+        m_densityPressureDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_densityPressurePipeline->getPipelineLayout());
+
+        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_densityPressurePipeline->getWorkGroupSize() + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
+        insertComputeBarrier(cmdBuffer);
+    }
+
+    void FluidSimulation::computeForces(VkCommandBuffer cmdBuffer) const
+    {
+        m_forcesPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_forcesPipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_gravity, m_numParticles, m_viscosityFactor, m_kappa);
+        m_forcesDescGroup.setDynamicOffset(0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_forcesDescGroup.setDynamicOffset(1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        m_forcesDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
+        m_forcesDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(float));
+        m_forcesDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(float));
+        m_forcesDescGroup.setDynamicOffset(5, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_forcesDescGroup.setDynamicOffset(6, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        m_forcesDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_forcesPipeline->getPipelineLayout());
+
+        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_forcesPipeline->getWorkGroupSize() + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
+        insertComputeBarrier(cmdBuffer);
+    }
+
+    void FluidSimulation::integrate(VkCommandBuffer cmdBuffer, float timeDelta) const
+    {
+        m_integratePipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        m_integratePipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, timeDelta, m_numParticles);
+        m_integrateDescGroup.setDynamicOffset(0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_integrateDescGroup.setDynamicOffset(1, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        m_integrateDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        m_integrateDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        m_integrateDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        m_integrateDescGroup.setDynamicOffset(5, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        m_integrateDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_integratePipeline->getPipelineLayout());
+
+        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_integratePipeline->getWorkGroupSize() + glm::uvec3(1);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
+    }
+
+    void FluidSimulation::insertComputeBarrier(VkCommandBuffer cmdBuffer) const
+    {
+        VkMemoryBarrier memBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+        memBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        memBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memBarrier, 0, nullptr, 0, nullptr);
+    }
+
+    std::vector<glm::vec4> FluidSimulation::createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const
+    {
+        std::vector<glm::vec4> positions;
+        for (unsigned int z = 0; z < fluidDim.z; ++z)
+            for (unsigned int y = 0; y < fluidDim.y; ++y)
+                for (unsigned int x = 0; x < fluidDim.x; ++x)
+                {
+                    //glm::vec3 translation = glm::vec3(m_fluidDim) * m_particleRadius;
+                    //translation.x = 0.0f;
+                    //translation.y = 0.0f;
+                    glm::vec3 offset = glm::vec3(x, y, z) * 2.0f * particleRadius + particleRadius;// +translation;
+                    positions.emplace_back(offset, 1.0f);
+                }
+        return positions;
     }
 }

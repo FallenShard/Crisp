@@ -12,32 +12,36 @@ namespace crisp
         : m_context(vulkanContext)
         , m_device(VK_NULL_HANDLE)
     {
-        VulkanQueueConfiguration config =
-        {
+        VulkanQueueConfiguration config({
             QueueTypeFlags(QueueType::General | QueueType::Present),
             //QueueType::Transfer
-        };
-        config.buildQueueCreateInfos(vulkanContext);
+        }, m_context);
         m_device = m_context->createLogicalDevice(config);
 
         m_generalQueue  = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(0));
         //m_transferQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(1));
 
         // Device buffer memory
-        m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize / 2, m_context->findDeviceBufferMemoryType(m_device), m_device, "Device Buffer Heap");
+        std::optional<uint32_t> deviceBufferHeapIndex = m_context->findDeviceBufferMemoryType(m_device);
+        if (!deviceBufferHeapIndex.has_value())
+            throw std::runtime_error("Requested device buffer heap memory is not available!");
+        m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize / 2, deviceBufferHeapIndex.value(), m_device, "Device Buffer Heap");
 
         // Device image memory
-        m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, m_context->findDeviceImageMemoryType(m_device), m_device, "Device Image Heap");
+        std::optional<uint32_t> deviceImageHeapIndex = m_context->findDeviceImageMemoryType(m_device);
+        if (!deviceImageHeapIndex.has_value())
+            throw std::runtime_error("Requested device buffer heap memory is not available!");
+        m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, deviceImageHeapIndex.value(), m_device, "Device Image Heap");
 
         // Staging memory
-        m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize, m_context->findStagingBufferMemoryType(m_device), m_device, "Staging Buffer Heap");
-        m_mappedStagingPtr = m_stagingBufferHeap->mapMemoryBlock(0);
+        std::optional<uint32_t> stagingBufferHeapIndex = m_context->findStagingBufferMemoryType(m_device);
+        if (!stagingBufferHeapIndex.has_value())
+            throw std::runtime_error("Requested device buffer heap memory is not available!");
+        m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize, stagingBufferHeapIndex.value(), m_device, "Staging Buffer Heap");
     }
 
     VulkanDevice::~VulkanDevice()
     {
-        m_stagingBufferHeap->unmapMemoryBlock(0);
-
         m_deviceBufferHeap->freeVulkanMemoryBlocks();
         m_deviceImageHeap->freeVulkanMemoryBlocks();
         m_stagingBufferHeap->freeVulkanMemoryBlocks();
@@ -67,8 +71,7 @@ namespace crisp
 
     void VulkanDevice::invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size)
     {
-        VkMappedMemoryRange memRange = {};
-        memRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        VkMappedMemoryRange memRange = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
         memRange.memory = memory;
         memRange.offset = offset;
         memRange.size   = size;
@@ -86,8 +89,7 @@ namespace crisp
 
     VkSemaphore VulkanDevice::createSemaphore() const
     {
-        VkSemaphoreCreateInfo semInfo = {};
-        semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
         VkSemaphore semaphore;
         vkCreateSemaphore(m_device, &semInfo, nullptr, &semaphore);
@@ -106,7 +108,7 @@ namespace crisp
 
     VulkanMemoryHeap* VulkanDevice::getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
     {
-        uint32_t supportedHeapIndex = m_context->findMemoryType(memoryTypeBits, flags);
+        std::optional<uint32_t> supportedHeapIndex = m_context->findMemoryType(memoryTypeBits, flags);
 
         VulkanMemoryHeap* heap = nullptr;
         if (supportedHeapIndex == m_deviceBufferHeap->memoryTypeIndex)
@@ -147,11 +149,6 @@ namespace crisp
         return m_stagingBufferHeap.get();
     }
 
-    void* VulkanDevice::getStagingMemoryPtr() const
-    {
-        return m_mappedStagingPtr;
-    }
-
     void VulkanDevice::printMemoryStatus()
     {
         m_deviceBufferHeap->printFreeChunks();
@@ -162,11 +159,11 @@ namespace crisp
     DeviceMemoryMetrics VulkanDevice::getDeviceMemoryUsage()
     {
         DeviceMemoryMetrics memoryMetrics = {};
-        memoryMetrics.bufferMemorySize  = m_deviceBufferHeap->totalSize;
+        memoryMetrics.bufferMemorySize  = m_deviceBufferHeap->getTotalAllocatedSize();
         memoryMetrics.bufferMemoryUsed  = m_deviceBufferHeap->usedSize;
-        memoryMetrics.imageMemorySize   = m_deviceImageHeap->totalSize;
+        memoryMetrics.imageMemorySize   = m_deviceImageHeap->getTotalAllocatedSize();
         memoryMetrics.imageMemoryUsed   = m_deviceImageHeap->usedSize;
-        memoryMetrics.stagingMemorySize = m_stagingBufferHeap->totalSize;
+        memoryMetrics.stagingMemorySize = m_stagingBufferHeap->getTotalAllocatedSize();
         memoryMetrics.stagingMemoryUsed = m_stagingBufferHeap->usedSize;
         return memoryMetrics;
     }

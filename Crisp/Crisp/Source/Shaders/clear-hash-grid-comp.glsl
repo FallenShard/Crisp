@@ -1,23 +1,31 @@
 #version 450 core
 
-layout(set = 0, binding = 0) buffer GridCells
-{
-    uvec4 gridCells[];
-};
-
-layout(set = 0, binding = 1) buffer CellCounts
+// Output: all cell counts will be 0
+layout(set = 0, binding = 0) buffer CellCounts
 {
     uint cellCounts[];
 };
 
-layout (local_size_x = 2, local_size_y = 2, local_size_z = 2) in;
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+uint getGlobalIndex()
+{
+    uvec3 dim = gl_WorkGroupSize * gl_NumWorkGroups;
+    return gl_GlobalInvocationID.z * dim.x * dim.y +
+           gl_GlobalInvocationID.y * dim.x +
+           gl_GlobalInvocationID.x;
+}
+
+layout(push_constant) uniform PushConstant
+{
+    uint numCells;
+};
 
 void main()
 {
-    uvec3 dim     = gl_WorkGroupSize * gl_NumWorkGroups;
-    uvec3 indices = gl_WorkGroupSize * gl_WorkGroupID + gl_LocalInvocationID;
-    uint idx = indices.y * dim.x * dim.z + indices.z * dim.x + indices.x;
+    uint threadIdx = getGlobalIndex();
+    if (threadIdx >= numCells)
+        return;
 
-    //gridCells[idx] = uvec4(0);
-    cellCounts[idx] = 0;
+    cellCounts[threadIdx] = 0;
 }

@@ -16,7 +16,7 @@ namespace crisp
         RenderPassBuilder& setAttachmentStencilOps(uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp);
         RenderPassBuilder& setAttachmentLayouts(uint32_t attachmentIndex, VkImageLayout initialLayout, VkImageLayout finalLayout);
 
-        RenderPassBuilder& addSubpass(VkPipelineBindPoint bindPoint, VkSubpassDescriptionFlags flags = 0);
+        RenderPassBuilder& addSubpass(VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, VkSubpassDescriptionFlags flags = 0);
         RenderPassBuilder& addInputAttachmentRef(uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout);
         RenderPassBuilder& addColorAttachmentRef(uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout);
         RenderPassBuilder& addResolveAttachmentRef(uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout);
@@ -27,6 +27,8 @@ namespace crisp
             VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkDependencyFlags flags = 0);
 
         VkRenderPass create(VkDevice device);
+
+        std::vector<VkImageLayout> getFinalLayouts() const;
 
     private:
         std::vector<VkAttachmentDescription> m_attachments;

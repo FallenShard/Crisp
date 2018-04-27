@@ -13,7 +13,8 @@
 #include "Renderer/Pipelines/ShadowMapPipeline.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/NormalMapPipeline.hpp"
-#include "Renderer/TextureView.hpp"
+#include "Vulkan/VulkanImageView.hpp"
+#include "vulkan/VulkanImage.hpp"
 #include "Renderer/VulkanRenderer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "vulkan/VulkanSampler.hpp"
@@ -65,9 +66,9 @@ namespace crisp
         //});
 
         m_transforms.resize(22);
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(Transforms), BufferUpdatePolicy::PerFrame);
+        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
         m_transforms[0].M = glm::scale(glm::vec3{ 100.0f, 1.0f, 100.0f });
-        m_transforms[1].M = glm::translate(glm::vec3{ 0.0f, 2.0f, -4.0f });
+        m_transforms[1].M = glm::translate(glm::vec3{ 0.0f, 0.0f, -4.0f });
         for (int i = 2; i < 22; i++) {
             m_transforms[i].M = glm::translate(glm::vec3{ i * 0.4f - 4.0f, 2.0f, 0.0f }) *
                 glm::scale(glm::vec3{0.2f, 3.0f, 0.2f});
@@ -81,7 +82,7 @@ namespace crisp
         m_shadowPass = std::make_unique<ShadowPass>(m_renderer, 1024, 1);
         m_shadowMapPipeline = std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get());
         m_shadowMapDescGroup = { m_shadowMapPipeline->allocateDescriptorSet(0) };
-        m_shadowMapDescGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_shadowMapDescGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_shadowMapDescGroup.postBufferUpdate(0, 1, m_lvpBuffer->getDescriptorInfo());
         m_shadowMapDescGroup.flushUpdates(m_renderer->getDevice());
 
@@ -93,7 +94,7 @@ namespace crisp
         m_vsmPass = std::make_unique<VarianceShadowMapPass>(m_renderer, 1024);
         m_vsmPipeline = std::make_unique<VarianceShadowMapPipeline>(m_renderer, m_vsmPass.get());
         m_vsmDescSetGroup = { m_vsmPipeline->allocateDescriptorSet(0) };
-        m_vsmDescSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_vsmDescSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_vsmDescSetGroup.postBufferUpdate(0, 1, m_vsmLightBuffer->getDescriptorInfo());
         m_vsmDescSetGroup.flushUpdates(m_device);
 
@@ -108,7 +109,7 @@ namespace crisp
         for (auto& desc : m_colorAndShadowDescGroups)
             desc = { firstSet, m_colorAndShadowPipeline->allocateDescriptorSet(1) };
 
-        m_colorAndShadowDescGroups[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_colorAndShadowDescGroups[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_colorAndShadowDescGroups[0].postBufferUpdate(0, 1, m_lvpBuffer->getDescriptorInfo(0, sizeof(glm::mat4)));
         m_colorAndShadowDescGroups[0].postBufferUpdate(0, 2, m_cameraBuffer->getDescriptorInfo(0, sizeof(CameraParameters)));
 
@@ -120,7 +121,7 @@ namespace crisp
         for (int i = 0; i < VulkanRenderer::NumVirtualFrames; ++i)
         {
             m_blurDescGroups[i] = { m_blurPipeline->allocateDescriptorSet(0) };
-            m_blurDescGroups[i].postImageUpdate(0, 0, { m_linearClampSampler->getHandle(), m_vsmPass->getAttachmentView(1, i), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            m_blurDescGroups[i].postImageUpdate(0, 0, { m_linearClampSampler->getHandle(), m_vsmPass->getRenderTargetView(0, i)->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
             m_blurDescGroups[i].flushUpdates(m_device);
         }
 
@@ -132,19 +133,18 @@ namespace crisp
         frameIdx = 0;
         for (auto& descGroup : m_vertBlurDescGroups) {
             descGroup = { m_vertBlurPipeline->allocateDescriptorSet(0) };
-            descGroup.postImageUpdate(0, 0, { m_linearClampSampler->getHandle(), m_blurPass->getAttachmentView(0, frameIdx++), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            descGroup.postImageUpdate(0, 0, { m_linearClampSampler->getHandle(), m_blurPass->getRenderTargetView(0, frameIdx++)->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
             descGroup.flushUpdates(m_device);
         }
 
         frameIdx = 0;
         for (auto& desc : m_colorAndShadowDescGroups) {
-            desc.postImageUpdate(1, 0, { m_nearestNeighborSampler->getHandle(), m_shadowPass->getAttachmentView(0, frameIdx), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-            desc.postImageUpdate(1, 1, { m_linearClampSampler->getHandle(), m_vertBlurPass->getAttachmentView(0, frameIdx++), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            desc.postImageUpdate(1, 0, { m_nearestNeighborSampler->getHandle(), m_shadowPass->getRenderTargetView(0, frameIdx)->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            desc.postImageUpdate(1, 1, { m_linearClampSampler->getHandle(), m_vertBlurPass->getRenderTargetView(0, frameIdx++)->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
             desc.flushUpdates(m_device);
         }
 
         auto imageBuffer = std::make_unique<ImageFileBuffer>("Resources/Textures/brickwall.png");
-        imageBuffer->padComponents(4);
         // create texture image
         VkExtent3D imageExtent = { imageBuffer->getWidth(), imageBuffer->getHeight(), 1u };
         auto byteSize = imageExtent.width * imageExtent.height * imageBuffer->getNumComponents() * sizeof(unsigned char);
@@ -163,15 +163,15 @@ namespace crisp
             desc = { firstNormalMapSet, m_normalMapPipeline->allocateDescriptorSet(1), thirdNormalMapSet };
 
         m_linearRepeatSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, static_cast<float>(mipLevels));
-        m_normalMapDescGroups[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
+        m_normalMapDescGroups[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_normalMapDescGroups[0].postBufferUpdate(0, 1, m_lvpBuffer->getDescriptorInfo(0, sizeof(glm::mat4)));
         m_normalMapDescGroups[0].postBufferUpdate(0, 2, m_cameraBuffer->getDescriptorInfo(0, sizeof(CameraParameters)));
         m_normalMapDescGroups[0].postImageUpdate(2, 0, m_normalMapView->getDescriptorInfo(m_linearRepeatSampler->getHandle()));
 
         frameIdx = 0;
         for (auto& desc : m_normalMapDescGroups) {
-            desc.postImageUpdate(1, 0, { m_nearestNeighborSampler->getHandle(), m_shadowPass->getAttachmentView(0, frameIdx), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-            desc.postImageUpdate(1, 1, { m_linearClampSampler->getHandle(), m_vertBlurPass->getAttachmentView(0, frameIdx++), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+            desc.postImageUpdate(1, 0, m_shadowPass->getRenderTargetView(0, frameIdx)->getDescriptorInfo(m_nearestNeighborSampler->getHandle()));
+            desc.postImageUpdate(1, 1, m_vertBlurPass->getRenderTargetView(0, frameIdx++)->getDescriptorInfo(m_linearClampSampler->getHandle()));
             desc.flushUpdates(m_device);
         }
 
@@ -205,8 +205,10 @@ namespace crisp
 
         m_planeGeometry  = std::make_unique<MeshGeometry>(m_renderer, fullVerts, faces);
         m_cwPlaneGeometry = std::make_unique<MeshGeometry>(m_renderer, verts, cwFaces);
-        m_sphereGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("sphere.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
-        m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, TriangleMesh("cube.obj", { VertexAttribute::Position, VertexAttribute::Normal }));
+
+        auto posNormalFormat = { VertexAttribute::Position, VertexAttribute::Normal };
+        m_sphereGeometry = std::make_unique<MeshGeometry>(m_renderer, "treeBase1.obj", posNormalFormat);
+        m_cubeGeometry   = std::make_unique<MeshGeometry>(m_renderer, "cube.obj",   posNormalFormat);
 
         auto panel = std::make_unique<gui::ShadowMappingPanel>(app->getForm(), this);
         m_app->getForm()->add(std::move(panel));
@@ -280,7 +282,7 @@ namespace crisp
             descGroup.flushUpdates(m_device);
         }*/
 
-        m_sceneImageView = m_scenePass->createRenderTargetView(0);
+        m_sceneImageView = m_scenePass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
     }
@@ -298,7 +300,7 @@ namespace crisp
                 trans.MV  = V * trans.M;
                 trans.MVP = P * trans.MV;
             }
-            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(Transforms));
+            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
             m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
 
             m_lvpBuffer->updateStagingBuffer(m_lvpTransforms.data(), m_lvpTransforms.size() * sizeof(glm::mat4));
@@ -381,7 +383,7 @@ namespace crisp
 
             m_shadowPass->begin(commandBuffer);
             m_shadowMapPipeline->bind(commandBuffer);
-            m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(Transforms));
+            m_shadowMapDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(TransformPack));
             m_shadowMapDescGroup.setDynamicOffset(1, m_lvpBuffer->getDynamicOffset(frameIdx));
             m_shadowMapDescGroup.bind(commandBuffer, m_shadowMapPipeline->getPipelineLayout());
             m_shadowMapPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, 0);
@@ -396,22 +398,8 @@ namespace crisp
 
             m_shadowPass->end(commandBuffer);
 
-            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            barrier.srcAccessMask                   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            barrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
-            barrier.oldLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            barrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image                           = m_shadowPass->getColorAttachment();
-            barrier.subresourceRange.baseMipLevel   = 0;
-            barrier.subresourceRange.levelCount     = 1;
-            barrier.subresourceRange.baseArrayLayer = frameIdx;
-            barrier.subresourceRange.layerCount     = 1;
-            barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &barrier);
+            m_shadowPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
             m_vsmPass->begin(commandBuffer);
             m_vsmPipeline->bind(commandBuffer);
@@ -422,7 +410,7 @@ namespace crisp
             m_cwPlaneGeometry->bindGeometryBuffers(commandBuffer);
             m_cwPlaneGeometry->draw(commandBuffer);
 
-            m_vsmDescSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(Transforms));
+            m_vsmDescSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(TransformPack));
             m_vsmDescSetGroup.setDynamicOffset(1, m_vsmLightBuffer->getDynamicOffset(frameIdx));
             m_vsmDescSetGroup.bind(commandBuffer, m_vsmPipeline->getPipelineLayout());
             m_sphereGeometry->bindGeometryBuffers(commandBuffer);
@@ -431,29 +419,15 @@ namespace crisp
             m_cubeGeometry->bindGeometryBuffers(commandBuffer);
             for (int i = 2; i < 22; i++)
             {
-                m_vsmDescSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                m_vsmDescSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(TransformPack));
                 m_vsmDescSetGroup.bind(commandBuffer, m_vsmPipeline->getPipelineLayout());
                 m_cubeGeometry->draw(commandBuffer);
             }
 
             m_vsmPass->end(commandBuffer);
 
-            VkImageMemoryBarrier vsmBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            vsmBarrier.srcAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            vsmBarrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
-            vsmBarrier.oldLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            vsmBarrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            vsmBarrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-            vsmBarrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-            vsmBarrier.image                           = m_vsmPass->getColorAttachment(1);
-            vsmBarrier.subresourceRange.baseMipLevel   = 0;
-            vsmBarrier.subresourceRange.levelCount     = 1;
-            vsmBarrier.subresourceRange.baseArrayLayer = frameIdx;
-            vsmBarrier.subresourceRange.layerCount     = 1;
-            vsmBarrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &vsmBarrier);
+            m_vsmPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
             m_blurPass->begin(commandBuffer);
 
@@ -468,22 +442,8 @@ namespace crisp
 
             m_blurPass->end(commandBuffer);
 
-            VkImageMemoryBarrier blurMemBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            blurMemBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            blurMemBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            blurMemBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            blurMemBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            blurMemBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            blurMemBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            blurMemBarrier.image = m_blurPass->getColorAttachment();
-            blurMemBarrier.subresourceRange.baseMipLevel = 0;
-            blurMemBarrier.subresourceRange.levelCount = 1;
-            blurMemBarrier.subresourceRange.baseArrayLayer = frameIdx;
-            blurMemBarrier.subresourceRange.layerCount = 1;
-            blurMemBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &blurMemBarrier);
+            m_blurPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
             m_vertBlurPass->begin(commandBuffer);
 
@@ -498,37 +458,22 @@ namespace crisp
 
             m_vertBlurPass->end(commandBuffer);
 
-            VkImageMemoryBarrier vertBlurMemBarrier = {};
-            vertBlurMemBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            vertBlurMemBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            vertBlurMemBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            vertBlurMemBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            vertBlurMemBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            vertBlurMemBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            vertBlurMemBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            vertBlurMemBarrier.image = m_vertBlurPass->getColorAttachment();
-            vertBlurMemBarrier.subresourceRange.baseMipLevel = 0;
-            vertBlurMemBarrier.subresourceRange.levelCount = 1;
-            vertBlurMemBarrier.subresourceRange.baseArrayLayer = frameIdx;
-            vertBlurMemBarrier.subresourceRange.layerCount = 1;
-            vertBlurMemBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &vertBlurMemBarrier);
+            m_vertBlurPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
             m_scenePass->begin(commandBuffer);
             m_colorAndShadowPipeline->bind(commandBuffer);
             m_colorAndShadowPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, m_vsmLightTransforms[0]);
             m_colorAndShadowPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), m_vsmLightTransforms[1]);
             m_colorAndShadowDescGroups[frameIdx].setDynamicOffset(2, m_cameraBuffer->getDynamicOffset(frameIdx));
-            m_colorAndShadowDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + sizeof(Transforms));
+            m_colorAndShadowDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + sizeof(TransformPack));
             m_colorAndShadowDescGroups[frameIdx].bind(commandBuffer, m_colorAndShadowPipeline->getPipelineLayout());
             m_sphereGeometry->bindGeometryBuffers(commandBuffer);
             m_sphereGeometry->draw(commandBuffer);
 
             for (int i = 2; i < 22; i++)
             {
-                m_colorAndShadowDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(Transforms));
+                m_colorAndShadowDescGroups[frameIdx].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + i * sizeof(TransformPack));
                 m_colorAndShadowDescGroups[frameIdx].bind(commandBuffer, m_colorAndShadowPipeline->getPipelineLayout());
                 m_cubeGeometry->bindGeometryBuffers(commandBuffer);
                 m_cubeGeometry->draw(commandBuffer);
@@ -571,23 +516,8 @@ namespace crisp
 
             m_scenePass->end(commandBuffer);
 
-            VkImageMemoryBarrier imageMemoryBarrier = {};
-            imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier.image = m_scenePass->getColorAttachment();
-            imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
-            imageMemoryBarrier.subresourceRange.levelCount = 1;
-            imageMemoryBarrier.subresourceRange.baseArrayLayer = frameIdx;
-            imageMemoryBarrier.subresourceRange.layerCount = 1;
-            imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+            m_scenePass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
         m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
@@ -614,7 +544,7 @@ namespace crisp
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        m_sceneImageView = m_scenePass->createRenderTargetView(0);
+        m_sceneImageView = m_scenePass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);

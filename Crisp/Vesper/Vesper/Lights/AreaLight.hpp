@@ -17,7 +17,6 @@ namespace vesper
         virtual bool isDelta() const override;
 
     private:
-        glm::vec3 m_position;
         Spectrum m_radiance;
     };
 }

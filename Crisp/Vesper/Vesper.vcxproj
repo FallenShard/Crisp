@@ -23,7 +23,6 @@
     <RootNamespace>Vesper</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\Microsoft.VCToolsVersion.14.11.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -70,14 +69,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Vesper\;$(SourcePath)</SourcePath>
-    <IntDir>$(SolutionDir)Intermediate\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)Binaries\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Vesper\;$(SourcePath)</SourcePath>
-    <IntDir>$(SolutionDir)Intermediate\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -225,6 +224,7 @@
     <ClInclude Include="Vesper\Textures\UVTexture.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Vesper\BSDFs\BSDF.cpp" />
     <ClCompile Include="Vesper\BSDFs\BSDFFactory.cpp" />
     <ClCompile Include="Vesper\BSDFs\DielectricBSDF.cpp" />
     <ClCompile Include="Vesper\BSDFs\LambertianBSDF.cpp" />

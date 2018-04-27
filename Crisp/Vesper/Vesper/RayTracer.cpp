@@ -74,9 +74,9 @@ namespace vesper
             auto size = m_image.getSize();
             generateImageBlocks(size.x, size.y);
 
-#ifdef _DEBUG
-            tbb::task_scheduler_init init(1);
-#endif
+//#ifdef _DEBUG
+//            tbb::task_scheduler_init init(1);
+//#endif
             std::cout << "Using " << tbb::task_scheduler_init::default_num_threads() << " thread(s)." << std::endl;
 
             tbb::concurrent_vector<std::unique_ptr<Sampler>> samplers(m_totalBlocks);
@@ -89,7 +89,7 @@ namespace vesper
                 {
                     if (m_renderStatus == RenderStatus::Interrupted)
                         break;
-            
+
                     ImageBlock::Descriptor desc;
                     if (m_descriptorQueue.try_pop(desc))
                     {

@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <experimental/filesystem>
 
 namespace crisp
 {
@@ -125,5 +126,11 @@ namespace crisp
     void FileUtils::createDirectory(const std::string& path)
     {
         CreateDirectory(path.c_str(), nullptr);
+    }
+
+    bool FileUtils::fileExists(const std::string& filePath)
+    {
+        using namespace std::experimental;
+        return filesystem::exists(filesystem::path(filePath));
     }
 }

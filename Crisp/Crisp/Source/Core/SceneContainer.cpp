@@ -5,6 +5,7 @@
 #include "Scenes/ShadowMappingScene.hpp"
 #include "Scenes/AmbientOcclusionScene.hpp"
 #include "Scenes/RayTracerScene.hpp"
+#include "Scenes/PhysicallyBasedMaterialsScene.hpp"
 #include "Application.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/ComboBox.hpp"
@@ -13,19 +14,25 @@ namespace crisp
 {
     namespace
     {
+        std::vector<std::string> sceneNames =
+        {
+            "Ambient Occlusion",
+            "Liquid Simulation",
+            "Shadow Mapping",
+            "Ray Tracer",
+            "Physically Based Materials",
+            "Test"
+        };
+
         template <typename ...Args>
         std::unique_ptr<Scene> createScene(const std::string& name, Args&&... args)
         {
-            if (name == "Liquid Simulation")
-                return std::make_unique<FluidSimulationScene>(std::forward<Args>(args)...);
-            else if (name == "Shadow Mapping")
-                return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
-            else if (name == "Ambient Occlusion")
-                return std::make_unique<AmbientOcclusionScene>(std::forward<Args>(args)...);
-            else if (name == "Ray Tracer")
-                return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
-            else
-                return std::make_unique<TestScene>(std::forward<Args>(args)...);
+            if      (name == sceneNames[0]) return std::make_unique<AmbientOcclusionScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[1]) return std::make_unique<FluidSimulationScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[2]) return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[3]) return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[4]) return std::make_unique<PhysicallyBasedMaterialsScene>(std::forward<Args>(args)...);
+            else                            return std::make_unique<TestScene>(std::forward<Args>(args)...);
         }
     }
 
@@ -41,13 +48,12 @@ namespace crisp
 
     std::vector<std::string> SceneContainer::getSceneNames()
     {
-        return 
-        {
-            "Ambient Occlusion",
-            "Liquid Simulation",
-            "Shadow Mapping",
-            "Test"
-        };
+        return sceneNames;
+    }
+
+    const std::string& SceneContainer::getDefaultScene()
+    {
+        return sceneNames.at(1);
     }
 
     void SceneContainer::update(float dt)

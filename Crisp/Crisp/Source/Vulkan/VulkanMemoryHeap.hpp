@@ -2,32 +2,37 @@
 
 #include <map>
 #include <string>
-#include <vector>
+#include <list>
 
 #include <vulkan/vulkan.h>
 
 namespace crisp
 {
-    struct VulkanMemoryHeap;
-    struct VulkanMemoryChunk
-    {
-        VulkanMemoryHeap* memoryHeap;
-        uint32_t blockIndex;
-        uint64_t offset;
-        uint64_t size;
-
-        inline void free();
-        inline VkDeviceMemory getMemory() const;
-    };
-
     namespace internal
     {
         struct VulkanAllocationBlock
         {
             VkDeviceMemory memory;
+            void* mappedPtr;
             std::map<uint64_t, uint64_t> freeChunks;
+
+            inline bool operator==(const VulkanAllocationBlock& other) const { return memory == other.memory; }
         };
     }
+
+    struct VulkanMemoryHeap;
+    struct VulkanMemoryChunk
+    {
+        VulkanMemoryHeap* memoryHeap;
+        internal::VulkanAllocationBlock* allocationBlock;
+        uint64_t offset;
+        uint64_t size;
+
+        inline void free();
+        inline VkDeviceMemory getMemory() const;
+        inline void* getBlockMappedPtr() const;
+        inline char* getMappedPtr() const;
+    };
 
     struct VulkanMemoryHeap
     {
@@ -35,36 +40,45 @@ namespace crisp
         VkMemoryPropertyFlags properties;
         uint32_t              memoryTypeIndex;
 
-        VkDeviceSize totalSize;
         VkDeviceSize usedSize;
         VkDeviceSize blockSize;
-        std::vector<internal::VulkanAllocationBlock> memoryBlocks;
+        std::list<internal::VulkanAllocationBlock> memoryBlocks;
 
         std::string tag;
 
         VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memoryTypeIndex, VkDevice device, std::string tag);
 
-        void coalesce(uint32_t blockIndex);
-        inline void free(const VulkanMemoryChunk& chunk) { free(chunk.offset, chunk.size, chunk.blockIndex); }
-        void free(uint64_t offset, uint64_t size, uint32_t blockIndex);
+        void coalesce(internal::VulkanAllocationBlock& block);
+        void free(uint64_t offset, uint64_t size, internal::VulkanAllocationBlock& block);
         VulkanMemoryChunk allocate(uint64_t size, uint64_t alignment);
-        uint32_t allocateVulkanMemoryBlock(uint64_t size);
-        std::pair<uint64_t, uint64_t> findFreeChunkInBlock(uint32_t blockIndex, uint64_t size, uint64_t alignment);
+        internal::VulkanAllocationBlock* allocateVulkanMemoryBlock(uint64_t size);
+        std::pair<uint64_t, uint64_t> findFreeChunkInBlock(internal::VulkanAllocationBlock& block, uint64_t size, uint64_t alignment);
         void printFreeChunks();
 
         void freeVulkanMemoryBlocks();
 
-        void* mapMemoryBlock(uint32_t blockIndex) const;
-        void unmapMemoryBlock(uint32_t blockIndex) const;
+        void* mapMemoryBlock(internal::VulkanAllocationBlock& blockIndex) const;
+
+        inline VkDeviceSize getTotalAllocatedSize() const { return memoryBlocks.size() * blockSize; }
     };
 
     inline void VulkanMemoryChunk::free()
     {
-        memoryHeap->free(offset, size, blockIndex);
+        memoryHeap->free(offset, size, *allocationBlock);
     }
 
     inline VkDeviceMemory VulkanMemoryChunk::getMemory() const
     {
-        return memoryHeap->memoryBlocks[blockIndex].memory;
+        return allocationBlock->memory;
+    }
+
+    inline void* VulkanMemoryChunk::getBlockMappedPtr() const
+    {
+        return allocationBlock->mappedPtr;
+    }
+
+    inline char* VulkanMemoryChunk::getMappedPtr() const
+    {
+        return static_cast<char*>(allocationBlock->mappedPtr) + offset;
     }
 }

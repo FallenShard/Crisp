@@ -19,8 +19,8 @@ namespace crisp
     class VulkanPipeline : public VulkanResource<VkPipeline>
     {
     public:
-        VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass);
-        ~VulkanPipeline();
+        VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent = true);
+        virtual ~VulkanPipeline();
 
         inline VkPipelineLayout getPipelineLayout() const { return m_pipelineLayout; }
         inline VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
@@ -33,9 +33,24 @@ namespace crisp
         VulkanDescriptorSetLayout*   getDescriptorSetLayout(uint32_t index) const;
 
         template <typename T>
-        inline void setPushConstant(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, const T& value) const
+        inline void setPushConstant(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& value) const
         {
             vkCmdPushConstants(cmdBuffer, m_pipelineLayout, shaderStages, offset, sizeof(T), &value);
+        }
+
+        template <typename T, typename ...Ts>
+        inline void setPushConstants(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg, Ts&&... args) const
+        {
+            setPushConstantsWithOffset(cmdBuffer, shaderStages, 0, std::forward<T>(arg), std::forward<Ts>(args)...);
+        }
+
+        template <typename T, typename ...Ts>
+        inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
+        {
+            setPushConstant(cmdBuffer, shaderStages, offset, std::forward<T>(arg));
+
+            if constexpr (sizeof...(Ts) > 0)
+                setPushConstantsWithOffset(cmdBuffer, shaderStages, offset + sizeof(T), std::forward<Ts>(args)...);
         }
 
     protected:
@@ -59,5 +74,7 @@ namespace crisp
         std::vector<std::unique_ptr<VulkanDescriptorSetLayout>> m_descriptorSetLayouts;
         VkDescriptorPool m_descriptorPool;
         VkPipelineLayout m_pipelineLayout;
+
+        bool m_isWindowDependent;
     };
 }

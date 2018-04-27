@@ -57,7 +57,7 @@ namespace crisp
         SwapChainSupportDetails swapChainSupport = context->querySwapChainSupport();
 
         VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
-        VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes);
+        VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_FIFO_KHR);
         VkExtent2D extent                = chooseExtent(swapChainSupport.capabilities);
 
         // minImageCount + 1 to support triple-buffering with MAILBOX present mode
@@ -65,8 +65,7 @@ namespace crisp
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
             imageCount = swapChainSupport.capabilities.maxImageCount;
 
-        VkSwapchainCreateInfoKHR createInfo = {};
-        createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface          = context->getSurface();
         createInfo.minImageCount    = imageCount;
         createInfo.imageFormat      = surfaceFormat.format;
@@ -83,15 +82,15 @@ namespace crisp
         };
         if (indices.graphicsFamily != indices.presentFamily)
         {
-            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
-            createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
+            createInfo.pQueueFamilyIndices   = queueFamilyIndices.data();
         }
         else
         {
-            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
             createInfo.queueFamilyIndexCount = 0;
-            createInfo.pQueueFamilyIndices = nullptr;
+            createInfo.pQueueFamilyIndices   = nullptr;
         }
 
         createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
@@ -120,8 +119,7 @@ namespace crisp
 
         for (uint32_t i = 0; i < m_images.size(); i++)
         {
-            VkImageViewCreateInfo viewInfo = {};
-            viewInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            VkImageViewCreateInfo viewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
             viewInfo.image        = m_images[i];
             viewInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
             viewInfo.format       = m_imageFormat;
@@ -153,13 +151,11 @@ namespace crisp
         return availableFormats[0];
     }
 
-    VkPresentModeKHR VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const
+    VkPresentModeKHR VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const
     {
         for (const auto& availablePresentMode : availablePresentModes)
-        {
-            if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) // Triple-buffering
+            if (availablePresentMode == presentMode)
                 return availablePresentMode;
-        }
 
         return VK_PRESENT_MODE_FIFO_KHR; // V-Sync is FIFO
     }
