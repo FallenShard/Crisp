@@ -7,7 +7,7 @@ namespace crisp
     class ColorAndShadowPipeline : public VulkanPipeline
     {
     public:
-        ColorAndShadowPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        ColorAndShadowPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

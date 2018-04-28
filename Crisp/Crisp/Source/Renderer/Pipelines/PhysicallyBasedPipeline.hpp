@@ -7,7 +7,7 @@ namespace crisp
     class PhysicallyBasedPipeline : public VulkanPipeline
     {
     public:
-        PhysicallyBasedPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        PhysicallyBasedPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

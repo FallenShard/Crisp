@@ -10,14 +10,14 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
 
     class UniformBuffer
     {
     public:
         static constexpr VkDeviceSize SizeGranularity = 256;
 
-        UniformBuffer(VulkanRenderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
+        UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
         ~UniformBuffer();
 
         inline VkBuffer get() const { return m_buffer->getHandle(); }
@@ -36,7 +36,7 @@ namespace crisp
         VkDescriptorBufferInfo getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const;
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         BufferUpdatePolicy m_updatePolicy;
         VkDeviceSize m_singleRegionSize;

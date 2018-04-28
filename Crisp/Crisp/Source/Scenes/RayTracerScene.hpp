@@ -19,13 +19,13 @@ namespace vesper
 namespace crisp
 {
     class Application;
-    class VulkanRenderer;
+    class Renderer;
     class RayTracedImage;
 
     class RayTracerScene : public Scene
     {
     public:
-        RayTracerScene(VulkanRenderer* renderer, Application* app);
+        RayTracerScene(Renderer* renderer, Application* app);
         ~RayTracerScene();
 
         virtual void resize(int width, int height) override;
@@ -43,7 +43,7 @@ namespace crisp
         void openSceneFile(const std::string& filename);
         void createGui();
 
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
         Application* m_app;
 
         uint32_t m_numChannels;

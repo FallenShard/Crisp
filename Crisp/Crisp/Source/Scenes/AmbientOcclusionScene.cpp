@@ -6,7 +6,7 @@
 #include "Core/Window.hpp"
 #include "Core/InputDispatcher.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Camera/CameraController.hpp"
 
 #include "Renderer/UniformBuffer.hpp"
@@ -34,7 +34,7 @@
 
 namespace crisp
 {
-    AmbientOcclusionScene::AmbientOcclusionScene(VulkanRenderer* renderer, Application* app)
+    AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
         , m_app(app)
@@ -94,7 +94,7 @@ namespace crisp
         m_normalPipeline = std::make_unique<NormalPipeline>(m_renderer, m_scenePass.get());
 
         m_ssaoPipeline = std::make_unique<SsaoPipeline>(m_renderer, m_aoPass.get());
-        for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        for (int i = 0; i < Renderer::NumVirtualFrames; i++)
         {
             m_ssaoSetGroups[i] = { m_ssaoPipeline->allocateDescriptorSet(0) };
             m_ssaoSetGroups[i].postImageUpdate(0,  0, m_scenePass->getRenderTargetView(0, i)->getDescriptorInfo(m_nearestSampler->getHandle()));
@@ -108,7 +108,7 @@ namespace crisp
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        m_sceneImageView = m_aoPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_aoPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
@@ -134,11 +134,11 @@ namespace crisp
 
         m_scenePass->recreate();
         m_aoPass->recreate();
-        m_sceneImageView = m_aoPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_aoPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
 
-        for (int i = 0; i < VulkanRenderer::NumVirtualFrames; i++)
+        for (int i = 0; i < Renderer::NumVirtualFrames; i++)
         {
             m_ssaoSetGroups[i].postImageUpdate(0, 0, m_scenePass->getRenderTargetView(0, i)->getDescriptorInfo(m_nearestSampler->getHandle()));
             m_ssaoSetGroups[i].flushUpdates(m_device);

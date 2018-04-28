@@ -8,7 +8,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class VulkanDevice;
     class VulkanRenderPass;
     class VulkanImageView;
@@ -22,7 +22,7 @@ namespace crisp
     class Skybox
     {
     public:
-        Skybox(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        Skybox(Renderer* renderer, VulkanRenderPass* renderPass);
         ~Skybox();
 
         void updateTransforms(const glm::mat4& P, const glm::mat4& V);
@@ -33,7 +33,7 @@ namespace crisp
         VulkanImageView* getSkyboxView() const;
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
         VulkanDevice*   m_device;
 
         std::unique_ptr<MeshGeometry> m_cubeGeometry;

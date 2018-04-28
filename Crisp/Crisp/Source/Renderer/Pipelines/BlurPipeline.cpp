@@ -1,12 +1,12 @@
 #include "BlurPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 
 namespace crisp
 {
-    BlurPipeline::BlurPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    BlurPipeline::BlurPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 1, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(
@@ -21,9 +21,9 @@ namespace crisp
 
         m_descriptorPool = createDescriptorPool(
         {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VulkanRenderer::NumVirtualFrames },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VulkanRenderer::NumVirtualFrames },
-        }, VulkanRenderer::NumVirtualFrames);
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Renderer::NumVirtualFrames },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Renderer::NumVirtualFrames },
+        }, Renderer::NumVirtualFrames);
 
         m_vertShader = renderer->getShaderModule("blur-vert");
         m_fragShader = renderer->getShaderModule("blur-frag");

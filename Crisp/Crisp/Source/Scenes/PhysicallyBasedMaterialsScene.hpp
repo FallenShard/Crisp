@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 #include "Geometry/TransformPack.hpp"
 #include "Scene.hpp"
@@ -11,7 +11,7 @@ namespace crisp
 
     class CameraController;
 
-    class VulkanRenderer;
+    class Renderer;
     class VulkanDevice;
     class VulkanSampler;
     class VulkanPipeline;
@@ -27,7 +27,7 @@ namespace crisp
     class PhysicallyBasedMaterialsScene : public Scene
     {
     public:
-        PhysicallyBasedMaterialsScene(VulkanRenderer* renderer, Application* app);
+        PhysicallyBasedMaterialsScene(Renderer* renderer, Application* app);
         ~PhysicallyBasedMaterialsScene();
 
         virtual void resize(int width, int height) override;
@@ -36,7 +36,7 @@ namespace crisp
         virtual void render() override;
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
         VulkanDevice*   m_device;
         Application*    m_app;
 
@@ -59,7 +59,7 @@ namespace crisp
 
         std::unique_ptr<SceneRenderPass> m_mainPass;
         std::unique_ptr<VulkanPipeline> m_physBasedPipeline;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_physBasedDesc;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_physBasedDesc;
 
         // Scene to screen compositing
         std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;

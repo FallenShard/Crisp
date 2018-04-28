@@ -225,7 +225,7 @@ popd</Command>
     <ClCompile Include="Source\Vulkan\VulkanImage.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanQueue.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanQueueConfiguration.cpp" />
-    <ClCompile Include="Source\Renderer\VulkanRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanRenderPass.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanSampler.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanSwapChain.cpp" />
@@ -351,7 +351,7 @@ popd</Command>
     <ClInclude Include="Source\Vulkan\VulkanImage.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanQueue.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanQueueConfiguration.hpp" />
-    <ClInclude Include="Source\Renderer\VulkanRenderer.hpp" />
+    <ClInclude Include="Source\Renderer\Renderer.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanRenderPass.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanResource.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanSampler.hpp" />

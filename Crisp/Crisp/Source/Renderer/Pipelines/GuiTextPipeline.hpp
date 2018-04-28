@@ -15,7 +15,7 @@ namespace crisp
             Count
         };
 
-        GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        GuiTextPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

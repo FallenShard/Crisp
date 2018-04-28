@@ -2,12 +2,12 @@
 
 #include "Vulkan/VulkanFormatTraits.hpp"
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 
 namespace crisp
 {
-    ColorAndShadowPipeline::ColorAndShadowPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    ColorAndShadowPipeline::ColorAndShadowPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 2, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(
@@ -29,9 +29,9 @@ namespace crisp
 
         m_descriptorPool = createDescriptorPool(
         {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VulkanRenderer::NumVirtualFrames },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * VulkanRenderer::NumVirtualFrames }
-        }, 1 + VulkanRenderer::NumVirtualFrames);
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Renderer::NumVirtualFrames },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * Renderer::NumVirtualFrames }
+        }, 1 + Renderer::NumVirtualFrames);
 
         m_vertShader = renderer->getShaderModule("color-and-shadow-vert");
         m_fragShader = renderer->getShaderModule("color-and-shadow-frag");

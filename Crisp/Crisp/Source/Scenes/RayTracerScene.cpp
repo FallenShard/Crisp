@@ -14,7 +14,7 @@
 
 namespace crisp
 {
-    RayTracerScene::RayTracerScene(VulkanRenderer* renderer, Application* app)
+    RayTracerScene::RayTracerScene(Renderer* renderer, Application* app)
         : m_numChannels(4)
         , m_progress(0.0f)
         , m_timeSpentRendering(0.0f)

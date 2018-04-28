@@ -2,7 +2,7 @@
 
 #include "Camera/CameraController.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 
@@ -15,7 +15,7 @@
 
 namespace crisp
 {
-    BoxVisualizer::BoxVisualizer(VulkanRenderer* renderer, uint32_t numBoxes, uint32_t numFrusta, VulkanRenderPass* renderPass)
+    BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, uint32_t numFrusta, VulkanRenderPass* renderPass)
         : m_renderer(renderer)
         , m_numBoxes(numBoxes)
         , m_numFrusta(numFrusta)

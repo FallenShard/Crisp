@@ -1,11 +1,11 @@
 #include "SkyboxPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    SkyboxPipeline::SkyboxPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
+    SkyboxPipeline::SkyboxPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
         : VulkanPipeline(renderer, 1, renderPass)
         , m_subpass(subpass)
     {

@@ -1,13 +1,13 @@
 #include "UniformMultiBuffer.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    UniformMultiBuffer::UniformMultiBuffer(VulkanRenderer* renderer, VkDeviceSize initialSize, VkDeviceSize resSize, const void* data)
+    UniformMultiBuffer::UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize resSize, const void* data)
         : m_renderer(renderer)
         , m_singleRegionSize(initialSize)
-        , m_buffers(VulkanRenderer::NumVirtualFrames)
+        , m_buffers(Renderer::NumVirtualFrames)
     {
         auto device = m_renderer->getDevice();
 

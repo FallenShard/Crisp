@@ -7,7 +7,7 @@ namespace crisp
     class LiquidPipeline : public VulkanPipeline
     {
     public:
-        LiquidPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        LiquidPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

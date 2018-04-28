@@ -1,20 +1,20 @@
 #include "Texture.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
 #include "vulkan/VulkanImageView.hpp"
 
 namespace crisp
 {
-    Texture::Texture(VulkanRenderer* renderer, VkExtent3D extent, uint32_t numLayers, VkFormat format,
+    Texture::Texture(Renderer* renderer, VkExtent3D extent, uint32_t numLayers, VkFormat format,
         VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
         : m_renderer(renderer)
     {
         m_image = std::make_unique<VulkanImage>(renderer->getDevice(), extent, numLayers, 1, format, usage, aspect, createFlags);
     }
 
-    Texture::Texture(VulkanRenderer* renderer, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
+    Texture::Texture(Renderer* renderer, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
         VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
         : m_renderer(renderer)
     {

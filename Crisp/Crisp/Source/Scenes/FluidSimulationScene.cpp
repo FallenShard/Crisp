@@ -12,7 +12,7 @@
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "vulkan/VulkanImageView.hpp"
 #include "vulkan/VulkanImage.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "vulkan/VulkanSampler.hpp"
 
@@ -21,7 +21,7 @@
 
 namespace crisp
 {
-    FluidSimulationScene::FluidSimulationScene(VulkanRenderer* renderer, Application* app)
+    FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_app(app)
         , m_device(m_renderer->getDevice())
@@ -64,7 +64,7 @@ namespace crisp
 
         m_scenePass->recreate();
 
-        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
     }
@@ -132,7 +132,7 @@ namespace crisp
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);

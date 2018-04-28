@@ -7,7 +7,7 @@ namespace crisp
     class VarianceShadowMapPass : public VulkanRenderPass
     {
     public:
-        VarianceShadowMapPass(VulkanRenderer* renderer, unsigned int shadowMapSize);
+        VarianceShadowMapPass(Renderer* renderer, unsigned int shadowMapSize);
 
     protected:
         virtual void createResources() override;

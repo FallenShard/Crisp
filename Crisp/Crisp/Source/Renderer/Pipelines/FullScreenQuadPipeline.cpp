@@ -1,11 +1,11 @@
 #include "FullScreenQuadPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    FullScreenQuadPipeline::FullScreenQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection)
+    FullScreenQuadPipeline::FullScreenQuadPipeline(Renderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection)
         : VulkanPipeline(renderer, 1, renderPass)
     {
         m_descriptorSetLayouts[DisplayedImage] = createDescriptorSetLayout(

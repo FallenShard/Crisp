@@ -7,7 +7,7 @@ namespace crisp
     class ShadowMapPipeline : public VulkanPipeline
     {
     public:
-        ShadowMapPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass = 0);
+        ShadowMapPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass = 0);
 
     protected:
         virtual void create(int width, int height) override;

@@ -1,6 +1,6 @@
 #include "BlurPass.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/RenderPassBuilder.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-    BlurPass::BlurPass(VulkanRenderer* renderer, VkFormat format, VkExtent2D renderArea)
+    BlurPass::BlurPass(Renderer* renderer, VkFormat format, VkExtent2D renderArea)
         : VulkanRenderPass(renderer)
         , m_colorFormat(format)
     {
@@ -35,7 +35,7 @@ namespace crisp
     {
         m_renderTargets.resize(1);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        auto numLayers = VulkanRenderer::NumVirtualFrames;
+        auto numLayers = Renderer::NumVirtualFrames;
 
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, m_colorFormat,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);

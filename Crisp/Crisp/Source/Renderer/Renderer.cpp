@@ -1,4 +1,4 @@
-#include "VulkanRenderer.hpp"
+#include "Renderer.hpp"
 
 #define NOMINMAX
 
@@ -26,7 +26,7 @@ namespace crisp
         static constexpr auto shadersDir = "Resources/Shaders/";
     }
 
-    VulkanRenderer::VulkanRenderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions)
+    Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions)
         : m_framesRendered(0)
         , m_currentFrameIndex(0)
     {
@@ -80,7 +80,7 @@ namespace crisp
         m_fsQuadIndexBuffer = std::make_unique<IndexBuffer>(this, faces);
     }
 
-    VulkanRenderer::~VulkanRenderer()
+    Renderer::~Renderer()
     {
         for (auto& frameRes : m_frameResources)
         {
@@ -96,64 +96,64 @@ namespace crisp
         }
     }
 
-    VulkanContext* VulkanRenderer::getContext() const
+    VulkanContext* Renderer::getContext() const
     {
         return m_context.get();
     }
 
-    VulkanDevice* VulkanRenderer::getDevice() const
+    VulkanDevice* Renderer::getDevice() const
     {
         return m_device.get();
     }
 
-    VulkanSwapChain* VulkanRenderer::getSwapChain() const
+    VulkanSwapChain* Renderer::getSwapChain() const
     {
         return m_swapChain.get();
     }
 
-    VkExtent2D VulkanRenderer::getSwapChainExtent() const
+    VkExtent2D Renderer::getSwapChainExtent() const
     {
         return m_swapChain->getExtent();
     }
 
-    DefaultRenderPass* VulkanRenderer::getDefaultRenderPass() const
+    DefaultRenderPass* Renderer::getDefaultRenderPass() const
     {
         return m_defaultRenderPass.get();
     }
 
-    VkViewport VulkanRenderer::getDefaultViewport() const
+    VkViewport Renderer::getDefaultViewport() const
     {
         return m_defaultViewport;
     }
 
-    VkRect2D VulkanRenderer::getDefaultScissor() const
+    VkRect2D Renderer::getDefaultScissor() const
     {
         return { {0, 0}, getSwapChainExtent() };
     }
 
-    VkShaderModule VulkanRenderer::getShaderModule(std::string&& key) const
+    VkShaderModule Renderer::getShaderModule(std::string&& key) const
     {
         return m_shaderModules.at(key);
     }
 
-    void VulkanRenderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const
+    void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const
     {
         vkCmdSetViewport(cmdBuffer, 0, 1, &m_defaultViewport);
     }
 
-    void VulkanRenderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const
+    void Renderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const
     {
         m_fsQuadVertexBufferBindingGroup.bind(cmdBuffer);
         m_fsQuadIndexBuffer->bind(cmdBuffer, 0);
         vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
     }
 
-    uint32_t VulkanRenderer::getCurrentVirtualFrameIndex() const
+    uint32_t Renderer::getCurrentVirtualFrameIndex() const
     {
         return m_currentFrameIndex;
     }
 
-    void VulkanRenderer::resize(int width, int height)
+    void Renderer::resize(int width, int height)
     {
         recreateSwapChain();
 
@@ -166,32 +166,32 @@ namespace crisp
         flushResourceUpdates();
     }
 
-    void VulkanRenderer::registerPipeline(VulkanPipeline* pipeline)
+    void Renderer::registerPipeline(VulkanPipeline* pipeline)
     {
         m_pipelines.insert(pipeline);
     }
 
-    void VulkanRenderer::unregisterPipeline(VulkanPipeline* pipeline)
+    void Renderer::unregisterPipeline(VulkanPipeline* pipeline)
     {
         m_pipelines.erase(pipeline);
     }
 
-    void VulkanRenderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
+    void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
     {
         m_resourceUpdates.emplace_back(resourceUpdate);
     }
 
-    void VulkanRenderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
+    void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
     {
         m_defaultPassDrawCommands.emplace_back(drawAction);
     }
 
-    void VulkanRenderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
+    void Renderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
     {
         m_drawCommands.emplace_back(drawAction);
     }
 
-    void VulkanRenderer::flushResourceUpdates()
+    void Renderer::flushResourceUpdates()
     {
         if (m_resourceUpdates.empty())
             return;
@@ -225,7 +225,7 @@ namespace crisp
         m_resourceUpdates.clear();
     }
 
-    void VulkanRenderer::drawFrame()
+    void Renderer::drawFrame()
     {
         auto cmdBuffer = acquireCommandBuffer();
 
@@ -256,12 +256,12 @@ namespace crisp
         m_currentFrameIndex = (m_currentFrameIndex + 1) % NumVirtualFrames;
     }
 
-    void VulkanRenderer::finish()
+    void Renderer::finish()
     {
         vkDeviceWaitIdle(m_device->getHandle());
     }
 
-    void VulkanRenderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
+    void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
         auto stagingBuffer = std::make_shared<VulkanBuffer>(m_device.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         stagingBuffer->updateFromHost(data, size, 0);
@@ -273,13 +273,13 @@ namespace crisp
         });
     }
 
-    void VulkanRenderer::scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive)
+    void Renderer::scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive)
     {
         if (m_removedBuffers.find(buffer) == m_removedBuffers.end())
             m_removedBuffers.emplace(buffer, framesToLive);
     }
 
-    void VulkanRenderer::destroyResourcesScheduledForRemoval()
+    void Renderer::destroyResourcesScheduledForRemoval()
     {
         if (!m_removedBuffers.empty())
         {
@@ -298,7 +298,7 @@ namespace crisp
         }
     }
 
-    void VulkanRenderer::loadShaders(std::string dirPath)
+    void Renderer::loadShaders(std::string dirPath)
     {
         auto files = FileUtils::enumerateFiles(dirPath, "spv");
         for (auto& file : files)
@@ -324,14 +324,14 @@ namespace crisp
         }
     }
 
-    VkCommandBuffer VulkanRenderer::acquireCommandBuffer()
+    VkCommandBuffer Renderer::acquireCommandBuffer()
     {
         vkWaitForFences(m_device->getHandle(), 1, &m_frameResources[m_currentFrameIndex].bufferFinishedFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
         vkResetFences(m_device->getHandle(),   1, &m_frameResources[m_currentFrameIndex].bufferFinishedFence);
         return m_frameResources[m_currentFrameIndex].cmdBuffer;
     }
 
-    std::optional<uint32_t> VulkanRenderer::acquireSwapChainImageIndex()
+    std::optional<uint32_t> Renderer::acquireSwapChainImageIndex()
     {
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(), std::numeric_limits<uint64_t>::max(), m_frameResources[m_currentFrameIndex].imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
@@ -349,12 +349,12 @@ namespace crisp
         return imageIndex;
     }
 
-    void VulkanRenderer::resetCommandBuffer(VkCommandBuffer cmdBuffer)
+    void Renderer::resetCommandBuffer(VkCommandBuffer cmdBuffer)
     {
         vkResetCommandBuffer(cmdBuffer, 0);
     }
 
-    void VulkanRenderer::record(VkCommandBuffer commandBuffer)
+    void Renderer::record(VkCommandBuffer commandBuffer)
     {
         VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -376,7 +376,7 @@ namespace crisp
         vkEndCommandBuffer(commandBuffer);
     }
 
-    void VulkanRenderer::present(uint32_t swapChainImageIndex)
+    void Renderer::present(uint32_t swapChainImageIndex)
     {
         auto result = m_device->getGeneralQueue()->present(
             m_frameResources[m_currentFrameIndex].renderFinishedSemaphore,
@@ -392,7 +392,7 @@ namespace crisp
         }
     }
 
-    void VulkanRenderer::recreateSwapChain()
+    void Renderer::recreateSwapChain()
     {
         vkDeviceWaitIdle(m_device->getHandle());
 

@@ -1,12 +1,12 @@
 #include "VarianceShadowMapPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 
 namespace crisp
 {
-    VarianceShadowMapPipeline::VarianceShadowMapPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    VarianceShadowMapPipeline::VarianceShadowMapPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 1, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(
@@ -19,7 +19,7 @@ namespace crisp
 
         m_descriptorPool = createDescriptorPool(
         {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VulkanRenderer::NumVirtualFrames }
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Renderer::NumVirtualFrames }
         }, 1);
 
         m_vertShader = renderer->getShaderModule("variance-shadow-map-vert");

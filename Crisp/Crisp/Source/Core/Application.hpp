@@ -13,7 +13,7 @@ namespace crisp
 {
     class Window;
     class InputDispatcher;
-    class VulkanRenderer;
+    class Renderer;
     class BackgroundImage;
     class RayTracedImage;
     class SceneContainer;
@@ -50,12 +50,12 @@ namespace crisp
 
     private:
         std::unique_ptr<Window>         createWindow();
-        std::unique_ptr<VulkanRenderer> createRenderer();
+        std::unique_ptr<Renderer> createRenderer();
 
         FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;
 
         std::unique_ptr<Window>          m_window;
-        std::unique_ptr<VulkanRenderer>  m_renderer;
+        std::unique_ptr<Renderer>  m_renderer;
 
         std::unique_ptr<gui::Form> m_guiForm;
 

@@ -7,7 +7,7 @@ namespace crisp
     class BlurPipeline : public VulkanPipeline
     {
     public:
-        BlurPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        BlurPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

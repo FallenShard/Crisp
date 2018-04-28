@@ -7,12 +7,12 @@
 
 #include "Geometry/TransformPack.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
     class Application;
-    class VulkanRenderer;
+    class Renderer;
     class VulkanDevice;
 
     class CameraController;
@@ -31,7 +31,7 @@ namespace crisp
     class AmbientOcclusionScene : public Scene
     {
     public:
-        AmbientOcclusionScene(VulkanRenderer* renderer, Application* app);
+        AmbientOcclusionScene(Renderer* renderer, Application* app);
         ~AmbientOcclusionScene();
 
         virtual void resize(int width, int height) override;
@@ -42,7 +42,7 @@ namespace crisp
         void setRadius(double radius);
 
     private:
-        VulkanRenderer*  m_renderer;
+        Renderer*  m_renderer;
         VulkanDevice*    m_device;
         Application*     m_app;
 
@@ -50,7 +50,7 @@ namespace crisp
 
         std::unique_ptr<AmbientOcclusionPass> m_aoPass;
         std::unique_ptr<VulkanPipeline> m_ssaoPipeline;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_ssaoSetGroups;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_ssaoSetGroups;
 
         std::unique_ptr<SceneRenderPass> m_scenePass;
         std::unique_ptr<UniformBuffer> m_cameraBuffer;

@@ -2,7 +2,7 @@
 
 namespace crisp
 {
-    TestScene::TestScene(VulkanRenderer* renderer, Application* app)
+    TestScene::TestScene(Renderer* renderer, Application* app)
     {
     }
 

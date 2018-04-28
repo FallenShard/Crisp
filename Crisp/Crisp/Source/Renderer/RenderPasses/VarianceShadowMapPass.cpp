@@ -1,6 +1,6 @@
 #include "VarianceShadowMapPass.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/RenderPassBuilder.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-    VarianceShadowMapPass::VarianceShadowMapPass(VulkanRenderer* renderer, unsigned int shadowMapSize)
+    VarianceShadowMapPass::VarianceShadowMapPass(Renderer* renderer, unsigned int shadowMapSize)
         : VulkanRenderPass(renderer)
     {
         m_clearValues.resize(2);
@@ -40,7 +40,7 @@ namespace crisp
     void VarianceShadowMapPass::createResources()
     {
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        auto numLayers = VulkanRenderer::NumVirtualFrames;
+        auto numLayers = Renderer::NumVirtualFrames;
 
         m_renderTargets.resize(2);
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32_SFLOAT,

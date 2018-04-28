@@ -10,12 +10,12 @@ namespace crisp
     class VulkanImage;
     class VulkanImageView;
     class VulkanFramebuffer;
-    class VulkanRenderer;
+    class Renderer;
 
     class VulkanRenderPass : public VulkanResource<VkRenderPass>
     {
     public:
-        VulkanRenderPass(VulkanRenderer* renderer);
+        VulkanRenderPass(Renderer* renderer);
         virtual ~VulkanRenderPass();
         void recreate();
 
@@ -35,7 +35,7 @@ namespace crisp
         virtual void createResources() = 0;
         void freeResources();
 
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         VkExtent2D m_renderArea;
 

@@ -11,7 +11,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
 
     namespace internal
     {
@@ -24,10 +24,10 @@ namespace crisp
     class IndexBuffer
     {
     public:
-        IndexBuffer(VulkanRenderer* renderer, VkIndexType indexType, BufferUpdatePolicy updatePolicy, size_t size, const void* data = nullptr);
+        IndexBuffer(Renderer* renderer, VkIndexType indexType, BufferUpdatePolicy updatePolicy, size_t size, const void* data = nullptr);
 
         template <typename T>
-        IndexBuffer(VulkanRenderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
+        IndexBuffer(Renderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
             : IndexBuffer(renderer, internal::IndexTypeTrait<T>::value, updatePolicy, data.size() * sizeof(T), data.data()) {}
 
         ~IndexBuffer();
@@ -47,7 +47,7 @@ namespace crisp
         void bind(VkCommandBuffer& commandBuffer, VkDeviceSize offset);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         BufferUpdatePolicy m_updatePolicy;
         VkDeviceSize m_singleRegionSize;

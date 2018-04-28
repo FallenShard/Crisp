@@ -13,7 +13,7 @@ namespace crisp
 
             Count
         };
-        GuiColorQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        GuiColorQuadPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

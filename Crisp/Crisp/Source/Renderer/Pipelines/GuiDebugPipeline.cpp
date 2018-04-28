@@ -1,11 +1,11 @@
 #include "GuiDebugPipeline.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "vulkan/VulkanDevice.hpp"
 
 namespace crisp
 {
-    GuiDebugPipeline::GuiDebugPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    GuiDebugPipeline::GuiDebugPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 0, renderPass)
     {
         m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts,

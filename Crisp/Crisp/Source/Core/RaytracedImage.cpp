@@ -8,12 +8,12 @@
 #include "Vulkan/VulkanSampler.hpp"
 
 #include "Renderer/Texture.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 
 namespace crisp
 {
-    RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer* renderer)
+    RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, VkFormat format, Renderer* renderer)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
         , m_extent({ width, height, 1u })
@@ -30,13 +30,13 @@ namespace crisp
         m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         m_stagingBuffer->updateFromHost(data.data(), byteSize);
 
-        m_texture = std::make_unique<Texture>(m_renderer, m_extent, VulkanRenderer::NumVirtualFrames, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+        m_texture = std::make_unique<Texture>(m_renderer, m_extent, Renderer::NumVirtualFrames, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
         m_texture->fill(*m_stagingBuffer, byteSize, 0, 1);
         m_texture->fill(*m_stagingBuffer, byteSize, 1, 1);
         m_texture->fill(*m_stagingBuffer, byteSize, 2, 1);
 
         // create view
-        m_VulkanImageView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, VulkanRenderer::NumVirtualFrames);
+        m_VulkanImageView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, Renderer::NumVirtualFrames);
         m_updatedImageIndex = 0;
 
         // create sampler
@@ -56,7 +56,7 @@ namespace crisp
     void RayTracedImage::postTextureUpdate(vesper::RayTracerUpdate update)
     {
         // Add an update that stretches over three frames
-        m_textureUpdates.emplace_back(std::make_pair(VulkanRenderer::NumVirtualFrames, update));
+        m_textureUpdates.emplace_back(std::make_pair(Renderer::NumVirtualFrames, update));
 
         uint32_t rowSize = update.width * m_numChannels * sizeof(float);
         for (int i = 0; i < update.height; i++)
@@ -75,7 +75,7 @@ namespace crisp
         {
             m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
             {
-                m_updatedImageIndex = (m_updatedImageIndex + 1) % VulkanRenderer::NumVirtualFrames;
+                m_updatedImageIndex = (m_updatedImageIndex + 1) % Renderer::NumVirtualFrames;
 
                 // Transition the destination image layer into transfer destination
                 VkImageMemoryBarrier toCopyBarrierDst = {};

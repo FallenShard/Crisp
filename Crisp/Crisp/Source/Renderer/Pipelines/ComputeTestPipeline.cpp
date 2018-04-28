@@ -1,11 +1,11 @@
 #include "ComputeTestPipeline.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "vulkan/VulkanDevice.hpp"
 
 namespace crisp
 {
-    ComputeTestPipeline::ComputeTestPipeline(VulkanRenderer* renderer)
+    ComputeTestPipeline::ComputeTestPipeline(Renderer* renderer)
         : VulkanPipeline(renderer, 1, nullptr)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(

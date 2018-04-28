@@ -7,7 +7,7 @@ namespace crisp
     class NormalMapPipeline : public VulkanPipeline
     {
     public:
-        NormalMapPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        NormalMapPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

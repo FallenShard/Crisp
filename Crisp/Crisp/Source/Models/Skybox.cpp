@@ -2,7 +2,7 @@
 
 #include "IO/ImageFileBuffer.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/Pipelines/SkyboxPipeline.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/Texture.hpp"
@@ -14,7 +14,7 @@
 
 namespace crisp
 {
-    Skybox::Skybox(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    Skybox::Skybox(Renderer* renderer, VulkanRenderPass* renderPass)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
     {

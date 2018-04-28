@@ -9,15 +9,15 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
 
     class VertexBuffer
     {
     public:
-        VertexBuffer(VulkanRenderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
+        VertexBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
 
         template <typename T>
-        VertexBuffer(VulkanRenderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
+        VertexBuffer(Renderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
             : VertexBuffer(renderer, data.size() * sizeof(T), updatePolicy, data.data()) {}
 
         ~VertexBuffer();
@@ -41,7 +41,7 @@ namespace crisp
         void updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         BufferUpdatePolicy            m_updatePolicy;
         VkDeviceSize                  m_singleRegionSize;

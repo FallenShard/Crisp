@@ -13,7 +13,7 @@
 #include "Vulkan/VulkanSampler.hpp"
 #include "vulkan/VulkanDescriptorSet.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/GuiColorQuadPipeline.hpp"
 #include "Renderer/Pipelines/GuiTextPipeline.hpp"
@@ -28,7 +28,7 @@
 
 namespace crisp::gui
 {
-    RenderSystem::RenderSystem(VulkanRenderer* renderer)
+    RenderSystem::RenderSystem(Renderer* renderer)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
     {
@@ -53,7 +53,7 @@ namespace crisp::gui
         initGeometryBuffers();
 
         // Initialize resources to support dynamic addition of MVP transform resources
-        std::array<VkDescriptorSet, VulkanRenderer::NumVirtualFrames> transformAndColorSets =
+        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> transformAndColorSets =
         {
             m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle(),
             m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle(),
@@ -65,7 +65,7 @@ namespace crisp::gui
         m_colors = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
         // Initialize resources to support dynamic addition of textured controls
-        std::array<VkDescriptorSet, VulkanRenderer::NumVirtualFrames> tcSets =
+        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> tcSets =
         {
             m_texQuadPipeline->allocateDescriptorSet(1).getHandle(),
             m_texQuadPipeline->allocateDescriptorSet(1).getHandle(),
@@ -233,7 +233,7 @@ namespace crisp::gui
                 auto textRes = textResource.get();
                 if (!textRes->isUpdatedOnDevice)
                 {
-                    textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % VulkanRenderer::NumVirtualFrames;
+                    textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % Renderer::NumVirtualFrames;
                     textRes->geomData.vertexBufferGroup.offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
                     textRes->geomData.indexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
                     textRes->geomData.vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
@@ -295,7 +295,7 @@ namespace crisp::gui
         m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f, static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
         m_guiPass->recreate();
-        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
 
         VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo();
 
@@ -415,7 +415,7 @@ namespace crisp::gui
         m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage).getHandle();
 
         // Create a view to the render target
-        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
 
         VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
@@ -545,7 +545,7 @@ namespace crisp::gui
         m_lineLoopGeometry.drawIndexed(cmdBuffer);
     }
 
-    void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, Font* font, VulkanRenderer* renderer)
+    void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, Font* font, Renderer* renderer)
     {
         std::vector<glm::vec4> textVertices;
         std::vector<glm::u16vec3> textFaces;

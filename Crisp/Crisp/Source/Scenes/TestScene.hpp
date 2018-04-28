@@ -4,13 +4,13 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class Application;
 
     class TestScene : public Scene
     {
     public:
-        TestScene(VulkanRenderer* renderer, Application* app);
+        TestScene(Renderer* renderer, Application* app);
         virtual ~TestScene();
 
         virtual void resize(int width, int height) override;

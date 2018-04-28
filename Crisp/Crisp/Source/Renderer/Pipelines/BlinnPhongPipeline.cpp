@@ -2,11 +2,11 @@
 
 #include "Vulkan/VulkanFormatTraits.hpp"
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    BlinnPhongPipeline::BlinnPhongPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    BlinnPhongPipeline::BlinnPhongPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 2, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(

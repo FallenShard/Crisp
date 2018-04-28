@@ -7,7 +7,7 @@ namespace crisp
     class VarianceShadowMapPipeline : public VulkanPipeline
     {
     public:
-        VarianceShadowMapPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        VarianceShadowMapPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

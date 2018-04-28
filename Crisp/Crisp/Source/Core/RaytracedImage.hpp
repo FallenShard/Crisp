@@ -11,7 +11,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class VulkanDevice;
     class VulkanBuffer;
     class VulkanSampler;
@@ -22,7 +22,7 @@ namespace crisp
     class RayTracedImage
     {
     public:
-        RayTracedImage(uint32_t width, uint32_t height, VkFormat format, VulkanRenderer* renderer);
+        RayTracedImage(uint32_t width, uint32_t height, VkFormat format, Renderer* renderer);
         ~RayTracedImage();
 
         void postTextureUpdate(vesper::RayTracerUpdate rayTracerUpdate);
@@ -31,7 +31,7 @@ namespace crisp
         void resize(int width, int height);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
         VulkanDevice*   m_device;
 
         std::unique_ptr<FullScreenQuadPipeline> m_pipeline;

@@ -1,10 +1,10 @@
 #include "IndexBuffer.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    IndexBuffer::IndexBuffer(VulkanRenderer* renderer, VkIndexType indexType, BufferUpdatePolicy updatePolicy, size_t size, const void* data)
+    IndexBuffer::IndexBuffer(Renderer* renderer, VkIndexType indexType, BufferUpdatePolicy updatePolicy, size_t size, const void* data)
         : m_renderer(renderer)
         , m_indexType(indexType)
         , m_updatePolicy(updatePolicy)
@@ -24,7 +24,7 @@ namespace crisp
         }
         else if (m_updatePolicy == BufferUpdatePolicy::PerFrame)
         {
-            m_buffer = std::make_unique<VulkanBuffer>(device, VulkanRenderer::NumVirtualFrames * size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            m_buffer = std::make_unique<VulkanBuffer>(device, Renderer::NumVirtualFrames * size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
             auto stagingUsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
             auto stagingMemoryProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;

@@ -1,13 +1,13 @@
 #include "UniformBuffer.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    UniformBuffer::UniformBuffer(VulkanRenderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
+    UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
         : m_renderer(renderer)
         , m_updatePolicy(updatePolicy)
-        , m_framesToUpdateOnGpu(VulkanRenderer::NumVirtualFrames)
+        , m_framesToUpdateOnGpu(Renderer::NumVirtualFrames)
     {
         auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         auto device = m_renderer->getDevice();
@@ -26,7 +26,7 @@ namespace crisp
         else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) // Setup triple buffering
         {
             m_singleRegionSize = std::max(size, SizeGranularity);
-            m_buffer = std::make_unique<VulkanBuffer>(device, VulkanRenderer::NumVirtualFrames * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            m_buffer = std::make_unique<VulkanBuffer>(device, Renderer::NumVirtualFrames * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             m_stagingBuffer = std::make_unique<VulkanBuffer>(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
     }
@@ -38,7 +38,7 @@ namespace crisp
     void UniformBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
         m_stagingBuffer->updateFromHost(data, size, offset);
-        m_framesToUpdateOnGpu = VulkanRenderer::NumVirtualFrames;
+        m_framesToUpdateOnGpu = Renderer::NumVirtualFrames;
     }
 
     void UniformBuffer::updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex)

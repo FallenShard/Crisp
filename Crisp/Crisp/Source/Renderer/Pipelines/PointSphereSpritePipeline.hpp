@@ -7,7 +7,7 @@ namespace crisp
     class PointSphereSpritePipeline : public VulkanPipeline
     {
     public:
-        PointSphereSpritePipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        PointSphereSpritePipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

@@ -23,7 +23,7 @@ namespace crisp
         static const std::string materialTexPath = "Resources/Textures/PbrMaterials/RustedIron/";
     }
 
-    PhysicallyBasedMaterialsScene::PhysicallyBasedMaterialsScene(VulkanRenderer* renderer, Application* app)
+    PhysicallyBasedMaterialsScene::PhysicallyBasedMaterialsScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
         , m_app(app)
@@ -77,7 +77,7 @@ namespace crisp
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        m_sceneImageView = m_mainPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_mainPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
@@ -93,7 +93,7 @@ namespace crisp
         m_cameraController->resize(width, height);
 
         m_mainPass->recreate();
-        m_sceneImageView = m_mainPass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_mainPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
     }

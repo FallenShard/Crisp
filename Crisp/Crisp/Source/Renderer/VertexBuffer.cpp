@@ -1,10 +1,10 @@
 #include "VertexBuffer.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    VertexBuffer::VertexBuffer(VulkanRenderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
+    VertexBuffer::VertexBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
         : m_renderer(renderer)
         , m_updatePolicy(updatePolicy)
     {
@@ -23,7 +23,7 @@ namespace crisp
         }
         else if (m_updatePolicy == BufferUpdatePolicy::PerFrame)
         {
-            m_buffer = std::make_unique<VulkanBuffer>(device, VulkanRenderer::NumVirtualFrames * size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            m_buffer = std::make_unique<VulkanBuffer>(device, Renderer::NumVirtualFrames * size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             m_stagingBuffer = std::make_unique<VulkanBuffer>(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
 

@@ -36,7 +36,7 @@ namespace crisp
         }
     }
 
-    SceneContainer::SceneContainer(VulkanRenderer* renderer, Application* app)
+    SceneContainer::SceneContainer(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_application(app)
     {

@@ -16,7 +16,7 @@ namespace crisp
             Count
         };
 
-        LiquidRenderPass(VulkanRenderer* renderer);
+        LiquidRenderPass(Renderer* renderer);
 
     protected:
         virtual void createResources() override;

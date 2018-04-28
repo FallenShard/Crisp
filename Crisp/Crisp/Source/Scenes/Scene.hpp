@@ -2,7 +2,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class InputDispatcher;
     class Application;
 

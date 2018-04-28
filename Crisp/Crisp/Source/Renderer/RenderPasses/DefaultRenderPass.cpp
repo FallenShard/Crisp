@@ -1,6 +1,6 @@
 #include "DefaultRenderPass.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/RenderPassBuilder.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
@@ -10,7 +10,7 @@
 
 namespace crisp
 {
-    DefaultRenderPass::DefaultRenderPass(VulkanRenderer* renderer)
+    DefaultRenderPass::DefaultRenderPass(Renderer* renderer)
         : VulkanRenderPass(renderer)
     {
         m_clearValues.resize(1);
@@ -44,6 +44,6 @@ namespace crisp
     void DefaultRenderPass::createResources()
     {
         m_renderArea = m_renderer->getSwapChainExtent();
-        m_framebuffers.resize(VulkanRenderer::NumVirtualFrames);
+        m_framebuffers.resize(Renderer::NumVirtualFrames);
     }
 }

@@ -13,7 +13,7 @@ namespace crisp
 {
     class CameraController;
 
-    class VulkanRenderer;
+    class Renderer;
     class UniformBuffer;
     class VertexBuffer;
     class IndexBuffer;
@@ -26,7 +26,7 @@ namespace crisp
     class BoxVisualizer
     {
     public:
-        BoxVisualizer(VulkanRenderer* renderer, uint32_t numBoxes, uint32_t numFrusta, VulkanRenderPass* renderPass);
+        BoxVisualizer(Renderer* renderer, uint32_t numBoxes, uint32_t numFrusta, VulkanRenderPass* renderPass);
         ~BoxVisualizer();
 
         void update(const glm::mat4& V, const glm::mat4& P);
@@ -38,7 +38,7 @@ namespace crisp
 
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         uint32_t m_numFrusta;
         uint32_t m_numBoxes;

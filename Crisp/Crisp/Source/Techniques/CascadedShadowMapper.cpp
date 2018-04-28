@@ -1,7 +1,7 @@
 #include "CascadedShadowMapper.hpp"
 
 #include "Camera/AbstractCamera.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/RenderPasses/ShadowPass.hpp"
 #include "Renderer/Pipelines/ShadowMapPipeline.hpp"
@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-    CascadedShadowMapper::CascadedShadowMapper(VulkanRenderer* renderer, DirectionalLight light, uint32_t numCascades, UniformBuffer* modelTransformsBuffer)
+    CascadedShadowMapper::CascadedShadowMapper(Renderer* renderer, DirectionalLight light, uint32_t numCascades, UniformBuffer* modelTransformsBuffer)
         : m_renderer(renderer)
         , m_numCascades(numCascades)
         , m_light(light)

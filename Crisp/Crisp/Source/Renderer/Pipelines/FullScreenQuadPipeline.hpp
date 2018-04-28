@@ -13,7 +13,7 @@ namespace crisp
 
             Count
         };
-        FullScreenQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection = false);
+        FullScreenQuadPipeline(Renderer* renderer, VulkanRenderPass* renderPass, bool useGammaCorrection = false);
 
     protected:
         virtual void create(int width, int height) override;

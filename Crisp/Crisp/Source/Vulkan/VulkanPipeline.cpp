@@ -4,11 +4,11 @@
 
 #include "Vulkan/VulkanDevice.hpp"
 #include "Vulkan/VulkanRenderPass.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    VulkanPipeline::VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent)
+    VulkanPipeline::VulkanPipeline(Renderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent)
         : VulkanResource(renderer->getDevice())
         , m_renderer(renderer)
         , m_renderPass(renderPass)

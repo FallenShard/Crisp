@@ -4,11 +4,11 @@
 #include "vulkan/VulkanFramebuffer.hpp"
 #include "Vulkan/VulkanImage.hpp"
 #include "vulkan/VulkanImageView.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    VulkanRenderPass::VulkanRenderPass(VulkanRenderer* renderer)
+    VulkanRenderPass::VulkanRenderPass(Renderer* renderer)
         : VulkanResource(renderer->getDevice())
         , m_renderer(renderer)
     {

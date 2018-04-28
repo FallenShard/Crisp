@@ -15,7 +15,7 @@ namespace crisp
         }
     }
 
-    MeshGeometry::MeshGeometry(VulkanRenderer* renderer, const std::string& filename, std::initializer_list<std::initializer_list<VertexAttribute>> vertexAttributes)
+    MeshGeometry::MeshGeometry(Renderer* renderer, const std::string& filename, std::initializer_list<std::initializer_list<VertexAttribute>> vertexAttributes)
         : m_vertexBuffers(vertexAttributes.size())
     {
         TriangleMesh triangleMesh(filename);
@@ -50,7 +50,7 @@ namespace crisp
         m_numIndices = static_cast<uint32_t>(triangleMesh.getFaces().size()) * 3;
     }
 
-    MeshGeometry::MeshGeometry(VulkanRenderer* renderer, const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes)
+    MeshGeometry::MeshGeometry(Renderer* renderer, const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes)
         : MeshGeometry(renderer, filename, { vertexAttributes })
     {
     }

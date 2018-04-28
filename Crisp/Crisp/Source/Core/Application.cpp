@@ -7,7 +7,7 @@
 
 #include <CrispCore/ConsoleUtils.hpp>
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Core/Window.hpp"
 #include "Core/InputDispatcher.hpp"
 #include "Core/SceneContainer.hpp"
@@ -154,13 +154,13 @@ namespace crisp
         return std::make_unique<Window>((desktopRes - size) / 2, size, Title);
     }
 
-    std::unique_ptr<VulkanRenderer> Application::createRenderer()
+    std::unique_ptr<Renderer> Application::createRenderer()
     {
         auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface)
         {
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
 
-        return std::make_unique<VulkanRenderer>(surfaceCreator, Window::getVulkanExtensions());
+        return std::make_unique<Renderer>(surfaceCreator, Window::getVulkanExtensions());
     }
 }

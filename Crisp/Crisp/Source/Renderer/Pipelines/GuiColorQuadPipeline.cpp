@@ -1,11 +1,11 @@
 #include "GuiColorQuadPipeline.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "vulkan/VulkanDevice.hpp"
 
 namespace crisp
 {
-    GuiColorQuadPipeline::GuiColorQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    GuiColorQuadPipeline::GuiColorQuadPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, DescSets::Count, renderPass)
     {
         m_descriptorSetLayouts[DescSets::TransformAndColor] = createDescriptorSetLayout(

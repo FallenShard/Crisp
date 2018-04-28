@@ -13,7 +13,7 @@ namespace crisp
 {
     class AbstractCamera;
 
-    class VulkanRenderer;
+    class Renderer;
     class UniformBuffer;
 
     class ShadowPass;
@@ -29,7 +29,7 @@ namespace crisp
     class CascadedShadowMapper
     {
     public:
-        CascadedShadowMapper(VulkanRenderer* renderer, DirectionalLight light, uint32_t numCascades, UniformBuffer* modelTransformsBuffer);
+        CascadedShadowMapper(Renderer* renderer, DirectionalLight light, uint32_t numCascades, UniformBuffer* modelTransformsBuffer);
         ~CascadedShadowMapper();
 
         UniformBuffer* getLightTransformsBuffer() const;
@@ -47,7 +47,7 @@ namespace crisp
         VkImage getShadowMap(int idx);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         uint32_t m_numCascades;
         DirectionalLight m_light;

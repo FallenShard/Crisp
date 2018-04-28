@@ -15,7 +15,7 @@
 #include "Renderer/Pipelines/NormalMapPipeline.hpp"
 #include "Vulkan/VulkanImageView.hpp"
 #include "vulkan/VulkanImage.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "vulkan/VulkanSampler.hpp"
 #include "Renderer/Texture.hpp"
@@ -45,7 +45,7 @@ namespace crisp
 
     }
 
-    ShadowMappingScene::ShadowMappingScene(VulkanRenderer* renderer, Application* app)
+    ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_app(app)
         , m_device(m_renderer->getDevice())
@@ -118,7 +118,7 @@ namespace crisp
         m_blurPass = std::make_unique<BlurPass>(m_renderer, VK_FORMAT_R32G32_SFLOAT, VkExtent2D{ 1024, 1024 });
         m_blurPipeline = std::make_unique<BlurPipeline>(m_renderer, m_blurPass.get());
 
-        for (int i = 0; i < VulkanRenderer::NumVirtualFrames; ++i)
+        for (int i = 0; i < Renderer::NumVirtualFrames; ++i)
         {
             m_blurDescGroups[i] = { m_blurPipeline->allocateDescriptorSet(0) };
             m_blurDescGroups[i].postImageUpdate(0, 0, { m_linearClampSampler->getHandle(), m_vsmPass->getRenderTargetView(0, i)->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
@@ -244,7 +244,7 @@ namespace crisp
         //m_blinnPhongDescGroups[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(Transforms)));
         //m_blinnPhongDescGroups[0].postBufferUpdate(0, 1, m_shadowMapper->getLightTransformsBuffer()->getDescriptorInfo());
         //m_blinnPhongDescGroups[0].postBufferUpdate(0, 2, m_cameraBuffer->getDescriptorInfo());
-        //for (uint32_t frameIdx = 0; frameIdx < VulkanRenderer::NumVirtualFrames; frameIdx++)
+        //for (uint32_t frameIdx = 0; frameIdx < Renderer::NumVirtualFrames; frameIdx++)
         //{
         //    for (uint32_t cascadeIdx = 0; cascadeIdx < numCascades; cascadeIdx++)
         //    {
@@ -282,7 +282,7 @@ namespace crisp
             descGroup.flushUpdates(m_device);
         }*/
 
-        m_sceneImageView = m_scenePass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);
     }
@@ -544,7 +544,7 @@ namespace crisp
         m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
         m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
-        m_sceneImageView = m_scenePass->createRenderTargetView(0, VulkanRenderer::NumVirtualFrames);
+        m_sceneImageView = m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
         m_sceneDescSetGroup.flushUpdates(m_device);

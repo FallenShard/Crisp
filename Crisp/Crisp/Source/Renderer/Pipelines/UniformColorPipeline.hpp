@@ -7,7 +7,7 @@ namespace crisp
     class UniformColorPipeline : public VulkanPipeline
     {
     public:
-        UniformColorPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        UniformColorPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

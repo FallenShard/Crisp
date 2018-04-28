@@ -7,7 +7,7 @@ namespace crisp
     class BlurPass : public VulkanRenderPass
     {
     public:
-        BlurPass(VulkanRenderer* renderer, VkFormat format, VkExtent2D renderArea);
+        BlurPass(Renderer* renderer, VkFormat format, VkExtent2D renderArea);
 
     protected:
         virtual void createResources() override;

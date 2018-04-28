@@ -1,12 +1,12 @@
 #include "NormalMapPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 
 namespace crisp
 {
-    NormalMapPipeline::NormalMapPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    NormalMapPipeline::NormalMapPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 3, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(
@@ -33,9 +33,9 @@ namespace crisp
 
         m_descriptorPool = createDescriptorPool(
         {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VulkanRenderer::NumVirtualFrames },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * VulkanRenderer::NumVirtualFrames + 1 }
-        }, 2 + VulkanRenderer::NumVirtualFrames);
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Renderer::NumVirtualFrames },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * Renderer::NumVirtualFrames + 1 }
+        }, 2 + Renderer::NumVirtualFrames);
 
         m_vertShader = renderer->getShaderModule("normal-map-vert");
         m_fragShader = renderer->getShaderModule("normal-map-frag");

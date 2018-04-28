@@ -4,7 +4,7 @@
 #include <vector>
 #include <set>
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
@@ -16,7 +16,7 @@ namespace crisp::gui
     class DynamicUniformBufferResource
     {
     public:
-        DynamicUniformBufferResource(VulkanRenderer* renderer, const std::array<VkDescriptorSet, VulkanRenderer::NumVirtualFrames>& sets, uint32_t resourceSize, uint32_t descBinding);
+        DynamicUniformBufferResource(Renderer* renderer, const std::array<VkDescriptorSet, Renderer::NumVirtualFrames>& sets, uint32_t resourceSize, uint32_t descBinding);
         ~DynamicUniformBufferResource();
 
         uint32_t registerResource();
@@ -32,15 +32,15 @@ namespace crisp::gui
     private:
         void updateSet(uint32_t index);
 
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         uint32_t m_resourceSize;
         uint32_t m_resourcesPerGranularity;
         uint32_t m_binding;
 
         std::unique_ptr<UniformMultiBuffer>                           m_buffer;
-        std::array<VkDescriptorSet, VulkanRenderer::NumVirtualFrames> m_sets;
-        std::array<bool, VulkanRenderer::NumVirtualFrames>            m_isSetUpdated;
+        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> m_sets;
+        std::array<bool, Renderer::NumVirtualFrames>            m_isSetUpdated;
 
         std::set<uint32_t>                                            m_idPool;
         unsigned int                                                  m_numRegistered;

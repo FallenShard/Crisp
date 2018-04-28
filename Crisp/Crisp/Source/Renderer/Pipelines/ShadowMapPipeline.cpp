@@ -1,12 +1,12 @@
 #include "ShadowMapPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 
 namespace crisp
 {
-    ShadowMapPipeline::ShadowMapPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
+    ShadowMapPipeline::ShadowMapPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
         : VulkanPipeline(renderer, 1, renderPass)
         , m_subpass(subpass)
     {

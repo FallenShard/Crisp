@@ -7,20 +7,20 @@
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
     class VulkanPipeline;
     class ComputePipeline;
-    class VulkanRenderer;
+    class Renderer;
     class VulkanDevice;
     class UniformBuffer;
 
     class FluidSimulation
     {
     public:
-        FluidSimulation(VulkanRenderer* renderer);
+        FluidSimulation(Renderer* renderer);
         ~FluidSimulation();
 
         void update(float dt);
@@ -52,7 +52,7 @@ namespace crisp
 
         std::vector<glm::vec4> createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const;
 
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
         VulkanDevice*   m_device;
         std::unique_ptr<VulkanBuffer> m_vertexBuffer;
         std::unique_ptr<VulkanBuffer> m_colorBuffer;

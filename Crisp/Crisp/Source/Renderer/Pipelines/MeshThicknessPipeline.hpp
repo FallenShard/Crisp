@@ -7,7 +7,7 @@ namespace crisp
     class MeshThicknessPipeline : public VulkanPipeline
     {
     public:
-        MeshThicknessPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        MeshThicknessPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

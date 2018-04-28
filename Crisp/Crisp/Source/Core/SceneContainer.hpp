@@ -6,7 +6,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class Application;
     class Scene;
     class TestScene;
@@ -19,7 +19,7 @@ namespace crisp
     class SceneContainer
     {
     public:
-        SceneContainer(VulkanRenderer* renderer, Application* app);
+        SceneContainer(Renderer* renderer, Application* app);
         ~SceneContainer();
 
         static std::vector<std::string> getSceneNames();
@@ -34,7 +34,7 @@ namespace crisp
     private:
         std::unique_ptr<Scene> m_scene;
 
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
         Application* m_application;
     };
 }

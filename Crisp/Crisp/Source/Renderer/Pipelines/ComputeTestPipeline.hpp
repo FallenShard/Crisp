@@ -7,7 +7,7 @@ namespace crisp
     class ComputeTestPipeline : public VulkanPipeline
     {
     public:
-        ComputeTestPipeline(VulkanRenderer* renderer);
+        ComputeTestPipeline(Renderer* renderer);
 
     protected:
         virtual void create(int width, int height) override;

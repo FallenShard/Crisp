@@ -1,11 +1,11 @@
 #include "GuiTexQuadPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    GuiTexQuadPipeline::GuiTexQuadPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    GuiTexQuadPipeline::GuiTexQuadPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 2, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(

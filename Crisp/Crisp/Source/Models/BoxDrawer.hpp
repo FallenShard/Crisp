@@ -13,7 +13,7 @@ namespace crisp
 {
     class CameraController;
 
-    class VulkanRenderer;
+    class Renderer;
     class UniformBuffer;
     class VertexBuffer;
     class IndexBuffer;
@@ -26,7 +26,7 @@ namespace crisp
     class BoxDrawer
     {
     public:
-        BoxDrawer(VulkanRenderer* renderer, uint32_t numBoxes, VulkanRenderPass* renderPass);
+        BoxDrawer(Renderer* renderer, uint32_t numBoxes, VulkanRenderPass* renderPass);
         ~BoxDrawer();
 
         void setBoxTransforms(const std::vector<glm::vec3>& centers, const std::vector<glm::vec3>& scales);
@@ -36,7 +36,7 @@ namespace crisp
         void render(VkCommandBuffer commandBuffer, uint32_t frameIndex);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         uint32_t m_numBoxes;
 

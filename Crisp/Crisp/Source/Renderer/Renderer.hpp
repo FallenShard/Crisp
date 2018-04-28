@@ -26,18 +26,18 @@ namespace crisp
     class VertexBuffer;
     class IndexBuffer;
 
-    class VulkanRenderer
+    class Renderer
     {
     public:
         static constexpr unsigned int NumVirtualFrames = 3;
 
-        VulkanRenderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions);
-        ~VulkanRenderer();
+        Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions);
+        ~Renderer();
 
-        VulkanRenderer(const VulkanRenderer& other) = delete;
-        VulkanRenderer(VulkanRenderer&& other) = delete;
-        VulkanRenderer& operator=(const VulkanRenderer& other) = delete;
-        VulkanRenderer& operator=(VulkanRenderer&& other) = delete;
+        Renderer(const Renderer& other) = delete;
+        Renderer(Renderer&& other) = delete;
+        Renderer& operator=(const Renderer& other) = delete;
+        Renderer& operator=(Renderer&& other) = delete;
 
         VulkanContext*    getContext() const;
         VulkanDevice*     getDevice() const;

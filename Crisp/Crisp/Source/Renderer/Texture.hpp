@@ -6,7 +6,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class VulkanDevice;
     class VulkanImage;
     class VulkanImageView;
@@ -15,9 +15,9 @@ namespace crisp
     class Texture
     {
     public:
-        Texture(VulkanRenderer* renderer, VkExtent3D extent, uint32_t numLayers, VkFormat format,
+        Texture(Renderer* renderer, VkExtent3D extent, uint32_t numLayers, VkFormat format,
                 VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags = 0);
-        Texture(VulkanRenderer* renderer, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
+        Texture(Renderer* renderer, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
             VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags = 0);
         ~Texture();
 
@@ -33,7 +33,7 @@ namespace crisp
         std::unique_ptr<VulkanImageView> createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel = 0, uint32_t mipLevels = 1);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         std::unique_ptr<VulkanImage> m_image;
     };

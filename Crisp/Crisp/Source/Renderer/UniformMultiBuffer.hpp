@@ -8,13 +8,13 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
 
     // Models resizable, frequently (per-frame) updated uniform buffer (for batching transforms etc.)
     class UniformMultiBuffer
     {
     public:
-        UniformMultiBuffer(VulkanRenderer* renderer, VkDeviceSize initialSize, VkDeviceSize resourceSize, const void* data = nullptr);
+        UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize resourceSize, const void* data = nullptr);
         ~UniformMultiBuffer();
 
         inline VkBuffer get(uint32_t index) const { return m_buffers[index]->getHandle(); }
@@ -28,7 +28,7 @@ namespace crisp
         void resizeOnDevice(uint32_t index);
 
     private:
-        VulkanRenderer* m_renderer;
+        Renderer* m_renderer;
 
         std::vector<std::unique_ptr<VulkanBuffer>> m_buffers;
         std::unique_ptr<VulkanBuffer>              m_stagingBuffer;

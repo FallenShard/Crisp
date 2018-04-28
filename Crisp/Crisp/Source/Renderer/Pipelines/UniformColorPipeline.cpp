@@ -1,11 +1,11 @@
 #include "UniformColorPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    UniformColorPipeline::UniformColorPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    UniformColorPipeline::UniformColorPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, 1, renderPass)
     {
         m_descriptorSetLayouts[0] = createDescriptorSetLayout(

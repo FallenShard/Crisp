@@ -7,7 +7,7 @@ namespace crisp
     class GuiDebugPipeline : public VulkanPipeline
     {
     public:
-        GuiDebugPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass);
+        GuiDebugPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 
     protected:
         virtual void create(int width, int height) override;

@@ -10,7 +10,7 @@
 #include "Math/Rect.hpp"
 #include "IO/FontLoader.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/UniformMultiBuffer.hpp"
@@ -20,7 +20,7 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class VulkanPipeline;
     class VulkanImageView;
     class GuiColorQuadPipeline;
@@ -53,7 +53,7 @@ namespace crisp
         public:
             static constexpr uint32_t GuiRenderPassId = 64;
 
-            RenderSystem(VulkanRenderer* renderer);
+            RenderSystem(Renderer* renderer);
             ~RenderSystem();
 
             const glm::mat4& getProjectionMatrix() const;
@@ -95,7 +95,7 @@ namespace crisp
             void initGeometryBuffers();
             void initGuiRenderTargetResources();
 
-            VulkanRenderer* m_renderer;
+            Renderer* m_renderer;
             VulkanDevice*   m_device;
 
             static constexpr float DepthLayers = 32.0f;
@@ -170,7 +170,7 @@ namespace crisp
 
                 VkDescriptorSet descSet;
 
-                void updateStagingBuffer(std::string text, Font* font, VulkanRenderer* renderer);
+                void updateStagingBuffer(std::string text, Font* font, Renderer* renderer);
             };
             static constexpr uint32_t TextResourceIncrement = 10;
             std::vector<std::unique_ptr<TextGeometryResource>> m_textResources;

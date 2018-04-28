@@ -1,11 +1,11 @@
 #include "GuiTextPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    GuiTextPipeline::GuiTextPipeline(VulkanRenderer* renderer, VulkanRenderPass* renderPass)
+    GuiTextPipeline::GuiTextPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
         : VulkanPipeline(renderer, DescSets::Count, renderPass)
     {
         m_descriptorSetLayouts[TransformAndColor] = createDescriptorSetLayout(

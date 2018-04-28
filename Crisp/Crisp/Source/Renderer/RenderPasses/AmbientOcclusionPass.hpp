@@ -7,7 +7,7 @@ namespace crisp
     class AmbientOcclusionPass : public VulkanRenderPass
     {
     public:
-        AmbientOcclusionPass(VulkanRenderer* renderer);
+        AmbientOcclusionPass(Renderer* renderer);
 
     protected:
         virtual void createResources() override;

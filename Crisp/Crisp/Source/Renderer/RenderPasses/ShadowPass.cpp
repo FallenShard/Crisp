@@ -1,6 +1,6 @@
 #include "ShadowPass.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/RenderPassBuilder.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-    ShadowPass::ShadowPass(VulkanRenderer* renderer, unsigned int shadowMapSize, unsigned int numCascades)
+    ShadowPass::ShadowPass(Renderer* renderer, unsigned int shadowMapSize, unsigned int numCascades)
         : VulkanRenderPass(renderer)
         , m_numCascades(numCascades)
     {
@@ -41,7 +41,7 @@ namespace crisp
     void ShadowPass::createResources()
     {
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        auto numLayers = VulkanRenderer::NumVirtualFrames;
+        auto numLayers = Renderer::NumVirtualFrames;
 
         m_renderTargets.resize(m_numCascades);
         for (auto& rt : m_renderTargets)

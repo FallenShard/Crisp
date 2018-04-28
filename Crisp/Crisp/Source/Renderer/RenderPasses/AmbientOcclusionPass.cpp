@@ -1,6 +1,6 @@
 #include "AmbientOcclusionPass.hpp"
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/RenderPassBuilder.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-    AmbientOcclusionPass::AmbientOcclusionPass(VulkanRenderer* renderer)
+    AmbientOcclusionPass::AmbientOcclusionPass(Renderer* renderer)
         : VulkanRenderPass(renderer)
     {
         m_clearValues.resize(1);
@@ -34,7 +34,7 @@ namespace crisp
         m_renderArea = m_renderer->getSwapChainExtent();
         m_renderTargets.resize(1);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        auto numLayers = VulkanRenderer::NumVirtualFrames;
+        auto numLayers = Renderer::NumVirtualFrames;
 
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);

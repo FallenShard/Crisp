@@ -12,14 +12,14 @@
 
 namespace crisp
 {
-    class VulkanRenderer;
+    class Renderer;
     class VulkanRenderPass;
     class VulkanDevice;
 
     class VulkanPipeline : public VulkanResource<VkPipeline>
     {
     public:
-        VulkanPipeline(VulkanRenderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent = true);
+        VulkanPipeline(Renderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent = true);
         virtual ~VulkanPipeline();
 
         inline VkPipelineLayout getPipelineLayout() const { return m_pipelineLayout; }
@@ -68,7 +68,7 @@ namespace crisp
 
         VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint = "main");
 
-        VulkanRenderer*   m_renderer;
+        Renderer*   m_renderer;
         VulkanRenderPass* m_renderPass;
 
         std::vector<std::unique_ptr<VulkanDescriptorSetLayout>> m_descriptorSetLayouts;

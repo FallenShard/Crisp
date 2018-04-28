@@ -16,11 +16,11 @@ namespace crisp
     class MeshGeometry
     {
     public:
-        MeshGeometry(VulkanRenderer* renderer, const std::string& filename, std::initializer_list<std::initializer_list<VertexAttribute>> vertexAttributes);
-        MeshGeometry(VulkanRenderer* renderer, const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes);
+        MeshGeometry(Renderer* renderer, const std::string& filename, std::initializer_list<std::initializer_list<VertexAttribute>> vertexAttributes);
+        MeshGeometry(Renderer* renderer, const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes);
 
         template <typename T>
-        MeshGeometry(VulkanRenderer* renderer, const std::vector<T>& vertices, const std::vector<glm::uvec3>& faces)
+        MeshGeometry(Renderer* renderer, const std::vector<T>& vertices, const std::vector<glm::uvec3>& faces)
             : m_vertexBuffers(1)
         {
             m_vertexBuffers[0] = std::make_unique<VertexBuffer>(renderer, vertices);

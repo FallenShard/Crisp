@@ -19,13 +19,13 @@ namespace crisp
     class VulkanImageView;
     class UniformBuffer;
     class VulkanDevice;
-    class VulkanRenderer;
+    class Renderer;
     class VulkanSampler;
 
     class FluidSimulationScene : public Scene
     {
     public:
-        FluidSimulationScene(VulkanRenderer* renderer, Application* app);
+        FluidSimulationScene(Renderer* renderer, Application* app);
         ~FluidSimulationScene();
 
         virtual void resize(int width, int height) override;
@@ -35,7 +35,7 @@ namespace crisp
     private:
         void initRenderTargetResources();
 
-        VulkanRenderer*  m_renderer;
+        Renderer*  m_renderer;
         VulkanDevice*    m_device;
         Application*     m_app;
 

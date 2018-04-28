@@ -4,7 +4,7 @@
 #include <memory>
 #include <array>
 
-#include "Renderer/VulkanRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Geometry/TransformPack.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 #include "Scene.hpp"
@@ -41,7 +41,7 @@ namespace crisp
     class VulkanImageView;
     class UniformBuffer;
     class VulkanDevice;
-    class VulkanRenderer;
+    class Renderer;
     class VulkanSampler;
     class MeshGeometry;
     class BoxVisualizer;
@@ -50,7 +50,7 @@ namespace crisp
     class ShadowMappingScene : public Scene
     {
     public:
-        ShadowMappingScene(VulkanRenderer* renderer, Application* app);
+        ShadowMappingScene(Renderer* renderer, Application* app);
         ~ShadowMappingScene();
 
         virtual void resize(int width, int height) override;
@@ -62,7 +62,7 @@ namespace crisp
     private:
         void initRenderTargetResources();
 
-        VulkanRenderer*  m_renderer;
+        Renderer*  m_renderer;
         VulkanDevice*    m_device;
         Application*     m_app;
         std::unique_ptr<CameraController> m_cameraController;
@@ -98,8 +98,8 @@ namespace crisp
         std::unique_ptr<SceneRenderPass> m_scenePass;
         std::unique_ptr<BlinnPhongPipeline> m_blinnPhongPipeline;
         std::unique_ptr<ColorAndShadowPipeline> m_colorAndShadowPipeline;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_colorAndShadowDescGroups;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_blinnPhongDescGroups;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_colorAndShadowDescGroups;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_blinnPhongDescGroups;
 
         std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
         DescriptorSetGroup m_sceneDescSetGroup;
@@ -111,18 +111,18 @@ namespace crisp
 
         std::unique_ptr<BlurPass> m_blurPass;
         std::unique_ptr<BlurPipeline> m_blurPipeline;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_blurDescGroups;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_blurDescGroups;
 
         std::unique_ptr<BlurPass> m_vertBlurPass;
         std::unique_ptr<BlurPipeline> m_vertBlurPipeline;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_vertBlurDescGroups;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_vertBlurDescGroups;
 
         std::unique_ptr<VarianceShadowMapPass> m_vsmPass;
         std::unique_ptr<VarianceShadowMapPipeline> m_vsmPipeline;
         DescriptorSetGroup m_vsmDescSetGroup;
 
         std::unique_ptr<NormalMapPipeline> m_normalMapPipeline;
-        std::array<DescriptorSetGroup, VulkanRenderer::NumVirtualFrames> m_normalMapDescGroups;
+        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_normalMapDescGroups;
 
         std::unique_ptr<Texture>       m_normalMap;
         std::unique_ptr<VulkanImageView>   m_normalMapView;

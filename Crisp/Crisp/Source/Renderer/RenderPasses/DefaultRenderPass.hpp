@@ -7,7 +7,7 @@ namespace crisp
     class DefaultRenderPass : public VulkanRenderPass
     {
     public:
-        DefaultRenderPass(VulkanRenderer* renderer);
+        DefaultRenderPass(Renderer* renderer);
 
         void recreateFramebuffer(VkImageView swapChainImageView);
 
