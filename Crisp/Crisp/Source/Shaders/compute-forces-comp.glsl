@@ -47,7 +47,7 @@ layout(set = 0, binding = 6) buffer Forces
     vec4 forces[];
 };
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 layout(push_constant) uniform PushConstant
 {
@@ -108,7 +108,7 @@ float poly6(float x)
 {
     if (x >= h)
         return 0.0f;
-                
+
     float val = h2 - x * x;
     return poly6Const * val * val * val;
 }
@@ -147,7 +147,7 @@ void main()
         return;
 
     vec3 position = positions[threadIdx].xyz;
-    
+
     ivec3 gridPosition = calculateGridPosition(position, pc.cellSize);
     ivec3 lo = max(ivec3(0),                 gridPosition - ivec3(1));
     ivec3 hi = min(ivec3(pc.dim) - ivec3(1), gridPosition + ivec3(1));

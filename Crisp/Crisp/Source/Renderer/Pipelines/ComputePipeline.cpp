@@ -28,11 +28,25 @@ namespace crisp
 
         create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
 
+        std::vector<VkSpecializationMapEntry> specEntries =
+        {
+            { 0, 0 * sizeof(uint32_t), sizeof(uint32_t) },
+            { 1, 1 * sizeof(uint32_t), sizeof(uint32_t) },
+            { 2, 2 * sizeof(uint32_t), sizeof(uint32_t) }
+        };
+
+        VkSpecializationInfo specInfo = {};
+        specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
+        specInfo.pMapEntries   = specEntries.data();
+        specInfo.dataSize      = sizeof(m_workGroupSize);
+        specInfo.pData         = glm::value_ptr(m_workGroupSize);
+
         VkComputePipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-        pipelineInfo.stage              = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, m_shader);
-        pipelineInfo.layout             = m_pipelineLayout;
-        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-        pipelineInfo.basePipelineIndex  = -1;
+        pipelineInfo.stage                     = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, m_shader);
+        pipelineInfo.stage.pSpecializationInfo = &specInfo;
+        pipelineInfo.layout                    = m_pipelineLayout;
+        pipelineInfo.basePipelineHandle        = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex         = -1;
         vkCreateComputePipelines(m_device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
     }
 

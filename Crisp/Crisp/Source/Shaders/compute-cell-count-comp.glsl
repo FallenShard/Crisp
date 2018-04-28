@@ -18,7 +18,7 @@ layout(set = 0, binding = 2) buffer CellIds
     uint cellIds[];
 };
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 uvec3 calculateGridPosition(vec3 position, float cellSize)
 {

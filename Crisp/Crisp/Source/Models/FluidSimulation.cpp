@@ -117,7 +117,7 @@ namespace crisp
         m_scanBlockDescGroup.flushUpdates(m_device);
 
         // Add block prefix sum to intra-block prefix sums
-        m_combineScanPipeline = std::make_unique<ComputePipeline>(m_renderer, "scan-combine-comp", 2, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_combineScanPipeline = std::make_unique<ComputePipeline>(m_renderer, "scan-combine-comp", 2, 1, sizeof(uint32_t), glm::uvec3(512, 1, 1));
         m_combineScanDescGroup =
         {
             m_combineScanPipeline->allocateDescriptorSet(0)

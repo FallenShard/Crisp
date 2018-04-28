@@ -10,7 +10,7 @@ layout(set = 0, binding = 1) buffer BlockSums
     uint blockSums[];
 };
 
-layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 shared uint temp[gl_WorkGroupSize.x * 2];
 
@@ -58,7 +58,7 @@ void main()
             blockSums[gl_WorkGroupID.x] = temp[n - 1];
         temp[n - 1] = 0;
     }
-        
+
     for (uint i = 1; i < n; i *= 2)
     {
         offset >>= 1;
