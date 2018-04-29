@@ -14,6 +14,11 @@ namespace crisp
         static constexpr uint32_t ScanBlockSize = 256;
         static constexpr uint32_t ScanElementsPerThread = 2;
         static constexpr uint32_t ScanElementsPerBlock = ScanBlockSize * ScanElementsPerThread;
+
+        inline glm::uvec3 getNumWorkGroups(const glm::uvec3& dataDims, const ComputePipeline& pipeline)
+        {
+            return (dataDims - glm::uvec3(1)) / pipeline.getWorkGroupSize() + glm::uvec3(1);
+        }
     }
 
     FluidSimulation::FluidSimulation(Renderer* renderer)
@@ -289,7 +294,7 @@ namespace crisp
         m_clearGridDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
         m_clearGridDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_clearHashGridPipeline->getPipelineLayout());
 
-        glm::uvec3 numGroups = (glm::uvec3(m_gridParams.numCells, 1, 1) - glm::uvec3(1)) / m_clearHashGridPipeline->getWorkGroupSize() + glm::uvec3(1);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells, 1, 1), *m_clearHashGridPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
     }
@@ -305,7 +310,7 @@ namespace crisp
         m_computeCellCountDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
         m_computeCellCountDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_computeCellCountPipeline->getPipelineLayout());
 
-        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_computeCellCountPipeline->getWorkGroupSize() + glm::uvec3(1);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_computeCellCountPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
     }
@@ -320,8 +325,8 @@ namespace crisp
         m_scanDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
         m_scanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout());
 
-        glm::uvec3 numBlocks = glm::uvec3(m_gridParams.numCells, 1, 1) / glm::uvec3(ScanElementsPerBlock, 1, 1);
-        vkCmdDispatch(cmdBuffer, numBlocks.x, numBlocks.y, numBlocks.z);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells / ScanElementsPerThread, 1, 1), *m_scanPipeline);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
 
         // Block-level scan
@@ -331,9 +336,8 @@ namespace crisp
         m_scanBlockDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
         m_scanBlockDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout());
 
-        numBlocks = (glm::uvec3(m_gridParams.numCells / ScanElementsPerBlock, 1, 1) - glm::uvec3(1))
-            / glm::uvec3(ScanElementsPerBlock, 1, 1) + glm::uvec3(1);
-        vkCmdDispatch(cmdBuffer, numBlocks.x, numBlocks.y, numBlocks.z);
+        numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells / ScanElementsPerBlock / ScanElementsPerThread, 1, 1), *m_scanPipeline);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
 
         // Fold the block-level scans into intra-block scans
@@ -343,8 +347,8 @@ namespace crisp
         m_combineScanDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
         m_combineScanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_combineScanPipeline->getPipelineLayout());
 
-        numBlocks = glm::uvec3(m_gridParams.numCells, 1, 1) / glm::uvec3(ScanElementsPerBlock, 1, 1);
-        vkCmdDispatch(cmdBuffer, numBlocks.x, numBlocks.y, numBlocks.z);
+        numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells, 1, 1), *m_combineScanPipeline);
+        vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
     }
 
@@ -360,7 +364,7 @@ namespace crisp
         m_reindexDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(glm::vec4));
         m_reindexDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_reindexPipeline->getPipelineLayout());
 
-        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_reindexPipeline->getWorkGroupSize() + glm::uvec3(1);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_reindexPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
     }
@@ -378,7 +382,7 @@ namespace crisp
         m_densityPressureDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(float));
         m_densityPressureDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_densityPressurePipeline->getPipelineLayout());
 
-        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_densityPressurePipeline->getWorkGroupSize() + glm::uvec3(1);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_densityPressurePipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
     }
@@ -396,7 +400,7 @@ namespace crisp
         m_forcesDescGroup.setDynamicOffset(6, m_currentSection * m_numParticles * sizeof(glm::vec4));
         m_forcesDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_forcesPipeline->getPipelineLayout());
 
-        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_forcesPipeline->getWorkGroupSize() + glm::uvec3(1);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_forcesPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
         insertComputeBarrier(cmdBuffer);
     }
@@ -413,7 +417,7 @@ namespace crisp
         m_integrateDescGroup.setDynamicOffset(5, m_currentSection * m_numParticles * sizeof(glm::vec4));
         m_integrateDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_integratePipeline->getPipelineLayout());
 
-        glm::uvec3 numGroups = (glm::uvec3(m_numParticles, 1, 1) - glm::uvec3(1)) / m_integratePipeline->getWorkGroupSize() + glm::uvec3(1);
+        glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_integratePipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
     }
 
