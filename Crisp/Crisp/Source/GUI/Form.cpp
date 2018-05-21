@@ -54,7 +54,7 @@ namespace crisp::gui
 
     void Form::add(std::unique_ptr<Control> control, bool useFadeInAnimation)
     {
-        m_rootControlGroup->addControl(std::move(useFadeInAnimation ? fadeIn(std::move(control)) : std::move(control)));
+        m_rootControlGroup->addControl(useFadeInAnimation ? fadeIn(std::move(control)) : std::move(control));
     }
 
     void Form::remove(std::string controlId, float duration)
@@ -67,11 +67,11 @@ namespace crisp::gui
             return;
         }
 
-        auto colorAnim = std::make_shared<PropertyAnimation<float>>(duration, 1.0f, 0.0f, 0, Easing::SlowIn);
-        colorAnim->setUpdater([control](const auto& t)
+        auto colorAnim = std::make_shared<PropertyAnimation<float, Easing::SlowIn>>(duration, 1.0f, 0.0f, [control](const auto& t)
         {
             control->setOpacity(t);
         });
+
         colorAnim->finished.subscribe([this, control]()
         {
             //postGuiUpdate([this, control]()
@@ -149,23 +149,22 @@ namespace crisp::gui
             m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
     }
 
-    void Form::onMousePressed(int buttonId, int mods, double x, double y)
+    void Form::onMousePressed(const MouseEventArgs& mouseEventArgs)
     {
-        if (m_focusedControl && m_focusedControl->getInteractionBounds().contains(x, y))
-            m_focusedControl->onMousePressed(x, y);
+        if (m_focusedControl && m_focusedControl->getInteractionBounds().contains(mouseEventArgs.x, mouseEventArgs.y))
+            m_focusedControl->onMousePressed(mouseEventArgs.x, mouseEventArgs.y);
         else
-            m_rootControlGroup->onMousePressed(static_cast<float>(x), static_cast<float>(y));
+            m_rootControlGroup->onMousePressed(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y));
     }
 
-    void Form::onMouseReleased(int buttonId, int mods, double x, double y)
+    void Form::onMouseReleased(const MouseEventArgs& mouseEventArgs)
     {
-        m_rootControlGroup->onMouseReleased(static_cast<float>(x), static_cast<float>(y));
+        m_rootControlGroup->onMouseReleased(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y));
     }
 
     std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float duration)
     {
-        auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f, 0.0, Easing::Linear);
-        anim->setUpdater([this, con = control.get()](const auto& t)
+        auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f, [this, con = control.get()](const auto& t)
         {
             con->setOpacity(t);
         });

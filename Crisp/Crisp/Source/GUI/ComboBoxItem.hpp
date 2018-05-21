@@ -51,9 +51,9 @@ namespace crisp::gui
 
         std::vector<Color> m_stateColors;
 
-        std::shared_ptr<PropertyAnimation<glm::vec4>> m_colorAnim;
+        std::shared_ptr<PropertyAnimation<glm::vec4, Easing::SlowOut>> m_colorAnim;
 
-        std::shared_ptr<PropertyAnimation<glm::vec4>> m_labelColorAnim;
+        std::shared_ptr<PropertyAnimation<glm::vec4, Easing::SlowOut>> m_labelColorAnim;
         std::unique_ptr<Label> m_label;
 
         ColorRectDrawComponent m_drawComponent;

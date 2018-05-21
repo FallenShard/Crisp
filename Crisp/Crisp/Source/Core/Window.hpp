@@ -4,12 +4,20 @@
 #include <vector>
 #include <string>
 
-#include "ApplicationEnvironment.hpp"
+#include <vulkan/vulkan.h>
 #include "Math/Headers.hpp"
+
+struct GLFWwindow;
 
 namespace crisp
 {
     class InputDispatcher;
+
+    enum class CursorState
+    {
+        Disabled,
+        Normal
+    };
 
     class Window
     {
@@ -24,7 +32,8 @@ namespace crisp
         bool shouldClose() const;
         void close();
 
-        void setInputMode(int mode, int value);
+        void setCursorState(CursorState cursorState);
+        void setCursorPosition(const glm::vec2& position);
         void setTitle(const std::string& title);
 
         glm::ivec2 getSize() const;

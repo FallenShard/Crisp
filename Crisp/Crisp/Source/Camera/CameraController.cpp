@@ -14,15 +14,17 @@ namespace crisp
     {
         std::ostream& operator<<(std::ostream& out, const glm::vec2& v)
         {
-            out << "[" << v.x << ", " << v.y << "]\n";
+            out << "[" << v.x << ", " << v.y << "]";
             return out;
         }
+
+        glm::vec2 lastPress;
     }
 
     CameraController::CameraController(Window* window)
         : m_window(window)
         , m_inputDispatcher(window->getInputDispatcher())
-        , m_useMouseFiltering(false)
+        , m_useMouseFiltering(true)
         , m_isMoving(false)
         , m_moveSpeed(2.0f)
         , m_refreshDeltasOnUpdate(true)
@@ -38,18 +40,18 @@ namespace crisp
         for (int i = 0; i < MouseFilterListSize; i++)
             m_mouseDeltas.push_front(glm::vec2(0.0f, 0.0f));
 
-        m_inputDispatcher->mouseButtonPressed.subscribe<CameraController, &CameraController::onMousePressed>(this);
-        m_inputDispatcher->mouseButtonReleased.subscribe<CameraController, &CameraController::onMouseReleased>(this);
-        m_inputDispatcher->mouseMoved.subscribe<CameraController, &CameraController::onMouseMoved>(this);
-        m_inputDispatcher->mouseWheelScrolled.subscribe<CameraController, &CameraController::onMouseWheelScrolled>(this);
+        m_inputDispatcher->mouseButtonPressed.subscribe<&CameraController::onMousePressed>(this);
+        m_inputDispatcher->mouseButtonReleased.subscribe<&CameraController::onMouseReleased>(this);
+        m_inputDispatcher->mouseMoved.subscribe<&CameraController::onMouseMoved>(this);
+        m_inputDispatcher->mouseWheelScrolled.subscribe<&CameraController::onMouseWheelScrolled>(this);
     }
 
     CameraController::~CameraController()
     {
-        m_inputDispatcher->mouseButtonPressed.unsubscribe<CameraController, &CameraController::onMousePressed>(this);
-        m_inputDispatcher->mouseButtonReleased.unsubscribe<CameraController, &CameraController::onMouseReleased>(this);
-        m_inputDispatcher->mouseMoved.unsubscribe<CameraController, &CameraController::onMouseMoved>(this);
-        m_inputDispatcher->mouseWheelScrolled.unsubscribe<CameraController, &CameraController::onMouseWheelScrolled>(this);
+        m_inputDispatcher->mouseButtonPressed.unsubscribe<&CameraController::onMousePressed>(this);
+        m_inputDispatcher->mouseButtonReleased.unsubscribe<&CameraController::onMouseReleased>(this);
+        m_inputDispatcher->mouseMoved.unsubscribe<&CameraController::onMouseMoved>(this);
+        m_inputDispatcher->mouseWheelScrolled.unsubscribe<&CameraController::onMouseWheelScrolled>(this);
     }
 
     bool CameraController::update(float dt)
@@ -81,29 +83,34 @@ namespace crisp
         return viewChanged;
     }
 
-    void CameraController::onMousePressed(int button, int mods, double xPos, double yPos)
+    void CameraController::onMousePressed(const MouseEventArgs& mouseEventArgs)
     {
-        if (button == GLFW_MOUSE_BUTTON_RIGHT)
+        if (mouseEventArgs.button == MouseButton::Right)
         {
+            //std::cout << "PRESS: " << mouseEventArgs.x << " " << mouseEventArgs.y << std::endl;
             m_isMoving = true;
 
-            m_prevMousePos.x = static_cast<float>(xPos);
-            m_prevMousePos.y = static_cast<float>(yPos);
+            m_prevMousePos.x = static_cast<float>(mouseEventArgs.x);
+            m_prevMousePos.y = static_cast<float>(mouseEventArgs.y);
 
-            m_window->setInputMode(GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            m_window->setCursorState(CursorState::Disabled);
+            lastPress = m_prevMousePos;
         }
     }
 
-    void CameraController::onMouseReleased(int button, int mods, double xPos, double yPos)
+    void CameraController::onMouseReleased(const MouseEventArgs& mouseEventArgs)
     {
-        if (button == GLFW_MOUSE_BUTTON_RIGHT)
+        if (mouseEventArgs.button == MouseButton::Right)
         {
+            //std::cout << "RELEASE: " << mouseEventArgs.x << " " << mouseEventArgs.y << std::endl;
             m_isMoving = false;
 
-            m_prevMousePos.x = static_cast<float>(xPos);
-            m_prevMousePos.y = static_cast<float>(yPos);
+            m_window->setCursorState(CursorState::Normal);
 
-            m_window->setInputMode(GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            m_prevMousePos.x = static_cast<float>(mouseEventArgs.x);
+            m_prevMousePos.y = static_cast<float>(mouseEventArgs.y);
+
+            m_window->setCursorPosition(lastPress);
         }
     }
 
@@ -117,6 +124,9 @@ namespace crisp
 
         if (m_isMoving)
         {
+            //std::cout << mousePos << std::endl;
+            //std::cout << "Delta: " << mousePos - lastPress << std::endl;
+            //std::cout << "DeltaLP: " << lastPress - glm::vec2(m_window->getSize() / 2) << std::endl;
             auto delta = m_useMouseFiltering ? filterMouseMoves() : mousePos - m_prevMousePos;
             auto moveAmount = -m_moveSpeed * delta / m_screenSize;
             m_camera.rotate(moveAmount.x, moveAmount.y);
@@ -164,21 +174,16 @@ namespace crisp
 
     void CameraController::checkKeyboardInput(float dt)
     {
-        //if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
-        //    m_camera.pan(-3.0f * dt, 0.0f);
-        //
-        //if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
-        //    m_camera.pan(+3.0f * dt, 0.0f);
-        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_A))
+        if (m_inputDispatcher->isKeyDown(Key::A))
             m_camera.strafe(-3.0f * dt);
 
-        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_D))
+        if (m_inputDispatcher->isKeyDown(Key::D))
             m_camera.strafe(+3.0f * dt);
 
-        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_S))
+        if (m_inputDispatcher->isKeyDown(Key::S))
             m_camera.walk(-3.0f * dt);
 
-        if (m_inputDispatcher->isKeyPressed(GLFW_KEY_W))
+        if (m_inputDispatcher->isKeyDown(Key::W))
             m_camera.walk(3.0f * dt);
     }
 

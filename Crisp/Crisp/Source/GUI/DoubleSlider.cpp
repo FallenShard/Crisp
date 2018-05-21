@@ -58,12 +58,12 @@ namespace crisp::gui
         m_label->setParent(this);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
             m_indicatorRect->setColor(t);
             m_foregroundRect->setColor(t);
-        }, 0, Easing::SlowOut);
+        });
     }
 
     DoubleSlider::~DoubleSlider()
@@ -252,7 +252,7 @@ namespace crisp::gui
         m_indicatorRect->setPosition({ indicatorPos, 0.0f });
         m_foregroundRect->setSizeHint({ localPos, 2.0f });
     }
-    
+
     double DoubleSlider::getValueFromMousePosition(float x, float y)
     {
         auto bounds = m_backgroundRect->getAbsoluteBounds();

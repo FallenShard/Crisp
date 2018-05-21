@@ -46,26 +46,23 @@ namespace crisp
         m_renderer = createRenderer();
 
         auto inputDispatcher = m_window->getInputDispatcher();
-        inputDispatcher->windowResized.subscribe<Application, &Application::onResize>(this);
+        inputDispatcher->windowResized.subscribe<&Application::onResize>(this);
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-        inputDispatcher->mouseMoved.subscribe<gui::Form, &gui::Form::onMouseMoved>(m_guiForm.get());
-        inputDispatcher->mouseButtonPressed.subscribe<gui::Form, &gui::Form::onMousePressed>(m_guiForm.get());
-        inputDispatcher->mouseButtonReleased.subscribe<gui::Form, &gui::Form::onMouseReleased>(m_guiForm.get());
-        inputDispatcher->mouseEntered.subscribe<gui::Form, &gui::Form::onMouseEntered>(m_guiForm.get());
-        inputDispatcher->mouseExited.subscribe<gui::Form, &gui::Form::onMouseExited>(m_guiForm.get());
+        inputDispatcher->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
+        inputDispatcher->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
+        inputDispatcher->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
+        inputDispatcher->mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
+        inputDispatcher->mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
 
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
-        m_frameTimeLogger.onLoggerUpdated.subscribe<gui::StatusBar, &gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
+        m_frameTimeLogger.onLoggerUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
         m_guiForm->add(std::move(statusBar));
 
-        auto memoryUsageBar = std::make_unique<gui::MemoryUsageBar>(m_guiForm.get());
-        m_guiForm->add(std::move(memoryUsageBar));
-
-        auto introPanel = std::make_unique<gui::IntroductionPanel>(m_guiForm.get(), this);
-        m_guiForm->add(std::move(introPanel));
+        m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
+        m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
 
         m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
     }
@@ -76,7 +73,10 @@ namespace crisp
 
     void Application::run()
     {
-        std::cout << "Hello world from Crisp! The application is up and running!\n";
+        {
+            ConsoleColorizer clr(ConsoleColor::LightGreen);
+            std::cout << "Hello world from Crisp! The application is up and running!\n";
+        }
 
         m_renderer->flushResourceUpdates();
 

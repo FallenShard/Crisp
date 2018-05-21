@@ -2,6 +2,7 @@
 
 #include "Vulkan/VulkanDevice.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Renderer/PipelineBuilder.hpp"
 
 namespace crisp
 {
@@ -33,76 +34,18 @@ namespace crisp
 
     void PointSphereSpritePipeline::create(int width, int height)
     {
-        std::vector<VkPipelineShaderStageCreateInfo> shaderStages =
-        {
-            createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   m_vertShader),
-            createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, m_fragShader)
-        };
-
-        std::vector<VkVertexInputBindingDescription> vertexInputBindings =
-        {
-            { 0, FormatSizeof<VK_FORMAT_R32G32B32A32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX },
-            { 1, FormatSizeof<VK_FORMAT_R32G32B32A32_SFLOAT>::value, VK_VERTEX_INPUT_RATE_VERTEX }
-        };
-        
-        std::vector<VkVertexInputAttributeDescription> attributes =
-        {
-            { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 0 },
-            { 1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0 }
-        };
-
-        VkPipelineVertexInputStateCreateInfo vertexInput = {};
-        vertexInput.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInput.vertexBindingDescriptionCount   = static_cast<uint32_t>(vertexInputBindings.size());
-        vertexInput.pVertexBindingDescriptions      = vertexInputBindings.data();
-        vertexInput.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-        vertexInput.pVertexAttributeDescriptions    = attributes.data();
-        
-        VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-        inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-        inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-        VkViewport viewport = m_renderer->getDefaultViewport();
-
-        VkRect2D scissor = {};
-        scissor.offset = { 0, 0 };
-        scissor.extent = m_renderer->getSwapChainExtent();
-
-        VkPipelineViewportStateCreateInfo viewportState = {};
-        viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        viewportState.viewportCount = 1;
-        viewportState.pViewports    = &viewport;
-        viewportState.scissorCount  = 1;
-        viewportState.pScissors     = &scissor;
-
-        auto rasterizationState   = VulkanPipeline::createDefaultRasterizationState();
-        auto multisampleState     = VulkanPipeline::createDefaultMultisampleState();
-        auto colorBlendAttachment = VulkanPipeline::createDefaultColorBlendAttachmentState();
-        auto colorBlendState      = VulkanPipeline::createDefaultColorBlendState();
-        colorBlendState.attachmentCount = 1;
-        colorBlendState.pAttachments = &colorBlendAttachment;
-
-        auto depthStencilState = VulkanPipeline::createDefaultDepthStencilState();
-
-        VkGraphicsPipelineCreateInfo pipelineInfo = {};
-        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount          = static_cast<uint32_t>(shaderStages.size());
-        pipelineInfo.pStages             = shaderStages.data();
-        pipelineInfo.pVertexInputState   = &vertexInput;
-        pipelineInfo.pInputAssemblyState = &inputAssembly;
-        pipelineInfo.pViewportState      = &viewportState;
-        pipelineInfo.pRasterizationState = &rasterizationState;
-        pipelineInfo.pMultisampleState   = &multisampleState;
-        pipelineInfo.pColorBlendState    = &colorBlendState;
-        pipelineInfo.pDepthStencilState  = &depthStencilState;
-        pipelineInfo.pDynamicState       = nullptr;
-        pipelineInfo.layout              = m_pipelineLayout;
-        pipelineInfo.renderPass          = m_renderPass->getHandle();
-        pipelineInfo.subpass             = 0;
-        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
-        pipelineInfo.basePipelineIndex   = -1;
-
-        vkCreateGraphicsPipelines(m_renderer->getDevice()->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle);
+        m_handle = PipelineBuilder()
+            .setShaderStages({
+                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   m_vertShader),
+                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, m_fragShader)
+            })
+            .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32A32_SFLOAT>()
+            .addVertexInputBinding<1, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32A32_SFLOAT>()
+            .addVertexAttributes<0, 0, VK_FORMAT_R32G32B32A32_SFLOAT>()
+            .addVertexAttributes<1, 1, VK_FORMAT_R32G32B32A32_SFLOAT>()
+            .setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
+            .setViewport(m_renderer->getDefaultViewport())
+            .setScissor(m_renderer->getDefaultScissor())
+            .create(m_renderer->getDevice()->getHandle(), m_pipelineLayout, m_renderPass->getHandle(), 0);
     }
 }

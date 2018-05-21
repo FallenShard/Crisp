@@ -1,8 +1,11 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
-
 #include <CrispCore/Event.hpp>
+
+#include "Keyboard.hpp"
+#include "Mouse.hpp"
+
+struct GLFWwindow;
 
 namespace crisp
 {
@@ -12,17 +15,17 @@ namespace crisp
         InputDispatcher(GLFWwindow* window);
         ~InputDispatcher() = default;
 
-        bool isKeyPressed(int keyCode) const;
+        bool isKeyDown(Key key) const;
 
         InputDispatcher(const InputDispatcher& other)            = delete;
         InputDispatcher& operator=(const InputDispatcher& other) = delete;
         InputDispatcher& operator=(InputDispatcher&& other)      = delete;
 
         Event<int, int> windowResized;
-        Event<int, int> keyPressed;
+        Event<Key, int> keyPressed;
         Event<double, double> mouseMoved;
-        Event<int, int, double, double> mouseButtonPressed;
-        Event<int, int, double, double> mouseButtonReleased;
+        Event<const MouseEventArgs&> mouseButtonPressed;
+        Event<const MouseEventArgs&> mouseButtonReleased;
         Event<double> mouseWheelScrolled;
         Event<double, double> mouseEntered;
         Event<double, double> mouseExited;
@@ -36,6 +39,7 @@ namespace crisp
         static void mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset);
         static void mouseEnterCallback(GLFWwindow* window, int entered);
         static void closeCallback(GLFWwindow* window);
+        static void focusCallback(GLFWwindow* window, int isFocused);
         GLFWwindow* m_window;
     };
 }

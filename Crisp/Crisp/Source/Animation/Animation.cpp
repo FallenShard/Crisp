@@ -1,7 +1,13 @@
 #include "Animation.hpp"
+#include "Animator.hpp"
 
 namespace crisp
 {
+    namespace
+    {
+        static int Id = 0;
+    }
+
     Animation::Animation(double startDelay, double duration, bool isLooped, int loopCount)
         : m_startDelay(startDelay)
         , m_duration(duration)
@@ -10,7 +16,6 @@ namespace crisp
         , m_isFinished(false)
         , m_loopCount(loopCount == 0 ? std::numeric_limits<int>::max() : loopCount)
         , m_loopsCompleted(0)
-        , m_frameCount(0)
         , m_elapsedTime(0)
         , m_elapsedDelayTime(0)
     {
@@ -18,7 +23,6 @@ namespace crisp
 
     Animation::~Animation()
     {
-
     }
 
     void Animation::setDuration(double duration)
@@ -63,7 +67,6 @@ namespace crisp
 
     void Animation::reset()
     {
-        m_frameCount = 0;
         m_loopsCompleted = 0;
         m_elapsedDelayTime = 0;
         m_elapsedTime = 0;

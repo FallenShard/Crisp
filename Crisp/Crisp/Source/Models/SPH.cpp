@@ -1,4 +1,4 @@
-#include "FluidSimulation.hpp"
+#include "SPH.hpp"
 
 #include "Renderer/Renderer.hpp"
 
@@ -21,7 +21,7 @@ namespace crisp
         }
     }
 
-    FluidSimulation::FluidSimulation(Renderer* renderer)
+    SPH::SPH(Renderer* renderer)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
         , m_particleRadius(0.01f)
@@ -178,17 +178,17 @@ namespace crisp
         m_integrateDescGroup.flushUpdates(m_device);
     }
 
-    FluidSimulation::~FluidSimulation()
+    SPH::~SPH()
     {
     }
 
-    void FluidSimulation::update(float dt)
+    void SPH::update(float dt)
     {
         m_timeDelta = dt;
         m_runCompute = true;
     }
 
-    void FluidSimulation::dispatchCompute(VkCommandBuffer cmdBuffer, uint32_t currentFrameIdx) const
+    void SPH::dispatchCompute(VkCommandBuffer cmdBuffer, uint32_t currentFrameIdx) const
     {
         if (!m_runSimulation)
             return;
@@ -221,38 +221,38 @@ namespace crisp
         }
     }
 
-    void FluidSimulation::onKeyPressed(int code, int)
+    void SPH::onKeyPressed(Key key, int)
     {
-        if (code == GLFW_KEY_SPACE)
+        if (key == Key::Space)
             m_runSimulation = !m_runSimulation;
     }
 
-    void FluidSimulation::setGravityX(float value)
+    void SPH::setGravityX(float value)
     {
         m_gravity.x = value;
     }
 
-    void FluidSimulation::setGravityY(float value)
+    void SPH::setGravityY(float value)
     {
         m_gravity.y = value;
     }
 
-    void FluidSimulation::setGravityZ(float value)
+    void SPH::setGravityZ(float value)
     {
         m_gravity.z = value;
     }
 
-    void FluidSimulation::setViscosity(float value)
+    void SPH::setViscosity(float value)
     {
         m_viscosityFactor = value;
     }
 
-    void FluidSimulation::setSurfaceTension(float value)
+    void SPH::setSurfaceTension(float value)
     {
         m_kappa = value;
     }
 
-    void FluidSimulation::reset()
+    void SPH::reset()
     {
         m_runSimulation = false;
         m_renderer->finish();
@@ -273,12 +273,12 @@ namespace crisp
         m_prevSection = 0;
     }
 
-    float FluidSimulation::getParticleRadius() const
+    float SPH::getParticleRadius() const
     {
         return m_particleRadius;
     }
 
-    void FluidSimulation::drawGeometry(VkCommandBuffer cmdBuffer) const
+    void SPH::drawGeometry(VkCommandBuffer cmdBuffer) const
     {
         VkDeviceSize offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
         VkDeviceSize offsets[] = { offset, offset };
@@ -287,7 +287,7 @@ namespace crisp
         vkCmdDraw(cmdBuffer, m_numParticles, 1, 0, 0);
     }
 
-    void FluidSimulation::clearCellCounts(VkCommandBuffer cmdBuffer) const
+    void SPH::clearCellCounts(VkCommandBuffer cmdBuffer) const
     {
         m_clearHashGridPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_clearHashGridPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells);
@@ -299,7 +299,7 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::computeCellCounts(VkCommandBuffer cmdBuffer) const
+    void SPH::computeCellCounts(VkCommandBuffer cmdBuffer) const
     {
         m_computeCellCountPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.dim);
@@ -315,7 +315,7 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::scanCellCounts(VkCommandBuffer cmdBuffer) const
+    void SPH::scanCellCounts(VkCommandBuffer cmdBuffer) const
     {
         // Intra-block scan
         m_scanPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
@@ -352,7 +352,7 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::reindex(VkCommandBuffer cmdBuffer) const
+    void SPH::reindex(VkCommandBuffer cmdBuffer) const
     {
         m_reindexPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_reindexPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams);
@@ -369,7 +369,7 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::computeDensityAndPressure(VkCommandBuffer cmdBuffer) const
+    void SPH::computeDensityAndPressure(VkCommandBuffer cmdBuffer) const
     {
         m_densityPressurePipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_densityPressurePipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams);
@@ -387,7 +387,7 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::computeForces(VkCommandBuffer cmdBuffer) const
+    void SPH::computeForces(VkCommandBuffer cmdBuffer) const
     {
         m_forcesPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_forcesPipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_gravity, m_numParticles, m_viscosityFactor, m_kappa);
@@ -405,7 +405,7 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void FluidSimulation::integrate(VkCommandBuffer cmdBuffer, float timeDelta) const
+    void SPH::integrate(VkCommandBuffer cmdBuffer, float timeDelta) const
     {
         m_integratePipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_integratePipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, timeDelta, m_numParticles);
@@ -421,7 +421,7 @@ namespace crisp
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
     }
 
-    void FluidSimulation::insertComputeBarrier(VkCommandBuffer cmdBuffer) const
+    void SPH::insertComputeBarrier(VkCommandBuffer cmdBuffer) const
     {
         VkMemoryBarrier memBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
         memBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -430,7 +430,7 @@ namespace crisp
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memBarrier, 0, nullptr, 0, nullptr);
     }
 
-    std::vector<glm::vec4> FluidSimulation::createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const
+    std::vector<glm::vec4> SPH::createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const
     {
         std::vector<glm::vec4> positions;
         for (unsigned int z = 0; z < fluidDim.z; ++z)

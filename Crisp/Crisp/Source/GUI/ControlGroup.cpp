@@ -38,6 +38,7 @@ namespace crisp::gui
             {
                 return child->getId() == id;
             }), m_children.end());
+            setValidationFlags(Validation::All);
         });
     }
 
@@ -248,6 +249,6 @@ namespace crisp::gui
         func(this);
 
         for (auto& child : m_children)
-            func(child.get());
+            child->visit(func);
     }
 }

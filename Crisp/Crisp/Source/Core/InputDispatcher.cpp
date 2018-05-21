@@ -1,23 +1,29 @@
 #include "InputDispatcher.hpp"
 
+#include <GLFW/glfw3.h>
+
+#include <iostream>
+
+#include "InputTranslator.hpp"
+
 namespace crisp
 {
     InputDispatcher::InputDispatcher(GLFWwindow* window)
         : m_window(window)
     {
         glfwSetWindowUserPointer(window, this);
-        glfwSetWindowSizeCallback(window,  InputDispatcher::resizeCallback);
-        glfwSetKeyCallback(window,         InputDispatcher::keyboardCallback);
-        glfwSetCursorPosCallback(window,   InputDispatcher::mouseMoveCallback);
-        glfwSetMouseButtonCallback(window, InputDispatcher::mouseButtonCallback);
-        glfwSetWindowCloseCallback(window, InputDispatcher::closeCallback);
-        glfwSetScrollCallback(window,      InputDispatcher::mouseWheelCallback);
-        glfwSetCursorEnterCallback(window, InputDispatcher::mouseEnterCallback);
+        glfwSetWindowSizeCallback(window,  resizeCallback);
+        glfwSetWindowCloseCallback(window, closeCallback);
+        glfwSetKeyCallback(window,         keyboardCallback);
+        glfwSetMouseButtonCallback(window, mouseButtonCallback);
+        glfwSetScrollCallback(window,      mouseWheelCallback);
+        glfwSetCursorPosCallback(window,   mouseMoveCallback);
+        glfwSetCursorEnterCallback(window, mouseEnterCallback);
     }
 
-    bool InputDispatcher::isKeyPressed(int keyCode) const
+    bool InputDispatcher::isKeyDown(Key key) const
     {
-        return glfwGetKey(m_window, keyCode) == GLFW_PRESS;
+        return glfwGetKey(m_window, translateKeyToGlfw(key)) == GLFW_PRESS;
     }
 
     void InputDispatcher::resizeCallback(GLFWwindow* window, int width, int height)
@@ -31,7 +37,7 @@ namespace crisp
         if (action == GLFW_PRESS)
         {
             auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
-            if (dispatcher) dispatcher->keyPressed(key, mode);
+            if (dispatcher) dispatcher->keyPressed(translateGlfwToKey(key), mode);
         }
     }
 
@@ -50,7 +56,7 @@ namespace crisp
             {
                 double xPos, yPos;
                 glfwGetCursorPos(window, &xPos, &yPos);
-                dispatcher->mouseButtonPressed(button, mods, xPos, yPos);
+                dispatcher->mouseButtonPressed({ translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos });
             }
         }
         else if (action == GLFW_RELEASE)
@@ -60,7 +66,7 @@ namespace crisp
             {
                 double xPos, yPos;
                 glfwGetCursorPos(window, &xPos, &yPos);
-                dispatcher->mouseButtonReleased(button, mods, xPos, yPos);
+                dispatcher->mouseButtonReleased({ translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos });
             }
         }
     }
@@ -89,5 +95,10 @@ namespace crisp
     {
         auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
         if (dispatcher) dispatcher->windowClosed();
+    }
+
+    void InputDispatcher::focusCallback(GLFWwindow* window, int isFocused)
+    {
+        auto dispatcher = reinterpret_cast<InputDispatcher*>(glfwGetWindowUserPointer(window));
     }
 }

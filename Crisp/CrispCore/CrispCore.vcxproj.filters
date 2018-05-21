@@ -36,5 +36,8 @@
     <ClInclude Include="CrispCore\ChromeProfiler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CrispCore\MathConstants.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -140,7 +140,8 @@ popd</Command>
     <ClCompile Include="Source\GUI\DoubleSlider.cpp" />
     <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp" />
     <ClCompile Include="Source\GUI\ListBox.cpp" />
-    <ClCompile Include="Source\Models\FluidSimulation.cpp" />
+    <ClCompile Include="Source\Models\SPH.cpp" />
+    <ClCompile Include="Source\Models\PositionBasedFluid.cpp" />
     <ClCompile Include="Source\Renderer\PipelineBuilder.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\BlurPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.cpp" />
@@ -148,6 +149,7 @@ popd</Command>
     <ClCompile Include="Source\Renderer\Pipelines\NormalMapPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\SsaoPipeline.cpp" />
+    <ClCompile Include="Source\Renderer\Pipelines\TerrainPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.cpp" />
     <ClCompile Include="Source\Renderer\RenderPassBuilder.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.cpp" />
@@ -176,7 +178,7 @@ popd</Command>
     <ClCompile Include="Source\IO\OpenEXRWriter.cpp" />
     <ClCompile Include="Source\Lights\DirectionalLight.cpp" />
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Core\RaytracedImage.cpp" />
+    <ClCompile Include="Source\Scenes\RaytracedImage.cpp" />
     <ClCompile Include="Source\Models\BoxDrawer.cpp" />
     <ClCompile Include="Source\Models\BoxVisualizer.cpp" />
     <ClCompile Include="Source\Models\Skybox.cpp" />
@@ -197,6 +199,7 @@ popd</Command>
     <ClCompile Include="Source\Scenes\RayTracerScene.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingPanel.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
+    <ClCompile Include="Source\Scenes\TerrainScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanImageView.cpp" />
@@ -240,6 +243,9 @@ popd</Command>
     <ClInclude Include="Source\Camera\CameraController.hpp" />
     <ClInclude Include="Source\Camera\TargetCamera.hpp" />
     <ClInclude Include="Source\Camera\FreeCamera.hpp" />
+    <ClInclude Include="Source\Core\InputTranslator.hpp" />
+    <ClInclude Include="Source\Core\Keyboard.hpp" />
+    <ClInclude Include="Source\Core\Mouse.hpp" />
     <ClInclude Include="Source\Core\SceneContainer.hpp" />
     <ClInclude Include="Source\Geometry\SphereMeshGenerator.hpp" />
     <ClInclude Include="Source\Geometry\VertexAttributeTraits.hpp" />
@@ -250,6 +256,8 @@ popd</Command>
     <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ListBox.hpp" />
     <ClInclude Include="Source\Models\FluidSimulation.hpp" />
+    <ClInclude Include="Source\Models\SPH.hpp" />
+    <ClInclude Include="Source\Models\PositionBasedFluid.hpp" />
     <ClInclude Include="Source\Renderer\PipelineBuilder.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\BlurPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\ColorAndShadowPipeline.hpp" />
@@ -258,6 +266,7 @@ popd</Command>
     <ClInclude Include="Source\Renderer\Pipelines\NormalMapPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\SsaoPipeline.hpp" />
+    <ClInclude Include="Source\Renderer\Pipelines\TerrainPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\VarianceShadowMapPipeline.hpp" />
     <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.hpp" />
@@ -272,6 +281,7 @@ popd</Command>
     <ClInclude Include="Source\Scenes\Scene.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingPanel.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingScene.hpp" />
+    <ClInclude Include="Source\Scenes\TerrainScene.hpp" />
     <ClInclude Include="Source\Scenes\TestScene.hpp" />
     <ClInclude Include="Source\Core\Window.hpp" />
     <ClInclude Include="Source\Geometry\MeshGeometry.hpp" />
@@ -304,7 +314,7 @@ popd</Command>
     <ClInclude Include="Source\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Math\Headers.hpp" />
     <ClInclude Include="Source\Math\Rect.hpp" />
-    <ClInclude Include="Source\Core\RaytracedImage.hpp" />
+    <ClInclude Include="Source\Scenes\RaytracedImage.hpp" />
     <ClInclude Include="Source\Models\BoxDrawer.hpp" />
     <ClInclude Include="Source\Models\BoxVisualizer.hpp" />
     <ClInclude Include="Source\Models\FluidSimulationParams.hpp" />
@@ -396,6 +406,7 @@ popd</Command>
     <None Include="Source\Shaders\normal-map-vert.glsl" />
     <None Include="Source\Shaders\outline-frag.glsl" />
     <None Include="Source\Shaders\outline-vert.glsl" />
+    <None Include="Source\Shaders\pbf-predict-comp.glsl" />
     <None Include="Source\Shaders\physically-based-frag.glsl" />
     <None Include="Source\Shaders\physically-based-vert.glsl" />
     <None Include="Source\Shaders\point-sphere-sprite-frag.glsl" />
@@ -410,6 +421,10 @@ popd</Command>
     <None Include="Source\Shaders\skybox-vert.glsl" />
     <None Include="Source\Shaders\ssao-frag.glsl" />
     <None Include="Source\Shaders\ssao-vert.glsl" />
+    <None Include="Source\Shaders\terrain-frag.glsl" />
+    <None Include="Source\Shaders\terrain-tesc.glsl" />
+    <None Include="Source\Shaders\terrain-tese.glsl" />
+    <None Include="Source\Shaders\terrain-vert.glsl" />
     <None Include="Source\Shaders\test-comp.glsl" />
     <None Include="Source\Shaders\unif-col-vert.glsl" />
     <None Include="Source\Shaders\unif-col-frag.glsl" />

@@ -37,6 +37,7 @@ namespace crisp
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
         m_defaultViewport = { 0.0f, 0.0f, static_cast<float>(m_swapChain->getExtent().width), static_cast<float>(m_swapChain->getExtent().height), 0.0f, 1.0f };
+        m_defaultScissor = { { 0, 0 }, m_swapChain->getExtent() };
 
         // Create frame resources, such as command buffer, fence and semaphores
         for (auto& frameRes : m_frameResources)
@@ -141,6 +142,11 @@ namespace crisp
         vkCmdSetViewport(cmdBuffer, 0, 1, &m_defaultViewport);
     }
 
+    void Renderer::setDefaultScissor(VkCommandBuffer cmdBuffer) const
+    {
+        vkCmdSetScissor(cmdBuffer, 0, 1, &m_defaultScissor);
+    }
+
     void Renderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const
     {
         m_fsQuadVertexBufferBindingGroup.bind(cmdBuffer);
@@ -159,6 +165,7 @@ namespace crisp
 
         m_defaultViewport.width  = static_cast<float>(m_swapChain->getExtent().width);
         m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
+        m_defaultScissor.extent = m_swapChain->getExtent();
 
         for (auto& pipeline : m_pipelines)
             pipeline->resize(width, height);

@@ -1,6 +1,6 @@
 #include "Animator.hpp"
 
-#include <iostream>
+#include <algorithm>
 
 namespace crisp
 {
@@ -11,7 +11,6 @@ namespace crisp
 
     Animator::~Animator()
     {
-        clearAllAnimations();
     }
 
     void Animator::update(double dt)
@@ -19,20 +18,31 @@ namespace crisp
         // Clear all animations if requested
         if (m_clearAllAnimations)
         {
+            m_pendingAnimations.clear();
             m_activeAnimations.clear();
+            m_removedAnimations.clear();
             m_clearAllAnimations = false;
         }
 
         // Remove all animations scheduled for removal
         if (!m_removedAnimations.empty())
         {
-            for (auto& removedAnim : m_removedAnimations)
-                m_activeAnimations.remove(removedAnim);
+            m_activeAnimations.erase(std::remove_if(m_activeAnimations.begin(), m_activeAnimations.end(), [this](const std::shared_ptr<Animation>& anim)
+            {
+                for (auto& removedAnim : m_removedAnimations)
+                    if (anim.get() == removedAnim.get())
+                        return true;
+                return false;
+            }), m_activeAnimations.end());
+            m_removedAnimations.clear();
         }
 
         // Add in any new animations
         if (!m_pendingAnimations.empty())
-            m_activeAnimations.splice(m_activeAnimations.end(), m_pendingAnimations);
+        {
+            m_activeAnimations.insert(m_activeAnimations.end(), m_pendingAnimations.begin(), m_pendingAnimations.end());
+            m_pendingAnimations.clear();
+        }
 
         // Advance all animations by a step
         bool hasFinishedAnimations = false;
@@ -49,11 +59,10 @@ namespace crisp
         // Remove all finished animations
         if (hasFinishedAnimations)
         {
-            m_activeAnimations.remove_if([](const std::shared_ptr<crisp::Animation>& anim)
+            m_activeAnimations.erase(std::remove_if(m_activeAnimations.begin(), m_activeAnimations.end(), [this](const std::shared_ptr<Animation>& anim)
             {
                 return anim->isFinished();
-            });
-            hasFinishedAnimations = false;
+            }), m_activeAnimations.end());
         }
     }
 

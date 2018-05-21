@@ -7,6 +7,11 @@
 
 namespace crisp::gui
 {
+    namespace
+    {
+        static constexpr double AnimationDuration = 0.5;
+    }
+
     Button::Button(Form* parentForm, std::string text)
         : Control(parentForm)
         , m_state(State::Idle)
@@ -14,13 +19,16 @@ namespace crisp::gui
         , m_label(std::make_unique<Label>(parentForm, text))
         , m_drawComponent(parentForm->getRenderSystem())
     {
-        m_stateColors[static_cast<std::size_t>(State::Idle)].border = glm::vec3(0.0f);
-        m_stateColors[static_cast<std::size_t>(State::Hover)].border = glm::vec3(0.3f, 0.8f, 1.0f);
-        m_stateColors[static_cast<std::size_t>(State::Pressed)].border = glm::vec3(0.2f, 0.7f, 0.9f);
+        setSizeHint({ 100, 30 });
+        m_stateColors[static_cast<std::size_t>(State::Idle)].border     = glm::vec3(0.0f);
+        m_stateColors[static_cast<std::size_t>(State::Hover)].border    = glm::vec3(0.3f, 0.8f, 1.0f);
+        m_stateColors[static_cast<std::size_t>(State::Pressed)].border  = glm::vec3(0.2f, 0.7f, 0.9f);
+        m_stateColors[static_cast<std::size_t>(State::Disabled)].border = glm::vec3(0.5f);
 
         setTextColor(glm::vec3(1.0f), State::Idle);
         setTextColor(glm::vec3(0.3f, 0.8f, 1.0f), State::Hover);
         setTextColor(glm::vec3(0.2f, 0.7f, 0.9f), State::Pressed);
+        setTextColor(glm::vec3(0.5f), State::Disabled);
 
         setBackgroundColor(glm::vec3(0.15f));
 
@@ -28,20 +36,21 @@ namespace crisp::gui
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
         m_borderColor = glm::vec4(glm::vec3(0.0f), 1.0f);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::Linear>>(AnimationDuration, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
-        }, 0, Easing::SlowOut);
-        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        });
+
+        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::Linear>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_label->setColor(t);
-        }, 0, Easing::SlowOut);
+        });
 
-        m_borderColorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        m_borderColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::Linear>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_borderColor = t;
             setValidationFlags(Validation::Color);
-        }, 0, Easing::SlowOut);
+        });
 
         m_label->setParent(this);
         m_label->setAnchor(Anchor::Center);
@@ -90,17 +99,18 @@ namespace crisp::gui
     void Button::setEnabled(bool enabled)
     {
         if (enabled)
-            setState(State::Disabled);
-        else
             setState(State::Idle);
+        else
+            setState(State::Disabled);
     }
 
     void Button::setBackgroundColor(const glm::vec3& color)
     {
         m_color        = glm::vec4(color, m_opacity);
-        m_stateColors[static_cast<std::size_t>(State::Idle)].background    = color;
-        m_stateColors[static_cast<std::size_t>(State::Hover)].background   = glm::clamp(color * 1.25f, glm::vec3(0.0f), glm::vec3(1.0f));
-        m_stateColors[static_cast<std::size_t>(State::Pressed)].background = color * 0.75f;
+        m_stateColors[static_cast<std::size_t>(State::Idle)].background     = color;
+        m_stateColors[static_cast<std::size_t>(State::Hover)].background    = glm::min(color * 1.25f, glm::vec3(1.0f));
+        m_stateColors[static_cast<std::size_t>(State::Pressed)].background  = color * 0.75f;
+        m_stateColors[static_cast<std::size_t>(State::Disabled)].background = glm::min(color * 1.1f, glm::vec3(1.0f));
         setValidationFlags(Validation::Color);
     }
 
@@ -146,7 +156,8 @@ namespace crisp::gui
         {
             clicked();
 
-            setState(State::Hover);
+            if (m_state != State::Disabled)
+                setState(State::Hover);
         }
         else
         {
@@ -191,6 +202,7 @@ namespace crisp::gui
             return;
 
         m_state = state;
+
         glm::vec4 targetColor = glm::vec4(m_stateColors[static_cast<std::size_t>(m_state)].background, m_opacity);
 
         m_colorAnim->reset(glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity), targetColor);

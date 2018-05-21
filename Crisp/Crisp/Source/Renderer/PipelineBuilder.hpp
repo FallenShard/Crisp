@@ -12,19 +12,19 @@ namespace crisp
 {
     namespace internal
     {
-        template <int loc, int binding, int offset, VkFormat format, VkFormat... formats>
+        template <uint32_t loc, uint32_t binding, int offset, VkFormat format, VkFormat... formats>
         void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs) {
-            vertexAttribs[loc] = VkVertexInputAttributeDescription{ loc, binding, format, offset };
+            vertexAttribs.emplace_back(VkVertexInputAttributeDescription{ loc, binding, format, offset });
 
             if constexpr (sizeof...(formats) > 0)
                 fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
         }
 
-        template <VkFormat... formats>
+        template <uint32_t loc, uint32_t binding, VkFormat... formats>
         std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes()
         {
-            std::vector<VkVertexInputAttributeDescription> vertexAttribs(sizeof...(formats), VkVertexInputAttributeDescription{});
-            fillVertexAttribs<0, 0, 0, formats...>(vertexAttribs);
+            std::vector<VkVertexInputAttributeDescription> vertexAttribs;
+            fillVertexAttribs<loc, binding, 0, formats...>(vertexAttribs);
             return vertexAttribs;
         }
     }
@@ -63,19 +63,33 @@ namespace crisp
 
         template <VkFormat... formats>
         PipelineBuilder& setVertexAttributes() {
-            m_vertexInputAttributes = internal::generateVertexInputAttributes<formats...>();
+            m_vertexInputAttributes = internal::generateVertexInputAttributes<0, 0, formats...>();
             m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
             m_vertexInputState.pVertexAttributeDescriptions    = m_vertexInputAttributes.data();
             return *this;
         }
 
+        template <uint32_t startLoc, uint32_t binding, VkFormat... formats>
+        PipelineBuilder& addVertexAttributes() {
+            auto attribs = internal::generateVertexInputAttributes<startLoc, binding, formats...>();
+            m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
+            m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
+            m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
+            return *this;
+        }
+
         PipelineBuilder& setInputAssemblyState(VkPrimitiveTopology topology, VkBool32 primitiveRestartEnable = VK_FALSE);
+        PipelineBuilder& setTessellationControlPoints(uint32_t numControlPoints);
+
+        PipelineBuilder& setPolygonMode(VkPolygonMode polygonMode);
 
         PipelineBuilder& setViewport(VkViewport&& viewport);
         PipelineBuilder& setScissor(VkRect2D&& scissor);
 
-        void enableState(PipelineState pipelineState);
-        void disableState(PipelineState pipelineState);
+        PipelineBuilder& enableState(PipelineState pipelineState);
+        PipelineBuilder& disableState(PipelineState pipelineState);
+
+        PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
 
         VkPipeline create(VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
 
@@ -109,6 +123,7 @@ namespace crisp
 
         VkPipelineDepthStencilStateCreateInfo m_depthStencilState;
 
+        std::vector<VkDynamicState>      m_dynamicStates;
         VkPipelineDynamicStateCreateInfo m_dynamicState;
 
         PipelineStateFlags m_pipelineStateFlags;

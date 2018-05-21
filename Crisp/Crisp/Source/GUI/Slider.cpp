@@ -45,12 +45,12 @@ namespace crisp::gui
         m_label->setParent(this);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.5, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
             m_indicatorRect->setColor(t);
             m_foregroundRect->setColor(t);
-        }, 0, Easing::SlowOut);
+        });
     }
 
     Slider::~Slider()
@@ -262,7 +262,7 @@ namespace crisp::gui
         setValidationFlags(Validation::Geometry);
 
         float t = indicatorPos / bounds.width;
-        float valueSpan = m_maxValue - m_minValue;
+        int valueSpan = m_maxValue - m_minValue;
 
         int rawValue = static_cast<int>(std::round(m_minValue + t * valueSpan));
         int dd = (rawValue - m_minValue + m_increment / 2) / m_increment;

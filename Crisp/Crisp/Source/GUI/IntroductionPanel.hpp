@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Panel.hpp"
+#include <memory>
 
 namespace crisp
 {
@@ -10,13 +10,7 @@ namespace crisp
 namespace crisp::gui
 {
     class Form;
-    class Label;
-    class Button;
+    class Panel;
 
-    class IntroductionPanel : public Panel
-    {
-    public:
-        IntroductionPanel(Form* parentForm, Application* app);
-        virtual ~IntroductionPanel();
-    };
+    std::unique_ptr<Panel> createIntroPanel(Form* form, Application* application);
 }

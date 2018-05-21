@@ -51,6 +51,7 @@ namespace crisp
         VkShaderModule    getShaderModule(std::string&& key) const;
 
         void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
+        void setDefaultScissor(VkCommandBuffer cmdBuffer) const;
         void drawFullScreenQuad(VkCommandBuffer cmdBuffer) const;
 
         uint32_t getCurrentVirtualFrameIndex() const;
@@ -93,6 +94,7 @@ namespace crisp
         std::unique_ptr<DefaultRenderPass> m_defaultRenderPass;
 
         VkViewport m_defaultViewport;
+        VkRect2D m_defaultScissor;
 
         uint32_t m_framesRendered;
         uint32_t m_currentFrameIndex;

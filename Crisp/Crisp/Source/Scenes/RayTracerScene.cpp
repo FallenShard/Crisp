@@ -5,11 +5,11 @@
 #include <Vesper/RayTracer.hpp>
 
 #include "Core/Application.hpp"
-#include "Core/RaytracedImage.hpp"
 #include "Core/Window.hpp"
 #include "IO/FileUtils.hpp"
 #include "IO/OpenEXRWriter.hpp"
 #include "RayTracerGui.hpp"
+#include "RaytracedImage.hpp"
 #include "GUI/Form.hpp"
 
 namespace crisp

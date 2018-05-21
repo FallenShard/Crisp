@@ -2,10 +2,19 @@
 
 namespace crisp
 {
+    namespace detail
+    {
+        template<typename ReturnType, typename ClassType, typename... Args>
+        ClassType deduceMemberFunctionClass(ReturnType(ClassType::*)(Args...)) {}
+
+        template<auto MemFn>
+        using MemFnClassType = decltype(deduceMemberFunctionClass(MemFn));
+    }
+
     template<typename ReturnType, typename... ParamTypes>
     class Delegate
     {
-        using CallbackType = ReturnType(*)(void* receiverObject, ParamTypes...);
+        using CallbackType = ReturnType(*)(void*, ParamTypes...);
 
     public:
         Delegate(void* receiverObject, CallbackType function)
@@ -15,16 +24,16 @@ namespace crisp
         }
 
         // Creates a delegate from specified method
-        template<typename T, ReturnType(T::*TMethod)(ParamTypes...)>
-        static Delegate fromFunction(T* receiverObject)
+        template <auto MemFn, typename ReceiverType = detail::MemFnClassType<MemFn>>
+        static Delegate fromMemberFunction(ReceiverType* receiverObject)
         {
-            return Delegate(receiverObject, &methodCaller<T, TMethod>);
+            return Delegate(receiverObject, &memberFunctionCaller<MemFn, ReceiverType>);
         }
 
         template<ReturnType(*SMethod)(ParamTypes...)>
         static Delegate fromStaticFunction()
         {
-            return Delegate(nullptr, &staticMethodCaller<SMethod>);
+            return Delegate(nullptr, &staticFunctionCaller<SMethod>);
         }
 
         // Executes the stored callback
@@ -49,14 +58,14 @@ namespace crisp
         CallbackType m_callbackFunction;
 
         // Where the magic happens
-        template<typename T, ReturnType(T::*TMethod)(ParamTypes...)>
-        static ReturnType methodCaller(void* receiverObject, ParamTypes... args)
+        template<auto MemFn, typename ReceiverType>
+        static ReturnType memberFunctionCaller(void* receiverObject, ParamTypes... args)
         {
-            return (static_cast<T*>(receiverObject)->*TMethod)(args...);
+            return (static_cast<ReceiverType*>(receiverObject)->*MemFn)(args...);
         }
 
         template<ReturnType(*SMethod)(ParamTypes...)>
-        static ReturnType staticMethodCaller(void* receiverObject, ParamTypes... args)
+        static ReturnType staticFunctionCaller(void* receiverObject, ParamTypes... args)
         {
             return (*SMethod)(args...);
         }

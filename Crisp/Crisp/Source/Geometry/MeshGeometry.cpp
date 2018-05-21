@@ -22,8 +22,8 @@ namespace crisp
         uint32_t numVertices = triangleMesh.getNumVertices();
         uint32_t i = 0;
 
-        m_vertexBindingGroup.firstBinding = 0;
-        m_vertexBindingGroup.bindingCount = static_cast<uint32_t>(m_vertexBuffers.size());
+        m_firstBinding = 0;
+        m_bindingCount = static_cast<uint32_t>(m_vertexBuffers.size());
         for (const auto& vertexAttribFormat : vertexAttributes)
         {
             std::vector<float> interleavedBuffer;
@@ -42,8 +42,9 @@ namespace crisp
             }
 
             m_vertexBuffers[i] = std::make_unique<VertexBuffer>(renderer, interleavedBuffer);
-            m_vertexBindingGroup.buffers.push_back(m_vertexBuffers[i]->get());
-            m_vertexBindingGroup.offsets.push_back(0);
+
+            m_buffers.push_back(m_vertexBuffers[i]->get());
+            m_offsets.push_back(0);
         }
 
         m_indexBuffer = std::make_unique<IndexBuffer>(renderer, triangleMesh.getFaces());
@@ -61,7 +62,7 @@ namespace crisp
 
     void MeshGeometry::bindGeometryBuffers(VkCommandBuffer commandBuffer) const
     {
-        m_vertexBindingGroup.bind(commandBuffer);
+        vkCmdBindVertexBuffers(commandBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
         m_indexBuffer->bind(commandBuffer, 0);
     }
 

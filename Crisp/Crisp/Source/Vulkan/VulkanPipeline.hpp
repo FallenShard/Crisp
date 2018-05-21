@@ -44,6 +44,13 @@ namespace crisp
             setPushConstantsWithOffset(cmdBuffer, shaderStages, 0, std::forward<T>(arg), std::forward<Ts>(args)...);
         }
 
+    protected:
+        static VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();
+        static VkPipelineMultisampleStateCreateInfo   createDefaultMultisampleState();
+        static VkPipelineColorBlendAttachmentState    createDefaultColorBlendAttachmentState();
+        static VkPipelineColorBlendStateCreateInfo    createDefaultColorBlendState();
+        static VkPipelineDepthStencilStateCreateInfo  createDefaultDepthStencilState();
+
         template <typename T, typename ...Ts>
         inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
         {
@@ -52,13 +59,6 @@ namespace crisp
             if constexpr (sizeof...(Ts) > 0)
                 setPushConstantsWithOffset(cmdBuffer, shaderStages, offset + sizeof(T), std::forward<Ts>(args)...);
         }
-
-    protected:
-        static VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();
-        static VkPipelineMultisampleStateCreateInfo   createDefaultMultisampleState();
-        static VkPipelineColorBlendAttachmentState    createDefaultColorBlendAttachmentState();
-        static VkPipelineColorBlendStateCreateInfo    createDefaultColorBlendState();
-        static VkPipelineDepthStencilStateCreateInfo  createDefaultDepthStencilState();
 
         virtual void create(int width, int height) = 0;
 

@@ -49,7 +49,7 @@ namespace crisp
         VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* message, void*)
         {
             std::stringstream stream;
-            stream << "=== Vulkan Validation Layer ===\n";
+            stream << "\n=== Vulkan Validation Layer ===\n";
             stream << "Severity: ";
             if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)         stream << " | Info";
             if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)             stream << " | Warning";

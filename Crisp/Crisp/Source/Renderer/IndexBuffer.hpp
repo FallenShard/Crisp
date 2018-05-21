@@ -19,6 +19,7 @@ namespace crisp
         template <>           struct IndexTypeTrait<glm::u16vec2> { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16; };
         template <>           struct IndexTypeTrait<glm::u16vec3> { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16; };
         template <>           struct IndexTypeTrait<glm::uvec3>   { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32; };
+        template <>           struct IndexTypeTrait<glm::uvec4>   { static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32; };
     }
 
     class IndexBuffer

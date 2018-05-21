@@ -22,14 +22,14 @@ namespace crisp::gui
         m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.4, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.4, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
-        }, 0, Easing::SlowOut);
-        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4>>(0.4, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        });
+        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.4, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_label->setColor(t);
-        }, 0, Easing::SlowOut);
+        });
 
         m_label->setParent(this);
         m_label->setAnchor(Anchor::CenterLeft);

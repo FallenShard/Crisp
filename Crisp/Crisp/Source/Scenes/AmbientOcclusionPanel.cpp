@@ -32,7 +32,7 @@ namespace crisp::gui
         numSamplesSlider->setPosition({ 0, y });
         numSamplesSlider->setValues({ 16, 32, 64, 128, 256, 512 });
         numSamplesSlider->setValue(3);
-        numSamplesSlider->valueChanged.subscribe<AmbientOcclusionScene, &AmbientOcclusionScene::setNumSamples>(scene);
+        numSamplesSlider->valueChanged.subscribe<&AmbientOcclusionScene::setNumSamples>(scene);
         addControl(std::move(numSamplesSlider));
         y += 30;
 
@@ -50,7 +50,7 @@ namespace crisp::gui
         radiusSlider->setIncrement(0.1);
         radiusSlider->setPrecision(1);
         radiusSlider->setValue(0.5);
-        radiusSlider->valueChanged.subscribe<AmbientOcclusionScene, &AmbientOcclusionScene::setRadius>(scene);
+        radiusSlider->valueChanged.subscribe<&AmbientOcclusionScene::setRadius>(scene);
         addControl(std::move(radiusSlider));
         y += 30;
     }

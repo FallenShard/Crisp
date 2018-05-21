@@ -165,9 +165,6 @@
     <ClCompile Include="Source\Renderer\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\RaytracedImage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\IO\ImageFileBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -340,13 +337,25 @@
     <ClCompile Include="Source\Scenes\AmbientOcclusionScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Models\FluidSimulation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Renderer\Pipelines\ComputePipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\RaytracedImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Models\PositionBasedFluid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Models\SPH.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scenes\TerrainScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Pipelines\TerrainPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -508,9 +517,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Texture.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Core\RaytracedImage.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\IO\ImageFileBuffer.hpp">
@@ -717,13 +723,37 @@
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Models\FluidSimulation.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\Pipelines\ComputePipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Renderer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\RaytracedImage.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Models\PositionBasedFluid.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Models\SPH.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Models\FluidSimulation.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scenes\TerrainScene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Keyboard.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\InputTranslator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Mouse.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Pipelines\TerrainPipeline.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -781,6 +811,11 @@
     <None Include="Source\Shaders\compute-density-and-pressure-comp.glsl" />
     <None Include="Source\Shaders\compute-forces-comp.glsl" />
     <None Include="Source\Shaders\reindex-particles-comp.glsl" />
+    <None Include="Source\Shaders\pbf-predict-comp.glsl" />
+    <None Include="Source\Shaders\terrain-vert.glsl" />
+    <None Include="Source\Shaders\terrain-tesc.glsl" />
+    <None Include="Source\Shaders\terrain-tese.glsl" />
+    <None Include="Source\Shaders\terrain-frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />

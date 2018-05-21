@@ -53,7 +53,7 @@ namespace crisp::gui
         glm::vec3 m_idleColor;
         glm::vec3 m_pressedColor;
 
-        std::shared_ptr<PropertyAnimation<glm::vec4>> m_colorAnim;
+        std::shared_ptr<PropertyAnimation<glm::vec4, Easing::SlowOut>> m_colorAnim;
 
         std::unique_ptr<Label> m_label;
         std::unique_ptr<Panel> m_backgroundRect;

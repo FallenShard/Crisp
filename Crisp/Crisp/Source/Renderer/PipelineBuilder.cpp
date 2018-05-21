@@ -43,6 +43,19 @@ namespace crisp
         return *this;
     }
 
+    PipelineBuilder& PipelineBuilder::setTessellationControlPoints(uint32_t numControlPoints)
+    {
+        m_pipelineStateFlags |= PipelineState::Tessellation;
+        m_tessellationState.patchControlPoints = numControlPoints;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setPolygonMode(VkPolygonMode polygonMode)
+    {
+        m_rasterizationState.polygonMode = polygonMode;
+        return *this;
+    }
+
     PipelineBuilder& PipelineBuilder::setViewport(VkViewport&& viewport)
     {
         m_viewports = { viewport };
@@ -59,14 +72,25 @@ namespace crisp
         return *this;
     }
 
-    void PipelineBuilder::enableState(PipelineState pipelineState)
+    PipelineBuilder& PipelineBuilder::enableState(PipelineState pipelineState)
     {
         m_pipelineStateFlags |= pipelineState;
+        return *this;
     }
 
-    void PipelineBuilder::disableState(PipelineState pipelineState)
+    PipelineBuilder& PipelineBuilder::disableState(PipelineState pipelineState)
     {
         m_pipelineStateFlags.disable(pipelineState);
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::addDynamicState(VkDynamicState dynamicState)
+    {
+        m_pipelineStateFlags |= PipelineState::Dynamic;
+        m_dynamicStates.push_back(dynamicState);
+        m_dynamicState.dynamicStateCount = static_cast<uint32_t>(m_dynamicStates.size());
+        m_dynamicState.pDynamicStates    = m_dynamicStates.data();
+        return *this;
     }
 
     VkPipeline PipelineBuilder::create(VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex)

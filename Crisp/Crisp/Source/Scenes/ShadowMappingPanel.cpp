@@ -32,7 +32,7 @@ namespace crisp::gui
         blurRadiusSlider->setPosition({ 0, y });
         blurRadiusSlider->setValues({ 0, 3, 7, 15, 25, 37 });
         blurRadiusSlider->setValue(2);
-        blurRadiusSlider->valueChanged.subscribe<ShadowMappingScene, &ShadowMappingScene::setBlurRadius>(scene);
+        blurRadiusSlider->valueChanged.subscribe<&ShadowMappingScene::setBlurRadius>(scene);
         addControl(std::move(blurRadiusSlider));
         y += 30;
     }

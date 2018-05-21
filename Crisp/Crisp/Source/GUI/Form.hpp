@@ -8,6 +8,7 @@
 #include "Math/Headers.hpp"
 #include "Animation/Animator.hpp"
 #include "GUI/ControlGroup.hpp"
+#include "Core/Mouse.hpp"
 
 namespace crisp::gui
 {
@@ -44,8 +45,8 @@ namespace crisp::gui
         void onMouseEntered(double mouseX, double mouseY);
         void onMouseExited(double mouseX, double mouseY);
         void onMouseMoved(double mouseX, double mouseY);
-        void onMousePressed(int button, int mods, double mouseX, double mouseY);
-        void onMouseReleased(int button, int mods, double mouseX, double mouseY);
+        void onMousePressed(const MouseEventArgs& mouseEventArgs);
+        void onMouseReleased(const MouseEventArgs& mouseEventArgs);
 
         void update(double dt);
         void draw();

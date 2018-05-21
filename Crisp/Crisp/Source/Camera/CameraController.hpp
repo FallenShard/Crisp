@@ -6,6 +6,8 @@
 #include "FreeCamera.hpp"
 #include "TargetCamera.hpp"
 
+#include "Core/Mouse.hpp"
+
 namespace crisp
 {
     class Animator;
@@ -28,8 +30,8 @@ namespace crisp
 
         bool update(float dt);
 
-        void onMousePressed(int button, int mods, double xPos, double yPos);
-        void onMouseReleased(int button, int mods, double xPos, double yPos);
+        void onMousePressed(const MouseEventArgs& mouseEventArgs);
+        void onMouseReleased(const MouseEventArgs& mouseEventArgs);
         void onMouseMoved(double xPos, double yPos);
         void onMouseWheelScrolled(double offset);
 

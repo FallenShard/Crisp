@@ -19,10 +19,10 @@ namespace crisp
         Event<void, ParamTypes...>& operator=(const Event& other) = delete;
         Event<void, ParamTypes...>& operator=(Event&& other) = delete;
 
-        template<typename T, void(T::*callbackMethod)(ParamTypes...)>
-        void subscribe(T* obj)
+        template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
+        void subscribe(ReceiverType* obj)
         {
-            m_delegates.insert(Delegate<void, ParamTypes...>::fromFunction<T, callbackMethod>(obj));
+            m_delegates.insert(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
         }
 
         template<void(*callbackMethod)(ParamTypes...)>
@@ -49,10 +49,10 @@ namespace crisp
             m_delegates.insert(del);
         }
 
-        template<typename T, void(T::*callbackMethod)(ParamTypes...)>
-        void unsubscribe(T* obj)
+        template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
+        void unsubscribe(ReceiverType* obj)
         {
-            m_delegates.erase(Delegate<void, ParamTypes...>::fromFunction<T, callbackMethod>(obj));
+            m_delegates.erase(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
         }
 
         void operator()(ParamTypes... args)

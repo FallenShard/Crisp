@@ -6,6 +6,7 @@
 #include "Scenes/AmbientOcclusionScene.hpp"
 #include "Scenes/RayTracerScene.hpp"
 #include "Scenes/PhysicallyBasedMaterialsScene.hpp"
+#include "Scenes/TerrainScene.hpp"
 #include "Application.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/ComboBox.hpp"
@@ -21,6 +22,7 @@ namespace crisp
             "Shadow Mapping",
             "Ray Tracer",
             "Physically Based Materials",
+            "Terrain Tessellation",
             "Test"
         };
 
@@ -32,6 +34,7 @@ namespace crisp
             else if (name == sceneNames[2]) return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[3]) return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[4]) return std::make_unique<PhysicallyBasedMaterialsScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[5]) return std::make_unique<TerrainScene>(std::forward<Args>(args)...);
             else                            return std::make_unique<TestScene>(std::forward<Args>(args)...);
         }
     }
@@ -53,7 +56,7 @@ namespace crisp
 
     const std::string& SceneContainer::getDefaultScene()
     {
-        return sceneNames.at(1);
+        return sceneNames.at(5);
     }
 
     void SceneContainer::update(float dt)

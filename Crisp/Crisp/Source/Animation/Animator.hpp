@@ -20,9 +20,9 @@ namespace crisp
         void clearAllAnimations();
 
     private:
-        std::list<std::shared_ptr<Animation>> m_activeAnimations;
-        std::list<std::shared_ptr<Animation>> m_pendingAnimations;
-        std::list<std::shared_ptr<Animation>> m_removedAnimations;
+        std::vector<std::shared_ptr<Animation>> m_activeAnimations;
+        std::vector<std::shared_ptr<Animation>> m_pendingAnimations;
+        std::vector<std::shared_ptr<Animation>> m_removedAnimations;
 
         bool m_clearAllAnimations;
     };

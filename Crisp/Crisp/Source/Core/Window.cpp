@@ -1,5 +1,7 @@
 #include "Window.hpp"
 
+#include <glfw/glfw3.h>
+
 #include "InputDispatcher.hpp"
 
 namespace crisp
@@ -44,9 +46,15 @@ namespace crisp
         glfwSetWindowShouldClose(m_window, GLFW_TRUE);
     }
 
-    void Window::setInputMode(int mode, int value)
+    void Window::setCursorState(CursorState cursorState)
     {
-        glfwSetInputMode(m_window, mode, value);
+        int value = cursorState == CursorState::Normal ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
+        glfwSetInputMode(m_window, GLFW_CURSOR, value);
+    }
+
+    void Window::setCursorPosition(const glm::vec2& position)
+    {
+        glfwSetCursorPos(m_window, position.x, position.y);
     }
 
     void Window::setTitle(const std::string& title)

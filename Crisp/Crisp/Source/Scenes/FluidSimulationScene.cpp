@@ -1,6 +1,8 @@
 #include "FluidSimulationScene.hpp"
 
 #include "Models/FluidSimulation.hpp"
+#include "Models/PositionBasedFluid.hpp"
+#include "Models/SPH.hpp"
 
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
@@ -32,8 +34,8 @@ namespace crisp
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         initRenderTargetResources();
 
-        m_fluidSimulation = std::make_unique<FluidSimulation>(m_renderer);
-        m_app->getWindow()->getInputDispatcher()->keyPressed.subscribe<FluidSimulation, &FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+        m_fluidSimulation = std::make_unique<SPH>(m_renderer);
+        m_app->getWindow()->getInputDispatcher()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
         auto fluidPanel = std::make_unique<gui::FluidSimulationPanel>(app->getForm(), m_fluidSimulation.get());
         m_app->getForm()->add(std::move(fluidPanel));
@@ -54,7 +56,7 @@ namespace crisp
 
     FluidSimulationScene::~FluidSimulationScene()
     {
-        m_app->getWindow()->getInputDispatcher()->keyPressed.unsubscribe<FluidSimulation, &FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+        m_app->getWindow()->getInputDispatcher()->keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
         m_app->getForm()->remove("fluidSimulationPanel");
     }
 

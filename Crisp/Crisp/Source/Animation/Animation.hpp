@@ -11,7 +11,7 @@ namespace crisp
     {
     public:
         Animation(double startDelay, double duration, bool isLooped = false, int loopCount = 1);
-        ~Animation();
+        virtual ~Animation();
 
         Event<> started;
         Event<> finished;
@@ -45,7 +45,5 @@ namespace crisp
         int m_loopCount;
 
         int m_loopsCompleted;
-        int m_frameCount;
-
     };
 }
