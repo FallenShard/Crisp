@@ -12,7 +12,7 @@ namespace crisp
     class VulkanBuffer : public VulkanResource<VkBuffer>
     {
     public:
-        VulkanBuffer(VulkanDevice* device, size_t size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
+        VulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
         ~VulkanBuffer();
 
         VkDeviceSize getSize() const;

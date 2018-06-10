@@ -4,15 +4,5 @@
 
 namespace crisp
 {
-    class LiquidPipeline : public VulkanPipeline
-    {
-    public:
-        LiquidPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
-
-    protected:
-        virtual void create(int width, int height) override;
-
-        VkShaderModule m_vertShader;
-        VkShaderModule m_fragShader;
-    };
+    std::unique_ptr<VulkanPipeline> createDielectricPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass);
 }

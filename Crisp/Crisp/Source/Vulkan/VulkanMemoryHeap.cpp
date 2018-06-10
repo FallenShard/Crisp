@@ -3,7 +3,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include <CrispCore/ConsoleUtils.hpp>
+#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -28,8 +28,7 @@ namespace crisp
 
         if (block.freeChunks.size() > 10)
         {
-            ConsoleColorizer colorizer(ConsoleColor::Yellow);
-            std::cout << '[' << tag << ']' << " Possible memory fragmentation - free chunks: " << block.freeChunks.size() << '\n';
+            logWarning('[', tag, ']', " Possible memory fragmentation - free chunks: ", block.freeChunks.size());
         }
         else if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == blockSize)
         {
@@ -40,8 +39,7 @@ namespace crisp
 
             memoryBlocks.remove(block);
 
-            ConsoleColorizer colorizer(ConsoleColor::Green);
-            std::cout << '[' << tag << ']' << " Freeing a memory block\n";
+            logInfo('[', tag, ']', " Freeing a memory block.");
         }
     }
 
@@ -85,9 +83,8 @@ namespace crisp
 
         if (!foundMemoryBlock)
         {
-            ConsoleColorizer colorizer(ConsoleColor::Yellow);
-            std::cout << '[' << tag << ']' << " Failed to find a free chunk.\n";
-            std::cout << '[' << tag << ']' << " Allocating another memory block of size " << (blockSize >> 20) << " MB.\n";
+            logWarning('[', tag, ']', " Failed to find a free chunk.");
+            logWarning('[', tag, ']', " Allocating another memory block of size ", (blockSize >> 20), " MB.");
             auto* blockPtr = allocateVulkanMemoryBlock(blockSize);
             std::tie(foundChunkOffset, foundChunkSize) = findFreeChunkInBlock(*blockPtr, size, alignment);
             if (foundChunkSize != 0)
@@ -96,9 +93,8 @@ namespace crisp
             }
             else
             {
-                ConsoleColorizer colorizer(ConsoleColor::LightRed);
-                std::cout << '[' << tag << ']' << " CRITICAL ERROR: Allocation failed! " << (blockSize >> 20) << " MB.\n";
-                std::cout << '[' << tag << ']' << " Requested size: " << size << " bytes, but heap supports max " << (blockSize >> 20) << " MB allocations.\n";
+                logFatal('[', tag, ']', " CRITICAL ERROR: Allocation failed! ", (blockSize >> 20), " MB.");
+                logFatal('[', tag, ']', " Requested size: ", size, " bytes, but heap supports max ", (blockSize >> 20), " MB allocations.");
                 return allocResult;
             }
         }
@@ -190,8 +186,7 @@ namespace crisp
     {
         if (!(properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
         {
-            ConsoleColorizer colorizer(ConsoleColor::LightRed);
-            std::cout << '[' << tag << ']' << " Attempted invalid MapMemory!\n";
+            logFatal('[', tag, ']', " Attempted invalid MapMemory!");
             return nullptr;
         }
 

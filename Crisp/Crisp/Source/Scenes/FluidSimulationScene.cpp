@@ -32,7 +32,7 @@ namespace crisp
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
-        initRenderTargetResources();
+        m_renderer->setSceneImageView(m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames));
 
         m_fluidSimulation = std::make_unique<SPH>(m_renderer);
         m_app->getWindow()->getInputDispatcher()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
@@ -43,7 +43,7 @@ namespace crisp
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
         m_paramsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame);
 
-        m_pointSpritePipeline = std::make_unique<PointSphereSpritePipeline>(m_renderer, m_scenePass.get());
+        m_pointSpritePipeline = createPointSphereSpritePipeline(m_renderer, m_scenePass.get());
         m_pointSpriteDescGroup =
         {
             m_pointSpritePipeline->allocateDescriptorSet(0),
@@ -65,10 +65,7 @@ namespace crisp
         m_cameraController->resize(width, height);
 
         m_scenePass->recreate();
-
-        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
+        m_renderer->setSceneImageView(m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames));
     }
 
     void FluidSimulationScene::update(float dt)
@@ -108,35 +105,12 @@ namespace crisp
             m_pointSpriteDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
             m_pointSpriteDescGroup.setDynamicOffset(1, m_paramsBuffer->getDynamicOffset(frameIdx));
             m_pointSpritePipeline->bind(commandBuffer);
-            m_pointSpriteDescGroup.bind(commandBuffer, m_pointSpritePipeline->getPipelineLayout());
+            m_pointSpriteDescGroup.bind(commandBuffer, m_pointSpritePipeline->getPipelineLayout()->getHandle());
             m_fluidSimulation->drawGeometry(commandBuffer);
             m_scenePass->end(commandBuffer);
 
             m_scenePass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
-
-        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
-        {
-            m_fsQuadPipeline->bind(commandBuffer);
-            m_renderer->setDefaultViewport(commandBuffer);
-            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout());
-
-            unsigned int layerIndex = m_renderer->getCurrentVirtualFrameIndex();
-            m_fsQuadPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, layerIndex);
-            m_renderer->drawFullScreenQuad(commandBuffer);
-        });
-    }
-
-    void FluidSimulationScene::initRenderTargetResources()
-    {
-        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
-        m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
-
-        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
     }
 }

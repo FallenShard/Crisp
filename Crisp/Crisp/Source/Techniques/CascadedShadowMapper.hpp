@@ -18,7 +18,6 @@ namespace crisp
 
     class ShadowPass;
     class VulkanPipeline;
-    class ShadowMapPipeline;
 
     enum class ParallelSplit
     {
@@ -39,7 +38,7 @@ namespace crisp
 
         void update(VkCommandBuffer cmdBuffer, unsigned int frameIndex);
         void draw(VkCommandBuffer cmdBuffer, unsigned int frameIndex, std::function<void(VkCommandBuffer commandBuffer, uint32_t frameIdx, DescriptorSetGroup& descSets, VulkanPipeline* pipeline, uint32_t cascadeTransformOffset)> callback);
-       
+
         glm::mat4 getLightTransform(uint32_t index) const;
 
         const DirectionalLight* getLight() const;
@@ -53,7 +52,7 @@ namespace crisp
         DirectionalLight m_light;
 
         std::unique_ptr<ShadowPass> m_shadowPass;
-        std::vector<std::unique_ptr<ShadowMapPipeline>> m_pipelines;
+        std::vector<std::unique_ptr<VulkanPipeline>> m_pipelines;
         DescriptorSetGroup m_descGroup;
 
         std::vector<glm::mat4> m_transforms;

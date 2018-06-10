@@ -167,7 +167,6 @@ namespace crisp::gui
 
     void Button::validate()
     {
-
         if (m_validationFlags & Validation::Geometry)
         {
             auto absPos   = getAbsolutePosition();

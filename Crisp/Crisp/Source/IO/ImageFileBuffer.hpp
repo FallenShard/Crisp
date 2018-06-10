@@ -16,6 +16,8 @@ namespace crisp
         unsigned int getNumComponents() const;
         uint64_t getByteSize() const;
 
+        uint32_t getMipLevels() const;
+
     private:
         std::vector<unsigned char> m_data;
         unsigned int m_width;

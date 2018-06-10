@@ -8,9 +8,7 @@ namespace crisp
     {
         void glfwErrorHandler(int errorCode, const char* message)
         {
-            ConsoleColorizer colorizer(ConsoleColor::LightRed);
-            std::cout << "GLFW error code: " << errorCode << std::endl;
-            std::cout << message << std::endl;
+            logError("GLFW error code: ", errorCode, '\n', message);
         }
     }
 
@@ -18,11 +16,10 @@ namespace crisp
     {
         ConsoleColorizer::saveDefault();
 
-        if (glfwInit() == GLFW_FALSE)
-        {
-            std::cerr << "Could not initialize GLFW library!\n";
-        }
         glfwSetErrorCallback(glfwErrorHandler);
+
+        if (glfwInit() == GLFW_FALSE)
+            logError("Could not initialize GLFW library!");
     }
 
     ApplicationEnvironment::~ApplicationEnvironment()

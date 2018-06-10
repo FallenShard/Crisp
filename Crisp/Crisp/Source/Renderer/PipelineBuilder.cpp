@@ -36,6 +36,13 @@ namespace crisp
         return *this;
     }
 
+    PipelineBuilder& PipelineBuilder::setFullScreenVertexLayout()
+    {
+        addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32_SFLOAT>();
+        setVertexAttributes<VK_FORMAT_R32G32_SFLOAT>();
+        return *this;
+    }
+
     PipelineBuilder& PipelineBuilder::setInputAssemblyState(VkPrimitiveTopology topology, VkBool32 primitiveRestartEnable)
     {
         m_inputAssemblyState.topology               = topology;
@@ -56,6 +63,18 @@ namespace crisp
         return *this;
     }
 
+    PipelineBuilder& PipelineBuilder::setFrontFace(VkFrontFace frontFace)
+    {
+        m_rasterizationState.frontFace = frontFace;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setLineWidth(float lineWidth)
+    {
+        m_rasterizationState.lineWidth = lineWidth;
+        return *this;
+    }
+
     PipelineBuilder& PipelineBuilder::setViewport(VkViewport&& viewport)
     {
         m_viewports = { viewport };
@@ -69,6 +88,45 @@ namespace crisp
         m_scissors = { scissor };
         m_viewportState.scissorCount = static_cast<uint32_t>(m_scissors.size());
         m_viewportState.pScissors    = m_scissors.data();
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setBlendState(uint32_t index, VkBool32 enabled)
+    {
+        if (index >= m_colorBlendAttachmentStates.size())
+        {
+            m_colorBlendAttachmentStates.resize(index + 1);
+            m_colorBlendState.attachmentCount = static_cast<uint32_t>(m_colorBlendAttachmentStates.size());
+            m_colorBlendState.pAttachments = m_colorBlendAttachmentStates.data();
+        }
+        m_colorBlendAttachmentStates[index].blendEnable = enabled;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setBlendFactors(uint32_t index, VkBlendFactor srcFactor, VkBlendFactor dstFactor)
+    {
+        if (index >= m_colorBlendAttachmentStates.size())
+        {
+            m_colorBlendAttachmentStates.resize(index + 1);
+            m_colorBlendState.attachmentCount = static_cast<uint32_t>(m_colorBlendAttachmentStates.size());
+            m_colorBlendState.pAttachments = m_colorBlendAttachmentStates.data();
+        }
+        m_colorBlendAttachmentStates[index].srcColorBlendFactor = srcFactor;
+        m_colorBlendAttachmentStates[index].srcAlphaBlendFactor = srcFactor;
+        m_colorBlendAttachmentStates[index].dstColorBlendFactor = dstFactor;
+        m_colorBlendAttachmentStates[index].dstAlphaBlendFactor = dstFactor;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setDepthTest(VkBool32 enabled)
+    {
+        m_depthStencilState.depthTestEnable = enabled;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setDepthWrite(VkBool32 enabled)
+    {
+        m_depthStencilState.depthWriteEnable = enabled;
         return *this;
     }
 
@@ -185,5 +243,14 @@ namespace crisp
         depthStencilState.minDepthBounds        = 0.0f;
         depthStencilState.maxDepthBounds        = 1.0f;
         return depthStencilState;
+    }
+
+    VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint)
+    {
+        VkPipelineShaderStageCreateInfo shaderStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+        shaderStageInfo.stage  = shaderStage;
+        shaderStageInfo.module = shaderModule;
+        shaderStageInfo.pName  = entryPoint;
+        return shaderStageInfo;
     }
 }

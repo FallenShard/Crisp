@@ -9,6 +9,7 @@
 #include "vulkan/VulkanFormatTraits.hpp"
 #include "vulkan/VulkanDescriptorSetLayout.hpp"
 #include "vulkan/VulkanDescriptorSet.hpp"
+#include "Vulkan/VulkanPipelineLayout.hpp"
 
 namespace crisp
 {
@@ -19,23 +20,25 @@ namespace crisp
     class VulkanPipeline : public VulkanResource<VkPipeline>
     {
     public:
-        VulkanPipeline(Renderer* renderer, uint32_t layoutCount, VulkanRenderPass* renderPass, bool isWindowDependent = true);
+        VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout);
         virtual ~VulkanPipeline();
 
-        inline VkPipelineLayout getPipelineLayout() const { return m_pipelineLayout; }
-        inline VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
+        inline VulkanPipelineLayout* getPipelineLayout() const { return m_pipelineLayout.get(); }
 
-        void resize(int width, int height);
         void bind(VkCommandBuffer buffer) const;
         void bind(VkCommandBuffer buffer, VkPipelineBindPoint bindPoint) const;
 
         VulkanDescriptorSet          allocateDescriptorSet(uint32_t setId) const;
-        VulkanDescriptorSetLayout*   getDescriptorSetLayout(uint32_t index) const;
+
+        inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
+        {
+            return m_pipelineLayout->getDescriptorType(setIndex, binding);
+        }
 
         template <typename T>
         inline void setPushConstant(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& value) const
         {
-            vkCmdPushConstants(cmdBuffer, m_pipelineLayout, shaderStages, offset, sizeof(T), &value);
+            vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, sizeof(T), &value);
         }
 
         template <typename T, typename ...Ts>
@@ -45,12 +48,6 @@ namespace crisp
         }
 
     protected:
-        static VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();
-        static VkPipelineMultisampleStateCreateInfo   createDefaultMultisampleState();
-        static VkPipelineColorBlendAttachmentState    createDefaultColorBlendAttachmentState();
-        static VkPipelineColorBlendStateCreateInfo    createDefaultColorBlendState();
-        static VkPipelineDepthStencilStateCreateInfo  createDefaultDepthStencilState();
-
         template <typename T, typename ...Ts>
         inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
         {
@@ -60,21 +57,6 @@ namespace crisp
                 setPushConstantsWithOffset(cmdBuffer, shaderStages, offset + sizeof(T), std::forward<Ts>(args)...);
         }
 
-        virtual void create(int width, int height) = 0;
-
-        std::unique_ptr<VulkanDescriptorSetLayout> createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
-        VkDescriptorPool createDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxAllocatedSets);
-        VkPipelineLayout createPipelineLayout(const std::vector<std::unique_ptr<VulkanDescriptorSetLayout>>& setLayouts, const std::vector<VkPushConstantRange>& pushConstants = std::vector<VkPushConstantRange>());
-
-        VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint = "main");
-
-        Renderer*   m_renderer;
-        VulkanRenderPass* m_renderPass;
-
-        std::vector<std::unique_ptr<VulkanDescriptorSetLayout>> m_descriptorSetLayouts;
-        VkDescriptorPool m_descriptorPool;
-        VkPipelineLayout m_pipelineLayout;
-
-        bool m_isWindowDependent;
+        std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;
     };
 }

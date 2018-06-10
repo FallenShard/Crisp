@@ -5,7 +5,7 @@
 #include <string>
 #include <chrono>
 
-#include <CrispCore/ConsoleUtils.hpp>
+#include <CrispCore/Log.hpp>
 
 #include "Renderer/Renderer.hpp"
 #include "Core/Window.hpp"
@@ -32,15 +32,14 @@ namespace crisp
             stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << frameTime << " ms"
                 << ", " << std::setfill('0') << fps << " fps";
 
-            ConsoleColorizer color(ConsoleColor::Yellow);
-            std::cout << stringStream.str() << '\r';
+            logDebug(stringStream.str(), '\r');
         }
     }
 
     Application::Application(const ApplicationEnvironment& env)
         : m_frameTimeLogger(1000.0)
     {
-        std::cout << "Initializing application...\n";
+        logInfo("Initializing application...");
 
         m_window   = createWindow();
         m_renderer = createRenderer();
@@ -73,10 +72,7 @@ namespace crisp
 
     void Application::run()
     {
-        {
-            ConsoleColorizer clr(ConsoleColor::LightGreen);
-            std::cout << "Hello world from Crisp! The application is up and running!\n";
-        }
+        logDebug("Hello world from Crisp! The application is up and running!");
 
         m_renderer->flushResourceUpdates();
 
@@ -120,7 +116,7 @@ namespace crisp
 
     void Application::onResize(int width, int height)
     {
-        std::cout << "New window dims: (" << width << ", " << height << ")\n";
+        logInfo("New window dims: (", width, ", ", height, ")");
 
         m_renderer->resize(width, height);
 

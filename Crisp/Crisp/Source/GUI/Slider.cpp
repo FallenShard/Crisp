@@ -25,18 +25,19 @@ namespace crisp::gui
         m_M = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
 
         m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.875f);
-        m_backgroundRect->setSizeHint({ 0.0f, 10.0f });
-        m_backgroundRect->setPosition({ 0, 5 });
+        m_backgroundRect->setSizeHint({ 0.0f, 6.0f });
+        m_backgroundRect->setPosition({ 0.0f, 7.0f });
         m_backgroundRect->setColor({ 0.5f, 0.5f, 0.5f, 1.0f });
         m_backgroundRect->setParent(this);
 
         m_foregroundRect->setSizeHint({ 200.0f * 0.875f * 0.5f, 6.0f });
-        m_foregroundRect->setPosition({ 0, 7 });
+        m_foregroundRect->setPosition({ 0.0f, 7.0f });
         m_foregroundRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
         m_foregroundRect->setParent(this);
 
-        m_indicatorRect->setSizeHint({7, 20});
-        m_indicatorRect->setPosition({100 * 0.875f, 0});
+        m_indicatorRect->setAnchor(Anchor::CenterLeft);
+        m_indicatorRect->setSizeHint({ 8.0f, 12.0f });
+        m_indicatorRect->setPosition({ 100 * 0.875f, 0.0f });
         m_indicatorRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
         m_indicatorRect->setParent(this);
 
@@ -96,7 +97,7 @@ namespace crisp::gui
     {
         m_values = values;
         setMinValue(0);
-        setMaxValue(m_values.size() - 1);
+        setMaxValue(static_cast<int>(m_values.size()) - 1);
         setIncrement(1);
     }
 
@@ -256,7 +257,7 @@ namespace crisp::gui
     int Slider::getValueFromMousePosition(float x, float y)
     {
         auto bounds = m_backgroundRect->getAbsoluteBounds();
-        float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0] - m_indicatorRect->getSize().x / 2.0f, bounds.width));
+        float indicatorPos = std::max(-m_indicatorRect->getSize().x / 2.0f, std::min(x - m_M[3][0] - m_indicatorRect->getSize().x / 2.0f, bounds.width));
         m_indicatorRect->setPosition({ indicatorPos, 0.0f });
         m_foregroundRect->setSizeHint({ indicatorPos, 6.0f });
         setValidationFlags(Validation::Geometry);

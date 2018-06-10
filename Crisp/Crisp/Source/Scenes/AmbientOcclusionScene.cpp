@@ -84,16 +84,16 @@ namespace crisp
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         m_aoPass = std::make_unique<AmbientOcclusionPass>(m_renderer);
 
-        m_uniformColorPipeline = std::make_unique<UniformColorPipeline>(m_renderer, m_scenePass.get());
+        m_uniformColorPipeline = createColorPipeline(m_renderer, m_scenePass.get());
         m_unifColorSetGroup = { m_uniformColorPipeline->allocateDescriptorSet(0) };
         m_unifColorSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_unifColorSetGroup.flushUpdates(m_device);
 
         m_nearestSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        m_normalPipeline = std::make_unique<NormalPipeline>(m_renderer, m_scenePass.get());
+        m_normalPipeline = createNormalPipeline(m_renderer, m_scenePass.get());
 
-        m_ssaoPipeline = std::make_unique<SsaoPipeline>(m_renderer, m_aoPass.get());
+        m_ssaoPipeline = createSsaoPipeline(m_renderer, m_aoPass.get());
         for (int i = 0; i < Renderer::NumVirtualFrames; i++)
         {
             m_ssaoSetGroups[i] = { m_ssaoPipeline->allocateDescriptorSet(0) };
@@ -105,8 +105,8 @@ namespace crisp
         }
 
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
-        m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
+        //m_fsQuadPipeline = createTonemappingPipeline(m_renderer, ::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
+        //m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
 
         m_sceneImageView = m_aoPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
         m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
@@ -117,7 +117,7 @@ namespace crisp
 
         m_buddhaGeometry = std::make_unique<MeshGeometry>(m_renderer, "sponza_fixed.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position, VertexAttribute::Normal });
 
-        m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get());
+        m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get(), "Creek");
 
         auto panel = std::make_unique<gui::AmbientOcclusionPanel>(app->getForm(), this);
         m_app->getForm()->add(std::move(panel));
@@ -188,7 +188,7 @@ namespace crisp
             m_uniformColorPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, color);
 
             m_unifColorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
-            m_unifColorSetGroup.bind(commandBuffer, m_uniformColorPipeline->getPipelineLayout());
+            m_unifColorSetGroup.bind(commandBuffer, m_uniformColorPipeline->getPipelineLayout()->getHandle());
 
             m_planeGeometry->bindGeometryBuffers(commandBuffer);
             m_planeGeometry->draw(commandBuffer);
@@ -196,7 +196,7 @@ namespace crisp
 
             m_normalPipeline->bind(commandBuffer);
             m_unifColorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(TransformPack));
-            m_unifColorSetGroup.bind(commandBuffer, m_normalPipeline->getPipelineLayout());
+            m_unifColorSetGroup.bind(commandBuffer, m_normalPipeline->getPipelineLayout()->getHandle());
             m_buddhaGeometry->bindGeometryBuffers(commandBuffer);
             m_buddhaGeometry->draw(commandBuffer);
 
@@ -211,7 +211,7 @@ namespace crisp
 
             m_ssaoPipeline->bind(commandBuffer);
             m_ssaoSetGroups[frameIdx].setDynamicOffset(0, m_cameraBuffer->getDynamicOffset(frameIdx));
-            m_ssaoSetGroups[frameIdx].bind(commandBuffer, m_ssaoPipeline->getPipelineLayout());
+            m_ssaoSetGroups[frameIdx].bind(commandBuffer, m_ssaoPipeline->getPipelineLayout()->getHandle());
             m_ssaoPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, m_numSamples);
             m_ssaoPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(m_numSamples), m_radius);
 
@@ -227,7 +227,7 @@ namespace crisp
         {
             m_fsQuadPipeline->bind(commandBuffer);
             m_renderer->setDefaultViewport(commandBuffer);
-            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout());
+            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout()->getHandle());
 
             unsigned int layerIndex = m_renderer->getCurrentVirtualFrameIndex();
             m_fsQuadPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, layerIndex);

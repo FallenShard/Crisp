@@ -23,11 +23,6 @@ namespace crisp
     class Renderer;
     class VulkanPipeline;
     class VulkanImageView;
-    class GuiColorQuadPipeline;
-    class GuiTextPipeline;
-    class GuiTexQuadPipeline;
-    class GuiDebugPipeline;
-    class FullScreenQuadPipeline;
 
     class IndexBuffer;
     class UniformBuffer;
@@ -51,8 +46,6 @@ namespace crisp
         class RenderSystem
         {
         public:
-            static constexpr uint32_t GuiRenderPassId = 64;
-
             RenderSystem(Renderer* renderer);
             ~RenderSystem();
 
@@ -102,11 +95,11 @@ namespace crisp
             glm::mat4 m_P;
 
             std::unique_ptr<GuiRenderPass> m_guiPass;
-            std::unique_ptr<GuiColorQuadPipeline>   m_colorQuadPipeline;
-            std::unique_ptr<GuiTextPipeline>        m_textPipeline;
-            std::unique_ptr<GuiTexQuadPipeline>     m_texQuadPipeline;
-            std::unique_ptr<GuiDebugPipeline>       m_debugRectPipeline;
-            std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
+            std::unique_ptr<VulkanPipeline> m_colorQuadPipeline;
+            std::unique_ptr<VulkanPipeline> m_textPipeline;
+            std::unique_ptr<VulkanPipeline> m_texQuadPipeline;
+            std::unique_ptr<VulkanPipeline> m_debugRectPipeline;
+            std::unique_ptr<VulkanPipeline> m_fsQuadPipeline;
 
 
             // Geometry

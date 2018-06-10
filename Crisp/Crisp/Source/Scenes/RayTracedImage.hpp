@@ -17,7 +17,7 @@ namespace crisp
     class VulkanSampler;
     class Texture;
     class VulkanImageView;
-    class FullScreenQuadPipeline;
+    class VulkanPipeline;
 
     class RayTracedImage
     {
@@ -34,7 +34,7 @@ namespace crisp
         Renderer* m_renderer;
         VulkanDevice*   m_device;
 
-        std::unique_ptr<FullScreenQuadPipeline> m_pipeline;
+        std::unique_ptr<VulkanPipeline> m_pipeline;
         DescriptorSetGroup m_descSets;
 
         VkExtent3D m_extent;

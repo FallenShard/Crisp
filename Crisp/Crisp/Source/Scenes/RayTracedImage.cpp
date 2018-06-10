@@ -42,7 +42,7 @@ namespace crisp
         // create sampler
         m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        m_pipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
+        m_pipeline = createTonemappingPipeline(m_renderer, m_renderer->getDefaultRenderPass(), 0, true);
         m_descSets = { m_pipeline->allocateDescriptorSet(0) };
         m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_VulkanImageView->getDescriptorInfo(m_sampler->getHandle()));
         m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_VulkanImageView->getDescriptorInfo());
@@ -145,11 +145,10 @@ namespace crisp
         m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer cmdBuffer)
         {
             m_pipeline->bind(cmdBuffer);
-            m_descSets.bind(cmdBuffer, m_pipeline->getPipelineLayout());
+            m_descSets.bind(cmdBuffer, m_pipeline->getPipelineLayout()->getHandle());
             vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
 
-            vkCmdPushConstants(cmdBuffer, m_pipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &m_updatedImageIndex);
-
+            m_pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, m_updatedImageIndex);
             m_renderer->drawFullScreenQuad(cmdBuffer);
         });
     }

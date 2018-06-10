@@ -1,51 +1,47 @@
 #include "PointSphereSpritePipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/Renderer.hpp"
+#include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Renderer/PipelineBuilder.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    PointSphereSpritePipeline::PointSphereSpritePipeline(Renderer* renderer, VulkanRenderPass* renderPass)
-        : VulkanPipeline(renderer, 2, renderPass)
+    std::unique_ptr<VulkanPipeline> createPointSphereSpritePipeline(Renderer* renderer, VulkanRenderPass* renderPass)
     {
-        m_descriptorSetLayouts[0] = createDescriptorSetLayout(
-        {
-            { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT }
-        });
+        PipelineLayoutBuilder layoutBuilder;
+        layoutBuilder.defineDescriptorSet(0,
+            {
+                { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT },
+            })
+            .defineDescriptorSet(1,
+            {
+                { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT }
+            })
+            .addPushConstant(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uint32_t));
 
-        m_descriptorSetLayouts[1] = createDescriptorSetLayout(
-        {
-            { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT }
-        });
+        VulkanDevice* device = renderer->getDevice();
 
-        m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts);
+        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
+        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
-        m_descriptorPool = createDescriptorPool(
-        {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2 },
-        }, 2);
-
-        m_vertShader = renderer->getShaderModule("point-sphere-sprite-vert");
-        m_fragShader = renderer->getShaderModule("point-sphere-sprite-frag");
-
-        create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
-    }
-
-    void PointSphereSpritePipeline::create(int width, int height)
-    {
-        m_handle = PipelineBuilder()
-            .setShaderStages({
-                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   m_vertShader),
-                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, m_fragShader)
+        VkPipeline pipeline = PipelineBuilder()
+            .setShaderStages
+            ({
+                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("point-sphere-sprite-vert")),
+                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("point-sphere-sprite-frag"))
             })
             .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32A32_SFLOAT>()
             .addVertexInputBinding<1, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32A32_SFLOAT>()
             .addVertexAttributes<0, 0, VK_FORMAT_R32G32B32A32_SFLOAT>()
             .addVertexAttributes<1, 1, VK_FORMAT_R32G32B32A32_SFLOAT>()
             .setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
-            .setViewport(m_renderer->getDefaultViewport())
-            .setScissor(m_renderer->getDefaultScissor())
-            .create(m_renderer->getDevice()->getHandle(), m_pipelineLayout, m_renderPass->getHandle(), 0);
+            .setViewport(renderer->getDefaultViewport())
+            .setScissor(renderer->getDefaultScissor())
+            .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
+            .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
+            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
+
+        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
     }
 }

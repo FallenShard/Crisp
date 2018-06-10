@@ -93,7 +93,7 @@ namespace crisp
 
         m_outlineTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_outlineTransforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-        m_outlinePipeline = std::make_unique<OutlinePipeline>(m_renderer, renderPass);
+        m_outlinePipeline = createOutlinePipeline(m_renderer, renderPass);
         m_outlineDesc =
         {
             m_outlinePipeline->allocateDescriptorSet(0)
@@ -199,9 +199,9 @@ namespace crisp
             m_frusta[i].vertexBindingGroup.bind(commandBuffer);
 
             m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
-            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());
+            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle());
 
-            vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &colors[i]);
+            vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &colors[i]);
 
             //m_cubeGeometry->draw(commandBuffer);
             vkCmdDrawIndexed(commandBuffer, m_numIndices, 1, 0, 0, 0);
@@ -211,11 +211,11 @@ namespace crisp
         for (int i = 4; i < 8; i++)
         {
             m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
-            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());
+            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle());
 
             auto color = colors[i - 4] * 0.5f;
             color.a = 1.0f;
-            vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
+            vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
 
             //m_cubeGeometry->draw(commandBuffer);
             vkCmdDrawIndexed(commandBuffer, m_numIndices, 1, 0, 0, 0);

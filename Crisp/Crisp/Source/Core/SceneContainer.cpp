@@ -56,7 +56,7 @@ namespace crisp
 
     const std::string& SceneContainer::getDefaultScene()
     {
-        return sceneNames.at(5);
+        return sceneNames.at(2);
     }
 
     void SceneContainer::update(float dt)

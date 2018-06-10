@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <CrispCore/ConsoleUtils.hpp>
+#include <CrispCore/Log.hpp>
 #include "VulkanDevice.hpp"
 #include "VulkanBuffer.hpp"
 #include "VulkanImageView.hpp"
@@ -176,8 +176,7 @@ namespace crisp
         else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
 
-        ConsoleColorizer console(ConsoleColor::LightRed);
-        std::cerr << "Unsupported layout transition: " << oldLayout << " to " << oldLayout << "!\n";
+        logError("Unsupported layout transition: ", oldLayout, " to ", oldLayout, "!");
         return { 0, 0 };
     }
 }

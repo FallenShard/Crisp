@@ -4,15 +4,5 @@
 
 namespace crisp
 {
-    class SsaoPipeline : public VulkanPipeline
-    {
-    public:
-        SsaoPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
-
-    protected:
-        virtual void create(int width, int height) override;
-
-        VkShaderModule m_vertShader;
-        VkShaderModule m_fragShader;
-    };
+    std::unique_ptr<VulkanPipeline> createSsaoPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 }

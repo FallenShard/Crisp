@@ -29,7 +29,7 @@ namespace crisp
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
-        initRenderTargetResources();
+        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         std::unique_ptr<ImageFileBuffer> image = std::make_unique<ImageFileBuffer>("Resources/Textures/heightmap.jpg", 1);
 
@@ -54,7 +54,7 @@ namespace crisp
         m_vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, data);
         m_indexBuffer = std::make_unique<IndexBuffer>(m_renderer, indexData);
 
-        m_terrainPipeline = std::make_unique<TerrainPipeline>(m_renderer, m_scenePass.get());
+        m_terrainPipeline = createTerrainPipeline(m_renderer, m_scenePass.get());
         m_terrainDescGroup =
         {
             m_terrainPipeline->allocateDescriptorSet(0)
@@ -74,10 +74,7 @@ namespace crisp
         m_cameraController->resize(width, height);
 
         m_scenePass->recreate();
-
-        m_sceneImageView = m_scenePass->createRenderTargetView(SceneRenderPass::Opaque, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
+        m_renderer->setSceneImageView(m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames));
     }
 
     void TerrainScene::update(float dt)
@@ -114,7 +111,7 @@ namespace crisp
             m_renderer->setDefaultViewport(commandBuffer);
             m_renderer->setDefaultScissor(commandBuffer);
 
-            m_terrainDescGroup.bind(commandBuffer, m_terrainPipeline->getPipelineLayout());
+            m_terrainDescGroup.bind(commandBuffer, m_terrainPipeline->getPipelineLayout()->getHandle());
             VkDeviceSize offset = 0;
             VkBuffer buf = m_vertexBuffer->get();
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buf, &offset);
@@ -126,28 +123,5 @@ namespace crisp
             m_scenePass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
-
-        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
-        {
-            m_fsQuadPipeline->bind(commandBuffer);
-            m_renderer->setDefaultViewport(commandBuffer);
-            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout());
-
-            unsigned int layerIndex = m_renderer->getCurrentVirtualFrameIndex();
-            m_fsQuadPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, layerIndex);
-            m_renderer->drawFullScreenQuad(commandBuffer);
-        });
-    }
-
-    void TerrainScene::initRenderTargetResources()
-    {
-        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
-        m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
-
-        m_sceneImageView = m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
     }
 }

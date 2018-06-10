@@ -64,7 +64,7 @@ namespace crisp
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         m_mainPass = std::make_unique<SceneRenderPass>(m_renderer);
-        m_physBasedPipeline = std::make_unique<PhysicallyBasedPipeline>(m_renderer, m_mainPass.get());
+        m_physBasedPipeline = createPbrPipeline(m_renderer, m_mainPass.get());
         m_physBasedDesc[0] = { m_physBasedPipeline->allocateDescriptorSet(0) };
         m_physBasedDesc[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_physBasedDesc[0].postBufferUpdate(0, 1, m_cameraTransformBuffer->getDescriptorInfo());
@@ -73,14 +73,7 @@ namespace crisp
         m_physBasedDesc[0].postImageUpdate(0, 4, m_roughnessTexView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         m_physBasedDesc[0].flushUpdates(m_device);
 
-
-        m_fsQuadPipeline = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
-        m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
-
-        m_sceneImageView = m_mainPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
+        m_renderer->setSceneImageView(m_mainPass->createRenderTargetView(0, Renderer::NumVirtualFrames));
     }
 
     PhysicallyBasedMaterialsScene::~PhysicallyBasedMaterialsScene()
@@ -93,9 +86,7 @@ namespace crisp
         m_cameraController->resize(width, height);
 
         m_mainPass->recreate();
-        m_sceneImageView = m_mainPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
+        m_renderer->setSceneImageView(m_mainPass->createRenderTargetView(0, Renderer::NumVirtualFrames));
     }
 
     void PhysicallyBasedMaterialsScene::update(float dt)
@@ -134,7 +125,7 @@ namespace crisp
             m_physBasedPipeline->bind(commandBuffer);
             m_physBasedDesc[0].setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(TransformPack));
             m_physBasedDesc[0].setDynamicOffset(1, m_cameraTransformBuffer->getDynamicOffset(frameIdx));
-            m_physBasedDesc[0].bind(commandBuffer, m_physBasedPipeline->getPipelineLayout());
+            m_physBasedDesc[0].bind(commandBuffer, m_physBasedPipeline->getPipelineLayout()->getHandle());
             m_sphereMesh->bindGeometryBuffers(commandBuffer);
             m_sphereMesh->draw(commandBuffer);
 
@@ -142,17 +133,6 @@ namespace crisp
 
             m_mainPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        });
-
-        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
-        {
-            m_fsQuadPipeline->bind(commandBuffer);
-            m_renderer->setDefaultViewport(commandBuffer);
-            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout());
-
-            unsigned int layerIndex = m_renderer->getCurrentVirtualFrameIndex();
-            m_fsQuadPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, layerIndex);
-            m_renderer->drawFullScreenQuad(commandBuffer);
         });
     }
 }

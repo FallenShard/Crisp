@@ -15,7 +15,7 @@ namespace crisp
     class FluidSimulation;
 
     class SceneRenderPass;
-    class FullScreenQuadPipeline;
+    class VulkanPipeline;
     class VulkanImageView;
     class UniformBuffer;
     class VulkanDevice;
@@ -33,11 +33,9 @@ namespace crisp
         virtual void render() override;
 
     private:
-        void initRenderTargetResources();
-
-        Renderer*  m_renderer;
-        VulkanDevice*    m_device;
-        Application*     m_app;
+        Renderer*     m_renderer;
+        VulkanDevice* m_device;
+        Application*  m_app;
 
         std::unique_ptr<CameraController> m_cameraController;
 
@@ -59,10 +57,5 @@ namespace crisp
 
         std::unique_ptr<SceneRenderPass> m_scenePass;
         std::unique_ptr<UniformBuffer> m_cameraBuffer;
-
-        std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
-        std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        std::unique_ptr<VulkanImageView> m_sceneImageView;
-        DescriptorSetGroup m_sceneDescSetGroup;
     };
 }

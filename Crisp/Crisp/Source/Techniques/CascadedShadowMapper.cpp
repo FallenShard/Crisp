@@ -4,7 +4,7 @@
 #include "Renderer/Renderer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/RenderPasses/ShadowPass.hpp"
-#include "Renderer/Pipelines/ShadowMapPipeline.hpp"
+#include "Renderer/Pipelines/ShadowMapPipelines.hpp"
 #include "vulkan/VulkanImage.hpp"
 
 namespace crisp
@@ -17,7 +17,7 @@ namespace crisp
         m_shadowPass = std::make_unique<ShadowPass>(m_renderer, 2048, m_numCascades);
         m_pipelines.reserve(m_numCascades);
         for (uint32_t i = 0; i < m_numCascades; i++)
-            m_pipelines.emplace_back(std::make_unique<ShadowMapPipeline>(m_renderer, m_shadowPass.get(), i));
+            m_pipelines.emplace_back(createShadowMapPipeline(m_renderer, m_shadowPass.get(), i));
 
         m_descGroup =
         {

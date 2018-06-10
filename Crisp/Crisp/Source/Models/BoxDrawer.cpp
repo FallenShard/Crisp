@@ -63,7 +63,7 @@ namespace crisp
 
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-        m_outlinePipeline = std::make_unique<OutlinePipeline>(m_renderer, renderPass);
+        m_outlinePipeline = createOutlinePipeline(m_renderer, renderPass);
         m_outlineDesc =
         {
             m_outlinePipeline->allocateDescriptorSet(0)
@@ -112,7 +112,7 @@ namespace crisp
         for (uint32_t i = 0; i < m_numBoxes; i++)
         {
             m_outlineDesc.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
-            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout());
+            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle());
             m_outlinePipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, glm::vec4(1.0f, 0.0f, 0.5f, 1.0f));
             vkCmdDrawIndexed(commandBuffer, m_numIndices, 1, 0, 0, 0);
         }

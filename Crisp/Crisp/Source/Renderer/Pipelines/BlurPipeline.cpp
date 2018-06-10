@@ -1,47 +1,37 @@
 #include "BlurPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
-#include "Renderer/Renderer.hpp"
+#include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Renderer/PipelineBuilder.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
-    BlurPipeline::BlurPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
-        : VulkanPipeline(renderer, 1, renderPass)
+    std::unique_ptr<VulkanPipeline> createBlurPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
     {
-        m_descriptorSetLayouts[0] = createDescriptorSetLayout(
-        {
-            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
-        });
-
-        m_pipelineLayout = createPipelineLayout(m_descriptorSetLayouts,
-        {
-            { VK_SHADER_STAGE_FRAGMENT_BIT, 0, 3 * sizeof(float) + sizeof(int) }
-        });
-
-        m_descriptorPool = createDescriptorPool(
-        {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Renderer::NumVirtualFrames },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Renderer::NumVirtualFrames },
-        }, Renderer::NumVirtualFrames);
-
-        m_vertShader = renderer->getShaderModule("blur-vert");
-        m_fragShader = renderer->getShaderModule("blur-frag");
-
-        create(renderer->getSwapChainExtent().width, renderer->getSwapChainExtent().height);
-    }
-
-    void BlurPipeline::create(int width, int height)
-    {
-        m_handle = PipelineBuilder()
-            .setShaderStages({
-                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   m_vertShader),
-                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, m_fragShader)
+        PipelineLayoutBuilder layoutBuilder;
+        layoutBuilder.defineDescriptorSet(0,
+            {
+                { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
             })
-            .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32_SFLOAT>()
-            .setVertexAttributes<VK_FORMAT_R32G32_SFLOAT>()
-            .setViewport(m_renderPass->createViewport())
-            .setScissor(m_renderPass->createScissor())
-            .create(m_device->getHandle(), m_pipelineLayout, m_renderPass->getHandle(), 0);
+            .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, 3 * sizeof(float) + sizeof(int));
+
+        VulkanDevice* device = renderer->getDevice();
+
+        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
+        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
+
+        VkPipeline pipeline = PipelineBuilder()
+            .setShaderStages
+            ({
+                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("blur-vert")),
+                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("blur-frag"))
+            })
+            .setFullScreenVertexLayout()
+            .setViewport(renderPass->createViewport())
+            .setScissor(renderPass->createScissor())
+            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
+
+        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
     }
 }

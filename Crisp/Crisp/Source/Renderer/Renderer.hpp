@@ -12,14 +12,15 @@
 #include "Vulkan/VulkanContext.hpp"
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/RenderPasses/DefaultRenderPass.hpp"
+#include "DescriptorSetGroup.hpp"
 
 namespace crisp
 {
+    class VulkanSampler;
     class VulkanImage;
     class VulkanDevice;
     class VulkanSwapChain;
     class VulkanPipeline;
-    class FullScreenQuadPipeline;
 
     class Texture;
     class VulkanImageView;
@@ -58,9 +59,6 @@ namespace crisp
 
         void resize(int width, int height);
 
-        void registerPipeline(VulkanPipeline* pipeline);
-        void unregisterPipeline(VulkanPipeline* pipeline);
-
         void enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate);
         void enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
         void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
@@ -73,7 +71,15 @@ namespace crisp
 
         void fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 
+        template <typename T>
+        inline void fillDeviceBuffer(VulkanBuffer* buffer, const std::vector<T>& data, VkDeviceSize offset = 0)
+        {
+            fillDeviceBuffer(buffer, data.data(), data.size() * sizeof(T), offset);
+        }
+
         void scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive = NumVirtualFrames);
+
+        void setSceneImageView(std::unique_ptr<VulkanImageView> sceneImageView);
 
     private:
         void loadShaders(std::string dirPath);
@@ -120,8 +126,11 @@ namespace crisp
         std::unique_ptr<IndexBuffer>  m_fsQuadIndexBuffer;
         VertexBufferBindingGroup      m_fsQuadVertexBufferBindingGroup;
 
-        std::unordered_set<VulkanPipeline*> m_pipelines;
-
         std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;
+
+        std::unique_ptr<VulkanPipeline>  m_scenePipeline;
+        std::unique_ptr<VulkanSampler>   m_linearClampSampler;
+        std::unique_ptr<VulkanImageView> m_sceneImageView;
+        DescriptorSetGroup               m_sceneDescSetGroup;
     };
 }

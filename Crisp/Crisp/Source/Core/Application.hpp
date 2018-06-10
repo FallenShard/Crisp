@@ -49,7 +49,7 @@ namespace crisp
         SceneContainer* getSceneContainer() const;
 
     private:
-        std::unique_ptr<Window>         createWindow();
+        std::unique_ptr<Window>   createWindow();
         std::unique_ptr<Renderer> createRenderer();
 
         FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;

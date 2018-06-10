@@ -118,6 +118,8 @@ namespace vesper
                     return Spectrum(0.0f);
 
             }
+
+            return transmittance;
         }
     }
 
@@ -155,16 +157,16 @@ namespace vesper
             if (medium && medium->sampleDistance(Ray3(ray, 0.0f, its.tHit), mediumSample, sampler))
             {
                 auto phaseFunc = medium->getPhaseFunction();
-            
+
                 throughput *= mediumSample.sigmaS * mediumSample.transmittance / mediumSample.pdfSuccess;
-            
+
                 Light::Sample lightSample(mediumSample.ref);
                 auto Latt = sampleLightFromMedium(lightSample, scene, medium, sampler);
                 if (!Latt.isZero())
                 {
                     PhaseFunction::Sample pfSample(mediumSample, -ray.d, lightSample.wi);
                     float phaseFuncValue = phaseFunc->eval(pfSample);
-            
+
                     if (phaseFuncValue > 0.0f)
                     {
                         float pfPdf = phaseFunc->pdf(pfSample);

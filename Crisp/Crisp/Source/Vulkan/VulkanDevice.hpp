@@ -49,6 +49,10 @@ namespace crisp
         VulkanMemoryHeap* getDeviceImageHeap() const;
         VulkanMemoryHeap* getStagingBufferHeap() const;
 
+        void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo&& bufferInfo);
+        void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo&& imageInfo);
+        void flushDescriptorUpdates();
+
     private:
         static constexpr VkDeviceSize DeviceHeapSize  = 256 << 20; // 256 MB
         static constexpr VkDeviceSize StagingHeapSize = 256 << 20; // 256 MB
@@ -64,5 +68,9 @@ namespace crisp
         std::unique_ptr<VulkanMemoryHeap> m_stagingBufferHeap;
 
         std::vector<VkMappedMemoryRange> m_unflushedRanges;
+
+        std::list<VkDescriptorBufferInfo> m_bufferInfos;
+        std::list<VkDescriptorImageInfo>  m_imageInfos;
+        std::vector<VkWriteDescriptorSet> m_descriptorWrites;
     };
 }

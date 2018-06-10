@@ -4,21 +4,20 @@
 
 namespace crisp
 {
-    class VulkanPipeline;
-    class VulkanDescriptorSetLayout;
+    class VulkanPipelineLayout;
 
     class VulkanDescriptorSet
     {
     public:
-        VulkanDescriptorSet(const VulkanPipeline* pipeline, uint32_t index);
+        VulkanDescriptorSet(VkDescriptorSet set, uint32_t index, const VulkanPipelineLayout* pipelineLayout);
 
-        inline VkDescriptorSet            getHandle() const { return m_set; }
-        inline VulkanDescriptorSetLayout* getLayout() const { return m_layout; }
+        inline VkDescriptorSet getHandle() const { return m_set; }
 
         VkDescriptorType getDescriptorType(uint32_t index) const;
 
     private:
-        VulkanDescriptorSetLayout* m_layout;
-        VkDescriptorSet            m_set;
+        VkDescriptorSet             m_set;
+        uint32_t                    m_index;
+        const VulkanPipelineLayout* m_pipelinelayout;
     };
 }

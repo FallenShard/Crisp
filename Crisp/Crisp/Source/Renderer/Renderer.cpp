@@ -3,6 +3,7 @@
 #define NOMINMAX
 
 #include <iostream>
+#include <CrispCore/Log.hpp>
 
 #include "Math/Headers.hpp"
 #include "IO/FileUtils.hpp"
@@ -12,9 +13,10 @@
 #include "Vulkan/VulkanSwapChain.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 #include "vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanImageView.hpp"
+#include "Vulkan/VulkanSampler.hpp"
 
 #include "Renderer/Texture.hpp"
-#include "Vulkan/VulkanImageView.hpp"
 #include "Renderer/VertexBuffer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
@@ -79,6 +81,10 @@ namespace crisp
             { 0, 3, 2 }
         };
         m_fsQuadIndexBuffer = std::make_unique<IndexBuffer>(this, faces);
+
+        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device.get(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_scenePipeline = createTonemappingPipeline(this, getDefaultRenderPass(), 0, true);
+        m_sceneDescSetGroup = { m_scenePipeline->allocateDescriptorSet(0) };
     }
 
     Renderer::~Renderer()
@@ -167,20 +173,7 @@ namespace crisp
         m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
         m_defaultScissor.extent = m_swapChain->getExtent();
 
-        for (auto& pipeline : m_pipelines)
-            pipeline->resize(width, height);
-
         flushResourceUpdates();
-    }
-
-    void Renderer::registerPipeline(VulkanPipeline* pipeline)
-    {
-        m_pipelines.insert(pipeline);
-    }
-
-    void Renderer::unregisterPipeline(VulkanPipeline* pipeline)
-    {
-        m_pipelines.erase(pipeline);
     }
 
     void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
@@ -286,6 +279,16 @@ namespace crisp
             m_removedBuffers.emplace(buffer, framesToLive);
     }
 
+    void Renderer::setSceneImageView(std::unique_ptr<VulkanImageView> sceneImageView)
+    {
+        m_sceneImageView = std::move(sceneImageView);
+        if (m_sceneImageView)
+        {
+            m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
+            m_sceneDescSetGroup.flushUpdates(m_device.get());
+        }
+    }
+
     void Renderer::destroyResourcesScheduledForRemoval()
     {
         if (!m_removedBuffers.empty())
@@ -349,7 +352,7 @@ namespace crisp
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            std::cerr << "Unable to acquire optimal swapchain image!\n";
+            logError("Unable to acquire optimal swapchain image!");
             return {};
         }
 
@@ -376,6 +379,16 @@ namespace crisp
             drawCommand(commandBuffer);
 
         m_defaultRenderPass->begin(commandBuffer);
+        if (m_sceneImageView)
+        {
+            m_scenePipeline->bind(commandBuffer);
+            m_scenePipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, getCurrentVirtualFrameIndex());
+            setDefaultViewport(commandBuffer);
+            setDefaultScissor(commandBuffer);
+            m_sceneDescSetGroup.bind(commandBuffer, m_scenePipeline->getPipelineLayout()->getHandle());
+            drawFullScreenQuad(commandBuffer);
+        }
+
         for (const auto& drawCommand : m_defaultPassDrawCommands)
             drawCommand(commandBuffer);
         m_defaultRenderPass->end(commandBuffer);

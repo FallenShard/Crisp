@@ -20,7 +20,7 @@ namespace crisp
 
     class MeshGeometry;
     class CascadedShadowMapper;
-    class OutlinePipeline;
+    class VulkanPipeline;
     class VulkanRenderPass;
 
     class BoxVisualizer
@@ -45,7 +45,7 @@ namespace crisp
 
         std::unique_ptr<MeshGeometry> m_cubeGeometry;
 
-        std::unique_ptr<OutlinePipeline> m_outlinePipeline;
+        std::unique_ptr<VulkanPipeline> m_outlinePipeline;
         DescriptorSetGroup m_outlineDesc;
 
         std::vector<TransformPack> m_outlineTransforms;

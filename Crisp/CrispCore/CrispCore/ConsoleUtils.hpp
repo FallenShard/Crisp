@@ -14,7 +14,7 @@ namespace crisp
         Cyan    = rlutil::CYAN,
         Blue    = rlutil::BLUE,
         Magenta = rlutil::MAGENTA,
-        
+
         Black    = rlutil::BLACK,
         DarkGrey = rlutil::DARKGREY,
         Grey     = rlutil::GREY,

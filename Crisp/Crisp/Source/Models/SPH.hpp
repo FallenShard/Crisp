@@ -14,7 +14,6 @@
 namespace crisp
 {
     class VulkanPipeline;
-    class ComputePipeline;
     class Renderer;
     class VulkanDevice;
     class UniformBuffer;
@@ -81,29 +80,29 @@ namespace crisp
 
         mutable uint32_t m_prevSection;
         mutable uint32_t m_currentSection;
-        std::unique_ptr<ComputePipeline> m_integratePipeline;
+        std::unique_ptr<VulkanPipeline> m_integratePipeline;
         DescriptorSetGroup m_integrateDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_clearHashGridPipeline;
+        std::unique_ptr<VulkanPipeline> m_clearHashGridPipeline;
         DescriptorSetGroup m_clearGridDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_computeCellCountPipeline;
+        std::unique_ptr<VulkanPipeline> m_computeCellCountPipeline;
         DescriptorSetGroup m_computeCellCountDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_scanPipeline;
+        std::unique_ptr<VulkanPipeline> m_scanPipeline;
         DescriptorSetGroup m_scanDescGroup;
         DescriptorSetGroup m_scanBlockDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_combineScanPipeline;
+        std::unique_ptr<VulkanPipeline> m_combineScanPipeline;
         DescriptorSetGroup m_combineScanDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_reindexPipeline;
+        std::unique_ptr<VulkanPipeline> m_reindexPipeline;
         DescriptorSetGroup m_reindexDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_densityPressurePipeline;
+        std::unique_ptr<VulkanPipeline> m_densityPressurePipeline;
         DescriptorSetGroup m_densityPressureDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_forcesPipeline;
+        std::unique_ptr<VulkanPipeline> m_forcesPipeline;
         DescriptorSetGroup m_forcesDescGroup;
 
         struct GridParams

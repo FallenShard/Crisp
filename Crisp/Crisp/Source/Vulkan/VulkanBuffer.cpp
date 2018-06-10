@@ -6,7 +6,7 @@
 
 namespace crisp
 {
-    VulkanBuffer::VulkanBuffer(VulkanDevice* device, size_t size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps)
+    VulkanBuffer::VulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps)
         : VulkanResource(device)
         , m_size(size)
     {

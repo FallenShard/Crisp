@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <CrispCore/ConsoleUtils.hpp>
+#include <CrispCore/Log.hpp>
 
 #include "RenderSystem.hpp"
 #include "StopWatch.hpp"
@@ -62,22 +62,18 @@ namespace crisp::gui
         auto control = m_rootControlGroup->getControlById(controlId);
         if (!control)
         {
-            ConsoleColorizer color(ConsoleColor::Yellow);
-            std::cout << "Attempt to delete a non-existing control with id: " << controlId << '\n';
+            logWarning("Attempt to delete a non-existing control with id: ", controlId);
             return;
         }
 
-        auto colorAnim = std::make_shared<PropertyAnimation<float, Easing::SlowIn>>(duration, 1.0f, 0.0f, [control](const auto& t)
+        auto colorAnim = std::make_shared<PropertyAnimation<float>>(duration, 1.0f, 0.0f, [control](const auto& t)
         {
             control->setOpacity(t);
         });
 
         colorAnim->finished.subscribe([this, control]()
         {
-            //postGuiUpdate([this, control]()
-            //{
-                m_rootControlGroup->removeControl(control->getId());
-            //});
+            m_rootControlGroup->removeControl(control->getId());
         });
         m_animator->add(colorAnim);
     }
@@ -143,8 +139,8 @@ namespace crisp::gui
 
     void Form::onMouseMoved(double x, double y)
     {
-        if (m_focusedControl /*&& m_focusedControl->getInteractionBounds().contains(x, y)*/)
-            m_focusedControl->onMouseMoved(x, y);
+        if (m_focusedControl)
+            m_focusedControl->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
         else
             m_rootControlGroup->onMouseMoved(static_cast<float>(x), static_cast<float>(y));
     }
@@ -152,7 +148,7 @@ namespace crisp::gui
     void Form::onMousePressed(const MouseEventArgs& mouseEventArgs)
     {
         if (m_focusedControl && m_focusedControl->getInteractionBounds().contains(mouseEventArgs.x, mouseEventArgs.y))
-            m_focusedControl->onMousePressed(mouseEventArgs.x, mouseEventArgs.y);
+            m_focusedControl->onMousePressed(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y));
         else
             m_rootControlGroup->onMousePressed(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y));
     }

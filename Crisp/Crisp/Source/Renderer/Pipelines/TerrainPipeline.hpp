@@ -4,17 +4,5 @@
 
 namespace crisp
 {
-    class TerrainPipeline : public VulkanPipeline
-    {
-    public:
-        TerrainPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
-
-    protected:
-        virtual void create(int width, int height) override;
-
-        VkShaderModule m_vertShader;
-        VkShaderModule m_tescShader;
-        VkShaderModule m_teseShader;
-        VkShaderModule m_fragShader;
-    };
+    std::unique_ptr<VulkanPipeline> createTerrainPipeline(Renderer* renderer, VulkanRenderPass* renderPass);
 }

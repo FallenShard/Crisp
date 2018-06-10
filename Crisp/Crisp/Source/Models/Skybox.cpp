@@ -14,7 +14,7 @@
 
 namespace crisp
 {
-    Skybox::Skybox(Renderer* renderer, VulkanRenderPass* renderPass)
+    Skybox::Skybox(Renderer* renderer, VulkanRenderPass* renderPass, const std::string& cubeMapFolder)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
     {
@@ -36,7 +36,7 @@ namespace crisp
 
         for (auto& fileName : fileNames)
         {
-            cubeMapImages.push_back(std::make_unique<ImageFileBuffer>("Resources/Textures/Cubemaps/Creek/" + fileName + ".jpg"));
+            cubeMapImages.push_back(std::make_unique<ImageFileBuffer>("Resources/Textures/Cubemaps/" + cubeMapFolder + "/" + fileName + ".jpg"));
         }
 
         auto width  = cubeMapImages[0]->getWidth();
@@ -53,7 +53,7 @@ namespace crisp
         // create sampler
         m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        m_pipeline           = std::make_unique<SkyboxPipeline>(m_renderer, renderPass);
+        m_pipeline = createSkyboxPipeline(m_renderer, renderPass, 0);
         m_descriptorSetGroup = { m_pipeline->allocateDescriptorSet(0) };
         m_descriptorSetGroup.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_transformsBuffer->getDescriptorInfo());
         m_descriptorSetGroup.postImageUpdate(0,  1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_cubeMapView->getDescriptorInfo(m_sampler->getHandle()));
@@ -82,7 +82,7 @@ namespace crisp
         m_descriptorSetGroup.setDynamicOffset(0, currentFrameIndex * sizeof(Transforms));
 
         vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getHandle());
-        m_descriptorSetGroup.bind(cmdBuffer, m_pipeline->getPipelineLayout());
+        m_descriptorSetGroup.bind(cmdBuffer, m_pipeline->getPipelineLayout()->getHandle());
 
         m_cubeGeometry->bindGeometryBuffers(cmdBuffer);
         m_cubeGeometry->draw(cmdBuffer);

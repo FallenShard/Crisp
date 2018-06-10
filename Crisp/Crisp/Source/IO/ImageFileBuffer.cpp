@@ -3,6 +3,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#include <algorithm>
+
 namespace crisp
 {
     auto getStbComponentFormat(int numComponents)
@@ -61,5 +63,10 @@ namespace crisp
     uint64_t ImageFileBuffer::getByteSize() const
     {
         return m_width * m_height * m_numComponents;
+    }
+
+    uint32_t ImageFileBuffer::getMipLevels() const
+    {
+        return static_cast<uint32_t>(std::floor(std::log2(std::max(m_width, m_height)))) + 1;
     }
 }

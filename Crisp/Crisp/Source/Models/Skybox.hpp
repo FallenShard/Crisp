@@ -9,6 +9,7 @@
 namespace crisp
 {
     class Renderer;
+    class VulkanPipeline;
     class VulkanDevice;
     class VulkanRenderPass;
     class VulkanImageView;
@@ -16,13 +17,12 @@ namespace crisp
 
     class Texture;
     class UniformBuffer;
-    class SkyboxPipeline;
     class MeshGeometry;
 
     class Skybox
     {
     public:
-        Skybox(Renderer* renderer, VulkanRenderPass* renderPass);
+        Skybox(Renderer* renderer, VulkanRenderPass* renderPass, const std::string& cubeMapFolder);
         ~Skybox();
 
         void updateTransforms(const glm::mat4& P, const glm::mat4& V);
@@ -38,7 +38,7 @@ namespace crisp
 
         std::unique_ptr<MeshGeometry> m_cubeGeometry;
 
-        std::unique_ptr<SkyboxPipeline> m_pipeline;
+        std::unique_ptr<VulkanPipeline> m_pipeline;
         DescriptorSetGroup m_descriptorSetGroup;
 
         struct Transforms

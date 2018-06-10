@@ -20,8 +20,8 @@ namespace crisp
 
     class MeshGeometry;
     class CascadedShadowMapper;
-    class OutlinePipeline;
     class VulkanRenderPass;
+    class VulkanPipeline;
 
     class BoxDrawer
     {
@@ -40,7 +40,7 @@ namespace crisp
 
         uint32_t m_numBoxes;
 
-        std::unique_ptr<OutlinePipeline> m_outlinePipeline;
+        std::unique_ptr<VulkanPipeline> m_outlinePipeline;
         DescriptorSetGroup m_outlineDesc;
 
         std::vector<TransformPack>     m_transforms;

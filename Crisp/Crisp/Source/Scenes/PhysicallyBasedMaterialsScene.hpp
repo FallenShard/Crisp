@@ -61,11 +61,6 @@ namespace crisp
         std::unique_ptr<VulkanPipeline> m_physBasedPipeline;
         std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_physBasedDesc;
 
-        // Scene to screen compositing
-        std::unique_ptr<FullScreenQuadPipeline> m_fsQuadPipeline;
-        DescriptorSetGroup m_sceneDescSetGroup;
-        std::unique_ptr<VulkanImageView> m_sceneImageView;
-
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
     };
 }

@@ -1,7 +1,6 @@
 #include "Control.hpp"
 
-#include <iostream>
-#include <CrispCore/ConsoleUtils.hpp>
+#include <CrispCore/Log.hpp>
 
 #include "Form.hpp"
 
@@ -34,7 +33,6 @@ namespace crisp::gui
 
     Control::~Control()
     {
-        //std::cout << "Deleting: " << m_id << '\n';
     }
 
     void Control::setId(std::string&& id)
@@ -142,8 +140,7 @@ namespace crisp::gui
                 return std::min(m_sizeHint.x, m_parent->getWidth() - 2.0f * getParentPadding().x);
 
         default:
-            ConsoleColorizer console(ConsoleColor::LightRed);
-            std::cout << "Attempting to use 'WrapContent' for width on a control which does not support children\n";
+            logError("Attempting to use 'WrapContent' for width on a control which does not support children.");
             return 0.0f;
         }
     }
@@ -166,8 +163,7 @@ namespace crisp::gui
                 return std::min(m_sizeHint.y, m_parent->getHeight() - 2.0f * getParentPadding().y);
 
         default:
-            ConsoleColorizer console(ConsoleColor::LightRed);
-            std::cout << "Attempting to use 'WrapContent' for height on a control which does not support children\n";
+            logError("Attempting to use 'WrapContent' for height on a control which does not support children.");
             return 0.0f;
         }
     }

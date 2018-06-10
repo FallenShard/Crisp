@@ -15,9 +15,9 @@ namespace crisp
         static constexpr uint32_t ScanElementsPerThread = 2;
         static constexpr uint32_t ScanElementsPerBlock = ScanBlockSize * ScanElementsPerThread;
 
-        inline glm::uvec3 getNumWorkGroups(const glm::uvec3& dataDims, const ComputePipeline& pipeline)
+        inline glm::uvec3 getNumWorkGroups(const glm::uvec3& dataDims, const VulkanPipeline& pipeline)
         {
-            return (dataDims - glm::uvec3(1)) / pipeline.getWorkGroupSize() + glm::uvec3(1);
+            return (dataDims - glm::uvec3(1)) / getWorkGroupSize(pipeline) + glm::uvec3(1);
         }
     }
 
@@ -82,7 +82,7 @@ namespace crisp
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_renderer->fillDeviceBuffer(m_forces.get(), forces.data(), vertexBufferSize, 0);
 
-        m_clearHashGridPipeline = std::make_unique<ComputePipeline>(m_renderer, "clear-hash-grid-comp", 1, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_clearHashGridPipeline = createComputePipeline(m_renderer, "clear-hash-grid-comp", 1, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
         m_clearGridDescGroup =
         {
             m_clearHashGridPipeline->allocateDescriptorSet(0)
@@ -90,7 +90,7 @@ namespace crisp
         m_clearGridDescGroup.postBufferUpdate(0, 0, { m_cellCounts->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
         m_clearGridDescGroup.flushUpdates(m_device);
 
-        m_computeCellCountPipeline = std::make_unique<ComputePipeline>(m_renderer, "compute-cell-count-comp", 3, 1, sizeof(glm::uvec3) + sizeof(float) + sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_computeCellCountPipeline = createComputePipeline(m_renderer, "compute-cell-count-comp", 3, 1, sizeof(glm::uvec3) + sizeof(float) + sizeof(uint32_t), glm::uvec3(256, 1, 1));
         m_computeCellCountDescGroup =
         {
             m_computeCellCountPipeline->allocateDescriptorSet(0)
@@ -101,7 +101,7 @@ namespace crisp
         m_computeCellCountDescGroup.flushUpdates(m_device);
 
         // Scan for individual blocks
-        m_scanPipeline = std::make_unique<ComputePipeline>(m_renderer, "scan-comp", 2, 2, sizeof(int32_t) + sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_scanPipeline = createComputePipeline(m_renderer, "scan-comp", 2, 2, sizeof(int32_t) + sizeof(uint32_t), glm::uvec3(256, 1, 1));
         m_scanDescGroup =
         {
             m_scanPipeline->allocateDescriptorSet(0)
@@ -120,7 +120,7 @@ namespace crisp
         m_scanBlockDescGroup.flushUpdates(m_device);
 
         // Add block prefix sum to intra-block prefix sums
-        m_combineScanPipeline = std::make_unique<ComputePipeline>(m_renderer, "scan-combine-comp", 2, 1, sizeof(uint32_t), glm::uvec3(512, 1, 1));
+        m_combineScanPipeline = createComputePipeline(m_renderer, "scan-combine-comp", 2, 1, sizeof(uint32_t), glm::uvec3(512, 1, 1));
         m_combineScanDescGroup =
         {
             m_combineScanPipeline->allocateDescriptorSet(0)
@@ -129,7 +129,7 @@ namespace crisp
         m_combineScanDescGroup.postBufferUpdate(0, 1, { m_blockSums->getHandle(),  0, m_blockSumRegionSize });
         m_combineScanDescGroup.flushUpdates(m_device);
 
-        m_reindexPipeline = std::make_unique<ComputePipeline>(m_renderer, "reindex-particles-comp", 5, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_reindexPipeline = createComputePipeline(m_renderer, "reindex-particles-comp", 5, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
         m_reindexDescGroup =
         {
             m_reindexPipeline->allocateDescriptorSet(0)
@@ -141,7 +141,7 @@ namespace crisp
         m_reindexDescGroup.postBufferUpdate(0, 4, { m_reorderedPositions->getHandle(), 0, m_numParticles * sizeof(glm::vec4) });
         m_reindexDescGroup.flushUpdates(m_device);
 
-        m_lambdasPipeline = std::make_unique<ComputePipeline>(m_renderer, "pbf-compute-lambdas-comp", 4, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_lambdasPipeline = createComputePipeline(m_renderer, "pbf-compute-lambdas-comp", 4, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
         m_lambdasDescGroup =
         {
             m_lambdasPipeline->allocateDescriptorSet(0)
@@ -152,7 +152,7 @@ namespace crisp
         m_lambdasDescGroup.postBufferUpdate(0, 3, { m_lambdas->getHandle(),    0, m_numParticles * sizeof(float) });
         m_lambdasDescGroup.flushUpdates(m_device);
 
-        m_deltasPipeline = std::make_unique<ComputePipeline>(m_renderer, "pbf-compute-deltas-comp", 5, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_deltasPipeline = createComputePipeline(m_renderer, "pbf-compute-deltas-comp", 5, 1, sizeof(GridParams) + sizeof(float), glm::uvec3(256, 1, 1));
         m_deltasDescGroup =
         {
             m_deltasPipeline->allocateDescriptorSet(0)
@@ -164,7 +164,7 @@ namespace crisp
         m_deltasDescGroup.postBufferUpdate(0, 4, { m_deltas->getHandle(),     0, m_numParticles * sizeof(glm::vec4) });
         m_deltasDescGroup.flushUpdates(m_device);
 
-        m_updatePosPipeline = std::make_unique<ComputePipeline>(m_renderer, "pbf-update-pos-comp", 2, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
+        m_updatePosPipeline = createComputePipeline(m_renderer, "pbf-update-pos-comp", 2, 1, sizeof(uint32_t), glm::uvec3(256, 1, 1));
         m_updatePosDescGroup =
         {
             m_updatePosPipeline->allocateDescriptorSet(0)
@@ -173,7 +173,7 @@ namespace crisp
         m_updatePosDescGroup.postBufferUpdate(0, 1, { m_deltas->getHandle(),     0, m_numParticles * sizeof(glm::vec4) });
         m_updatePosDescGroup.flushUpdates(m_device);
 
-        m_forcesPipeline = std::make_unique<ComputePipeline>(m_renderer, "compute-forces-comp", 7, 1, sizeof(GridParams) + sizeof(glm::uvec3) + sizeof(uint32_t) + 2 * sizeof(float), glm::uvec3(256, 1, 1));
+        m_forcesPipeline = createComputePipeline(m_renderer, "compute-forces-comp", 7, 1, sizeof(GridParams) + sizeof(glm::uvec3) + sizeof(uint32_t) + 2 * sizeof(float), glm::uvec3(256, 1, 1));
         m_forcesDescGroup =
         {
             m_forcesPipeline->allocateDescriptorSet(0)
@@ -187,7 +187,7 @@ namespace crisp
         m_forcesDescGroup.postBufferUpdate(0, 6, { m_forces->getHandle(),    0, m_numParticles * sizeof(glm::vec4) });
         m_forcesDescGroup.flushUpdates(m_device);
 
-        m_predictPositionsPipeline = std::make_unique<ComputePipeline>(m_renderer, "pbf-predict-comp", 6, 1, sizeof(GridParams) + sizeof(uint32_t) + sizeof(float), glm::uvec3(256, 1, 1));
+        m_predictPositionsPipeline = createComputePipeline(m_renderer, "pbf-predict-comp", 6, 1, sizeof(GridParams) + sizeof(uint32_t) + sizeof(float), glm::uvec3(256, 1, 1));
         m_predictPosDescGroup =
         {
             m_predictPositionsPipeline->allocateDescriptorSet(0)
@@ -327,7 +327,7 @@ namespace crisp
         m_predictPosDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(glm::vec4));
         m_predictPosDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(glm::vec4));
         m_predictPosDescGroup.setDynamicOffset(5, m_currentSection * m_numParticles * sizeof(glm::vec4));
-        m_predictPosDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_predictPositionsPipeline->getPipelineLayout());
+        m_predictPosDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_predictPositionsPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_predictPositionsPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -338,7 +338,7 @@ namespace crisp
         m_clearHashGridPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         m_clearHashGridPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells);
         m_clearGridDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        m_clearGridDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_clearHashGridPipeline->getPipelineLayout());
+        m_clearGridDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_clearHashGridPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells, 1, 1), *m_clearHashGridPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -354,7 +354,7 @@ namespace crisp
         m_computeCellCountDescGroup.setDynamicOffset(0, m_prevSection * m_numParticles * sizeof(glm::vec4));
         m_computeCellCountDescGroup.setDynamicOffset(1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
         m_computeCellCountDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
-        m_computeCellCountDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_computeCellCountPipeline->getPipelineLayout());
+        m_computeCellCountDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_computeCellCountPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_computeCellCountPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -369,7 +369,7 @@ namespace crisp
         m_scanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 4, m_gridParams.numCells);
         m_scanDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
         m_scanDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
-        m_scanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout());
+        m_scanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells / ScanElementsPerThread, 1, 1), *m_scanPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -380,7 +380,7 @@ namespace crisp
         m_scanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 4, m_gridParams.numCells / ScanElementsPerBlock);
         m_scanBlockDescGroup.setDynamicOffset(0, m_currentSection * m_blockSumRegionSize);
         m_scanBlockDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
-        m_scanBlockDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout());
+        m_scanBlockDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_scanPipeline->getPipelineLayout()->getHandle());
 
         numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells / ScanElementsPerBlock / ScanElementsPerThread, 1, 1), *m_scanPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -391,7 +391,7 @@ namespace crisp
         m_combineScanPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells);
         m_combineScanDescGroup.setDynamicOffset(0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
         m_combineScanDescGroup.setDynamicOffset(1, m_currentSection * m_blockSumRegionSize);
-        m_combineScanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_combineScanPipeline->getPipelineLayout());
+        m_combineScanDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_combineScanPipeline->getPipelineLayout()->getHandle());
 
         numGroups = getNumWorkGroups(glm::uvec3(m_gridParams.numCells, 1, 1), *m_combineScanPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -408,7 +408,7 @@ namespace crisp
         m_reindexDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
         m_reindexDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(uint32_t));
         m_reindexDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(glm::vec4));
-        m_reindexDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_reindexPipeline->getPipelineLayout());
+        m_reindexDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_reindexPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_reindexPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -423,7 +423,7 @@ namespace crisp
         m_lambdasDescGroup.setDynamicOffset(1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
         m_lambdasDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
         m_lambdasDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(float));
-        m_lambdasDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_lambdasPipeline->getPipelineLayout());
+        m_lambdasDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_lambdasPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_lambdasPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -439,7 +439,7 @@ namespace crisp
         m_deltasDescGroup.setDynamicOffset(2, m_currentSection * m_numParticles * sizeof(uint32_t));
         m_deltasDescGroup.setDynamicOffset(3, m_currentSection * m_numParticles * sizeof(float));
         m_deltasDescGroup.setDynamicOffset(4, m_currentSection * m_numParticles * sizeof(glm::vec4));
-        m_deltasDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_deltasPipeline->getPipelineLayout());
+        m_deltasDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_deltasPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_deltasPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
@@ -452,7 +452,7 @@ namespace crisp
         m_updatePosPipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_numParticles);
         m_updatePosDescGroup.setDynamicOffset(0, m_currentSection * m_numParticles * sizeof(glm::vec4));
         m_updatePosDescGroup.setDynamicOffset(1, m_currentSection * m_numParticles * sizeof(glm::vec4));
-        m_updatePosDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_updatePosPipeline->getPipelineLayout());
+        m_updatePosDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_updatePosPipeline->getPipelineLayout()->getHandle());
 
         glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_updatePosPipeline);
         vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);

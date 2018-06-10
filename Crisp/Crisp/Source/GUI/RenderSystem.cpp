@@ -15,10 +15,7 @@
 
 #include "Renderer/Renderer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
-#include "Renderer/Pipelines/GuiColorQuadPipeline.hpp"
-#include "Renderer/Pipelines/GuiTextPipeline.hpp"
-#include "Renderer/Pipelines/GuiTexQuadPipeline.hpp"
-#include "Renderer/Pipelines/GuiDebugPipeline.hpp"
+#include "Renderer/Pipelines/GuiPipelines.hpp"
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
 #include "Renderer/Texture.hpp"
 
@@ -55,9 +52,9 @@ namespace crisp::gui
         // Initialize resources to support dynamic addition of MVP transform resources
         std::array<VkDescriptorSet, Renderer::NumVirtualFrames> transformAndColorSets =
         {
-            m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle(),
-            m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle(),
-            m_colorQuadPipeline->allocateDescriptorSet(GuiColorQuadPipeline::TransformAndColor).getHandle()
+            m_colorQuadPipeline->allocateDescriptorSet(0).getHandle(),
+            m_colorQuadPipeline->allocateDescriptorSet(0).getHandle(),
+            m_colorQuadPipeline->allocateDescriptorSet(0).getHandle()
         };
         m_transforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
@@ -280,12 +277,13 @@ namespace crisp::gui
         {
             m_fsQuadPipeline->bind(commandBuffer);
             m_renderer->setDefaultViewport(commandBuffer);
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipelineLayout(),
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipelineLayout()->getHandle(),
                 0, 1, &m_fsQuadDescSet, 0, nullptr);
 
             unsigned int pushConst = m_renderer->getCurrentVirtualFrameIndex();
-            vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
+            vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
 
+            m_renderer->setDefaultScissor(commandBuffer);
             m_renderer->drawFullScreenQuad(commandBuffer);
         });
     }
@@ -297,14 +295,14 @@ namespace crisp::gui
         m_guiPass->recreate();
         m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
 
-        VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo();
+        VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
         std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
         descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet          = m_fsQuadDescSet;
-        descriptorWrites[0].dstBinding      = 1;
+        descriptorWrites[0].dstBinding      = 0;
         descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pImageInfo      = &imageInfo;
 
@@ -345,7 +343,7 @@ namespace crisp::gui
 
         auto imageInfo = fontTexture->VulkanImageView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
-        fontTexture->descSet = m_textPipeline->allocateDescriptorSet(GuiTextPipeline::FontAtlas).getHandle();
+        fontTexture->descSet = m_textPipeline->allocateDescriptorSet(1).getHandle();
 
         std::vector<VkWriteDescriptorSet> descWrites(2, VkWriteDescriptorSet{});
         descWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -373,11 +371,11 @@ namespace crisp::gui
 
     void RenderSystem::createPipelines()
     {
-        m_colorQuadPipeline = std::make_unique<GuiColorQuadPipeline>(m_renderer, m_guiPass.get());
-        m_textPipeline      = std::make_unique<GuiTextPipeline>(m_renderer, m_guiPass.get());
-        m_texQuadPipeline   = std::make_unique<GuiTexQuadPipeline>(m_renderer, m_guiPass.get());
-        m_debugRectPipeline = std::make_unique<GuiDebugPipeline>(m_renderer, m_guiPass.get());
-        m_fsQuadPipeline    = std::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass());
+        m_colorQuadPipeline = createGuiColorPipeline(m_renderer, m_guiPass.get());
+        m_textPipeline      = createGuiTextPipeline(m_renderer, m_guiPass.get(), 5);
+        m_texQuadPipeline   = createGuiTexturePipeline(m_renderer, m_guiPass.get());
+        m_debugRectPipeline = createGuiDebugPipeline(m_renderer, m_guiPass.get());
+        m_fsQuadPipeline    = createTonemappingPipeline(m_renderer, m_renderer->getDefaultRenderPass(), 0, false);
     }
 
     void RenderSystem::initGeometryBuffers()
@@ -412,30 +410,21 @@ namespace crisp::gui
     void RenderSystem::initGuiRenderTargetResources()
     {
         // Create descriptor set for the image
-        m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage).getHandle();
+        m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(0).getHandle();
 
         // Create a view to the render target
         m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
 
         VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+        std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
         descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet          = m_fsQuadDescSet;
         descriptorWrites[0].dstBinding      = 0;
         descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
+        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pImageInfo      = &imageInfo;
-
-        descriptorWrites[1].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet          = m_fsQuadDescSet;
-        descriptorWrites[1].dstBinding      = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo      = &imageInfo;
-
         vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
@@ -451,6 +440,8 @@ namespace crisp::gui
     void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
     {
         m_colorQuadPipeline->bind(cmdBuffer);
+        m_renderer->setDefaultViewport(cmdBuffer);
+        m_renderer->setDefaultScissor(cmdBuffer);
 
         // Latest updated buffer
         VkDescriptorSet descSets[] =
@@ -468,7 +459,7 @@ namespace crisp::gui
             m_colors->getPushConstantValue(cmd.colorId)
         };
 
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_colorQuadPipeline->getPipelineLayout(),
+        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_colorQuadPipeline->getPipelineLayout()->getHandle(),
             0, 1, descSets, 2, dynamicOffsets);
         m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants[0]);
         m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), pushConstants[1]);
@@ -480,6 +471,8 @@ namespace crisp::gui
     {
         const auto textRes = m_textResources.at(cmd.textId).get();
         m_textPipeline->bind(cmdBuffer);
+        m_renderer->setDefaultViewport(cmdBuffer);
+        m_renderer->setDefaultScissor(cmdBuffer);
 
         VkDescriptorSet descSets[] =
         {
@@ -497,11 +490,11 @@ namespace crisp::gui
             static_cast<int>(m_colors->getPushConstantValue(cmd.colorId))
         };
 
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->getPipelineLayout(),
+        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->getPipelineLayout()->getHandle(),
             0, 2, descSets, 2, dynamicOffsets);
 
-        vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
-        vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
+        vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
+        vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
 
         textRes->geomData.drawIndexed(cmdBuffer);
     }
@@ -509,6 +502,8 @@ namespace crisp::gui
     void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
     {
         m_texQuadPipeline->bind(cmdBuffer);
+        m_renderer->setDefaultViewport(cmdBuffer);
+        m_renderer->setDefaultScissor(cmdBuffer);
 
         VkDescriptorSet descSets[] =
         {
@@ -528,10 +523,10 @@ namespace crisp::gui
             static_cast<int>(m_tcTransforms->getPushConstantValue(cmd.textId))
         };
 
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_texQuadPipeline->getPipelineLayout(),
+        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_texQuadPipeline->getPipelineLayout()->getHandle(),
             0, 2, descSets, 3, dynamicOffsets);
-        vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT,             0,     sizeof(int), &pushConstants[0]);
-        vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2 * sizeof(int), &pushConstants[1]);
+        vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_VERTEX_BIT,             0,     sizeof(int), &pushConstants[0]);
+        vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2 * sizeof(int), &pushConstants[1]);
 
         m_quadGeometry.drawIndexed(cmdBuffer);
     }

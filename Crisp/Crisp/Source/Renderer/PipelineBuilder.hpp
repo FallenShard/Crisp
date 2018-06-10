@@ -78,13 +78,23 @@ namespace crisp
             return *this;
         }
 
+        PipelineBuilder& setFullScreenVertexLayout();
+
         PipelineBuilder& setInputAssemblyState(VkPrimitiveTopology topology, VkBool32 primitiveRestartEnable = VK_FALSE);
         PipelineBuilder& setTessellationControlPoints(uint32_t numControlPoints);
 
         PipelineBuilder& setPolygonMode(VkPolygonMode polygonMode);
+        PipelineBuilder& setFrontFace(VkFrontFace frontFace);
+        PipelineBuilder& setLineWidth(float lineWidth);
 
         PipelineBuilder& setViewport(VkViewport&& viewport);
         PipelineBuilder& setScissor(VkRect2D&& scissor);
+
+        PipelineBuilder& setBlendState(uint32_t index, VkBool32 enabled);
+        PipelineBuilder& setBlendFactors(uint32_t index, VkBlendFactor srcFactor, VkBlendFactor dstFactor);
+
+        PipelineBuilder& setDepthTest(VkBool32 enabled);
+        PipelineBuilder& setDepthWrite(VkBool32 enabled);
 
         PipelineBuilder& enableState(PipelineState pipelineState);
         PipelineBuilder& disableState(PipelineState pipelineState);
@@ -128,4 +138,6 @@ namespace crisp
 
         PipelineStateFlags m_pipelineStateFlags;
     };
+
+    VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint = "main");
 }

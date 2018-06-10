@@ -136,6 +136,7 @@
     <ClInclude Include="CrispCore\ConsoleUtils.hpp" />
     <ClInclude Include="CrispCore\Delegate.hpp" />
     <ClInclude Include="CrispCore\Event.hpp" />
+    <ClInclude Include="CrispCore\Log.hpp" />
     <ClInclude Include="CrispCore\MathConstants.hpp" />
     <ClInclude Include="CrispCore\Profiler.hpp" />
     <ClInclude Include="CrispCore\Timer.hpp" />

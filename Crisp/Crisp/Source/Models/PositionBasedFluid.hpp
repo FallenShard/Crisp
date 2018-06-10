@@ -13,7 +13,6 @@
 namespace crisp
 {
     class VulkanPipeline;
-    class ComputePipeline;
     class Renderer;
     class VulkanDevice;
     class UniformBuffer;
@@ -95,35 +94,35 @@ namespace crisp
         mutable uint32_t m_prevSection;
         mutable uint32_t m_currentSection;
 
-        std::unique_ptr<ComputePipeline> m_predictPositionsPipeline;
+        std::unique_ptr<VulkanPipeline> m_predictPositionsPipeline;
         DescriptorSetGroup m_predictPosDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_clearHashGridPipeline;
+        std::unique_ptr<VulkanPipeline> m_clearHashGridPipeline;
         DescriptorSetGroup m_clearGridDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_computeCellCountPipeline;
+        std::unique_ptr<VulkanPipeline> m_computeCellCountPipeline;
         DescriptorSetGroup m_computeCellCountDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_scanPipeline;
+        std::unique_ptr<VulkanPipeline> m_scanPipeline;
         DescriptorSetGroup m_scanDescGroup;
         DescriptorSetGroup m_scanBlockDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_combineScanPipeline;
+        std::unique_ptr<VulkanPipeline> m_combineScanPipeline;
         DescriptorSetGroup m_combineScanDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_reindexPipeline;
+        std::unique_ptr<VulkanPipeline> m_reindexPipeline;
         DescriptorSetGroup m_reindexDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_lambdasPipeline;
+        std::unique_ptr<VulkanPipeline> m_lambdasPipeline;
         DescriptorSetGroup m_lambdasDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_deltasPipeline;
+        std::unique_ptr<VulkanPipeline> m_deltasPipeline;
         DescriptorSetGroup m_deltasDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_updatePosPipeline;
+        std::unique_ptr<VulkanPipeline> m_updatePosPipeline;
         DescriptorSetGroup m_updatePosDescGroup;
 
-        std::unique_ptr<ComputePipeline> m_forcesPipeline;
+        std::unique_ptr<VulkanPipeline> m_forcesPipeline;
         DescriptorSetGroup m_forcesDescGroup;
 
         float m_viscosityFactor = 5.0f;

@@ -4,17 +4,6 @@
 
 namespace crisp
 {
-    class ComputePipeline : public VulkanPipeline
-    {
-    public:
-        ComputePipeline(Renderer* renderer, std::string&& shaderName, uint32_t numDynamicStorageBuffers, uint32_t numDescriptorSets, std::size_t pushConstantSize, const glm::uvec3& workGroupSize);
-
-        const glm::uvec3& getWorkGroupSize() const;
-
-    protected:
-        virtual void create(int width, int height) override;
-
-        VkShaderModule m_shader;
-        glm::uvec3 m_workGroupSize;
-    };
+    std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, std::string&& shaderName, uint32_t numDynamicStorageBuffers, uint32_t numDescriptorSets, std::size_t pushConstantSize, const glm::uvec3& workGroupSize);
+    glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline);
 }

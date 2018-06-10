@@ -2,8 +2,6 @@
 
 #include <GLFW/glfw3.h>
 
-#include <iostream>
-
 #include "InputTranslator.hpp"
 
 namespace crisp

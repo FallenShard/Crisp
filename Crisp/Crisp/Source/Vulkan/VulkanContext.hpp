@@ -45,7 +45,6 @@ namespace crisp
         bool getQueueFamilyPresentationSupport(uint32_t familyIndex) const;
         std::vector<VkQueueFamilyProperties> getQueueFamilyProperties() const;
         QueueFamilyIndices findQueueFamilies() const;
-        bool checkDeviceExtensionSupport() const;
         SwapChainSupportDetails querySwapChainSupport() const;
 
         std::optional<uint32_t> findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
@@ -57,30 +56,16 @@ namespace crisp
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat findSupportedDepthFormat() const;
 
-        VkPhysicalDeviceProperties getDeviceProperties() const;
+        const VkPhysicalDeviceProperties& getPhysicalDeviceProperties() const;
+        const VkPhysicalDeviceFeatures&   getPhysicalDeviceFeatures() const;
 
     private:
-        VkInstance               createInstance(std::vector<std::string>&& reqPlatformExtensions);
-        VkDebugReportCallbackEXT createDebugCallback();
-        VkSurfaceKHR             createSurface(SurfaceCreator surfaceCreator);
-        VkPhysicalDevice         pickPhysicalDevice();
-
-        bool checkRequiredExtensions(std::vector<const char*> reqExtensions, const std::vector<VkExtensionProperties>& supportedExtensions);
-        bool checkValidationLayerSupport();
-
-        bool isDeviceSuitable(VkPhysicalDevice device);
-
-        std::vector<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice device) const;
-        QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;
-        bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;
-        SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const;
-
-        const static std::vector<const char*> validationLayers;
-        const static std::vector<const char*> deviceExtensions;
-
         VkInstance               m_instance;
         VkDebugReportCallbackEXT m_debugCallback;
         VkSurfaceKHR             m_surface;
-        VkPhysicalDevice         m_physicalDevice; // Implicitly cleaned up with VkInstance
+
+        VkPhysicalDevice           m_physicalDevice; // Implicitly cleaned up with VkInstance
+        VkPhysicalDeviceFeatures   m_physicalDeviceFeatures;
+        VkPhysicalDeviceProperties m_physicalDeviceProperties;
     };
 }
