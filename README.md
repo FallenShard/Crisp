@@ -2,7 +2,7 @@
 This project contains a small application that will showcase reference implementations of various algorithms for ray tracing and
 real-time rendering that I have encountered in computer graphics, both during my studies and in my career.
 
-It is developed sporadically during my free time so updates are not going to be very frequent.
+It is developed sporadically during my free time so updates are not going to be very frequent. The real-time rendering code is developed with Vulkan API.
 
 Currently, the following techniques have an implementation for the real-time renderer:
   - SSAO
