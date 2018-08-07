@@ -19,6 +19,7 @@ The ray tracing section of the code (codenamed Vesper in the source) has the fol
     - Oren Nayar
     - Rough & smooth conductor
     - Rough & smooth dielectric
+    - Beckmann and GGX microfacet models
   - Integrators
     - Ambient occlusion
     - Direct lighting
