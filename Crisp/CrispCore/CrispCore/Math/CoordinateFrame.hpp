@@ -4,7 +4,7 @@
 
 #include "Operations.hpp"
 
-namespace vesper
+namespace crisp
 {
     struct CoordinateFrame
     {

@@ -13,8 +13,9 @@ namespace crisp
         PipelineLayoutBuilder& addPushConstant(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
 
         VkPipelineLayout create(VkDevice device);
-        std::vector<VkDescriptorSetLayout> moveDescriptorSetLayouts();
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>> moveDescriptorSetBindings();
+        std::vector<VkDescriptorSetLayout> extractDescriptorSetLayouts();
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>> extractDescriptorSetBindings();
+        std::vector<VkPushConstantRange> extractPushConstants();
 
         const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& getDescriptorSetBindings() const;
 

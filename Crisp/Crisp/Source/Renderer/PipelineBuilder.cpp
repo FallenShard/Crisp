@@ -1,9 +1,24 @@
 #include "Renderer/PipelineBuilder.hpp"
 
-#include "vulkan/VulkanPipeline.hpp"
+#include <CrispCore/Log.hpp>
+
+#include "Vulkan/VulkanDevice.hpp"
 
 namespace crisp
 {
+    PipelineDynamicState getPipelineDynamicState(VkDynamicState dynamicState)
+    {
+        switch (dynamicState)
+        {
+        case VK_DYNAMIC_STATE_VIEWPORT: return PipelineDynamicState::Viewport;
+        case VK_DYNAMIC_STATE_SCISSOR:  return PipelineDynamicState::Scissor;
+        default: {
+            logError("Invalid vulkan dynamic state received!");
+            return static_cast<PipelineDynamicState>(0);
+        }
+        }
+    }
+
     PipelineBuilder::PipelineBuilder()
         : m_vertexInputState({ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO })
         , m_inputAssemblyState({ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO })
@@ -66,6 +81,12 @@ namespace crisp
     PipelineBuilder& PipelineBuilder::setFrontFace(VkFrontFace frontFace)
     {
         m_rasterizationState.frontFace = frontFace;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setCullMode(VkCullModeFlags cullMode)
+    {
+        m_rasterizationState.cullMode = cullMode;
         return *this;
     }
 
@@ -151,7 +172,7 @@ namespace crisp
         return *this;
     }
 
-    VkPipeline PipelineBuilder::create(VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex)
+    std::unique_ptr<VulkanPipeline> PipelineBuilder::create(VulkanDevice* device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex)
     {
         VkGraphicsPipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         pipelineInfo.stageCount          = static_cast<uint32_t>(m_shaderStages.size());
@@ -165,15 +186,24 @@ namespace crisp
         pipelineInfo.pColorBlendState    = m_pipelineStateFlags & PipelineState::ColorBlend    ? &m_colorBlendState    : nullptr;
         pipelineInfo.pDepthStencilState  = m_pipelineStateFlags & PipelineState::DepthStencil  ? &m_depthStencilState  : nullptr;
         pipelineInfo.pDynamicState       = m_pipelineStateFlags & PipelineState::Dynamic       ? &m_dynamicState       : nullptr;
-        pipelineInfo.layout              = pipelineLayout;
+        pipelineInfo.layout              = pipelineLayout->getHandle();
         pipelineInfo.renderPass          = renderPass;
         pipelineInfo.subpass             = subpassIndex;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
         VkPipeline pipeline;
-        vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-        return pipeline;
+        vkCreateGraphicsPipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(pipelineLayout), createDynamicStateFlags());
+    }
+
+    PipelineDynamicStateFlags PipelineBuilder::createDynamicStateFlags() const
+    {
+        PipelineDynamicStateFlags dynamicStateFlags;
+        for (auto dynState : m_dynamicStates)
+            dynamicStateFlags |= getPipelineDynamicState(dynState);
+
+        return dynamicStateFlags;
     }
 
     VkPipelineRasterizationStateCreateInfo PipelineBuilder::createDefaultRasterizationState()

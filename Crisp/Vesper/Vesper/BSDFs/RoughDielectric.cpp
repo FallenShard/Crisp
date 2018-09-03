@@ -1,8 +1,8 @@
 #include "RoughDielectric.hpp"
 
-#include "Math/CoordinateFrame.hpp"
-#include "Math/Constants.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
+#include <CrispCore/Math/Constants.hpp>
+#include <CrispCore/Math/Warp.hpp>
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
 
@@ -10,7 +10,7 @@
 
 #include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {

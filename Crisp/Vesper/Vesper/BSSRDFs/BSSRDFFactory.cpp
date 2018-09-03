@@ -2,7 +2,7 @@
 
 #include "DipoleBSSRDF.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<BSSRDF> BSSRDFFactory::create(std::string type, VariantMap parameters)
     {

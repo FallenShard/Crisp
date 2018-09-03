@@ -8,7 +8,7 @@
 
 #include "BSSRDF.hpp"
 
-namespace vesper
+namespace crisp
 {
     class BSSRDFFactory
     {

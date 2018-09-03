@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/Event.hpp>
 
 namespace crisp

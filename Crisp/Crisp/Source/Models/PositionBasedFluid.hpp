@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"

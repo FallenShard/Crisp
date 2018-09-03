@@ -1,22 +1,22 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 #include <fstream>
-#include <glm/vec3.hpp>
-#include <glm/vec2.hpp>
+#include <CrispCore/Math/Headers.hpp>
 
-namespace vesper
+namespace crisp
 {
     class MeshLoader
     {
     public:
-        bool load(std::string fileName, 
-            std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
+        bool load(std::filesystem::path path,
+            std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
             std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const;
 
     private:
-        void loadWavefrontObj(std::ifstream& file, 
-            std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, 
+        void loadWavefrontObj(std::ifstream& file,
+            std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
             std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const;
 
         bool loadModelCache(std::string fileName,

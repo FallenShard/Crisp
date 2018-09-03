@@ -4,7 +4,7 @@
 
 #include "Ray.hpp"
 
-namespace vesper
+namespace crisp
 {
     template <typename PointType>
     struct BoundingBox

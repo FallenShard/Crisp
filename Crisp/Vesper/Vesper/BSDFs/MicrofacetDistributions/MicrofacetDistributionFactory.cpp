@@ -4,7 +4,7 @@
 #include "GGX.hpp"
 #include "Phong.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<MicrofacetDistribution> MicrofacetDistributionFactory::create(std::string type, VariantMap params)
     {

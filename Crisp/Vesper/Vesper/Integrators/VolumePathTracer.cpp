@@ -8,7 +8,7 @@
 #include "Media/Medium.hpp"
 #include "PhaseFunctions/PhaseFunction.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {

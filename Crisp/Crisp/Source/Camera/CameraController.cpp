@@ -17,8 +17,6 @@ namespace crisp
             out << "[" << v.x << ", " << v.y << "]";
             return out;
         }
-
-        glm::vec2 lastPress;
     }
 
     CameraController::CameraController(Window* window)
@@ -87,14 +85,12 @@ namespace crisp
     {
         if (mouseEventArgs.button == MouseButton::Right)
         {
-            //std::cout << "PRESS: " << mouseEventArgs.x << " " << mouseEventArgs.y << std::endl;
             m_isMoving = true;
 
             m_prevMousePos.x = static_cast<float>(mouseEventArgs.x);
             m_prevMousePos.y = static_cast<float>(mouseEventArgs.y);
 
             m_window->setCursorState(CursorState::Disabled);
-            lastPress = m_prevMousePos;
         }
     }
 
@@ -102,15 +98,12 @@ namespace crisp
     {
         if (mouseEventArgs.button == MouseButton::Right)
         {
-            //std::cout << "RELEASE: " << mouseEventArgs.x << " " << mouseEventArgs.y << std::endl;
             m_isMoving = false;
 
             m_window->setCursorState(CursorState::Normal);
 
             m_prevMousePos.x = static_cast<float>(mouseEventArgs.x);
             m_prevMousePos.y = static_cast<float>(mouseEventArgs.y);
-
-            m_window->setCursorPosition(lastPress);
         }
     }
 
@@ -124,9 +117,6 @@ namespace crisp
 
         if (m_isMoving)
         {
-            //std::cout << mousePos << std::endl;
-            //std::cout << "Delta: " << mousePos - lastPress << std::endl;
-            //std::cout << "DeltaLP: " << lastPress - glm::vec2(m_window->getSize() / 2) << std::endl;
             auto delta = m_useMouseFiltering ? filterMouseMoves() : mousePos - m_prevMousePos;
             auto moveAmount = -m_moveSpeed * delta / m_screenSize;
             m_camera.rotate(moveAmount.x, moveAmount.y);

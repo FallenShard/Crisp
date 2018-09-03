@@ -1,8 +1,9 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 #include <unordered_map>
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 
 #include "Geometry/VertexAttributeTraits.hpp"
 
@@ -14,8 +15,8 @@ namespace crisp
     class TriangleMesh
     {
     public:
-        TriangleMesh(std::string filename);
-        TriangleMesh(const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes);
+        TriangleMesh(const std::filesystem::path& filePath);
+        TriangleMesh(const std::filesystem::path& filePath, std::initializer_list<VertexAttribute> vertexAttributes);
         TriangleMesh(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
             const std::vector<glm::vec2>& texCoords, const std::vector<glm::uvec3>& faces, std::initializer_list<VertexAttribute> vertexAttributes);
         ~TriangleMesh();

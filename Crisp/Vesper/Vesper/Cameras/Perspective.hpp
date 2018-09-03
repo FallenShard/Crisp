@@ -2,9 +2,9 @@
 
 #include "Camera.hpp"
 
-#include "Math/Transform.hpp"
+#include <CrispCore/Math/Transform.hpp>
 
-namespace vesper
+namespace crisp
 {
     class PerspectiveCamera : public Camera
     {

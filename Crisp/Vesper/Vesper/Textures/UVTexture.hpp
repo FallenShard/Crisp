@@ -7,7 +7,7 @@
 
 #include "Texture.hpp"
 
-namespace vesper
+namespace crisp
 {
     class UVTexture : public Texture<Spectrum>
     {

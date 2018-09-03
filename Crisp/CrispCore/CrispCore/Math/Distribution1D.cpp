@@ -1,6 +1,8 @@
 #include "Distribution1D.hpp"
 
-namespace vesper
+#include <algorithm>
+
+namespace crisp
 {
     Distribution1D::Distribution1D(size_t numEntries)
     {

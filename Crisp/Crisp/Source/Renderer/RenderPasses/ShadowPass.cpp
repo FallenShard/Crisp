@@ -10,7 +10,7 @@
 namespace crisp
 {
     ShadowPass::ShadowPass(Renderer* renderer, unsigned int shadowMapSize, unsigned int numCascades)
-        : VulkanRenderPass(renderer)
+        : VulkanRenderPass(renderer, false, numCascades)
         , m_numCascades(numCascades)
     {
         m_clearValues.resize(numCascades);
@@ -25,11 +25,12 @@ namespace crisp
                 .setAttachmentOps(i, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
                 .setAttachmentLayouts(i, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
+        builder.setNumSubpasses(m_numCascades);
         for (uint32_t i = 0; i < m_numCascades; ++i)
-            builder.addSubpass().setDepthAttachmentRef(i, i, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            builder.setDepthAttachmentRef(i, i, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
         m_handle = builder
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
             .create(m_device->getHandle());
 

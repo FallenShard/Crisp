@@ -24,7 +24,7 @@ namespace crisp
 
     class SceneRenderPass;
 
-    class PhysicallyBasedMaterialsScene : public Scene
+    class PhysicallyBasedMaterialsScene : public AbstractScene
     {
     public:
         PhysicallyBasedMaterialsScene(Renderer* renderer, Application* app);

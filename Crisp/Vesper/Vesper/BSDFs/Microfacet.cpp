@@ -1,13 +1,13 @@
 #include "Microfacet.hpp"
 
-#include "Math/CoordinateFrame.hpp"
-#include "Math/Constants.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
+#include <CrispCore/Math/Constants.hpp>
+#include <CrispCore/Math/Warp.hpp>
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
 #include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 
-namespace vesper
+namespace crisp
 {
     MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)
         : BSDF(LobeFlags(Lobe::Diffuse | Lobe::Glossy))
@@ -70,7 +70,7 @@ namespace vesper
         {
             glm::vec2 reusedSample((sample.x - m_ks) / (1.0f - m_ks), sample.y);
 
-            bsdfSample.wo = Warp::squareToCosineHemisphere(reusedSample);
+            bsdfSample.wo = warp::squareToCosineHemisphere(reusedSample);
             bsdfSample.sampledLobe = Lobe::Diffuse;
         }
 
@@ -96,7 +96,7 @@ namespace vesper
 
         float Jh = 1.0f / (4.0f * glm::dot(m, bsdfSample.wo));
         float specPdf = m_ks * m_distrib->pdf(m) * Jh;
-        float diffPdf = (1.0f - m_ks) * Warp::squareToCosineHemispherePdf(bsdfSample.wo);
+        float diffPdf = (1.0f - m_ks) * warp::squareToCosineHemispherePdf(bsdfSample.wo);
 
         return specPdf + diffPdf;
     }

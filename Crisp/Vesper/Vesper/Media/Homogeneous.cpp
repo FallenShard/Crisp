@@ -2,7 +2,7 @@
 
 #include "Samplers/Sampler.hpp"
 
-namespace vesper
+namespace crisp
 {
     HomogeneousMedium::HomogeneousMedium(const VariantMap& params)
     {

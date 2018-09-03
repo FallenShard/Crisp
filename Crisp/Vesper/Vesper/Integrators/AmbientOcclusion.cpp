@@ -2,10 +2,10 @@
 
 #include "Core/Intersection.hpp"
 #include "Core/Scene.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/Warp.hpp>
 #include "Samplers/Sampler.hpp"
 
-namespace vesper
+namespace crisp
 {
     AmbientOcclusionIntegrator::AmbientOcclusionIntegrator(const VariantMap& params)
     {
@@ -26,7 +26,7 @@ namespace vesper
         if (!scene->rayIntersect(ray, its))
             return Spectrum(1.0f);
 
-        glm::vec3 hemisphereDir = Warp::squareToUniformHemisphere(sampler.next2D());
+        glm::vec3 hemisphereDir = warp::squareToUniformHemisphere(sampler.next2D());
 
         Ray3 testRay(its.p, its.toWorld(hemisphereDir), Ray3::Epsilon, m_rayLength);
 

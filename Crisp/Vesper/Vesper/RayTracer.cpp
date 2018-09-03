@@ -17,7 +17,7 @@
 
 #include "Core/XmlSceneParser.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {

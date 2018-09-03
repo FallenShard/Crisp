@@ -8,9 +8,11 @@
 
 namespace crisp
 {
-    VulkanRenderPass::VulkanRenderPass(Renderer* renderer)
+    VulkanRenderPass::VulkanRenderPass(Renderer* renderer, bool isWindowSizeDependent, uint32_t numSubpasses)
         : VulkanResource(renderer->getDevice())
         , m_renderer(renderer)
+        , m_isWindowSizeDependent(isWindowSizeDependent)
+        , m_numSubpasses(numSubpasses)
     {
     }
 
@@ -22,8 +24,11 @@ namespace crisp
 
     void VulkanRenderPass::recreate()
     {
-        freeResources();
-        createResources();
+        if (m_isWindowSizeDependent)
+        {
+            freeResources();
+            createResources();
+        }
     }
 
     VkExtent2D VulkanRenderPass::getRenderArea() const

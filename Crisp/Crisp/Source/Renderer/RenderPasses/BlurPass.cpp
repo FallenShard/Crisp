@@ -10,7 +10,7 @@
 namespace crisp
 {
     BlurPass::BlurPass(Renderer* renderer, VkFormat format, VkExtent2D renderArea)
-        : VulkanRenderPass(renderer)
+        : VulkanRenderPass(renderer, true, 1)
         , m_colorFormat(format)
     {
         m_renderArea = renderArea;
@@ -21,7 +21,7 @@ namespace crisp
             .addAttachment(m_colorFormat, VK_SAMPLE_COUNT_1_BIT)
             .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
             .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addSubpass()
+            .setNumSubpasses(1)
             .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "Spectrums/Spectrum.hpp"
-#include "Math/Ray.hpp"
-#include "Core/VariantMap.hpp"
 #include <CrispCore/BitFlags.hpp>
+#include <CrispCore/Math/Ray.hpp>
 
-namespace vesper
+#include "Spectrums/Spectrum.hpp"
+#include "Core/VariantMap.hpp"
+
+namespace crisp
 {
     class Scene;
     class Sampler;

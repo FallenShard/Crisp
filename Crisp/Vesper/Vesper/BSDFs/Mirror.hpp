@@ -2,7 +2,7 @@
 
 #include "BSDF.hpp"
 
-namespace vesper
+namespace crisp
 {
     class MirrorBSDF : public BSDF
     {

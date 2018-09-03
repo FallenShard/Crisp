@@ -8,7 +8,7 @@
 
 #include "MicrofacetDistribution.hpp"
 
-namespace vesper
+namespace crisp
 {
     class MicrofacetDistributionFactory
     {

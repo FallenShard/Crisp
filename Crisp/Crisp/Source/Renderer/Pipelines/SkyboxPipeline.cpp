@@ -7,7 +7,7 @@
 
 namespace crisp
 {
-    std::unique_ptr<VulkanPipeline> createSkyboxPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
+    std::unique_ptr<VulkanPipeline> createSkyboxPipeline(Renderer* renderer, const VulkanRenderPass& renderPass, uint32_t subpass)
     {
         PipelineLayoutBuilder layoutBuilder;
         layoutBuilder.defineDescriptorSet(0,
@@ -21,7 +21,7 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
         auto layout = createPipelineLayout(device, layoutBuilder, descPool);
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("skybox-vert")),
@@ -34,8 +34,6 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setFrontFace(VK_FRONT_FACE_CLOCKWISE)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), subpass);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass.getHandle(), subpass);
     }
 }

@@ -27,7 +27,7 @@
 
 #include "Models/Skybox.hpp"
 
-#include <Vesper/Math/Warp.hpp>
+//#include <CrispCore/Math/Warp.hpp>
 
 #include "GUI/Form.hpp"
 #include "AmbientOcclusionPanel.hpp"
@@ -52,7 +52,7 @@ namespace crisp
             float x = distribution(randomEngine);
             float y = distribution(randomEngine);
             float r = distribution(randomEngine);
-            glm::vec3 s = r * vesper::Warp::squareToUniformHemisphere(glm::vec2(x, y));
+            glm::vec3 s;// = r; *warp::squareToUniformHemisphere(glm::vec2(x, y));
             float scale = float(i) / float(512.0f);
             scale = glm::mix(0.1f, 1.0f, scale * scale);
             samples[i].x = s.x * scale;
@@ -117,7 +117,7 @@ namespace crisp
 
         m_buddhaGeometry = std::make_unique<MeshGeometry>(m_renderer, "sponza_fixed.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position, VertexAttribute::Normal });
 
-        m_skybox = std::make_unique<Skybox>(m_renderer, m_scenePass.get(), "Creek");
+        m_skybox = std::make_unique<Skybox>(m_renderer, *m_scenePass, "Creek");
 
         auto panel = std::make_unique<gui::AmbientOcclusionPanel>(app->getForm(), this);
         m_app->getForm()->add(std::move(panel));
@@ -161,7 +161,7 @@ namespace crisp
             m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
             m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
 
-            m_skybox->updateTransforms(P, V);
+            m_skybox->updateTransforms(V, P);
         }
     }
 
@@ -171,7 +171,7 @@ namespace crisp
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
-            m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
+            //m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
 
             m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
             m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
@@ -200,7 +200,7 @@ namespace crisp
             m_buddhaGeometry->bindGeometryBuffers(commandBuffer);
             m_buddhaGeometry->draw(commandBuffer);
 
-            m_skybox->draw(commandBuffer, frameIdx);
+            //m_skybox->draw(commandBuffer, frameIdx);
 
             m_scenePass->end(commandBuffer);
 

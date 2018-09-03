@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 
 #include "Vulkan/VulkanMemoryHeap.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
@@ -15,8 +15,6 @@ namespace crisp
     class UniformBuffer
     {
     public:
-        static constexpr VkDeviceSize SizeGranularity = 256;
-
         UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
         ~UniformBuffer();
 
@@ -29,7 +27,7 @@ namespace crisp
         }
 
         void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
-        void updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex);
+        void updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex);
 
         uint32_t getDynamicOffset(uint32_t currentFrameIndex) const;
         VkDescriptorBufferInfo getDescriptorInfo() const;

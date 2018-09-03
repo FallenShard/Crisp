@@ -123,7 +123,7 @@ namespace crisp::gui
         setValidationFlags(Validation::Color);
     }
 
-    void Button::onMouseEntered(float x, float y)
+    void Button::onMouseEntered(float, float)
     {
         if (m_state == State::Disabled || m_state != State::Idle)
             return;
@@ -131,7 +131,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void Button::onMouseExited(float x, float y)
+    void Button::onMouseExited(float, float)
     {
         if (m_state == State::Disabled || m_state != State::Hover)
             return;
@@ -139,7 +139,7 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void Button::onMousePressed(float x, float y)
+    void Button::onMousePressed(float, float)
     {
         if (m_state == State::Disabled)
             return;

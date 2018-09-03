@@ -1,13 +1,12 @@
 #include "MeshLoader.hpp"
 
 #include <unordered_map>
-#include <iostream>
 #include <sstream>
-#include <experimental/filesystem>
+#include <filesystem>
 
-#include <glm/glm.hpp>
+#include <CrispCore/Log.hpp>
 
-namespace vesper
+namespace crisp
 {
     namespace
     {
@@ -80,33 +79,30 @@ namespace vesper
         };
     }
 
-    bool MeshLoader::load(std::string fileName,
+    bool MeshLoader::load(std::filesystem::path path,
         std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
         std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
-        std::string meshFilename = "Resources/Meshes/" + fileName;
-        std::ifstream meshFile(meshFilename);
+        std::ifstream meshFile(path);
         if (meshFile.fail())
             return false;
 
-        auto tokens = tokenize(meshFilename, ".");
-        std::string ext = tokens.back();
+        std::string ext = path.extension().string();
 
-        std::experimental::filesystem::path modelPath(tokens.front());
-        auto cachedModelPath = modelPath.remove_filename() / "cache" / modelPath.filename();
+        auto cachedModelPath = path.remove_filename() / "cache" / path.filename();
 
-        if (loadModelCache(cachedModelPath.generic_string(), positions, normals, texCoords, faces))
+        if (loadModelCache(cachedModelPath.string(), positions, normals, texCoords, faces))
         {
-            std::cout << "Loading Wavefront Obj mesh from cache: " + meshFilename << std::endl;
+            logInfo("Loading cached version of Wavefront Obj mesh: ", cachedModelPath.filename());
             return true;
         }
 
 
-        if (ext == "obj")
+        if (ext == ".obj")
         {
-            std::cout << "Loading Wavefront Obj mesh: " + meshFilename << std::endl;
+            logInfo("Loading Wavefront Obj mesh: ", path.filename());
             loadWavefrontObj(meshFile, positions, normals, texCoords, faces);
-            createModelCache(cachedModelPath.generic_string(), positions, normals, texCoords, faces);
+            createModelCache(cachedModelPath.string(), positions, normals, texCoords, faces);
             return true;
         }
 

@@ -19,31 +19,25 @@ namespace crisp
     class ShadowPass;
     class VulkanPipeline;
 
-    enum class ParallelSplit
+    enum class SplitStrategy
     {
         Linear,
-        Logarithmic
+        Logarithmic,
+        Hybrid
     };
 
     class CascadedShadowMapper
     {
     public:
-        CascadedShadowMapper(Renderer* renderer, DirectionalLight light, uint32_t numCascades, UniformBuffer* modelTransformsBuffer);
+        CascadedShadowMapper(Renderer* renderer, uint32_t numCascades, DirectionalLight light, float zFar);
         ~CascadedShadowMapper();
 
-        UniformBuffer* getLightTransformsBuffer() const;
-        ShadowPass* getRenderPass() const;
+        UniformBuffer* getLightTransformBuffer() const;
+        UniformBuffer* getSplitBuffer() const;
 
-        void recalculateLightProjections(const AbstractCamera& camera, float zFar, ParallelSplit splitStrategy);
+        void setSplitLambda(float lambda, const AbstractCamera& camera);
 
-        void update(VkCommandBuffer cmdBuffer, unsigned int frameIndex);
-        void draw(VkCommandBuffer cmdBuffer, unsigned int frameIndex, std::function<void(VkCommandBuffer commandBuffer, uint32_t frameIdx, DescriptorSetGroup& descSets, VulkanPipeline* pipeline, uint32_t cascadeTransformOffset)> callback);
-
-        glm::mat4 getLightTransform(uint32_t index) const;
-
-        const DirectionalLight* getLight() const;
-
-        VkImage getShadowMap(int idx);
+        void recalculateLightProjections(const AbstractCamera& camera);
 
     private:
         Renderer* m_renderer;
@@ -51,11 +45,18 @@ namespace crisp
         uint32_t m_numCascades;
         DirectionalLight m_light;
 
-        std::unique_ptr<ShadowPass> m_shadowPass;
-        std::vector<std::unique_ptr<VulkanPipeline>> m_pipelines;
-        DescriptorSetGroup m_descGroup;
+        float m_zFar;
 
-        std::vector<glm::mat4> m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+        std::vector<glm::mat4> m_lightTransforms;
+        std::unique_ptr<UniformBuffer> m_lightTransformBuffer;
+
+        float m_lambda;
+        struct SplitIntervals
+        {
+            glm::vec4 lo;
+            glm::vec4 hi;
+        };
+        SplitIntervals m_splitIntervals;
+        std::unique_ptr<UniformBuffer> m_splitBuffer;
     };
 }

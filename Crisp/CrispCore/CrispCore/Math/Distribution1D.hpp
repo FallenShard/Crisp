@@ -1,9 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include <vector>
 
-namespace vesper
+namespace crisp
 {
     class Distribution1D
     {

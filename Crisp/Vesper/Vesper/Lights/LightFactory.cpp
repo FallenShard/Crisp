@@ -5,7 +5,7 @@
 #include "AreaLight.hpp"
 #include "EnvironmentLight.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<Light> LightFactory::create(std::string type, VariantMap parameters)
     {

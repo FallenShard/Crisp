@@ -4,7 +4,7 @@
 #include "Mesh.hpp"
 #include "Sphere.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<Shape> ShapeFactory::create(std::string type, VariantMap parameters)
     {

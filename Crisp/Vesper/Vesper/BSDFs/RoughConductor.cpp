@@ -1,12 +1,12 @@
 #include "RoughConductor.hpp"
 
-#include "Math/CoordinateFrame.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
 
 #include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 
-namespace vesper
+namespace crisp
 {
     RoughConductorBSDF::RoughConductorBSDF(const VariantMap& params)
         : BSDF(Lobe::Glossy)

@@ -1,6 +1,6 @@
 #include "Distribution2D.hpp"
 
-namespace vesper
+namespace crisp
 {
     Distribution2D::Distribution2D()
     {

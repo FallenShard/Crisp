@@ -1,7 +1,8 @@
 #pragma once
 
+#include <CrispCore/Math/Constants.hpp>
+
 #include "Animation.hpp"
-#include "CrispCore/MathConstants.hpp"
 
 namespace crisp
 {

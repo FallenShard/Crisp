@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <map>
 
-namespace vesper
+namespace crisp
 {
     enum class IndexOfRefraction
     {

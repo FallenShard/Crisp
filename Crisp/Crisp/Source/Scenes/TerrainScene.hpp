@@ -26,7 +26,7 @@ namespace crisp
     class Renderer;
     class VulkanSampler;
 
-    class TerrainScene : public Scene
+    class TerrainScene : public AbstractScene
     {
     public:
         TerrainScene(Renderer* renderer, Application* app);

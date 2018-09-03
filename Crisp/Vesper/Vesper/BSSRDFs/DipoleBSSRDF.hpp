@@ -3,10 +3,10 @@
 #include "BSSRDF.hpp"
 #include "Core/VariantMap.hpp"
 
-#include "Math/Octree.hpp"
+#include <CrispCore/Math/Octree.hpp>
 #include "IrradianceTree.hpp"
 
-namespace vesper
+namespace crisp
 {
     class DipoleBSSRDF : public BSSRDF
     {

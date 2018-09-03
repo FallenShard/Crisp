@@ -1,10 +1,10 @@
 #include "DielectricBSDF.hpp"
 
-#include "Math/CoordinateFrame.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
 
-namespace vesper
+namespace crisp
 {
     DielectricBSDF::DielectricBSDF(const VariantMap& params)
         : BSDF(Lobe::Delta)

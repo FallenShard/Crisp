@@ -492,6 +492,11 @@ namespace crisp
         return m_physicalDeviceFeatures;
     }
 
+    const VkPhysicalDeviceLimits& VulkanContext::getPhysicalDeviceLimits() const
+    {
+        return m_physicalDeviceProperties.limits;
+    }
+
     const VkPhysicalDeviceProperties& VulkanContext::getPhysicalDeviceProperties() const
     {
         return m_physicalDeviceProperties;

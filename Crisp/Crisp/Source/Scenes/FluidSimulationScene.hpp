@@ -22,7 +22,7 @@ namespace crisp
     class Renderer;
     class VulkanSampler;
 
-    class FluidSimulationScene : public Scene
+    class FluidSimulationScene : public AbstractScene
     {
     public:
         FluidSimulationScene(Renderer* renderer, Application* app);

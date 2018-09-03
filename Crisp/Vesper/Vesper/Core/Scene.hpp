@@ -8,11 +8,11 @@
 
 #include "Spectrums/Spectrum.hpp"
 #include "Core/Intersection.hpp"
-#include "Math/Ray.hpp"
-#include "Math/BoundingBox.hpp"
+#include <CrispCore/Math/Ray.hpp>
+#include <CrispCore/Math/BoundingBox.hpp>
 #include "Lights/Light.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Integrator;
     class Sampler;

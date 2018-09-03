@@ -18,11 +18,6 @@
 
 namespace crisp
 {
-    namespace
-    {
-        static const std::string materialTexPath = "Resources/Textures/PbrMaterials/RustedIron/";
-    }
-
     PhysicallyBasedMaterialsScene::PhysicallyBasedMaterialsScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
@@ -37,7 +32,8 @@ namespace crisp
         m_transforms.resize(2);
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-        auto roughness = std::make_unique<ImageFileBuffer>(materialTexPath + "roughness.png");
+        auto texFolder = renderer->getResourcesPath() / "Textures/PbrMaterials/RustedIron";
+        auto roughness = std::make_unique<ImageFileBuffer>(texFolder / "roughness.png");
         VkExtent3D extent = { roughness->getWidth(), roughness->getHeight(), 1 };
 
         m_roughnessTex = std::make_unique<Texture>(m_renderer, extent, 1, VK_FORMAT_R8G8B8A8_UNORM,
@@ -45,7 +41,7 @@ namespace crisp
         m_roughnessTex->fill(roughness->getData(), roughness->getByteSize(), 0, 1);
         m_roughnessTexView = m_roughnessTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
-        auto metallic = std::make_unique<ImageFileBuffer>(materialTexPath + "metallic.png");
+        auto metallic = std::make_unique<ImageFileBuffer>(texFolder / "metallic.png");
         extent = { metallic->getWidth(), metallic->getHeight(), 1 };
 
         m_metallicTex = std::make_unique<Texture>(m_renderer, extent, 1, VK_FORMAT_R8G8B8A8_UNORM,
@@ -53,7 +49,7 @@ namespace crisp
         m_metallicTex->fill(metallic->getData(), metallic->getByteSize(), 0, 1);
         m_metallicTexView = m_metallicTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
-        auto diffuse = std::make_unique<ImageFileBuffer>(materialTexPath + "diffuse.png");
+        auto diffuse = std::make_unique<ImageFileBuffer>(texFolder / "diffuse.png");
         extent = { diffuse->getWidth(), diffuse->getHeight(), 1 };
 
         m_materialTex = std::make_unique<Texture>(m_renderer, extent, 1, VK_FORMAT_R8G8B8A8_SRGB,

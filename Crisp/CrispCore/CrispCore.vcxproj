@@ -72,14 +72,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
+    <SourcePath>$(ProjectDir)CrispCore;$(VC_SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
+    <SourcePath>$(ProjectDir)CrispCore;$(VC_SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -87,6 +89,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/std:c++latest</AdditionalOptions>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)CrispCore\;</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -105,13 +108,15 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/std:c++latest</AdditionalOptions>
+      <AdditionalOptions>
+      </AdditionalOptions>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)CrispCore\;</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalOptions>-Bv %(AdditionalOptions)</AdditionalOptions>
@@ -137,9 +142,25 @@
     <ClInclude Include="CrispCore\Delegate.hpp" />
     <ClInclude Include="CrispCore\Event.hpp" />
     <ClInclude Include="CrispCore\Log.hpp" />
-    <ClInclude Include="CrispCore\MathConstants.hpp" />
+    <ClInclude Include="CrispCore\Math\BoundingBox.hpp" />
+    <ClInclude Include="CrispCore\Math\Constants.hpp" />
+    <ClInclude Include="CrispCore\Math\CoordinateFrame.hpp" />
+    <ClInclude Include="CrispCore\Math\Distribution1D.hpp" />
+    <ClInclude Include="CrispCore\Math\Distribution2D.hpp" />
+    <ClInclude Include="CrispCore\Math\Headers.hpp" />
+    <ClInclude Include="CrispCore\Math\Octree.hpp" />
+    <ClInclude Include="CrispCore\Math\Operations.hpp" />
+    <ClInclude Include="CrispCore\Math\Ray.hpp" />
+    <ClInclude Include="CrispCore\Math\Rect.hpp" />
+    <ClInclude Include="CrispCore\Math\Transform.hpp" />
+    <ClInclude Include="CrispCore\Math\Warp.hpp" />
     <ClInclude Include="CrispCore\Profiler.hpp" />
     <ClInclude Include="CrispCore\Timer.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CrispCore\Math\Distribution1D.cpp" />
+    <ClCompile Include="CrispCore\Math\Distribution2D.cpp" />
+    <ClCompile Include="CrispCore\Math\Warp.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,10 +1,10 @@
 #include "SmoothConductor.hpp"
 
-#include "Math/CoordinateFrame.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
 #include "Samplers/Sampler.hpp"
 #include "Core/Fresnel.hpp"
 
-namespace vesper
+namespace crisp
 {
     SmoothConductorBSDF::SmoothConductorBSDF(const VariantMap& params)
         : BSDF(Lobe::Delta)

@@ -4,12 +4,12 @@
 #include <string>
 
 #include "Samplers/Sampler.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/Warp.hpp>
 #include "Core/Scene.hpp"
 
 #include "MeshLoader.hpp"
 
-namespace vesper
+namespace crisp
 {
     Mesh::Mesh(const VariantMap& params)
     {
@@ -18,7 +18,7 @@ namespace vesper
         m_toWorld = params.get<Transform>("toWorld");
 
         MeshLoader meshLoader;
-        if (!meshLoader.load(filename, m_positions, m_normals, m_texCoords, m_faces))
+        if (!meshLoader.load(std::filesystem::path("../../Resources/Meshes") / filename, m_positions, m_normals, m_texCoords, m_faces))
         {
             std::cerr << "Could not open " + filename << std::endl;
             return;
@@ -49,7 +49,7 @@ namespace vesper
         barycentric[0] = 1.0f - its.uv.x - its.uv.y;
         barycentric[1] = its.uv.x;
         barycentric[2] = its.uv.y;
-        
+
         glm::vec3 p0 = m_positions[m_faces[triangleId][0]];
         glm::vec3 p1 = m_positions[m_faces[triangleId][1]];
         glm::vec3 p2 = m_positions[m_faces[triangleId][2]];
@@ -74,7 +74,7 @@ namespace vesper
         glm::vec2 sample = sampler.next2D();
         unsigned int triangleId = static_cast<unsigned int>(m_pdf.sampleReuse(sample.x));
 
-        glm::vec3 barycentric = Warp::squareToUniformTriangle(sample);
+        glm::vec3 barycentric = warp::squareToUniformTriangle(sample);
 
         shapeSample.p = interpolatePosition(triangleId, barycentric);
         if (m_normals.size() > 0)

@@ -1,9 +1,9 @@
 #include "Phong.hpp"
 
-#include "Math/Operations.hpp"
-#include "Math/CoordinateFrame.hpp"
+#include <CrispCore/Math/Operations.hpp>
+#include <CrispCore/Math/CoordinateFrame.hpp>
 
-namespace vesper
+namespace crisp
 {
     PhongDistribution::PhongDistribution(const VariantMap& params)
     {

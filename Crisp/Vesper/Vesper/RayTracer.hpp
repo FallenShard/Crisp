@@ -11,7 +11,7 @@
 #include "ImageBlock.hpp"
 #include "RayTracerUpdate.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Scene;
     class Sampler;

@@ -1,9 +1,9 @@
 #include "Sphere.hpp"
 
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/Warp.hpp>
 #include "Samplers/Sampler.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {
@@ -143,10 +143,10 @@ namespace vesper
     {
         float invRad2 = 1.0f / (m_radius * m_radius);
         // Uniform sampling
-        //glm::vec3 q = Warp::squareToUniformSphere(sampler.next2D());
+        //glm::vec3 q = warp::squareToUniformSphere(sampler.next2D());
         //shapeSample.p = m_center + m_radius * q;
         //shapeSample.n = q;
-        //shapeSample.pdf = invRad2 * Warp::squareToUniformSpherePdf();
+        //shapeSample.pdf = invRad2 * warp::squareToUniformSpherePdf();
 
         // Spherical cap sampling
         glm::vec3 centerToRef = shapeSample.ref - m_center;
@@ -157,17 +157,17 @@ namespace vesper
         CoordinateFrame frame(centerToRef);
 
         float cosThetaMax = std::min(m_radius / dist, 1.0f - Ray3::Epsilon);
-        glm::vec3 localQ = Warp::squareToUniformSphereCap(sampler.next2D(), cosThetaMax);
+        glm::vec3 localQ = warp::squareToUniformSphereCap(sampler.next2D(), cosThetaMax);
         glm::vec3 worldQ = frame.toWorld(localQ);
         shapeSample.p = m_center + m_radius * worldQ;
         shapeSample.n = worldQ;
-        shapeSample.pdf = invRad2 * Warp::squareToUniformSphereCapPdf(cosThetaMax);
+        shapeSample.pdf = invRad2 * warp::squareToUniformSphereCapPdf(cosThetaMax);
     }
 
     float Sphere::pdfSurface(const Shape::Sample& shapeSample) const
     {
         float invRad2 = 1.0f / (m_radius * m_radius);
-        //return invRad2 * Warp::squareToUniformSpherePdf();
+        //return invRad2 * warp::squareToUniformSpherePdf();
 
         glm::vec3 centerToRef = shapeSample.ref - m_center;
 
@@ -178,7 +178,7 @@ namespace vesper
 
         float cosThetaMax = std::min(m_radius / dist, 1.0f - Ray3::Epsilon);
 
-        return invRad2 * Warp::squareToUniformSphereCapPdf(cosThetaMax);
+        return invRad2 * warp::squareToUniformSphereCapPdf(cosThetaMax);
     }
 
     bool Sphere::addToAccelerationStructure(RTCScene scene)

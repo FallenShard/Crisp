@@ -3,7 +3,7 @@
 #include <memory>
 #include <vulkan/vulkan.h>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/VertexBuffer.hpp"
 #include "Geometry/VertexAttributeTraits.hpp"

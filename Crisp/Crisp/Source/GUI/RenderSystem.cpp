@@ -328,7 +328,7 @@ namespace crisp::gui
                 return i;
         }
 
-        auto font = m_fontLoader.load(name, pixelSize);
+        auto font = m_fontLoader.load(m_renderer->getResourcesPath() / "Fonts" / name, pixelSize);
         auto fontTexture = std::make_unique<FontTexture>();
         fontTexture->font = std::move(font);
 
@@ -430,7 +430,7 @@ namespace crisp::gui
 
     void RenderSystem::loadTextureAtlas()
     {
-        auto imageBuffer = std::make_shared<ImageFileBuffer>("Resources/Textures/Gui/Atlas.png");
+        auto imageBuffer = std::make_shared<ImageFileBuffer>(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png");
         auto byteSize = imageBuffer->getWidth() * imageBuffer->getHeight() * 4;
         m_guiAtlas     = std::make_unique<Texture>(m_renderer, VkExtent3D{ imageBuffer->getWidth(), imageBuffer->getHeight(), 1u }, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
         m_guiAtlasView = m_guiAtlas->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);

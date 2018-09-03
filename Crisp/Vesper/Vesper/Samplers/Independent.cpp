@@ -1,6 +1,6 @@
 #include "Independent.hpp"
 
-namespace vesper
+namespace crisp
 {
     IndependentSampler::IndependentSampler(const VariantMap& attribs)
         : m_randomEngine(std::random_device()())

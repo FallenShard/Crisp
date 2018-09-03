@@ -4,7 +4,7 @@
 
 #include "Sampler.hpp"
 
-namespace vesper
+namespace crisp
 {
     class IndependentSampler : public Sampler
     {

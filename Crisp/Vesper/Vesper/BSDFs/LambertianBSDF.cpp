@@ -1,12 +1,12 @@
 #include "LambertianBSDF.hpp"
 
-#include "Math/CoordinateFrame.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
+#include <CrispCore/Math/Warp.hpp>
 #include "Samplers/Sampler.hpp"
 
 #include "Textures/TextureFactory.hpp"
 
-namespace vesper
+namespace crisp
 {
     LambertianBSDF::LambertianBSDF(const VariantMap& params)
         : BSDF(Lobe::Diffuse)
@@ -46,8 +46,8 @@ namespace vesper
 
     Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
     {
-        bsdfSample.wo          = Warp::squareToCosineHemisphere(sampler.next2D());
-        bsdfSample.pdf         = Warp::squareToCosineHemispherePdf(bsdfSample.wo);
+        bsdfSample.wo          = warp::squareToCosineHemisphere(sampler.next2D());
+        bsdfSample.pdf         = warp::squareToCosineHemispherePdf(bsdfSample.wo);
         bsdfSample.measure     = Measure::SolidAngle;
         bsdfSample.sampledLobe = Lobe::Diffuse;
         bsdfSample.eta         = 1.0f;

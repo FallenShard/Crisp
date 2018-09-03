@@ -2,7 +2,7 @@
 
 #include "BSSRDFs/BSSRDF.hpp"
 
-namespace vesper
+namespace crisp
 {
     Shape::Shape()
         : m_light(nullptr)

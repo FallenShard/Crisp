@@ -4,7 +4,7 @@
 #include "Textures/Texture.hpp"
 #include "MicrofacetDistributions/MicrofacetDistribution.hpp"
 
-namespace vesper
+namespace crisp
 {
     class RoughDielectricBSDF : public BSDF
     {

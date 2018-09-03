@@ -2,7 +2,7 @@
 
 #include "Distribution1D.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Distribution2D
     {

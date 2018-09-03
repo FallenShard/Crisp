@@ -3,10 +3,10 @@
 #include <memory>
 #include <array>
 #include <vector>
-#include "Math/BoundingBox.hpp"
+#include <CrispCore/Math/BoundingBox.hpp>
 #include "Spectrums/Spectrum.hpp"
 
-namespace vesper
+namespace crisp
 {
     struct SurfacePoint
     {

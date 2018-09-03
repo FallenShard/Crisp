@@ -22,6 +22,9 @@
 #include "GUI/MemoryUsageBar.hpp"
 #include "GUI/IntroductionPanel.hpp"
 
+#include "LuaState.hpp"
+#include "LuaMachine.hpp"
+
 namespace crisp
 {
     namespace
@@ -40,6 +43,8 @@ namespace crisp
         : m_frameTimeLogger(1000.0)
     {
         logInfo("Initializing application...");
+
+        LuaMachine lm;
 
         m_window   = createWindow();
         m_renderer = createRenderer();
@@ -72,7 +77,7 @@ namespace crisp
 
     void Application::run()
     {
-        logDebug("Hello world from Crisp! The application is up and running!");
+        logInfo("Hello world from Crisp! The application is up and running!");
 
         m_renderer->flushResourceUpdates();
 
@@ -117,6 +122,8 @@ namespace crisp
     void Application::onResize(int width, int height)
     {
         logInfo("New window dims: (", width, ", ", height, ")");
+        if (width == 0 || height == 0)
+            return;
 
         m_renderer->resize(width, height);
 
@@ -157,6 +164,6 @@ namespace crisp
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
 
-        return std::make_unique<Renderer>(surfaceCreator, Window::getVulkanExtensions());
+        return std::make_unique<Renderer>(surfaceCreator, Window::getVulkanExtensions(), "../../Resources");
     }
 }

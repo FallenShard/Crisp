@@ -2,7 +2,7 @@
 
 #include "MicrofacetDistribution.hpp"
 
-namespace vesper
+namespace crisp
 {
     class BeckmannDistribution : public MicrofacetDistribution
     {

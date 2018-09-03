@@ -7,7 +7,7 @@
 #include "Core/Intersection.hpp"
 #include "Shapes/Shape.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {

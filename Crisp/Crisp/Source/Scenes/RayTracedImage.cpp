@@ -10,6 +10,7 @@
 #include "Renderer/Texture.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+#include "Renderer/Material.hpp"
 
 namespace crisp
 {
@@ -36,27 +37,26 @@ namespace crisp
         m_texture->fill(*m_stagingBuffer, byteSize, 2, 1);
 
         // create view
-        m_VulkanImageView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, Renderer::NumVirtualFrames);
+        m_textureView = m_texture->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, Renderer::NumVirtualFrames);
         m_updatedImageIndex = 0;
 
         // create sampler
         m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         m_pipeline = createTonemappingPipeline(m_renderer, m_renderer->getDefaultRenderPass(), 0, true);
-        m_descSets = { m_pipeline->allocateDescriptorSet(0) };
-        m_descSets.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER,       m_VulkanImageView->getDescriptorInfo(m_sampler->getHandle()));
-        m_descSets.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_VulkanImageView->getDescriptorInfo());
-        m_descSets.flushUpdates(m_renderer->getDevice());
+        m_material = std::make_unique<Material>(m_pipeline.get(), std::vector<uint32_t>{ 0 });
+        m_device->postDescriptorWrite(m_material->makeDescriptorWrite(0, 0), m_textureView->getDescriptorInfo(m_sampler->getHandle()));
+        m_device->flushDescriptorUpdates();
     }
 
     RayTracedImage::~RayTracedImage()
     {
     }
 
-    void RayTracedImage::postTextureUpdate(vesper::RayTracerUpdate update)
+    void RayTracedImage::postTextureUpdate(RayTracerUpdate update)
     {
         // Add an update that stretches over three frames
-        m_textureUpdates.emplace_back(std::make_pair(Renderer::NumVirtualFrames, update));
+        m_textureUpdates.emplace_back(std::make_pair(Renderer::NumVirtualFrames, std::move(update)));
 
         uint32_t rowSize = update.width * m_numChannels * sizeof(float);
         for (int i = 0; i < update.height; i++)
@@ -118,7 +118,7 @@ namespace crisp
                 }
                 vkCmdCopyBufferToImage(cmdBuffer, m_stagingBuffer->getHandle(), m_texture->getImage()->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
 
-                m_textureUpdates.erase(std::remove_if(m_textureUpdates.begin(), m_textureUpdates.end(), [](const std::pair<unsigned int, vesper::RayTracerUpdate>& item)
+                m_textureUpdates.erase(std::remove_if(m_textureUpdates.begin(), m_textureUpdates.end(), [](const std::pair<unsigned int, RayTracerUpdate>& item)
                 {
                     return item.first <= 0; // Erase those updates that have been written NumVirtualFrames times already
                 }), m_textureUpdates.end());
@@ -145,7 +145,7 @@ namespace crisp
         m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer cmdBuffer)
         {
             m_pipeline->bind(cmdBuffer);
-            m_descSets.bind(cmdBuffer, m_pipeline->getPipelineLayout()->getHandle());
+            m_material->bind(m_renderer->getCurrentVirtualFrameIndex(), cmdBuffer);
             vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
 
             m_pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, m_updatedImageIndex);

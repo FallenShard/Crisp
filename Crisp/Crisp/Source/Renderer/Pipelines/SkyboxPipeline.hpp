@@ -4,5 +4,5 @@
 
 namespace crisp
 {
-    std::unique_ptr<VulkanPipeline> createSkyboxPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass);
+    std::unique_ptr<VulkanPipeline> createSkyboxPipeline(Renderer* renderer, const VulkanRenderPass& renderPass, uint32_t subpass);
 }

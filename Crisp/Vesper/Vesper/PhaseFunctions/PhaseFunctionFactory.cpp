@@ -2,7 +2,7 @@
 
 #include "Isotropic.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<PhaseFunction> PhaseFunctionFactory::create(std::string type, VariantMap parameters)
     {

@@ -35,6 +35,7 @@ namespace crisp::gui
         Renderer* m_renderer;
 
         uint32_t m_resourceSize;
+        uint32_t m_bufferGranularity;
         uint32_t m_resourcesPerGranularity;
         uint32_t m_binding;
 

@@ -18,6 +18,7 @@ namespace crisp
         Material(VulkanPipeline* pipeline, std::vector<uint32_t> sharedSets, std::vector<uint32_t> uniqueSets = std::vector<uint32_t>());
 
         VkWriteDescriptorSet makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t frameIdx = 0);
+        VkWriteDescriptorSet makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t index, uint32_t frameIdx = 0);
 
         void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
         void bind(uint32_t frameIdx, VkCommandBuffer commandBuffer);

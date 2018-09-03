@@ -3,7 +3,7 @@
 #include "Core/Intersection.hpp"
 #include "Core/Scene.hpp"
 
-namespace vesper
+namespace crisp
 {
     NormalsIntegrator::NormalsIntegrator(const VariantMap& params)
     {

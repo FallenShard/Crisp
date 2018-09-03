@@ -2,7 +2,7 @@
 
 #include "Integrator.hpp"
 
-namespace vesper
+namespace crisp
 {
     struct Intersection;
 

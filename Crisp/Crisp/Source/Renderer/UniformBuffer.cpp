@@ -23,14 +23,18 @@ namespace crisp
         }
         else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) // Setup triple buffering
         {
-            m_singleRegionSize = std::max(size, SizeGranularity);
+            m_singleRegionSize = std::max(size, renderer->getContext()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment);
             m_buffer = std::make_unique<VulkanBuffer>(device, Renderer::NumVirtualFrames * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             m_stagingBuffer = std::make_unique<VulkanBuffer>(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+            m_renderer->registerStreamingUniformBuffer(this);
         }
     }
 
     UniformBuffer::~UniformBuffer()
     {
+        if (m_updatePolicy == BufferUpdatePolicy::PerFrame)
+            m_renderer->unregisterStreamingUniformBuffer(this);
     }
 
     void UniformBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset)
@@ -39,7 +43,7 @@ namespace crisp
         m_framesToUpdateOnGpu = Renderer::NumVirtualFrames;
     }
 
-    void UniformBuffer::updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex)
+    void UniformBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex)
     {
         if (m_framesToUpdateOnGpu == 0)
             return;

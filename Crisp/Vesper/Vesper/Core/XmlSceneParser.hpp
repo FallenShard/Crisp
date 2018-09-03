@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-namespace vesper
+namespace crisp
 {
     class Scene;
 

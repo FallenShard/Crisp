@@ -5,7 +5,7 @@
 #include "Spectrums/Spectrum.hpp"
 #include "Core/VariantMap.hpp"
 
-namespace vesper
+namespace crisp
 {
     class MicrofacetDistribution
     {

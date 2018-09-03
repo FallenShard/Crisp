@@ -7,7 +7,7 @@
 #include "Core/VariantMap.hpp"
 #include "Textures/Texture.hpp"
 
-namespace vesper
+namespace crisp
 {
     enum class Lobe
     {

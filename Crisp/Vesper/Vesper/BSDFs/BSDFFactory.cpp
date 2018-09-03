@@ -9,7 +9,7 @@
 #include "SmoothConductor.hpp"
 #include "RoughConductor.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<BSDF> BSDFFactory::create(std::string type, VariantMap parameters)
     {

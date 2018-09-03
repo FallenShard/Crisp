@@ -3,7 +3,7 @@
 #include "RgbSpectrum.hpp"
 #include "WeightedRgbSpectrum.hpp"
 
-namespace vesper
+namespace crisp
 {
     using Spectrum = RgbSpectrum;
     using WeightedSpectrum = WeightedRgbSpectrum;

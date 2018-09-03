@@ -2,7 +2,7 @@
 
 #include "Homogeneous.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<Medium> MediumFactory::create(std::string type, VariantMap parameters)
     {

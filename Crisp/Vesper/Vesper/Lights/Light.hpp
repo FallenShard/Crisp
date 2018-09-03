@@ -2,11 +2,11 @@
 
 #include <glm/glm.hpp>
 
-#include "Math/Ray.hpp"
+#include <CrispCore/Math/Ray.hpp>
 #include "Spectrums/Spectrum.hpp"
 #include "Core/VariantMap.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Sampler;
     class Shape;

@@ -2,7 +2,7 @@
 
 #include "PhaseFunction.hpp"
 
-namespace vesper
+namespace crisp
 {
     class IsotropicPhaseFunction : public PhaseFunction
     {

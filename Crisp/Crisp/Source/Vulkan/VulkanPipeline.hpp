@@ -3,9 +3,11 @@
 #include <vector>
 #include <memory>
 
+#include <CrispCore/BitFlags.hpp>
+#include <CrispCore/Math/Headers.hpp>
+
 #include "VulkanResource.hpp"
 
-#include "Math/Headers.hpp"
 #include "vulkan/VulkanFormatTraits.hpp"
 #include "vulkan/VulkanDescriptorSetLayout.hpp"
 #include "vulkan/VulkanDescriptorSet.hpp"
@@ -17,10 +19,17 @@ namespace crisp
     class VulkanRenderPass;
     class VulkanDevice;
 
-    class VulkanPipeline : public VulkanResource<VkPipeline>
+    enum class PipelineDynamicState
+    {
+        Viewport = 0x01,
+        Scissor  = 0x02
+    };
+    DECLARE_BITFLAG(PipelineDynamicState);
+
+    class VulkanPipeline final : public VulkanResource<VkPipeline>
     {
     public:
-        VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout);
+        VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags);
         virtual ~VulkanPipeline();
 
         inline VulkanPipelineLayout* getPipelineLayout() const { return m_pipelineLayout.get(); }
@@ -41,11 +50,18 @@ namespace crisp
             vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, sizeof(T), &value);
         }
 
+        inline void setPushConstant(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, uint32_t size, const char* value) const
+        {
+            vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset);
+        }
+
         template <typename T, typename ...Ts>
         inline void setPushConstants(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg, Ts&&... args) const
         {
             setPushConstantsWithOffset(cmdBuffer, shaderStages, 0, std::forward<T>(arg), std::forward<Ts>(args)...);
         }
+
+        inline PipelineDynamicStateFlags getDynamicStateFlags() const { return m_dynamicStateFlags; }
 
     protected:
         template <typename T, typename ...Ts>
@@ -58,5 +74,7 @@ namespace crisp
         }
 
         std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;
+
+        PipelineDynamicStateFlags m_dynamicStateFlags;
     };
 }

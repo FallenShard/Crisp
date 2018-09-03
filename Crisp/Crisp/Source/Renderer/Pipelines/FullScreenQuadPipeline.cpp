@@ -25,7 +25,7 @@ namespace crisp
         VkShaderModule vs = useGammaCorrection ? renderer->getShaderModule("gamma-correct-vert") : renderer->getShaderModule("fullscreen-quad-vert");
         VkShaderModule fs = useGammaCorrection ? renderer->getShaderModule("gamma-correct-frag") : renderer->getShaderModule("fullscreen-quad-frag");
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   vs),
@@ -40,8 +40,6 @@ namespace crisp
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
             .setDepthWrite(VK_FALSE)
             .setDepthTest(VK_FALSE)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 }

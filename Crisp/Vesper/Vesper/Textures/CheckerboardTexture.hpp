@@ -7,7 +7,7 @@
 
 #include "Texture.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace internal
     {

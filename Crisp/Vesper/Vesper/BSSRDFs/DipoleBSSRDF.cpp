@@ -3,18 +3,19 @@
 #include <thread>
 #include <vector>
 #include <random>
+#include <iostream>
 
-#include "Math/Constants.hpp"
+#include <CrispCore/Math/Constants.hpp>
+#include <CrispCore/Math/Warp.hpp>
+#include <CrispCore/Math/Octree.hpp>
 #include "IrradianceTree.hpp"
-#include "Math/Octree.hpp"
 #include "Core/Scene.hpp"
 #include "Integrators/Integrator.hpp"
 #include "Samplers/SamplerFactory.hpp"
-#include "Math/Warp.hpp"
 #include "Shapes/Shape.hpp"
 #include "Cameras/Camera.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {
@@ -71,7 +72,7 @@ namespace vesper
             // TODO: add presets
         };
 
-        static std::map<std::string, SubsurfaceParams> materials =
+        static std::unordered_map<std::string, SubsurfaceParams> materials =
         {
             { "Ketchup", { { 0.061f, 0.97f, 1.45f }, { 0.18f, 0.07f, 0.03f }, 1.3f } }
         };
@@ -110,7 +111,7 @@ namespace vesper
                             color += cosFactor * lightVal;
 
                         CoordinateFrame frame(in[i].n);
-                        glm::vec3 dir = frame.toWorld(Warp::squareToCosineHemisphere(glm::vec2(distrib(engine), distrib(engine))));
+                        glm::vec3 dir = frame.toWorld(warp::squareToCosineHemisphere(glm::vec2(distrib(engine), distrib(engine))));
                         Ray3 ray(in[i].p, dir);
 
                         // TODO: Request ONLY INDIRECT

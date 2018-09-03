@@ -2,9 +2,9 @@
 
 #include <glm/glm.hpp>
 
-#include "Constants.hpp"
+#include <CrispCore/Math/Constants.hpp>
 
-namespace vesper
+namespace crisp
 {
     inline static float degToRad(float value)
     {

@@ -6,6 +6,7 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <filesystem>
 
 #include <vulkan/vulkan.h>
 
@@ -22,23 +23,27 @@ namespace crisp
     class VulkanSwapChain;
     class VulkanPipeline;
 
+    class Geometry;
     class Texture;
     class VulkanImageView;
     class VertexBuffer;
     class IndexBuffer;
+    class UniformBuffer;
 
     class Renderer
     {
     public:
         static constexpr unsigned int NumVirtualFrames = 3;
 
-        Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions);
+        Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath);
         ~Renderer();
 
         Renderer(const Renderer& other) = delete;
         Renderer(Renderer&& other) = delete;
         Renderer& operator=(const Renderer& other) = delete;
         Renderer& operator=(Renderer&& other) = delete;
+
+        const std::filesystem::path& getResourcesPath() const;
 
         VulkanContext*    getContext() const;
         VulkanDevice*     getDevice() const;
@@ -48,6 +53,8 @@ namespace crisp
         DefaultRenderPass* getDefaultRenderPass() const;
         VkViewport         getDefaultViewport() const;
         VkRect2D           getDefaultScissor() const;
+
+        Geometry*          getFullScreenGeometry() const;
 
         VkShaderModule    getShaderModule(std::string&& key) const;
 
@@ -81,9 +88,11 @@ namespace crisp
 
         void setSceneImageView(std::unique_ptr<VulkanImageView> sceneImageView);
 
-    private:
-        void loadShaders(std::string dirPath);
+        void registerStreamingUniformBuffer(UniformBuffer* buffer);
+        void unregisterStreamingUniformBuffer(UniformBuffer* buffer);
 
+    private:
+        void loadShaders(const std::filesystem::path& directoryPath);
         VkCommandBuffer         acquireCommandBuffer();
         std::optional<uint32_t> acquireSwapChainImageIndex();
         void resetCommandBuffer(VkCommandBuffer cmdBuffer);
@@ -104,6 +113,7 @@ namespace crisp
 
         uint32_t m_framesRendered;
         uint32_t m_currentFrameIndex;
+        std::filesystem::path m_resourcesPath;
 
         struct FrameResources
         {
@@ -125,8 +135,10 @@ namespace crisp
         std::unique_ptr<VertexBuffer> m_fsQuadVertexBuffer;
         std::unique_ptr<IndexBuffer>  m_fsQuadIndexBuffer;
         VertexBufferBindingGroup      m_fsQuadVertexBufferBindingGroup;
+        std::unique_ptr<Geometry> m_fullScreenGeometry;
 
         std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;
+        std::unordered_set<UniformBuffer*> m_streamingUniformBuffers;
 
         std::unique_ptr<VulkanPipeline>  m_scenePipeline;
         std::unique_ptr<VulkanSampler>   m_linearClampSampler;

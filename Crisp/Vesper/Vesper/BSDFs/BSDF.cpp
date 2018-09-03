@@ -1,6 +1,6 @@
 #include "BSDF.hpp"
 
-namespace vesper
+namespace crisp
 {
     BSDF::BSDF(LobeFlags lobeFlags)
         : m_lobe(lobeFlags)

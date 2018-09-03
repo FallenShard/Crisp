@@ -1,6 +1,6 @@
 #include "GaussianFilter.hpp"
 
-namespace vesper
+namespace crisp
 {
     GaussianFilter::GaussianFilter()
     {

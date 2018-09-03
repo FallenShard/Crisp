@@ -9,14 +9,14 @@
 #include <embree2/rtcore_geometry.h>
 #include <embree2/rtcore_geometry_user.h>
 
-#include "Math/CoordinateFrame.hpp"
-#include "Math/Ray.hpp"
-#include "Math/Transform.hpp"
-#include "Math/BoundingBox.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
+#include <CrispCore/Math/Ray.hpp>
+#include <CrispCore/Math/Transform.hpp>
+#include <CrispCore/Math/BoundingBox.hpp>
 #include "Core/Intersection.hpp"
 #include "Core/VariantMap.hpp"
 
-namespace vesper
+namespace crisp
 {
     class BSDF;
     class Light;

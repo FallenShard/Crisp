@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include "Spectrums/Spectrum.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Shape;
     class Scene;

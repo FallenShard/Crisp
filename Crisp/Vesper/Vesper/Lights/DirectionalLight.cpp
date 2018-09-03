@@ -2,9 +2,9 @@
 
 #include <glm/gtx/norm.hpp>
 
-#include "Math/Operations.hpp"
+#include <CrispCore/Math/Operations.hpp>
 
-namespace vesper
+namespace crisp
 {
     DirectionalLight::DirectionalLight(const VariantMap& params)
     {

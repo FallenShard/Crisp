@@ -105,6 +105,8 @@ namespace crisp
             m_pointSpriteDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
             m_pointSpriteDescGroup.setDynamicOffset(1, m_paramsBuffer->getDynamicOffset(frameIdx));
             m_pointSpritePipeline->bind(commandBuffer);
+            m_renderer->setDefaultViewport(commandBuffer);
+            m_renderer->setDefaultScissor(commandBuffer);
             m_pointSpriteDescGroup.bind(commandBuffer, m_pointSpritePipeline->getPipelineLayout()->getHandle());
             m_fluidSimulation->drawGeometry(commandBuffer);
             m_scenePass->end(commandBuffer);

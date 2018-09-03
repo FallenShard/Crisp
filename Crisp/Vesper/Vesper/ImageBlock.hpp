@@ -6,7 +6,7 @@
 
 #include "Spectrums/Spectrum.hpp"
 
-namespace vesper
+namespace crisp
 {
     class ReconstructionFilter;
 

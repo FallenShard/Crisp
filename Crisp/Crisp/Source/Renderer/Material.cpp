@@ -42,6 +42,18 @@ namespace crisp
         return write;
     }
 
+    VkWriteDescriptorSet Material::makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t index, uint32_t frameIdx)
+    {
+        VkWriteDescriptorSet write = {};
+        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet          = m_sets[frameIdx][setIdx];
+        write.dstBinding      = binding;
+        write.dstArrayElement = index;
+        write.descriptorType  = m_pipeline->getDescriptorType(setIdx, binding);
+        write.descriptorCount = 1;
+        return write;
+    }
+
     void Material::setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset)
     {
         if (m_dynamicOffsets[frameIdx].size() <= index)

@@ -1,21 +1,22 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 #include <iostream>
 #include <algorithm>
 
 #include <tinyexr/tinyexr.h>
-#include <glm/glm.hpp>
+#include <CrispCore/Math/Headers.hpp>
 
-namespace vesper
+namespace crisp
 {
     template <typename T>
     class MipMap
     {
     public:
-        MipMap(std::string fileName)
+        MipMap(std::filesystem::path filePath)
         {
-            if (!loadExrImage(fileName))
+            if (!loadExrImage(filePath))
             {
                 m_resolution = glm::ivec2(1);
 
@@ -74,23 +75,23 @@ namespace vesper
         }
 
     private:
-        bool loadExrImage(std::string fileName)
+        bool loadExrImage(std::filesystem::path path)
         {
-            auto filePath = "Resources/Textures/" + fileName;
+            auto pathString = path.string();
 
             // Read EXR version
             EXRVersion version;
-            int retCode = ParseEXRVersionFromFile(&version, filePath.c_str());
+            int retCode = ParseEXRVersionFromFile(&version, pathString.c_str());
             if (retCode != 0)
             {
-                std::cerr << "Invalid EXR file: " << filePath << std::endl;
+                std::cerr << "Invalid EXR file: " << pathString << std::endl;
                 return false;
             }
 
             // Make sure it is not multipart
             if (version.multipart)
             {
-                std::cerr << "Multipart EXR files are not supported: " << filePath << std::endl;
+                std::cerr << "Multipart EXR files are not supported: " << pathString << std::endl;
                 return false;
             }
 
@@ -99,7 +100,7 @@ namespace vesper
             InitEXRHeader(&header);
 
             const char* err;
-            retCode = ParseEXRHeaderFromFile(&header, &version, filePath.c_str(), &err);
+            retCode = ParseEXRHeaderFromFile(&header, &version, pathString.c_str(), &err);
             if (retCode != 0)
             {
                 std::cerr << "Parse EXR error: " << err << std::endl;
@@ -119,7 +120,7 @@ namespace vesper
             InitEXRImage(&image);
 
             // Load image
-            retCode = LoadEXRImageFromFile(&image, &header, filePath.c_str(), &err);
+            retCode = LoadEXRImageFromFile(&image, &header, pathString.c_str(), &err);
             if (retCode != 0)
             {
                 std::cerr << "Load EXR image error: " << err << std::endl;

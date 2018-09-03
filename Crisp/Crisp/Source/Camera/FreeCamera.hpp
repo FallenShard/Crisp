@@ -12,11 +12,11 @@ namespace crisp
 
         virtual bool update(float dt) override;
         virtual void rotate(float dx, float dy) override;
-        
+
         virtual void walk(float dt) override;
         virtual void strafe(float dt) override;
         virtual void lift(float dt) override;
-        
+
         void setTranslation(const glm::vec3& translation);
         glm::vec3 getTranslation() const;
 

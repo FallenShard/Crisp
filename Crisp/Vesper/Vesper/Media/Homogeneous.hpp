@@ -2,7 +2,7 @@
 
 #include "Medium.hpp"
 
-namespace vesper
+namespace crisp
 {
     class HomogeneousMedium : public Medium
     {

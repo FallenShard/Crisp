@@ -6,7 +6,7 @@
 #include "Core/Intersection.hpp"
 #include "Shapes/Shape.hpp"
 
-namespace vesper
+namespace crisp
 {
     PathTracerIntegrator::PathTracerIntegrator(const VariantMap& attribs)
     {

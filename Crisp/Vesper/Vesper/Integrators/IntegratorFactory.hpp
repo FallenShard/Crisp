@@ -8,7 +8,7 @@
 
 #include "Integrator.hpp"
 
-namespace vesper
+namespace crisp
 {
     class IntegratorFactory
     {

@@ -1,6 +1,6 @@
 #include "ReconstructionFilter.hpp"
 
-namespace vesper
+namespace crisp
 {
     ReconstructionFilter::ReconstructionFilter()
     {

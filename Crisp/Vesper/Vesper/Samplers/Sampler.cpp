@@ -1,6 +1,6 @@
 #include "Sampler.hpp"
 
-namespace vesper
+namespace crisp
 {
     Sampler::Sampler()
         : m_sampleCount(0)

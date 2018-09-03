@@ -1,6 +1,6 @@
 #include "UVTexture.hpp"
 
-namespace vesper
+namespace crisp
 {
     UVTexture::UVTexture(const VariantMap& params)
         : Texture<Spectrum>(params)

@@ -20,18 +20,18 @@ namespace crisp
         }
     }
 
-    ImageFileBuffer::ImageFileBuffer(const std::string& fileName, int requestedComponents, bool flipY)
+    ImageFileBuffer::ImageFileBuffer(const std::filesystem::path& filePath, int requestedComponents, bool flipY)
         : m_width(0)
         , m_height(0)
         , m_numComponents(0)
     {
         int width, height, numComps;
         stbi_set_flip_vertically_on_load(flipY);
-        stbi_uc* data = stbi_load(fileName.c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
+        stbi_uc* data = stbi_load(filePath.string().c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
         stbi_set_flip_vertically_on_load(false);
 
         if (!data)
-            throw std::runtime_error("Failed to load image " + fileName);
+            throw std::runtime_error("Failed to load image " + filePath.string());
 
         m_width         = static_cast<unsigned int>(width);
         m_height        = static_cast<unsigned int>(height);

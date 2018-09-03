@@ -100,7 +100,7 @@ namespace crisp::gui
         setValidationFlags(Validation::Color);
     }
 
-    void ComboBoxItem::onMouseEntered(float x, float y)
+    void ComboBoxItem::onMouseEntered(float, float)
     {
         if (m_state == State::Disabled || m_state != State::Idle)
             return;
@@ -108,7 +108,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void ComboBoxItem::onMouseExited(float x, float y)
+    void ComboBoxItem::onMouseExited(float, float)
     {
         if (m_state == State::Disabled || m_state != State::Hover)
             return;
@@ -116,7 +116,7 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void ComboBoxItem::onMousePressed(float x, float y)
+    void ComboBoxItem::onMousePressed(float, float)
     {
         if (m_state == State::Disabled)
             return;

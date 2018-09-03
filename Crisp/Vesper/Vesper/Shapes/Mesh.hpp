@@ -2,10 +2,10 @@
 
 #include <vector>
 
+#include <CrispCore/Math/Distribution1D.hpp>
 #include "Shapes/Shape.hpp"
-#include "Math/Distribution1D.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Mesh : public Shape
     {

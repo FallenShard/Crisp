@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-namespace vesper
+namespace crisp
 {
     RgbSpectrum::RgbSpectrum(const glm::vec3& vec)
         : r(vec.r)

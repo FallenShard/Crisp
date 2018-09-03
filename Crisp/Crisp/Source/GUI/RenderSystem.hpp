@@ -6,8 +6,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Math/Headers.hpp"
-#include "Math/Rect.hpp"
+#include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/Math/Rect.hpp>
 #include "IO/FontLoader.hpp"
 
 #include "Renderer/Renderer.hpp"

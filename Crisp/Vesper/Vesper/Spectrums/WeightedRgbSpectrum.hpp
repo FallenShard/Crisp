@@ -5,7 +5,7 @@
 
 #include "RgbSpectrum.hpp"
 
-namespace vesper
+namespace crisp
 {
     struct WeightedRgbSpectrum : public glm::vec4
     {

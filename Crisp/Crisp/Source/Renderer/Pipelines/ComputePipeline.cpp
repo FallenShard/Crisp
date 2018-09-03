@@ -53,6 +53,6 @@ namespace crisp
         vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
         workGroupSizes[pipeline] = workGroupSize;
 
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
     }
 }

@@ -1,11 +1,11 @@
 #include "AreaLight.hpp"
 
 #include "Samplers/Sampler.hpp"
-#include "Math/Operations.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/Operations.hpp>
+#include <CrispCore/Math/Warp.hpp>
 #include "Shapes/Shape.hpp"
 
-namespace vesper
+namespace crisp
 {
     AreaLight::AreaLight(const VariantMap& params)
     {
@@ -70,7 +70,7 @@ namespace vesper
         Shape::Sample shapeSample;
         m_shape->sampleSurface(shapeSample, sampler);
 
-        glm::vec3 dir = Warp::squareToCosineHemisphere(sampler.next2D());
+        glm::vec3 dir = warp::squareToCosineHemisphere(sampler.next2D());
         CoordinateFrame frame(shapeSample.n);
 
         ray = Ray3(shapeSample.p, frame.toWorld(dir));

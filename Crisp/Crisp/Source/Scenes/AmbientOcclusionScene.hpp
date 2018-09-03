@@ -28,7 +28,7 @@ namespace crisp
 
     class Skybox;
 
-    class AmbientOcclusionScene : public Scene
+    class AmbientOcclusionScene : public AbstractScene
     {
     public:
         AmbientOcclusionScene(Renderer* renderer, Application* app);

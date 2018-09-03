@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-namespace vesper
+namespace crisp
 {
     ImageBlock::ImageBlock()
     {

@@ -15,7 +15,7 @@ namespace crisp
     class VulkanRenderPass : public VulkanResource<VkRenderPass>
     {
     public:
-        VulkanRenderPass(Renderer* renderer);
+        VulkanRenderPass(Renderer* renderer, bool isWindowSizeDependent, uint32_t numSubpasses);
         virtual ~VulkanRenderPass();
         void recreate();
 
@@ -31,12 +31,16 @@ namespace crisp
         VulkanImageView* getRenderTargetView(unsigned int index, unsigned int frameIndex) const;
         std::unique_ptr<VulkanImageView> createRenderTargetView(unsigned int index, unsigned int numFrames) const;
 
+        inline uint32_t getNumSubpasses() const { return m_numSubpasses; }
+
     protected:
         virtual void createResources() = 0;
         void freeResources();
 
         Renderer* m_renderer;
 
+        uint32_t m_numSubpasses;
+        bool m_isWindowSizeDependent;
         VkExtent2D m_renderArea;
 
         std::vector<VkImageLayout> m_finalLayouts;

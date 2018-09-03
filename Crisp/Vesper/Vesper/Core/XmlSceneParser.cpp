@@ -22,7 +22,7 @@
 #include "BSSRDFs/BSSRDFFactory.hpp"
 #include "Textures/TextureFactory.hpp"
 
-namespace vesper
+namespace crisp
 {
     using namespace rapidxml;
     namespace
@@ -189,7 +189,7 @@ namespace vesper
 
         void parseParameters(VariantMap& params, xml_node<char>* node)
         {
-            static std::map<std::string, std::function<VariantMap::VariantType(xml_node<char>*)>> keyValueParser =
+            static std::unordered_map<std::string, std::function<VariantMap::VariantType(xml_node<char>*)>> keyValueParser =
             {
                 { "bool",      [](xml_node<char>* node) { return parse<bool>(node);        } },
                 { "int",       [](xml_node<char>* node) { return parse<int>(node);         } },

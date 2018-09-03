@@ -2,10 +2,10 @@
 
 #define NOMINMAX
 
-#include <iostream>
+#include <filesystem>
 #include <CrispCore/Log.hpp>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 #include "IO/FileUtils.hpp"
 
 #include "Vulkan/VulkanQueue.hpp"
@@ -19,18 +19,17 @@
 #include "Renderer/Texture.hpp"
 #include "Renderer/VertexBuffer.hpp"
 #include "Renderer/IndexBuffer.hpp"
+#include "Renderer/UniformBuffer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+
+#include "Geometry/Geometry.hpp"
 
 namespace crisp
 {
-    namespace
-    {
-        static constexpr auto shadersDir = "Resources/Shaders/";
-    }
-
-    Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions)
+    Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath)
         : m_framesRendered(0)
         , m_currentFrameIndex(0)
+        , m_resourcesPath(std::move(resourcesPath))
     {
         // Create fundamental objects for the API
         m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<std::string>>(extensions));
@@ -58,7 +57,7 @@ namespace crisp
         }
 
         // Creates a map of all shaders
-        loadShaders(shadersDir);
+        loadShaders(m_resourcesPath / "Shaders");
 
         // create vertex buffer
         std::vector<glm::vec2> vertices =
@@ -75,12 +74,14 @@ namespace crisp
         };
 
         // create index buffer
-        std::vector<glm::u16vec3> faces =
+        std::vector<glm::uvec3> faces =
         {
             { 0, 2, 1 },
             { 0, 3, 2 }
         };
         m_fsQuadIndexBuffer = std::make_unique<IndexBuffer>(this, faces);
+
+        m_fullScreenGeometry = std::make_unique<Geometry>(this, vertices, faces);
 
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device.get(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         m_scenePipeline = createTonemappingPipeline(this, getDefaultRenderPass(), 0, true);
@@ -101,6 +102,11 @@ namespace crisp
         {
             vkDestroyShaderModule(m_device->getHandle(), shaderModule.second, nullptr);
         }
+    }
+
+    const std::filesystem::path& Renderer::getResourcesPath() const
+    {
+        return m_resourcesPath;
     }
 
     VulkanContext* Renderer::getContext() const
@@ -136,6 +142,11 @@ namespace crisp
     VkRect2D Renderer::getDefaultScissor() const
     {
         return { {0, 0}, getSwapChainExtent() };
+    }
+
+    Geometry* Renderer::getFullScreenGeometry() const
+    {
+        return m_fullScreenGeometry.get();
     }
 
     VkShaderModule Renderer::getShaderModule(std::string&& key) const
@@ -289,6 +300,16 @@ namespace crisp
         }
     }
 
+    void Renderer::registerStreamingUniformBuffer(UniformBuffer* buffer)
+    {
+        m_streamingUniformBuffers.insert(buffer);
+    }
+
+    void Renderer::unregisterStreamingUniformBuffer(UniformBuffer* buffer)
+    {
+        m_streamingUniformBuffers.erase(buffer);
+    }
+
     void Renderer::destroyResourcesScheduledForRemoval()
     {
         if (!m_removedBuffers.empty())
@@ -308,25 +329,27 @@ namespace crisp
         }
     }
 
-    void Renderer::loadShaders(std::string dirPath)
+    void Renderer::loadShaders(const std::filesystem::path& directoryPath)
     {
-        auto files = FileUtils::enumerateFiles(dirPath, "spv");
+        auto files = fileutils::enumerateFiles(directoryPath, "spv");
         for (auto& file : files)
         {
-            auto shaderCode = FileUtils::readBinaryFile(dirPath + file);
+            auto path = directoryPath / file;
+            auto shaderCode = fileutils::readBinaryFile(path);
 
             VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
             createInfo.codeSize = shaderCode.size();
-            createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
+            createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
             VkShaderModule shaderModule(VK_NULL_HANDLE);
             vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
 
-            auto shaderKey = file.substr(0, file.length() - 4);
+            auto shaderKey = path.stem().string();
 
             auto existingItem = m_shaderModules.find(shaderKey);
             if (existingItem != m_shaderModules.end())
             {
+                logWarning("Warning: ", shaderKey, " was already present in the renderer!");
                 vkDestroyShaderModule(m_device->getHandle(), existingItem->second, nullptr);
             }
 
@@ -371,6 +394,9 @@ namespace crisp
         beginInfo.pInheritanceInfo = nullptr;
 
         vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        for (auto& uniformBuffer : m_streamingUniformBuffers)
+            uniformBuffer->updateDeviceBuffer(commandBuffer, m_currentFrameIndex);
 
         for (const auto& update : m_resourceUpdates)
             update(commandBuffer);

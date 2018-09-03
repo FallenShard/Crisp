@@ -5,7 +5,7 @@
 
 #include "Ray.hpp"
 
-namespace vesper
+namespace crisp
 {
     struct Transform
     {
@@ -45,7 +45,7 @@ namespace vesper
         {
             return glm::normalize(glm::vec3(mat * glm::vec4(dir, 0.0f)));
         }
-        
+
         glm::vec3 transformNormal(const glm::vec3& normal) const
         {
             return glm::normalize(glm::vec3(glm::transpose(inv) * glm::vec4(normal, 0.0f)));

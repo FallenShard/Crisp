@@ -1,6 +1,6 @@
 #include "Fixed.hpp"
 
-namespace vesper
+namespace crisp
 {
     FixedSampler::FixedSampler(const VariantMap& attribs)
         : m_index(static_cast<size_t>(0))

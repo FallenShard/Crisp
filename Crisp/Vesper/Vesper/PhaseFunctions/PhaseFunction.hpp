@@ -3,7 +3,7 @@
 #include "Core/VariantMap.hpp"
 #include "Media/Medium.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Sampler;
 

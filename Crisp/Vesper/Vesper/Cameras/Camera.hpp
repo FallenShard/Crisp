@@ -3,11 +3,11 @@
 #include <memory>
 
 #include "Spectrums/Spectrum.hpp"
-#include "Math/Ray.hpp"
+#include <CrispCore/Math/Ray.hpp>
 #include "ReconstructionFilters/ReconstructionFilter.hpp"
 #include "Core/VariantMap.hpp"
 
-namespace vesper
+namespace crisp
 {
     class ReconstructionFilter;
 

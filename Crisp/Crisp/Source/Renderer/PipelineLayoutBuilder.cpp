@@ -94,14 +94,19 @@ namespace crisp
         return layout;
     }
 
-    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::moveDescriptorSetLayouts()
+    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::extractDescriptorSetLayouts()
     {
         return std::move(m_setLayouts);
     }
 
-    std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::moveDescriptorSetBindings()
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::extractDescriptorSetBindings()
     {
         return std::move(m_setBindings);
+    }
+
+    std::vector<VkPushConstantRange> PipelineLayoutBuilder::extractPushConstants()
+    {
+        return std::move(m_pushConstants);
     }
 
     const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& PipelineLayoutBuilder::getDescriptorSetBindings() const

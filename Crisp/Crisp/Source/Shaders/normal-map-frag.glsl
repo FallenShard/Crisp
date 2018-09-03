@@ -5,15 +5,11 @@ layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 worldPos;
 layout(location = 3) in vec2 outTexCoord;
 layout(location = 4) in vec3 eyeTangent;
+layout(location = 5) in vec3 eyeBitangent;
 
 layout(location = 0) out vec4 finalColor;
 
-//layout(set = 0, binding = 1) uniform LightTransforms
-//{
-//    mat4 LVP;
-//};
-
-layout(set = 0, binding = 0) uniform Transforms
+layout(set = 0, binding = 0) uniform TransformPack
 {
     mat4 MVP;
     mat4 MV;
@@ -21,7 +17,7 @@ layout(set = 0, binding = 0) uniform Transforms
     mat4 N;
 };
 
-layout(set = 0, binding = 1) uniform CameraParams
+layout(set = 0, binding = 1) uniform Camera
 {
     mat4 V;
     mat4 P;
@@ -29,16 +25,20 @@ layout(set = 0, binding = 1) uniform CameraParams
     vec2 nearFar;
 };
 
-//layout(set = 1, binding = 0) uniform sampler2D shadowMap;
 //layout(set = 1, binding = 1) uniform sampler2D vsm;
 
 layout(set = 1, binding = 0) uniform sampler2D normalMap;
 
-//layout(push_constant) uniform PushConstant
-//{
-//    layout(offset = 0) mat4 LV;
-//    layout(offset = 64) mat4 LP;
-//} pushConst;
+layout(set = 2, binding = 0) uniform Light
+{
+    mat4 VP;
+    mat4 V;
+    mat4 P;
+    vec4 position;
+    vec3 spectrum;
+} light;
+
+layout(set = 2, binding = 1) uniform sampler2D shadowMap;
 
 #define PI         3.14159265358979323846
 #define InvPI      0.31830988618379067154
@@ -56,18 +56,19 @@ const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 const vec4 splitNear = vec4(0.1f, 10.0f, 30.0f, 70.0f);
 const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
 
-//float getShadowCoeff() {
-//    vec4 lightSpacePos = LVP * vec4(worldPos, 1.0f);
-//    vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
-//
-//    if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-//        return 0.3f;
-//
-//    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-//    float shadowMapDepth = texture(shadowMap, texCoord).r;
-//
-//    return shadowMapDepth < ndcPos.z ? 0.3f : 1.0f;
-//}
+float getShadowCoeff()
+{
+   vec4 lightSpacePos = light.VP * vec4(worldPos, 1.0f);
+   vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+
+   if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
+       return 1.0f;
+
+   vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+   float shadowMapDepth = texture(shadowMap, texCoord).r;
+
+   return shadowMapDepth < ndcPos.z ? 0.0f : 1.0f;
+}
 
 //float getVSMCoeff() {
 //    vec4 lightViewPos = pushConst.LV * vec4(worldPos, 1.0f);
@@ -172,36 +173,64 @@ const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
 //         return vec3(0.15, 0.15, 0.75) * InvPI;
 // }
 
-
+vec3 Li(out vec3 wi)
+{
+    if (light.position.w == 0.0f)
+    {
+        wi = -vec3(V * light.position);
+        return light.spectrum;
+    }
+    else
+    {
+        wi = vec3(V * light.position) - eyePos;
+        float dist2 = dot(wi, wi);
+        return light.spectrum * InvFourPI / dist2;
+    }
+}
 
 void main()
 {
-    vec3 normal = normalize(eyeNormal);
-    vec3 eyeLightDir = vec3(V * lightDir);
-    vec3 eyeLightPos = vec3(MV * vec4(0.0f, 3.0f, 0.0f, 1.0f));
+    // Get radiance and direction from point towards the light in eye space
+    vec3 wi;
+    vec3 Li = Li(wi);
 
-    vec3 wi = eyeLightPos - eyePos;
+    // Albedo, lambertian material
+    vec3 f = vec3(0.84f, 0.95f, 0.67f) * InvPI;
 
-    float dist2 = dot(wi, wi);
-    float dist = sqrt(dist2);
-    wi = wi / dist;
-
-    vec3 lightPower = vec3(200.0f);
-    vec3 f = vec3(0.84f, 0.45f, 0.67f) * InvPI;
-    vec3 Li = lightPower * InvFourPI / dist2;
-
-    float cosThetaI = max(0.0f, dot(normal, wi));
-    vec3 col = vec3(0.6f, 0.6f, 0.63f);
-    vec4 texSample = texture(normalMap, outTexCoord * 50.0f);
     vec3 tangent = normalize(eyeTangent);
-    mat3 TBN = transpose(mat3(tangent, normalize(cross(normal, tangent)), normal));
+    vec3 normal  = normalize(eyeNormal);
+    
+    //tangent = normalize(tangent - dot(tangent, normal) * normal);
+    vec3 bitangent = normalize(eyeBitangent);//cross(normal, tangent);
 
-    vec3 texNormal = normalize(texSample.rgb * 2.0f - 1.0f);
-    vec3 texLight = normalize(TBN * wi);
-    cosThetaI = max(0.0f, dot(texNormal, texLight));
+    vec3 col = vec3(1.0f, 0.0f, 0.0f);
+    if (dot(cross(normal, tangent), bitangent) < 0.0)
+    {
+        col = vec3(0.0f, 1.0f, 0.0f);
+        tangent = -tangent;
+    }
 
-    finalColor = vec4(vec3(f * Li * cosThetaI), 1.0f);
+    vec3 wNorm = normalize(vec3(inverse(N) * vec4(normalize(eyeNormal), 0.0f)));
+        
 
+    mat3 TBN = transpose(mat3(tangent, bitangent, normal));
+
+    // In tangent space
+    normal = texture(normalMap, outTexCoord).rgb;
+    normal = normalize(normal * 2.0f - 1.0f);
+    wi = normalize(TBN * normalize(wi));
+    float cosThetaI = max(0.0f, dot(normal, wi));
+
+    wNorm = transpose(TBN) * normalize(normal);
+    //wNorm = normalize(vec3(inverse(N) * vec4(normalize(wNorm), 0.0f)));
+
+    float shadowCoeff = getShadowCoeff();
+
+    finalColor = vec4(vec3(cosThetaI), 1.0f);
+    //finalColor = vec4(shadowCoeff * vec3(f * Li * cosThetaI), 1.0f);
+    //finalColor = vec4(vec3(transpose(V) * vec4(tangent, 0.0f)), 1.0f);
+    //finalColor = vec4(outTexCoord, 0.0f, 1.0f);
+    
     //vec3 eyeLightPos = (V * lightPos).xyz;
     //
     //vec3 wi = eyeLightPos - eyePos;

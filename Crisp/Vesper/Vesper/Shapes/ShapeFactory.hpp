@@ -8,7 +8,7 @@
 
 #include "Shape.hpp"
 
-namespace vesper
+namespace crisp
 {
     class ShapeFactory
     {

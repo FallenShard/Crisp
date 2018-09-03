@@ -2,33 +2,34 @@
 
 #include <memory>
 
-#include "Math/Headers.hpp"
-#include "Renderer/VertexBufferBindingGroup.hpp"
-#include "Renderer/DescriptorSetGroup.hpp"
+#include <CrispCore/Math/Headers.hpp>
+
+#include "Renderer/DrawCommand.hpp"
+#include "Geometry/TransformPack.hpp"
 
 namespace crisp
 {
     class Renderer;
+    class VulkanRenderPass;
     class VulkanPipeline;
     class VulkanDevice;
-    class VulkanRenderPass;
     class VulkanImageView;
     class VulkanSampler;
 
+    class Material;
     class Texture;
     class UniformBuffer;
-    class MeshGeometry;
+    class Geometry;
 
     class Skybox
     {
     public:
-        Skybox(Renderer* renderer, VulkanRenderPass* renderPass, const std::string& cubeMapFolder);
+        Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder);
         ~Skybox();
 
-        void updateTransforms(const glm::mat4& P, const glm::mat4& V);
+        void updateTransforms(const glm::mat4& V, const glm::mat4& P);
 
-        void updateDeviceBuffers(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex);
-        void draw(VkCommandBuffer cmdBuffer, uint32_t currentFrameIndex) const;
+        DrawCommand createDrawCommand() const;
 
         VulkanImageView* getSkyboxView() const;
 
@@ -36,21 +37,13 @@ namespace crisp
         Renderer* m_renderer;
         VulkanDevice*   m_device;
 
-        std::unique_ptr<MeshGeometry> m_cubeGeometry;
+        std::unique_ptr<Geometry> m_cubeGeometry;
 
         std::unique_ptr<VulkanPipeline> m_pipeline;
-        DescriptorSetGroup m_descriptorSetGroup;
+        std::unique_ptr<Material> m_material;
 
-        struct Transforms
-        {
-            glm::mat4 MVP;
-            glm::mat4 MV;
-            glm::mat4 M;
-            glm::mat4 N;
-        };
-
-        Transforms m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+        TransformPack m_transformPack;
+        std::unique_ptr<UniformBuffer> m_transformBuffer;
 
         std::unique_ptr<Texture>         m_cubeMap;
         std::unique_ptr<VulkanImageView> m_cubeMapView;

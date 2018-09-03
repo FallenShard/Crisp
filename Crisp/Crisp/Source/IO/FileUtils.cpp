@@ -1,39 +1,28 @@
 #include "FileUtils.hpp"
 
-#define NOMINMAX
 #include <Windows.h>
 
 #include <fstream>
-#include <iostream>
-#include <experimental/filesystem>
 
-namespace crisp
+#include <CrispCore/Log.hpp>
+
+namespace crisp::fileutils
 {
-    std::vector<std::string> FileUtils::enumerateFiles(const std::string& directory, const std::string& extension)
+    std::vector<std::string> enumerateFiles(const std::filesystem::path& directory, const std::string& extension)
     {
-        std::vector<std::string> fileNames;
+        std::vector<std::string> filenames;
 
-        HANDLE findHandle;
-        WIN32_FIND_DATA findData;
-
-        auto searchPattern = directory + "*." + extension;
-
-        findHandle = FindFirstFile(searchPattern.c_str(), &findData);
-        if (findHandle != INVALID_HANDLE_VALUE)
+        std::string pattern = '.' + extension;
+        for (const auto& entry : std::filesystem::directory_iterator(directory))
         {
-            fileNames.push_back(findData.cFileName);
-            while (FindNextFile(findHandle, &findData))
-            {
-                fileNames.push_back(findData.cFileName);
-            }
+            if (entry.path().extension() == pattern)
+                filenames.push_back(entry.path().filename().string());
         }
 
-        FindClose(findHandle);
-
-        return fileNames;
+        return filenames;
     }
 
-    std::string FileUtils::fileToString(const std::string& filePath)
+    std::string fileToString(const std::string& filePath)
     {
         std::ifstream inputFile(filePath);
         std::string source;
@@ -49,13 +38,13 @@ namespace crisp
         }
         else
         {
-            std::cerr << "Could not open file: " + filePath << std::endl;
+            logError("Could not open file: ", filePath);
         }
 
         return source;
     }
 
-    std::vector<char> FileUtils::readBinaryFile(const std::string& filePath)
+    std::vector<char> readBinaryFile(const std::filesystem::path& filePath)
     {
         std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -72,7 +61,7 @@ namespace crisp
         return buffer;
     }
 
-    std::string FileUtils::openFileDialog()
+    std::string openFileDialog()
     {
         const int bufferSize = MAX_PATH;
         char oldDir[bufferSize];
@@ -109,7 +98,7 @@ namespace crisp
         return std::string(fileNameBuffer);
     }
 
-    std::string FileUtils::getFileNameFromPath(const std::string& filePath)
+    std::string getFileNameFromPath(const std::string& filePath)
     {
         auto result = filePath;
         auto indexPos = result.find_last_of("\\/");
@@ -123,14 +112,13 @@ namespace crisp
         return result;
     }
 
-    void FileUtils::createDirectory(const std::string& path)
+    void createDirectory(const std::string& path)
     {
         CreateDirectory(path.c_str(), nullptr);
     }
 
-    bool FileUtils::fileExists(const std::string& filePath)
+    bool fileExists(const std::string& filePath)
     {
-        using namespace std::experimental;
-        return filesystem::exists(filesystem::path(filePath));
+        return std::filesystem::exists(std::filesystem::path(filePath));
     }
 }

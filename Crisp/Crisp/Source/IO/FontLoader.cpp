@@ -1,6 +1,7 @@
 #define NOMINMAX
 #include "FontLoader.hpp"
 
+#include <CrispCore/Log.hpp>
 #include <cmath>
 #include <iostream>
 
@@ -8,8 +9,6 @@ namespace crisp
 {
     namespace
     {
-        const std::string FontPath = "Resources/Fonts/";
-
         constexpr int padding = 0;
 
         uint32_t ceilPowerOf2(uint32_t value)
@@ -35,42 +34,37 @@ namespace crisp
         FT_Done_FreeType(m_context);
     }
 
-    std::unique_ptr<Font> FontLoader::load(const std::string& fontName, int fontPixelSize)
+    std::unique_ptr<Font> FontLoader::load(const std::filesystem::path& fontPath, int fontPixelSize) const
     {
         FT_Face face;
-        if (FT_New_Face(m_context, (FontPath + fontName).c_str(), 0, &face))
+        if (FT_New_Face(m_context, fontPath.string().c_str(), 0, &face))
         {
-            std::cerr << "Failed to create new face: " + fontName << std::endl;
+            logError("Failed to create new face: ", fontPath.string().c_str());
             return nullptr;
         }
 
         FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
-        auto dims = getFontAtlasSize(face);
+        auto [width, height] = getFontAtlasSize(face);
 
-        uint32_t paddedWidth = ceilPowerOf2(dims.first);
-        uint32_t paddedHeight = ceilPowerOf2(dims.second);
+        uint32_t paddedWidth = ceilPowerOf2(width);
+        uint32_t paddedHeight = ceilPowerOf2(height);
 
         std::unique_ptr<Font> font = std::make_unique<Font>();
-        font->width = dims.first;
-        font->height = dims.second;
+        font->width  = width;
+        font->height = height;
         font->textureData.resize(paddedWidth * paddedHeight);
         loadGlyphs(*font, face, paddedWidth, paddedHeight);
 
         FT_Done_Face(face);
 
-        font->name = fontName;
+        font->name = fontPath.filename().string();
         font->pixelSize = fontPixelSize;
 
         return std::move(font);
     }
 
-    std::string FontLoader::getFontKey(const std::string&fontName, int fontSize) const
-    {
-        return fontName.substr(0, fontName.size() - 4) + "-" + std::to_string(fontSize); //.ttf or .otf
-    }
-
-    std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace)
+    std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) const
     {
         FT_GlyphSlot glyph = fontFace->glyph;
 
@@ -92,7 +86,7 @@ namespace crisp
         return { width, height };
     }
 
-    void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight)
+    void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const
     {
         FT_GlyphSlot glyph = face->glyph;
         int currX = 0;
@@ -124,7 +118,7 @@ namespace crisp
         font.height = paddedHeight;
     }
 
-    void FontLoader::updateTexData(std::vector<unsigned char>& texData, unsigned char* data, int xOffset, uint32_t dstWidth, uint32_t width, uint32_t height)
+    void FontLoader::updateTexData(std::vector<unsigned char>& texData, unsigned char* data, int xOffset, uint32_t dstWidth, uint32_t width, uint32_t height) const
     {
         for (uint32_t y = 0; y < height; y++)
         {

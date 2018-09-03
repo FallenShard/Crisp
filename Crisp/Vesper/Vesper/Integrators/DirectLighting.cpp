@@ -2,13 +2,13 @@
 
 #include "Core/Intersection.hpp"
 #include "Core/Scene.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/Warp.hpp>
 #include "Samplers/Sampler.hpp"
 #include "Shapes/Shape.hpp"
 #include "BSDFs/BSDF.hpp"
 #include "Lights/Light.hpp"
 
-namespace vesper
+namespace crisp
 {
     DirectLightingIntegrator::DirectLightingIntegrator(const VariantMap& params)
     {

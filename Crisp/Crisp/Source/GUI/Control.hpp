@@ -3,13 +3,12 @@
 #include <string>
 #include <memory>
 
-#include "Math/Headers.hpp"
-
-#include "Math/Rect.hpp"
-#include "RenderSystem.hpp"
-
-#include "GUI/GuiEnums.hpp"
+#include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/Math/Rect.hpp>
 #include <CrispCore/ConsoleUtils.hpp>
+
+#include "RenderSystem.hpp"
+#include "GUI/GuiEnums.hpp"
 
 namespace crisp::gui
 {

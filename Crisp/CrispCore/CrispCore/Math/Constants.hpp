@@ -1,6 +1,6 @@
 #pragma once
 
-namespace crisp::math
+namespace crisp
 {
     static constexpr float PI         = 3.14159265358979323846f;
     static constexpr float InvPI      = 0.31830988618379067154f;

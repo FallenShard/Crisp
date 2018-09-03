@@ -7,10 +7,12 @@
 
 namespace crisp
 {
-    VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts, std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, VkDescriptorPool descriptorPool)
+    VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts,
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants, VkDescriptorPool descriptorPool)
         : VulkanResource(device, pipelineLayoutHandle)
         , m_descriptorSetLayouts(std::move(setLayouts))
         , m_descriptorSetBindings(std::move(setBindings))
+        , m_pushConstants(std::move(pushConstants))
         , m_descriptorPool(descriptorPool)
     {
     }
@@ -42,8 +44,9 @@ namespace crisp
     {
         VkDevice deviceHandle = device->getHandle();
         auto pipelineLayout   = builder.create(deviceHandle);
-        auto setBindings      = builder.moveDescriptorSetBindings();
-        auto setLayouts       = builder.moveDescriptorSetLayouts();
-        return std::make_unique<VulkanPipelineLayout>(device, pipelineLayout, std::move(setLayouts), std::move(setBindings), descriptorPool);
+        auto setBindings      = builder.extractDescriptorSetBindings();
+        auto setLayouts       = builder.extractDescriptorSetLayouts();
+        auto pushConstants    = builder.extractPushConstants();
+        return std::make_unique<VulkanPipelineLayout>(device, pipelineLayout, std::move(setLayouts), std::move(setBindings), std::move(pushConstants), descriptorPool);
     }
 }

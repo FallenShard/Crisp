@@ -7,7 +7,7 @@ namespace crisp
     class Renderer;
     class Application;
 
-    class TestScene : public Scene
+    class TestScene : public AbstractScene
     {
     public:
         TestScene(Renderer* renderer, Application* app);

@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 
 #include "Vulkan/VulkanMemoryHeap.hpp"
 #include "Vulkan/VulkanBuffer.hpp"

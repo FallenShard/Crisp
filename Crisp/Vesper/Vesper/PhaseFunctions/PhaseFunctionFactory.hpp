@@ -8,7 +8,7 @@
 
 #include "PhaseFunction.hpp"
 
-namespace vesper
+namespace crisp
 {
     class PhaseFunctionFactory
     {

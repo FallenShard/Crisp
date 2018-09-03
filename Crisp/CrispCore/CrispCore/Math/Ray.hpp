@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
-namespace vesper
+namespace crisp
 {
     template <typename PointType, typename DirType>
     struct Ray

@@ -98,7 +98,7 @@ namespace crisp
     {
         return m_look;
     }
-    
+
     glm::vec3 AbstractCamera::getRightDirection() const
     {
         return m_right;

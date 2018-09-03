@@ -3,7 +3,7 @@
 #include "BSDF.hpp"
 #include "Core/Fresnel.hpp"
 
-namespace vesper
+namespace crisp
 {
     class SmoothConductorBSDF : public BSDF
     {

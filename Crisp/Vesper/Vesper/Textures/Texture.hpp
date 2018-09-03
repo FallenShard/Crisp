@@ -7,7 +7,7 @@
 #include "Core/VariantMap.hpp"
 #include "Spectrums/Spectrum.hpp"
 
-namespace vesper
+namespace crisp
 {
     template <typename T>
     class Texture

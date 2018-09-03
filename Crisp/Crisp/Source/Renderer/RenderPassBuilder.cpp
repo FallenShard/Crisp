@@ -36,14 +36,20 @@ namespace crisp
         return *this;
     }
 
-    RenderPassBuilder& RenderPassBuilder::addSubpass(VkPipelineBindPoint bindPoint, VkSubpassDescriptionFlags flags)
+    RenderPassBuilder& RenderPassBuilder::setNumSubpasses(uint32_t numSubpasses)
     {
-        m_inputAttachmentRefs.push_back(std::vector<VkAttachmentReference>());
-        m_colorAttachmentRefs.push_back(std::vector<VkAttachmentReference>());
-        m_resolveAttachmentRefs.push_back(std::vector<VkAttachmentReference>());
-        m_depthAttachmentRefs.push_back(VkAttachmentReference{});
-        m_preserveAttachments.push_back(std::vector<uint32_t>());
-        m_subpasses.push_back(VkSubpassDescription{ flags, bindPoint });
+        m_inputAttachmentRefs.resize(numSubpasses);
+        m_colorAttachmentRefs.resize(numSubpasses);
+        m_resolveAttachmentRefs.resize(numSubpasses);
+        m_depthAttachmentRefs.resize(numSubpasses);
+        m_preserveAttachments.resize(numSubpasses);
+        m_subpasses.resize(numSubpasses, VkSubpassDescription{ 0, VK_PIPELINE_BIND_POINT_GRAPHICS });
+        return *this;
+    }
+
+    RenderPassBuilder& RenderPassBuilder::setSubpassDescription(uint32_t subpass, VkPipelineBindPoint bindPoint, VkSubpassDescriptionFlags flags)
+    {
+        m_subpasses[subpass] = { flags, bindPoint };
         return *this;
     }
 

@@ -24,7 +24,7 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("gui-quad-unif-col-vert")),
@@ -38,9 +38,7 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 
     std::unique_ptr<VulkanPipeline> createGuiDebugPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
@@ -55,7 +53,7 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("gui-quad-debug-col-vert")),
@@ -70,9 +68,7 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 
     std::unique_ptr<VulkanPipeline> createGuiTextPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t maxFontTextures)
@@ -97,7 +93,7 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { maxFontTextures, maxFontTextures }, maxFontTextures);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("gui-text-vert")),
@@ -111,9 +107,7 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 
     std::unique_ptr<VulkanPipeline> createGuiTexturePipeline(Renderer* renderer, VulkanRenderPass* renderPass)
@@ -138,7 +132,7 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames, Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("gui-quad-tex-vert")),
@@ -152,9 +146,7 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 }
 

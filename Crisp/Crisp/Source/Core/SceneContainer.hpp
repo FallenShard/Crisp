@@ -8,8 +8,7 @@ namespace crisp
 {
     class Renderer;
     class Application;
-    class Scene;
-    class TestScene;
+    class AbstractScene;
 
     namespace gui
     {
@@ -32,7 +31,7 @@ namespace crisp
         void onSceneSelected(std::string sceneName);
 
     private:
-        std::unique_ptr<Scene> m_scene;
+        std::unique_ptr<AbstractScene> m_scene;
 
         Renderer* m_renderer;
         Application* m_application;

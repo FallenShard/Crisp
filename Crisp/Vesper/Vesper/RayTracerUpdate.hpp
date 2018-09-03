@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace vesper
+namespace crisp
 {
     struct RayTracerUpdate
     {

@@ -16,7 +16,8 @@ namespace crisp
         RenderPassBuilder& setAttachmentStencilOps(uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp);
         RenderPassBuilder& setAttachmentLayouts(uint32_t attachmentIndex, VkImageLayout initialLayout, VkImageLayout finalLayout);
 
-        RenderPassBuilder& addSubpass(VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, VkSubpassDescriptionFlags flags = 0);
+        RenderPassBuilder& setNumSubpasses(uint32_t numSubpasses);
+        RenderPassBuilder& setSubpassDescription(uint32_t subpass, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, VkSubpassDescriptionFlags flags = 0);
         RenderPassBuilder& addInputAttachmentRef(uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout);
         RenderPassBuilder& addColorAttachmentRef(uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout);
         RenderPassBuilder& addResolveAttachmentRef(uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout);

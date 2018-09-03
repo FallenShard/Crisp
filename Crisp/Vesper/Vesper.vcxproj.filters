@@ -69,9 +69,6 @@
     <ClCompile Include="Vesper\Lights\PointLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Vesper\Math\Warp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Vesper\ReconstructionFilters\GaussianFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -126,9 +123,6 @@
     <ClCompile Include="Vesper\Lights\EnvironmentLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Vesper\Math\Distribution1D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Vesper\BSDFs\SmoothConductor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,9 +145,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Vesper\BSDFs\MicrofacetDistributions\MicrofacetDistributionFactory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Vesper\Math\Distribution2D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Vesper\BSDFs\RoughConductor.cpp">
@@ -266,27 +257,6 @@
     <ClInclude Include="Vesper\Lights\PointLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vesper\Math\BoundingBox.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Constants.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\CoordinateFrame.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Operations.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Ray.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Transform.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Warp.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Vesper\ReconstructionFilters\GaussianFilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -365,9 +335,6 @@
     <ClInclude Include="Vesper\Core\MipMap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vesper\Math\Distribution1D.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Vesper\BSDFs\SmoothConductor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -393,9 +360,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\BSDFs\MicrofacetDistributions\MicrofacetDistributionFactory.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Distribution2D.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\BSDFs\RoughConductor.hpp">
@@ -438,9 +402,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\BSSRDFs\IrradianceTree.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Vesper\Math\Octree.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vesper\BSSRDFs\BSSRDFFactory.hpp">

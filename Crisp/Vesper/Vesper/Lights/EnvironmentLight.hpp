@@ -4,10 +4,10 @@
 #include <memory>
 
 #include "Light.hpp"
-#include "Math/Distribution1D.hpp"
+#include <CrispCore/Math/Distribution1D.hpp>
 #include "Core/MipMap.hpp"
 
-namespace vesper
+namespace crisp
 {
     class EnvironmentLight : public Light
     {

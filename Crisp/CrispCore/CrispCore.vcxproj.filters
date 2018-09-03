@@ -36,11 +36,55 @@
     <ClInclude Include="CrispCore\ChromeProfiler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CrispCore\MathConstants.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CrispCore\Log.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CrispCore\Math\Constants.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Headers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Rect.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\BoundingBox.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\CoordinateFrame.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Distribution1D.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Distribution2D.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Octree.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Operations.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Ray.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Transform.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CrispCore\Math\Warp.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CrispCore\Math\Distribution1D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CrispCore\Math\Distribution2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CrispCore\Math\Warp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

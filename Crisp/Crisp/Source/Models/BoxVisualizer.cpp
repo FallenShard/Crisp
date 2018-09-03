@@ -121,52 +121,52 @@ namespace crisp
     {
         auto& camera = cameraController->getCamera();
 
-        auto camPos = camera.getPosition();
-
-        m_outlineTransforms[0].M = glm::mat4(1.0f);
-        m_outlineTransforms[1].M = glm::mat4(1.0f);
-        m_outlineTransforms[2].M = glm::mat4(1.0f);
-        m_outlineTransforms[3].M = glm::mat4(1.0f);
-
-        std::vector<float> splitsNear = { 0.1f, 5.0f, 10.0f, 20.0f };
-        std::vector<float> splitsFar = { 5.0f, 10.0f, 20.0f, 50.0f };
-
-        auto lightView = shadowMapper->getLight()->getViewMatrix();
-
-        for (int i = 0; i < 4; i++)
-        {
-            auto worldPts = camera.getFrustumPoints(splitsNear[i], splitsFar[i]);
-            m_frusta[i].vertexBuffer->updateStagingBuffer(worldPts);
-
-            glm::vec3 minCorner(1000.0f);
-            glm::vec3 maxCorner(-1000.0f);
-            for (auto& pt : worldPts)
-            {
-                auto lightViewPt = lightView * glm::vec4(pt, 1.0f);
-
-                minCorner = glm::min(minCorner, glm::vec3(lightViewPt));
-                maxCorner = glm::max(maxCorner, glm::vec3(lightViewPt));
-            }
-
-            glm::vec3 lengths(maxCorner - minCorner);
-            auto cubeCenter = (minCorner + maxCorner) / 2.0f;
-            auto squareSize = std::max(lengths.x, lengths.y);
-
-            auto worldCubeCenter = glm::inverse(lightView) * glm::vec4(cubeCenter, 1.0f);
-
-            glm::vec3 scaleVec(squareSize, squareSize, lengths.z);
-            glm::vec3 transVec(worldCubeCenter);
-
-            m_outlineTransforms[i + 4].M = glm::translate(transVec) * glm::transpose(lightView) * glm::scale(scaleVec);
-        }
-
-        for (auto& trans : m_outlineTransforms)
-        {
-            trans.MV = camera.getViewMatrix() * trans.M;
-            trans.MVP = camera.getProjectionMatrix() * trans.MV;
-        }
-
-        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
+        //auto camPos = camera.getPosition();
+        //
+        //m_outlineTransforms[0].M = glm::mat4(1.0f);
+        //m_outlineTransforms[1].M = glm::mat4(1.0f);
+        //m_outlineTransforms[2].M = glm::mat4(1.0f);
+        //m_outlineTransforms[3].M = glm::mat4(1.0f);
+        //
+        //std::vector<float> splitsNear = { 0.1f, 5.0f, 10.0f, 20.0f };
+        //std::vector<float> splitsFar = { 5.0f, 10.0f, 20.0f, 50.0f };
+        //
+        //auto lightView = shadowMapper->getLight()->getViewMatrix();
+        //
+        //for (int i = 0; i < 4; i++)
+        //{
+        //    auto worldPts = camera.getFrustumPoints(splitsNear[i], splitsFar[i]);
+        //    m_frusta[i].vertexBuffer->updateStagingBuffer(worldPts);
+        //
+        //    glm::vec3 minCorner(1000.0f);
+        //    glm::vec3 maxCorner(-1000.0f);
+        //    for (auto& pt : worldPts)
+        //    {
+        //        auto lightViewPt = lightView * glm::vec4(pt, 1.0f);
+        //
+        //        minCorner = glm::min(minCorner, glm::vec3(lightViewPt));
+        //        maxCorner = glm::max(maxCorner, glm::vec3(lightViewPt));
+        //    }
+        //
+        //    glm::vec3 lengths(maxCorner - minCorner);
+        //    auto cubeCenter = (minCorner + maxCorner) / 2.0f;
+        //    auto squareSize = std::max(lengths.x, lengths.y);
+        //
+        //    auto worldCubeCenter = glm::inverse(lightView) * glm::vec4(cubeCenter, 1.0f);
+        //
+        //    glm::vec3 scaleVec(squareSize, squareSize, lengths.z);
+        //    glm::vec3 transVec(worldCubeCenter);
+        //
+        //    m_outlineTransforms[i + 4].M = glm::translate(transVec) * glm::transpose(lightView) * glm::scale(scaleVec);
+        //}
+        //
+        //for (auto& trans : m_outlineTransforms)
+        //{
+        //    trans.MV = camera.getViewMatrix() * trans.M;
+        //    trans.MVP = camera.getProjectionMatrix() * trans.MV;
+        //}
+        //
+        //m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
 
     }
 

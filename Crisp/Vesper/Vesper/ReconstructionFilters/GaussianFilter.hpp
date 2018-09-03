@@ -2,7 +2,7 @@
 
 #include "ReconstructionFilter.hpp"
 
-namespace vesper
+namespace crisp
 {
     class GaussianFilter : public ReconstructionFilter
     {

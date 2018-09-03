@@ -1,8 +1,8 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <memory>
-#include <map>
 #include <vector>
 #include <array>
 
@@ -39,13 +39,12 @@ namespace crisp
         FontLoader();
         ~FontLoader();
 
-        std::unique_ptr<Font> load(const std::string& fontName, int fontPixelSize);
-        std::string getFontKey(const std::string& fontName, int fontPixelSize) const;
-            
+        std::unique_ptr<Font> load(const std::filesystem::path& fontPath, int fontPixelSize) const;
+
     private:
-        std::pair<uint32_t, uint32_t> getFontAtlasSize(FT_Face fontFace);
-        void loadGlyphs(Font& fontName, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight);
-        void updateTexData(std::vector<unsigned char>& texData, unsigned char* data, int x, uint32_t dstWidth, uint32_t width, uint32_t height);
+        std::pair<uint32_t, uint32_t> getFontAtlasSize(FT_Face fontFace) const;
+        void loadGlyphs(Font& fontName, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const;
+        void updateTexData(std::vector<unsigned char>& texData, unsigned char* data, int x, uint32_t dstWidth, uint32_t width, uint32_t height) const;
 
         FT_Library m_context;
     };

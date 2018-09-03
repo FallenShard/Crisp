@@ -4,7 +4,7 @@
 #include "Independent.hpp"
 #include "Fixed.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<Sampler> SamplerFactory::create(std::string type, VariantMap parameters)
     {

@@ -9,14 +9,34 @@
 
 namespace crisp
 {
+    VulkanImage::VulkanImage(VulkanDevice* device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
+        : VulkanResource(device)
+        , m_type(createInfo.imageType)
+        , m_format(createInfo.format)
+        , m_extent(createInfo.extent)
+        , m_mipLevels(createInfo.mipLevels)
+        , m_numLayers(createInfo.arrayLayers)
+        , m_aspect(aspect)
+        , m_layouts(m_numLayers, std::vector<VkImageLayout>(m_mipLevels, VK_IMAGE_LAYOUT_UNDEFINED))
+    {
+        vkCreateImage(m_device->getHandle(), &createInfo, nullptr, &m_handle);
+
+        // Assign the image to the proper memory heap
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
+        m_memoryChunk = m_device->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
+        vkBindImageMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
+    }
+
     VulkanImage::VulkanImage(VulkanDevice* device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
         : VulkanResource(device)
+        , m_type(VK_IMAGE_TYPE_2D)
         , m_format(format)
         , m_extent(extent)
         , m_numLayers(numLayers)
         , m_mipLevels(numMipmaps)
+        , m_aspect(aspect)
         , m_layouts(numLayers, std::vector<VkImageLayout>(numMipmaps, VK_IMAGE_LAYOUT_UNDEFINED))
-        , m_aspectMask(aspect)
     {
         // Create an image handle
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -70,7 +90,7 @@ namespace crisp
         barrier.subresourceRange.levelCount     = 1;
         barrier.subresourceRange.baseArrayLayer = baseLayer;
         barrier.subresourceRange.layerCount     = numLayers;
-        barrier.subresourceRange.aspectMask     = m_aspectMask;
+        barrier.subresourceRange.aspectMask     = m_aspect;
         std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(oldLayout, newLayout);
 
         vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
@@ -114,11 +134,16 @@ namespace crisp
         copyRegion.bufferRowLength                 = m_extent.width;
         copyRegion.imageExtent                     = m_extent;
         copyRegion.imageOffset                     = { 0, 0, 0 };
-        copyRegion.imageSubresource.aspectMask     = m_aspectMask;
+        copyRegion.imageSubresource.aspectMask     = m_aspect;
         copyRegion.imageSubresource.baseArrayLayer = baseLayer;
         copyRegion.imageSubresource.layerCount     = numLayers;
         copyRegion.imageSubresource.mipLevel       = 0;
         vkCmdCopyBufferToImage(commandBuffer, buffer.getHandle(), m_handle, m_layouts[baseLayer][0], 1, &copyRegion);
+    }
+
+    std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type) const
+    {
+        return std::make_unique<VulkanImageView>(m_device, *this, type, 0, m_numLayers, 0, m_mipLevels);
     }
 
     std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels) const
@@ -143,7 +168,7 @@ namespace crisp
 
     VkImageAspectFlags VulkanImage::getAspectMask() const
     {
-        return m_aspectMask;
+        return m_aspect;
     }
 
     VkFormat VulkanImage::getFormat() const

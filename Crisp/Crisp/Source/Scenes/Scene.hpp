@@ -6,10 +6,10 @@ namespace crisp
     class InputDispatcher;
     class Application;
 
-    class Scene
+    class AbstractScene
     {
     public:
-        virtual ~Scene() {}
+        virtual ~AbstractScene() {}
 
         virtual void resize(int width, int height) = 0;
         virtual void update(float dt) = 0;

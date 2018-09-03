@@ -31,7 +31,7 @@ namespace crisp
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        std::unique_ptr<ImageFileBuffer> image = std::make_unique<ImageFileBuffer>("Resources/Textures/heightmap.jpg", 1);
+        std::unique_ptr<ImageFileBuffer> image = std::make_unique<ImageFileBuffer>(renderer->getResourcesPath() / "Textures/heightmap.jpg", 1);
 
         m_heightMap = std::make_unique<Texture>(m_renderer, VkExtent3D{ image->getWidth(), image->getHeight(), 1 }, 1, VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
         m_heightMap->fill(image->getData(), image->getByteSize());

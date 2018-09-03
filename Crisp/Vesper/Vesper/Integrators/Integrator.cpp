@@ -1,6 +1,6 @@
 #include "Integrator.hpp"
 
-namespace vesper
+namespace crisp
 {
     Integrator::~Integrator()
     {

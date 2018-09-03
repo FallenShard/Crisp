@@ -8,7 +8,7 @@
 
 #include "Camera.hpp"
 
-namespace vesper
+namespace crisp
 {
     class CameraFactory
     {

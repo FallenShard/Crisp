@@ -23,7 +23,7 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
-        VkPipeline pipeline = PipelineBuilder()
+        return PipelineBuilder()
             .setShaderStages
             ({
                 createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("ssao-vert")),
@@ -36,8 +36,6 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setDepthTest(VK_FALSE)
             .setDepthWrite(VK_FALSE)
-            .create(device->getHandle(), layout->getHandle(), renderPass->getHandle(), 0);
-
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout));
+            .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 }

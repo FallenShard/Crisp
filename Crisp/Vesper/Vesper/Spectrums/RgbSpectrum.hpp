@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <glm/vec3.hpp>
 
-namespace vesper
+namespace crisp
 {
     struct RgbSpectrum
     {
@@ -57,7 +57,6 @@ namespace vesper
         const RgbSpectrum operator/(float scalar) const;
 
         const RgbSpectrum operator-() const;
-        
 
         float getLuminance() const;
         float maxCoeff() const;

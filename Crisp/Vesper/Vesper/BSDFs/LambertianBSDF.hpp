@@ -3,7 +3,7 @@
 #include "BSDF.hpp"
 #include "Textures/Texture.hpp"
 
-namespace vesper
+namespace crisp
 {
     class LambertianBSDF : public BSDF
     {

@@ -5,11 +5,14 @@
 #include <array>
 
 #include "Renderer/Renderer.hpp"
+#include "Renderer/DrawCommand.hpp"
 #include "Geometry/TransformPack.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 #include "Scene.hpp"
 
 #include "Renderer/Material.hpp"
+
+#include "Lights/LightDescriptorData.hpp"
 
 namespace crisp
 {
@@ -25,33 +28,26 @@ namespace crisp
 
     class CascadedShadowMapper;
 
-    class ShadowPass;
-    class ShadowMapPipeline;
-
     class BlurPass;
-    class BlurPipeline;
 
     class VarianceShadowMapPass;
-    class VarianceShadowMapPipeline;
 
-    class NormalMapPipeline;
-
-    class SceneRenderPass;
-    class BlinnPhongPipeline;
-    class ColorAndShadowPipeline;
-    class FullScreenQuadPipeline;
     class VulkanImageView;
     class UniformBuffer;
-    class VulkanDevice;
+
     class Renderer;
+    class RenderGraph;
+
+    class VulkanDevice;
+
     class VulkanSampler;
-    class MeshGeometry;
     class BoxVisualizer;
     class Skybox;
 
     class Geometry;
+    class Grass;
 
-    class ShadowMappingScene : public Scene
+    class ShadowMappingScene : public AbstractScene
     {
     public:
         ShadowMappingScene(Renderer* renderer, Application* app);
@@ -62,6 +58,7 @@ namespace crisp
         virtual void render() override;
 
         void setBlurRadius(int radius);
+        void setSplitLambda(double lambda);
 
     private:
         Renderer*     m_renderer;
@@ -71,36 +68,68 @@ namespace crisp
         std::unique_ptr<CameraController> m_cameraController;
         std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::unique_ptr<VulkanRenderPass> m_renderPass;
-
         std::unique_ptr<VulkanPipeline> m_colorPipeline;
         std::unique_ptr<Material> m_colorMaterial;
+
+        std::unique_ptr<VulkanPipeline> m_colorLightPipeline;
+        std::unique_ptr<Material> m_colorLightMaterial;
 
         std::unique_ptr<VulkanPipeline> m_normalMapPipeline;
         std::unique_ptr<Material> m_normalMapMaterial;
 
-        std::unique_ptr<Geometry> m_sphereGeometry;
+        std::unique_ptr<Geometry> m_spherePosGeometry;
+        std::unique_ptr<Geometry> m_fullSphereGeometry;
+        std::vector<std::pair<uint32_t, uint32_t>> m_geometryViews;
+        std::vector<std::unique_ptr<VulkanImage>> m_normalMaps;
+        std::vector<std::unique_ptr<VulkanImageView>> m_normalMapViews;
+        std::vector<std::unique_ptr<Material>> m_materials;
         std::unique_ptr<Geometry> m_planeGeometry;
 
         std::vector<TransformPack> m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+        std::unique_ptr<UniformBuffer> m_transformBuffer;
 
-        std::vector<glm::mat4> m_lvpTransforms;
-        std::unique_ptr<UniformBuffer> m_lvpBuffer;
+        std::unique_ptr<CascadedShadowMapper> m_cascadedShadowMapper;
 
-        //
-        //std::unique_ptr<CascadedShadowMapper> m_shadowMapper;
-        //
+        std::vector<LightDescriptorData> m_lights;
+        std::unique_ptr<UniformBuffer> m_lightBuffer;
+
+        std::unique_ptr<RenderGraph> m_renderGraph;
+        std::unique_ptr<VulkanPipeline> m_shadowMapPipeline;
+        std::unique_ptr<Material> m_shadowMapMaterial;
+
+        std::unique_ptr<VulkanPipeline> m_colorShadowPipeline;
+        std::unique_ptr<Material> m_colorShadowMaterial;
+
+        std::vector<std::unique_ptr<VulkanPipeline>> m_csmPipelines;
+        std::unique_ptr<Material> m_csmMaterial;
+
+
+        std::unique_ptr<Grass> m_grass;
+
+        std::unique_ptr<VulkanPipeline> m_lightShaftPipeline;
+        std::unique_ptr<Material> m_lightShaftMaterial;
+        std::unique_ptr<UniformBuffer> m_lightShaftBuffer;
+        struct LightShaftParams
+        {
+            glm::vec2 lightPos;
+            float exposure;
+            float decay;
+            float density;
+            float weight;
+        };
+        LightShaftParams m_lightShaftParams;
+
+        //std::unique_ptr<CascadedShadowMapper> m_csm;
+
         //std::unique_ptr<Geometry> m_planeGeometry;
         //std::unique_ptr<Geometry> m_cubeGeometry;
-        //std::unique_ptr<Geometry> m_treeBaseGeometry;
+        std::unique_ptr<Geometry> m_treeGeometry;
+        std::unique_ptr<Geometry> m_sphereGeometry;
         //std::unique_ptr<Geometry> m_cwPlaneGeometry;
         //
         //std::unique_ptr<BoxVisualizer> m_boxVisualizer;
-        //std::unique_ptr<Skybox> m_skybox;
+        std::unique_ptr<Skybox> m_skybox;
         //
-        //std::unique_ptr<ShadowPass> m_shadowPass;
-        //std::unique_ptr<ShadowMapPipeline> m_shadowMapPipeline;
         //DescriptorSetGroup m_shadowMapDescGroup;
         //
         //std::vector<glm::mat4> m_lvpTransforms;
@@ -109,7 +138,6 @@ namespace crisp
         //std::vector<glm::mat4> m_vsmLightTransforms;
         //std::unique_ptr<UniformBuffer> m_vsmLightBuffer;
         //
-        //std::unique_ptr<SceneRenderPass> m_scenePass;
         //std::unique_ptr<BlinnPhongPipeline> m_blinnPhongPipeline;
         //std::unique_ptr<ColorAndShadowPipeline> m_colorAndShadowPipeline;
         //std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_colorAndShadowDescGroups;
@@ -119,8 +147,8 @@ namespace crisp
         //DescriptorSetGroup m_sceneDescSetGroup;
         //std::unique_ptr<VulkanImageView> m_sceneImageView;
         //
-        //std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        //std::unique_ptr<VulkanSampler> m_nearestNeighborSampler;
+        std::unique_ptr<VulkanSampler> m_linearClampSampler;
+        std::unique_ptr<VulkanSampler> m_nearestNeighborSampler;
         std::unique_ptr<VulkanSampler> m_linearRepeatSampler;
         //
         //std::unique_ptr<BlurPass> m_blurPass;
@@ -135,7 +163,7 @@ namespace crisp
         //std::unique_ptr<VarianceShadowMapPipeline> m_vsmPipeline;
         //DescriptorSetGroup m_vsmDescSetGroup;
 
-        std::unique_ptr<Texture>       m_normalMap;
+        std::unique_ptr<VulkanImage>       m_normalMap;
         std::unique_ptr<VulkanImageView>   m_normalMapView;
 
         //GaussianBlur m_blurParameters;

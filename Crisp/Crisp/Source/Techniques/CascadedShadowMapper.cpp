@@ -9,95 +9,145 @@
 
 namespace crisp
 {
-    CascadedShadowMapper::CascadedShadowMapper(Renderer* renderer, DirectionalLight light, uint32_t numCascades, UniformBuffer* modelTransformsBuffer)
+    namespace
+    {
+        static constexpr int texSize = 2048;
+
+        glm::mat4 computeSphereBoundTransform(const glm::vec3& dir, const glm::vec3& right, const glm::vec3& up, const std::array<glm::vec3, 8>& frustumPoints)
+        {
+            glm::vec3 center(0.0f);
+            for (const auto& point : frustumPoints)
+                center += point;
+            center /= static_cast<float>(frustumPoints.size());
+
+            float radius = 0.0f;
+            for (const auto& point : frustumPoints)
+            {
+                float distance = glm::length(point - center);
+                radius = glm::max(radius, distance);
+            }
+            radius = std::ceil(radius * 16.0f) / 16.0f;
+
+            float x = std::ceil(glm::dot(center, up) * texSize / radius) * radius / texSize;
+            float y = std::ceil(glm::dot(center, right) * texSize / radius) * radius / texSize;
+            center = up * x + right * y + dir * glm::dot(center, dir);
+
+            glm::mat4 proj = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius);
+            glm::mat4 view = glm::lookAt(center - dir * radius, center, up);
+            glm::mat4 lvp = proj * view;
+
+            glm::vec4 lightSpaceOrigin = lvp * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+            lightSpaceOrigin *= texSize * 0.5f;
+            glm::vec4 fractionalOffset = glm::vec4(round(lightSpaceOrigin.x), round(lightSpaceOrigin.y), 0.0f, 0.0f) - lightSpaceOrigin;
+            fractionalOffset *= 2.0f / texSize;
+            fractionalOffset.z = 0.0f;
+            fractionalOffset.w = 0.0f;
+
+            lvp[3] += fractionalOffset;
+            return lvp;
+        }
+
+        glm::mat4 computeTightBoundTransform(const glm::mat4& lightView, const std::array<glm::vec3, 8>& frustumPoints)
+        {
+            glm::vec3 minCorner(std::numeric_limits<float>::max());
+            glm::vec3 maxCorner(std::numeric_limits<float>::min());
+
+            for (const auto& point : frustumPoints)
+            {
+                glm::vec3 lightViewPoint = lightView * glm::vec4(point, 1.0f);
+                minCorner = glm::min(minCorner, lightViewPoint);
+                maxCorner = glm::max(maxCorner, lightViewPoint);
+            }
+
+            float sx = 2.0f / (maxCorner.x - minCorner.x);
+            float sy = 2.0f / (maxCorner.y - minCorner.y);
+
+            float scaleQuantizer = 64.0f;
+            // quantize scale
+            sx = 1.0f / std::ceil(1.0f / sx * scaleQuantizer) * scaleQuantizer;
+            sy = 1.0f / std::ceil(1.0f / sy * scaleQuantizer) * scaleQuantizer;
+
+            float halfTexSize = static_cast<float>(texSize) * 0.5f;
+            float ox = -0.5f * (maxCorner.x + minCorner.x) * sx;
+            float oy = -0.5f * (maxCorner.y + minCorner.y) * sy;
+            ox = std::ceil(ox * halfTexSize) / halfTexSize;
+            oy = std::ceil(oy * halfTexSize) / halfTexSize;
+
+            glm::mat4 crop;
+            crop[0][0] = sx;
+            crop[1][1] = sy;
+            crop[3][0] = ox;
+            crop[3][1] = oy;
+
+            return {};
+        }
+    }
+
+    CascadedShadowMapper::CascadedShadowMapper(Renderer* renderer, uint32_t numCascades, DirectionalLight light, float zFar)
         : m_renderer(renderer)
         , m_numCascades(numCascades)
         , m_light(light)
+        , m_zFar(zFar)
+        , m_lightTransforms(m_numCascades)
+        , m_lightTransformBuffer(std::make_unique<UniformBuffer>(m_renderer, m_numCascades * sizeof(glm::mat4), BufferUpdatePolicy::PerFrame))
+        , m_lambda(0.5f)
+        , m_splitBuffer(std::make_unique<UniformBuffer>(m_renderer, sizeof(SplitIntervals), BufferUpdatePolicy::PerFrame))
     {
-        m_shadowPass = std::make_unique<ShadowPass>(m_renderer, 2048, m_numCascades);
-        m_pipelines.reserve(m_numCascades);
-        for (uint32_t i = 0; i < m_numCascades; i++)
-            m_pipelines.emplace_back(createShadowMapPipeline(m_renderer, m_shadowPass.get(), i));
-
-        m_descGroup =
-        {
-            m_pipelines[0]->allocateDescriptorSet(0)
-        };
-
-        m_transforms.resize(m_numCascades);
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_numCascades * sizeof(glm::mat4), BufferUpdatePolicy::PerFrame, m_transforms.data());
-
-        m_descGroup.postBufferUpdate(0, 0, { modelTransformsBuffer->get(), 0, 4 * sizeof(glm::mat4) });
-        m_descGroup.postBufferUpdate(0, 1, m_transformsBuffer->getDescriptorInfo());
-        m_descGroup.flushUpdates(m_renderer->getDevice());
     }
 
     CascadedShadowMapper::~CascadedShadowMapper()
     {
     }
 
-    UniformBuffer* CascadedShadowMapper::getLightTransformsBuffer() const
+    UniformBuffer* CascadedShadowMapper::getLightTransformBuffer() const
     {
-        return m_transformsBuffer.get();
+        return m_lightTransformBuffer.get();
     }
 
-    ShadowPass* CascadedShadowMapper::getRenderPass() const
+    UniformBuffer* CascadedShadowMapper::getSplitBuffer() const
     {
-        return m_shadowPass.get();
+        return m_splitBuffer.get();
     }
 
-    void CascadedShadowMapper::recalculateLightProjections(const AbstractCamera& camera, float zFar, ParallelSplit splitStrategy)
+    void CascadedShadowMapper::setSplitLambda(float lambda, const AbstractCamera& camera)
     {
-        auto zNear = camera.getNearPlaneDistance();
-        std::vector<float> splitsNear = { zNear, 5.0f, 10.0f, 20.0f };
-        std::vector<float> splitsFar  = { 5.0f, 10.0f, 20.0f, zFar };
+        m_lambda = lambda;
+        recalculateLightProjections(camera);
+    }
+
+    void CascadedShadowMapper::recalculateLightProjections(const AbstractCamera& camera)
+    {
+        float zNear = camera.getNearPlaneDistance();
+        float range = m_zFar - zNear;
+        float ratio = m_zFar / zNear;
+
+        m_splitIntervals.lo[0] = zNear;
+        m_splitIntervals.hi[m_numCascades - 1] = m_zFar;
+        for (uint32_t i = 0; i < m_numCascades - 1; i++)
+        {
+            float p = (i + 1) / static_cast<float>(m_numCascades);
+            float logSplit = zNear * std::pow(ratio, p);
+            float linSplit = zNear + range * p;
+            float splitPos = m_lambda * (logSplit - linSplit) + linSplit;
+            m_splitIntervals.hi[i] = splitPos - zNear;
+            m_splitIntervals.lo[i + 1] = m_splitIntervals.hi[i];
+        }
+
+        glm::vec3 dir = m_light.getDirection();
+        glm::vec3 up(0.0f, 1.0f, 0.0f);
+        glm::vec3 right = glm::normalize(glm::cross(dir, up));
+        up = glm::normalize(glm::cross(right, dir));
+
+        glm::vec3 origin = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::mat4 genericView = glm::lookAt(origin, origin + dir, up);
 
         for (uint32_t i = 0; i < m_numCascades; i++)
         {
-            m_light.calculateProjection(camera.getFrustumPoints(splitsNear[i], splitsFar[i]));
-            m_transforms[i] = m_light.getProjectionMatrix() * m_light.getViewMatrix();
+            auto frustumPoints = camera.getFrustumPoints(m_splitIntervals.lo[i], m_splitIntervals.hi[i]);
+            m_lightTransforms[i] = computeSphereBoundTransform(dir, right, up, frustumPoints);
         }
 
-        m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_numCascades * sizeof(glm::mat4));
-    }
-
-    void CascadedShadowMapper::update(VkCommandBuffer cmdBuffer, unsigned int frameIndex)
-    {
-        m_transformsBuffer->updateDeviceBuffer(cmdBuffer, frameIndex);
-    }
-
-    void CascadedShadowMapper::draw(VkCommandBuffer commandBuffer, unsigned int frameIndex, std::function<void(VkCommandBuffer commandBuffer, uint32_t frameIdx, DescriptorSetGroup& descSets, VulkanPipeline* pipeline, uint32_t cascadeTransformOffset)> callback)
-    {
-        m_descGroup.setDynamicOffset(1, m_transformsBuffer->getDynamicOffset(frameIndex));
-
-        m_shadowPass->begin(commandBuffer);
-        callback(commandBuffer, frameIndex, m_descGroup, m_pipelines[0].get(), 0);
-
-        for (uint32_t i = 1; i < m_numCascades; i++)
-        {
-            vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-            callback(commandBuffer, frameIndex, m_descGroup, m_pipelines[i].get(), i);
-        }
-
-        m_shadowPass->end(commandBuffer);
-    }
-
-    glm::mat4 CascadedShadowMapper::getLightTransform(uint32_t index) const
-    {
-        return m_transforms[index];
-    }
-
-    const DirectionalLight* CascadedShadowMapper::getLight() const
-    {
-        return &m_light;
-    }
-
-    VkImage CascadedShadowMapper::getShadowMap(int idx)
-    {
-        return m_shadowPass->getRenderTarget(idx)->getHandle();
+        m_splitBuffer->updateStagingBuffer(&m_splitIntervals, sizeof(m_splitIntervals));
+        m_lightTransformBuffer->updateStagingBuffer(m_lightTransforms.data(), m_lightTransforms.size() * sizeof(glm::mat4));
     }
 }
-
-
-
-

@@ -1,32 +1,33 @@
 #version 450 core
 
-layout(location = 0) in vec3 eyePos;
-layout(location = 1) in vec3 eyeNormal;
-layout(location = 2) in vec3 worldPos;
+//layout(location = 0) in vec3 eyePos;
+//layout(location = 1) in vec3 eyeNormal;
+layout(location = 0) in vec3 worldPos;
+layout(location = 1) in vec3 eyePos;
 
 layout(location = 0) out vec4 finalColor;
 
+
 layout(set = 0, binding = 1) uniform LightTransforms
 {
-    mat4 LVP;
+    mat4 LVP[4];
 };
+layout(set = 1, binding = 0) uniform sampler2D shadowMap[4];
 
-layout(set = 0, binding = 2) uniform CameraParams
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
-};
+//layout(set = 0, binding = 2) uniform CameraParams
+//{
+//    mat4 V;
+//    mat4 P;
+//    vec2 screenSize;
+//    vec2 nearFar;
+//};
+//layout(set = 1, binding = 1) uniform sampler2D vsm;
 
-layout(set = 1, binding = 0) uniform sampler2D shadowMap;
-layout(set = 1, binding = 1) uniform sampler2D vsm;
-
-layout(push_constant) uniform PushConstant
-{
-    layout(offset = 0) mat4 LV;
-    layout(offset = 64) mat4 LP;
-} pushConst;
+//layout(push_constant) uniform PushConstant
+//{
+//    layout(offset = 0) mat4 LV;
+//    layout(offset = 64) mat4 LP;
+//} pushConst;
 
 #define PI         3.14159265358979323846
 #define InvPI      0.31830988618379067154
@@ -41,43 +42,101 @@ const vec4 lightDir = vec4(normalize(vec3(1.0f, 1.0f, 1.0f)), 0.0f);
 const vec3 ndcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 
-const vec4 splitNear = vec4(0.1f, 10.0f, 30.0f, 70.0f);
-const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
+layout(set = 0, binding = 2) uniform CsmParams
+{
+    vec4 splitNear;
+    vec4 splitFar;
+};
 
-float getShadowCoeff() {
-    vec4 lightSpacePos = LVP * vec4(worldPos, 1.0f);
+float pcf(in sampler2D shadowMapSampler, in vec3 ndcPos, int radius)
+{
+    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+
+    ivec2 shadowMapSize = textureSize(shadowMapSampler, 0);
+    vec2 texelSize = vec2(1.0f) / shadowMapSize;
+
+    float taps = (2 * radius + 1) * (2 * radius + 1);
+    float sum = 0.0f;
+    for (int i = -radius; i <= radius; i++)
+    {
+        for (int j = -radius; j <= radius; j++)
+        {
+            vec2 convCoord = texCoord + vec2(i, j) * texelSize;
+            float shadowDepth = texture(shadowMapSampler, convCoord).r;
+            if (ndcPos.z > shadowDepth)
+                sum += 1.0f;
+        }
+    }
+    return 1.0f - 0.9f * sum / taps;
+}
+
+float getPcfShadowCoeff() {
+    vec4 lightSpacePos = LVP[0] * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
     if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-        return 0.3f;
+        return 0.1f;
 
-    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-    float shadowMapDepth = texture(shadowMap, texCoord).r;
+    return pcf(shadowMap[0], ndcPos, 3);
+    //float shadowDepth = texture(sMap, projPos.xy * 0.5f + 0.5f).r;
+    //if (projPos.z > shadowDepth + bias)
+    //    return vec3(0.2f);
+    //return vec3(1.0f - 0.8f * sum / taps);
 
-    return shadowMapDepth < ndcPos.z ? 0.3f : 1.0f;
+    //return shadowMapDepth < ndcPos.z ? 0.1f : 1.0f;
 }
 
-float getVSMCoeff() {
-    vec4 lightViewPos = pushConst.LV * vec4(worldPos, 1.0f);
-    float lightViewDist = -lightViewPos.z;
+float getCsmShadowCoeff()
+{
+    vec4 lsPos0 = LVP[0] * vec4(worldPos, 1.0f);
+    vec4 lsPos1 = LVP[1] * vec4(worldPos, 1.0f);
+    vec4 lsPos2 = LVP[2] * vec4(worldPos, 1.0f);
+    vec4 lsPos3 = LVP[3] * vec4(worldPos, 1.0f);
 
-    vec4 clipPos = pushConst.LP * lightViewPos;
-    vec3 ndcPos = clipPos.xyz / clipPos.w;
+    vec4 eyeDist = abs(eyePos.zzzz);
+    vec4 weight = vec4(greaterThan(eyeDist, splitNear)) * vec4(lessThan(eyeDist, splitFar));
+
+    lsPos0 = lsPos0 * weight.x + lsPos1 * weight.y + lsPos2 * weight.z + lsPos3 * weight.w;
+    vec3 ndcPos = lsPos0.xyz / lsPos0.w;
+
+    int idx = 3;
+    if (weight.z == 1) idx = 2;
+    else if (weight.y == 1) idx = 1;
+    else if (weight.x == 1) idx = 0;
+
     if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-        return 0.2f;
+        return 0.1f;
 
     vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-    vec2 moments = texture(vsm, texCoord).rg;
+    float shadowMapDepth = texture(shadowMap[idx], texCoord).r;
 
-    if (lightViewDist <= moments.x)
-        return 1.0f;
+    ivec2 shadowMapSize = textureSize(shadowMap[0], 0);
+    vec2 texelSize = vec2(1.0f) / shadowMapSize;
 
-    float variance = moments.y - moments.x * moments.x;
-    variance = max(variance, 0.002);
-    float t = lightViewDist - moments.x;
-    float p = variance / (variance + t * t);
-    return p * 0.8f + 0.2f;
+    return shadowMapDepth < ndcPos.z ? 0.1f : 1.0f;
 }
+
+//float getVSMCoeff() {
+//    vec4 lightViewPos = pushConst.LV * vec4(worldPos, 1.0f);
+//    float lightViewDist = -lightViewPos.z;
+//
+//    vec4 clipPos = pushConst.LP * lightViewPos;
+//    vec3 ndcPos = clipPos.xyz / clipPos.w;
+//    if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
+//        return 0.2f;
+//
+//    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+//    vec2 moments = texture(vsm, texCoord).rg;
+//
+//    if (lightViewDist <= moments.x)
+//        return 1.0f;
+//
+//    float variance = moments.y - moments.x * moments.x;
+//    variance = max(variance, 0.002);
+//    float t = lightViewDist - moments.x;
+//    float p = variance / (variance + t * t);
+//    return p * 0.8f + 0.2f;
+//}
 
 // vec3 shadowEstimate(vec3 worldPos, float bias, in sampler2D sMap, in mat4 lvp)
 // {
@@ -160,17 +219,29 @@ float getVSMCoeff() {
 //         return vec3(0.15, 0.15, 0.75) * InvPI;
 // }
 
+vec3 getDebugColor() {
+    vec4 eyeDist = abs(eyePos.zzzz);
+    vec4 weight = vec4(greaterThan(eyeDist, splitNear)) * vec4(lessThan(eyeDist, splitFar));
+
+    if (weight.x == 1) return vec3(1.0f, 0.0f, 0.0f);
+    if (weight.y == 1) return vec3(1.0f, 1.0f, 0.0f);
+    if (weight.z == 1) return vec3(0.0f, 1.0f, 0.0f);
+    
+    return vec3(0.0f, 0.0f, 1.0f);
+}
 
 
 void main()
 {
-    vec3 normal = normalize(eyeNormal);
+    //vec3 normal = normalize(eyeNormal);
 
-    vec3 eyeLightDir = vec3(V * lightDir);
+    //vec3 eyeLightDir = vec3(V * lightDir);
 
-    float cosFactor = max(0.0f, dot(normal, eyeLightDir)) * 0.8f + 0.2f;
+    //float cosFactor = max(0.0f, dot(normal, eyeLightDir)) * 0.8f + 0.2f;
 
-    finalColor = vec4(1.0f * cosFactor * getVSMCoeff(), 0.0f, 0.0f, 1.0f);
+    float shadow = getCsmShadowCoeff();
+
+    finalColor = vec4(getDebugColor() * vec3(shadow), 1.0f);
 
     //vec3 eyeLightPos = (V * lightPos).xyz;
     //

@@ -1,9 +1,9 @@
 #include "Beckmann.hpp"
 
-#include "Math/Operations.hpp"
-#include "Math/CoordinateFrame.hpp"
+#include <CrispCore/Math/Operations.hpp>
+#include <CrispCore/Math/CoordinateFrame.hpp>
 
-namespace vesper
+namespace crisp
 {
     BeckmannDistribution::BeckmannDistribution(const VariantMap& params)
     {
@@ -43,7 +43,7 @@ namespace vesper
 
         return std::exp(-temp * temp) * InvPI / (alphaCosTheta2 * alphaCosTheta2);
     }
-    
+
     float BeckmannDistribution::G(const glm::vec3& wi, const glm::vec3& wo, const glm::vec3& m) const
     {
         return smithBeckmannG1(wi, m) * smithBeckmannG1(wo, m);

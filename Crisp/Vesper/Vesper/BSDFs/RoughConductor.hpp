@@ -5,7 +5,7 @@
 
 #include "MicrofacetDistributions/MicrofacetDistribution.hpp"
 
-namespace vesper
+namespace crisp
 {
     class RoughConductorBSDF : public BSDF
     {

@@ -2,11 +2,11 @@
 
 #include "Perspective.hpp"
 
-#include "Math/Operations.hpp"
+#include <CrispCore/Math/Operations.hpp>
 
 #include "ReconstructionFilters/GaussianFilter.hpp"
 
-namespace vesper
+namespace crisp
 {
     PerspectiveCamera::PerspectiveCamera(const VariantMap& params)
     {

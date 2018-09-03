@@ -1,6 +1,6 @@
 #include "ApplicationEnvironment.hpp"
 
-#include <iostream>
+#include "Core/LuaConfig.hpp"
 
 namespace crisp
 {
@@ -20,6 +20,8 @@ namespace crisp
 
         if (glfwInit() == GLFW_FALSE)
             logError("Could not initialize GLFW library!");
+
+
     }
 
     ApplicationEnvironment::~ApplicationEnvironment()

@@ -11,7 +11,7 @@
 #include <CrispCore/Event.hpp>
 #include "Scene.hpp"
 
-namespace vesper
+namespace crisp
 {
     class RayTracer;
 }
@@ -22,7 +22,7 @@ namespace crisp
     class Renderer;
     class RayTracedImage;
 
-    class RayTracerScene : public Scene
+    class RayTracerScene : public AbstractScene
     {
     public:
         RayTracerScene(Renderer* renderer, Application* app);
@@ -49,11 +49,11 @@ namespace crisp
         uint32_t m_numChannels;
         std::string m_projectName;
         std::unique_ptr<RayTracedImage> m_image;
-        tbb::concurrent_queue<vesper::RayTracerUpdate> m_updateQueue;
+        tbb::concurrent_queue<RayTracerUpdate> m_updateQueue;
         std::atomic<float> m_progress;
         std::atomic<float> m_timeSpentRendering;
 
-        std::unique_ptr<vesper::RayTracer> m_rayTracer;
+        std::unique_ptr<RayTracer> m_rayTracer;
         std::vector<float> m_imageData;
     };
 }

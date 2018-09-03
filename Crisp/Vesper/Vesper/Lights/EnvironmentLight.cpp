@@ -2,9 +2,9 @@
 
 #include <glm/gtx/norm.hpp>
 
-#include "Math/Operations.hpp"
-#include "Math/Distribution1D.hpp"
-#include "Math/Warp.hpp"
+#include <CrispCore/Math/Operations.hpp>
+#include <CrispCore/Math/Distribution1D.hpp>
+#include <CrispCore/Math/Warp.hpp>
 
 #include "Shapes/Shape.hpp"
 #include "Samplers/Sampler.hpp"
@@ -13,7 +13,7 @@
 
 #include "Samplers/SamplerFactory.hpp"
 
-namespace vesper
+namespace crisp
 {
     namespace
     {
@@ -53,7 +53,7 @@ namespace vesper
         m_scale = params.get<float>("scale", 1.0f);
 
 
-        m_probe = std::make_unique<MipMap<Spectrum>>(probeFilename);
+        m_probe = std::make_unique<MipMap<Spectrum>>("../../Resources/Textures/" + probeFilename);
 
         int w = m_probe->getWidth();
         int h = m_probe->getHeight();

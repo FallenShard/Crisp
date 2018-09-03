@@ -16,6 +16,7 @@ namespace crisp
     class VulkanBuffer;
     class VulkanSampler;
     class Texture;
+    class Material;
     class VulkanImageView;
     class VulkanPipeline;
 
@@ -25,27 +26,27 @@ namespace crisp
         RayTracedImage(uint32_t width, uint32_t height, VkFormat format, Renderer* renderer);
         ~RayTracedImage();
 
-        void postTextureUpdate(vesper::RayTracerUpdate rayTracerUpdate);
+        void postTextureUpdate(RayTracerUpdate rayTracerUpdate);
 
         void draw();
         void resize(int width, int height);
 
     private:
-        Renderer* m_renderer;
-        VulkanDevice*   m_device;
+        Renderer*     m_renderer;
+        VulkanDevice* m_device;
 
         std::unique_ptr<VulkanPipeline> m_pipeline;
-        DescriptorSetGroup m_descSets;
+        std::unique_ptr<Material> m_material;
 
         VkExtent3D m_extent;
         uint32_t   m_numChannels;
 
-        std::vector<std::pair<unsigned int, vesper::RayTracerUpdate>> m_textureUpdates;
+        std::vector<std::pair<unsigned int, RayTracerUpdate>> m_textureUpdates;
         std::unique_ptr<VulkanBuffer> m_stagingBuffer;
         unsigned int m_updatedImageIndex;
 
         std::unique_ptr<Texture>         m_texture;
-        std::unique_ptr<VulkanImageView> m_VulkanImageView;
+        std::unique_ptr<VulkanImageView> m_textureView;
         std::unique_ptr<VulkanSampler>   m_sampler;
 
         VkViewport   m_viewport;

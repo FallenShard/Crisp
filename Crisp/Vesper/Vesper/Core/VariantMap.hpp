@@ -1,17 +1,16 @@
 #pragma once
 
-#include <iostream>
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <variant>
+#include <iostream>
 
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/Math/Transform.hpp>
 
 #include "Spectrums/Spectrum.hpp"
-#include "Math/Transform.hpp"
 
-namespace vesper
+namespace crisp
 {
     class VariantMap
     {
@@ -72,6 +71,6 @@ namespace vesper
         }
 
     private:
-        std::map<std::string, VariantType> m_map;
+        std::unordered_map<std::string, VariantType> m_map;
     };
 }

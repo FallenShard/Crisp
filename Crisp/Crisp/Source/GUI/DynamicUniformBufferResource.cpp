@@ -1,19 +1,22 @@
 #include "DynamicUniformBufferResource.hpp"
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 #include "vulkan/VulkanDevice.hpp"
 #include "Renderer/UniformMultiBuffer.hpp"
 #include "Renderer/UniformBuffer.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp::gui
 {
     DynamicUniformBufferResource::DynamicUniformBufferResource(Renderer* renderer, const std::array<VkDescriptorSet, Renderer::NumVirtualFrames>& sets, uint32_t resourceSize, uint32_t descBinding)
         : m_renderer(renderer)
         , m_resourceSize(resourceSize)
-        , m_resourcesPerGranularity(UniformBuffer::SizeGranularity / m_resourceSize)
+        , m_bufferGranularity(renderer->getContext()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment)
+        , m_resourcesPerGranularity(m_bufferGranularity / m_resourceSize)
         , m_binding(descBinding)
         , m_sets(sets)
     {
+
         for (unsigned int i = 0; i < m_resourcesPerGranularity; i++)
         {
             m_idPool.insert(i); // unoccupied resource ids
@@ -23,7 +26,7 @@ namespace crisp::gui
         auto multiplier = (m_idPool.size() - 1) / m_resourcesPerGranularity + 1;
 
         // Per-frame buffers and descriptor sets, because each command buffer in flight may hold onto its own version of data/desc set
-        m_buffer = std::make_unique<UniformMultiBuffer>(renderer, UniformBuffer::SizeGranularity * multiplier, UniformBuffer::SizeGranularity);
+        m_buffer = std::make_unique<UniformMultiBuffer>(renderer, m_bufferGranularity * multiplier, m_bufferGranularity);
 
         for (unsigned int i = 0; i < Renderer::NumVirtualFrames; i++)
         {
@@ -52,7 +55,7 @@ namespace crisp::gui
             auto numResources = m_numRegistered + m_idPool.size();
             auto multiplier = (numResources - 1) / m_resourcesPerGranularity + 1;
 
-            m_buffer->resize(UniformBuffer::SizeGranularity * multiplier);
+            m_buffer->resize(m_bufferGranularity * multiplier);
             for (auto& v : m_isSetUpdated) v = false;
         }
 
@@ -88,7 +91,7 @@ namespace crisp::gui
 
     uint32_t DynamicUniformBufferResource::getDynamicOffset(uint32_t resourceId) const
     {
-        return static_cast<uint32_t>(UniformBuffer::SizeGranularity * (resourceId / m_resourcesPerGranularity));
+        return static_cast<uint32_t>(m_bufferGranularity * (resourceId / m_resourcesPerGranularity));
     }
 
     uint32_t DynamicUniformBufferResource::getPushConstantValue(uint32_t resourceId) const
@@ -101,7 +104,7 @@ namespace crisp::gui
         VkDescriptorBufferInfo transBufferInfo = {};
         transBufferInfo.buffer = m_buffer->get(index);
         transBufferInfo.offset = 0;
-        transBufferInfo.range  = UniformBuffer::SizeGranularity; // Because we use UNIFORM_BUFFER_DYNAMIC, it stays the same size
+        transBufferInfo.range  = m_bufferGranularity;
 
         VkWriteDescriptorSet descWrite = {};
         descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

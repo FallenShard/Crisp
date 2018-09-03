@@ -2,9 +2,9 @@
 
 #include <glm/glm.hpp>
 
-#include "Math/CoordinateFrame.hpp"
+#include <CrispCore/Math/CoordinateFrame.hpp>
 
-namespace vesper
+namespace crisp
 {
     class Shape;
 
@@ -15,7 +15,7 @@ namespace vesper
         glm::vec2 uv;               // UV texture coordinates of the hit
 
         CoordinateFrame shFrame;    // Shading frame, formed by interpolated normal
-        CoordinateFrame geoFrame;   // Geometric frame, formed from surface orientation 
+        CoordinateFrame geoFrame;   // Geometric frame, formed from surface orientation
 
         const Shape* shape;         // Pointer to the underlying shape
 

@@ -11,6 +11,7 @@
 #include "RayTracerGui.hpp"
 #include "RaytracedImage.hpp"
 #include "GUI/Form.hpp"
+#include "vulkan/VulkanImageView.hpp"
 
 namespace crisp
 {
@@ -22,15 +23,16 @@ namespace crisp
         , m_app(app)
     {
         m_image = std::make_unique<RayTracedImage>(512, 512, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer);
-        m_rayTracer = std::make_unique<vesper::RayTracer>();
+        m_rayTracer = std::make_unique<RayTracer>();
         //m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
-        m_rayTracer->setProgressUpdater([this](vesper::RayTracerUpdate&& update)
+        m_rayTracer->setProgressUpdater([this](RayTracerUpdate&& update)
         {
             m_progress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
             m_timeSpentRendering = update.totalTimeSpentRendering;
             m_updateQueue.emplace(std::move(update));
             rayTracerProgressed(m_progress, m_timeSpentRendering);
         });
+        m_renderer->setSceneImageView(nullptr);
 
         gui::RayTracerGui gui;
         m_app->getForm()->add(gui.buildSceneOptions(m_app->getForm(), this));
@@ -48,11 +50,11 @@ namespace crisp
         m_image->resize(width, height);
     }
 
-    void RayTracerScene::update(float dt)
+    void RayTracerScene::update(float)
     {
         while (!m_updateQueue.empty())
         {
-            vesper::RayTracerUpdate update;
+            RayTracerUpdate update;
             if (m_updateQueue.try_pop(update))
             {
                 m_image->postTextureUpdate(update);
@@ -83,7 +85,7 @@ namespace crisp
 
     void RayTracerScene::openSceneFileFromDialog()
     {
-        auto openedFile = FileUtils::openFileDialog();
+        auto openedFile = fileutils::openFileDialog();
         if (openedFile == "")
             return;
 
@@ -103,7 +105,7 @@ namespace crisp
     void RayTracerScene::writeImageToExr()
     {
         std::string outputDirectory = "Output";
-        FileUtils::createDirectory(outputDirectory);
+        fileutils::createDirectory(outputDirectory);
         OpenEXRWriter writer;
         glm::ivec2 imageSize = m_rayTracer->getImageSize();
         std::cout << "Writing EXR image..." << std::endl;
@@ -111,7 +113,7 @@ namespace crisp
         std::string fileName = outputDirectory + "/" + m_projectName + ".exr";
 
         int i = 0;
-        while (FileUtils::fileExists(fileName))
+        while (fileutils::fileExists(fileName))
             fileName = outputDirectory + "/" + m_projectName + "_" + std::to_string(++i) + ".exr";
 
         writer.write(fileName, m_imageData.data(), imageSize.x, imageSize.y, true);
@@ -120,7 +122,7 @@ namespace crisp
     void RayTracerScene::openSceneFile(const std::string& filename)
     {
         m_renderer->finish();
-        m_projectName = FileUtils::getFileNameFromPath(filename);
+        m_projectName = fileutils::getFileNameFromPath(filename);
         m_rayTracer->initializeScene(filename);
 
         glm::ivec2 imageSize = m_rayTracer->getImageSize();
@@ -131,6 +133,6 @@ namespace crisp
 
     void RayTracerScene::createGui()
     {
-        gui::Form* form = m_app->getForm();
+        //gui::Form* form = m_app->getForm();
     }
 }

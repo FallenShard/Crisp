@@ -87,13 +87,14 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;$(SolutionDir)CrispCore\;</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>-Bv</AdditionalOptions>
+      <AdditionalOptions>
+      </AdditionalOptions>
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -119,13 +120,14 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Vesper\;$(SolutionDir)CrispCore\;</AdditionalIncludeDirectories>
-      <AdditionalOptions>-Bv</AdditionalOptions>
+      <AdditionalOptions>
+      </AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -185,16 +187,6 @@
     <ClInclude Include="Vesper\Lights\Light.hpp" />
     <ClInclude Include="Vesper\Lights\LightFactory.hpp" />
     <ClInclude Include="Vesper\Lights\PointLight.hpp" />
-    <ClInclude Include="Vesper\Math\BoundingBox.hpp" />
-    <ClInclude Include="Vesper\Math\Constants.hpp" />
-    <ClInclude Include="Vesper\Math\CoordinateFrame.hpp" />
-    <ClInclude Include="Vesper\Math\Distribution1D.hpp" />
-    <ClInclude Include="Vesper\Math\Distribution2D.hpp" />
-    <ClInclude Include="Vesper\Math\Octree.hpp" />
-    <ClInclude Include="Vesper\Math\Operations.hpp" />
-    <ClInclude Include="Vesper\Math\Ray.hpp" />
-    <ClInclude Include="Vesper\Math\Transform.hpp" />
-    <ClInclude Include="Vesper\Math\Warp.hpp" />
     <ClInclude Include="Vesper\Media\Homogeneous.hpp" />
     <ClInclude Include="Vesper\Media\Medium.hpp" />
     <ClInclude Include="Vesper\Media\MediumFactory.hpp" />
@@ -262,9 +254,6 @@
     <ClCompile Include="Vesper\Lights\EnvironmentLight.cpp" />
     <ClCompile Include="Vesper\Lights\LightFactory.cpp" />
     <ClCompile Include="Vesper\Lights\PointLight.cpp" />
-    <ClCompile Include="Vesper\Math\Distribution1D.cpp" />
-    <ClCompile Include="Vesper\Math\Distribution2D.cpp" />
-    <ClCompile Include="Vesper\Math\Warp.cpp" />
     <ClCompile Include="Vesper\Media\Homogeneous.cpp" />
     <ClCompile Include="Vesper\Media\Medium.cpp" />
     <ClCompile Include="Vesper\Media\MediumFactory.cpp" />

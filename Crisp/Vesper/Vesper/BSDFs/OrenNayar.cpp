@@ -6,7 +6,7 @@
 //
 //#include "Textures/TextureFactory.hpp"
 //
-//namespace vesper
+//namespace crisp
 //{
 //    OrenNayarBSDF::OrenNayarBSDF(const VariantMap& params)
 //    {
@@ -52,7 +52,7 @@
 //        bsdfSample.measure = Measure::SolidAngle;
 //        bsdfSample.sampledType = Type::Diffuse;
 //        bsdfSample.eta = 1.0f;
-//        bsdfSample.wo = Warp::squareToCosineHemisphere(sampler.next2D());
+//        bsdfSample.wo = warp::squareToCosineHemisphere(sampler.next2D());
 //
 //        // eval() * cosThetaO / pdf() = albedo * invPI / (cosThetaI * invPI) * cosThetaI(subtension)
 //        // account for cosine subtension = just albedo

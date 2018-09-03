@@ -11,7 +11,7 @@
 #include "CheckerboardTexture.hpp"
 #include "UVTexture.hpp"
 
-namespace vesper
+namespace crisp
 {
     class TextureFactory
     {

@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "Math/Headers.hpp"
+#include <CrispCore/Math/Headers.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 namespace crisp
@@ -18,12 +18,12 @@ namespace crisp
 
         virtual bool update(float dt) = 0;
         virtual void rotate(float dx, float dy) = 0;
-        
+
         virtual void walk(float dt) = 0;
         virtual void strafe(float dt) = 0;
         virtual void lift(float dt) = 0;
 
-        void setupProjection(float fovY, float aspectRatio, float zNear = 0.1f, float zFar = 1000.0f);
+        void setupProjection(float fovY, float aspectRatio, float zNear = 1.0f, float zFar = 1000.0f);
         const glm::mat4& getProjectionMatrix() const;
 
         void setFov(float fovY);
@@ -63,7 +63,7 @@ namespace crisp
         float m_zNear;
         float m_zFar;
         glm::mat4 m_P;
-        
+
         glm::vec3 m_position;
         glm::vec3 m_look;
         glm::vec3 m_right;

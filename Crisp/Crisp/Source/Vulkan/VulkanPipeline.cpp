@@ -7,9 +7,10 @@
 
 namespace crisp
 {
-    VulkanPipeline::VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout)
+    VulkanPipeline::VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags)
         : VulkanResource(device, pipelineHandle)
         , m_pipelineLayout(std::move(pipelineLayout))
+        , m_dynamicStateFlags(dynamicStateFlags)
     {
     }
 

@@ -3,7 +3,7 @@
 #include "Camera.hpp"
 #include "Perspective.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<Camera> CameraFactory::create(std::string type, VariantMap parameters)
     {

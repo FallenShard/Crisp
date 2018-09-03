@@ -1,6 +1,6 @@
 #include "Medium.hpp"
 
-namespace vesper
+namespace crisp
 {
     Medium::Medium()
     {

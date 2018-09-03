@@ -10,7 +10,7 @@
 namespace crisp
 {
     GuiRenderPass::GuiRenderPass(Renderer* renderer)
-        : VulkanRenderPass(renderer)
+        : VulkanRenderPass(renderer, true, 1)
     {
         m_clearValues.resize(2);
         m_clearValues[0].color        = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -23,7 +23,7 @@ namespace crisp
             .addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
             .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
             .setAttachmentLayouts(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-            .addSubpass()
+            .setNumSubpasses(1)
             .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             .setDepthAttachmentRef(0, 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,

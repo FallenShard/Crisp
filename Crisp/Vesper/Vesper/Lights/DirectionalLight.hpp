@@ -2,7 +2,7 @@
 
 #include "Light.hpp"
 
-namespace vesper
+namespace crisp
 {
     class DirectionalLight : public Light
     {

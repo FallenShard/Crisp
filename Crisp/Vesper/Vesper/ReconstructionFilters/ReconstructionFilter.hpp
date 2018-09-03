@@ -2,7 +2,7 @@
 
 #include <array>
 
-namespace vesper
+namespace crisp
 {
     class ReconstructionFilter
     {

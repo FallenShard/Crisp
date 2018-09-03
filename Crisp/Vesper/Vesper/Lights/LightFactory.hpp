@@ -8,7 +8,7 @@
 
 #include "Light.hpp"
 
-namespace vesper
+namespace crisp
 {
     class LightFactory
     {

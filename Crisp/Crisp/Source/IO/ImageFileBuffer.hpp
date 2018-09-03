@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 #include <vector>
 
 namespace crisp
@@ -8,7 +8,7 @@ namespace crisp
     class ImageFileBuffer
     {
     public:
-        ImageFileBuffer(const std::string& fileName, int requestedComponents = 4, bool flipY = false);
+        ImageFileBuffer(const std::filesystem::path& filePath, int requestedComponents = 4, bool flipY = false);
 
         const unsigned char* getData() const;
         unsigned int getWidth() const;

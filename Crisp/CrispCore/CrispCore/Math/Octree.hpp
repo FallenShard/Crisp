@@ -5,7 +5,7 @@
 #include <vector>
 #include "BoundingBox.hpp"
 
-namespace vesper
+namespace crisp
 {
     template <typename T>
     struct OctNode
@@ -73,7 +73,7 @@ namespace vesper
             bool gtY = itemBoundingBox.max.y > mid.y;
             bool ltZ = itemBoundingBox.min.z < mid.z;
             bool gtZ = itemBoundingBox.max.z > mid.z;
-            bool over[8] = 
+            bool over[8] =
             {
                 ltX && ltY && ltZ, ltX && ltY && gtZ,
                 ltX && gtY && ltZ, ltX && gtY && gtZ,

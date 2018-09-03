@@ -9,7 +9,7 @@
 #include "EmsDirectLighting.hpp"
 #include "MatsDirectLighting.hpp"
 
-namespace vesper
+namespace crisp
 {
     std::unique_ptr<Integrator> IntegratorFactory::create(std::string type, VariantMap parameters)
     {

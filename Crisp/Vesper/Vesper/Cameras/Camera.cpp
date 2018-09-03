@@ -2,7 +2,7 @@
 
 
 
-namespace vesper
+namespace crisp
 {
     glm::ivec2 Camera::getImageSize() const
     {

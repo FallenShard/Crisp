@@ -2,7 +2,7 @@
 
 #include "Shapes/Shape.hpp"
 
-namespace vesper
+namespace crisp
 {
     class Sphere : public Shape
     {

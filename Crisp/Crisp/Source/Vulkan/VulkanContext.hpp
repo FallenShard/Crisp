@@ -58,6 +58,7 @@ namespace crisp
 
         const VkPhysicalDeviceProperties& getPhysicalDeviceProperties() const;
         const VkPhysicalDeviceFeatures&   getPhysicalDeviceFeatures() const;
+        const VkPhysicalDeviceLimits&     getPhysicalDeviceLimits() const;
 
     private:
         VkInstance               m_instance;

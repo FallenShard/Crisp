@@ -2,7 +2,7 @@
 
 #include "Texture.hpp"
 
-namespace vesper
+namespace crisp
 {
     template <typename T>
     class ConstantTexture : public Texture<T>

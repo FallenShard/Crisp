@@ -7,9 +7,12 @@
 
 #include <vulkan/vulkan.h>
 #include "vulkan/VulkanFormatTraits.hpp"
+#include "Vulkan/VulkanPipeline.hpp"
 
 namespace crisp
 {
+    class VulkanDevice;
+
     namespace internal
     {
         template <uint32_t loc, uint32_t binding, int offset, VkFormat format, VkFormat... formats>
@@ -85,6 +88,7 @@ namespace crisp
 
         PipelineBuilder& setPolygonMode(VkPolygonMode polygonMode);
         PipelineBuilder& setFrontFace(VkFrontFace frontFace);
+        PipelineBuilder& setCullMode(VkCullModeFlags cullMode);
         PipelineBuilder& setLineWidth(float lineWidth);
 
         PipelineBuilder& setViewport(VkViewport&& viewport);
@@ -101,7 +105,8 @@ namespace crisp
 
         PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
 
-        VkPipeline create(VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
+        std::unique_ptr<VulkanPipeline> create(VulkanDevice* device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
+        PipelineDynamicStateFlags createDynamicStateFlags() const;
 
     private:
         VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();

@@ -7,9 +7,7 @@
 #include "Lights/PointLight.hpp"
 #include "BSDFs/BSDF.hpp"
 
-#include "Math/Octree.hpp"
-
-namespace vesper
+namespace crisp
 {
     Scene::Scene()
         : m_device(rtcNewDevice(nullptr))

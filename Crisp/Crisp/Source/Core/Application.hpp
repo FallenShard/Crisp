@@ -14,8 +14,6 @@ namespace crisp
     class Window;
     class InputDispatcher;
     class Renderer;
-    class BackgroundImage;
-    class RayTracedImage;
     class SceneContainer;
 
     namespace gui
@@ -27,7 +25,7 @@ namespace crisp
     {
     public:
         static constexpr const char* Title = "Crisp";
-        static constexpr double TimePerFrame = 1.0 / 60.0;
+        static constexpr double TimePerFrame = 1.0 / 144.0;
         static constexpr int DefaultWindowWidth  = 1280;
         static constexpr int DefaultWindowHeight = 720;
 

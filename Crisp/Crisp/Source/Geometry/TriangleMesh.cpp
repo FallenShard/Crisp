@@ -40,15 +40,15 @@ namespace crisp
         }
     }
 
-    TriangleMesh::TriangleMesh(std::string filename)
-        : m_meshName(filename.substr(0, filename.length() - 4))
+    TriangleMesh::TriangleMesh(const std::filesystem::path& path)
+        : m_meshName(path.filename().stem().string())
     {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
         std::vector<glm::vec2> texCoords;
 
-        vesper::MeshLoader meshLoader;
-        meshLoader.load(filename, positions, normals, texCoords, m_faces);
+        MeshLoader meshLoader;
+        meshLoader.load(path, positions, normals, texCoords, m_faces);
         m_numVertices = static_cast<uint32_t>(positions.size());
 
         if (normals.empty())
@@ -59,20 +59,20 @@ namespace crisp
         insertAttribute<VertexAttribute::TexCoord>(m_vertexAttributes, texCoords);
     }
 
-    TriangleMesh::TriangleMesh(const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes)
-        : m_meshName(filename.substr(0, filename.length() - 4))
+    TriangleMesh::TriangleMesh(const std::filesystem::path& path, std::initializer_list<VertexAttribute> vertexAttributes)
+        : m_meshName(path.filename().stem().string())
         , m_interleavedFormat(vertexAttributes)
     {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
         std::vector<glm::vec2> texCoords;
 
-        vesper::MeshLoader meshLoader;
-        meshLoader.load(filename, positions, normals, texCoords, m_faces);
+        MeshLoader meshLoader;
+        meshLoader.load(path, positions, normals, texCoords, m_faces);
         m_numVertices = static_cast<uint32_t>(positions.size());
         if (m_numVertices == 0)
         {
-            logError("Positions could not be loaded for mesh file ", filename);
+            logError("Positions could not be loaded for mesh file ", path);
             return;
         }
 
@@ -210,30 +210,45 @@ namespace crisp
         std::vector<glm::vec3> tangents(positions.size(), glm::vec3(0.0f));
         std::vector<glm::vec3> bitangents(positions.size(), glm::vec3(0.0f));
 
-        for (uint32_t i = 0; i < faces.size(); i++)
+        for (const auto& face : faces)
         {
-            glm::uvec3 face = faces[i];
+            const glm::vec3& v1 = positions[face[0]];
+            const glm::vec3& v2 = positions[face[1]];
+            const glm::vec3& v3 = positions[face[2]];
 
-            const glm::vec3& p0 = positions[face[0]];
-            const glm::vec3& p1 = positions[face[1]];
-            const glm::vec3& p2 = positions[face[2]];
+            const glm::vec2& w1 = texCoords[face[0]];
+            const glm::vec2& w2 = texCoords[face[1]];
+            const glm::vec2& w3 = texCoords[face[2]];
 
-            const glm::vec2& tc0 = texCoords[face[0]];
-            const glm::vec2& tc1 = texCoords[face[1]];
-            const glm::vec2& tc2 = texCoords[face[2]];
+            //glm::vec3 e1 = p1 - p0;
+            //glm::vec3 e2 = p2 - p0;
+            //
+            //glm::vec2 s = tc1 - tc0;
+            //glm::vec2 t = tc2 - tc0;
+            //float r = 1.0f / (s.x * t.y - s.y * t.x);
+            //
+            //glm::vec3 sDir = glm::vec3(t.y * e1.x - t.x * e2.x, t.y * e1.y - t.x * e2.y,
+            //    t.y * e1.z - t.x * e2.z) * r;
+            //
+            //glm::vec3 tDir = glm::vec3(s.x * e2.x - s.y * e1.x, s.x * e2.y - s.y * e1.y,
+            //    s.x * e2.z - s.y * e1.z) * r;
+            float x1 = v2.x - v1.x;
+            float x2 = v3.x - v1.x;
+            float y1 = v2.y - v1.y;
+            float y2 = v3.y - v1.y;
+            float z1 = v2.z - v1.z;
+            float z2 = v3.z - v1.z;
 
-            glm::vec3 e1 = p1 - p0;
-            glm::vec3 e2 = p2 - p0;
+            float s1 = w2.x - w1.x;
+            float s2 = w3.x - w1.x;
+            float t1 = w2.y - w1.y;
+            float t2 = w3.y - w1.y;
 
-            glm::vec2 s = tc1 - tc0;
-            glm::vec2 t = tc2 - tc0;
-            float r = 1.0f / (s.x * t.y - s.y * t.x);
-
-            glm::vec3 sDir((t.y * e1.x - t.x * e2.x) * r, (t.y * e1.y - t.x * e2.y) * r,
-                (t.y * e1.z - t.x * e2.z) * r);
-
-            glm::vec3 tDir((s.x * e2.x - s.y * e1.x) * r, (s.x * e2.y - s.y * e1.y) * r,
-                (s.x * e2.z - s.y * e1.z) * r);
+            float r = 1.0F / (s1 * t2 - s2 * t1);
+            glm::vec3 sDir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+                (t2 * z1 - t1 * z2) * r);
+            glm::vec3 tDir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+                (s1 * z2 - s2 * z1) * r);
 
             tangents[face[0]]   += sDir;
             tangents[face[1]]   += sDir;
@@ -249,7 +264,7 @@ namespace crisp
             const glm::vec3& t = tangents[i];
 
             tangents[i]   = glm::normalize(t - n * glm::dot(n, t));
-            bitangents[i] = glm::normalize(glm::cross(n, t));
+            //bitangents[i] = glm::normalize(glm::cross(n, t));
         }
 
         return std::make_pair(tangents, bitangents);
