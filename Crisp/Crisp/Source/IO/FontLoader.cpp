@@ -39,7 +39,7 @@ namespace crisp
         FT_Face face;
         if (FT_New_Face(m_context, fontPath.string().c_str(), 0, &face))
         {
-            logError("Failed to create new face: ", fontPath.string().c_str());
+            logError("Failed to create new face: {}\n", fontPath.string());
             return nullptr;
         }
 

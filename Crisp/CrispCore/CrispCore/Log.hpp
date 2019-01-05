@@ -3,61 +3,42 @@
 #include "ConsoleUtils.hpp"
 #include <iostream>
 
+#define FMT_HEADER_ONLY
+#include "fmt/format.h"
+
 namespace crisp
 {
-    enum class Severity
+    template <typename StringType, typename... Args>
+    inline static void logInfo(StringType&& string, Args&&... args)
     {
-        Info,
-        Debug,
-        Warning,
-        Error,
-        Fatal
-    };
-
-    namespace internal
-    {
-        template <Severity sev> struct SeverityConsoleColor { };
-        template <> struct SeverityConsoleColor<Severity::Info>    { static constexpr ConsoleColor value = ConsoleColor::LightGreen; };
-        template <> struct SeverityConsoleColor<Severity::Debug>   { static constexpr ConsoleColor value = ConsoleColor::LightCyan; };
-        template <> struct SeverityConsoleColor<Severity::Warning> { static constexpr ConsoleColor value = ConsoleColor::Yellow; };
-        template <> struct SeverityConsoleColor<Severity::Error>   { static constexpr ConsoleColor value = ConsoleColor::LightRed; };
-        template <> struct SeverityConsoleColor<Severity::Fatal>   { static constexpr ConsoleColor value = ConsoleColor::LightMagenta; };
-
-        template <Severity severity, typename... Args>
-        inline static void log(Args&&... args)
-        {
-            ConsoleColorizer colorizer(internal::SeverityConsoleColor<severity>::value);
-            (std::cout << ... << args) << '\n';
-        }
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
     }
 
-    template <typename... Args>
-    inline static void logInfo(Args&&... args)
+    template <typename StringType, typename... Args>
+    inline static void logDebug(StringType&& string, Args&&... args)
     {
-        internal::log<Severity::Info>(std::forward<Args>(args)...);
+        ConsoleColorizer colorizer(ConsoleColor::LightCyan);
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
     }
 
-    template <typename... Args>
-    inline static void logDebug(Args&&... args)
+    template <typename StringType, typename... Args>
+    inline static void logWarning(StringType&& string, Args&&... args)
     {
-        internal::log<Severity::Debug>(std::forward<Args>(args)...);
+        ConsoleColorizer colorizer(ConsoleColor::Yellow);
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
     }
 
-    template <typename... Args>
-    inline static void logWarning(Args&&... args)
+    template <typename StringType, typename... Args>
+    inline static void logError(StringType&& string, Args&&... args)
     {
-        internal::log<Severity::Warning>(std::forward<Args>(args)...);
+        ConsoleColorizer colorizer(ConsoleColor::LightRed);
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
     }
 
-    template <typename... Args>
-    inline static void logError(Args&&... args)
+    template <typename StringType, typename... Args>
+    inline static void logFatal(StringType&& string, Args&&... args)
     {
-        internal::log<Severity::Error>(std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    inline static void logFatal(Args&&... args)
-    {
-        internal::log<Severity::Fatal>(std::forward<Args>(args)...);
+        ConsoleColorizer colorizer(ConsoleColor::LightMagenta);
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
     }
 }

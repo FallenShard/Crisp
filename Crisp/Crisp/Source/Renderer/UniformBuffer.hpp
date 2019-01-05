@@ -43,4 +43,10 @@ namespace crisp
 
         uint32_t m_framesToUpdateOnGpu;
     };
+
+    struct DynamicBufferInfo
+    {
+        const UniformBuffer& buffer;
+        uint32_t subOffset;
+    };
 }

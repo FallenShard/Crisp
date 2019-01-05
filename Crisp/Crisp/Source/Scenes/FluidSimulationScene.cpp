@@ -6,7 +6,6 @@
 
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
-#include "Core/InputDispatcher.hpp"
 #include "Camera/CameraController.hpp"
 
 #include "Renderer/RenderPasses/SceneRenderPass.hpp"
@@ -35,7 +34,7 @@ namespace crisp
         m_renderer->setSceneImageView(m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames));
 
         m_fluidSimulation = std::make_unique<SPH>(m_renderer);
-        m_app->getWindow()->getInputDispatcher()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+        m_app->getWindow()->getEventHub().keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
         auto fluidPanel = std::make_unique<gui::FluidSimulationPanel>(app->getForm(), m_fluidSimulation.get());
         m_app->getForm()->add(std::move(fluidPanel));
@@ -56,7 +55,7 @@ namespace crisp
 
     FluidSimulationScene::~FluidSimulationScene()
     {
-        m_app->getWindow()->getInputDispatcher()->keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+        m_app->getWindow()->getEventHub().keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
         m_app->getForm()->remove("fluidSimulationPanel");
     }
 

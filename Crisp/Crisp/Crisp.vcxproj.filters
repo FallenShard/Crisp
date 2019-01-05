@@ -24,9 +24,6 @@
     <ClCompile Include="Source\Vulkan\VulkanDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\InputDispatcher.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\GUI\Button.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -379,15 +376,15 @@
     <ClCompile Include="Source\Core\LuaMachine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\EventHub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Vulkan\VulkanDevice.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Core\InputDispatcher.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\GUI\Button.hpp">
@@ -804,6 +801,12 @@
     <ClInclude Include="Source\Core\LuaConfig.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\EventHub.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Geometry\VertexLayout.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Core\StringUtils.hpp" />
@@ -866,6 +869,8 @@
     <None Include="Source\Shaders\terrain-frag.glsl" />
     <None Include="Source\Shaders\grass-vert.glsl" />
     <None Include="Source\Shaders\grass-frag.glsl" />
+    <None Include="Source\Shaders\diffuse-vert.glsl" />
+    <None Include="Source\Shaders\diffuse-frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="Resources\VesperScenes\ajax-normals.xml" />

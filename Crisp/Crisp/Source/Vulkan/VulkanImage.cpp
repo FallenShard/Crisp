@@ -201,7 +201,7 @@ namespace crisp
         else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
 
-        logError("Unsupported layout transition: ", oldLayout, " to ", oldLayout, "!");
+        logError("Unsupported layout transition: {} to {}!\n", oldLayout, newLayout);
         return { 0, 0 };
     }
 }

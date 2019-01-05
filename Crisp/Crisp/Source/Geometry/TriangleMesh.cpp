@@ -72,7 +72,7 @@ namespace crisp
         m_numVertices = static_cast<uint32_t>(positions.size());
         if (m_numVertices == 0)
         {
-            logError("Positions could not be loaded for mesh file ", path);
+            logError("Vertices could not be loaded for mesh file {}\n", path.string());
             return;
         }
 
@@ -264,7 +264,7 @@ namespace crisp
             const glm::vec3& t = tangents[i];
 
             tangents[i]   = glm::normalize(t - n * glm::dot(n, t));
-            //bitangents[i] = glm::normalize(glm::cross(n, t));
+            bitangents[i] = glm::normalize(glm::cross(n, t));
         }
 
         return std::make_pair(tangents, bitangents);

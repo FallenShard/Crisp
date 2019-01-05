@@ -306,7 +306,7 @@ namespace crisp
         {
             int code = luaL_dostring(L, configContent);
             if (code != 0)
-                logError("Error: ", lua_tostring(L, -1));
+                logError("Error: {}\n", lua_tostring(L, -1));
         }
 
         template <typename T>
@@ -543,7 +543,7 @@ namespace crisp
         //float b = table->get<float>("b").value_or(0.0f);
 
 
-        logInfo("Made it!");
+        //logInfo("Made it!");
     }
 
     LuaMachine::~LuaMachine()

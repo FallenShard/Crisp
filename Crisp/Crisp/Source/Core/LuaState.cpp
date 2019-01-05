@@ -16,7 +16,7 @@ namespace crisp
             for (int i = 1; i <= numArgs; i++)
             {
                 lua_Number x = lua_tonumber(state, i);
-                logDebug("I was called from Lua! Value: ", x);
+                //logDebug("I was called from Lua! Value: ", x);
             }
 
             return 0;
@@ -137,7 +137,7 @@ namespace crisp
         int status = luaL_dofile(m_state, (ScriptFolder / "callhost.lua").string().c_str());
         if (status != 0)
         {
-            logError("Failed to load Lua script: ", lua_tostring(m_state, -1));
+            logError("Failed to load Lua script: {}\n", lua_tostring(m_state, -1));
             return;
         }
 

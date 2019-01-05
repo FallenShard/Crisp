@@ -17,7 +17,8 @@ namespace crisp
 
         VkDeviceSize getSize() const;
 
-        void updateFromHost(const void* srcData, VkDeviceSize size, VkDeviceSize offset = 0);
+        void updateFromHost(const void* srcData, VkDeviceSize size, VkDeviceSize offset);
+        void updateFromHost(const void* srcData);
 
         template <typename T>
         void updateFromHost(const std::vector<T>& buffer)

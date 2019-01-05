@@ -38,7 +38,7 @@ namespace crisp::fileutils
         }
         else
         {
-            logError("Could not open file: ", filePath);
+            logError("Could not open file: {}\n", filePath);
         }
 
         return source;

@@ -72,6 +72,8 @@ namespace crisp
         void bindAndDraw(VkCommandBuffer commandBuffer) const;
         void bindVertexBuffers(VkCommandBuffer cmdBuffer) const;
 
+        inline VulkanBuffer* getVertexBuffer() const { return m_vertexBuffers[0].get(); }
+
         inline VulkanBuffer* getIndexBuffer() const { return m_indexBuffer.get(); }
         inline uint32_t getIndexCount() const { return m_indexCount; }
 

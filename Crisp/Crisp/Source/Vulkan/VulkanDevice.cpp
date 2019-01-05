@@ -80,8 +80,17 @@ namespace crisp
 
     void VulkanDevice::flushMappedRanges()
     {
+        auto atomSize = m_context->getPhysicalDeviceLimits().nonCoherentAtomSize;
         if (!m_unflushedRanges.empty())
         {
+            for (auto& range : m_unflushedRanges)
+            {
+                if (range.size != VK_WHOLE_SIZE)
+                    range.size = ((range.size - 1) / atomSize + 1) * atomSize;
+
+                range.offset = (range.offset / atomSize) * atomSize;
+            }
+
             vkFlushMappedMemoryRanges(m_device, static_cast<uint32_t>(m_unflushedRanges.size()), m_unflushedRanges.data());
             m_unflushedRanges.clear();
         }
@@ -106,7 +115,7 @@ namespace crisp
         return fence;
     }
 
-    VulkanMemoryHeap* VulkanDevice::getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
+    VulkanMemoryHeap* VulkanDevice::getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
     {
         std::optional<uint32_t> supportedHeapIndex = m_context->findMemoryType(memoryTypeBits, flags);
 

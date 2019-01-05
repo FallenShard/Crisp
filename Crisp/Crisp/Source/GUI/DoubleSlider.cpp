@@ -265,6 +265,6 @@ namespace crisp::gui
         double valueSpan = m_maxValue - m_minValue;
 
         double rawValue = m_minValue + t * valueSpan;
-        return rawValue + m_increment - std::fmod(rawValue, m_increment);
+        return rawValue +m_increment - std::fmod(rawValue, m_increment);
     }
 }

@@ -44,7 +44,7 @@ namespace crisp
         void printMemoryStatus();
         DeviceMemoryMetrics getDeviceMemoryUsage();
 
-        VulkanMemoryHeap* getHeapFromMemProps(VkBuffer buffer, VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
+        VulkanMemoryHeap* getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
         VulkanMemoryHeap* getDeviceBufferHeap() const;
         VulkanMemoryHeap* getDeviceImageHeap() const;
         VulkanMemoryHeap* getStagingBufferHeap() const;

@@ -2,12 +2,12 @@
 
 #define NOMINMAX
 
-#include <memory>
+#include "ApplicationEnvironment.hpp"
+#include "Core/FrameTimeLogger.hpp"
 
 #include <CrispCore/Timer.hpp>
 
-#include "ApplicationEnvironment.hpp"
-#include "Core/FrameTimeLogger.hpp"
+#include <memory>
 
 namespace crisp
 {

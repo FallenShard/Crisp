@@ -2,8 +2,6 @@
 
 #include <glfw/glfw3.h>
 
-#include "InputDispatcher.hpp"
-
 namespace crisp
 {
     Window::Window(const glm::ivec2& position, const glm::ivec2 & size, std::string title)
@@ -17,7 +15,7 @@ namespace crisp
         m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
         glfwSetWindowPos(m_window, x, y);
 
-        m_inputDispatcher = std::make_unique<InputDispatcher>(m_window);
+        m_eventHub = std::make_unique<EventHub>(m_window);
     }
 
     Window::~Window()
@@ -76,21 +74,9 @@ namespace crisp
         return { static_cast<float>(x), static_cast<float>(y) };
     }
 
-    InputDispatcher* Window::getInputDispatcher()
+    EventHub& Window::getEventHub()
     {
-        return m_inputDispatcher.get();
-    }
-
-    std::vector<std::string> Window::getVulkanExtensions()
-    {
-        std::vector<std::string> extensions;
-        unsigned int glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        for (unsigned int i = 0; i < glfwExtensionCount; i++)
-            extensions.push_back(glfwExtensions[i]);
-
-        return extensions;
+        return *m_eventHub;
     }
 
     VkResult Window::createRenderingSurface(VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) const

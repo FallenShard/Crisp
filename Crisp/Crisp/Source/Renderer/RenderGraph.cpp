@@ -4,6 +4,12 @@
 #include "Renderer/Material.hpp"
 #include "Geometry/Geometry.hpp"
 
+#include <CrispCore/Log.hpp>
+
+#include <stack>
+#include <string_view>
+#include <exception>
+
 namespace crisp
 {
     RenderGraph::RenderGraph(Renderer* renderer)
@@ -15,16 +21,67 @@ namespace crisp
     {
     }
 
-    RenderGraph::Node& RenderGraph::addRenderPass(std::unique_ptr<VulkanRenderPass> renderPass)
+    RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)
     {
-        m_nodes.emplace_back(std::make_unique<Node>(std::move(renderPass)));
-        return *m_nodes.back();
+        if (m_nodes.count(name) > 0)
+            logWarning("Render graph already contains a node named {}\n", name);
+
+        auto iter = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
+        return *iter.first->second;
     }
 
     void RenderGraph::resize(int width, int height)
     {
+        for (auto& entry : m_nodes)
+            entry.second->renderPass->recreate();
+    }
+
+    void RenderGraph::addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback)
+    {
+        m_nodes.at(sourcePass)->dependencies[destinationPass] = callback;
+    }
+
+    void RenderGraph::sortRenderPasses()
+    {
+        std::unordered_map<std::string, int> fanIn;
+        for (auto& nodeEntry : m_nodes)
+        {
+            if (fanIn.count(nodeEntry.first) == 0)
+                fanIn.emplace(nodeEntry.first, 0);
+
+            for (auto& dependency : nodeEntry.second->dependencies)
+                if (m_nodes.count(dependency.first) > 0)
+                    fanIn[dependency.first]++;
+        }
+
+        std::stack<std::string> stack;
+        for (auto& entry : fanIn)
+            if (entry.second == 0)
+                stack.push(entry.first);
+
+        m_executionOrder.clear();
+        while (!stack.empty())
+        {
+            auto node = m_nodes.at(stack.top()).get();
+            stack.pop();
+
+            m_executionOrder.push_back(node);
+            for (auto& entry : node->dependencies)
+            {
+                if (--fanIn[entry.first] == 0)
+                    stack.push(entry.first);
+            }
+        }
+
+        if (m_executionOrder.size() != m_nodes.size())
+            throw std::runtime_error("Render graph contains a cycle!");
+    }
+
+    void RenderGraph::clearCommandLists()
+    {
         for (auto& node : m_nodes)
-            node->renderPass->recreate();
+            for (auto& subpassCommandList : node.second->commands)
+                subpassCommandList.clear();
     }
 
     void RenderGraph::executeDrawCommands() const
@@ -33,9 +90,8 @@ namespace crisp
         {
             uint32_t frameIndex = m_renderer->getCurrentVirtualFrameIndex();
 
-            for (auto index : m_executionOrder)
+            for (auto node : m_executionOrder)
             {
-                const auto& node = m_nodes.at(index);
                 node->renderPass->begin(cmdBuffer);
                 for (uint32_t subpassIndex = 0; subpassIndex < node->renderPass->getNumSubpasses(); subpassIndex++)
                 {
@@ -67,23 +123,24 @@ namespace crisp
 
                 node->renderPass->end(cmdBuffer);
                 for (const auto& dep : node->dependencies)
-                    dep(*node->renderPass, cmdBuffer, frameIndex);
+                    dep.second(*node->renderPass, cmdBuffer, frameIndex);
             }
         });
     }
 
-    void RenderGraph::setExecutionOrder(std::vector<int>&& executionOrder)
+    const RenderGraph::Node& RenderGraph::getNode(std::string name) const
     {
-        m_executionOrder = executionOrder;
+        return *m_nodes.at(name);
     }
 
-    const RenderGraph::Node& RenderGraph::getNode(int index) const
+    RenderGraph::Node& RenderGraph::getNode(std::string name)
     {
-        return *m_nodes.at(index);
+        return *m_nodes.at(name);
     }
 
-    RenderGraph::Node::Node(std::unique_ptr<VulkanRenderPass> renderPass)
-        : renderPass(std::move(renderPass))
+    RenderGraph::Node::Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)
+        : name(name)
+        , renderPass(std::move(renderPass))
     {
         commands.resize(this->renderPass->getNumSubpasses());
     }

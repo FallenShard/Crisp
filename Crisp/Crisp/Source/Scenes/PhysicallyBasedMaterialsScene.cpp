@@ -60,7 +60,7 @@ namespace crisp
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
         m_mainPass = std::make_unique<SceneRenderPass>(m_renderer);
-        m_physBasedPipeline = createPbrPipeline(m_renderer, m_mainPass.get());
+        m_physBasedPipeline = createPbrPipeline(m_renderer, m_mainPass.get(), 1);
         m_physBasedDesc[0] = { m_physBasedPipeline->allocateDescriptorSet(0) };
         m_physBasedDesc[0].postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_physBasedDesc[0].postBufferUpdate(0, 1, m_cameraTransformBuffer->getDescriptorInfo());

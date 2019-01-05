@@ -28,7 +28,7 @@ namespace crisp
 
         if (block.freeChunks.size() > 10)
         {
-            logWarning('[', tag, ']', " Possible memory fragmentation - free chunks: ", block.freeChunks.size());
+            logWarning("[{}] Possible memory fragmentation - free chunks: {}\n", tag, block.freeChunks.size());
         }
         else if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == blockSize)
         {
@@ -39,7 +39,7 @@ namespace crisp
 
             memoryBlocks.remove(block);
 
-            logInfo('[', tag, ']', " Freeing a memory block.");
+            logInfo("[{}] Freeing a memory block.\n", tag);
         }
     }
 
@@ -83,8 +83,8 @@ namespace crisp
 
         if (!foundMemoryBlock)
         {
-            logWarning('[', tag, ']', " Failed to find a free chunk.");
-            logWarning('[', tag, ']', " Allocating another memory block of size ", (blockSize >> 20), " MB.");
+            logWarning("[{}] Failed to find a free chunk.\n", tag);
+            logWarning("[{}] Allocating another memory block of size: {} MB.\n", tag, (blockSize >> 20));
             auto* blockPtr = allocateVulkanMemoryBlock(blockSize);
             std::tie(foundChunkOffset, foundChunkSize) = findFreeChunkInBlock(*blockPtr, size, alignment);
             if (foundChunkSize != 0)
@@ -93,8 +93,8 @@ namespace crisp
             }
             else
             {
-                logFatal('[', tag, ']', " CRITICAL ERROR: Allocation failed! ", (blockSize >> 20), " MB.");
-                logFatal('[', tag, ']', " Requested size: ", size, " bytes, but heap supports max ", (blockSize >> 20), " MB allocations.");
+                logFatal("[{}] CRITICAL ERROR: Allocation failed: {} MB\n", tag, (blockSize >> 20));
+                logFatal("[{}] Requested size: {} bytes, but heap supports max {} MB allocations.\n", tag, size, (blockSize >> 20));
                 return allocResult;
             }
         }
@@ -140,9 +140,6 @@ namespace crisp
 
     std::pair<uint64_t, uint64_t> VulkanMemoryHeap::findFreeChunkInBlock(internal::VulkanAllocationBlock& block, uint64_t size, uint64_t alignment)
     {
-        uint64_t foundChunkOffset = 0;
-        uint64_t foundChunkSize   = 0;
-
         for (auto& freeChunk : block.freeChunks)
         {
             uint64_t chunkOffset = freeChunk.first;
@@ -186,7 +183,7 @@ namespace crisp
     {
         if (!(properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
         {
-            logFatal('[', tag, ']', " Attempted invalid MapMemory!");
+            logFatal("[{}] Attempted invalid MapMemory!\n", tag);
             return nullptr;
         }
 

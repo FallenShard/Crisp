@@ -43,7 +43,7 @@ namespace crisp
     void Texture::fill(const void* data, VkDeviceSize size)
     {
         auto buffer = std::make_shared<VulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        buffer->updateFromHost(data, size);
+        buffer->updateFromHost(data, size, 0);
 
         m_renderer->enqueueResourceUpdate([this, buffer](VkCommandBuffer cmdBuffer)
         {
@@ -102,7 +102,7 @@ namespace crisp
     void Texture::fill(const void* data, VkDeviceSize size, uint32_t baseLayer, uint32_t numLayers)
     {
         auto buffer = std::make_shared<VulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        buffer->updateFromHost(data, size);
+        buffer->updateFromHost(data, size, 0);
 
         m_renderer->enqueueResourceUpdate([this, buffer, baseLayer, numLayers](VkCommandBuffer cmdBuffer)
         {

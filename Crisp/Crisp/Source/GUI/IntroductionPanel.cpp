@@ -17,7 +17,6 @@
 #include "VesperGui.hpp"
 
 #include "Core/Window.hpp"
-#include "Core/InputDispatcher.hpp"
 
 namespace crisp::gui
 {

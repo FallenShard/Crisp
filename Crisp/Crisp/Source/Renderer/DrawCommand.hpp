@@ -12,12 +12,6 @@
 
 namespace crisp
 {
-    struct DynamicBufferInfo
-    {
-        const UniformBuffer& buffer;
-        uint32_t subOffset;
-    };
-
     using GeometryViewVariant = std::variant<ListGeometryView, IndexedGeometryView>;
 
     namespace detail

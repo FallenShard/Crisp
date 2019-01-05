@@ -176,7 +176,7 @@ namespace crisp
             {
                 std::string objectName;
                 lineStream >> objectName;
-                logInfo("Parsing object: ", objectName);
+                logInfo("Parsing object: {}\n", objectName);
                 partOffsets.push_back(std::make_pair(3 * static_cast<uint32_t>(tempFaces.size()), 0));
             }
             else if (prefix == "v")

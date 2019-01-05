@@ -183,7 +183,7 @@ popd</Command>
     <ClCompile Include="Source\GUI\Control.cpp" />
     <ClCompile Include="Source\GUI\ControlGroup.cpp" />
     <ClCompile Include="Source\GUI\Form.cpp" />
-    <ClCompile Include="Source\Core\InputDispatcher.cpp" />
+    <ClCompile Include="Source\Core\EventHub.cpp" />
     <ClCompile Include="Source\GUI\Label.cpp" />
     <ClCompile Include="Source\GUI\Panel.cpp" />
     <ClCompile Include="Source\GUI\RenderSystem.cpp" />
@@ -261,6 +261,7 @@ popd</Command>
     <ClInclude Include="Source\Geometry\MeshGenerators.hpp" />
     <ClInclude Include="Source\Geometry\SphereMeshGenerator.hpp" />
     <ClInclude Include="Source\Geometry\VertexAttributeTraits.hpp" />
+    <ClInclude Include="Source\Geometry\VertexLayout.hpp" />
     <ClInclude Include="Source\GUI\ComboBoxItem.hpp" />
     <ClInclude Include="Source\GUI\DoubleSlider.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\ColorRectDrawComponent.hpp" />
@@ -328,7 +329,7 @@ popd</Command>
     <ClInclude Include="Source\GUI\Control.hpp" />
     <ClInclude Include="Source\GUI\ControlGroup.hpp" />
     <ClInclude Include="Source\GUI\Form.hpp" />
-    <ClInclude Include="Source\Core\InputDispatcher.hpp" />
+    <ClInclude Include="Source\Core\EventHub.hpp" />
     <ClInclude Include="Source\GUI\Label.hpp" />
     <ClInclude Include="Source\GUI\Panel.hpp" />
     <ClInclude Include="Source\GUI\RenderSystem.hpp" />
@@ -405,6 +406,8 @@ popd</Command>
     <None Include="Source\Shaders\compute-forces-comp.glsl" />
     <None Include="Source\Shaders\depth-normal-frag.glsl" />
     <None Include="Source\Shaders\depth-normal-vert.glsl" />
+    <None Include="Source\Shaders\diffuse-frag.glsl" />
+    <None Include="Source\Shaders\diffuse-vert.glsl" />
     <None Include="Source\Shaders\fullscreen-quad-frag.glsl" />
     <None Include="Source\Shaders\fullscreen-quad-vert.glsl" />
     <None Include="Source\Shaders\gamma-correct-frag.glsl" />

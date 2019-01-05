@@ -62,7 +62,7 @@ namespace crisp::gui
         auto control = m_rootControlGroup->getControlById(controlId);
         if (!control)
         {
-            logWarning("Attempt to delete a non-existing control with id: ", controlId);
+            logWarning("Attempt to delete a non-existing control with id: {}\n", controlId);
             return;
         }
 

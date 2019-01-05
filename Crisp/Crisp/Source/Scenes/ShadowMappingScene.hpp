@@ -23,6 +23,8 @@ namespace crisp
         int radius;
     };
 
+
+
     class Application;
     class CameraController;
 
@@ -47,6 +49,14 @@ namespace crisp
     class Geometry;
     class Grass;
 
+    struct RenderNode
+    {
+        Material* material = nullptr;
+        Geometry* geometry = nullptr;
+        int transformIndex = -1;
+        RenderNode(Material* mat, Geometry* geom, int index) : material(mat), geometry(geom), transformIndex(index) {}
+    };
+
     class ShadowMappingScene : public AbstractScene
     {
     public:
@@ -59,17 +69,27 @@ namespace crisp
 
         void setBlurRadius(int radius);
         void setSplitLambda(double lambda);
+        void setMetallic(double metallic);
+        void setRoughness(double roughness);
+
+        DrawCommand createDrawCommand(Material* material, Geometry* geometry, int transformIndex);
+        DrawCommand createLightDrawCommand(Material* material, Geometry* geometry, int transformIndex);
+        DrawCommand createPbrUnifDrawCommand(Material* material, Geometry* geometry, int transformIndex);
 
     private:
+        void createDefaultPbrTextures();
+        std::unique_ptr<Material> createPbrMaterial(const std::string& type);
+
         Renderer*     m_renderer;
         Application*  m_app;
-        VulkanDevice* m_device;
 
         std::unique_ptr<CameraController> m_cameraController;
         std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
         std::unique_ptr<VulkanPipeline> m_colorPipeline;
         std::unique_ptr<Material> m_colorMaterial;
+        std::unique_ptr<VulkanImage> m_texture;
+        std::unique_ptr<VulkanImageView> m_textureView;
 
         std::unique_ptr<VulkanPipeline> m_colorLightPipeline;
         std::unique_ptr<Material> m_colorLightMaterial;
@@ -77,13 +97,22 @@ namespace crisp
         std::unique_ptr<VulkanPipeline> m_normalMapPipeline;
         std::unique_ptr<Material> m_normalMapMaterial;
 
-        std::unique_ptr<Geometry> m_spherePosGeometry;
-        std::unique_ptr<Geometry> m_fullSphereGeometry;
         std::vector<std::pair<uint32_t, uint32_t>> m_geometryViews;
         std::vector<std::unique_ptr<VulkanImage>> m_normalMaps;
         std::vector<std::unique_ptr<VulkanImageView>> m_normalMapViews;
         std::vector<std::unique_ptr<Material>> m_materials;
-        std::unique_ptr<Geometry> m_planeGeometry;
+        std::vector<std::unique_ptr<Geometry>> m_geometries;
+
+        std::vector<RenderNode> m_renderNodes;
+
+        std::vector<std::unique_ptr<VulkanImage>>     m_images;
+        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
+        std::unique_ptr<VulkanPipeline> m_physBasedPipeline;
+        std::unique_ptr<VulkanImage> m_envMap;
+        std::unique_ptr<VulkanImageView> m_envMapView;
+
+        std::unique_ptr<VulkanPipeline> m_irradiancePipeline;
+        std::unique_ptr<VulkanPipeline> m_physBasedUnifPipeline;
 
         std::vector<TransformPack> m_transforms;
         std::unique_ptr<UniformBuffer> m_transformBuffer;

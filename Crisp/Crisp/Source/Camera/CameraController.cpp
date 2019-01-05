@@ -5,7 +5,6 @@
 #include "Animation/Animator.hpp"
 #include "Animation/PropertyAnimation.hpp"
 
-#include "Core/InputDispatcher.hpp"
 #include "Core/Window.hpp"
 
 namespace crisp
@@ -21,7 +20,6 @@ namespace crisp
 
     CameraController::CameraController(Window* window)
         : m_window(window)
-        , m_inputDispatcher(window->getInputDispatcher())
         , m_useMouseFiltering(true)
         , m_isMoving(false)
         , m_moveSpeed(2.0f)
@@ -38,18 +36,18 @@ namespace crisp
         for (int i = 0; i < MouseFilterListSize; i++)
             m_mouseDeltas.push_front(glm::vec2(0.0f, 0.0f));
 
-        m_inputDispatcher->mouseButtonPressed.subscribe<&CameraController::onMousePressed>(this);
-        m_inputDispatcher->mouseButtonReleased.subscribe<&CameraController::onMouseReleased>(this);
-        m_inputDispatcher->mouseMoved.subscribe<&CameraController::onMouseMoved>(this);
-        m_inputDispatcher->mouseWheelScrolled.subscribe<&CameraController::onMouseWheelScrolled>(this);
+        m_window->getEventHub().mouseButtonPressed.subscribe<&CameraController::onMousePressed>(this);
+        m_window->getEventHub().mouseButtonReleased.subscribe<&CameraController::onMouseReleased>(this);
+        m_window->getEventHub().mouseMoved.subscribe<&CameraController::onMouseMoved>(this);
+        m_window->getEventHub().mouseWheelScrolled.subscribe<&CameraController::onMouseWheelScrolled>(this);
     }
 
     CameraController::~CameraController()
     {
-        m_inputDispatcher->mouseButtonPressed.unsubscribe<&CameraController::onMousePressed>(this);
-        m_inputDispatcher->mouseButtonReleased.unsubscribe<&CameraController::onMouseReleased>(this);
-        m_inputDispatcher->mouseMoved.unsubscribe<&CameraController::onMouseMoved>(this);
-        m_inputDispatcher->mouseWheelScrolled.unsubscribe<&CameraController::onMouseWheelScrolled>(this);
+        m_window->getEventHub().mouseButtonPressed.unsubscribe<&CameraController::onMousePressed>(this);
+        m_window->getEventHub().mouseButtonReleased.unsubscribe<&CameraController::onMouseReleased>(this);
+        m_window->getEventHub().mouseMoved.unsubscribe<&CameraController::onMouseMoved>(this);
+        m_window->getEventHub().mouseWheelScrolled.unsubscribe<&CameraController::onMouseWheelScrolled>(this);
     }
 
     bool CameraController::update(float dt)
@@ -164,16 +162,16 @@ namespace crisp
 
     void CameraController::checkKeyboardInput(float dt)
     {
-        if (m_inputDispatcher->isKeyDown(Key::A))
+        if (m_window->getEventHub().isKeyDown(Key::A))
             m_camera.strafe(-3.0f * dt);
 
-        if (m_inputDispatcher->isKeyDown(Key::D))
+        if (m_window->getEventHub().isKeyDown(Key::D))
             m_camera.strafe(+3.0f * dt);
 
-        if (m_inputDispatcher->isKeyDown(Key::S))
+        if (m_window->getEventHub().isKeyDown(Key::S))
             m_camera.walk(-3.0f * dt);
 
-        if (m_inputDispatcher->isKeyDown(Key::W))
+        if (m_window->getEventHub().isKeyDown(Key::W))
             m_camera.walk(3.0f * dt);
     }
 

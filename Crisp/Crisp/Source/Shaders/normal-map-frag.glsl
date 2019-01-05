@@ -190,43 +190,43 @@ vec3 Li(out vec3 wi)
 
 void main()
 {
-    // Get radiance and direction from point towards the light in eye space
-    vec3 wi;
-    vec3 Li = Li(wi);
+    //// Get radiance and direction from point towards the light in eye space
+    //vec3 wi;
+    //vec3 Li = Li(wi);
+//
+    //// Albedo, lambertian material
+    //vec3 f = vec3(0.84f, 0.95f, 0.67f) * InvPI;
+//
+    //vec3 tangent = normalize(eyeTangent);
+    //vec3 normal  = normalize(eyeNormal);
+    //
+    ////tangent = normalize(tangent - dot(tangent, normal) * normal);
+    //vec3 bitangent = normalize(eyeBitangent);//cross(normal, tangent);
+//
+    //vec3 col = vec3(1.0f, 0.0f, 0.0f);
+    //if (dot(cross(normal, tangent), bitangent) < 0.0)
+    //{
+    //    col = vec3(0.0f, 1.0f, 0.0f);
+    //    tangent = -tangent;
+    //}
+//
+    //vec3 wNorm = normalize(vec3(inverse(N) * vec4(normalize(eyeNormal), 0.0f)));
+    //    
+//
+    //mat3 TBN = transpose(mat3(tangent, bitangent, normal));
+//
+    //// In tangent space
+    //normal = texture(normalMap, outTexCoord).rgb;
+    //normal = normalize(normal * 2.0f - 1.0f);
+    //wi = normalize(TBN * normalize(wi));
+    //float cosThetaI = max(0.0f, dot(normal, wi));
+//
+    //wNorm = transpose(TBN) * normalize(normal);
+    ////wNorm = normalize(vec3(inverse(N) * vec4(normalize(wNorm), 0.0f)));
+//
+    //float shadowCoeff = getShadowCoeff();
 
-    // Albedo, lambertian material
-    vec3 f = vec3(0.84f, 0.95f, 0.67f) * InvPI;
-
-    vec3 tangent = normalize(eyeTangent);
-    vec3 normal  = normalize(eyeNormal);
-    
-    //tangent = normalize(tangent - dot(tangent, normal) * normal);
-    vec3 bitangent = normalize(eyeBitangent);//cross(normal, tangent);
-
-    vec3 col = vec3(1.0f, 0.0f, 0.0f);
-    if (dot(cross(normal, tangent), bitangent) < 0.0)
-    {
-        col = vec3(0.0f, 1.0f, 0.0f);
-        tangent = -tangent;
-    }
-
-    vec3 wNorm = normalize(vec3(inverse(N) * vec4(normalize(eyeNormal), 0.0f)));
-        
-
-    mat3 TBN = transpose(mat3(tangent, bitangent, normal));
-
-    // In tangent space
-    normal = texture(normalMap, outTexCoord).rgb;
-    normal = normalize(normal * 2.0f - 1.0f);
-    wi = normalize(TBN * normalize(wi));
-    float cosThetaI = max(0.0f, dot(normal, wi));
-
-    wNorm = transpose(TBN) * normalize(normal);
-    //wNorm = normalize(vec3(inverse(N) * vec4(normalize(wNorm), 0.0f)));
-
-    float shadowCoeff = getShadowCoeff();
-
-    finalColor = vec4(vec3(cosThetaI), 1.0f);
+    finalColor = vec4(vec3(1.0f, 0.2f, 0.2f), 1.0f);
     //finalColor = vec4(shadowCoeff * vec3(f * Li * cosThetaI), 1.0f);
     //finalColor = vec4(vec3(transpose(V) * vec4(tangent, 0.0f)), 1.0f);
     //finalColor = vec4(outTexCoord, 0.0f, 1.0f);

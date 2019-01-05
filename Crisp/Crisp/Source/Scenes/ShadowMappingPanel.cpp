@@ -45,6 +45,30 @@ namespace crisp::gui
         lambdaSlider->valueChanged.subscribe<&ShadowMappingScene::setSplitLambda>(scene);
         addControl(std::move(lambdaSlider));
         y += 30;
+
+        auto roughnessSlider = std::make_unique<DoubleSlider>(parentForm);
+        roughnessSlider->setId("roughnessSlider");
+        roughnessSlider->setAnchor(Anchor::CenterTop);
+        roughnessSlider->setPosition({ 0, y });
+        roughnessSlider->setMinValue(0.0f);
+        roughnessSlider->setMaxValue(1.0f);
+        roughnessSlider->setValue(0.1f);
+        roughnessSlider->setIncrement(0.01f);
+        roughnessSlider->valueChanged.subscribe<&ShadowMappingScene::setRoughness>(scene);
+        addControl(std::move(roughnessSlider));
+        y += 30;
+
+        auto metallicSlider = std::make_unique<DoubleSlider>(parentForm);
+        metallicSlider->setId("metallicSlider");
+        metallicSlider->setAnchor(Anchor::CenterTop);
+        metallicSlider->setPosition({ 0, y });
+        metallicSlider->setMinValue(0.0f);
+        metallicSlider->setMaxValue(1.0f);
+        metallicSlider->setValue(0.0f);
+        metallicSlider->setIncrement(0.01f);
+        metallicSlider->valueChanged.subscribe<&ShadowMappingScene::setMetallic>(scene);
+        addControl(std::move(metallicSlider));
+        y += 30;
     }
 
     ShadowMappingPanel::~ShadowMappingPanel()

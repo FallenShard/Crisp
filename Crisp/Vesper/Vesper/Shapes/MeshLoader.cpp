@@ -93,14 +93,14 @@ namespace crisp
 
         if (loadModelCache(cachedModelPath.string(), positions, normals, texCoords, faces))
         {
-            logInfo("Loading cached version of Wavefront Obj mesh: ", cachedModelPath.filename());
+            logInfo("Loading cached version of Wavefront Obj mesh: {}\n", cachedModelPath.filename().string());
             return true;
         }
 
 
         if (ext == ".obj")
         {
-            logInfo("Loading Wavefront Obj mesh: ", path.filename());
+            logInfo("Loading Wavefront Obj mesh: {}\n", path.filename().string());
             loadWavefrontObj(meshFile, positions, normals, texCoords, faces);
             createModelCache(cachedModelPath.string(), positions, normals, texCoords, faces);
             return true;

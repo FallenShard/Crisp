@@ -4,7 +4,6 @@
 
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
-#include "Core/InputDispatcher.hpp"
 
 #include "Renderer/Renderer.hpp"
 #include "Camera/CameraController.hpp"

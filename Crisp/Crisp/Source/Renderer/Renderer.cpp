@@ -62,25 +62,9 @@ namespace crisp
         // create vertex buffer
         std::vector<glm::vec2> vertices =
         {
-            { -1.0f, -1.0f },
-            { +1.0f, -1.0f },
-            { +1.0f, +1.0f },
-            { -1.0f, +1.0f }
+            { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f }
         };
-        m_fsQuadVertexBuffer = std::make_unique<VertexBuffer>(this, vertices);
-        m_fsQuadVertexBufferBindingGroup =
-        {
-            { m_fsQuadVertexBuffer->get(), 0 }
-        };
-
-        // create index buffer
-        std::vector<glm::uvec3> faces =
-        {
-            { 0, 2, 1 },
-            { 0, 3, 2 }
-        };
-        m_fsQuadIndexBuffer = std::make_unique<IndexBuffer>(this, faces);
-
+        std::vector<glm::uvec3> faces = { { 0, 2, 1 } };
         m_fullScreenGeometry = std::make_unique<Geometry>(this, vertices, faces);
 
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device.get(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -144,11 +128,6 @@ namespace crisp
         return { {0, 0}, getSwapChainExtent() };
     }
 
-    Geometry* Renderer::getFullScreenGeometry() const
-    {
-        return m_fullScreenGeometry.get();
-    }
-
     VkShaderModule Renderer::getShaderModule(std::string&& key) const
     {
         return m_shaderModules.at(key);
@@ -166,9 +145,7 @@ namespace crisp
 
     void Renderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const
     {
-        m_fsQuadVertexBufferBindingGroup.bind(cmdBuffer);
-        m_fsQuadIndexBuffer->bind(cmdBuffer, 0);
-        vkCmdDrawIndexed(cmdBuffer, 6, 1, 0, 0, 0);
+        m_fullScreenGeometry->bindAndDraw(cmdBuffer);
     }
 
     uint32_t Renderer::getCurrentVirtualFrameIndex() const
@@ -275,7 +252,7 @@ namespace crisp
     void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
         auto stagingBuffer = std::make_shared<VulkanBuffer>(m_device.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        stagingBuffer->updateFromHost(data, size, 0);
+        stagingBuffer->updateFromHost(data);
         m_resourceUpdates.emplace_back([this, stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
         {
             buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
@@ -349,7 +326,7 @@ namespace crisp
             auto existingItem = m_shaderModules.find(shaderKey);
             if (existingItem != m_shaderModules.end())
             {
-                logWarning("Warning: ", shaderKey, " was already present in the renderer!");
+                logWarning("Warning: {} was already present in the renderer!\n", shaderKey);
                 vkDestroyShaderModule(m_device->getHandle(), existingItem->second, nullptr);
             }
 

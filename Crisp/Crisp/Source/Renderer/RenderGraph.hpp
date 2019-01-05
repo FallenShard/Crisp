@@ -10,13 +10,15 @@ namespace crisp
     class RenderGraph
     {
     public:
+        using DependencyCallback = std::function<void(const VulkanRenderPass&, VkCommandBuffer, uint32_t)>;
         struct Node
         {
+            std::string name;
             std::unique_ptr<VulkanRenderPass> renderPass;
             std::vector<std::vector<DrawCommand>> commands;
-            std::vector<std::function<void(const VulkanRenderPass&, VkCommandBuffer, uint32_t)>> dependencies;
+            std::unordered_map<std::string, DependencyCallback> dependencies;
 
-            Node(std::unique_ptr<VulkanRenderPass> renderPass);
+            Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
             Node(Node&& node) = default;
             Node(const Node& node) = delete;
 
@@ -26,20 +28,23 @@ namespace crisp
         RenderGraph(Renderer* renderer);
         ~RenderGraph();
 
-        Node& addRenderPass(std::unique_ptr<VulkanRenderPass> renderPass);
+        Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
+        void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
 
         void resize(int width, int height);
 
+        void sortRenderPasses();
+
+        void clearCommandLists();
         void executeDrawCommands() const;
 
-        void setExecutionOrder(std::vector<int>&& executionOrder);
-
-        const Node& getNode(int index) const;
+        const Node& getNode(std::string name) const;
+        Node& getNode(std::string name);
 
     private:
         Renderer* m_renderer;
 
-        std::vector<std::unique_ptr<Node>> m_nodes;
-        std::vector<int> m_executionOrder;
+        std::vector<Node*> m_executionOrder;
+        std::unordered_map<std::string, std::unique_ptr<Node>> m_nodes;
     };
 }

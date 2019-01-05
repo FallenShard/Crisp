@@ -60,6 +60,8 @@ namespace crisp
         const VkPhysicalDeviceFeatures&   getPhysicalDeviceFeatures() const;
         const VkPhysicalDeviceLimits&     getPhysicalDeviceLimits() const;
 
+        inline const VkInstance& getInstance() const { return m_instance; }
+
     private:
         VkInstance               m_instance;
         VkDebugReportCallbackEXT m_debugCallback;

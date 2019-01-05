@@ -21,7 +21,7 @@ namespace crisp
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
 
-        auto heap = m_device->getHeapFromMemProps(m_handle, memProps, memRequirements.memoryTypeBits);
+        auto heap = m_device->getHeapFromMemProps(memProps, memRequirements.memoryTypeBits);
         m_memoryChunk = heap->allocate(memRequirements.size, memRequirements.alignment);
 
         vkBindBufferMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
@@ -42,6 +42,12 @@ namespace crisp
     {
         memcpy(m_memoryChunk.getMappedPtr() + offset, srcData, static_cast<size_t>(size));
         m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset + offset, size);
+    }
+
+    void VulkanBuffer::updateFromHost(const void* srcData)
+    {
+        memcpy(m_memoryChunk.getMappedPtr(), srcData, m_size);
+        m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset, VK_WHOLE_SIZE);
     }
 
     void VulkanBuffer::updateFromStaging(const VulkanBuffer& srcBuffer)

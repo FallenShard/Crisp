@@ -48,7 +48,6 @@ namespace crisp
         glm::vec2 filterMouseMoves();
 
         Window* m_window;
-        InputDispatcher* m_inputDispatcher;
         glm::vec2 m_screenSize;
 
         std::unique_ptr<Animator> m_animator;

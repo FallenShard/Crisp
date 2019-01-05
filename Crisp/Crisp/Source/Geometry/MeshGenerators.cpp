@@ -1,5 +1,8 @@
 #include "MeshGenerators.hpp"
 
+#include <CrispCore/Math/Constants.hpp>
+#include <CrispCore/Log.hpp>
+
 namespace crisp
 {
     TriangleMesh createPlaneMesh(std::initializer_list<VertexAttribute> vertexAttributes)
@@ -23,9 +26,9 @@ namespace crisp
         std::vector<glm::vec2> texCoords =
         {
             glm::vec2(0.0f, 0.0f),
-            glm::vec2(0.0f, 1.0f),
+            glm::vec2(1.0f, 0.0f),
             glm::vec2(1.0f, 1.0f),
-            glm::vec2(1.0f, 0.0f)
+            glm::vec2(0.0f, 1.0f)
         };
 
         std::vector<glm::uvec3> faces =
@@ -84,30 +87,42 @@ namespace crisp
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
         std::vector<glm::vec2> texCoords;
+        std::vector<glm::vec3> tangents;
+        std::vector<glm::vec3> bitangents;
         std::vector<glm::uvec3> faces;
 
-        for (int i = 0; i < 100; i++)
+        int numRings  = 64;
+        int numSlices = 64;
+
+        for (int j = 0; j <= numRings; j++)
         {
-            float angle = glm::radians(i / 100.0f * 360.0f);
-            float sin = std::sinf(angle);
-            float cos = std::cosf(angle);
-            positions.emplace_back(5.0f * cos, -2.0f, -5.0f * sin);
-            positions.emplace_back(5.0f * cos, +2.0f, -5.0f * sin);
+            float v = j / static_cast<float>(numRings);
+            float phi  = glm::radians(90.0f - v * 180.0f);
+            float pSin = std::sinf(phi);
+            float pCos = std::cosf(phi);
 
-            normals.emplace_back(cos, 0.0f, -sin);
-            normals.emplace_back(cos, 0.0f, -sin);
+            for (int i = 0; i <= numSlices; i++)
+            {
+                float u = i / static_cast<float>(numSlices);
+                float theta = glm::radians(u * 360.0f);
+                float tSin = std::sinf(theta);
+                float tCos = std::cosf(theta);
+                positions.emplace_back(tCos * pCos, pSin, tSin * pCos);
+                normals.push_back(glm::normalize(positions.back()));
+                texCoords.emplace_back(1.0f - u, 1.0f - v);
 
-            float u = i % 2 == 0 ? 0.0f : 1.0f;
+                if (j > 0 && i < numSlices)
+                {
+                    int prevCurr = (j - 1) * (numSlices + 1) + i;
+                    int prevNext = (j - 1) * (numSlices + 1) + i + 1;
+                    int curr = j * (numSlices + 1) + i;
+                    int next = j * (numSlices + 1) + i + 1;
 
-            texCoords.emplace_back(abs(cos), 0.0f);
-            texCoords.emplace_back(abs(cos), 1.0f);
-
-
-            uint32_t next = (i + 1) % 100;
-            faces.emplace_back(2 * i, 2 * next, 2 * next + 1);
-            faces.emplace_back(2 * i, 2 * next + 1, 2 * i + 1);
+                    faces.emplace_back(prevCurr, next, curr);
+                    faces.emplace_back(prevCurr, prevNext, next);
+                }
+            }
         }
-
 
         return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
     }

@@ -9,17 +9,17 @@ struct GLFWwindow;
 
 namespace crisp
 {
-    class InputDispatcher
+    class EventHub
     {
     public:
-        InputDispatcher(GLFWwindow* window);
-        ~InputDispatcher() = default;
+        EventHub(GLFWwindow* window);
+        ~EventHub() = default;
 
         bool isKeyDown(Key key) const;
 
-        InputDispatcher(const InputDispatcher& other)            = delete;
-        InputDispatcher& operator=(const InputDispatcher& other) = delete;
-        InputDispatcher& operator=(InputDispatcher&& other)      = delete;
+        EventHub(const EventHub& other)            = delete;
+        EventHub& operator=(const EventHub& other) = delete;
+        EventHub& operator=(EventHub&& other)      = delete;
 
         Event<int, int> windowResized;
         Event<Key, int> keyPressed;

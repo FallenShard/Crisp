@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CrispCore/Math/Headers.hpp>
+#include <vulkan/vulkan.h>
 
 namespace crisp
 {
@@ -79,6 +80,19 @@ namespace crisp
             case VertexAttribute::Tangent:   return 12;
             case VertexAttribute::Bitangent: return 12;
             default: return 0;
+        }
+    }
+
+    inline VkFormat getDefaultFormat(VertexAttribute attribute)
+    {
+        switch (attribute)
+        {
+            case VertexAttribute::Position:  return VK_FORMAT_R32G32B32_SFLOAT;
+            case VertexAttribute::Normal:    return VK_FORMAT_R32G32B32_SFLOAT;
+            case VertexAttribute::TexCoord:  return VK_FORMAT_R32G32_SFLOAT;
+            case VertexAttribute::Tangent:   return VK_FORMAT_R32G32B32_SFLOAT;
+            case VertexAttribute::Bitangent: return VK_FORMAT_R32G32B32_SFLOAT;
+            default: return VkFormat();
         }
     }
 }

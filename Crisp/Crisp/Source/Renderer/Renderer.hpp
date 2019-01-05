@@ -54,8 +54,6 @@ namespace crisp
         VkViewport         getDefaultViewport() const;
         VkRect2D           getDefaultScissor() const;
 
-        Geometry*          getFullScreenGeometry() const;
-
         VkShaderModule    getShaderModule(std::string&& key) const;
 
         void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
@@ -132,9 +130,8 @@ namespace crisp
         FunctionVector m_drawCommands;
         FunctionVector m_defaultPassDrawCommands;
 
-        std::unique_ptr<VertexBuffer> m_fsQuadVertexBuffer;
-        std::unique_ptr<IndexBuffer>  m_fsQuadIndexBuffer;
-        VertexBufferBindingGroup      m_fsQuadVertexBufferBindingGroup;
+        std::unique_ptr<VertexBuffer> m_fullscreenVertexBuffer;
+        std::unique_ptr<IndexBuffer>  m_fullscreenIndexBuffer;
         std::unique_ptr<Geometry> m_fullScreenGeometry;
 
         std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;

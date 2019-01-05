@@ -9,7 +9,6 @@
 
 #include "Renderer/Renderer.hpp"
 #include "Core/Window.hpp"
-#include "Core/InputDispatcher.hpp"
 #include "Core/SceneContainer.hpp"
 
 #include "IO/FileUtils.hpp"
@@ -20,6 +19,7 @@
 #include "GUI/Button.hpp"
 #include "GUI/StatusBar.hpp"
 #include "GUI/MemoryUsageBar.hpp"
+#include "GUI/ComboBox.hpp"
 #include "GUI/IntroductionPanel.hpp"
 
 #include "LuaState.hpp"
@@ -35,40 +35,47 @@ namespace crisp
             stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << frameTime << " ms"
                 << ", " << std::setfill('0') << fps << " fps";
 
-            logDebug(stringStream.str(), '\r');
+            logDebug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
         }
     }
 
-    Application::Application(const ApplicationEnvironment& env)
+    Application::Application(const ApplicationEnvironment&)
         : m_frameTimeLogger(1000.0)
     {
-        logInfo("Initializing application...");
-
-        LuaMachine lm;
+        logInfo("Initializing application...\n");
 
         m_window   = createWindow();
         m_renderer = createRenderer();
 
-        auto inputDispatcher = m_window->getInputDispatcher();
-        inputDispatcher->windowResized.subscribe<&Application::onResize>(this);
+        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
+
+        auto& eventHub = m_window->getEventHub();
+        eventHub.windowResized.subscribe<&Application::onResize>(this);
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-        inputDispatcher->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
-        inputDispatcher->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
-        inputDispatcher->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
-        inputDispatcher->mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
-        inputDispatcher->mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
+        eventHub.mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
+        eventHub.mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
+        eventHub.mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
+        eventHub.mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
+        eventHub.mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
 
+
+        auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
+        comboBox->setId("sceneComboBox");
+        comboBox->setPosition({ 0, 0 });
+        comboBox->setItems(SceneContainer::getSceneNames());
+        comboBox->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+        comboBox->itemSelected(SceneContainer::getDefaultScene());
+
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
+        statusBar->addControl(std::move(comboBox));
         m_frameTimeLogger.onLoggerUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
         m_guiForm->add(std::move(statusBar));
 
         m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
-        m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
-
-        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
+        //m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
     }
 
     Application::~Application()
@@ -77,7 +84,7 @@ namespace crisp
 
     void Application::run()
     {
-        logInfo("Hello world from Crisp! The application is up and running!");
+        logInfo("Hello world from Crisp! The application is up and running!\n");
 
         m_renderer->flushResourceUpdates();
 
@@ -121,7 +128,7 @@ namespace crisp
 
     void Application::onResize(int width, int height)
     {
-        logInfo("New window dims: (", width, ", ", height, ")");
+        logInfo("New window dims: [{}, {}]\n", width, height);
         if (width == 0 || height == 0)
             return;
 
@@ -164,6 +171,6 @@ namespace crisp
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
 
-        return std::make_unique<Renderer>(surfaceCreator, Window::getVulkanExtensions(), "../../Resources");
+        return std::make_unique<Renderer>(surfaceCreator, ApplicationEnvironment::getVulkanExtensions(), ApplicationEnvironment::getResourcesPath());
     }
 }
