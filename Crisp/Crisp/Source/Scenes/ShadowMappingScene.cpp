@@ -25,6 +25,7 @@
 #include "Renderer/Pipelines/LightShaftPipeline.hpp"
 
 #include "Renderer/RenderPasses/VarianceShadowMapPass.hpp"
+#include "Renderer/RenderPasses/EnvironmentRenderPass.hpp"
 
 #include "Renderer/RenderPasses/BlurPass.hpp"
 #include "Renderer/Pipelines/BlurPipeline.hpp"
@@ -398,6 +399,50 @@ namespace crisp
 
         m_skybox = std::make_unique<Skybox>(m_renderer, *mainPassNode.renderPass, "Forest");
         device->flushDescriptorUpdates();
+
+        auto envPass = std::make_shared<EnvironmentRenderPass>(m_renderer, VkExtent2D{ 512, 512 });
+
+        m_renderer->enqueueResourceUpdate([this, envPass](VkCommandBuffer cmdBuffer)
+        {
+            glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+            glm::mat4 captureViews[] =
+            {
+               glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+               glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+               glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+               glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+               glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+               glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+            };
+
+            envPass->begin(cmdBuffer);
+
+            for (int i = 0; i < 5; i++)
+                envPass->nextSubpass(cmdBuffer);
+
+
+            envPass->end(cmdBuffer);
+
+            //// convert HDR equirectangular environment map to cubemap equivalent
+            //equirectangularToCubemapShader.use();
+            //equirectangularToCubemapShader.setInt("equirectangularMap", 0);
+            //equirectangularToCubemapShader.setMat4("projection", captureProjection);
+            //glActiveTexture(GL_TEXTURE0);
+            //glBindTexture(GL_TEXTURE_2D, hdrTexture);
+            //
+            //glViewport(0, 0, 512, 512); // don't forget to configure the viewport to the capture dimensions.
+            //glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+            //for (unsigned int i = 0; i < 6; ++i)
+            //{
+            //    equirectangularToCubemapShader.setMat4("view", captureViews[i]);
+            //    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            //        GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
+            //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            //
+            //    renderCube(); // renders a 1x1 cube
+            //}
+            //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        });
 
 
         //PointLight pointLight(glm::vec3(100.0f), glm::vec3(5.0f, 5.0f, 0.0f), glm::normalize(glm::vec3(-3.0f, -1.0f, 0.0f)));
