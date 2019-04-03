@@ -240,9 +240,9 @@ namespace crisp
             return requiredExtensions.empty();
         }
 
-        SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
+        VulkanSwapChainSupportDetails queryVulkanSwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
         {
-            SwapChainSupportDetails details;
+            VulkanSwapChainSupportDetails details;
 
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
@@ -277,16 +277,16 @@ namespace crisp
 
             bool extensionsSupported = checkDeviceExtensionSupport(device);
 
-            bool swapChainAdequate = false;
+            bool VulkanSwapChainAdequate = false;
             if (extensionsSupported)
             {
-                SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, surface);
-                swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+                VulkanSwapChainSupportDetails VulkanSwapChainSupport = queryVulkanSwapChainSupport(device, surface);
+                VulkanSwapChainAdequate = !VulkanSwapChainSupport.formats.empty() && !VulkanSwapChainSupport.presentModes.empty();
             }
 
             bool isDiscreteGpu = deviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 
-            return isDiscreteGpu && indices.isComplete() && extensionsSupported && swapChainAdequate;
+            return isDiscreteGpu && indices.isComplete() && extensionsSupported && VulkanSwapChainAdequate;
         }
 
         VkPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
@@ -373,9 +373,9 @@ namespace crisp
         return detail::findQueueFamilies(m_physicalDevice, m_surface);
     }
 
-    SwapChainSupportDetails VulkanContext::querySwapChainSupport() const
+    VulkanSwapChainSupportDetails VulkanContext::queryVulkanSwapChainSupport() const
     {
-        return detail::querySwapChainSupport(m_physicalDevice, m_surface);
+        return detail::queryVulkanSwapChainSupport(m_physicalDevice, m_surface);
     }
 
     std::optional<uint32_t> VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const

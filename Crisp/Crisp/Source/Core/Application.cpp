@@ -1,29 +1,18 @@
 #include "Application.hpp"
 
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <chrono>
-
-#include <CrispCore/Log.hpp>
-
 #include "Renderer/Renderer.hpp"
 #include "Core/Window.hpp"
 #include "Core/SceneContainer.hpp"
-
-#include "IO/FileUtils.hpp"
-#include "IO/ImageFileBuffer.hpp"
+#include "Core/EventHub.hpp"
 
 #include "GUI/RenderSystem.hpp"
 #include "GUI/Form.hpp"
-#include "GUI/Button.hpp"
 #include "GUI/StatusBar.hpp"
 #include "GUI/MemoryUsageBar.hpp"
 #include "GUI/ComboBox.hpp"
 #include "GUI/IntroductionPanel.hpp"
 
-#include "LuaState.hpp"
-#include "LuaMachine.hpp"
+#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -31,10 +20,6 @@ namespace crisp
     {
         void logFpsToConsole(double frameTime, double fps)
         {
-            std::ostringstream stringStream;
-            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << frameTime << " ms"
-                << ", " << std::setfill('0') << fps << " fps";
-
             logDebug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
         }
     }
@@ -60,7 +45,6 @@ namespace crisp
         eventHub.mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
         eventHub.mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
         //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
-
 
         auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
         comboBox->setId("sceneComboBox");
@@ -100,16 +84,14 @@ namespace crisp
 
             while (timeSinceLastUpdate > TimePerFrame)
             {
-                if (m_sceneContainer)
-                    m_sceneContainer->update(static_cast<float>(TimePerFrame));
+                m_sceneContainer->update(static_cast<float>(TimePerFrame));
 
                 m_guiForm->update(TimePerFrame);
 
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
-            if (m_sceneContainer)
-                m_sceneContainer->render();
+            m_sceneContainer->render();
 
             m_guiForm->draw();
 
@@ -134,11 +116,8 @@ namespace crisp
 
         m_renderer->resize(width, height);
 
-        if (m_sceneContainer)
-            m_sceneContainer->resize(width, height);
-
-        if (m_guiForm)
-            m_guiForm->resize(width, height);
+        m_sceneContainer->resize(width, height);
+        m_guiForm->resize(width, height);
     }
 
     SceneContainer* Application::getSceneContainer() const
@@ -158,8 +137,8 @@ namespace crisp
 
     std::unique_ptr<Window> Application::createWindow()
     {
-        auto desktopRes = Window::getDesktopResolution();
-        auto size = glm::ivec2(DefaultWindowWidth, DefaultWindowHeight);
+        glm::ivec2 desktopRes = Window::getDesktopResolution();
+        glm::ivec2 size(DefaultWindowWidth, DefaultWindowHeight);
 
         return std::make_unique<Window>((desktopRes - size) / 2, size, Title);
     }

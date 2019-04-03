@@ -35,13 +35,15 @@ namespace crisp
         UniformBuffer* getLightTransformBuffer() const;
         UniformBuffer* getSplitBuffer() const;
 
+        glm::mat4 getLightTransform(uint32_t cascadeIndex) const;
+
         void setSplitLambda(float lambda, const AbstractCamera& camera);
 
         void recalculateLightProjections(const AbstractCamera& camera);
 
-    private:
-        Renderer* m_renderer;
+        void setZ(float z) { m_z = z; }
 
+    private:
         uint32_t m_numCascades;
         DirectionalLight m_light;
 
@@ -50,7 +52,7 @@ namespace crisp
         std::vector<glm::mat4> m_lightTransforms;
         std::unique_ptr<UniformBuffer> m_lightTransformBuffer;
 
-        float m_lambda;
+        float m_lambda; // Balances between linear and logarithmic split
         struct SplitIntervals
         {
             glm::vec4 lo;
@@ -58,5 +60,7 @@ namespace crisp
         };
         SplitIntervals m_splitIntervals;
         std::unique_ptr<UniformBuffer> m_splitBuffer;
+
+        float m_z;
     };
 }

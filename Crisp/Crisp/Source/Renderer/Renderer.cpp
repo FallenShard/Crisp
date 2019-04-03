@@ -1,44 +1,40 @@
 #include "Renderer.hpp"
 
-#define NOMINMAX
-
-#include <filesystem>
-#include <CrispCore/Log.hpp>
-
-#include <CrispCore/Math/Headers.hpp>
-#include "IO/FileUtils.hpp"
-
-#include "Vulkan/VulkanQueue.hpp"
 #include "Vulkan/VulkanDevice.hpp"
 #include "Vulkan/VulkanSwapChain.hpp"
-#include "Vulkan/VulkanBuffer.hpp"
-#include "vulkan/VulkanImage.hpp"
-#include "Vulkan/VulkanImageView.hpp"
-#include "Vulkan/VulkanSampler.hpp"
+#include "Vulkan/VulkanQueue.hpp"
 
-#include "Renderer/Texture.hpp"
-#include "Renderer/VertexBuffer.hpp"
-#include "Renderer/IndexBuffer.hpp"
-#include "Renderer/UniformBuffer.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+#include "Vulkan/VulkanSampler.hpp"
+#include "Vulkan/VulkanImageView.hpp"
+#include "Vulkan/VulkanBuffer.hpp"
 
+#include "Renderer/RenderPasses/DefaultRenderPass.hpp"
+
+#include "Renderer/UniformBuffer.hpp"
 #include "Geometry/Geometry.hpp"
+#include "Renderer/Material.hpp"
+
+#include "IO/FileUtils.hpp"
+
+#include <CrispCore/Log.hpp>
+#include <CrispCore/Math/Headers.hpp>
 
 namespace crisp
 {
     Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath)
-        : m_framesRendered(0)
+        : m_numFramesRendered(0)
         , m_currentFrameIndex(0)
         , m_resourcesPath(std::move(resourcesPath))
     {
         // Create fundamental objects for the API
         m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<std::string>>(extensions));
         m_device            = std::make_unique<VulkanDevice>(m_context.get());
-        m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), NumVirtualFrames);
+        m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), true);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
-        m_defaultViewport = { 0.0f, 0.0f, static_cast<float>(m_swapChain->getExtent().width), static_cast<float>(m_swapChain->getExtent().height), 0.0f, 1.0f };
-        m_defaultScissor = { { 0, 0 }, m_swapChain->getExtent() };
+        m_defaultViewport = m_swapChain->createViewport(0.0f, 1.0f);
+        m_defaultScissor = m_swapChain->createScissor();
 
         // Create frame resources, such as command buffer, fence and semaphores
         for (auto& frameRes : m_frameResources)
@@ -46,12 +42,12 @@ namespace crisp
             frameRes.cmdPool = m_device->getGeneralQueue()->createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
             VkCommandBufferAllocateInfo cmdBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            cmdBufferAllocInfo.commandPool        = frameRes.cmdPool;
-            cmdBufferAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            cmdBufferAllocInfo.commandPool = frameRes.cmdPool;
+            cmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             cmdBufferAllocInfo.commandBufferCount = 1;
             vkAllocateCommandBuffers(m_device->getHandle(), &cmdBufferAllocInfo, &frameRes.cmdBuffer);
 
-            frameRes.bufferFinishedFence     = m_device->createFence(VK_FENCE_CREATE_SIGNALED_BIT);
+            frameRes.bufferFinishedFence = m_device->createFence(VK_FENCE_CREATE_SIGNALED_BIT);
             frameRes.imageAvailableSemaphore = m_device->createSemaphore();
             frameRes.renderFinishedSemaphore = m_device->createSemaphore();
         }
@@ -60,16 +56,13 @@ namespace crisp
         loadShaders(m_resourcesPath / "Shaders");
 
         // create vertex buffer
-        std::vector<glm::vec2> vertices =
-        {
-            { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f }
-        };
+        std::vector<glm::vec2> vertices = { { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f } };
         std::vector<glm::uvec3> faces = { { 0, 2, 1 } };
         m_fullScreenGeometry = std::make_unique<Geometry>(this, vertices, faces);
 
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device.get(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         m_scenePipeline = createTonemappingPipeline(this, getDefaultRenderPass(), 0, true);
-        m_sceneDescSetGroup = { m_scenePipeline->allocateDescriptorSet(0) };
+        m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get(), std::vector<uint32_t>{ 0 });
     }
 
     Renderer::~Renderer()
@@ -125,7 +118,7 @@ namespace crisp
 
     VkRect2D Renderer::getDefaultScissor() const
     {
-        return { {0, 0}, getSwapChainExtent() };
+        return m_defaultScissor;
     }
 
     VkShaderModule Renderer::getShaderModule(std::string&& key) const
@@ -222,20 +215,20 @@ namespace crisp
 
         m_device->flushMappedRanges();
 
-        std::optional<uint32_t> swapChainImageIndex = acquireSwapChainImageIndex();
-        if (!swapChainImageIndex.has_value())
+        std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex();
+        if (!swapImageIndex.has_value())
         {
-            std::cerr << "Failed to acquire swap chain image!" << std::endl;
+            logError("Failed to acquire swap chain image!\n");
             return;
         }
 
-        m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapChainImageIndex.value()));
+        m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapImageIndex.value()));
         record(cmdBuffer);
         const auto& frameRes = m_frameResources[m_currentFrameIndex];
         m_device->getGeneralQueue()->submit(frameRes.imageAvailableSemaphore, frameRes.renderFinishedSemaphore,
             frameRes.cmdBuffer, frameRes.bufferFinishedFence);
 
-        present(swapChainImageIndex.value());
+        present(swapImageIndex.value());
 
         m_resourceUpdates.clear();
         m_drawCommands.clear();
@@ -272,8 +265,8 @@ namespace crisp
         m_sceneImageView = std::move(sceneImageView);
         if (m_sceneImageView)
         {
-            m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
-            m_sceneDescSetGroup.flushUpdates(m_device.get());
+            m_sceneMaterial->writeDescriptor(0, 0, 0, *m_sceneImageView, m_linearClampSampler->getHandle());
+            m_device->flushDescriptorUpdates();
         }
     }
 
@@ -341,7 +334,7 @@ namespace crisp
         return m_frameResources[m_currentFrameIndex].cmdBuffer;
     }
 
-    std::optional<uint32_t> Renderer::acquireSwapChainImageIndex()
+    std::optional<uint32_t> Renderer::acquireSwapImageIndex()
     {
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(), std::numeric_limits<uint64_t>::max(), m_frameResources[m_currentFrameIndex].imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
@@ -352,7 +345,7 @@ namespace crisp
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            logError("Unable to acquire optimal swapchain image!");
+            logError("Unable to acquire optimal VulkanSwapChain image!");
             return {};
         }
 
@@ -388,7 +381,7 @@ namespace crisp
             m_scenePipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, getCurrentVirtualFrameIndex());
             setDefaultViewport(commandBuffer);
             setDefaultScissor(commandBuffer);
-            m_sceneDescSetGroup.bind(commandBuffer, m_scenePipeline->getPipelineLayout()->getHandle());
+            m_sceneMaterial->bind(m_currentFrameIndex, commandBuffer);
             drawFullScreenQuad(commandBuffer);
         }
 
@@ -399,11 +392,11 @@ namespace crisp
         vkEndCommandBuffer(commandBuffer);
     }
 
-    void Renderer::present(uint32_t swapChainImageIndex)
+    void Renderer::present(uint32_t VulkanSwapChainImageIndex)
     {
         auto result = m_device->getGeneralQueue()->present(
             m_frameResources[m_currentFrameIndex].renderFinishedSemaphore,
-            m_swapChain->getHandle(), swapChainImageIndex);
+            m_swapChain->getHandle(), VulkanSwapChainImageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {

@@ -74,7 +74,7 @@ namespace crisp
     void SceneContainer::onSceneSelected(std::string sceneName)
     {
         m_renderer->finish();
-        m_scene = std::move(createScene(sceneName, m_renderer, m_application));
+        m_scene = createScene(sceneName, m_renderer, m_application);
     }
 
     void SceneContainer::resize(int width, int height)

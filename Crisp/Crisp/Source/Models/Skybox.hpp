@@ -45,7 +45,7 @@ namespace crisp
         TransformPack m_transformPack;
         std::unique_ptr<UniformBuffer> m_transformBuffer;
 
-        std::unique_ptr<Texture>         m_cubeMap;
+        std::unique_ptr<VulkanImage> m_cubeMap;
         std::unique_ptr<VulkanImageView> m_cubeMapView;
         std::unique_ptr<VulkanSampler>   m_sampler;
     };

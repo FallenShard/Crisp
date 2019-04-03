@@ -8,9 +8,9 @@
 
 namespace crisp
 {
-    VulkanSwapChain::VulkanSwapChain(VulkanDevice* device, uint32_t numVirtualFrames)
+    VulkanSwapChain::VulkanSwapChain(VulkanDevice* device, bool tripleBuffering)
         : VulkanResource(device)
-        , m_numVirtualFrames(numVirtualFrames)
+        , m_tripleBuffering(tripleBuffering)
     {
         createSwapChain();
         createSwapImageViews();
@@ -33,12 +33,22 @@ namespace crisp
         return m_extent;
     }
 
+    VkViewport VulkanSwapChain::createViewport(float minDepth, float maxDepth) const
+    {
+        return { 0.0f, 0.0f, static_cast<float>(m_extent.width), static_cast<float>(m_extent.height), minDepth, maxDepth };
+    }
+
+    VkRect2D VulkanSwapChain::createScissor() const
+    {
+        return { { 0, 0 }, m_extent };
+    }
+
     VkImageView VulkanSwapChain::getImageView(size_t index) const
     {
         return m_imageViews.at(index);
     }
 
-    uint32_t VulkanSwapChain::getNumSwapChainImages() const
+    uint32_t VulkanSwapChain::getSwapChainImageCount() const
     {
         return static_cast<uint32_t>(m_imageViews.size());
     }
@@ -53,15 +63,14 @@ namespace crisp
 
     void VulkanSwapChain::createSwapChain()
     {
-        auto context = m_device->getContext();
-        SwapChainSupportDetails swapChainSupport = context->querySwapChainSupport();
+        VulkanContext* context = m_device->getContext();
+        VulkanSwapChainSupportDetails swapChainSupport = context->queryVulkanSwapChainSupport();
 
         VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
-        VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_FIFO_KHR);
+        VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes, m_tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR);
         VkExtent2D extent                = chooseExtent(swapChainSupport.capabilities);
 
-        // minImageCount + 1 to support triple-buffering with MAILBOX present mode
-        uint32_t imageCount = m_numVirtualFrames;
+        uint32_t imageCount = m_tripleBuffering ? 3 : 2;
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
             imageCount = swapChainSupport.capabilities.maxImageCount;
 
@@ -151,10 +160,10 @@ namespace crisp
         return availableFormats[0];
     }
 
-    VkPresentModeKHR VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const
+    VkPresentModeKHR VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode) const
     {
         for (const auto& availablePresentMode : availablePresentModes)
-            if (availablePresentMode == presentMode)
+            if (availablePresentMode == requestedPresentMode)
                 return availablePresentMode;
 
         return VK_PRESENT_MODE_FIFO_KHR; // V-Sync is FIFO

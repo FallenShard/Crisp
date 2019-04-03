@@ -1,6 +1,7 @@
 #include "RayTracedImage.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
+#include "Renderer/RenderPasses/DefaultRenderPass.hpp"
 #include "Vulkan/VulkanFormatTraits.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
 #include "Vulkan/VulkanImage.hpp"

@@ -55,7 +55,7 @@ namespace crisp
         m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(0, 1), csm->getLightTransformBuffer()->getDescriptorInfo());
         for (uint32_t i = 0; i < Renderer::NumVirtualFrames; i++)
             for (int c = 0; c < 4; c++)
-                m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(1, 0, c, i), shadowRenderPass->getRenderTargetView(c, i)->getDescriptorInfo(sampler->getHandle()));
+                m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(1, 0, c, i), shadowRenderPass->getRenderTargetView(c, i).getDescriptorInfo(sampler->getHandle()));
 
         m_drawCommand.pipeline = m_pipeline.get();
         m_drawCommand.dynamicBuffers.push_back({ *cameraBuffer, 0 });

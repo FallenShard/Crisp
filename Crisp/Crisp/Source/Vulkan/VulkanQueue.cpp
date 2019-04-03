@@ -45,13 +45,13 @@ namespace crisp
         return vkQueueSubmit(m_handle, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
-    VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR swapChain, uint32_t imageIndex) const
+    VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const
     {
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores    = &waitSemaphore;
         presentInfo.swapchainCount     = 1;
-        presentInfo.pSwapchains        = &swapChain;
+        presentInfo.pSwapchains        = &VulkanSwapChain;
         presentInfo.pImageIndices      = &imageIndex;
         presentInfo.pResults           = nullptr;
         return vkQueuePresentKHR(m_handle, &presentInfo);

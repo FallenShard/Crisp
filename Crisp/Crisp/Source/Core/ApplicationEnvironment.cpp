@@ -2,6 +2,9 @@
 
 #include "Core/LuaConfig.hpp"
 
+#include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>
+
 namespace crisp
 {
     namespace
@@ -14,7 +17,7 @@ namespace crisp
 
     std::filesystem::path ApplicationEnvironment::ResourcesPath;
 
-    ApplicationEnvironment::ApplicationEnvironment(int, char**)
+    ApplicationEnvironment::ApplicationEnvironment(int /*argc*/, char** /*argv*/)
     {
         ConsoleColorizer::saveDefault();
 
@@ -22,7 +25,6 @@ namespace crisp
 
         if (glfwInit() == GLFW_FALSE)
             logFatal("Could not initialize GLFW library!\n");
-
 
         LuaConfig config("../../Resources/Config.lua");
         ResourcesPath = config.get<std::string>("resourcesPath").value_or("../../Resources");

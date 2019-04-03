@@ -25,7 +25,7 @@ namespace crisp
         }
     };
 
-    struct SwapChainSupportDetails
+    struct VulkanSwapChainSupportDetails
     {
         VkSurfaceCapabilitiesKHR capabilities;
         std::vector<VkSurfaceFormatKHR> formats;
@@ -45,7 +45,7 @@ namespace crisp
         bool getQueueFamilyPresentationSupport(uint32_t familyIndex) const;
         std::vector<VkQueueFamilyProperties> getQueueFamilyProperties() const;
         QueueFamilyIndices findQueueFamilies() const;
-        SwapChainSupportDetails querySwapChainSupport() const;
+        VulkanSwapChainSupportDetails queryVulkanSwapChainSupport() const;
 
         std::optional<uint32_t> findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
         std::optional<uint32_t> findMemoryType(VkMemoryPropertyFlags properties) const;

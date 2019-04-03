@@ -30,13 +30,13 @@ namespace crisp
         createResources();
     }
 
-    void DefaultRenderPass::recreateFramebuffer(VkImageView swapChainImageView)
+    void DefaultRenderPass::recreateFramebuffer(VkImageView VulkanSwapChainImageView)
     {
         const uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
         if (m_framebuffers[frameIdx])
             m_framebuffers[frameIdx].reset();
 
-        auto attachmentViews = { swapChainImageView };
+        auto attachmentViews = { VulkanSwapChainImageView };
 
         m_framebuffers[frameIdx] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews);
     }

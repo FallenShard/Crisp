@@ -30,6 +30,7 @@ namespace crisp
 
         Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
         void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
+        void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex);
 
         void resize(int width, int height);
 

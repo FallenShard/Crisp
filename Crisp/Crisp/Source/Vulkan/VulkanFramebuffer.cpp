@@ -8,10 +8,10 @@ namespace crisp
         : VulkanResource(device)
     {
         VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-        createInfo.renderPass = renderPass;
-        createInfo.width      = extent.width;
-        createInfo.height     = extent.height;
-        createInfo.layers     = 1;
+        createInfo.renderPass      = renderPass;
+        createInfo.width           = extent.width;
+        createInfo.height          = extent.height;
+        createInfo.layers          = 1;
         createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         createInfo.pAttachments    = attachments.data();
         vkCreateFramebuffer(m_device->getHandle(), &createInfo, nullptr, &m_handle);

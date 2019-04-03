@@ -17,6 +17,7 @@
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/GuiPipelines.hpp"
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
+#include "Renderer/RenderPasses/DefaultRenderPass.hpp"
 #include "Renderer/Texture.hpp"
 
 #include "GUI/DynamicUniformBufferResource.hpp"
@@ -50,24 +51,20 @@ namespace crisp::gui
         initGeometryBuffers();
 
         // Initialize resources to support dynamic addition of MVP transform resources
-        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> transformAndColorSets =
-        {
-            m_colorQuadPipeline->allocateDescriptorSet(0).getHandle(),
-            m_colorQuadPipeline->allocateDescriptorSet(0).getHandle(),
-            m_colorQuadPipeline->allocateDescriptorSet(0).getHandle()
-        };
+
+        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> transformAndColorSets;
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; i++)
+            transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
         m_transforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
         // Initialize resources to support dynamic addition of color resources
         m_colors = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
         // Initialize resources to support dynamic addition of textured controls
-        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> tcSets =
-        {
-            m_texQuadPipeline->allocateDescriptorSet(1).getHandle(),
-            m_texQuadPipeline->allocateDescriptorSet(1).getHandle(),
-            m_texQuadPipeline->allocateDescriptorSet(1).getHandle()
-        };
+        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> tcSets;
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; i++)
+            tcSets[i] = m_texQuadPipeline->allocateDescriptorSet(1).getHandle();
+
         for (auto& set : tcSets)
         {
             const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler->getHandle());

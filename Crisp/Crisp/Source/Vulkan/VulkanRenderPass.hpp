@@ -28,7 +28,7 @@ namespace crisp
         void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
 
         VulkanImage*     getRenderTarget(unsigned int index) const;
-        VulkanImageView* getRenderTargetView(unsigned int index, unsigned int frameIndex) const;
+        const VulkanImageView& getRenderTargetView(unsigned int renderTargetIndex, unsigned int frameIndex) const;
         std::unique_ptr<VulkanImageView> createRenderTargetView(unsigned int index, unsigned int numFrames) const;
 
         inline uint32_t getNumSubpasses() const { return m_numSubpasses; }

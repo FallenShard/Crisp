@@ -6,6 +6,7 @@
 
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
+#include "Core/EventHub.hpp"
 #include "Camera/CameraController.hpp"
 
 #include "Renderer/RenderPasses/SceneRenderPass.hpp"

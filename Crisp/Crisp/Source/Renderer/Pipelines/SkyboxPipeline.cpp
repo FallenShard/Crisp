@@ -1,6 +1,7 @@
 #include "SkyboxPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
+#include "vulkan/VulkanRenderPass.hpp"
 #include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 #include "Renderer/Renderer.hpp"
@@ -18,8 +19,10 @@ namespace crisp
 
         VulkanDevice* device = renderer->getDevice();
 
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
-        auto layout = createPipelineLayout(device, layoutBuilder, descPool);
+        std::vector<bool> setBuffered = { false };
+        std::vector<uint32_t> copiesPerSet = { 1 };
+        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, copiesPerSet, 1);
+        auto layout = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -28,7 +31,7 @@ namespace crisp
                 createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("skybox-frag"))
             })
             .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32_SFLOAT>()
-            .addVertexAttributes<0, 0, VK_FORMAT_R32G32B32_SFLOAT>()
+            .setVertexAttributes<VK_FORMAT_R32G32B32_SFLOAT>()
             .setViewport(renderer->getDefaultViewport())
             .setScissor(renderer->getDefaultScissor())
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)

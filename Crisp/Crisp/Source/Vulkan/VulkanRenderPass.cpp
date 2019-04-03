@@ -76,9 +76,9 @@ namespace crisp
         return m_renderTargets.at(index).get();
     }
 
-    VulkanImageView* VulkanRenderPass::getRenderTargetView(unsigned int index, unsigned int frameIndex) const
+    const VulkanImageView& VulkanRenderPass::getRenderTargetView(unsigned int index, unsigned int frameIndex) const
     {
-        return m_renderTargetViews.at(index).at(frameIndex).get();
+        return *m_renderTargetViews.at(index).at(frameIndex);
     }
 
     std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(unsigned int index, unsigned int numFrames) const

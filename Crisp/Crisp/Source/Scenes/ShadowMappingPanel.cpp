@@ -5,6 +5,7 @@
 #include "GUI/Slider.hpp"
 #include "GUI/DoubleSlider.hpp"
 #include "GUI/Button.hpp"
+#include "GUI/ComboBox.hpp"
 
 #include "ShadowMappingScene.hpp"
 
@@ -69,6 +70,23 @@ namespace crisp::gui
         metallicSlider->valueChanged.subscribe<&ShadowMappingScene::setMetallic>(scene);
         addControl(std::move(metallicSlider));
         y += 30;
+
+        std::vector<std::string> materials =
+        {
+            "RustedIron",
+            "Limestone",
+            "MetalGrid",
+            "MixedMoss",
+            "RedBricks",
+            "GreenCeramic"
+        };
+
+        auto comboBox = std::make_unique<gui::ComboBox>(parentForm);
+        comboBox->setId("sceneComboBox");
+        comboBox->setPosition({ 0, 0 });
+        comboBox->setItems(materials);
+        comboBox->itemSelected.subscribe<&ShadowMappingScene::onMaterialSelected>(scene);
+        addControl(std::move(comboBox));
     }
 
     ShadowMappingPanel::~ShadowMappingPanel()

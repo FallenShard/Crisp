@@ -2,23 +2,36 @@
 
 namespace crisp
 {
+    namespace
+    {
+        glm::mat4 calculateViewMatrix(const glm::vec3& direction)
+        {
+            glm::vec3 up(0.0f, 1.0f, 0.0f);
+            const glm::vec3 right = glm::normalize(glm::cross(direction, up));
+            up = glm::normalize(glm::cross(right, direction));
+
+            const glm::vec3 origin(0.0f, 0.0f, 0.0f);
+            return glm::lookAt(origin, origin + direction, up);
+        }
+    }
+
     DirectionalLight::DirectionalLight(const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& minCorner, const glm::vec3& maxCorner)
-        : m_direction(direction)
+        : m_direction(glm::normalize(direction))
         , m_radiance(radiance)
     {
-        auto up    = glm::vec3(0.0f, 1.0f, 0.0f);
-        auto right = glm::normalize(glm::cross(m_direction, up));
-        up         = glm::normalize(glm::cross(right, m_direction));
-
-        auto position = glm::vec3(0.0f, 0.0f, 0.0f);
-        m_view     = glm::lookAt(position, position + m_direction, up);
-
+        m_view       = calculateViewMatrix(m_direction);
         m_projection = glm::ortho(minCorner.x, maxCorner.x, minCorner.y, maxCorner.y, minCorner.z, maxCorner.z);
     }
 
-    void DirectionalLight::setDirection(glm::vec3 dir)
+    void DirectionalLight::setDirection(glm::vec3 direction)
     {
-        m_direction = dir;
+        m_direction = glm::normalize(direction);
+        m_view      = calculateViewMatrix(m_direction);
+    }
+
+    const glm::vec3& DirectionalLight::getDirection() const
+    {
+        return m_direction;
     }
 
     const glm::mat4& DirectionalLight::getViewMatrix() const
@@ -31,7 +44,7 @@ namespace crisp
         return m_projection;
     }
 
-    void DirectionalLight::calculateProjection(float split, const std::array<glm::vec3, 8>& worldFrustumPoints)
+    void DirectionalLight::calculateProjection(float /*split*/, const std::array<glm::vec3, 8>& worldFrustumPoints)
     {
         glm::vec3 minCorner = worldFrustumPoints[0];
         glm::vec3 maxCorner = worldFrustumPoints[0];

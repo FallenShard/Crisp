@@ -16,7 +16,7 @@ namespace crisp
 
         VkResult submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer, VkFence fence) const;
         VkResult submit(VkCommandBuffer cmdBuffer) const;
-        VkResult present(VkSemaphore waitSemaphore, VkSwapchainKHR swapChain, uint32_t imageIndex) const;
+        VkResult present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const;
 
         void waitIdle() const;
 

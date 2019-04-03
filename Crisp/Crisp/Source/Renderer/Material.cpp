@@ -5,11 +5,35 @@
 
 namespace crisp
 {
-    Material::Material(VulkanPipeline* pipeline, std::vector<uint32_t> singleSetIds, std::vector<uint32_t> bufferedSetIds)
+    Material::Material(VulkanPipeline* pipeline)
+        : m_pipeline(pipeline)
+    {
+        std::size_t setCount = m_pipeline->getPipelineLayout()->getDescriptorSetLayoutCount();
+
+        for (auto& setVector : m_sets)
+            setVector.resize(setCount);
+
+        for (std::size_t i = 0; i < setCount; ++i)
+        {
+            if (m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(i))
+            {
+                for (uint32_t j = 0; j < m_sets.size(); ++j)
+                    m_sets[j][i] = pipeline->allocateDescriptorSet(i).getHandle();
+            }
+            else
+            {
+                VkDescriptorSet set = pipeline->allocateDescriptorSet(i).getHandle();
+                for (uint32_t j = 0; j < m_sets.size(); ++j)
+                    m_sets[j][i] = set;
+            }
+        }
+    }
+
+    Material::Material(VulkanPipeline* pipeline, std::vector<uint32_t> constantSetIds, std::vector<uint32_t> bufferedSetIds)
         : m_pipeline(pipeline)
     {
         std::vector<VkDescriptorSet> sharedSets;
-        for (auto setId : singleSetIds)
+        for (auto setId : constantSetIds)
         {
             if (setId >= sharedSets.size())
                 sharedSets.resize(setId + 1);
@@ -32,8 +56,7 @@ namespace crisp
 
     VkWriteDescriptorSet Material::makeDescriptorWrite(uint32_t setIndex, uint32_t binding, uint32_t frameIdx)
     {
-        VkWriteDescriptorSet write = {};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = m_sets[frameIdx][setIndex];
         write.dstBinding      = binding;
         write.dstArrayElement = 0;
@@ -44,8 +67,7 @@ namespace crisp
 
     VkWriteDescriptorSet Material::makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t index, uint32_t frameIdx)
     {
-        VkWriteDescriptorSet write = {};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = m_sets[frameIdx][setIdx];
         write.dstBinding      = binding;
         write.dstArrayElement = index;
@@ -56,8 +78,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, VkDescriptorBufferInfo&& bufferInfo)
     {
-        VkWriteDescriptorSet write = {};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = m_sets[frameIdx][setIndex];
         write.dstBinding      = binding;
         write.dstArrayElement = 0;
@@ -68,8 +89,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, VkDescriptorImageInfo&& imageInfo)
     {
-        VkWriteDescriptorSet write = {};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = m_sets[frameIdx][setIndex];
         write.dstBinding      = binding;
         write.dstArrayElement = 0;
@@ -80,8 +100,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, const VulkanImageView& imageView, VkSampler sampler)
     {
-        VkWriteDescriptorSet write = {};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = m_sets[frameIdx][setIndex];
         write.dstBinding      = binding;
         write.dstArrayElement = 0;

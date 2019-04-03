@@ -6,6 +6,7 @@
 #include "Animation/PropertyAnimation.hpp"
 
 #include "Core/Window.hpp"
+#include "Core/EventHub.hpp"
 
 namespace crisp
 {
@@ -123,7 +124,7 @@ namespace crisp
         m_prevMousePos = mousePos;
     }
 
-    void CameraController::onMouseWheelScrolled(double offset)
+    void CameraController::onMouseWheelScrolled(double /*offset*/)
     {
         //auto zoomAnim = std::make_shared<PropertyAnimation<float>>(0.3, m_camera.getDistance(), static_cast<float>(m_camera.getDistance() - offset), 0.0, Easing::CubicOut);
         //zoomAnim->setUpdater([this](const float& t)
@@ -138,6 +139,11 @@ namespace crisp
         m_screenSize.x = static_cast<float>(width);
         m_screenSize.y = static_cast<float>(height);
         m_camera.setApectRatio(m_screenSize.x / m_screenSize.y);
+    }
+
+    AbstractCamera& CameraController::getCamera()
+    {
+        return m_camera;
     }
 
     const AbstractCamera& CameraController::getCamera() const

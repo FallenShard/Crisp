@@ -1,6 +1,7 @@
 #include "ShadowMapPipelines.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
+#include "Vulkan/VulkanRenderPass.hpp"
 #include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 #include "Renderer/Renderer.hpp"
@@ -22,6 +23,14 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
+        VkViewport viewport = renderPass->createViewport();
+        viewport.width /= 2;
+        viewport.height /= 2;
+
+        VkRect2D scissor = renderPass->createScissor();
+        scissor.extent.width /= 2;
+        scissor.extent.height /= 2;
+
         return PipelineBuilder()
             .setShaderStages
             ({
@@ -30,8 +39,11 @@ namespace crisp
             })
             .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32_SFLOAT>()
             .setVertexAttributes<VK_FORMAT_R32G32B32_SFLOAT>()
-            .setViewport(renderPass->createViewport())
-            .setScissor(renderPass->createScissor())
+            .setViewport(std::move(viewport))
+            .setScissor(std::move(scissor))
+            .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
+            .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
+            .setFrontFace(VK_FRONT_FACE_CLOCKWISE)
             .create(device, std::move(layout), renderPass->getHandle(), subpass);
     }
 
@@ -79,6 +91,14 @@ namespace crisp
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
         auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
+        VkViewport viewport = renderPass->createViewport();
+        viewport.width /= 2;
+        viewport.height /= 2;
+
+        VkRect2D scissor = renderPass->createScissor();
+        scissor.extent.width /= 2;
+        scissor.extent.height /= 2;
+
         return PipelineBuilder()
             .setShaderStages
             ({
@@ -87,8 +107,8 @@ namespace crisp
             })
             .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT>()
             .setVertexAttributes<VK_FORMAT_R32G32B32_SFLOAT>()
-            .setViewport(renderPass->createViewport())
-            .setScissor(renderPass->createScissor())
+            .setViewport(std::move(viewport))
+            .setScissor(std::move(scissor))
             .create(device, std::move(layout), renderPass->getHandle(), 0);
     }
 }

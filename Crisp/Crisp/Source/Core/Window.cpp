@@ -1,10 +1,11 @@
 #include "Window.hpp"
+#include "Core/EventHub.hpp"
 
 #include <glfw/glfw3.h>
 
 namespace crisp
 {
-    Window::Window(const glm::ivec2& position, const glm::ivec2 & size, std::string title)
+    Window::Window(const glm::ivec2& position, const glm::ivec2& size, std::string title)
         : Window(position.x, position.y, size.x, size.y, title)
     {
     }

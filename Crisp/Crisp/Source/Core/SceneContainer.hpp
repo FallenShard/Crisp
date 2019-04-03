@@ -33,7 +33,7 @@ namespace crisp
     private:
         std::unique_ptr<AbstractScene> m_scene;
 
-        Renderer* m_renderer;
+        Renderer*    m_renderer;
         Application* m_application;
     };
 }

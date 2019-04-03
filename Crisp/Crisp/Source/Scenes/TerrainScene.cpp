@@ -15,6 +15,7 @@
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/Texture.hpp"
+#include "Renderer/VertexBuffer.hpp"
 
 namespace crisp
 {

@@ -71,14 +71,15 @@ namespace crisp
         void setSplitLambda(double lambda);
         void setMetallic(double metallic);
         void setRoughness(double roughness);
+        void onMaterialSelected(const std::string& material);
 
         DrawCommand createDrawCommand(Material* material, Geometry* geometry, int transformIndex);
-        DrawCommand createLightDrawCommand(Material* material, Geometry* geometry, int transformIndex);
-        DrawCommand createPbrUnifDrawCommand(Material* material, Geometry* geometry, int transformIndex);
 
     private:
         void createDefaultPbrTextures();
         std::unique_ptr<Material> createPbrMaterial(const std::string& type);
+
+        void setupControls();
 
         Renderer*     m_renderer;
         Application*  m_app;
@@ -91,9 +92,6 @@ namespace crisp
         std::unique_ptr<VulkanImage> m_texture;
         std::unique_ptr<VulkanImageView> m_textureView;
 
-        std::unique_ptr<VulkanPipeline> m_colorLightPipeline;
-        std::unique_ptr<Material> m_colorLightMaterial;
-
         std::unique_ptr<VulkanPipeline> m_normalMapPipeline;
         std::unique_ptr<Material> m_normalMapMaterial;
 
@@ -102,6 +100,8 @@ namespace crisp
         std::vector<std::unique_ptr<VulkanImageView>> m_normalMapViews;
         std::vector<std::unique_ptr<Material>> m_materials;
         std::vector<std::unique_ptr<Geometry>> m_geometries;
+
+        Material* m_activeMaterial;
 
         std::vector<RenderNode> m_renderNodes;
 
@@ -129,9 +129,7 @@ namespace crisp
         std::unique_ptr<VulkanPipeline> m_colorShadowPipeline;
         std::unique_ptr<Material> m_colorShadowMaterial;
 
-        std::vector<std::unique_ptr<VulkanPipeline>> m_csmPipelines;
-        std::unique_ptr<Material> m_csmMaterial;
-
+        std::unique_ptr<VulkanPipeline> m_csmPipeline;
 
         std::unique_ptr<Grass> m_grass;
 
@@ -191,9 +189,6 @@ namespace crisp
         //std::unique_ptr<VarianceShadowMapPass> m_vsmPass;
         //std::unique_ptr<VarianceShadowMapPipeline> m_vsmPipeline;
         //DescriptorSetGroup m_vsmDescSetGroup;
-
-        std::unique_ptr<VulkanImage>       m_normalMap;
-        std::unique_ptr<VulkanImageView>   m_normalMapView;
 
         //GaussianBlur m_blurParameters;
     };

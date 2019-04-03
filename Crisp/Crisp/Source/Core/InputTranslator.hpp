@@ -1,8 +1,9 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
 #include "Keyboard.hpp"
 #include "Mouse.hpp"
+
+#include <GLFW/glfw3.h>
 
 namespace crisp
 {

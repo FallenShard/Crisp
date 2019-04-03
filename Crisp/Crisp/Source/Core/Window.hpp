@@ -1,13 +1,13 @@
 #pragma once
 
+#include <CrispCore/Math/Headers.hpp>
+
+#include <vulkan/vulkan.h>
+
 #include <memory>
 #include <vector>
 #include <string>
 
-#include <vulkan/vulkan.h>
-#include <CrispCore/Math/Headers.hpp>
-
-#include "EventHub.hpp"
 
 struct GLFWwindow;
 
@@ -18,6 +18,8 @@ namespace crisp
         Disabled,
         Normal
     };
+
+    class EventHub;
 
     class Window
     {
@@ -42,7 +44,6 @@ namespace crisp
 
         EventHub& getEventHub();
 
-       
         VkResult createRenderingSurface(VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) const;
 
     private:

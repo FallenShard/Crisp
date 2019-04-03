@@ -12,6 +12,7 @@ layout(location = 1) out vec2 outTexCoord;
 layout(location = 2) out vec3 eyePosition;
 layout(location = 3) out vec3 eyeTangent;
 layout(location = 4) out vec3 eyeBitangent;
+layout(location = 5) out vec3 worldPos;
 
 
 layout(set = 0, binding = 0) uniform Transforms
@@ -29,6 +30,7 @@ void main()
     eyeBitangent = normalize((N * vec4(bitangent, 0.0f)).xyz);
     eyePosition  = (MV * vec4(position, 1.0f)).xyz;
     outTexCoord = texCoord;
+    worldPos = vec3(M * vec4(position, 1.0f));
     
     gl_Position = MVP * vec4(position, 1.0f);
 }

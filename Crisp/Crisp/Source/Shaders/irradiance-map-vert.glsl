@@ -14,6 +14,7 @@ layout(set = 0, binding = 0) uniform Transforms
 
 void main()
 {
-    modelPosition = position;  
+    modelPosition = position;
     gl_Position =  MVP * vec4(position, 1.0f);
+	gl_Position = gl_Position.xyww;
 }

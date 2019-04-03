@@ -4,6 +4,7 @@
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanImage.hpp"
 #include "vulkan/VulkanImageView.hpp"
+#include "vulkan/VulkanBuffer.hpp"
 
 namespace crisp
 {

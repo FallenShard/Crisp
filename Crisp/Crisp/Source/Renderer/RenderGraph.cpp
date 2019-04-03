@@ -1,5 +1,6 @@
 #include "RenderGraph.hpp"
 
+#include "Vulkan/VulkanImage.hpp"
 #include "Vulkan/VulkanPipeline.hpp"
 #include "Renderer/Material.hpp"
 #include "Geometry/Geometry.hpp"
@@ -39,6 +40,15 @@ namespace crisp
     void RenderGraph::addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback)
     {
         m_nodes.at(sourcePass)->dependencies[destinationPass] = callback;
+    }
+
+    void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex)
+    {
+        m_nodes.at(sourcePass)->dependencies[destinationPass] = [sourceRenderTargetIndex](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        {
+            sourcePass.getRenderTarget(sourceRenderTargetIndex)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        };
     }
 
     void RenderGraph::sortRenderPasses()
@@ -89,7 +99,6 @@ namespace crisp
         m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer)
         {
             uint32_t frameIndex = m_renderer->getCurrentVirtualFrameIndex();
-
             for (auto node : m_executionOrder)
             {
                 node->renderPass->begin(cmdBuffer);
@@ -103,9 +112,20 @@ namespace crisp
                         command.pipeline->bind(cmdBuffer);
                         auto dynamicState = command.pipeline->getDynamicStateFlags();
                         if (dynamicState & PipelineDynamicState::Viewport)
-                            m_renderer->setDefaultViewport(cmdBuffer);
+                        {
+                            if (command.viewport.width != 0.0f)
+                                vkCmdSetViewport(cmdBuffer, 0, 1, &command.viewport);
+                            else
+                                m_renderer->setDefaultViewport(cmdBuffer);
+                        }
+
                         if (dynamicState & PipelineDynamicState::Scissor)
-                            m_renderer->setDefaultScissor(cmdBuffer);
+                        {
+                            if (command.scissor.extent.width != 0)
+                                vkCmdSetScissor(cmdBuffer, 0, 1, &command.scissor);
+                            else
+                                m_renderer->setDefaultScissor(cmdBuffer);
+                        }
 
                         command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer, command.pushConstants.data());
 

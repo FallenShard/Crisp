@@ -1,7 +1,5 @@
 #pragma once
 
-#define NOMINMAX
-
 #include "ApplicationEnvironment.hpp"
 #include "Core/FrameTimeLogger.hpp"
 
@@ -12,7 +10,6 @@
 namespace crisp
 {
     class Window;
-    class InputDispatcher;
     class Renderer;
     class SceneContainer;
 
@@ -25,9 +22,11 @@ namespace crisp
     {
     public:
         static constexpr const char* Title = "Crisp";
-        static constexpr double TimePerFrame = 1.0 / 144.0;
         static constexpr int DefaultWindowWidth  = 1280;
         static constexpr int DefaultWindowHeight = 720;
+
+        static constexpr uint32_t DesiredFramesPerSecond = 144;
+        static constexpr double TimePerFrame = 1.0 / DesiredFramesPerSecond;
 
         Application(const ApplicationEnvironment& environment);
         ~Application();
@@ -52,7 +51,7 @@ namespace crisp
 
         FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;
 
-        std::unique_ptr<Window>          m_window;
+        std::unique_ptr<Window>    m_window;
         std::unique_ptr<Renderer>  m_renderer;
 
         std::unique_ptr<gui::Form> m_guiForm;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "VulkanResource.hpp"
+
+#include <vector>
 
 namespace crisp
 {
@@ -11,7 +11,7 @@ namespace crisp
     class VulkanSwapChain : public VulkanResource<VkSwapchainKHR>
     {
     public:
-        VulkanSwapChain(VulkanDevice* device, uint32_t numVirtualFrames);
+        VulkanSwapChain(VulkanDevice* device, bool tripleBuffering);
         ~VulkanSwapChain();
 
         VulkanSwapChain(const VulkanSwapChain& other) = delete;
@@ -20,8 +20,11 @@ namespace crisp
 
         VkFormat getImageFormat() const;
         VkExtent2D getExtent() const;
+        VkViewport createViewport(float minDepth = 0.0f, float maxDepth = 1.0f) const;
+        VkRect2D createScissor() const;
+
         VkImageView getImageView(size_t index) const;
-        uint32_t getNumSwapChainImages() const;
+        uint32_t getSwapChainImageCount() const;
 
         void recreate();
 
@@ -33,8 +36,7 @@ namespace crisp
         VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;
         VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
-        uint32_t m_numVirtualFrames;
-
+        bool       m_tripleBuffering;
         VkFormat   m_imageFormat;
         VkExtent2D m_extent;
         std::vector<VkImage>     m_images;

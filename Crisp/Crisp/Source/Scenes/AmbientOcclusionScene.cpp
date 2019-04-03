@@ -96,7 +96,7 @@ namespace crisp
         for (int i = 0; i < Renderer::NumVirtualFrames; i++)
         {
             m_ssaoSetGroups[i] = { m_ssaoPipeline->allocateDescriptorSet(0) };
-            m_ssaoSetGroups[i].postImageUpdate(0,  0, m_scenePass->getRenderTargetView(0, i)->getDescriptorInfo(m_nearestSampler->getHandle()));
+            m_ssaoSetGroups[i].postImageUpdate(0,  0, m_scenePass->getRenderTargetView(0, i).getDescriptorInfo(m_nearestSampler->getHandle()));
             m_ssaoSetGroups[i].postBufferUpdate(0, 1, m_cameraBuffer->getDescriptorInfo());
             m_ssaoSetGroups[i].postBufferUpdate(0, 2, m_samplesBuffer->getDescriptorInfo());
             m_ssaoSetGroups[i].postImageUpdate(0, 3, m_noiseMapView->getDescriptorInfo(m_noiseSampler->getHandle()));
@@ -139,7 +139,7 @@ namespace crisp
 
         for (int i = 0; i < Renderer::NumVirtualFrames; i++)
         {
-            m_ssaoSetGroups[i].postImageUpdate(0, 0, m_scenePass->getRenderTargetView(0, i)->getDescriptorInfo(m_nearestSampler->getHandle()));
+            m_ssaoSetGroups[i].postImageUpdate(0, 0, m_scenePass->getRenderTargetView(0, i).getDescriptorInfo(m_nearestSampler->getHandle()));
             m_ssaoSetGroups[i].flushUpdates(m_device);
         }
     }

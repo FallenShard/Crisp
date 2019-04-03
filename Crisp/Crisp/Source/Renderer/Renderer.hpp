@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Vulkan/VulkanContext.hpp"
+
 #include <memory>
 #include <array>
 #include <vector>
@@ -8,32 +10,25 @@
 #include <unordered_set>
 #include <filesystem>
 
-#include <vulkan/vulkan.h>
-
-#include "Vulkan/VulkanContext.hpp"
-#include "Renderer/VertexBufferBindingGroup.hpp"
-#include "Renderer/RenderPasses/DefaultRenderPass.hpp"
-#include "DescriptorSetGroup.hpp"
-
 namespace crisp
 {
-    class VulkanSampler;
-    class VulkanImage;
     class VulkanDevice;
     class VulkanSwapChain;
-    class VulkanPipeline;
 
-    class Geometry;
-    class Texture;
+    class DefaultRenderPass;
+    class VulkanPipeline;
+    class VulkanSampler;
     class VulkanImageView;
-    class VertexBuffer;
-    class IndexBuffer;
+    class VulkanBuffer;
+
     class UniformBuffer;
+    class Geometry;
+    class Material;
 
     class Renderer
     {
     public:
-        static constexpr unsigned int NumVirtualFrames = 3;
+        static constexpr unsigned int NumVirtualFrames = 2;
 
         Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath);
         ~Renderer();
@@ -92,14 +87,18 @@ namespace crisp
     private:
         void loadShaders(const std::filesystem::path& directoryPath);
         VkCommandBuffer         acquireCommandBuffer();
-        std::optional<uint32_t> acquireSwapChainImageIndex();
+        std::optional<uint32_t> acquireSwapImageIndex();
         void resetCommandBuffer(VkCommandBuffer cmdBuffer);
         void record(VkCommandBuffer commandBuffer);
-        void present(uint32_t swapChainImageIndex);
+        void present(uint32_t VulkanSwapChainImageIndex);
 
         void recreateSwapChain();
 
         void destroyResourcesScheduledForRemoval();
+
+        uint32_t m_numFramesRendered;
+        uint32_t m_currentFrameIndex;
+        std::filesystem::path m_resourcesPath;
 
         std::unique_ptr<VulkanContext>     m_context;
         std::unique_ptr<VulkanDevice>      m_device;
@@ -107,11 +106,7 @@ namespace crisp
         std::unique_ptr<DefaultRenderPass> m_defaultRenderPass;
 
         VkViewport m_defaultViewport;
-        VkRect2D m_defaultScissor;
-
-        uint32_t m_framesRendered;
-        uint32_t m_currentFrameIndex;
-        std::filesystem::path m_resourcesPath;
+        VkRect2D   m_defaultScissor;
 
         struct FrameResources
         {
@@ -130,8 +125,6 @@ namespace crisp
         FunctionVector m_drawCommands;
         FunctionVector m_defaultPassDrawCommands;
 
-        std::unique_ptr<VertexBuffer> m_fullscreenVertexBuffer;
-        std::unique_ptr<IndexBuffer>  m_fullscreenIndexBuffer;
         std::unique_ptr<Geometry> m_fullScreenGeometry;
 
         std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;
@@ -140,6 +133,6 @@ namespace crisp
         std::unique_ptr<VulkanPipeline>  m_scenePipeline;
         std::unique_ptr<VulkanSampler>   m_linearClampSampler;
         std::unique_ptr<VulkanImageView> m_sceneImageView;
-        DescriptorSetGroup               m_sceneDescSetGroup;
+        std::unique_ptr<Material>        m_sceneMaterial;
     };
 }

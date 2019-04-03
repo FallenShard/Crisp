@@ -1,9 +1,11 @@
 #include "SsaoPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
+#include "vulkan/VulkanRenderPass.hpp"
 #include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 #include "Renderer/Renderer.hpp"
+
 namespace crisp
 {
     std::unique_ptr<VulkanPipeline> createLightShaftPipeline(Renderer* renderer, VulkanRenderPass* renderPass)

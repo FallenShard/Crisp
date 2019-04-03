@@ -9,7 +9,7 @@ namespace crisp
     public:
         DefaultRenderPass(Renderer* renderer);
 
-        void recreateFramebuffer(VkImageView swapChainImageView);
+        void recreateFramebuffer(VkImageView VulkanSwapChainImageView);
 
     private:
         virtual void createResources() override;

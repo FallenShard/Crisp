@@ -168,6 +168,8 @@ popd</Command>
     <ClCompile Include="Source\Renderer\RenderPasses\EnvironmentRenderPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\LightShaftPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp" />
+    <ClCompile Include="Source\Renderer\VulkanBufferUtils.cpp" />
+    <ClCompile Include="Source\Renderer\VulkanImageUtils.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionPanel.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionScene.cpp" />
     <ClCompile Include="Source\Scenes\FluidSimulationPanel.cpp" />
@@ -297,6 +299,8 @@ popd</Command>
     <ClInclude Include="Source\Renderer\RenderPasses\EnvironmentRenderPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\LightShaftPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp" />
+    <ClInclude Include="Source\Renderer\VulkanBufferUtils.hpp" />
+    <ClInclude Include="Source\Renderer\VulkanImageUtils.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp" />
     <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
@@ -410,6 +414,8 @@ popd</Command>
     <None Include="Source\Shaders\depth-normal-vert.glsl" />
     <None Include="Source\Shaders\diffuse-frag.glsl" />
     <None Include="Source\Shaders\diffuse-vert.glsl" />
+    <None Include="Source\Shaders\equirect-frag.glsl" />
+    <None Include="Source\Shaders\equirect-vert.glsl" />
     <None Include="Source\Shaders\fullscreen-quad-frag.glsl" />
     <None Include="Source\Shaders\fullscreen-quad-vert.glsl" />
     <None Include="Source\Shaders\gamma-correct-frag.glsl" />

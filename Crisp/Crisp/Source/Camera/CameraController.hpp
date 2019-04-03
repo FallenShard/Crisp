@@ -37,6 +37,7 @@ namespace crisp
 
         void resize(int width, int height);
 
+        AbstractCamera& getCamera();
         const AbstractCamera& getCamera() const;
         const CameraParameters* getCameraParameters() const;
 

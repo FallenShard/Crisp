@@ -53,6 +53,8 @@ namespace crisp
 
     struct DrawCommand
     {
+        VkViewport viewport = {};
+        VkRect2D scissor = {};
         std::vector<DynamicBufferInfo> dynamicBuffers;
         std::vector<char> pushConstants;
         VulkanPipeline* pipeline;

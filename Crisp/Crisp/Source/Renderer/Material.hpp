@@ -19,7 +19,8 @@ namespace crisp
     class Material
     {
     public:
-        Material(VulkanPipeline* pipeline, std::vector<uint32_t> singleSets, std::vector<uint32_t> bufferedSets = std::vector<uint32_t>());
+        Material(VulkanPipeline* pipeline);
+        Material(VulkanPipeline* pipeline, std::vector<uint32_t> constantSetIds, std::vector<uint32_t> bufferedSets = std::vector<uint32_t>());
 
         VkWriteDescriptorSet makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t frameIdx = 0);
         VkWriteDescriptorSet makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t index, uint32_t frameIdx = 0);

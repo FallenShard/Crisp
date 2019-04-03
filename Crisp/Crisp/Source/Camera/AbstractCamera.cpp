@@ -41,7 +41,7 @@ namespace crisp
 
     float AbstractCamera::getFov() const
     {
-        return m_fov;
+        return glm::degrees(m_fov);
     }
 
     void AbstractCamera::setApectRatio(float aspectRatio)

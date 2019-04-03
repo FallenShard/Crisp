@@ -16,8 +16,8 @@ namespace crisp
         ~Event() = default;
 
         Event(const Event& other) = delete;
-        Event<void, ParamTypes...>& operator=(const Event& other) = delete;
-        Event<void, ParamTypes...>& operator=(Event&& other) = delete;
+        Event& operator=(const Event& other) = delete;
+        Event& operator=(Event&& other) = delete;
 
         template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
         void subscribe(ReceiverType* obj)

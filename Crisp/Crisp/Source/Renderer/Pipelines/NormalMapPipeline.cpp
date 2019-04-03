@@ -1,6 +1,7 @@
 #include "NormalMapPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
+#include "Vulkan/VulkanRenderPass.hpp"
 #include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Renderer/PipelineBuilder.hpp"
 #include "Renderer/Renderer.hpp"

@@ -5,6 +5,8 @@
 #include "Geometry/TransformPack.hpp"
 #include "Scene.hpp"
 
+#include "Renderer/Material.hpp"
+
 namespace crisp
 {
     class Application;
@@ -12,6 +14,7 @@ namespace crisp
     class CameraController;
 
     class Renderer;
+    class RenderGraph;
     class VulkanDevice;
     class VulkanSampler;
     class VulkanPipeline;
@@ -36,30 +39,26 @@ namespace crisp
         virtual void render() override;
 
     private:
-        Renderer* m_renderer;
-        VulkanDevice*   m_device;
-        Application*    m_app;
+        std::unique_ptr<Material> createPbrMaterial(const std::string& type);
+
+        Renderer*    m_renderer;
+        Application* m_app;
 
         std::unique_ptr<CameraController> m_cameraController;
-        std::unique_ptr<UniformBuffer>    m_cameraTransformBuffer;
+        std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
         std::vector<TransformPack>     m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+        std::unique_ptr<UniformBuffer> m_transformBuffer;
 
-        std::unique_ptr<Texture>     m_materialTex;
-        std::unique_ptr<VulkanImageView> m_materialTexView;
+        std::unique_ptr<RenderGraph> m_renderGraph;
 
-        std::unique_ptr<Texture>     m_roughnessTex;
-        std::unique_ptr<VulkanImageView> m_roughnessTexView;
+        std::vector<std::unique_ptr<VulkanImage>>     m_images;
+        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
 
-        std::unique_ptr<Texture>     m_metallicTex;
-        std::unique_ptr<VulkanImageView> m_metallicTexView;
+        std::vector<std::unique_ptr<Material>> m_materials;
+        std::vector<std::unique_ptr<Geometry>> m_geometries;
 
-        std::unique_ptr<MeshGeometry> m_sphereMesh;
-
-        std::unique_ptr<SceneRenderPass> m_mainPass;
         std::unique_ptr<VulkanPipeline> m_physBasedPipeline;
-        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_physBasedDesc;
 
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
     };
