@@ -59,11 +59,31 @@ namespace crisp
         vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
+    void VulkanRenderPass::begin(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const
+    {
+        VkRenderPassBeginInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        renderPassInfo.renderPass        = m_handle;
+        renderPassInfo.framebuffer       = m_framebuffers[frameIndex]->getHandle();
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = m_renderArea;
+        renderPassInfo.clearValueCount   = static_cast<uint32_t>(m_clearValues.size());
+        renderPassInfo.pClearValues      = m_clearValues.data();
+
+        vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
     void VulkanRenderPass::end(VkCommandBuffer cmdBuffer) const
     {
         vkCmdEndRenderPass(cmdBuffer);
         for (uint32_t i = 0; i < m_renderTargets.size(); ++i)
             m_renderTargets[i]->setImageLayout(m_finalLayouts[i], m_renderer->getCurrentVirtualFrameIndex());
+    }
+
+    void VulkanRenderPass::end(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const
+    {
+        vkCmdEndRenderPass(cmdBuffer);
+        for (uint32_t i = 0; i < m_renderTargets.size(); ++i)
+            m_renderTargets[i]->setImageLayout(m_finalLayouts[i], frameIndex);
     }
 
     void VulkanRenderPass::nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents contents) const
@@ -79,6 +99,14 @@ namespace crisp
     const VulkanImageView& VulkanRenderPass::getRenderTargetView(unsigned int index, unsigned int frameIndex) const
     {
         return *m_renderTargetViews.at(index).at(frameIndex);
+    }
+
+    std::vector<VulkanImageView*> VulkanRenderPass::getRenderTargetViews(unsigned int renderTargetIndex) const
+    {
+        std::vector<VulkanImageView*> imageViews;
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+            imageViews.push_back(m_renderTargetViews.at(renderTargetIndex).at(i).get());
+        return imageViews;
     }
 
     std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(unsigned int index, unsigned int numFrames) const

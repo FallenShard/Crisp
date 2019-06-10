@@ -26,6 +26,8 @@ namespace crisp
             "Test"
         };
 
+        static constexpr std::size_t DefaultSceneIndex = 1;
+
         template <typename ...Args>
         std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... args)
         {
@@ -56,7 +58,7 @@ namespace crisp
 
     const std::string& SceneContainer::getDefaultScene()
     {
-        return sceneNames.at(2);
+        return sceneNames.at(DefaultSceneIndex);
     }
 
     void SceneContainer::update(float dt)

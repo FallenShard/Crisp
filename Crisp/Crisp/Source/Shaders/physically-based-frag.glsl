@@ -23,7 +23,6 @@ layout(set = 0, binding = 3) uniform sampler2D metallicTex;
 layout(set = 0, binding = 4) uniform sampler2D roughnessTex;
 layout(set = 0, binding = 5) uniform sampler2D normalTex;
 layout(set = 0, binding = 6) uniform sampler2D aoTex;
-layout(set = 0, binding = 7) uniform sampler2D envMap;
 
 layout(set = 1, binding = 0) uniform Light
 {
@@ -42,37 +41,64 @@ layout(set = 1, binding = 2) uniform CascadeSplit
     vec4 hi;
 } cascadeSplit;
 
+layout(set = 1, binding = 3) uniform LightTransforms
+{
+    mat4 VP[4];
+} lightTransforms;
+
+layout (set = 2, binding = 0) uniform samplerCube irrMap;
+layout (set = 2, binding = 1) uniform samplerCube refMap;
+layout (set = 2, binding = 2) uniform sampler2D brdfLut;
+
 const vec3 ndcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 
-float getShadowCoeff(float bias, mat4 lightvp, vec2 texCoordOffset, float cascadeIndex)
+bool isInCascade(int cascadeIndex)
 {
-   vec4 lightSpacePos = lightvp * vec4(worldPos, 1.0f);
-   vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+    vec4 lightSpacePos = lightTransforms.VP[cascadeIndex] * vec4(worldPos, 1.0f);
+    vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+    
+    if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
+       return false;
+    else
+       return true;
+}
 
-   if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-       return 1.0f;
-
-   vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-   texCoord = texCoord * 0.5f + texCoordOffset;
-
-   ivec2 size = textureSize(shadowMap, 0);
-   vec2 texelSize = vec2(1) / size;
-
-   int halfRad = 15;
-   float amount = 0.0f;
-   for (int i = -halfRad; i <= halfRad; i++) {
-       for (int j = -halfRad; j <= halfRad; j++) {
-           vec2 tc = texCoord + vec2(i, j) * texelSize;
-           float shadowMapDepth = texture(shadowMap, tc).r;
-           amount += shadowMapDepth < ndcPos.z - bias ? 0.0f : 1.0f;
-       }
-   }
-
-   float numSamples = (2 * halfRad + 1) * (2 * halfRad + 1);
-
-   //float shadowMapDepth = ;
-   return amount / numSamples;
+float getShadowCoeff(float bias, mat4 lightvp, vec2 atlasOffset)
+{
+    vec4 lightSpacePos = lightvp * vec4(worldPos, 1.0f);
+    vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+ 
+    if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
+        return 1.0f;
+ 
+    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+    texCoord = texCoord * 0.5f + atlasOffset;
+ 
+    ivec2 size = textureSize(shadowMap, 0);
+    vec2 texelSize = vec2(1) / size;
+ 
+    int radius = 5;
+    float amount  = 0.0f;
+    float samples = 0.0f;
+    for (int i = -radius; i <= radius; i++) {
+        for (int j = -radius; j <= radius; j++) {
+            vec2 tc = texCoord + vec2(i, j) * texelSize;
+            tc = clamp(tc, atlasOffset + texelSize * 0.5, atlasOffset + vec2(0.5f, 0.5f) - texelSize * 0.5);
+            //if (all(greaterThan(tc, atlasOffset)) && all(lessThan(tc, atlasOffset + vec2(0.5f))))
+            //{
+                float shadowMapDepth = texture(shadowMap, tc).r;
+                amount += shadowMapDepth < ndcPos.z - bias ? 0.0f : 1.0f;
+                samples += 1.0f;
+            //}
+            
+            
+        }
+    }
+ 
+    float numSamples = (2 * radius + 1) * (2 * radius + 1);
+ 
+    return amount / samples;
 }
 
 float distributionGGX(vec3 N, vec3 H, float roughness)
@@ -141,86 +167,133 @@ float calculateAttenuation(in vec3 lightVec)
 vec3 estimateRadiance(in vec3 lightVec)
 {
     float attenuation = calculateAttenuation(lightVec);
-    float distFactor = mix(1.0f, attenuation, light.position.w);
+    float distFactor = attenuation;//mix(1.0f, attenuation, light.position.w);
     return light.spectrum * distFactor;
+}
+
+float getCsmShadowCoeff()
+{
+    return 1.0f;
+}
+
+// Check-in-bounds based
+float getCsmShadowCoeffDebug(float cosTheta, out vec3 color)
+{
+    color = vec3(0.0f, 0.0f, 1.0f);
+    vec2 tcOffset = vec2(0.5f, 0.5f);
+    mat4 lightVP = lightTransforms.VP[3];
+    if (isInCascade(0))
+    {
+        color = vec3(1.0f, 0.0f, 0.0f);
+        tcOffset = vec2(0.0f, 0.0f);
+        lightVP = lightTransforms.VP[0];
+    }
+    else if (isInCascade(1))
+    {
+        color = vec3(1.0f, 1.0f, 0.0f);
+        lightVP = lightTransforms.VP[1];
+        tcOffset = vec2(0.5f, 0.0f);
+    }
+    else if (isInCascade(2))
+    {
+        color = vec3(0.0f, 1.0f, 0.0f);
+        lightVP = lightTransforms.VP[2];
+        tcOffset = vec2(0.0f, 0.5f);
+    }
+
+    color *= 0.3f;
+
+    float bias = 0.005 * tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
+    bias = clamp(bias, 0.0f, 0.01f);
+    return getShadowCoeff(bias, lightVP, tcOffset);
+}
+
+// Depth based
+float getCsmShadowCoeffDebugDepth(float zDist, float cosTheta, out vec3 color)
+{
+    color = vec3(1.0f, 0.0f, 0.0f);
+    vec2 tcOffset = vec2(0.0f, 0.0f);
+    mat4 lightVP = lightTransforms.VP[0];
+    if (zDist > cascadeSplit.lo[3])
+    {
+        color = vec3(0.0f, 0.0f, 1.0f);
+        tcOffset = vec2(0.5f, 0.5f);
+        lightVP = lightTransforms.VP[3];
+    }
+    else if (zDist > cascadeSplit.lo[2])
+    {
+        color = vec3(0.0f, 1.0f, 0.0f);
+        lightVP = lightTransforms.VP[2];
+        tcOffset = vec2(0.0f, 0.5f);
+    }
+    else if (zDist > cascadeSplit.lo[1])
+    {
+        color = vec3(1.0f, 1.0f, 0.0f);
+        lightVP = lightTransforms.VP[1];
+        tcOffset = vec2(0.5f, 0.0f);
+    }
+
+    color *= 0.3f;
+
+    float bias = 0.005 * tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
+    bias = clamp(bias, 0.0f, 0.01f);
+    return getShadowCoeff(bias, lightVP, tcOffset);
 }
 
 void main()
 {
-    vec3 albedo = texture(diffuseTex, texCoord).rgb;
-    float roughness = texture(roughnessTex, texCoord).r;
-    float metallic = texture(metallicTex, texCoord).r;
+    const vec3  albedo    = texture(diffuseTex, texCoord).rgb;
+    const float roughness = texture(roughnessTex, texCoord).r;
+    const float metallic  = texture(metallicTex, texCoord).r;
+    const float ao        = texture(aoTex, texCoord).r;
 
-    vec3 eyeNormal = getNormal(texCoord);
-    vec3 eyeLightPos = (V * (-light.position)).xyz;
+    const vec3 eyeN = getNormal(texCoord);
+    const vec3 eyeV = normalize(-eyePosition);
+    const vec3 eyeR = reflect(-eyeV, eyeN);
 
-    vec3 viewDir = normalize(-eyePosition);
+    const vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
-    vec3 lightVec = eyeLightPos;//eyeLightPos - eyePosition;
-    vec3 wi = normalize(lightVec);
-    float cosTheta = max(dot(eyeNormal, wi), 0.0f);
-    vec3 radiance = estimateRadiance(lightVec);
+    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
-    vec3 halfDir = normalize(wi + viewDir);
+    const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+    const vec3 kS = F;
+    const vec3 kD = (1.0f - kS) * (1.0f - metallic);
 
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, metallic);
-    vec3 F = fresnelSchlick(max(dot(halfDir, viewDir), 0.0f), F0);
+    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    const vec3 worldR = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    const vec3 irradiance = texture(irrMap, worldN).rgb;
+    const vec3 diffuse = irradiance * albedo;
 
-    vec3 kS = F;
-    vec3 kD = vec3(1.0f) - kS;
-    kD *= 1.0f - metallic;
+    const float MaxReflectionLod = 4.0f;
+    const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
+    const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
+    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
 
-    float NDF = distributionGGX(eyeNormal, halfDir, roughness);
-    float G   = geometrySmith(eyeNormal, viewDir, wi, roughness);
-    vec3 numerator = NDF * G * F;
-    float denominator = 4.0f * max(dot(eyeNormal, viewDir), 0.0f) * max(dot(eyeNormal, wi), 0.0f);
-    vec3 specular = numerator / max(denominator, 0.001);
+    const vec3 Lenv = (kD * diffuse + specular) * ao;
 
-    vec3 Lo = (kD * albedo / PI + specular) * radiance * cosTheta;
+    const vec3 eyeLightPos = (V * (-light.position)).xyz;
+    const vec3 lightVec = eyeLightPos;//eyeLightPos - eyePosition;
+    const vec3 eyeL = normalize(lightVec);
+    const vec3 eyeH = normalize(eyeL + eyeV);
 
-    // ambient lighting (we now use IBL as the ambient term)
-    kS = fresnelSchlickRoughness(max(dot(eyeNormal, viewDir), 0.0f), F0, roughness);
-    kD = 1.0f - kS;
-    kD *= 1.0f - metallic;
-    vec3 irradiance = texture(envMap, texCoord).rgb;
-    vec3 diffuse      = irradiance * albedo;
-    vec3 ambient = (kD * diffuse) * 0.1f;
-    ambient = vec3(0.03) * albedo * 1.0f;
+    const float NdotL = max(dot(eyeN, eyeL), 0.0f);
+    
+    const vec3 radiance = estimateRadiance(lightVec);
 
-	float ao = texture(aoTex, texCoord).r;
+    const float D = distributionGGX(eyeN, eyeH, roughness);
+    const float G = geometrySmith(eyeN, eyeV, eyeL, roughness);
+    const vec3 numerator = D * G * F;
+    const float denominator = 4.0f * NdotV * NdotL;
+    const vec3 lightSpecular = numerator / max(denominator, 0.001);
 
-    //albedo = vec3(1.0f, 0.0f, 0.0f);
-    float eyeDist = abs(eyePosition.z);
-    vec2 tcOffset = vec2(0.0f, 0.0f);
-    mat4 lightVP = light.VP;
-    if (eyeDist > cascadeSplit.lo[3])
-    {
-        //albedo = vec3(0.0f, 0.0f, 1.0f);
-        tcOffset = vec2(0.5f, 0.5f);
-    }
-    else if (eyeDist > cascadeSplit.lo[2])
-    {
-        //albedo = vec3(0.0f, 1.0f, 0.0f);
-        lightVP = light.P;
-        tcOffset = vec2(0.0f, 0.5f);
-    }
-    else if (eyeDist > cascadeSplit.lo[1])
-    {
-        //albedo = vec3(1.0f, 1.0f, 0.0f);
-        lightVP = light.V;
-        tcOffset = vec2(0.5f, 0.0f);
-    }
+    const vec3 Li = (kD * albedo / PI + lightSpecular) * radiance * NdotL;
 
-    //albedo *= 0.3f;
+    vec3 debugColor;
+    float shadow = getCsmShadowCoeffDebug(dot(eyeN, eyeL), debugColor);
 
-    float ddd = dot(eyeNormal, wi);
-    float bias = 0.005 * tan(acos(ddd)); // cosTheta is dot( n,l ), clamped between 0 and 1
-    bias = clamp(bias, 0.0f, 0.01f);
-    float shadow = getShadowCoeff(bias, lightVP, tcOffset);
-
-    fragColor = vec4(vec3(ambient + albedo * shadow) * ao, 1.0f);
-
+    fragColor = vec4(Li * shadow + Lenv, 1.0f);
+    ////float shadow = getCsmShadowCoeffDebugDepth(abs(eyePosition.z), cosThetaRaw, albedo);
+    //fragColor = vec4(vec3(ambient + albedo * shadow) * ao, 1.0f);
     //if (gl_FragCoord.x < 500 && gl_FragCoord.y < 500) {
     //    float x = gl_FragCoord.x / 500.0f;
     //    float y = gl_FragCoord.y / 500.0f;

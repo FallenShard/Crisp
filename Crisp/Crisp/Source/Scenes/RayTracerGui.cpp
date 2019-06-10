@@ -12,7 +12,7 @@
 
 namespace crisp::gui
 {
-    std::unique_ptr<Control> RayTracerGui::buildSceneOptions(Form* form, RayTracerScene* scene)
+    std::unique_ptr<Control> buildSceneOptions(Form* form, RayTracerScene* scene)
     {
         auto panel = std::make_unique<gui::Panel>(form);
         panel->setId("vesperOptionsPanel");
@@ -72,7 +72,7 @@ namespace crisp::gui
         return panel;
     }
 
-    std::unique_ptr<Control> RayTracerGui::buildProgressBar(Form* form, RayTracerScene* scene)
+    std::unique_ptr<Control> buildProgressBar(Form* form, RayTracerScene* scene)
     {
         auto progressBarBg = std::make_unique<gui::Panel>(form);
         progressBarBg->setId("progressBarBg");

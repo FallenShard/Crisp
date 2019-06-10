@@ -29,7 +29,7 @@ namespace crisp
     class CascadedShadowMapper
     {
     public:
-        CascadedShadowMapper(Renderer* renderer, uint32_t numCascades, DirectionalLight light, float zFar);
+        CascadedShadowMapper(Renderer* renderer, uint32_t numCascades, DirectionalLight light, float zFar, uint32_t shadowMapSize);
         ~CascadedShadowMapper();
 
         UniformBuffer* getLightTransformBuffer() const;
@@ -42,6 +42,8 @@ namespace crisp
         void recalculateLightProjections(const AbstractCamera& camera);
 
         void setZ(float z) { m_z = z; }
+
+        const std::vector<std::vector<glm::vec3>>& getBoundingBoxExtents() const { return m_boundingBoxExtents; }
 
     private:
         uint32_t m_numCascades;
@@ -62,5 +64,8 @@ namespace crisp
         std::unique_ptr<UniformBuffer> m_splitBuffer;
 
         float m_z;
+        uint32_t m_shadowMapSize;
+
+        std::vector<std::vector<glm::vec3>> m_boundingBoxExtents;
     };
 }

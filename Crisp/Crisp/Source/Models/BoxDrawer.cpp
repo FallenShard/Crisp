@@ -9,7 +9,6 @@
 #include "Techniques/CascadedShadowMapper.hpp"
 
 #include "Geometry/TriangleMesh.hpp"
-#include "Geometry/MeshGeometry.hpp"
 
 #include "Renderer/Pipelines/OutlinePipeline.hpp"
 

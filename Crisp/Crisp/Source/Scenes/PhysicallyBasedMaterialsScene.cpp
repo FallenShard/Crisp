@@ -9,7 +9,6 @@
 
 #include "IO/ImageFileBuffer.hpp"
 
-#include "Geometry/MeshGeometry.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/RenderPasses/SceneRenderPass.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
@@ -41,14 +40,14 @@ namespace crisp
             pass.getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
-        m_renderer->setSceneImageView(mainPassNode.renderPass->createRenderTargetView(0, Renderer::NumVirtualFrames));
+        m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
 
         VulkanDevice* device = m_renderer->getDevice();
         m_linearClampSampler = std::make_unique<VulkanSampler>(device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        auto vertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent, VertexAttribute::Bitangent };
+        std::vector<VertexAttributeDescriptor> vertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent, VertexAttribute::Bitangent };
 
-        m_geometries.emplace_back(createGeometry(m_renderer, createSphereMesh(vertexFormat)));
+        m_geometries.emplace_back(std::make_unique<Geometry>(m_renderer, createSphereMesh(vertexFormat)));
 
         m_transforms.resize(2);
         m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
@@ -60,7 +59,7 @@ namespace crisp
         auto pbrMaterial = createPbrMaterial(texFolder);
         m_materials.push_back(std::move(pbrMaterial));
 
-        m_renderer->setSceneImageView(m_renderGraph->getNode("mainPass").renderPass->createRenderTargetView(0, Renderer::NumVirtualFrames));
+        m_renderer->setSceneImageView(m_renderGraph->getNode("mainPass").renderPass.get(), 0);
     }
 
     PhysicallyBasedMaterialsScene::~PhysicallyBasedMaterialsScene()
@@ -72,7 +71,7 @@ namespace crisp
         m_cameraController->resize(width, height);
 
         m_renderGraph->resize(width, height);
-        m_renderer->setSceneImageView(m_renderGraph->getNode("mainPass").renderPass->createRenderTargetView(0, Renderer::NumVirtualFrames));
+        m_renderer->setSceneImageView(m_renderGraph->getNode("mainPass").renderPass.get(), 0);
     }
 
     void PhysicallyBasedMaterialsScene::update(float dt)
@@ -115,7 +114,7 @@ namespace crisp
 
     std::unique_ptr<Material> PhysicallyBasedMaterialsScene::createPbrMaterial(const std::string& type)
     {
-        auto material = std::make_unique<Material>(m_physBasedPipeline.get(), std::vector<uint32_t>{ 0 });
+        auto material = std::make_unique<Material>(m_physBasedPipeline.get());
         material->writeDescriptor(0, 0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         material->writeDescriptor(0, 1, 0, m_cameraBuffer->getDescriptorInfo());
         material->addDynamicBufferInfo(*m_cameraBuffer, 0);

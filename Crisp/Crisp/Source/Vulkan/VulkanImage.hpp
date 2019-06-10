@@ -26,6 +26,8 @@ namespace crisp
 
         void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer);
         void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers);
+        void buildMipmaps(VkCommandBuffer commandBuffer);
+        void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t layer);
 
         std::unique_ptr<VulkanImageView> createView(VkImageViewType type) const;
         std::unique_ptr<VulkanImageView> createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel = 0, uint32_t mipLevels = 1) const;

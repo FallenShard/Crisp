@@ -13,7 +13,7 @@ namespace crisp
         , m_tripleBuffering(tripleBuffering)
     {
         createSwapChain();
-        createSwapImageViews();
+        createSwapChainImageViews();
     }
 
     VulkanSwapChain::~VulkanSwapChain()
@@ -58,7 +58,7 @@ namespace crisp
         for (auto imageView : m_imageViews)
             vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
         createSwapChain();
-        createSwapImageViews();
+        createSwapChainImageViews();
     }
 
     void VulkanSwapChain::createSwapChain()
@@ -108,7 +108,7 @@ namespace crisp
         createInfo.clipped        = VK_TRUE;
         createInfo.oldSwapchain   = m_handle;
 
-        auto deviceHandle = m_device->getHandle();
+        VkDevice deviceHandle = m_device->getHandle();
         vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle);
 
         if (createInfo.oldSwapchain != VK_NULL_HANDLE)
@@ -122,7 +122,7 @@ namespace crisp
         m_extent      = extent;
     }
 
-    void VulkanSwapChain::createSwapImageViews()
+    void VulkanSwapChain::createSwapChainImageViews()
     {
         m_imageViews.resize(m_images.size(), VK_NULL_HANDLE);
 

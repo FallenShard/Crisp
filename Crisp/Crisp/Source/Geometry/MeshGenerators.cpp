@@ -5,7 +5,7 @@
 
 namespace crisp
 {
-    TriangleMesh createPlaneMesh(std::initializer_list<VertexAttribute> vertexAttributes)
+    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     {
         std::vector<glm::vec3> positions =
         {
@@ -40,7 +40,8 @@ namespace crisp
         return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
     }
 
-    TriangleMesh createGrassBlade(std::initializer_list<VertexAttribute> vertexAttributes) {
+    TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
+    {
         std::vector<glm::vec3> positions =
         {
             glm::vec3(-0.05f, 0.0f, +0.0f),
@@ -82,7 +83,7 @@ namespace crisp
         return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
     }
 
-    TriangleMesh createSphereMesh(std::initializer_list<VertexAttribute> vertexAttributes)
+    TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
@@ -127,7 +128,7 @@ namespace crisp
         return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
     }
 
-    TriangleMesh createCubeMesh(std::initializer_list<VertexAttribute> vertexAttributes)
+    TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     {
         std::vector<glm::vec3> positions =
         {

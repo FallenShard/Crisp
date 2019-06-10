@@ -29,31 +29,6 @@ namespace crisp
         }
     }
 
-    Material::Material(VulkanPipeline* pipeline, std::vector<uint32_t> constantSetIds, std::vector<uint32_t> bufferedSetIds)
-        : m_pipeline(pipeline)
-    {
-        std::vector<VkDescriptorSet> sharedSets;
-        for (auto setId : constantSetIds)
-        {
-            if (setId >= sharedSets.size())
-                sharedSets.resize(setId + 1);
-
-            sharedSets[setId] = pipeline->allocateDescriptorSet(setId).getHandle();
-        }
-
-        for (auto& setVec : m_sets)
-        {
-            setVec = sharedSets;
-            for (auto setId : bufferedSetIds)
-            {
-                if (setId >= setVec.size())
-                    setVec.resize(setId + 1);
-
-                setVec[setId] = pipeline->allocateDescriptorSet(setId).getHandle();
-            }
-        }
-    }
-
     VkWriteDescriptorSet Material::makeDescriptorWrite(uint32_t setIndex, uint32_t binding, uint32_t frameIdx)
     {
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };

@@ -44,11 +44,26 @@ namespace crisp
 
     void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex)
     {
-        m_nodes.at(sourcePass)->dependencies[destinationPass] = [sourceRenderTargetIndex](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        RenderGraph::Node* sourceNode = m_nodes.at(sourcePass).get();
+        VkImageAspectFlags attachmentAspect = sourceNode->renderPass->getRenderTarget(sourceRenderTargetIndex)->getAspectMask();
+        if (attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT)
         {
-            sourcePass.getRenderTarget(sourceRenderTargetIndex)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        };
+            sourceNode->dependencies[destinationPass] = [sourceRenderTargetIndex](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            {
+                auto renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
+                renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
+                    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            };
+        }
+        else if (attachmentAspect == VK_IMAGE_ASPECT_DEPTH_BIT)
+        {
+            sourceNode->dependencies[destinationPass] = [sourceRenderTargetIndex](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            {
+                auto renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
+                renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
+                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            };
+        }
     }
 
     void RenderGraph::sortRenderPasses()

@@ -11,7 +11,10 @@ namespace crisp
         uint32_t firstVertex;
         uint32_t firstInstance;
 
-        ListGeometryView() {}
+        ListGeometryView()
+            : vertexCount(0), instanceCount(0), firstVertex(0), firstInstance(0)
+        {
+        }
 
         ListGeometryView(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
             : vertexCount(vertexCount), instanceCount(instanceCount), firstVertex(firstVertex), firstInstance(firstInstance)
@@ -28,7 +31,11 @@ namespace crisp
         int32_t  vertexOffset;
         uint32_t firstInstance;
 
-        IndexedGeometryView() {}
+        IndexedGeometryView()
+            : indexBuffer(0), indexCount(0), instanceCount(0)
+            , firstIndex(0), vertexOffset(0), firstInstance(0)
+        {
+        }
 
         IndexedGeometryView(VkBuffer indexBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
             : indexBuffer(indexBuffer), indexCount(indexCount), instanceCount(instanceCount)

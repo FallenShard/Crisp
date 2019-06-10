@@ -62,7 +62,7 @@ namespace crisp
 
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device.get(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         m_scenePipeline = createTonemappingPipeline(this, getDefaultRenderPass(), 0, true);
-        m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get(), std::vector<uint32_t>{ 0 });
+        m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
     }
 
     Renderer::~Renderer()
@@ -260,13 +260,19 @@ namespace crisp
             m_removedBuffers.emplace(buffer, framesToLive);
     }
 
-    void Renderer::setSceneImageView(std::unique_ptr<VulkanImageView> sceneImageView)
+    void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex)
     {
-        m_sceneImageView = std::move(sceneImageView);
-        if (m_sceneImageView)
+        if (renderPass)
         {
-            m_sceneMaterial->writeDescriptor(0, 0, 0, *m_sceneImageView, m_linearClampSampler->getHandle());
+            m_sceneImageViews = renderPass->getRenderTargetViews(renderTargetIndex);
+            for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+                m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler->getHandle());
+
             m_device->flushDescriptorUpdates();
+        }
+        else // Prevent rendering any scene output to the screen
+        {
+            m_sceneImageViews.clear();
         }
     }
 
@@ -278,6 +284,11 @@ namespace crisp
     void Renderer::unregisterStreamingUniformBuffer(UniformBuffer* buffer)
     {
         m_streamingUniformBuffers.erase(buffer);
+    }
+
+    Geometry* Renderer::getFullScreenGeometry() const
+    {
+        return m_fullScreenGeometry.get();
     }
 
     void Renderer::destroyResourcesScheduledForRemoval()
@@ -375,10 +386,9 @@ namespace crisp
             drawCommand(commandBuffer);
 
         m_defaultRenderPass->begin(commandBuffer);
-        if (m_sceneImageView)
+        if (!m_sceneImageViews.empty())
         {
             m_scenePipeline->bind(commandBuffer);
-            m_scenePipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, getCurrentVirtualFrameIndex());
             setDefaultViewport(commandBuffer);
             setDefaultScissor(commandBuffer);
             m_sceneMaterial->bind(m_currentFrameIndex, commandBuffer);

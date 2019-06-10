@@ -32,7 +32,7 @@ namespace crisp
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
         m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
-        m_renderer->setSceneImageView(m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames));
+        m_renderer->setSceneImageView(m_scenePass.get(), 0);
 
         m_fluidSimulation = std::make_unique<SPH>(m_renderer);
         m_app->getWindow()->getEventHub().keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
@@ -65,7 +65,7 @@ namespace crisp
         m_cameraController->resize(width, height);
 
         m_scenePass->recreate();
-        m_renderer->setSceneImageView(m_scenePass->createRenderTargetView(0, Renderer::NumVirtualFrames));
+        m_renderer->setSceneImageView(m_scenePass.get(), 0);
     }
 
     void FluidSimulationScene::update(float dt)
@@ -88,14 +88,6 @@ namespace crisp
 
     void FluidSimulationScene::render()
     {
-        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer)
-        {
-            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-            m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-            m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-            m_paramsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-        });
-
         m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
         {
             auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();

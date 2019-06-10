@@ -15,10 +15,10 @@ namespace crisp
     class VulkanDevice;
     class VulkanBuffer;
     class VulkanSampler;
-    class Texture;
     class Material;
     class VulkanImageView;
     class VulkanPipeline;
+    class VulkanImage;
 
     class RayTracedImage
     {
@@ -43,11 +43,10 @@ namespace crisp
 
         std::vector<std::pair<unsigned int, RayTracerUpdate>> m_textureUpdates;
         std::unique_ptr<VulkanBuffer> m_stagingBuffer;
-        unsigned int m_updatedImageIndex;
 
-        std::unique_ptr<Texture>         m_texture;
-        std::unique_ptr<VulkanImageView> m_textureView;
-        std::unique_ptr<VulkanSampler>   m_sampler;
+        std::unique_ptr<VulkanImage>                  m_image;
+        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
+        std::unique_ptr<VulkanSampler>                m_sampler;
 
         VkViewport   m_viewport;
     };

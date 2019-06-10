@@ -27,7 +27,7 @@ namespace crisp
 
     struct VulkanSwapChainSupportDetails
     {
-        VkSurfaceCapabilitiesKHR capabilities;
+        VkSurfaceCapabilitiesKHR capabilities = {};
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };

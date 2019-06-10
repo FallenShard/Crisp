@@ -11,7 +11,8 @@ namespace crisp
         Normal,
         TexCoord,
         Tangent,
-        Bitangent
+        Bitangent,
+        Custom
     };
 
     template <VertexAttribute attribute>
@@ -70,7 +71,7 @@ namespace crisp
         }
     }
 
-    inline std::size_t getByteSize(VertexAttribute attribute)
+    inline uint32_t getByteSize(VertexAttribute attribute)
     {
         switch (attribute)
         {
@@ -93,6 +94,19 @@ namespace crisp
             case VertexAttribute::Tangent:   return VK_FORMAT_R32G32B32_SFLOAT;
             case VertexAttribute::Bitangent: return VK_FORMAT_R32G32B32_SFLOAT;
             default: return VkFormat();
+        }
+    }
+
+    inline const char* getAttribName(VertexAttribute attribute)
+    {
+        switch (attribute)
+        {
+        case VertexAttribute::Position:  return "position";
+        case VertexAttribute::Normal:    return "normal";
+        case VertexAttribute::TexCoord:  return "texCoord";
+        case VertexAttribute::Tangent:   return "tangent";
+        case VertexAttribute::Bitangent: return "bitangent";
+        default: return "";
         }
     }
 }

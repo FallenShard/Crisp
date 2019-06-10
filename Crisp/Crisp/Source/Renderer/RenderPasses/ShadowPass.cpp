@@ -17,7 +17,10 @@ namespace crisp
         for (auto& clearValue : m_clearValues)
             clearValue.depthStencil = { 1.0f, 0 };
 
-        m_renderArea = { shadowMapSize * 2, shadowMapSize * 2 };
+        if (m_numCascades == 1)
+            m_renderArea = { shadowMapSize, shadowMapSize };
+        else
+            m_renderArea = { shadowMapSize * 2, shadowMapSize * 2 };
 
         m_handle = RenderPassBuilder()
             .addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)

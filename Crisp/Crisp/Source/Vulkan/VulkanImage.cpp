@@ -141,6 +141,76 @@ namespace crisp
         vkCmdCopyBufferToImage(commandBuffer, buffer.getHandle(), m_handle, m_layouts[baseLayer][0], 1, &copyRegion);
     }
 
+    void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
+    {
+        if (m_mipLevels > 1)
+        {
+            transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            for (uint32_t i = 1; i < m_mipLevels; i++)
+            {
+                VkImageBlit imageBlit = {};
+
+                imageBlit.srcSubresource.aspectMask     = m_aspect;
+                imageBlit.srcSubresource.baseArrayLayer = 0;
+                imageBlit.srcSubresource.layerCount     = 1;
+                imageBlit.srcSubresource.mipLevel       = i - 1;
+                imageBlit.srcOffsets[1].x = int32_t(m_extent.width  >> (i - 1));
+                imageBlit.srcOffsets[1].y = int32_t(m_extent.height >> (i - 1));
+                imageBlit.srcOffsets[1].z = 1;
+
+                imageBlit.dstSubresource.aspectMask     = m_aspect;
+                imageBlit.dstSubresource.baseArrayLayer = 0;
+                imageBlit.dstSubresource.layerCount     = 1;
+                imageBlit.dstSubresource.mipLevel       = i;
+                imageBlit.dstOffsets[1].x = int32_t(m_extent.width  >> i);
+                imageBlit.dstOffsets[1].y = int32_t(m_extent.height >> i);
+                imageBlit.dstOffsets[1].z = 1;
+
+                VkImageSubresourceRange mipRange = {};
+                mipRange.aspectMask     = m_aspect;
+                mipRange.baseMipLevel   = i;
+                mipRange.levelCount     = 1;
+                mipRange.baseArrayLayer = 0;
+                mipRange.layerCount     = 1;
+
+                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                vkCmdBlitImage(commandBuffer, m_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
+                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            }
+        }
+    }
+
+    void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t mipLevel)
+    {
+        VkImageBlit imageBlit = {};
+        imageBlit.srcSubresource.aspectMask     = m_aspect;
+        imageBlit.srcSubresource.baseArrayLayer = 0;
+        imageBlit.srcSubresource.layerCount     = 6;
+        imageBlit.srcSubresource.mipLevel       = 0;
+        imageBlit.srcOffsets[1].x = image.m_extent.width;
+        imageBlit.srcOffsets[1].y = image.m_extent.height;
+        imageBlit.srcOffsets[1].z = 1;
+
+        imageBlit.dstSubresource.aspectMask     = m_aspect;
+        imageBlit.dstSubresource.baseArrayLayer = 0;
+        imageBlit.dstSubresource.layerCount     = 6;
+        imageBlit.dstSubresource.mipLevel       = mipLevel;
+        imageBlit.dstOffsets[1].x = image.m_extent.width;
+        imageBlit.dstOffsets[1].y = image.m_extent.height;
+        imageBlit.dstOffsets[1].z = 1;
+
+        VkImageSubresourceRange mipRange = {};
+        mipRange.aspectMask     = m_aspect;
+        mipRange.baseMipLevel   = mipLevel;
+        mipRange.levelCount     = 1;
+        mipRange.baseArrayLayer = 0;
+        mipRange.layerCount     = 6;
+
+        transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        vkCmdBlitImage(commandBuffer, image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
+        transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+
     std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type) const
     {
         return std::make_unique<VulkanImageView>(m_device, *this, type, 0, m_numLayers, 0, m_mipLevels);
@@ -200,6 +270,10 @@ namespace crisp
             return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+            return { VK_ACCESS_SHADER_READ_BIT,  VK_ACCESS_TRANSFER_WRITE_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+            return { VK_ACCESS_SHADER_READ_BIT,  VK_ACCESS_TRANSFER_READ_BIT };
 
         logError("Unsupported layout transition: {} to {}!\n", oldLayout, newLayout);
         return { 0, 0 };

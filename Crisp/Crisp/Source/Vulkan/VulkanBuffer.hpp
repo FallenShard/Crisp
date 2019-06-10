@@ -23,7 +23,7 @@ namespace crisp
         template <typename T>
         void updateFromHost(const std::vector<T>& buffer)
         {
-            updateFromHost(buffer.data(), buffer.size() * sizeof(T));
+            updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
         }
 
         void updateFromStaging(const VulkanBuffer& srcBuffer);

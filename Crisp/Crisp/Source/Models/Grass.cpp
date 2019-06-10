@@ -23,7 +23,7 @@ namespace crisp
         m_shadowPipelines.reserve(4);
         for (uint32_t i = 0; i < 4; i++)
             m_shadowPipelines.emplace_back(createInstancingShadowMapPipeline(m_renderer, shadowRenderPass, i));
-        m_shadowMaterial = std::make_unique<Material>(m_shadowPipelines[0].get(), std::vector<uint32_t>{ 0 });
+        m_shadowMaterial = std::make_unique<Material>(m_shadowPipelines[0].get());
         m_renderer->getDevice()->postDescriptorWrite(m_shadowMaterial->makeDescriptorWrite(0, 0), csm->getLightTransformBuffer()->getDescriptorInfo());
 
 
@@ -45,12 +45,12 @@ namespace crisp
         auto instanceBuffer = std::make_unique<VulkanBuffer>(renderer->getDevice(), sizeof(glm::mat4) * matrices.size(), usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_renderer->fillDeviceBuffer(instanceBuffer.get(), matrices);
 
-        m_bladeGeometry = createGeometry(m_renderer, createGrassBlade({ VertexAttribute::Position }));
+        m_bladeGeometry = std::make_unique<Geometry>(m_renderer, createGrassBlade({ VertexAttribute::Position }));
         m_bladeGeometry->addVertexBuffer(std::move(instanceBuffer));
         m_bladeGeometry->setInstanceCount(matrices.size());
 
         m_pipeline = createGrassPipeline(m_renderer, mainRenderPass);
-        m_material = std::make_unique<Material>(m_pipeline.get(), std::vector<uint32_t>{ 0 }, std::vector<uint32_t>{ 1 });
+        m_material = std::make_unique<Material>(m_pipeline.get());
         m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(0, 0), cameraBuffer->getDescriptorInfo());
         m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(0, 1), csm->getLightTransformBuffer()->getDescriptorInfo());
         for (uint32_t i = 0; i < Renderer::NumVirtualFrames; i++)

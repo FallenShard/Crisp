@@ -24,7 +24,8 @@ namespace crisp
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
     {
-        m_cubeGeometry = createGeometry(m_renderer, renderer->getResourcesPath() / "Meshes/cube.obj", { VertexAttribute::Position });
+        std::vector<VertexAttributeDescriptor> vertexAttribs = { VertexAttribute::Position };
+        m_cubeGeometry = std::make_unique<Geometry>(m_renderer, renderer->getResourcesPath() / "Meshes/cube.obj", vertexAttribs);
 
         m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 

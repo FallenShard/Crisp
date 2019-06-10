@@ -1,25 +1,23 @@
 #pragma once
 
-#include <memory>
-#include <atomic>
-#include <string>
-#include <vector>
-
-#include <tbb/concurrent_queue.h>
+#include "Scenes/Scene.hpp"
 
 #include <Vesper/RayTracerUpdate.hpp>
 #include <CrispCore/Event.hpp>
-#include "Scene.hpp"
 
-namespace crisp
-{
-    class RayTracer;
-}
+#include <tbb/concurrent_queue.h>
+
+#include <memory>
+#include <string>
+#include <atomic>
+#include <vector>
 
 namespace crisp
 {
     class Application;
     class Renderer;
+
+    class RayTracer;
     class RayTracedImage;
 
     class RayTracerScene : public AbstractScene
@@ -43,13 +41,13 @@ namespace crisp
         void openSceneFile(const std::string& filename);
         void createGui();
 
-        Renderer* m_renderer;
+        Renderer*    m_renderer;
         Application* m_app;
 
-        uint32_t m_numChannels;
         std::string m_projectName;
         std::unique_ptr<RayTracedImage> m_image;
         tbb::concurrent_queue<RayTracerUpdate> m_updateQueue;
+
         std::atomic<float> m_progress;
         std::atomic<float> m_timeSpentRendering;
 

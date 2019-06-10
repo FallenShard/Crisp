@@ -10,22 +10,20 @@
 #include <CrispCore/Math/Rect.hpp>
 #include "IO/FontLoader.hpp"
 
-#include "Renderer/Renderer.hpp"
 #include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/IndexBuffer.hpp"
-#include "Renderer/UniformMultiBuffer.hpp"
-#include "Renderer/UniformBuffer.hpp"
-#include "Renderer/DescriptorSetGroup.hpp"
-#include "vulkan/VulkanDevice.hpp"
+
+#include "Geometry/Geometry.hpp"
+#include "Renderer/Material.hpp"
 
 namespace crisp
 {
     class Renderer;
     class VulkanPipeline;
     class VulkanImageView;
+    class VulkanDevice;
 
     class IndexBuffer;
-    class UniformBuffer;
     class VulkanSampler;
     class Texture;
 
@@ -77,7 +75,7 @@ namespace crisp
 
             void resize(int width, int height);
 
-            DeviceMemoryMetrics getDeviceMemoryUsage();
+            const Renderer& getRenderer() const;
             glm::vec2 getScreenSize() const;
 
             uint32_t getFont(std::string name, uint32_t pixelSize);
@@ -87,11 +85,11 @@ namespace crisp
             void loadTextureAtlas();
             void initGeometryBuffers();
             void initGuiRenderTargetResources();
+            void updateFullScreenMaterial();
 
-            Renderer* m_renderer;
-            VulkanDevice*   m_device;
+            Renderer*     m_renderer;
+            VulkanDevice* m_device;
 
-            static constexpr float DepthLayers = 32.0f;
             glm::mat4 m_P;
 
             std::unique_ptr<GuiRenderPass> m_guiPass;
@@ -101,22 +99,9 @@ namespace crisp
             std::unique_ptr<VulkanPipeline> m_debugRectPipeline;
             std::unique_ptr<VulkanPipeline> m_fsQuadPipeline;
 
-
-            // Geometry
-            struct GeometryData
-            {
-                VertexBufferBindingGroup vertexBufferGroup;
-                std::unique_ptr<VertexBuffer> vertexBuffer;
-                std::unique_ptr<IndexBuffer> indexBuffer;
-                VkDeviceSize indexBufferOffset;
-                uint32_t indexCount;
-
-                void drawIndexed(VkCommandBuffer cmdBuffer) const;
-            };
-
             // canonical square [0,1]x[0,1] quad geometry
-            GeometryData m_quadGeometry;
-            GeometryData m_lineLoopGeometry;
+            std::unique_ptr<Geometry> m_quadGeometry;
+            std::unique_ptr<Geometry> m_lineLoopGeometry;
 
             std::unique_ptr<DynamicUniformBufferResource> m_transforms;
             std::unique_ptr<DynamicUniformBufferResource> m_colors;
@@ -128,9 +113,7 @@ namespace crisp
             // Sampler
             std::unique_ptr<VulkanSampler> m_linearClampSampler;
 
-            // Gui render target
-            VkDescriptorSet m_fsQuadDescSet;
-            std::unique_ptr<VulkanImageView> m_guiRenderTargetView;
+            std::unique_ptr<Material> m_fsMaterial;
 
             // Font resources
             struct FontTexture
@@ -143,18 +126,20 @@ namespace crisp
             std::vector<std::unique_ptr<FontTexture>> m_fonts;
             FontLoader m_fontLoader;
 
-            std::vector<VkDescriptorSet> m_texQuadDescSets;
-
             // Text Resources
             struct TextGeometryResource
             {
                 static constexpr uint32_t NumInitialAllocatedCharacters = 32;
-                GeometryData geomData;
 
                 uint32_t allocatedVertexCount;
                 uint32_t vertexCount;
                 uint32_t allocatedFaceCount;
-                uint32_t faceCount;
+
+                VertexBufferBindingGroup vertexBufferGroup;
+                std::unique_ptr<VertexBuffer> vertexBuffer;
+                std::unique_ptr<IndexBuffer> indexBuffer;
+                VkDeviceSize indexBufferOffset;
+                uint32_t indexCount;
 
                 unsigned char updatedBufferIndex;
                 bool isUpdatedOnDevice;
@@ -163,7 +148,8 @@ namespace crisp
 
                 VkDescriptorSet descSet;
 
-                void updateStagingBuffer(std::string text, Font* font, Renderer* renderer);
+                void updateStagingBuffer(std::string text, const Font& font);
+                void drawIndexed(VkCommandBuffer cmdBuffer) const;
             };
             static constexpr uint32_t TextResourceIncrement = 10;
             std::vector<std::unique_ptr<TextGeometryResource>> m_textResources;
@@ -171,7 +157,7 @@ namespace crisp
 
             struct GuiDrawCommand
             {
-                using Callback = void(RenderSystem::*)(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
+                using Callback = void(RenderSystem::*)(VkCommandBuffer, uint32_t, const GuiDrawCommand&) const;
                 Callback drawFuncPtr;
                 uint32_t transformId;
                 uint32_t colorId;

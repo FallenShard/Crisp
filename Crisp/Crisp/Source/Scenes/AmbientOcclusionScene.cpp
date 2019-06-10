@@ -1,41 +1,44 @@
 #include "AmbientOcclusionScene.hpp"
 
-#include <random>
-
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
-
-#include "Renderer/Renderer.hpp"
+#include "IO/ImageFileBuffer.hpp"
 #include "Camera/CameraController.hpp"
 
-#include "Renderer/UniformBuffer.hpp"
+#include "Renderer/Renderer.hpp"
+#include "Renderer/RenderGraph.hpp"
+#include "Renderer/Material.hpp"
+
 #include "Renderer/RenderPasses/SceneRenderPass.hpp"
 #include "Renderer/RenderPasses/AmbientOcclusionPass.hpp"
 #include "Renderer/Pipelines/UniformColorPipeline.hpp"
 #include "Renderer/Pipelines/NormalPipeline.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/SsaoPipeline.hpp"
-#include "Renderer/Texture.hpp"
+#include "Renderer/UniformBuffer.hpp"
+#include "Renderer/VulkanImageUtils.hpp"
+
+#include "Geometry/Geometry.hpp"
+#include "Geometry/MeshGenerators.hpp"
 
 #include "vulkan/VulkanSampler.hpp"
 #include "vulkan/VulkanImage.hpp"
 #include "Vulkan/VulkanImageView.hpp"
-
-#include "Geometry/MeshGeometry.hpp"
-#include "Geometry/TriangleMesh.hpp"
+#include "vulkan/VulkanDevice.hpp"
 
 #include "Models/Skybox.hpp"
 
-//#include <CrispCore/Math/Warp.hpp>
-
 #include "GUI/Form.hpp"
 #include "AmbientOcclusionPanel.hpp"
+
+#include <CrispCore/Math/Warp.hpp>
+
+#include <random>
 
 namespace crisp
 {
     AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
-        , m_device(renderer->getDevice())
         , m_app(app)
         , m_numSamples(128)
         , m_radius(0.5f)
@@ -51,7 +54,7 @@ namespace crisp
             float x = distribution(randomEngine);
             float y = distribution(randomEngine);
             float r = distribution(randomEngine);
-            glm::vec3 s;// = r; *warp::squareToUniformHemisphere(glm::vec2(x, y));
+            glm::vec3 s = r * warp::squareToUniformHemisphere(glm::vec2(x, y));
             float scale = float(i) / float(512.0f);
             scale = glm::mix(0.1f, 1.0f, scale * scale);
             samples[i].x = s.x * scale;
@@ -60,63 +63,88 @@ namespace crisp
             samples[i].w = 1.0f;
         }
 
-        std::vector<glm::vec4> noiseTex;
+        std::vector<glm::vec4> noiseTexData;
         for (int i = 0; i < 16; i++)
         {
             glm::vec3 s(distribution(randomEngine) * 2.0f - 1.0f, distribution(randomEngine) * 2.0f - 1.0f, 0.0f);
             s = glm::normalize(s);
-            noiseTex.push_back(glm::vec4(s, 1.0f));
+            noiseTexData.push_back(glm::vec4(s, 1.0f));
         }
 
-        m_noiseTex = std::make_unique<Texture>(m_renderer, VkExtent3D{ 4, 4, 1 }, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
-        m_noiseTex->fill(noiseTex.data(), sizeof(glm::vec4) * noiseTex.size());
-        m_noiseMapView = m_noiseTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
-        m_noiseSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        VkImageCreateInfo noiseTexInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        noiseTexInfo.flags         = 0;
+        noiseTexInfo.imageType     = VK_IMAGE_TYPE_2D;
+        noiseTexInfo.format        = VK_FORMAT_R32G32B32A32_SFLOAT;
+        noiseTexInfo.extent        = { 4, 4, 1u };
+        noiseTexInfo.mipLevels     = 1;
+        noiseTexInfo.arrayLayers   = 1;
+        noiseTexInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+        noiseTexInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+        noiseTexInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        noiseTexInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+        noiseTexInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        auto noiseTex = createTexture(m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+        auto noiseTexView = noiseTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
-        m_samplesBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
+        m_noiseSampler       = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR,  VK_FILTER_LINEAR,  VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        m_nearestSampler     = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_linearClampSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR,  VK_FILTER_LINEAR,  VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+        m_sampleBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
 
         m_transforms.resize(2);
         m_transforms[0].M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
-        m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
+        m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-        m_scenePass = std::make_unique<SceneRenderPass>(m_renderer);
-        m_aoPass = std::make_unique<AmbientOcclusionPass>(m_renderer);
+        auto mainPass = std::make_unique<SceneRenderPass>(m_renderer);
+        auto ssaoPass = std::make_unique<AmbientOcclusionPass>(m_renderer);
 
-        m_uniformColorPipeline = createColorPipeline(m_renderer, m_scenePass.get());
-        m_unifColorSetGroup = { m_uniformColorPipeline->allocateDescriptorSet(0) };
-        m_unifColorSetGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
-        m_unifColorSetGroup.flushUpdates(m_device);
+        auto colorPipeline = createColorPipeline(m_renderer, mainPass.get());
+        auto colorMaterial = std::make_unique<Material>(colorPipeline.get());
+        colorMaterial->writeDescriptor(0, 0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
 
-        m_nearestSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        auto normalPipeline = createNormalPipeline(m_renderer, mainPass.get());
 
-        m_normalPipeline = createNormalPipeline(m_renderer, m_scenePass.get());
-
-        m_ssaoPipeline = createSsaoPipeline(m_renderer, m_aoPass.get());
-        for (int i = 0; i < Renderer::NumVirtualFrames; i++)
+        auto ssaoPipeline   = createSsaoPipeline(m_renderer, ssaoPass.get());
+        auto ssaoMaterial = std::make_unique<Material>(ssaoPipeline.get());
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
         {
-            m_ssaoSetGroups[i] = { m_ssaoPipeline->allocateDescriptorSet(0) };
-            m_ssaoSetGroups[i].postImageUpdate(0,  0, m_scenePass->getRenderTargetView(0, i).getDescriptorInfo(m_nearestSampler->getHandle()));
-            m_ssaoSetGroups[i].postBufferUpdate(0, 1, m_cameraBuffer->getDescriptorInfo());
-            m_ssaoSetGroups[i].postBufferUpdate(0, 2, m_samplesBuffer->getDescriptorInfo());
-            m_ssaoSetGroups[i].postImageUpdate(0, 3, m_noiseMapView->getDescriptorInfo(m_noiseSampler->getHandle()));
-            m_ssaoSetGroups[i].flushUpdates(m_device);
+            ssaoMaterial->writeDescriptor(0, 0, i, mainPass->getRenderTargetView(0, i).getDescriptorInfo(*m_nearestSampler));
+            ssaoMaterial->writeDescriptor(0, 1, i, m_cameraBuffer->getDescriptorInfo());
+            ssaoMaterial->writeDescriptor(0, 2, i, m_sampleBuffer->getDescriptorInfo());
+            ssaoMaterial->writeDescriptor(0, 3, i, noiseTexView->getDescriptorInfo(*m_noiseSampler));
         }
+        ssaoMaterial->addDynamicBufferInfo(*m_cameraBuffer, 0);
 
-        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        //m_fsQuadPipeline = createTonemappingPipeline(m_renderer, ::make_unique<FullScreenQuadPipeline>(m_renderer, m_renderer->getDefaultRenderPass(), true);
-        //m_sceneDescSetGroup = { m_fsQuadPipeline->allocateDescriptorSet(FullScreenQuadPipeline::DisplayedImage) };
+        m_renderer->getDevice()->flushDescriptorUpdates();
 
-        m_sceneImageView = m_aoPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 0, VK_DESCRIPTOR_TYPE_SAMPLER, m_sceneImageView->getDescriptorInfo(m_linearClampSampler->getHandle()));
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
+        std::vector<VertexAttributeDescriptor> shadowFormat = { VertexAttribute::Position };
+        auto planeGeometry = std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowFormat));
 
-        m_planeGeometry = std::make_unique<MeshGeometry>(m_renderer, "plane.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
+        std::vector<VertexAttributeDescriptor> vertexFormat = { VertexAttribute::Position, VertexAttribute::Normal };
+        auto sponzaGeometry = std::make_unique<Geometry>(m_renderer, m_renderer->getResourcesPath() / "Meshes/sponza_fixed.obj", vertexFormat);
 
-        m_buddhaGeometry = std::make_unique<MeshGeometry>(m_renderer, "sponza_fixed.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position, VertexAttribute::Normal });
+        m_skybox = std::make_unique<Skybox>(m_renderer, *mainPass, "Creek");
 
-        m_skybox = std::make_unique<Skybox>(m_renderer, *m_scenePass, "Creek");
+        m_images.push_back(std::move(noiseTex));
+        m_imageViews.push_back(std::move(noiseTexView));
+
+        m_geometries.push_back(std::move(planeGeometry));
+        m_geometries.push_back(std::move(sponzaGeometry));
+        m_pipelines.push_back(std::move(colorPipeline));
+        m_pipelines.push_back(std::move(normalPipeline));
+        m_pipelines.push_back(std::move(ssaoPipeline));
+        m_materials.push_back(std::move(colorMaterial));
+        m_materials.push_back(std::move(ssaoMaterial));
+
+        m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
+        m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
+        m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
+        m_renderGraph->addRenderTargetLayoutTransition("mainPass", "ssaoPass", 0);
+        m_renderGraph->addRenderTargetLayoutTransition("ssaoPass", "SCREEN", 0);
+        m_renderGraph->sortRenderPasses();
+
+        m_renderer->setSceneImageView(m_renderGraph->getNode("ssaoPass").renderPass.get(), 0);
 
         auto panel = std::make_unique<gui::AmbientOcclusionPanel>(app->getForm(), this);
         m_app->getForm()->add(std::move(panel));
@@ -131,107 +159,76 @@ namespace crisp
     {
         m_cameraController->resize(width, height);
 
-        m_scenePass->recreate();
-        m_aoPass->recreate();
-        m_sceneImageView = m_aoPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
-        m_sceneDescSetGroup.postImageUpdate(0, 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, m_sceneImageView->getDescriptorInfo());
-        m_sceneDescSetGroup.flushUpdates(m_device);
+        m_renderGraph->resize(width, height);
+        m_renderer->setSceneImageView(m_renderGraph->getNode("ssaoPass").renderPass.get(), 0);
 
-        for (int i = 0; i < Renderer::NumVirtualFrames; i++)
-        {
-            m_ssaoSetGroups[i].postImageUpdate(0, 0, m_scenePass->getRenderTargetView(0, i).getDescriptorInfo(m_nearestSampler->getHandle()));
-            m_ssaoSetGroups[i].flushUpdates(m_device);
-        }
+        auto* mainPass = m_renderGraph->getNode("mainPass").renderPass.get();
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+            m_materials[1]->writeDescriptor(0, 0, i, mainPass->getRenderTargetView(0, i).getDescriptorInfo(*m_nearestSampler));
     }
 
     void AmbientOcclusionScene::update(float dt)
     {
-        auto viewChanged = m_cameraController->update(dt);
-        if (viewChanged)
+        m_cameraController->update(dt);
+        m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
+
+        auto& V = m_cameraController->getViewMatrix();
+        auto& P = m_cameraController->getProjectionMatrix();
+
+        for (auto& trans : m_transforms)
         {
-            auto& V = m_cameraController->getViewMatrix();
-            auto& P = m_cameraController->getProjectionMatrix();
-
-            for (auto& trans : m_transforms)
-            {
-                trans.MV  = V * trans.M;
-                trans.MVP = P * trans.MV;
-            }
-            m_transformsBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
-            m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
-
-            m_skybox->updateTransforms(V, P);
+            trans.MV  = V * trans.M;
+            trans.MVP = P * trans.MV;
         }
+        m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
+
+        m_skybox->updateTransforms(V, P);
     }
 
     void AmbientOcclusionScene::render()
     {
-        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer)
-        {
-            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+        m_renderGraph->clearCommandLists();
 
-            //m_skybox->updateDeviceBuffers(commandBuffer, frameIdx);
+        auto& mainPass = m_renderGraph->getNode("mainPass");
+        auto& ssaoPass = m_renderGraph->getNode("ssaoPass");
 
-            m_transformsBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-            m_cameraBuffer->updateDeviceBuffer(commandBuffer, frameIdx);
-        });
+        DrawCommand dc;
+        dc.pipeline = m_materials[0]->getPipeline();
+        dc.material = m_materials[0].get();
+        dc.dynamicBuffers.push_back({ *m_transformBuffer, 0 * sizeof(TransformPack) });
+        for (const auto& info : dc.material->getDynamicBufferInfos())
+            dc.dynamicBuffers.push_back(info);
+        dc.setPushConstants(glm::vec4(0.2f, 0.0f, 0.0f, 1.0f));
+        dc.geometry = m_geometries[0].get();
+        dc.setGeometryView(dc.geometry->createIndexedGeometryView());
 
-        m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
-        {
-            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+        mainPass.addCommand(std::move(dc));
 
-            m_scenePass->begin(commandBuffer);
-            m_uniformColorPipeline->bind(commandBuffer);
+        DrawCommand sponza;
+        sponza.pipeline = m_pipelines[1].get();
+        sponza.material = m_materials[0].get();
+        sponza.dynamicBuffers.push_back({ *m_transformBuffer, 1 * sizeof(TransformPack) });
+        for (const auto& info : sponza.material->getDynamicBufferInfos())
+            sponza.dynamicBuffers.push_back(info);
+        sponza.setPushConstants(glm::vec4(0.2f, 0.0f, 0.0f, 1.0f));
+        sponza.geometry = m_geometries[1].get();
+        sponza.setGeometryView(sponza.geometry->createIndexedGeometryView());
 
-            glm::vec4 color = glm::vec4(0.2f, 0.0f, 0.0f, 1.0f);
-            m_uniformColorPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, color);
+        mainPass.addCommand(std::move(sponza));
+        mainPass.addCommand(m_skybox->createDrawCommand());
 
-            m_unifColorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
-            m_unifColorSetGroup.bind(commandBuffer, m_uniformColorPipeline->getPipelineLayout()->getHandle());
+        DrawCommand ssao;
+        ssao.pipeline = m_pipelines[2].get();
+        ssao.material = m_materials[1].get();
+        for (const auto& info : ssao.material->getDynamicBufferInfos())
+            ssao.dynamicBuffers.push_back(info);
+        ssao.setPushConstants(m_numSamples, m_radius);
+        ssao.geometry = m_renderer->getFullScreenGeometry();
+        ssao.setGeometryView(ssao.geometry->createIndexedGeometryView());
 
-            m_planeGeometry->bindGeometryBuffers(commandBuffer);
-            m_planeGeometry->draw(commandBuffer);
+        ssaoPass.addCommand(std::move(ssao));
 
-
-            m_normalPipeline->bind(commandBuffer);
-            m_unifColorSetGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx) + 1 * sizeof(TransformPack));
-            m_unifColorSetGroup.bind(commandBuffer, m_normalPipeline->getPipelineLayout()->getHandle());
-            m_buddhaGeometry->bindGeometryBuffers(commandBuffer);
-            m_buddhaGeometry->draw(commandBuffer);
-
-            //m_skybox->draw(commandBuffer, frameIdx);
-
-            m_scenePass->end(commandBuffer);
-
-            m_scenePass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-            m_aoPass->begin(commandBuffer);
-
-            m_ssaoPipeline->bind(commandBuffer);
-            m_ssaoSetGroups[frameIdx].setDynamicOffset(0, m_cameraBuffer->getDynamicOffset(frameIdx));
-            m_ssaoSetGroups[frameIdx].bind(commandBuffer, m_ssaoPipeline->getPipelineLayout()->getHandle());
-            m_ssaoPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, m_numSamples);
-            m_ssaoPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(m_numSamples), m_radius);
-
-            m_renderer->drawFullScreenQuad(commandBuffer);
-
-            m_aoPass->end(commandBuffer);
-
-            m_aoPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        });
-
-        m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
-        {
-            m_fsQuadPipeline->bind(commandBuffer);
-            m_renderer->setDefaultViewport(commandBuffer);
-            m_sceneDescSetGroup.bind(commandBuffer, m_fsQuadPipeline->getPipelineLayout()->getHandle());
-
-            unsigned int layerIndex = m_renderer->getCurrentVirtualFrameIndex();
-            m_fsQuadPipeline->setPushConstant(commandBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, layerIndex);
-            m_renderer->drawFullScreenQuad(commandBuffer);
-        });
+        m_renderGraph->executeDrawCommands();
     }
 
     void AmbientOcclusionScene::setNumSamples(int numSamples)

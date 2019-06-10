@@ -15,16 +15,20 @@
 
 namespace crisp
 {
+    namespace
+    {
+        static constexpr uint32_t NumChannels = 4;
+        static constexpr VkFormat VulkanImageFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+    }
+
     RayTracerScene::RayTracerScene(Renderer* renderer, Application* app)
-        : m_numChannels(4)
+        : m_renderer(renderer)
+        , m_app(app)
         , m_progress(0.0f)
         , m_timeSpentRendering(0.0f)
-        , m_renderer(renderer)
-        , m_app(app)
     {
-        m_image = std::make_unique<RayTracedImage>(512, 512, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer);
+        m_image = std::make_unique<RayTracedImage>(512, 512, VulkanImageFormat, m_renderer);
         m_rayTracer = std::make_unique<RayTracer>();
-        //m_rayTracer->setImageSize(DefaultWindowWidth, DefaultWindowHeight);
         m_rayTracer->setProgressUpdater([this](RayTracerUpdate&& update)
         {
             m_progress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
@@ -32,11 +36,10 @@ namespace crisp
             m_updateQueue.emplace(std::move(update));
             rayTracerProgressed(m_progress, m_timeSpentRendering);
         });
-        m_renderer->setSceneImageView(nullptr);
+        m_renderer->setSceneImageView(nullptr, 0);
 
-        gui::RayTracerGui gui;
-        m_app->getForm()->add(gui.buildSceneOptions(m_app->getForm(), this));
-        m_app->getForm()->add(gui.buildProgressBar(m_app->getForm(), this));
+        m_app->getForm()->add(buildSceneOptions(m_app->getForm(), this));
+        m_app->getForm()->add(buildProgressBar(m_app->getForm(), this));
     }
 
     RayTracerScene::~RayTracerScene()
@@ -127,7 +130,7 @@ namespace crisp
 
         glm::ivec2 imageSize = m_rayTracer->getImageSize();
         m_image = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer);
-        m_imageData.resize(m_numChannels * imageSize.x * imageSize.y);
+        m_imageData.resize(NumChannels * imageSize.x * imageSize.y);
         m_app->getWindow()->setTitle(filename);
     }
 

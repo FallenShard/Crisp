@@ -6,6 +6,8 @@
 #include "Form.hpp"
 #include "Label.hpp"
 #include "StopWatch.hpp"
+#include "Renderer/Renderer.hpp"
+#include "vulkan/VulkanDevice.hpp"
 
 namespace crisp::gui
 {
@@ -59,7 +61,7 @@ namespace crisp::gui
         m_stopWatch = std::make_unique<StopWatch>(2.0);
         m_stopWatch->triggered += [this]()
         {
-            auto metrics = m_renderSystem->getDeviceMemoryUsage();
+            auto metrics = m_renderSystem->getRenderer().getDevice()->getDeviceMemoryUsage();
 
             auto transformToMb = [](uint64_t bytes)
             {

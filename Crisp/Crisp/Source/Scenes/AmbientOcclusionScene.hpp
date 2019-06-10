@@ -1,30 +1,26 @@
 #pragma once
 
-#include <memory>
-#include <array>
-
-#include "Scene.hpp"
-
+#include "Scenes/Scene.hpp"
 #include "Geometry/TransformPack.hpp"
-#include "Renderer/DescriptorSetGroup.hpp"
-#include "Renderer/Renderer.hpp"
+
+#include <vector>
+#include <memory>
 
 namespace crisp
 {
     class Application;
     class Renderer;
-    class VulkanDevice;
-
     class CameraController;
-    class SceneRenderPass;
-    class AmbientOcclusionPass;
+    class RenderGraph;
+
     class UniformBuffer;
-    class VulkanSampler;
-    class VulkanImageView;
-    class Texture;
+    class Material;
+    class Geometry;
 
     class VulkanPipeline;
-    class MeshGeometry;
+    class VulkanImage;
+    class VulkanImageView;
+    class VulkanSampler;
 
     class Skybox;
 
@@ -38,50 +34,37 @@ namespace crisp
         virtual void update(float dt)  override;
         virtual void render() override;
 
-        void setNumSamples(int value);
+        void setNumSamples(int numSamples);
         void setRadius(double radius);
 
     private:
-        Renderer*  m_renderer;
-        VulkanDevice*    m_device;
-        Application*     m_app;
+        Renderer*    m_renderer;
+        Application* m_app;
 
         std::unique_ptr<CameraController> m_cameraController;
+        std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::unique_ptr<AmbientOcclusionPass> m_aoPass;
-        std::unique_ptr<VulkanPipeline> m_ssaoPipeline;
-        std::array<DescriptorSetGroup, Renderer::NumVirtualFrames> m_ssaoSetGroups;
+        std::vector<std::unique_ptr<Material>> m_materials;
+        std::vector<std::unique_ptr<Geometry>> m_geometries;
+        std::vector<std::unique_ptr<VulkanPipeline>> m_pipelines;
 
-        std::unique_ptr<SceneRenderPass> m_scenePass;
-        std::unique_ptr<UniformBuffer> m_cameraBuffer;
-        std::unique_ptr<UniformBuffer> m_samplesBuffer;
-
-        std::unique_ptr<VulkanSampler> m_nearestSampler;
+        std::vector<std::unique_ptr<VulkanImage>>     m_images;
+        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
 
         std::vector<TransformPack> m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+        std::unique_ptr<UniformBuffer> m_transformBuffer;
 
-        std::unique_ptr<VulkanPipeline> m_uniformColorPipeline;
-        DescriptorSetGroup m_unifColorSetGroup;
+        std::unique_ptr<RenderGraph> m_renderGraph;
 
-        std::unique_ptr<VulkanPipeline> m_normalPipeline;
-        DescriptorSetGroup m_normalSetGroup;
-
-        std::unique_ptr<VulkanPipeline> m_fsQuadPipeline;
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        std::unique_ptr<VulkanImageView> m_sceneImageView;
-        DescriptorSetGroup m_sceneDescSetGroup;
-
-        std::unique_ptr<MeshGeometry> m_planeGeometry;
-        std::unique_ptr<MeshGeometry> m_buddhaGeometry;
+        std::unique_ptr<VulkanSampler> m_nearestSampler;
+        std::unique_ptr<VulkanSampler> m_noiseSampler;
 
         std::unique_ptr<Skybox> m_skybox;
 
-        std::unique_ptr<Texture>       m_noiseTex;
-        std::unique_ptr<VulkanImageView>   m_noiseMapView;
-        std::unique_ptr<VulkanSampler> m_noiseSampler;
-
         int m_numSamples;
+        std::unique_ptr<UniformBuffer> m_sampleBuffer;
+
         float m_radius;
     };
 }

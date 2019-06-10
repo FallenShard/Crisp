@@ -20,8 +20,9 @@ namespace crisp
 
         VulkanDevice* device = renderer->getDevice();
 
+        std::vector<bool> setBuffered = { false };
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
+        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         VkViewport viewport = renderPass->createViewport();
         viewport.width /= 2;
@@ -58,8 +59,9 @@ namespace crisp
 
         VulkanDevice* device = renderer->getDevice();
 
+        std::vector<bool> setBuffered = { false };
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
-        auto layout = createPipelineLayout(device, layoutBuilder, descPool);
+        auto layout = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         return PipelineBuilder()
             .setShaderStages

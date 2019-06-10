@@ -21,8 +21,9 @@ namespace crisp
 
         VulkanDevice* device = renderer->getDevice();
 
+        std::vector<bool> setBuffered = { false };
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
+        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -36,7 +37,7 @@ namespace crisp
             .addVertexAttributes<0, 0, VK_FORMAT_R32G32B32_SFLOAT>()
             .setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)
             .setTessellationControlPoints(4)
-            .setPolygonMode(VK_POLYGON_MODE_LINE)
+            .setPolygonMode(VK_POLYGON_MODE_FILL)
             .setViewport(renderer->getDefaultViewport())
             .setScissor(renderer->getDefaultScissor())
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)

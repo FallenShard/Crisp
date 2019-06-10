@@ -20,14 +20,6 @@ namespace crisp
         }
     }
 
-    ImageFileBuffer::ImageFileBuffer(unsigned int width, unsigned int height, unsigned int numComponents, std::vector<unsigned char> data)
-        : m_width(width)
-        , m_height(height)
-        , m_numComponents(numComponents)
-        , m_data(data)
-    {
-    }
-
     ImageFileBuffer::ImageFileBuffer(const std::filesystem::path& filePath, int requestedComponents, bool flipY)
         : m_width(0)
         , m_height(0)
@@ -35,17 +27,33 @@ namespace crisp
     {
         int width, height, numComps;
         stbi_set_flip_vertically_on_load(flipY);
-        stbi_uc* data = stbi_load(filePath.string().c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
+
+        std::size_t typeSize = 1;
+        void* dataPtr = nullptr;
+        std::string ext = filePath.extension().string();
+        if (ext == ".hdr")
+        {
+            typeSize = sizeof(float);
+            dataPtr = stbi_loadf(filePath.string().c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
+        }
+        else
+        {
+            typeSize = sizeof(unsigned char);
+            dataPtr = stbi_load(filePath.string().c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
+        }
+
         stbi_set_flip_vertically_on_load(false);
 
-        if (!data)
+        if (!dataPtr)
             throw std::runtime_error("Failed to load image " + filePath.string());
 
         m_width         = static_cast<unsigned int>(width);
         m_height        = static_cast<unsigned int>(height);
         m_numComponents = static_cast<unsigned int>(requestedComponents);
-        m_data.resize(m_width * m_height * m_numComponents);
-        memcpy(m_data.data(), data, m_width * m_height * m_numComponents);
+        m_pixelByteSize = m_numComponents * typeSize;
+
+        m_data.resize(m_width * m_height * m_pixelByteSize);
+        memcpy(m_data.data(), dataPtr, m_width * m_height * m_pixelByteSize);
     }
 
     const unsigned char* ImageFileBuffer::getData() const
@@ -70,7 +78,7 @@ namespace crisp
 
     uint64_t ImageFileBuffer::getByteSize() const
     {
-        return m_width * m_height * m_numComponents;
+        return m_data.size();
     }
 
     uint32_t ImageFileBuffer::getMipLevels() const
@@ -78,53 +86,8 @@ namespace crisp
         return static_cast<uint32_t>(std::floor(std::log2(std::max(m_width, m_height)))) + 1;
     }
 
-    HdrImageFileBuffer::HdrImageFileBuffer(const std::filesystem::path& filePath, int requestedComponents, bool flipY)
-        : m_width(0)
-        , m_height(0)
-        , m_numComponents(0)
+    uint32_t ImageFileBuffer::getMipLevels(uint32_t width, uint32_t height)
     {
-        int width, height, numComps;
-        stbi_set_flip_vertically_on_load(flipY);
-        float* data = stbi_loadf(filePath.string().c_str(), &width, &height, &numComps, getStbComponentFormat(requestedComponents));
-        stbi_set_flip_vertically_on_load(false);
-
-        if (!data)
-            throw std::runtime_error("Failed to load image " + filePath.string());
-
-        m_width = static_cast<unsigned int>(width);
-        m_height = static_cast<unsigned int>(height);
-        m_numComponents = static_cast<unsigned int>(requestedComponents);
-        m_data.resize(m_width * m_height * m_numComponents);
-        memcpy(m_data.data(), data, m_width * m_height * m_numComponents * sizeof(float));
-    }
-
-    const float* HdrImageFileBuffer::getData() const
-    {
-        return m_data.data();
-    }
-
-    unsigned int HdrImageFileBuffer::getWidth() const
-    {
-        return m_width;
-    }
-
-    unsigned int HdrImageFileBuffer::getHeight() const
-    {
-        return m_height;
-    }
-
-    unsigned int HdrImageFileBuffer::getNumComponents() const
-    {
-        return m_numComponents;
-    }
-
-    uint64_t HdrImageFileBuffer::getByteSize() const
-    {
-        return m_width * m_height * m_numComponents * sizeof(float);
-    }
-
-    uint32_t HdrImageFileBuffer::getMipLevels() const
-    {
-        return static_cast<uint32_t>(std::floor(std::log2(std::max(m_width, m_height)))) + 1;
+        return static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
     }
 }

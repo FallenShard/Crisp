@@ -1,29 +1,25 @@
 #pragma once
 
-#include <vector>
-#include <memory>
-#include <array>
-
 #include "Scenes/Scene.hpp"
 #include "Geometry/TransformPack.hpp"
-#include "Renderer/DescriptorSetGroup.hpp"
+
+#include <vector>
+#include <memory>
 
 namespace crisp
 {
     class Application;
-    class CameraController;
-
-    class FluidSimulation;
-
-    class SceneRenderPass;
-    class VulkanPipeline;
-    class VulkanImageView;
-    class UniformBuffer;
-    class VertexBuffer;
-    class IndexBuffer;
-    class Texture;
-    class VulkanDevice;
     class Renderer;
+    class CameraController;
+    class RenderGraph;
+
+    class UniformBuffer;
+    class Material;
+    class Geometry;
+
+    class VulkanPipeline;
+    class VulkanImage;
+    class VulkanImageView;
     class VulkanSampler;
 
     class TerrainScene : public AbstractScene
@@ -37,28 +33,26 @@ namespace crisp
         virtual void render() override;
 
     private:
-        Renderer*     m_renderer;
-        VulkanDevice* m_device;
-        Application*  m_app;
+        Renderer*    m_renderer;
+        Application* m_app;
 
         std::unique_ptr<CameraController> m_cameraController;
+        std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::unique_ptr<VertexBuffer> m_vertexBuffer;
-        std::unique_ptr<IndexBuffer> m_indexBuffer;
+        std::vector<std::unique_ptr<Material>> m_materials;
+        std::vector<std::unique_ptr<Geometry>> m_geometries;
+        std::vector<std::unique_ptr<VulkanPipeline>> m_pipelines;
 
-        std::unique_ptr<VulkanPipeline> m_terrainPipeline;
-        DescriptorSetGroup m_terrainDescGroup;
+        std::vector<std::unique_ptr<VulkanImage>>     m_images;
+        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
 
         TransformPack m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
+        std::unique_ptr<UniformBuffer> m_transformBuffer;
 
-        std::unique_ptr<Texture> m_heightMap;
-        std::unique_ptr<VulkanImageView> m_heightMapView;
-
-        std::unique_ptr<SceneRenderPass> m_scenePass;
-        std::unique_ptr<UniformBuffer> m_cameraBuffer;
+        std::unique_ptr<RenderGraph> m_renderGraph;
 
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
+
         int m_numTiles;
     };
 }

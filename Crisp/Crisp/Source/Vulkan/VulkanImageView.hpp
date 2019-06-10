@@ -7,6 +7,7 @@
 namespace crisp
 {
     class VulkanImage;
+    class VulkanSampler;
 
     class VulkanImageView : public VulkanResource<VkImageView>
     {
@@ -15,5 +16,6 @@ namespace crisp
         ~VulkanImageView();
 
         VkDescriptorImageInfo getDescriptorInfo(VkSampler sampler = VK_NULL_HANDLE, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
+        VkDescriptorImageInfo getDescriptorInfo(const VulkanSampler& sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
     };
 }

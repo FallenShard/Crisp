@@ -1,11 +1,10 @@
-#version 450 core
+#version 460 core
 #define PI 3.1415926535897932384626433832795
 
-layout(location = 0) in vec3 eyeNormal;
-layout(location = 1) in vec2 texCoord;
-layout(location = 2) in vec3 eyePosition;
-layout(location = 3) in vec3 eyeTangent;
-layout(location = 4) in vec3 eyeBitangent;
+layout(location = 0) in vec3 vsEyeNormal;
+layout(location = 1) in vec3 eyePosition;
+layout(location = 2) in vec3 eyeTangent;
+layout(location = 3) in vec3 eyeBitangent;
 
 layout(location = 0) out vec4 fragColor;
 
@@ -16,6 +15,26 @@ layout(set = 0, binding = 1) uniform Camera
     vec2 screenSize;
     vec2 nearFar;
 };
+
+layout(set = 0, binding = 2) uniform Material
+{
+    vec3 albedo;
+    float metallic;
+    float roughness;
+} mat;
+
+layout(set = 1, binding = 0) uniform Light
+{
+    mat4 VP;
+    mat4 V;
+    mat4 P;
+    vec4 position;
+    vec3 spectrum;
+} light;
+
+layout (set = 2, binding = 0) uniform samplerCube irrMap;
+layout (set = 2, binding = 1) uniform samplerCube refMap;
+layout (set = 2, binding = 2) uniform sampler2D brdfLut;
 
 float distributionGGX(vec3 N, vec3 H, float roughness)
 {
@@ -62,28 +81,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
     return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
-//const vec4 lightPosition = vec4(0.0f, 3.0f, 0.0f, 1.0f);
-//const vec3 lightColor = vec3(5.0f, 5.0f, 4.5f);
 const vec3 lightColor = vec3(23.47, 21.31, 20.79);
-
-layout(push_constant) uniform LightPosition
-{
-    layout(offset = 0) vec4 lightPosition;
-    layout(offset = 16) float matRoughness;
-    layout(offset = 20) float matMetallic;
-};
-
-vec3 getNormal(in vec2 uv)
-{
-    vec3 normal  = normalize(eyeNormal);
-    vec3 tangent = normalize(eyeTangent);
-    vec3 bitangent = normalize(eyeBitangent);
-    mat3 TBN = mat3(tangent, bitangent, normal);
-
-    vec3 n = vec3(0.5f, 0.5f, 1.0f);//texture(normalTex, uv).xyz;
-    n = normalize(n * 2.0f - 1.0f);
-    return normalize(TBN * n);
-}
 
 float calculateAttenuation(in vec3 lightVec)
 {
@@ -91,62 +89,73 @@ float calculateAttenuation(in vec3 lightVec)
     return 1.0f / (dist * dist);
 }
 
+vec3 estimateRadiance(in vec3 lightVec)
+{
+    float attenuation = calculateAttenuation(lightVec);
+    float distFactor = mix(1.0f, attenuation, light.position.w);
+    return light.spectrum * distFactor;
+}
+
 void main()
 {
-    vec3 albedo = vec3(1.0f, 1.0f, 1.0f); //texture(diffuseTex, texCoord).rgb;
-    float roughness = matRoughness; //texture(roughnessTex, texCoord).r;
-    float metallic = matMetallic; //texture(metallicTex, texCoord).r;
+    const vec3  albedo    = mat.albedo;
+    const float roughness = mat.roughness;
+    const float metallic  = mat.metallic;
 
-    vec3 eyeNormal = getNormal(texCoord);
-    vec3 eyeLightPos = (V * lightPosition).xyz;
+    // Bring all the vectors needed for lighting in eye (view) space
+    vec3 eyeN = normalize(vsEyeNormal);
+    vec3 eyeL = (V * (-light.position)).xyz;
+    vec3 eyeV = normalize(-eyePosition);
+    vec3 eyeR = reflect(-eyeV, eyeN);
 
-    vec3 viewDir = normalize(-eyePosition);
+    // Reflectance at normal incidence
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
-    vec3 lightVec = eyeLightPos - eyePosition;
-    vec3 wi = normalize(lightVec);
-    float cosTheta = max(dot(eyeNormal, wi), 0.0f);
-    float attenuation = calculateAttenuation(lightVec);
-    vec3 radiance = lightColor * attenuation;
+    float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
-    vec3 halfDir = normalize(wi + viewDir);
-
-    vec3 F0 = vec3(0.04);
-    F0 = mix(F0, albedo, metallic);
-    vec3 F = fresnelSchlick(max(dot(halfDir, viewDir), 0.0f), F0);
+    vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
 
     vec3 kS = F;
-    vec3 kD = vec3(1.0f) - kS;
+    vec3 kD = 1.0f - kS;
     kD *= 1.0f - metallic;
 
-    float NDF = distributionGGX(eyeNormal, halfDir, roughness);
-    float G   = geometrySmith(eyeNormal, viewDir, wi, roughness);
-    vec3 numerator = NDF * G * F;
-    float denominator = 4.0f * max(dot(eyeNormal, viewDir), 0.0f) * max(dot(eyeNormal, wi), 0.0f);
-    vec3 specular = numerator / max(denominator, 0.001);
+    vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+    vec3 irradiance = texture(irrMap, worldN).rgb;
+    vec3 diffuse = irradiance * albedo;
 
-    vec3 Lo = (kD * albedo / PI + specular) * radiance * cosTheta;
-    
-    // ambient lighting (we now use IBL as the ambient term)
-    kS = fresnelSchlickRoughness(max(dot(eyeNormal, viewDir), 0.0f), F0, roughness);
-    kD = 1.0f - kS;
-    kD *= 1.0f - metallic;	  
-    //vec3 irradiance = texture(envMap, texCoord).rgb;
-    //vec3 diffuse      = irradiance * albedo;
-    //vec3 ambient = (kD * diffuse) * 0.1f;
-    vec3 ambient = vec3(0.03) * albedo * 1.0f;
+    const float MaxReflectionLod = 4.0f;
+    vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
+    vec2 envBrdf = texture(brdfLut, vec2(NdotV, roughness)).rg;
+    vec3 specular = prefilter * (F * envBrdf.x + envBrdf.y);
 
-    vec3 tangent = normalize(eyeTangent);
-    vec3 bitangent = normalize(eyeBitangent);
+    const float ao = 1.0f;
+    vec3 ambient = (kD * diffuse + specular) * ao;
 
-    fragColor = vec4(vec3(ambient + Lo), 1.0f);
-    fragColor = vec4(eyeNormal, 1.0f);
-    fragColor.rgb = ambient + Lo;
-    //fragColor = vec4(texCoord, 0.0f, 1.0f);
-    //fragColor = vec4(vec3(roughness), 1.0f);
-
-    //fragColor = vec4(eyeBitangent, 1.0f);
-    //vec3 nn = getNormal(texCoord);
-    //cosTheta = max(dot(nn, lightDir), 0.0f);
-    //fragColor = vec4(radiance * cosTheta, 1.0f);
-    //fragColor = vec4(getNormal(texCoord), 1.0f);
+    fragColor = vec4(ambient, 1.0f);
+    //vec3 lightVec = eyeLightPos;// eyeLightPos - eyePosition;
+    //vec3 wi = normalize(lightVec);
+    //float cosThetaSigned = dot(eyeNormal, wi);
+    //float cosTheta = max(cosThetaSigned, 0.0f);
+    //float attenuation = calculateAttenuation(lightVec);
+    //vec3 radiance = estimateRadiance(lightVec);//lightColor * attenuation;
+//
+    //vec3 halfDir = normalize(wi + eyeViewDir);
+//
+    //float NdotV = max(dot(eyeNormal, eyeViewDir), 0.0f);
+//
+    //
+    //vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+//
+    //
+//
+    //
+//
+    //float NDF = distributionGGX(eyeNormal, halfDir, roughness);
+    //float G   = geometrySmith(eyeNormal, eyeViewDir, wi, roughness);
+    //vec3 numerator = NDF * G * F;
+    //float denominator = 4.0f * max(dot(eyeNormal, viewDir), 0.0f) * max(dot(eyeNormal, wi), 0.0f);
+    //vec3 specular = numerator / max(denominator, 0.001);
+    //
+    //vec3 Lo = (kD * albedo / PI + specular) * radiance * cosTheta;
 }

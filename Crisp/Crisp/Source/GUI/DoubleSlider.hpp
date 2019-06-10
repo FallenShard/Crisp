@@ -15,6 +15,7 @@ namespace crisp::gui
     {
     public:
         DoubleSlider(Form* parentForm);
+        DoubleSlider(Form* parentForm, double minVal, double maxVal);
         virtual ~DoubleSlider();
 
         void setMinValue(double minValue);

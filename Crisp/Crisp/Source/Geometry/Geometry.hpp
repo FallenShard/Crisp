@@ -1,16 +1,15 @@
 #pragma once
 
+#include "Geometry/VertexAttributeDescriptor.hpp"
+#include "Geometry/VertexAttributeBuffer.hpp"
+#include "Geometry/GeometryView.hpp"
+#include "Geometry/GeometryPart.hpp"
+
+#include "Renderer/VulkanBufferUtils.hpp"
+
 #include <filesystem>
 #include <vector>
 #include <memory>
-
-#include <vulkan/vulkan.h>
-
-#include "Vulkan/VulkanBuffer.hpp"
-#include "Renderer/Renderer.hpp"
-#include "Geometry/VertexAttributeTraits.hpp"
-
-#include "Geometry/GeometryView.hpp"
 
 namespace crisp
 {
@@ -18,40 +17,29 @@ namespace crisp
     class VulkanBuffer;
     class TriangleMesh;
 
-    namespace internal
-    {
-        inline std::unique_ptr<VulkanBuffer> makeVertexBuffer(Renderer* renderer, VkDeviceSize size)
-        {
-            VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-            return std::make_unique<VulkanBuffer>(renderer->getDevice(), size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        }
-
-        inline std::unique_ptr<VulkanBuffer> makeIndexBuffer(Renderer* renderer, VkDeviceSize size)
-        {
-            VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-            return std::make_unique<VulkanBuffer>(renderer->getDevice(), size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        }
-    }
-
     class Geometry
     {
     public:
         Geometry(Renderer* renderer, const TriangleMesh& triangleMesh);
+        Geometry(Renderer* renderer, const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttribs);
+        Geometry(Renderer* renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
 
-        template <typename T>
-        Geometry(Renderer* renderer, const std::vector<T>& vertices, const std::vector<glm::uvec3>& faces)
+        Geometry(Renderer* renderer, InterleavedVertexBuffer&& interleavedVertexBuffer, const std::vector<glm::uvec3>& faces, const std::vector<GeometryPart>& parts = {});
+
+        template <typename VertexType, typename IndexType>
+        Geometry(Renderer* renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
             : m_indexBuffer(nullptr)
             , m_indexCount(0)
             , m_vertexCount(0)
             , m_instanceCount(0)
         {
-            auto vertexBuffer = internal::makeVertexBuffer(renderer, vertices.size() * sizeof(T));
+            auto vertexBuffer = createVertexBuffer(renderer->getDevice(), vertices.size() * sizeof(VertexType));
             renderer->fillDeviceBuffer(vertexBuffer.get(), vertices);
             m_vertexBuffers.push_back(std::move(vertexBuffer));
 
-            m_indexBuffer = internal::makeIndexBuffer(renderer, faces.size() * sizeof(glm::uvec3));
+            m_indexBuffer = createIndexBuffer(renderer->getDevice(), faces.size() * sizeof(IndexType));
             renderer->fillDeviceBuffer(m_indexBuffer.get(), faces);
-            m_indexCount = static_cast<uint32_t>(faces.size()) * 3;
+            m_indexCount = static_cast<uint32_t>(faces.size()) * IndexType::length();
 
             for (const auto& buffer : m_vertexBuffers)
             {
@@ -67,10 +55,10 @@ namespace crisp
 
         void addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer);
 
+        void bindVertexBuffers(VkCommandBuffer cmdBuffer) const;
         void bind(VkCommandBuffer commandBuffer) const;
         void draw(VkCommandBuffer commandBuffer) const;
         void bindAndDraw(VkCommandBuffer commandBuffer) const;
-        void bindVertexBuffers(VkCommandBuffer cmdBuffer) const;
 
         inline VulkanBuffer* getVertexBuffer() const { return m_vertexBuffers[0].get(); }
 
@@ -81,6 +69,8 @@ namespace crisp
         inline uint32_t getInstanceCount() const { return m_instanceCount; }
 
         inline void setInstanceCount(uint32_t instanceCount) { m_instanceCount = instanceCount; }
+
+        inline void setVertexBufferOffset(uint32_t bufferIndex, VkDeviceSize offset) { m_offsets.at(bufferIndex) = offset; }
 
         IndexedGeometryView createIndexedGeometryView() const;
 
@@ -95,9 +85,7 @@ namespace crisp
         std::vector<VkDeviceSize> m_offsets;
         uint32_t m_firstBinding;
         uint32_t m_bindingCount;
-    };
 
-    std::unique_ptr<Geometry> createGeometry(Renderer* renderer, std::filesystem::path&& path, std::initializer_list<VertexAttribute> vertexAttributes);
-    std::unique_ptr<Geometry> createGeometry(Renderer* renderer, TriangleMesh&& triangleMesh);
-    std::pair<std::unique_ptr<Geometry>, std::vector<std::pair<uint32_t, uint32_t>>> loadMesh(Renderer* renderer, const std::string& filename, std::initializer_list<VertexAttribute> vertexAttributes);
+        std::vector<GeometryPart> m_parts;
+    };
 }

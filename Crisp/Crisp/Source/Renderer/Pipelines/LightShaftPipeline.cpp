@@ -20,7 +20,7 @@ namespace crisp
         VulkanDevice* device = renderer->getDevice();
 
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout = createPipelineLayout(device, layoutBuilder, descPool);
+        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages

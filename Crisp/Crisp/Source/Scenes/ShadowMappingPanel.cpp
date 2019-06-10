@@ -11,31 +11,24 @@
 
 namespace crisp::gui
 {
-    ShadowMappingPanel::ShadowMappingPanel(Form* parentForm, ShadowMappingScene* scene)
-        : Panel(parentForm)
+    std::unique_ptr<Panel> createShadowMappingSceneGui(Form* form, ShadowMappingScene* scene)
     {
-        setId("shadowMappingPanel");
-        setPadding({ 20, 20 });
-        setPosition({ 20, 40 });
-        setVerticalSizingPolicy(SizingPolicy::WrapContent);
-        setHorizontalSizingPolicy(SizingPolicy::WrapContent);
+        std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
+
+        panel->setId("shadowMappingPanel");
+        panel->setPadding({ 20, 20 });
+        panel->setPosition({ 20, 40 });
+        panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
+        panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
 
         int y = 0;
 
-        auto numSamplesLabel = std::make_unique<Label>(parentForm, "CSM Split Lambda");
+        auto numSamplesLabel = std::make_unique<Label>(form, "CSM Split Lambda");
         numSamplesLabel->setPosition({ 0, y });
-        addControl(std::move(numSamplesLabel));
+        panel->addControl(std::move(numSamplesLabel));
         y += 20;
 
-        //auto blurRadiusSlider = std::make_unique<Slider>(parentForm);
-        //blurRadiusSlider->setId("lambdaSlider");
-        //blurRadiusSlider->setAnchor(Anchor::CenterTop);
-        //blurRadiusSlider->setPosition({ 0, y });
-        //blurRadiusSlider->setValues({ 0, 3, 7, 15, 25, 37 });
-        //blurRadiusSlider->setValue(2);
-        //blurRadiusSlider->valueChanged.subscribe<&ShadowMappingScene::setSplitLambda>(scene);
-        //addControl(std::move(blurRadiusSlider));
-        auto lambdaSlider = std::make_unique<DoubleSlider>(parentForm);
+        auto lambdaSlider = std::make_unique<DoubleSlider>(form);
         lambdaSlider->setId("lambdaSlider");
         lambdaSlider->setAnchor(Anchor::CenterTop);
         lambdaSlider->setPosition({ 0, y });
@@ -44,32 +37,59 @@ namespace crisp::gui
         lambdaSlider->setValue(0.5f);
         lambdaSlider->setIncrement(0.01f);
         lambdaSlider->valueChanged.subscribe<&ShadowMappingScene::setSplitLambda>(scene);
-        addControl(std::move(lambdaSlider));
+        panel->addControl(std::move(lambdaSlider));
         y += 30;
 
-        auto roughnessSlider = std::make_unique<DoubleSlider>(parentForm);
+        auto roughnessSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         roughnessSlider->setId("roughnessSlider");
         roughnessSlider->setAnchor(Anchor::CenterTop);
         roughnessSlider->setPosition({ 0, y });
-        roughnessSlider->setMinValue(0.0f);
-        roughnessSlider->setMaxValue(1.0f);
-        roughnessSlider->setValue(0.1f);
+        roughnessSlider->setValue(0.0f);
         roughnessSlider->setIncrement(0.01f);
         roughnessSlider->valueChanged.subscribe<&ShadowMappingScene::setRoughness>(scene);
-        addControl(std::move(roughnessSlider));
+        panel->addControl(std::move(roughnessSlider));
         y += 30;
 
-        auto metallicSlider = std::make_unique<DoubleSlider>(parentForm);
+        auto metallicSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         metallicSlider->setId("metallicSlider");
         metallicSlider->setAnchor(Anchor::CenterTop);
         metallicSlider->setPosition({ 0, y });
-        metallicSlider->setMinValue(0.0f);
-        metallicSlider->setMaxValue(1.0f);
         metallicSlider->setValue(0.0f);
         metallicSlider->setIncrement(0.01f);
         metallicSlider->valueChanged.subscribe<&ShadowMappingScene::setMetallic>(scene);
-        addControl(std::move(metallicSlider));
+        panel->addControl(std::move(metallicSlider));
         y += 30;
+
+        auto redSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
+        redSlider->setId("redSlider");
+        redSlider->setAnchor(Anchor::CenterTop);
+        redSlider->setPosition({ 0, y });
+        redSlider->setValue(0.0f);
+        redSlider->setIncrement(0.01f);
+        redSlider->valueChanged.subscribe<&ShadowMappingScene::setRedAlbedo>(scene);
+        panel->addControl(std::move(redSlider));
+        y += 30;
+
+        auto greenSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
+        greenSlider->setId("greenSlider");
+        greenSlider->setAnchor(Anchor::CenterTop);
+        greenSlider->setPosition({ 0, y });
+        greenSlider->setValue(0.0f);
+        greenSlider->setIncrement(0.01f);
+        greenSlider->valueChanged.subscribe<&ShadowMappingScene::setGreenAlbedo>(scene);
+        panel->addControl(std::move(greenSlider));
+        y += 30;
+
+        auto blueSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
+        blueSlider->setId("blueSlider");
+        blueSlider->setAnchor(Anchor::CenterTop);
+        blueSlider->setPosition({ 0, y });
+        blueSlider->setValue(0.0f);
+        blueSlider->setIncrement(0.01f);
+        blueSlider->valueChanged.subscribe<&ShadowMappingScene::setBlueAlbedo>(scene);
+        panel->addControl(std::move(blueSlider));
+        y += 30;
+
 
         std::vector<std::string> materials =
         {
@@ -81,15 +101,13 @@ namespace crisp::gui
             "GreenCeramic"
         };
 
-        auto comboBox = std::make_unique<gui::ComboBox>(parentForm);
+        auto comboBox = std::make_unique<gui::ComboBox>(form);
         comboBox->setId("sceneComboBox");
-        comboBox->setPosition({ 0, 0 });
+        comboBox->setPosition({ 0, y });
         comboBox->setItems(materials);
         comboBox->itemSelected.subscribe<&ShadowMappingScene::onMaterialSelected>(scene);
-        addControl(std::move(comboBox));
-    }
+        panel->addControl(std::move(comboBox));
 
-    ShadowMappingPanel::~ShadowMappingPanel()
-    {
+        return panel;
     }
 }

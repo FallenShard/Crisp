@@ -7,6 +7,7 @@
 #include "IO/FontLoader.hpp"
 #include "IO/ImageFileBuffer.hpp"
 
+#include "vulkan/VulkanDevice.hpp"
 #include "Vulkan/VulkanPipeline.hpp"
 #include "vulkan/VulkanImage.hpp"
 #include "vulkan/VulkanImageView.hpp"
@@ -24,14 +25,19 @@
 
 #include <CrispCore/ConsoleUtils.hpp>
 
+namespace
+{
+    static constexpr float DepthLayers = 32.0f;
+}
+
 namespace crisp::gui
 {
     RenderSystem::RenderSystem(Renderer* renderer)
         : m_renderer(renderer)
         , m_device(renderer->getDevice())
     {
-        auto width  = static_cast<float>(m_renderer->getSwapChainExtent().width);
-        auto height = static_cast<float>(m_renderer->getSwapChainExtent().height);
+        float width  = static_cast<float>(m_renderer->getSwapChainExtent().width);
+        float height = static_cast<float>(m_renderer->getSwapChainExtent().height);
         m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + DepthLayers);
 
         // Create the render pass where all GUI controls will be drawn
@@ -147,17 +153,17 @@ namespace crisp::gui
         m_textResourceIdPool.erase(freeTextResourceId);
 
         auto textRes = std::make_unique<TextGeometryResource>();
-        textRes->allocatedVertexCount        = TextGeometryResource::NumInitialAllocatedCharacters * 4; // 4 Vertices per letter
-        textRes->allocatedFaceCount          = TextGeometryResource::NumInitialAllocatedCharacters * 2; // 2 Triangles per letter
-        textRes->updatedBufferIndex          = 0;
-        textRes->isUpdatedOnDevice           = false;
-        textRes->geomData.vertexBuffer       = std::make_unique<VertexBuffer>(m_renderer, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
-        textRes->geomData.indexBuffer        = std::make_unique<IndexBuffer>(m_renderer, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
-        textRes->geomData.vertexBufferGroup  = { { textRes->geomData.vertexBuffer->get(), 0 } };
-        textRes->geomData.indexBufferOffset  = 0;
-        textRes->geomData.indexCount         = 32;
-        textRes->descSet                     = m_fonts.at(fontId)->descSet;
-        textRes->updateStagingBuffer(text, m_fonts.at(fontId)->font.get(), m_renderer);
+        textRes->allocatedVertexCount = TextGeometryResource::NumInitialAllocatedCharacters * 4; // 4 Vertices per letter
+        textRes->allocatedFaceCount   = TextGeometryResource::NumInitialAllocatedCharacters * 2; // 2 Triangles per letter
+        textRes->updatedBufferIndex   = 0;
+        textRes->isUpdatedOnDevice    = false;
+        textRes->vertexBuffer         = std::make_unique<VertexBuffer>(m_renderer, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
+        textRes->indexBuffer          = std::make_unique<IndexBuffer>(m_renderer, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
+        textRes->vertexBufferGroup    = { { textRes->vertexBuffer->get(), 0 } };
+        textRes->indexBufferOffset    = 0;
+        textRes->indexCount           = 32;
+        textRes->descSet              = m_fonts.at(fontId)->descSet;
+        textRes->updateStagingBuffer(text, *m_fonts.at(fontId)->font.get());
 
         m_textResources.emplace_back(std::move(textRes));
 
@@ -167,7 +173,7 @@ namespace crisp::gui
     glm::vec2 RenderSystem::updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId)
     {
         m_textResources.at(textResId)->descSet = m_fonts.at(fontId)->descSet;
-        m_textResources.at(textResId)->updateStagingBuffer(text, m_fonts.at(fontId)->font.get(), m_renderer);
+        m_textResources.at(textResId)->updateStagingBuffer(text, *m_fonts.at(fontId)->font);
         m_textResources.at(textResId)->isUpdatedOnDevice = false;
         return m_textResources.at(textResId)->extent;
     }
@@ -228,10 +234,10 @@ namespace crisp::gui
                 if (!textRes->isUpdatedOnDevice)
                 {
                     textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % Renderer::NumVirtualFrames;
-                    textRes->geomData.vertexBufferGroup.offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
-                    textRes->geomData.indexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
-                    textRes->geomData.vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
-                    textRes->geomData.indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
+                    textRes->vertexBufferGroup.offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
+                    textRes->indexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
+                    textRes->vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
+                    textRes->indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
 
                     textRes->isUpdatedOnDevice = true;
                 }
@@ -272,14 +278,11 @@ namespace crisp::gui
 
         m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer)
         {
+            unsigned int frameIndex = m_renderer->getCurrentVirtualFrameIndex();
             m_fsQuadPipeline->bind(commandBuffer);
+            m_fsMaterial->bind(frameIndex, commandBuffer);
+
             m_renderer->setDefaultViewport(commandBuffer);
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_fsQuadPipeline->getPipelineLayout()->getHandle(),
-                0, 1, &m_fsQuadDescSet, 0, nullptr);
-
-            unsigned int pushConst = m_renderer->getCurrentVirtualFrameIndex();
-            vkCmdPushConstants(commandBuffer, m_fsQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(unsigned int), &pushConst);
-
             m_renderer->setDefaultScissor(commandBuffer);
             m_renderer->drawFullScreenQuad(commandBuffer);
         });
@@ -290,25 +293,12 @@ namespace crisp::gui
         m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f, static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
         m_guiPass->recreate();
-        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
-
-        VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
-
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
-        descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet          = m_fsQuadDescSet;
-        descriptorWrites[0].dstBinding      = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pImageInfo      = &imageInfo;
-
-        vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        updateFullScreenMaterial();
     }
 
-    DeviceMemoryMetrics RenderSystem::getDeviceMemoryUsage()
+    const Renderer& RenderSystem::getRenderer() const
     {
-        return m_device->getDeviceMemoryUsage();
+        return *m_renderer;
     }
 
     glm::vec2 RenderSystem::getScreenSize() const
@@ -377,52 +367,26 @@ namespace crisp::gui
 
     void RenderSystem::initGeometryBuffers()
     {
-        // Vertex buffer
-        std::vector<glm::vec2> quadVerts = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
-        m_quadGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, quadVerts);
+        std::vector<glm::vec2> quadVerts  = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
+        std::vector<glm::uvec3> quadFaces = { { 0, 2, 1 }, { 0, 3, 2 } };
+        m_quadGeometry = std::make_unique<Geometry>(m_renderer, quadVerts, quadFaces);
 
-        // Index buffer
-        std::vector<glm::u16vec3> quadFaces = { { 0, 2, 1 }, { 0, 3, 2 } };
-        m_quadGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_renderer, quadFaces);
-
-        m_quadGeometry.vertexBufferGroup =
-        {
-            { m_quadGeometry.vertexBuffer->get(), 0 }
-        };
-
-        m_quadGeometry.indexBufferOffset  = 0;
-        m_quadGeometry.indexCount         = 6;
-
-        m_lineLoopGeometry.vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, quadVerts);
-        std::vector<glm::u16vec2> loopIndices = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 } };
-        m_lineLoopGeometry.indexBuffer = std::make_unique<IndexBuffer>(m_renderer, loopIndices);
-        m_lineLoopGeometry.vertexBufferGroup =
-        {
-            { m_lineLoopGeometry.vertexBuffer->get(), 0 }
-        };
-        m_lineLoopGeometry.indexBufferOffset = 0;
-        m_lineLoopGeometry.indexCount        = 8;
+        std::vector<glm::uvec2> loopSegments = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 } };
+        m_lineLoopGeometry = std::make_unique<Geometry>(m_renderer, quadVerts, loopSegments);
     }
 
     void RenderSystem::initGuiRenderTargetResources()
     {
-        // Create descriptor set for the image
-        m_fsQuadDescSet = m_fsQuadPipeline->allocateDescriptorSet(0).getHandle();
+        m_fsMaterial = std::make_unique<Material>(m_fsQuadPipeline.get());
+        updateFullScreenMaterial();
+    }
 
-        // Create a view to the render target
-        m_guiRenderTargetView = m_guiPass->createRenderTargetView(0, Renderer::NumVirtualFrames);
+    void RenderSystem::updateFullScreenMaterial()
+    {
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+            m_fsMaterial->writeDescriptor(0, 0, i, m_guiPass->getRenderTargetView(0, i).getDescriptorInfo(m_linearClampSampler->getHandle()));
 
-        VkDescriptorImageInfo imageInfo = m_guiRenderTargetView->getDescriptorInfo(m_linearClampSampler->getHandle());
-
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
-        descriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet          = m_fsQuadDescSet;
-        descriptorWrites[0].dstBinding      = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pImageInfo      = &imageInfo;
-        vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        m_device->flushDescriptorUpdates();
     }
 
     void RenderSystem::loadTextureAtlas()
@@ -461,7 +425,7 @@ namespace crisp::gui
         m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants[0]);
         m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), pushConstants[1]);
 
-        m_quadGeometry.drawIndexed(cmdBuffer);
+        m_quadGeometry->bindAndDraw(cmdBuffer);
     }
 
     void RenderSystem::renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
@@ -493,7 +457,7 @@ namespace crisp::gui
         vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_VERTEX_BIT,             0, sizeof(int), &pushConstants[0]);
         vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int), &pushConstants[1]);
 
-        textRes->geomData.drawIndexed(cmdBuffer);
+        textRes->drawIndexed(cmdBuffer);
     }
 
     void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
@@ -525,7 +489,7 @@ namespace crisp::gui
         vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_VERTEX_BIT,             0,     sizeof(int), &pushConstants[0]);
         vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2 * sizeof(int), &pushConstants[1]);
 
-        m_quadGeometry.drawIndexed(cmdBuffer);
+        m_quadGeometry->bindAndDraw(cmdBuffer);
     }
 
     void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const
@@ -534,10 +498,10 @@ namespace crisp::gui
         m_debugRectPipeline->bind(cmdBuffer);
         m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, m_P * transform);
         m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), color);
-        m_lineLoopGeometry.drawIndexed(cmdBuffer);
+        m_lineLoopGeometry->bindAndDraw(cmdBuffer);
     }
 
-    void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, Font* font, Renderer* renderer)
+    void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, const Font& font)
     {
         std::vector<glm::vec4> textVertices;
         std::vector<glm::u16vec3> textFaces;
@@ -545,13 +509,13 @@ namespace crisp::gui
         unsigned short ind = 0;
         float currentX = 0.f;
         float currentY = 0.f;
-        float atlasWidth  = static_cast<float>(font->width);
-        float atlasHeight = static_cast<float>(font->height);
+        float atlasWidth  = static_cast<float>(font.width);
+        float atlasHeight = static_cast<float>(font.height);
 
         extent = glm::vec2(0.0f, 0.0f);
         for (auto& character : text)
         {
-            auto& gInfo = font->glyphs[character - FontLoader::CharBegin];
+            auto& gInfo = font.glyphs[character - FontLoader::CharBegin];
             float x1 = currentX + gInfo.bmpLeft;
             float y1 = currentY - gInfo.bmpTop;
             float x2 = x1 + gInfo.bmpWidth;
@@ -576,14 +540,13 @@ namespace crisp::gui
         extent.x += currentX;
 
         vertexCount = static_cast<uint32_t>(textVertices.size());
-        faceCount   = static_cast<uint32_t>(textFaces.size());
-        geomData.indexCount = faceCount * 3;
+        indexCount = static_cast<uint32_t>(textFaces.size()) * 3;
 
-        geomData.vertexBuffer->updateStagingBuffer(textVertices);
-        geomData.indexBuffer->updateStagingBuffer(textFaces);
+        vertexBuffer->updateStagingBuffer(textVertices);
+        indexBuffer->updateStagingBuffer(textFaces);
     }
 
-    void RenderSystem::GeometryData::drawIndexed(VkCommandBuffer cmdBuffer) const
+    void RenderSystem::TextGeometryResource::drawIndexed(VkCommandBuffer cmdBuffer) const
     {
         vertexBufferGroup.bind(cmdBuffer);
         indexBuffer->bind(cmdBuffer, indexBufferOffset);

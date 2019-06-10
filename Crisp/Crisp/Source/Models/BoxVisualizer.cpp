@@ -9,18 +9,53 @@
 #include "Techniques/CascadedShadowMapper.hpp"
 
 #include "Geometry/TriangleMesh.hpp"
-#include "Geometry/MeshGeometry.hpp"
 
 #include "Renderer/Pipelines/OutlinePipeline.hpp"
 
 namespace crisp
 {
-    BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, uint32_t numFrusta, VulkanRenderPass* renderPass)
+    BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, uint32_t numFrusta, const VulkanRenderPass& renderPass)
         : m_renderer(renderer)
         , m_numBoxes(numBoxes)
-        , m_numFrusta(numFrusta)
+        , m_frusta(numFrusta)
+        , m_stagingBuffers(numFrusta)
     {
-        m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, "cube.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
+        std::vector<glm::uvec2> lines =
+        {
+            { 0, 1 },
+            { 1, 2 },
+            { 2, 3 },
+            { 3, 0 },
+
+            { 4, 5 },
+            { 5, 6 },
+            { 6, 7 },
+            { 7, 4 },
+
+            { 0, 4 },
+            { 3, 7 },
+            { 2, 6 },
+            { 1, 5 }
+        };
+
+        for (auto& stagingBuffer : m_stagingBuffers)
+            stagingBuffer = createStagingBuffer(renderer->getDevice(), 8 * sizeof(glm::vec3), nullptr);
+
+        for (auto& frustum : m_frusta)
+            frustum = std::make_unique<Geometry>(renderer, 8, lines);
+
+        m_outlineTransforms.resize(m_frusta.size() + m_numBoxes);
+        m_outlineTransforms[0].M = glm::scale(glm::vec3{ 3.0f });
+        m_outlineTransforms[1].M = glm::translate(glm::vec3{ -5.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
+        m_outlineTransforms[2].M = glm::translate(glm::vec3{ -15.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
+        m_outlineTransforms[3].M = glm::translate(glm::vec3{ -25.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
+
+        m_outlineTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_outlineTransforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
+
+        m_outlinePipeline = createOutlinePipeline(m_renderer, &renderPass);
+        m_outlineMaterial = std::make_unique<Material>(m_outlinePipeline.get());
+        m_outlineMaterial->writeDescriptor(0, 0, 0, m_outlineTransformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
+        /*m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, "cube.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
 
         std::vector<glm::u16vec2> lines =
         {
@@ -99,91 +134,74 @@ namespace crisp
             m_outlinePipeline->allocateDescriptorSet(0)
         };
         m_outlineDesc.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_outlineTransformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
-        m_outlineDesc.flushUpdates(m_renderer->getDevice());
+        m_outlineDesc.flushUpdates(m_renderer->getDevice());*/
     }
 
     BoxVisualizer::~BoxVisualizer()
     {
     }
 
-    void BoxVisualizer::update(const glm::mat4& V, const glm::mat4& P)
-    {
-        for (auto& trans : m_outlineTransforms)
-        {
-            trans.MV = V * trans.M;
-            trans.MVP = P * trans.MV;
-        }
-
-        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
-    }
-
     void BoxVisualizer::updateFrusta(CascadedShadowMapper* shadowMapper, CameraController* cameraController)
     {
         auto& camera = cameraController->getCamera();
 
-        //auto camPos = camera.getPosition();
-        //
-        //m_outlineTransforms[0].M = glm::mat4(1.0f);
-        //m_outlineTransforms[1].M = glm::mat4(1.0f);
-        //m_outlineTransforms[2].M = glm::mat4(1.0f);
-        //m_outlineTransforms[3].M = glm::mat4(1.0f);
-        //
-        //std::vector<float> splitsNear = { 0.1f, 5.0f, 10.0f, 20.0f };
-        //std::vector<float> splitsFar = { 5.0f, 10.0f, 20.0f, 50.0f };
-        //
-        //auto lightView = shadowMapper->getLight()->getViewMatrix();
-        //
-        //for (int i = 0; i < 4; i++)
-        //{
-        //    auto worldPts = camera.getFrustumPoints(splitsNear[i], splitsFar[i]);
-        //    m_frusta[i].vertexBuffer->updateStagingBuffer(worldPts);
-        //
-        //    glm::vec3 minCorner(1000.0f);
-        //    glm::vec3 maxCorner(-1000.0f);
-        //    for (auto& pt : worldPts)
-        //    {
-        //        auto lightViewPt = lightView * glm::vec4(pt, 1.0f);
-        //
-        //        minCorner = glm::min(minCorner, glm::vec3(lightViewPt));
-        //        maxCorner = glm::max(maxCorner, glm::vec3(lightViewPt));
-        //    }
-        //
-        //    glm::vec3 lengths(maxCorner - minCorner);
-        //    auto cubeCenter = (minCorner + maxCorner) / 2.0f;
-        //    auto squareSize = std::max(lengths.x, lengths.y);
-        //
-        //    auto worldCubeCenter = glm::inverse(lightView) * glm::vec4(cubeCenter, 1.0f);
-        //
-        //    glm::vec3 scaleVec(squareSize, squareSize, lengths.z);
-        //    glm::vec3 transVec(worldCubeCenter);
-        //
-        //    m_outlineTransforms[i + 4].M = glm::translate(transVec) * glm::transpose(lightView) * glm::scale(scaleVec);
-        //}
-        //
-        //for (auto& trans : m_outlineTransforms)
-        //{
-        //    trans.MV = camera.getViewMatrix() * trans.M;
-        //    trans.MVP = camera.getProjectionMatrix() * trans.MV;
-        //}
-        //
-        //m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
+        auto camPos = camera.getPosition();
+
+        m_outlineTransforms[0].M = glm::mat4(1.0f);
+        m_outlineTransforms[1].M = glm::mat4(1.0f);
+        m_outlineTransforms[2].M = glm::mat4(1.0f);
+        m_outlineTransforms[3].M = glm::mat4(1.0f);
+
+        auto& bounds = shadowMapper->getBoundingBoxExtents();
+        std::vector<glm::vec3> vertices;
+        for (int i = 0; i < 4; i++)
+        {
+            vertices.clear();
+            vertices.emplace_back(bounds[i][0].x, bounds[i][0].y, bounds[i][0].z);
+            vertices.emplace_back(bounds[i][1].x, bounds[i][0].y, bounds[i][0].z);
+            vertices.emplace_back(bounds[i][1].x, bounds[i][1].y, bounds[i][0].z);
+            vertices.emplace_back(bounds[i][0].x, bounds[i][1].y, bounds[i][0].z);
+            vertices.emplace_back(bounds[i][0].x, bounds[i][0].y, bounds[i][1].z);
+            vertices.emplace_back(bounds[i][1].x, bounds[i][0].y, bounds[i][1].z);
+            vertices.emplace_back(bounds[i][1].x, bounds[i][1].y, bounds[i][1].z);
+            vertices.emplace_back(bounds[i][0].x, bounds[i][1].y, bounds[i][1].z);
+            /*vertices.emplace_back(-5 * i, -5 * i, -5 * i);
+            vertices.emplace_back(+5, -5, -5);
+            vertices.emplace_back(+5, +5, -5);
+            vertices.emplace_back(-5, +5, -5);
+            vertices.emplace_back(-5, -5, +5);
+            vertices.emplace_back(+5, -5, +5);
+            vertices.emplace_back(+5, +5, +5);
+            vertices.emplace_back(-5, +5, +5);*/
+
+            m_stagingBuffers[i]->updateFromHost(vertices);
+
+            m_outlineTransforms[i].M = glm::mat4(1.0f);
+        }
+
+        for (auto& trans : m_outlineTransforms)
+        {
+            trans.MV = camera.getViewMatrix() * trans.M;
+            trans.MVP = camera.getProjectionMatrix() * trans.MV;
+        }
+
+        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
 
     }
 
     void BoxVisualizer::updateDeviceBuffers(VkCommandBuffer commandBuffer, uint32_t frameIndex)
     {
-        m_outlineTransformsBuffer->updateDeviceBuffer(commandBuffer, frameIndex);
-
-        for (auto& frustum : m_frusta)
-            frustum.vertexBuffer->updateDeviceBuffer(commandBuffer, frameIndex);
+        for (int i = 0; i < 4; i++)
+        {
+            uint32_t offset = frameIndex * 8 * sizeof(glm::vec3);
+            m_frusta[i]->getVertexBuffer()->copyFrom(commandBuffer, *m_stagingBuffers[i], 0, offset, 8 * sizeof(glm::vec3));
+            m_frusta[i]->setVertexBufferOffset(0, frameIndex * 8 * sizeof(glm::vec3));
+        }
     }
 
-    void BoxVisualizer::render(VkCommandBuffer commandBuffer, uint32_t frameIndex)
+    std::vector<DrawCommand> BoxVisualizer::createDrawCommands() const
     {
-        m_outlinePipeline->bind(commandBuffer);
-        //m_cubeGeometry->bindGeometryBuffers(commandBuffer);
-
-        std::vector<glm::vec4> colors =
+        static const std::vector<glm::vec4> colors =
         {
             { 1.0f, 0.0f, 0.0f, 1.0f },
             { 1.0f, 1.0f, 0.0f, 1.0f },
@@ -191,34 +209,19 @@ namespace crisp
             { 0.0f, 0.0f, 1.0f, 1.0f }
         };
 
-        m_indexBuffer->bind(commandBuffer, 0);
-
-        for (int i = 0; i < 4; i++)
+        std::vector<DrawCommand> drawCommands(4);
+        for (int i = 0; i < 4; ++i)
         {
-            m_frusta[i].vertexBindingGroup.offsets[0] = frameIndex * m_frustumPoints.size() * sizeof(glm::vec3);
-            m_frusta[i].vertexBindingGroup.bind(commandBuffer);
-
-            m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
-            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle());
-
-            vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &colors[i]);
-
-            //m_cubeGeometry->draw(commandBuffer);
-            vkCmdDrawIndexed(commandBuffer, m_numIndices, 1, 0, 0, 0);
+            drawCommands[i].pipeline = m_outlinePipeline.get();
+            drawCommands[i].material = m_outlineMaterial.get();
+            drawCommands[i].dynamicBuffers.push_back({ *m_outlineTransformsBuffer, i * sizeof(TransformPack) });
+            for (const auto& info : drawCommands[i].material->getDynamicBufferInfos())
+                drawCommands[i].dynamicBuffers.push_back(info);
+            drawCommands[i].setPushConstants(colors[i]);
+            drawCommands[i].geometry = m_frusta[i].get();
+            drawCommands[i].setGeometryView(drawCommands[i].geometry->createIndexedGeometryView());
         }
 
-        m_cubeVertexBindingGroup.bind(commandBuffer);
-        for (int i = 4; i < 8; i++)
-        {
-            m_outlineDesc.setDynamicOffset(0, m_outlineTransformsBuffer->getDynamicOffset(frameIndex) + i * sizeof(TransformPack));
-            m_outlineDesc.bind(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle());
-
-            auto color = colors[i - 4] * 0.5f;
-            color.a = 1.0f;
-            vkCmdPushConstants(commandBuffer, m_outlinePipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &color);
-
-            //m_cubeGeometry->draw(commandBuffer);
-            vkCmdDrawIndexed(commandBuffer, m_numIndices, 1, 0, 0, 0);
-        }
+        return drawCommands;
     }
 }

@@ -6,8 +6,8 @@
 
 namespace crisp
 {
-    TriangleMesh createPlaneMesh(std::initializer_list<VertexAttribute> vertexAttributes);
-    TriangleMesh createGrassBlade(std::initializer_list<VertexAttribute> vertexAttributes);
-    TriangleMesh createSphereMesh(std::initializer_list<VertexAttribute> vertexAttributes);
-    TriangleMesh createCubeMesh(std::initializer_list<VertexAttribute> vertexAttributes);
+    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
+    TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
+    TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
+    TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
 }

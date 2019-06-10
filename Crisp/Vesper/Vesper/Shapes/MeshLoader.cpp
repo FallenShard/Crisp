@@ -113,9 +113,7 @@ namespace crisp
         std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals,
         std::vector<glm::vec2>& texCoords, std::vector<glm::uvec3>& faces) const
     {
-        using VertexMap = std::unordered_map<ObjVertex, unsigned int, ObjVertexHasher>;
-
-        VertexMap vertexMap;
+        std::unordered_map<ObjVertex, unsigned int, ObjVertexHasher> vertexMap;
 
         std::vector<glm::vec3> tempPositions;
         std::vector<glm::vec3> tempNormals;

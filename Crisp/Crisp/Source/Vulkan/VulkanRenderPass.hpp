@@ -24,11 +24,14 @@ namespace crisp
         VkRect2D createScissor() const;
 
         void begin(VkCommandBuffer cmdBuffer) const;
+        void begin(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const;
         void end(VkCommandBuffer cmdBuffer) const;
+        void end(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const;
         void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
 
         VulkanImage*     getRenderTarget(unsigned int index) const;
         const VulkanImageView& getRenderTargetView(unsigned int renderTargetIndex, unsigned int frameIndex) const;
+        std::vector<VulkanImageView*> getRenderTargetViews(unsigned int renderTargetIndex) const;
         std::unique_ptr<VulkanImageView> createRenderTargetView(unsigned int index, unsigned int numFrames) const;
 
         inline uint32_t getNumSubpasses() const { return m_numSubpasses; }

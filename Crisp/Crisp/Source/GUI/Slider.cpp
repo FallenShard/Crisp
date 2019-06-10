@@ -6,6 +6,17 @@
 
 namespace crisp::gui
 {
+    namespace
+    {
+        static constexpr float BarWidthPercent = 7.0f / 8.0f;
+        static constexpr float IndicatorWidth = 7.0f;
+
+        static const glm::vec4 BackgroundColor = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+        static const glm::vec4 ForegroundColor = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f);
+
+        static const glm::vec2 IndicatorSize = glm::vec2(7.0f, 20.0f);
+    }
+
     Slider::Slider(Form* parentForm)
         : Control(parentForm)
         , m_state(State::Idle)
@@ -24,21 +35,23 @@ namespace crisp::gui
         setSizeHint({200.0f, 20.0f});
         m_M = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
 
-        m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent, 0.875f);
-        m_backgroundRect->setSizeHint({ 0.0f, 6.0f });
-        m_backgroundRect->setPosition({ 0.0f, 7.0f });
-        m_backgroundRect->setColor({ 0.5f, 0.5f, 0.5f, 1.0f });
+        m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent, BarWidthPercent);
+        m_backgroundRect->setSizeHint({ 0.0f, 2.0f });
+        m_backgroundRect->setPosition({ 0.0f, 9.0f });
+        m_backgroundRect->setColor(BackgroundColor);
         m_backgroundRect->setParent(this);
 
-        m_foregroundRect->setSizeHint({ 200.0f * 0.875f * 0.5f, 6.0f });
-        m_foregroundRect->setPosition({ 0.0f, 7.0f });
-        m_foregroundRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
+        m_foregroundRect->setSizeHint({ m_sizeHint.x * BarWidthPercent * 0.5f, 2.0f });
+        m_foregroundRect->setPosition({ 0.0f, 9.0f });
+        m_foregroundRect->setDepthOffset(2.0f);
+        m_foregroundRect->setColor(ForegroundColor);
         m_foregroundRect->setParent(this);
 
+        m_indicatorRect->setSizeHint(IndicatorSize);
+        m_indicatorRect->setPosition({ m_sizeHint.x * BarWidthPercent * 0.5f, 0.0f });
+        m_indicatorRect->setDepthOffset(2.0f);
+        m_indicatorRect->setColor(ForegroundColor);
         m_indicatorRect->setAnchor(Anchor::CenterLeft);
-        m_indicatorRect->setSizeHint({ 8.0f, 12.0f });
-        m_indicatorRect->setPosition({ 100 * 0.875f, 0.0f });
-        m_indicatorRect->setColor({ 0.0f, 1.0f, 1.0f, 1.0f });
         m_indicatorRect->setParent(this);
 
         m_label->setAnchor(Anchor::CenterRight);
@@ -80,12 +93,12 @@ namespace crisp::gui
             return;
 
         moveIndicators(value);
-        setValidationFlags(Validation::Geometry);
-
-        m_label->setText(std::to_string(value));
-
         m_value = value;
-        valueChanged(m_value);
+
+        int v = m_values.empty() ? m_value : m_values[m_value];
+
+        m_label->setText(std::to_string(v));
+        valueChanged(v);
     }
 
     void Slider::setIncrement(int increment)
@@ -119,13 +132,7 @@ namespace crisp::gui
 
     void Slider::onMousePressed(float x, float y)
     {
-        int newValue = getValueFromMousePosition(x, y);
-
-        m_label->setText(std::to_string(newValue));
-        if (m_value != newValue) {
-            m_value = newValue;
-            valueChanged(m_value);
-        }
+        setValue(getValueFromMousePosition(x, y));
 
         setState(State::Pressed);
         m_form->setFocusedControl(this);
@@ -134,15 +141,7 @@ namespace crisp::gui
     void Slider::onMouseMoved(float x, float y)
     {
         if (m_state == State::Pressed)
-        {
-            int newValue = getValueFromMousePosition(x, y);
-
-            m_label->setText(std::to_string(newValue));
-            if (m_value != newValue) {
-                m_value = newValue;
-                valueChanged(m_value);
-            }
-        }
+            setValue(getValueFromMousePosition(x, y));
     }
 
     void Slider::onMouseReleased(float x, float y)
@@ -237,37 +236,23 @@ namespace crisp::gui
 
     void Slider::moveIndicators(int value)
     {
-        if (!m_values.empty())
-        {
-            for (int i = 0; i < m_values.size(); i++)
-                if (m_values[i] == value)
-                {
-                    value = i;
-                    break;
-                }
-        }
-
-        auto bounds = m_backgroundRect->getAbsoluteBounds();
+        Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
         float localPos = static_cast<float>((value - m_minValue) * bounds.width) / static_cast<float>(m_maxValue - m_minValue);
-        float indicatorPos = localPos - m_indicatorRect->getSize().x / 2.0f;
-        m_indicatorRect->setPosition({ indicatorPos, 0.0f });
-        m_foregroundRect->setSizeHint({ localPos, 6.0f });
+        m_indicatorRect->setPosition({ localPos - m_indicatorRect->getSize().x / 2.0f, 0.0f });
+        m_foregroundRect->setSizeHint({ localPos, 2.0f });
+        setValidationFlags(Validation::Geometry);
     }
 
     int Slider::getValueFromMousePosition(float x, float y)
     {
-        auto bounds = m_backgroundRect->getAbsoluteBounds();
-        float indicatorPos = std::max(-m_indicatorRect->getSize().x / 2.0f, std::min(x - m_M[3][0] - m_indicatorRect->getSize().x / 2.0f, bounds.width));
-        m_indicatorRect->setPosition({ indicatorPos, 0.0f });
-        m_foregroundRect->setSizeHint({ indicatorPos, 6.0f });
-        setValidationFlags(Validation::Geometry);
+        Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
+        float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0], bounds.width));
 
-        float t = indicatorPos / bounds.width;
-        int valueSpan = m_maxValue - m_minValue;
+        float t = std::max(0.0f, std::min(1.0f, indicatorPos / bounds.width));
+        float rawValue = t * (m_maxValue - m_minValue);
+        float spillOver = std::fmod(rawValue, m_increment);
+        float snappedValue = spillOver < m_increment / 2.0 ? rawValue - spillOver : rawValue + m_increment - spillOver;
 
-        int rawValue = static_cast<int>(std::round(m_minValue + t * valueSpan));
-        int dd = (rawValue - m_minValue + m_increment / 2) / m_increment;
-        int finalValue = std::min(std::max(m_minValue + dd * m_increment, m_minValue), m_maxValue);
-        return m_values.empty() ? finalValue : m_values[finalValue];
+        return static_cast<int>(std::round(snappedValue + m_minValue));
     }
 }

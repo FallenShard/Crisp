@@ -10,14 +10,6 @@ namespace crisp
 namespace crisp::gui
 {
     class Form;
-    class Label;
-    class Slider;
-    class Button;
 
-    class ShadowMappingPanel : public Panel
-    {
-    public:
-        ShadowMappingPanel(Form* parentForm, ShadowMappingScene* scene);
-        virtual ~ShadowMappingPanel();
-    };
+    std::unique_ptr<Panel> createShadowMappingSceneGui(Form* form, ShadowMappingScene* scene);
 }

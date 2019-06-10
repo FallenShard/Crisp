@@ -210,7 +210,7 @@ namespace crisp
                 integrate(cmdBuffer, m_timeDelta / 5.0f);
                 insertComputeBarrier(cmdBuffer);
                 m_prevSection = m_currentSection;
-                m_currentSection = (m_currentSection + 1) % 3;
+                m_currentSection = (m_currentSection + 1) % Renderer::NumVirtualFrames;
             }
 
             VkMemoryBarrier memBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };

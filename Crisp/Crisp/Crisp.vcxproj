@@ -131,11 +131,10 @@ popd</Command>
     <ClCompile Include="Source\Core\StringUtils.cpp" />
     <ClCompile Include="Source\Core\Window.cpp" />
     <ClCompile Include="Source\Geometry\Geometry.cpp" />
-    <ClCompile Include="Source\Geometry\MeshGeometry.cpp" />
     <ClCompile Include="Source\Geometry\MeshGenerators.cpp" />
-    <ClCompile Include="Source\Geometry\SphereMeshGenerator.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMesh.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMeshBatch.cpp" />
+    <ClCompile Include="Source\Geometry\VertexAttributeDescriptor.cpp" />
     <ClCompile Include="Source\GUI\ComboBox.cpp" />
     <ClCompile Include="Source\GUI\ComboBoxItem.cpp" />
     <ClCompile Include="Source\GUI\CrispGui.cpp" />
@@ -143,6 +142,8 @@ popd</Command>
     <ClCompile Include="Source\GUI\DoubleSlider.cpp" />
     <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp" />
     <ClCompile Include="Source\GUI\ListBox.cpp" />
+    <ClCompile Include="Source\IO\MeshImporter.cpp" />
+    <ClCompile Include="Source\IO\WavefrontObjImporter.cpp" />
     <ClCompile Include="Source\Lights\PointLight.cpp" />
     <ClCompile Include="Source\Models\Grass.cpp" />
     <ClCompile Include="Source\Models\SPH.cpp" />
@@ -165,8 +166,9 @@ popd</Command>
     <ClCompile Include="Source\Renderer\RenderPassBuilder.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\BlurPass.cpp" />
-    <ClCompile Include="Source\Renderer\RenderPasses\EnvironmentRenderPass.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPasses\CubeMapRenderPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\LightShaftPass.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPasses\TexturePass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp" />
     <ClCompile Include="Source\Renderer\VulkanBufferUtils.cpp" />
     <ClCompile Include="Source\Renderer\VulkanImageUtils.cpp" />
@@ -260,9 +262,11 @@ popd</Command>
     <ClInclude Include="Source\Core\Mouse.hpp" />
     <ClInclude Include="Source\Core\SceneContainer.hpp" />
     <ClInclude Include="Source\Geometry\Geometry.hpp" />
+    <ClInclude Include="Source\Geometry\GeometryPart.hpp" />
     <ClInclude Include="Source\Geometry\GeometryView.hpp" />
     <ClInclude Include="Source\Geometry\MeshGenerators.hpp" />
-    <ClInclude Include="Source\Geometry\SphereMeshGenerator.hpp" />
+    <ClInclude Include="Source\Geometry\VertexAttributeBuffer.hpp" />
+    <ClInclude Include="Source\Geometry\VertexAttributeDescriptor.hpp" />
     <ClInclude Include="Source\Geometry\VertexAttributeTraits.hpp" />
     <ClInclude Include="Source\Geometry\VertexLayout.hpp" />
     <ClInclude Include="Source\GUI\ComboBoxItem.hpp" />
@@ -271,6 +275,8 @@ popd</Command>
     <ClInclude Include="Source\GUI\ComboBox.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ListBox.hpp" />
+    <ClInclude Include="Source\IO\MeshImporter.hpp" />
+    <ClInclude Include="Source\IO\WavefrontObjImporter.hpp" />
     <ClInclude Include="Source\Lights\LightDescriptorData.hpp" />
     <ClInclude Include="Source\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Models\FluidSimulation.hpp" />
@@ -296,8 +302,9 @@ popd</Command>
     <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\BlurPass.hpp" />
-    <ClInclude Include="Source\Renderer\RenderPasses\EnvironmentRenderPass.hpp" />
+    <ClInclude Include="Source\Renderer\RenderPasses\CubeMapRenderPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\LightShaftPass.hpp" />
+    <ClInclude Include="Source\Renderer\RenderPasses\TexturePass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp" />
     <ClInclude Include="Source\Renderer\VulkanBufferUtils.hpp" />
     <ClInclude Include="Source\Renderer\VulkanImageUtils.hpp" />
@@ -313,7 +320,6 @@ popd</Command>
     <ClInclude Include="Source\Scenes\TerrainScene.hpp" />
     <ClInclude Include="Source\Scenes\TestScene.hpp" />
     <ClInclude Include="Source\Core\Window.hpp" />
-    <ClInclude Include="Source\Geometry\MeshGeometry.hpp" />
     <ClInclude Include="Source\Geometry\TriangleMesh.hpp" />
     <ClInclude Include="Source\GUI\CrispGui.hpp" />
     <ClInclude Include="Source\GUI\DebugRect.hpp" />

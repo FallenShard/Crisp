@@ -15,13 +15,13 @@ namespace crisp
             .defineDescriptorSet(0,
             {
                 { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
-            })
-            .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(int));
+            });
 
         VulkanDevice* device = renderer->getDevice();
 
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
+        std::vector<bool> setBuffered = { true };
+        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
+        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         VkShaderModule vs = useGammaCorrection ? renderer->getShaderModule("gamma-correct-vert") : renderer->getShaderModule("fullscreen-quad-vert");
         VkShaderModule fs = useGammaCorrection ? renderer->getShaderModule("gamma-correct-frag") : renderer->getShaderModule("fullscreen-quad-frag");

@@ -3,24 +3,26 @@
 #include <Vesper/Shapes/MeshLoader.hpp>
 #include <CrispCore/Log.hpp>
 
+#include "IO/WavefrontObjImporter.hpp"
+
 namespace crisp
 {
     namespace
     {
+        static void fillInterleaved(std::vector<std::byte>& interleavedBuffer, size_t vertexSize, size_t offset, const std::vector<std::byte>& attribute, size_t attribSize)
+        {
+            for (size_t i = 0; i < attribute.size(); i++)
+            {
+                memcpy(&interleavedBuffer[i * vertexSize + offset], &attribute[i * attribSize], attribSize);
+            }
+        }
+
         template <typename T>
-        static void fillInterleaved(std::vector<float>& interleavedBuffer, const std::vector<T>& attribute, size_t vertexSize, size_t offset)
+        static void fillInterleaved(std::vector<std::byte>& interleavedBuffer, size_t vertexSize, size_t offset, const std::vector<T>& attribute)
         {
             for (size_t i = 0; i < attribute.size(); i++)
             {
                 memcpy(&interleavedBuffer[i * vertexSize + offset], &attribute[i], sizeof(T));
-            }
-        }
-
-        static void fillInterleaved(std::vector<float>& interleavedBuffer, const std::vector<float>& attribute, size_t vertexComponents, size_t attribComponents, size_t offset)
-        {
-            for (size_t i = 0; i < interleavedBuffer.size() / vertexComponents; i++)
-            {
-                memcpy(&interleavedBuffer[i * vertexComponents + offset], &attribute[i * attribComponents], attribComponents * sizeof(float));
             }
         }
 
@@ -40,61 +42,62 @@ namespace crisp
         }
     }
 
-    TriangleMesh::TriangleMesh(const std::filesystem::path& path)
-        : m_meshName(path.filename().stem().string())
+    TriangleMesh::TriangleMesh()
     {
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec2> texCoords;
-
-        MeshLoader meshLoader;
-        meshLoader.load(path, positions, normals, texCoords, m_faces);
-        m_numVertices = static_cast<uint32_t>(positions.size());
-
-        if (normals.empty())
-            normals = calculateVertexNormals(positions, m_faces);
-
-        insertAttribute<VertexAttribute::Position>(m_vertexAttributes, positions);
-        insertAttribute<VertexAttribute::Normal>(m_vertexAttributes, normals);
-        insertAttribute<VertexAttribute::TexCoord>(m_vertexAttributes, texCoords);
     }
 
-    TriangleMesh::TriangleMesh(const std::filesystem::path& path, std::initializer_list<VertexAttribute> vertexAttributes)
+    TriangleMesh::TriangleMesh(const std::filesystem::path& path)
         : m_meshName(path.filename().stem().string())
-        , m_interleavedFormat(vertexAttributes)
+        , m_interleavedFormat({ VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord })
     {
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec2> texCoords;
-
-        MeshLoader meshLoader;
-        meshLoader.load(path, positions, normals, texCoords, m_faces);
-        m_numVertices = static_cast<uint32_t>(positions.size());
-        if (m_numVertices == 0)
+        if (WavefrontObjImporter::isWavefrontObjFile(path))
         {
-            logError("Vertices could not be loaded for mesh file {}\n", path.string());
+            WavefrontObjImporter importer(path);
+            importer.moveDataToTriangleMesh(*this, m_interleavedFormat);
             return;
         }
 
-        insertAttributes(positions, normals, texCoords, m_faces, m_interleavedFormat);
+        MeshLoader meshLoader;
+        meshLoader.load(path, m_positions, m_normals, m_texCoords, m_faces);
+
+        if (m_normals.empty())
+            computeVertexNormals();
+    }
+
+    TriangleMesh::TriangleMesh(const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
+        : m_meshName(path.filename().stem().string())
+        , m_interleavedFormat(vertexAttributes)
+    {
+        if (WavefrontObjImporter::isWavefrontObjFile(path))
+        {
+            WavefrontObjImporter importer(path);
+            importer.moveDataToTriangleMesh(*this, m_interleavedFormat);
+            return;
+        }
+
+        MeshLoader meshLoader;
+        meshLoader.load(path, m_positions, m_normals, m_texCoords, m_faces);
     }
 
     TriangleMesh::TriangleMesh(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords,
-        const std::vector<glm::uvec3>& faces, std::initializer_list<VertexAttribute> vertexAttributes)
+        const std::vector<glm::uvec3>& faces, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
         : m_interleavedFormat(vertexAttributes)
+        , m_positions(positions)
+        , m_normals(normals)
+        , m_texCoords(texCoords)
+        , m_faces(faces)
     {
-        m_faces = faces;
-        m_numVertices = static_cast<uint32_t>(positions.size());
-        insertAttributes(positions, normals, texCoords, m_faces, m_interleavedFormat);
+        m_parts.emplace_back("", 0, m_faces.size() * 3);
+        for (const auto& attrib : vertexAttributes)
+            if (attrib.type == VertexAttribute::Tangent || attrib.type == VertexAttribute::Bitangent)
+            {
+                computeTangentVectors();
+                break;
+            }
     }
 
     TriangleMesh::~TriangleMesh()
     {
-    }
-
-    const std::vector<float>& TriangleMesh::getAttributeBuffer(VertexAttribute attribute) const
-    {
-        return m_vertexAttributes.at(attribute);
     }
 
     const std::vector<glm::uvec3>& TriangleMesh::getFaces() const
@@ -114,78 +117,46 @@ namespace crisp
 
     uint32_t TriangleMesh::getNumVertices() const
     {
-        return m_numVertices;
+        return static_cast<uint32_t>(m_positions.size());
     }
 
-    std::vector<float> TriangleMesh::interleaveAttributes() const
+    InterleavedVertexBuffer TriangleMesh::interleaveAttributes() const
     {
-        std::size_t numVertexComponents = 0;
-        for (VertexAttribute attrib : m_interleavedFormat)
-            numVertexComponents += getNumComponents(attrib);
+        InterleavedVertexBuffer interleavedBuffer;
 
-        std::vector<float> interleavedBuffer(numVertexComponents * m_numVertices);
+        interleavedBuffer.vertexSize = 0;
+        for (const auto& attrib : m_interleavedFormat)
+            interleavedBuffer.vertexSize += attrib.size;
 
-        std::size_t offset = 0;
-        for (VertexAttribute attrib : m_interleavedFormat)
+        uint32_t numVertices = getNumVertices();
+        interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * numVertices);
+
+        uint32_t currOffset = 0;
+        for (const auto& attrib : m_interleavedFormat)
         {
-            fillInterleaved(interleavedBuffer, m_vertexAttributes.at(attrib), numVertexComponents, getNumComponents(attrib), offset);
-            offset += getNumComponents(attrib);
+            if (attrib.type == VertexAttribute::Position)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_positions);
+            else if (attrib.type == VertexAttribute::Normal)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_normals);
+            else if (attrib.type == VertexAttribute::TexCoord)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_texCoords);
+            else if (attrib.type == VertexAttribute::Tangent)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_tangents);
+            else if (attrib.type == VertexAttribute::Bitangent)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_bitangents);
+            else if (attrib.type == VertexAttribute::Custom)
+            {
+                auto& attribBuffer = m_customAttributes.at(attrib.name);
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, attribBuffer.buffer, attribBuffer.descriptor.size);
+            }
+
+            currOffset += attrib.size;
         }
 
         return interleavedBuffer;
     }
 
-    std::string TriangleMesh::getMeshName() const
-    {
-        return m_meshName;
-    }
-
-    void TriangleMesh::insertAttributes(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
-        const std::vector<glm::vec2>& texCoords, const std::vector<glm::uvec3>& faces, const std::vector<VertexAttribute>& interleavedFormat)
-    {
-        std::vector<glm::vec3> norms = normals;
-        std::vector<glm::vec2> uvs = texCoords;
-        std::vector<glm::vec3> tangents;
-        std::vector<glm::vec3> bitangents;
-
-        for (auto vertexAttrib : interleavedFormat)
-        {
-            if (vertexAttrib == VertexAttribute::Position)
-            {
-                insertAttribute<VertexAttribute::Position>(m_vertexAttributes, positions);
-            }
-            else if (vertexAttrib == VertexAttribute::Normal)
-            {
-                if (norms.empty())
-                    norms = calculateVertexNormals(positions, m_faces);
-
-                insertAttribute<VertexAttribute::Normal>(m_vertexAttributes, normals);
-            }
-            else if (vertexAttrib == VertexAttribute::TexCoord)
-            {
-                if (uvs.empty())
-                    uvs.resize(positions.size(), glm::vec2(0.0f));
-
-                insertAttribute<VertexAttribute::TexCoord>(m_vertexAttributes, texCoords);
-            }
-            else if (vertexAttrib == VertexAttribute::Tangent)
-            {
-                if (tangents.empty())
-                    std::tie(tangents, bitangents) = calculateTangentVectors(positions, normals, texCoords, m_faces);
-
-                insertAttribute<VertexAttribute::Tangent>(m_vertexAttributes, tangents);
-            }
-            else if (vertexAttrib == VertexAttribute::Bitangent)
-            {
-                if (bitangents.empty())
-                    std::tie(tangents, bitangents) = calculateTangentVectors(positions, normals, texCoords, m_faces);
-
-                insertAttribute<VertexAttribute::Bitangent>(m_vertexAttributes, bitangents);
-            }
-        }
-    }
-
-    std::vector<glm::vec3> calculateVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces)
+    std::vector<glm::vec3> TriangleMesh::computeVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces)
     {
         std::vector<glm::vec3> normals(positions.size(), glm::vec3(0.0f));
 
@@ -205,68 +176,120 @@ namespace crisp
         return normals;
     }
 
-    std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> calculateTangentVectors(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords, const std::vector<glm::uvec3>& faces)
+    void TriangleMesh::computeTangentVectors()
     {
-        std::vector<glm::vec3> tangents(positions.size(), glm::vec3(0.0f));
-        std::vector<glm::vec3> bitangents(positions.size(), glm::vec3(0.0f));
+        m_tangents   = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
+        m_bitangents = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
 
-        for (const auto& face : faces)
+        for (const auto& face : m_faces)
         {
-            const glm::vec3& v1 = positions[face[0]];
-            const glm::vec3& v2 = positions[face[1]];
-            const glm::vec3& v3 = positions[face[2]];
+            const glm::vec3& v1 = m_positions[face[0]];
+            const glm::vec3& v2 = m_positions[face[1]];
+            const glm::vec3& v3 = m_positions[face[2]];
 
-            const glm::vec2& w1 = texCoords[face[0]];
-            const glm::vec2& w2 = texCoords[face[1]];
-            const glm::vec2& w3 = texCoords[face[2]];
+            const glm::vec2& w1 = m_texCoords[face[0]];
+            const glm::vec2& w2 = m_texCoords[face[1]];
+            const glm::vec2& w3 = m_texCoords[face[2]];
 
-            //glm::vec3 e1 = p1 - p0;
-            //glm::vec3 e2 = p2 - p0;
-            //
-            //glm::vec2 s = tc1 - tc0;
-            //glm::vec2 t = tc2 - tc0;
-            //float r = 1.0f / (s.x * t.y - s.y * t.x);
-            //
-            //glm::vec3 sDir = glm::vec3(t.y * e1.x - t.x * e2.x, t.y * e1.y - t.x * e2.y,
-            //    t.y * e1.z - t.x * e2.z) * r;
-            //
-            //glm::vec3 tDir = glm::vec3(s.x * e2.x - s.y * e1.x, s.x * e2.y - s.y * e1.y,
-            //    s.x * e2.z - s.y * e1.z) * r;
-            float x1 = v2.x - v1.x;
-            float x2 = v3.x - v1.x;
-            float y1 = v2.y - v1.y;
-            float y2 = v3.y - v1.y;
-            float z1 = v2.z - v1.z;
-            float z2 = v3.z - v1.z;
+            glm::vec3 e1 = v2 - v1;
+            glm::vec3 e2 = v3 - v1;
 
-            float s1 = w2.x - w1.x;
-            float s2 = w3.x - w1.x;
-            float t1 = w2.y - w1.y;
-            float t2 = w3.y - w1.y;
+            glm::vec2 s = w2 - w1;
+            glm::vec2 t = w3 - w1;
 
-            float r = 1.0F / (s1 * t2 - s2 * t1);
-            glm::vec3 sDir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-                (t2 * z1 - t1 * z2) * r);
-            glm::vec3 tDir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-                (s1 * z2 - s2 * z1) * r);
+            float r = 1.0f / (s.x * t.y - t.x * s.y);
+            glm::vec3 sDir = glm::vec3(t.y * e1.x - s.y * e2.x, t.y * e1.y - s.x * e2.y,
+                t.y * e1.z - s.y * e2.z) * r;
+            glm::vec3 tDir = glm::vec3(s.x * e2.x - t.x * e1.x, s.x * e2.y - t.x * e1.y,
+                s.x * e2.z - t.x * e1.z) * r;
 
-            tangents[face[0]]   += sDir;
-            tangents[face[1]]   += sDir;
-            tangents[face[2]]   += sDir;
-            bitangents[face[0]] += tDir;
-            bitangents[face[1]] += tDir;
-            bitangents[face[2]] += tDir;
+            m_tangents[face[0]]   += sDir;
+            m_tangents[face[1]]   += sDir;
+            m_tangents[face[2]]   += sDir;
+            m_bitangents[face[0]] += tDir;
+            m_bitangents[face[1]] += tDir;
+            m_bitangents[face[2]] += tDir;
         }
 
-        for (uint32_t i = 0; i < positions.size(); i++)
+        for (std::size_t i = 0; i < m_tangents.size(); ++i)
         {
-            const glm::vec3& n = normals[i];
-            const glm::vec3& t = tangents[i];
+            const glm::vec3& n = m_normals[i];
+            const glm::vec3& t = m_tangents[i];
 
-            tangents[i]   = glm::normalize(t - n * glm::dot(n, t));
-            bitangents[i] = glm::normalize(glm::cross(n, t));
+            m_tangents[i]   = glm::normalize(t - n * glm::dot(n, t));
+            // handedness = glm::dot(glm::cross(n, t), m_bitangents[i]) < 0.0f ? -1.0f : 1.0f;
+
+            m_bitangents[i] = glm::normalize(glm::cross(n, t));
         }
+    }
 
-        return std::make_pair(tangents, bitangents);
+    void TriangleMesh::computeVertexNormals()
+    {
+        m_normals = computeVertexNormals(m_positions, m_faces);
+    }
+
+    const std::vector<GeometryPart> TriangleMesh::getGeometryParts() const
+    {
+        return m_parts;
+    }
+
+    void TriangleMesh::setMeshName(std::string&& meshName)
+    {
+        m_meshName = std::move(meshName);
+    }
+
+    std::string TriangleMesh::getMeshName() const
+    {
+        return m_meshName;
+    }
+
+    void TriangleMesh::setPositions(std::vector<glm::vec3>&& positions)
+    {
+        m_positions = std::move(positions);
+    }
+
+    void TriangleMesh::setNormals(std::vector<glm::vec3>&& normals)
+    {
+        m_normals = std::move(normals);
+    }
+
+    void TriangleMesh::setTexCoords(std::vector<glm::vec2>&& texCoords)
+    {
+        m_texCoords = std::move(texCoords);
+    }
+
+    void TriangleMesh::setCustomAttribute(const std::string& id, VertexAttributeBuffer&& attributeBuffer)
+    {
+        m_customAttributes.emplace(id, std::move(attributeBuffer));
+    }
+
+    void TriangleMesh::setFaces(std::vector<glm::uvec3>&& faces)
+    {
+        m_faces = std::move(faces);
+    }
+
+    void TriangleMesh::setParts(std::vector<GeometryPart>&& parts)
+    {
+        m_parts = std::move(parts);
+    }
+
+    const std::vector<glm::vec3>& TriangleMesh::getPositions() const
+    {
+        return m_positions;
+    }
+
+    const std::vector<glm::vec3>& TriangleMesh::getNormals() const
+    {
+        return m_normals;
+    }
+
+    const std::vector<glm::vec2>& TriangleMesh::getTexCoords() const
+    {
+        return m_texCoords;
+    }
+
+    const VertexAttributeBuffer& TriangleMesh::getCustomAttribute(const std::string& id) const
+    {
+        return m_customAttributes.at(id);
     }
 }

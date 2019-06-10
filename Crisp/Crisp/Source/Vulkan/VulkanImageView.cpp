@@ -2,6 +2,7 @@
 
 #include "vulkan/VulkanImage.hpp"
 #include "vulkan/VulkanDevice.hpp"
+#include "vulkan/VulkanSampler.hpp"
 
 namespace crisp
 {
@@ -33,5 +34,9 @@ namespace crisp
     VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(VkSampler sampler, VkImageLayout layout) const
     {
         return { sampler, m_handle, layout };
+    }
+    VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler& sampler, VkImageLayout layout) const
+    {
+        return { sampler.getHandle(), m_handle, layout };
     }
 }

@@ -21,8 +21,9 @@ namespace crisp
 
         VulkanDevice* device = renderer->getDevice();
 
+        std::vector<bool> setBuffered = { true };
         auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
+        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         return PipelineBuilder()
             .setShaderStages

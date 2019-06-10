@@ -30,7 +30,7 @@ namespace crisp
 
     private:
         void createSwapChain();
-        void createSwapImageViews();
+        void createSwapChainImageViews();
 
         VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
         VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;

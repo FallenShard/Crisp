@@ -15,6 +15,7 @@ namespace crisp
     class VulkanDevice;
     class VulkanSwapChain;
 
+    class VulkanRenderPass;
     class DefaultRenderPass;
     class VulkanPipeline;
     class VulkanSampler;
@@ -79,10 +80,12 @@ namespace crisp
 
         void scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive = NumVirtualFrames);
 
-        void setSceneImageView(std::unique_ptr<VulkanImageView> sceneImageView);
+        void setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex);
 
         void registerStreamingUniformBuffer(UniformBuffer* buffer);
         void unregisterStreamingUniformBuffer(UniformBuffer* buffer);
+
+        Geometry* getFullScreenGeometry() const;
 
     private:
         void loadShaders(const std::filesystem::path& directoryPath);
@@ -132,7 +135,8 @@ namespace crisp
 
         std::unique_ptr<VulkanPipeline>  m_scenePipeline;
         std::unique_ptr<VulkanSampler>   m_linearClampSampler;
-        std::unique_ptr<VulkanImageView> m_sceneImageView;
         std::unique_ptr<Material>        m_sceneMaterial;
+
+        std::vector<VulkanImageView*> m_sceneImageViews;
     };
 }

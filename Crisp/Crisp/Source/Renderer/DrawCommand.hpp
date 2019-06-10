@@ -32,7 +32,7 @@ namespace crisp
         }
 
         template <typename GeometryView>
-        DrawFunc getDrawFunc()
+        constexpr DrawFunc getDrawFunc()
         {
             if constexpr (std::is_same_v<GeometryView, IndexedGeometryView>)
                 return drawIndexed;
