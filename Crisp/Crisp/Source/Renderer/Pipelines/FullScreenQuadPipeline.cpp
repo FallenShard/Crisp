@@ -41,6 +41,6 @@ namespace crisp
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
             .setDepthWrite(VK_FALSE)
             .setDepthTest(VK_FALSE)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, std::move(layout), renderPass->getHandle(), subpass);
     }
 }

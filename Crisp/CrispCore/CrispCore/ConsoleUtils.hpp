@@ -1,7 +1,10 @@
 #pragma once
 
 #define NOMINMAX
+#pragma warning(push)
+#pragma warning(disable:6031)
 #include <rlutil/rlutil.h>
+#pragma warning(pop)
 
 namespace crisp
 {

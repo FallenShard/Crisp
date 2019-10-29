@@ -2,8 +2,9 @@
 
 namespace crisp
 {
-    FixedSampler::FixedSampler(const VariantMap& attribs)
+    FixedSampler::FixedSampler(const VariantMap& /*attribs*/)
         : m_index(static_cast<size_t>(0))
+        , m_values{}
     {
         for (auto& el : m_values)
         {

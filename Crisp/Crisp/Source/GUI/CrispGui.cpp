@@ -10,7 +10,7 @@
 
 namespace crisp::gui
 {
-    void CrispGui::setupInputCallbacks(Form* form, Application* app, Scene* scene)
+    void CrispGui::setupInputCallbacks(Form* /*form*/, Application* /*app*/, Scene* /*scene*/)
     {
         //form->getControlById<gui::Button>("openButton")->clicked += [app]()
         //{

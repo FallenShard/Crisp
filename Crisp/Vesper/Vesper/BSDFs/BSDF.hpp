@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
+#include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/BitFlags.hpp>
 #include "Spectrums/Spectrum.hpp"
 #include "Core/VariantMap.hpp"
@@ -47,9 +46,9 @@ namespace crisp
 
             float eta;
 
-            Sample() {}
-            Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi) : p(p), wi(wi), uv(uv) {}
-            Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi, const glm::vec3& wo) : p(p), uv(uv), wi(wi), wo(wo) {}
+            Sample() : p(0.0f), uv(0.0f), wi(0.0f), wo(0.0f), pdf(0.0f), measure(Measure::Unknown), sampledLobe(Lobe::Passthrough), eta(0.0f) {}
+            Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi) : p(p), wi(wi), uv(uv), wo(0.0f), pdf(0.0f), measure(Measure::Unknown), sampledLobe(Lobe::Passthrough), eta(0.0f) {}
+            Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi, const glm::vec3& wo) : p(p), uv(uv), wi(wi), wo(wo), pdf(0.0f), measure(Measure::Unknown), sampledLobe(Lobe::Passthrough), eta(0.0f) {}
         };
 
         BSDF(LobeFlags lobeFlags);

@@ -158,14 +158,14 @@ namespace crisp
         return m_stagingBufferHeap.get();
     }
 
-    void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo&& bufferInfo)
+    void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo)
     {
         m_bufferInfos.emplace_back(bufferInfo);
         m_descriptorWrites.emplace_back(write);
         m_descriptorWrites.back().pBufferInfo = &m_bufferInfos.back();
     }
 
-    void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo&& imageInfo)
+    void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo)
     {
         m_imageInfos.emplace_back(imageInfo);
         m_descriptorWrites.emplace_back(write);

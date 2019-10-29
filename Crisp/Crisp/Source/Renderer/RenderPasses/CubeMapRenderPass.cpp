@@ -37,7 +37,7 @@ namespace crisp
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
             .create(m_device->getHandle());
 
-        m_finalLayouts = { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        m_finalLayouts.resize(6, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         createResources();
     }

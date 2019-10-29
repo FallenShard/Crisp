@@ -65,7 +65,8 @@ namespace crisp
         material->writeDescriptor(0, 0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         material->writeDescriptor(0, 1, 0, heightMapView->getDescriptorInfo(m_linearClampSampler->getHandle()));
         material->writeDescriptor(0, 2, 0, m_cameraBuffer->getDescriptorInfo());
-        material->addDynamicBufferInfo(*m_cameraBuffer, 0);
+        material->setDynamicBufferView(0, *m_transformBuffer, 0);
+        material->setDynamicBufferView(1, *m_cameraBuffer, 0);
         m_renderer->getDevice()->flushDescriptorUpdates();
 
         m_images.push_back(std::move(heightMap));
@@ -112,16 +113,16 @@ namespace crisp
         DrawCommand dc;
         dc.pipeline = m_materials[0]->getPipeline();
         dc.material = m_materials[0].get();
-        dc.dynamicBuffers.push_back({ *m_transformBuffer, 0 * sizeof(TransformPack) });
-        for (const auto& info : dc.material->getDynamicBufferInfos())
-            dc.dynamicBuffers.push_back(info);
-        dc.setPushConstants(1.0f, 15.0f);
+        dc.dynamicBufferViews = m_materials[0]->getDynamicBufferViews();
+
+        std::array<float, 2> pc = { 1.0f, 15.0f };
+        dc.pushConstantView.set(pc);
         dc.geometry = m_geometries[0].get();
         dc.setGeometryView(dc.geometry->createIndexedGeometryView());
 
         auto& scenePass = m_renderGraph->getNode("scenePass");
         scenePass.addCommand(std::move(dc));
 
-        m_renderGraph->executeDrawCommands();
+        m_renderGraph->executeCommandLists();
     }
 }

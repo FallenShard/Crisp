@@ -4,7 +4,7 @@
 
 namespace crisp
 {
-    class ShadowPass : public VulkanRenderPass
+    class ShadowPass final : public VulkanRenderPass
     {
     public:
         ShadowPass(Renderer* renderer, unsigned int shadowMapSize, unsigned int numCascades);
@@ -13,5 +13,7 @@ namespace crisp
         virtual void createResources() override;
 
         unsigned int m_numCascades;
+
+        std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_individualLayerViews;
     };
 }

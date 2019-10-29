@@ -40,7 +40,7 @@ namespace crisp::gui
         , m_foregroundRect(std::make_unique<Panel>(parentForm))
         , m_indicatorRect(std::make_unique<Panel>(parentForm))
         , m_hoverColor(0.0f, 1.0f, 1.0f)
-        , m_idleColor(0.0f, 0.75f, 0.75f)
+        , m_idleColor(0.75f, 0.75f, 0.75f)
         , m_pressedColor(0.0f, 0.3f, 0.3f)
         , m_minValue(minVal)
         , m_value(minVal + (maxVal - minVal) / 2)
@@ -53,25 +53,27 @@ namespace crisp::gui
 
         m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent, BarWidthPercent);
         m_backgroundRect->setSizeHint({ 0.0f, 2.0f });
-        m_backgroundRect->setPosition({ 0, 9 });
+        m_backgroundRect->setPosition({ 0.0f, 9.0f });
         m_backgroundRect->setColor(BackgroundColor);
         m_backgroundRect->setParent(this);
 
         m_foregroundRect->setSizeHint({ m_sizeHint.x * BarWidthPercent * 0.5f, 2.0f });
-        m_foregroundRect->setPosition({ 0, 9 });
+        m_foregroundRect->setPosition({ 0.0f, 9.0f });
         m_foregroundRect->setDepthOffset(2.0f);
-        m_foregroundRect->setColor(ForegroundColor);
+        m_foregroundRect->setColor(m_idleColor);
         m_foregroundRect->setParent(this);
 
         m_indicatorRect->setSizeHint(IndicatorSize);
-        m_indicatorRect->setPosition({ m_sizeHint.x * BarWidthPercent * 0.5f, 0 });
+        m_indicatorRect->setPosition({ m_sizeHint.x * BarWidthPercent * 0.5f, 0.0f });
         m_indicatorRect->setDepthOffset(2.0f);
-        m_indicatorRect->setColor(ForegroundColor);
+        m_indicatorRect->setColor(m_idleColor);
         m_indicatorRect->setAnchor(Anchor::CenterLeft);
+        m_indicatorRect->setOrigin(Origin::Center);
         m_indicatorRect->setParent(this);
 
         m_label->setAnchor(Anchor::CenterRight);
-        m_label->setPosition({ 0.0f, 0.0f });
+        m_label->setOrigin(Origin::CenterLeft);
+        m_label->setPosition({ 15.0f, 0.0f });
         m_label->setParent(this);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
@@ -125,7 +127,7 @@ namespace crisp::gui
         m_increment = increment;
     }
 
-    void DoubleSlider::onMouseEntered(float x, float y)
+    void DoubleSlider::onMouseEntered(float /*x*/, float /*y*/)
     {
         if (m_state != State::Idle)
             return;
@@ -133,7 +135,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void DoubleSlider::onMouseExited(float x, float y)
+    void DoubleSlider::onMouseExited(float /*x*/, float /*y*/)
     {
         if (m_state != State::Hover)
             return;
@@ -249,12 +251,12 @@ namespace crisp::gui
     {
         Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
         float localPos = static_cast<float>((value - m_minValue) * bounds.width) / static_cast<float>(m_maxValue - m_minValue);
-        m_indicatorRect->setPosition({ localPos - m_indicatorRect->getSize().x / 2.0f, 0.0f });
+        m_indicatorRect->setPosition({ localPos, 0.0f });
         m_foregroundRect->setSizeHint({ localPos, 2.0f });
         setValidationFlags(Validation::Geometry);
     }
 
-    double DoubleSlider::getValueFromMousePosition(float x, float y)
+    double DoubleSlider::getValueFromMousePosition(float x, float /*y*/)
     {
         Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
         float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0], bounds.width));

@@ -188,15 +188,11 @@ namespace crisp
             int currHeight = BlockSize;
             if (currRow + BlockSize > height) currHeight = height - currRow;
 
-            int currBlockRow = (currHeight - 1) / BlockSize;
-
             currCol = 0;
             while (currCol < width)
             {
                 int currWidth = BlockSize;
                 if (currCol + BlockSize > width) currWidth = width - currCol;
-
-                int currBlockCol = (currWidth - 1) / BlockSize;
 
                 ImageBlock::Descriptor desc(currCol, currRow, currWidth, currHeight);
                 descriptors.push_back(desc);
@@ -244,8 +240,8 @@ namespace crisp
             }
         }
 
-        for (auto i = 0; i < indices.size() / 2; ++i)
-            std::swap(indices[i], indices[indices.size() - 1 - i]);
+        for (auto idx = 0; idx < indices.size() / 2; ++idx)
+            std::swap(indices[idx], indices[indices.size() - 1 - idx]);
 
         for (auto idx : indices)
             m_descriptorQueue.push(descriptors[idx]);

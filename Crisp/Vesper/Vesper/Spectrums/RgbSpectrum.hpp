@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <algorithm>
-#include <glm/vec3.hpp>
+#include <CrispCore/Math/Headers.hpp>
 
 namespace crisp
 {

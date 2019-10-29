@@ -1,7 +1,6 @@
 #include "PointLight.hpp"
 
-#include <glm/gtx/norm.hpp>
-
+#include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/Math/Operations.hpp>
 
 namespace crisp
@@ -21,7 +20,7 @@ namespace crisp
         return m_power * InvFourPI / glm::length2(m_position - sample.ref);
     }
 
-    Spectrum PointLight::sample(Light::Sample& sample, Sampler& sampler) const
+    Spectrum PointLight::sample(Light::Sample& sample, Sampler& /*sampler*/) const
     {
         sample.p = m_position;
         sample.pdf = 1.0f;
@@ -34,12 +33,12 @@ namespace crisp
         return m_power * InvFourPI / squaredDist;
     }
 
-    float PointLight::pdf(const Light::Sample& sample) const
+    float PointLight::pdf(const Light::Sample& /*sample*/) const
     {
         return 0.0f;
     }
 
-    Spectrum PointLight::samplePhoton(Ray3& ray, Sampler& sampler) const
+    Spectrum PointLight::samplePhoton(Ray3& /*ray*/, Sampler& /*sampler*/) const
     {
         return Spectrum();
     }

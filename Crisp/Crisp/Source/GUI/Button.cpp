@@ -36,17 +36,17 @@ namespace crisp::gui
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
         m_borderColor = glm::vec4(glm::vec3(0.0f), 1.0f);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::Linear>>(AnimationDuration, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, easing>>(AnimationDuration, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
         });
 
-        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::Linear>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, easing>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_label->setColor(t);
         });
 
-        m_borderColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::Linear>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        m_borderColorAnim = std::make_shared<PropertyAnimation<glm::vec4, easing>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_borderColor = t;
             setValidationFlags(Validation::Color);
@@ -54,6 +54,7 @@ namespace crisp::gui
 
         m_label->setParent(this);
         m_label->setAnchor(Anchor::Center);
+        m_label->setOrigin(Origin::Center);
     }
 
     Button::~Button()

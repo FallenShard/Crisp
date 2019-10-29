@@ -9,7 +9,7 @@ namespace crisp::gui
 {
     Label::Label(Form* parentForm, const std::string& text, unsigned int fontSize)
         : Control(parentForm)
-        , m_fontName("PT Sans Narrow.ttf")
+        , m_fontName("Expressway.ttf")
         , m_text(text)
         , m_drawComponent(parentForm->getRenderSystem(), m_text, m_fontName, fontSize)
     {
@@ -86,7 +86,7 @@ namespace crisp::gui
         }
     }
 
-    void Label::draw(const RenderSystem& renderSystem) const
+    void Label::draw(const RenderSystem& /*renderSystem*/) const
     {
         m_drawComponent.draw(m_M[3][2]);
     }

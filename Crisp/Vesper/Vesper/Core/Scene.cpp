@@ -127,7 +127,7 @@ namespace crisp
         return m_envLight;
     }
 
-    Spectrum Scene::sampleLight(const Intersection& its, Sampler& sampler, Light::Sample& lightSample) const
+    Spectrum Scene::sampleLight(const Intersection& /*its*/, Sampler& sampler, Light::Sample& lightSample) const
     {
         auto light = getRandomLight(sampler.next1D());
         if (!light)

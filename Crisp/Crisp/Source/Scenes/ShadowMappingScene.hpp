@@ -5,14 +5,13 @@
 #include <array>
 
 #include "Renderer/Renderer.hpp"
-#include "Renderer/DrawCommand.hpp"
-#include "Geometry/TransformPack.hpp"
-#include "Renderer/DescriptorSetGroup.hpp"
 #include "Scene.hpp"
 
 #include "Renderer/Material.hpp"
 
-#include "Lights/LightDescriptorData.hpp"
+#include "Lights/LightDescriptor.hpp"
+
+#include "Geometry/TransformPack.hpp"
 
 namespace crisp
 {
@@ -34,13 +33,13 @@ namespace crisp
     class CameraController;
 
     class CascadedShadowMapper;
+    class ShadowMapper;
 
     class BlurPass;
 
     class VarianceShadowMapPass;
 
     class VulkanImageView;
-    class UniformBuffer;
 
     class Renderer;
     class RenderGraph;
@@ -51,16 +50,7 @@ namespace crisp
     class BoxVisualizer;
     class Skybox;
 
-    class Geometry;
     class Grass;
-
-    struct RenderNode
-    {
-        Material* material = nullptr;
-        Geometry* geometry = nullptr;
-        int transformIndex = -1;
-        RenderNode(Material* mat, Geometry* geom, int index) : material(mat), geometry(geom), transformIndex(index) {}
-    };
 
     class ShadowMappingScene : public AbstractScene
     {
@@ -98,19 +88,13 @@ namespace crisp
         std::unique_ptr<CameraController> m_cameraController;
         std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::vector<std::unique_ptr<Material>> m_materials;
-        std::vector<std::unique_ptr<Geometry>> m_geometries;
-        std::vector<std::unique_ptr<VulkanPipeline>> m_pipelines;
-
-        Material* m_activeMaterial;
-
-        std::vector<RenderNode> m_renderNodes;
+        std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
+        std::unordered_map<std::string, std::unique_ptr<Geometry>> m_geometries;
+        std::unordered_map<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
 
         std::vector<std::unique_ptr<VulkanImage>>     m_images;
         std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
         std::unordered_map<std::string, std::unique_ptr<VulkanImageView>> m_defaultTexImageViews;
-        std::shared_ptr<VulkanImage> m_envRefMap;
-        std::shared_ptr<VulkanImageView> m_envRefMapView;
 
         std::unique_ptr<VulkanImage> m_filteredMap;
         std::unique_ptr<VulkanImageView> m_filteredMapView;
@@ -125,8 +109,9 @@ namespace crisp
         std::unique_ptr<UniformBuffer> m_transformBuffer;
 
         std::unique_ptr<CascadedShadowMapper> m_cascadedShadowMapper;
+        std::unique_ptr<ShadowMapper> m_shadowMapper;
 
-        std::vector<LightDescriptorData> m_lights;
+        std::vector<LightDescriptor> m_lights;
         std::unique_ptr<UniformBuffer> m_lightBuffer;
 
         PbrUnifMaterial m_pbrUnifMaterial;
@@ -151,7 +136,7 @@ namespace crisp
         ////std::unique_ptr<CascadedShadowMapper> m_csm;
 
         std::unique_ptr<BoxVisualizer> m_boxVisualizer;
-        //std::unique_ptr<Skybox> m_skybox;
+        std::unique_ptr<Skybox> m_skybox;
 
         std::unique_ptr<VulkanSampler> m_linearClampSampler;
         std::unique_ptr<VulkanSampler> m_nearestNeighborSampler;

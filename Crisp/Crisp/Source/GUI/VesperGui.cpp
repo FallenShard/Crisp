@@ -11,15 +11,15 @@ namespace crisp
 {
     namespace gui
     {
-        void VesperGui::setupInputCallbacks(Form* form, Application* app)
+        void VesperGui::setupInputCallbacks(Form* /*form*/, Application* /*app*/)
         {
-            auto progressLabel = form->getControlById<Label>("progressLabel");
-            auto progressBar   = form->getControlById<Panel>("progressBar");
+            // auto progressLabel = form->getControlById<Label>("progressLabel");
+            // auto progressBar   = form->getControlById<Panel>("progressBar");
 
             //app->rayTracerProgressed.subscribe([form, progressLabel, progressBar](float percentage, float timeSpent)
             //{
             //    float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
-            //    
+            //
             //    std::stringstream stringStream;
             //    stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
             //    progressLabel->setText(stringStream.str());

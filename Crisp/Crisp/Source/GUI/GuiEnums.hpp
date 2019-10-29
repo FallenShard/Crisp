@@ -16,14 +16,27 @@ namespace crisp::gui
     enum class Anchor
     {
         TopLeft,
+        TopCenter,
         TopRight,
-        BottomLeft,
-        BottomRight,
-        Center,
-        CenterTop,
-        CenterBottom,
         CenterLeft,
-        CenterRight
+        Center,
+        CenterRight,
+        BottomLeft,
+        BottomCenter,
+        BottomRight
+    };
+
+    enum class Origin
+    {
+        TopLeft,
+        TopCenter,
+        TopRight,
+        CenterLeft,
+        Center,
+        CenterRight,
+        BottomLeft,
+        BottomCenter,
+        BottomRight
     };
 
     enum class Validation

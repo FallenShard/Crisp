@@ -30,6 +30,8 @@ namespace crisp
         Event<double, double> mouseEntered;
         Event<double, double> mouseExited;
         Event<> windowClosed;
+        Event<> windowFocusGained;
+        Event<> windowFocusLost;
 
     private:
         static void resizeCallback(GLFWwindow* window, int width, int height);

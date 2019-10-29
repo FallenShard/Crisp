@@ -5,10 +5,28 @@ namespace crisp
     namespace
     {
         glm::mat4 invertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
+
+        glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar)
+        {
+            //glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
+            //float f = 1.0f / std::tan(fovY / 2.0f);
+            //return glm::mat4(
+            //    f / aspectRatio, 0.0f,  0.0f,  0.0f,
+            //               0.0f,    f,  0.0f,  0.0f,
+            //               0.0f, 0.0f,  0.0f, -1.0f,
+            //               0.0f, 0.0f, zNear,  0.0f);
+
+            return glm::perspective(fovY, aspectRatio, zNear, zFar);
+            //return glm::perspective(fovY, aspectRatio, 500.0f, zNear);
+        }
     }
 
     AbstractCamera::AbstractCamera()
         : m_recalculateViewMatrix(true)
+        , m_aspectRatio(1.0f)
+        , m_fov(45.0f)
+        , m_zFar(100.0f)
+        , m_zNear(1.0f)
     {
     }
 
@@ -23,7 +41,7 @@ namespace crisp
         m_zNear       = zNear;
         m_zFar        = zFar;
 
-        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        updateProjectionMatrix();
     }
 
     const glm::mat4& AbstractCamera::getProjectionMatrix() const
@@ -34,7 +52,7 @@ namespace crisp
     void AbstractCamera::setFov(float fovY)
     {
         m_fov = glm::radians(fovY);
-        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        updateProjectionMatrix();
 
         m_recalculateViewMatrix = true;
     }
@@ -47,7 +65,7 @@ namespace crisp
     void AbstractCamera::setApectRatio(float aspectRatio)
     {
         m_aspectRatio = aspectRatio;
-        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        updateProjectionMatrix();
 
         m_recalculateViewMatrix = true;
     }
@@ -60,7 +78,7 @@ namespace crisp
     void AbstractCamera::setNearPlaneDistance(float zNear)
     {
         m_zNear = zNear;
-        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        updateProjectionMatrix();
 
         m_recalculateViewMatrix = true;
     }
@@ -73,7 +91,7 @@ namespace crisp
     void AbstractCamera::setFarPlaneDistance(float zFar)
     {
         m_zFar = zFar;
-        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        updateProjectionMatrix();
 
         m_recalculateViewMatrix = true;
     }
@@ -118,17 +136,17 @@ namespace crisp
     {
     }
 
-    bool AbstractCamera::isPointInFrustum(const glm::vec3& point)
+    bool AbstractCamera::isPointInFrustum(const glm::vec3& /*point*/)
     {
         return false;
     }
 
-    bool AbstractCamera::isSphereInFrustum(const glm::vec3& center, float radius)
+    bool AbstractCamera::isSphereInFrustum(const glm::vec3& /*center*/, float /*radius*/)
     {
         return false;
     }
 
-    bool AbstractCamera::isBoxInFrustum(const glm::vec3& min, const glm::vec3& max)
+    bool AbstractCamera::isBoxInFrustum(const glm::vec3& /*min*/, const glm::vec3& /*max*/)
     {
         return false;
     }
@@ -170,5 +188,11 @@ namespace crisp
         std::array<glm::vec3, 8> result;
         std::transform(frustumPoints.begin(), frustumPoints.end(), result.begin(), [&camToWorld](const glm::vec3& pt) { return glm::vec3(camToWorld * glm::vec4(pt, 1.0f)); });
         return result;
+    }
+
+    void AbstractCamera::updateProjectionMatrix()
+    {
+        //m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * reverseZPerspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
     }
 }

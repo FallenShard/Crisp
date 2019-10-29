@@ -38,6 +38,12 @@ namespace crisp
         void setRadius(double radius);
 
     private:
+        struct SsaoParams
+        {
+            int numSamples;
+            float radius;
+        };
+
         Renderer*    m_renderer;
         Application* m_app;
 
@@ -62,9 +68,7 @@ namespace crisp
 
         std::unique_ptr<Skybox> m_skybox;
 
-        int m_numSamples;
+        SsaoParams m_ssaoParams;
         std::unique_ptr<UniformBuffer> m_sampleBuffer;
-
-        float m_radius;
     };
 }

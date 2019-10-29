@@ -30,7 +30,8 @@ namespace crisp::gui
 
         auto lambdaSlider = std::make_unique<DoubleSlider>(form);
         lambdaSlider->setId("lambdaSlider");
-        lambdaSlider->setAnchor(Anchor::CenterTop);
+        lambdaSlider->setAnchor(Anchor::TopCenter);
+        lambdaSlider->setOrigin(Origin::TopCenter);
         lambdaSlider->setPosition({ 0, y });
         lambdaSlider->setMinValue(0.0f);
         lambdaSlider->setMaxValue(1.0f);
@@ -42,7 +43,8 @@ namespace crisp::gui
 
         auto roughnessSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         roughnessSlider->setId("roughnessSlider");
-        roughnessSlider->setAnchor(Anchor::CenterTop);
+        roughnessSlider->setAnchor(Anchor::TopCenter);
+        roughnessSlider->setOrigin(Origin::TopCenter);
         roughnessSlider->setPosition({ 0, y });
         roughnessSlider->setValue(0.0f);
         roughnessSlider->setIncrement(0.01f);
@@ -52,7 +54,8 @@ namespace crisp::gui
 
         auto metallicSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         metallicSlider->setId("metallicSlider");
-        metallicSlider->setAnchor(Anchor::CenterTop);
+        metallicSlider->setAnchor(Anchor::TopCenter);
+        metallicSlider->setOrigin(Origin::TopCenter);
         metallicSlider->setPosition({ 0, y });
         metallicSlider->setValue(0.0f);
         metallicSlider->setIncrement(0.01f);
@@ -62,7 +65,8 @@ namespace crisp::gui
 
         auto redSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         redSlider->setId("redSlider");
-        redSlider->setAnchor(Anchor::CenterTop);
+        redSlider->setAnchor(Anchor::TopCenter);
+        redSlider->setOrigin(Origin::TopCenter);
         redSlider->setPosition({ 0, y });
         redSlider->setValue(0.0f);
         redSlider->setIncrement(0.01f);
@@ -72,7 +76,8 @@ namespace crisp::gui
 
         auto greenSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         greenSlider->setId("greenSlider");
-        greenSlider->setAnchor(Anchor::CenterTop);
+        greenSlider->setAnchor(Anchor::TopCenter);
+        greenSlider->setOrigin(Origin::TopCenter);
         greenSlider->setPosition({ 0, y });
         greenSlider->setValue(0.0f);
         greenSlider->setIncrement(0.01f);
@@ -82,14 +87,14 @@ namespace crisp::gui
 
         auto blueSlider = std::make_unique<DoubleSlider>(form, 0.0f, 1.0f);
         blueSlider->setId("blueSlider");
-        blueSlider->setAnchor(Anchor::CenterTop);
+        blueSlider->setAnchor(Anchor::TopCenter);
+        blueSlider->setOrigin(Origin::TopCenter);
         blueSlider->setPosition({ 0, y });
         blueSlider->setValue(0.0f);
         blueSlider->setIncrement(0.01f);
         blueSlider->valueChanged.subscribe<&ShadowMappingScene::setBlueAlbedo>(scene);
         panel->addControl(std::move(blueSlider));
         y += 30;
-
 
         std::vector<std::string> materials =
         {

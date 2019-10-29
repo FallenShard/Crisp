@@ -3,6 +3,7 @@
 #include "Camera/CameraController.hpp"
 
 #include "Renderer/Renderer.hpp"
+#include "Renderer/VertexBuffer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/UniformBuffer.hpp"
 
@@ -53,10 +54,10 @@ namespace crisp
         };
 
         m_cubeVertexBuffer = std::make_unique<VertexBuffer>(m_renderer, cubePoints);
-        m_cubeVertexBindingGroup =
-        {
-            { m_cubeVertexBuffer->get(), 0 }
-        };
+        m_firstBinding = 0;
+        m_bindingCount = 1;
+        m_buffers = { m_cubeVertexBuffer->get() };
+        m_offsets = { 0 };
 
         m_transforms.resize(m_numBoxes);
 
@@ -106,7 +107,7 @@ namespace crisp
         m_outlinePipeline->bind(commandBuffer);
 
         m_indexBuffer->bind(commandBuffer, 0);
-        m_cubeVertexBindingGroup.bind(commandBuffer);
+        vkCmdBindVertexBuffers(commandBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
 
         for (uint32_t i = 0; i < m_numBoxes; i++)
         {

@@ -1,7 +1,10 @@
 #include "ImageFileBuffer.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
+#pragma warning(push)
+#pragma warning(disable: 4244) // conversion warnings
 #include <stb/stb_image.h>
+#pragma warning(pop)
 
 #include <algorithm>
 
@@ -54,6 +57,8 @@ namespace crisp
 
         m_data.resize(m_width * m_height * m_pixelByteSize);
         memcpy(m_data.data(), dataPtr, m_width * m_height * m_pixelByteSize);
+
+        stbi_image_free(dataPtr);
     }
 
     const unsigned char* ImageFileBuffer::getData() const
@@ -74,6 +79,11 @@ namespace crisp
     unsigned int ImageFileBuffer::getNumComponents() const
     {
         return m_numComponents;
+    }
+
+    uint64_t ImageFileBuffer::getPixelByteSize() const
+    {
+        return m_pixelByteSize;
     }
 
     uint64_t ImageFileBuffer::getByteSize() const

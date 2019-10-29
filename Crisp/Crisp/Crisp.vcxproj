@@ -59,10 +59,12 @@
       <ShowIncludes>false</ShowIncludes>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>-Bv</AdditionalOptions>
+      <AdditionalOptions>
+      </AdditionalOptions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
+      <DisableSpecificWarnings>26451</DisableSpecificWarnings>
     </ClCompile>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
@@ -91,11 +93,14 @@ popd</Command>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Externals\Headers\;$(ProjectDir)Source\;$(SolutionDir)Vesper\;$(SolutionDir)CrispCore\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>-Bv</AdditionalOptions>
+      <AdditionalOptions>
+      </AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <SupportJustMyCode>true</SupportJustMyCode>
+      <DisableSpecificWarnings>26451</DisableSpecificWarnings>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -133,7 +138,6 @@ popd</Command>
     <ClCompile Include="Source\Geometry\Geometry.cpp" />
     <ClCompile Include="Source\Geometry\MeshGenerators.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMesh.cpp" />
-    <ClCompile Include="Source\Geometry\TriangleMeshBatch.cpp" />
     <ClCompile Include="Source\Geometry\VertexAttributeDescriptor.cpp" />
     <ClCompile Include="Source\GUI\ComboBox.cpp" />
     <ClCompile Include="Source\GUI\ComboBoxItem.cpp" />
@@ -163,6 +167,7 @@ popd</Command>
     <ClCompile Include="Source\Renderer\Pipelines\TerrainPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ShadowMapPipelines.cpp" />
     <ClCompile Include="Source\Renderer\RenderGraph.cpp" />
+    <ClCompile Include="Source\Renderer\RenderNode.cpp" />
     <ClCompile Include="Source\Renderer\RenderPassBuilder.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\BlurPass.cpp" />
@@ -170,6 +175,7 @@ popd</Command>
     <ClCompile Include="Source\Renderer\RenderPasses\LightShaftPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\TexturePass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp" />
+    <ClCompile Include="Source\Renderer\VirtualFrame.cpp" />
     <ClCompile Include="Source\Renderer\VulkanBufferUtils.cpp" />
     <ClCompile Include="Source\Renderer\VulkanImageUtils.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionPanel.cpp" />
@@ -216,6 +222,9 @@ popd</Command>
     <ClCompile Include="Source\Scenes\TerrainScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
+    <ClCompile Include="Source\Techniques\ShadowMapper.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanCommandBuffer.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanCommandPool.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanImageView.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanMemoryHeap.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.cpp" />
@@ -277,7 +286,7 @@ popd</Command>
     <ClInclude Include="Source\GUI\ListBox.hpp" />
     <ClInclude Include="Source\IO\MeshImporter.hpp" />
     <ClInclude Include="Source\IO\WavefrontObjImporter.hpp" />
-    <ClInclude Include="Source\Lights\LightDescriptorData.hpp" />
+    <ClInclude Include="Source\Lights\LightDescriptor.hpp" />
     <ClInclude Include="Source\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Models\FluidSimulation.hpp" />
     <ClInclude Include="Source\Models\Grass.hpp" />
@@ -299,6 +308,7 @@ popd</Command>
     <ClInclude Include="Source\Renderer\Pipelines\TerrainPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\ShadowMapPipelines.hpp" />
     <ClInclude Include="Source\Renderer\RenderGraph.hpp" />
+    <ClInclude Include="Source\Renderer\RenderNode.hpp" />
     <ClInclude Include="Source\Renderer\RenderPassBuilder.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\BlurPass.hpp" />
@@ -308,6 +318,7 @@ popd</Command>
     <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp" />
     <ClInclude Include="Source\Renderer\VulkanBufferUtils.hpp" />
     <ClInclude Include="Source\Renderer\VulkanImageUtils.hpp" />
+    <ClInclude Include="Source\Renderer\VirtualFrame.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp" />
     <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
@@ -362,6 +373,9 @@ popd</Command>
     <ClInclude Include="Source\Renderer\Texture.hpp" />
     <ClInclude Include="Source\Geometry\TransformPack.hpp" />
     <ClInclude Include="Source\Techniques\CascadedShadowMapper.hpp" />
+    <ClInclude Include="Source\Techniques\ShadowMapper.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanCommandBuffer.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanCommandPool.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanFormatTraits.hpp" />
     <ClInclude Include="Source\Renderer\IndexBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanImageView.hpp" />
@@ -378,7 +392,6 @@ popd</Command>
     <ClInclude Include="Source\Renderer\UniformBuffer.hpp" />
     <ClInclude Include="Source\Renderer\UniformMultiBuffer.hpp" />
     <ClInclude Include="Source\Renderer\VertexBuffer.hpp" />
-    <ClInclude Include="Source\Renderer\VertexBufferBindingGroup.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanDescriptorSet.hpp" />
@@ -404,7 +417,6 @@ popd</Command>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\Geometry\TriangleMeshBatch.hpp" />
     <None Include="Source\Shaders\blinn-phong-frag.glsl" />
     <None Include="Source\Shaders\blinn-phong-vert.glsl" />
     <None Include="Source\Shaders\blur-frag.glsl" />

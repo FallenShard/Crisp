@@ -2,8 +2,7 @@
 
 #include <limits>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
+#include "Headers.hpp"
 
 namespace crisp
 {

@@ -29,6 +29,9 @@ namespace crisp::gui
         void setAnchor(Anchor anchor);
         Anchor getAnchor() const;
 
+        void setOrigin(Origin origin);
+        Origin getOrigin() const;
+
         void setSizingPolicy(SizingPolicy horizontal, SizingPolicy vertical, float widthPercent = 1.0f, float heightPercent = 1.0f);
 
         void setHorizontalSizingPolicy(SizingPolicy sizing, float widthPercent = 1.0f);
@@ -55,6 +58,7 @@ namespace crisp::gui
         void setScale(float scale);
         float setScale() const;
 
+        void setColor(glm::vec3 color);
         void setColor(glm::vec4 color);
         glm::vec4 getColor() const;
 
@@ -95,6 +99,10 @@ namespace crisp::gui
 
         float getParentAbsoluteOpacity() const;
 
+        glm::vec2 getAnchorOffset() const;
+        glm::vec2 getOriginOffset() const;
+        glm::vec2 getPaddingOffset() const;
+        glm::vec2 getOffsetDirection() const;
         glm::vec2 getAbsolutePosition() const;
         float getAbsoluteDepth() const;
 
@@ -102,6 +110,7 @@ namespace crisp::gui
 
         Control* m_parent;
 
+        Origin       m_origin;
         Anchor       m_anchor;
         SizingPolicy m_horizontalSizingPolicy;
         SizingPolicy m_verticalSizingPolicy;

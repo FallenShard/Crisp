@@ -16,11 +16,11 @@ namespace crisp
     {
     }
 
-    void AmbientOcclusionIntegrator::preprocess(Scene* scene)
+    void AmbientOcclusionIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum AmbientOcclusionIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum AmbientOcclusionIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))

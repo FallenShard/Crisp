@@ -4,11 +4,11 @@
 
 #include <CrispCore/Math/Headers.hpp>
 
-#include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 
 #include "Renderer/Renderer.hpp"
 #include "FluidSimulation.hpp"
+#include "vulkan/VulkanBuffer.hpp"
 
 namespace crisp
 {

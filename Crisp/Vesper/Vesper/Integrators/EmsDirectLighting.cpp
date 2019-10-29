@@ -10,7 +10,7 @@
 
 namespace crisp
 {
-    EmsDirectLightingIntegrator::EmsDirectLightingIntegrator(const VariantMap& params)
+    EmsDirectLightingIntegrator::EmsDirectLightingIntegrator(const VariantMap& /*params*/)
     {
     }
 
@@ -18,11 +18,11 @@ namespace crisp
     {
     }
 
-    void EmsDirectLightingIntegrator::preprocess(Scene* scene)
+    void EmsDirectLightingIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum EmsDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum EmsDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))

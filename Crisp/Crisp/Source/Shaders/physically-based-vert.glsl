@@ -28,8 +28,8 @@ void main()
     eyeTangent   = normalize((N * vec4(tangent, 0.0f)).xyz);
     eyeBitangent = normalize((N * vec4(bitangent, 0.0f)).xyz);
     eyePosition  = (MV * vec4(position, 1.0f)).xyz;
-    outTexCoord = texCoord;
+    outTexCoord = texCoord * 32.0f;
     worldPos = vec3(M * vec4(position, 1.0f));
-    
+
     gl_Position = MVP * vec4(position, 1.0f);
 }

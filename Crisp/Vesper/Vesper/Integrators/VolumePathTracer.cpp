@@ -87,7 +87,7 @@ namespace crisp
             return lightContrib;
         }
 
-        Spectrum findLight(const Scene* scene, Sampler& sampler, const Medium* medium, Ray3 ray, Intersection& itsRef, Light::Sample& lightSample)
+        Spectrum findLight(const Scene* scene, Sampler& sampler, const Medium* medium, Ray3 ray, Intersection& itsRef, Light::Sample& /*lightSample*/)
         {
             Intersection its2;
             Intersection* its = &itsRef;
@@ -123,7 +123,7 @@ namespace crisp
         }
     }
 
-    VolumePathTracerIntegrator::VolumePathTracerIntegrator(const VariantMap& attributes)
+    VolumePathTracerIntegrator::VolumePathTracerIntegrator(const VariantMap& /*attributes*/)
     {
     }
 
@@ -131,21 +131,21 @@ namespace crisp
     {
     }
 
-    void VolumePathTracerIntegrator::preprocess(Scene* scene)
+    void VolumePathTracerIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum VolumePathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags flags) const
+    Spectrum VolumePathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*flags*/) const
     {
         Spectrum L(0.0f);
 
         Spectrum throughput(1.0f);
-        float eta = 1.0f;
+        //float eta = 1.0f;
 
-        unsigned int bounces = 0;
-        bool isDeltaBounce = true;
-        bool includeEmitted = true;
-        bool scattered = false;
+        //unsigned int bounces = 0;
+        //bool isDeltaBounce = true;
+        //bool includeEmitted = true;
+        //bool scattered = false;
 
         Medium* medium = nullptr;
         Medium::Sample mediumSample;

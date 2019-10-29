@@ -2,6 +2,7 @@
 
 #include "vulkan/VulkanRenderPass.hpp"
 #include "DrawCommand.hpp"
+#include "RenderNode.hpp"
 
 namespace crisp
 {
@@ -15,7 +16,11 @@ namespace crisp
         {
             std::string name;
             std::unique_ptr<VulkanRenderPass> renderPass;
+
+            // Rendered nodes can be culled/filtered down into commands
+            std::vector<RenderNode> renderNodes;
             std::vector<std::vector<DrawCommand>> commands;
+
             std::unordered_map<std::string, DependencyCallback> dependencies;
 
             Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
@@ -31,13 +36,15 @@ namespace crisp
         Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
         void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
         void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex);
+        void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex, uint32_t layerMultiplier);
 
         void resize(int width, int height);
 
         void sortRenderPasses();
 
         void clearCommandLists();
-        void executeDrawCommands() const;
+        void buildCommandLists();
+        void executeCommandLists() const;
 
         const Node& getNode(std::string name) const;
         Node& getNode(std::string name);

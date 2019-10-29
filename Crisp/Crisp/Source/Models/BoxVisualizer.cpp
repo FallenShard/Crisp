@@ -214,10 +214,9 @@ namespace crisp
         {
             drawCommands[i].pipeline = m_outlinePipeline.get();
             drawCommands[i].material = m_outlineMaterial.get();
-            drawCommands[i].dynamicBuffers.push_back({ *m_outlineTransformsBuffer, i * sizeof(TransformPack) });
-            for (const auto& info : drawCommands[i].material->getDynamicBufferInfos())
-                drawCommands[i].dynamicBuffers.push_back(info);
-            drawCommands[i].setPushConstants(colors[i]);
+            drawCommands[i].dynamicBufferViews = m_outlineMaterial->getDynamicBufferViews();
+            drawCommands[i].dynamicBufferViews[0] = { m_outlineTransformsBuffer.get(), i * sizeof(TransformPack) };
+            drawCommands[i].setPushConstantView(colors[i]);
             drawCommands[i].geometry = m_frusta[i].get();
             drawCommands[i].setGeometryView(drawCommands[i].geometry->createIndexedGeometryView());
         }

@@ -63,7 +63,7 @@ namespace crisp
 
         Spectrum F = Fresnel::conductorFull(cosThetaIm, m_IOR);
         float G = m_distrib->G(bsdfSample.wi, bsdfSample.wo, m);
-        float D = m_distrib->D(m);
+        /*float D = m_distrib->D(m);*/
 
         return F * G * cosThetaIm / (cosThetaI * CoordinateFrame::cosTheta(m));
     }

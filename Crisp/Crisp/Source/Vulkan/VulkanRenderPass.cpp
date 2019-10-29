@@ -72,18 +72,16 @@ namespace crisp
         vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    void VulkanRenderPass::end(VkCommandBuffer cmdBuffer) const
-    {
-        vkCmdEndRenderPass(cmdBuffer);
-        for (uint32_t i = 0; i < m_renderTargets.size(); ++i)
-            m_renderTargets[i]->setImageLayout(m_finalLayouts[i], m_renderer->getCurrentVirtualFrameIndex());
-    }
-
     void VulkanRenderPass::end(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const
     {
         vkCmdEndRenderPass(cmdBuffer);
-        for (uint32_t i = 0; i < m_renderTargets.size(); ++i)
-            m_renderTargets[i]->setImageLayout(m_finalLayouts[i], frameIndex);
+
+        for (uint32_t i = 0; i < m_renderTargetViews.size(); ++i)
+        {
+            auto& attachmentView = m_renderTargetViews[i][frameIndex];
+            auto& image = const_cast<VulkanImage&>(attachmentView->getImage());
+            image.setImageLayout(m_finalLayouts[i], attachmentView->getSubresourceRange());
+        }
     }
 
     void VulkanRenderPass::nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents contents) const
@@ -112,6 +110,11 @@ namespace crisp
     std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(unsigned int index, unsigned int numFrames) const
     {
         return std::make_unique<VulkanImageView>(m_renderer->getDevice(), *m_renderTargets.at(index), numFrames > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D, 0, numFrames, 0, 1);
+    }
+
+    std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(unsigned int index, unsigned int baseLayer, unsigned int numLayers) const
+    {
+        return std::make_unique<VulkanImageView>(m_renderer->getDevice(), *m_renderTargets.at(index), numLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D, baseLayer, numLayers);
     }
 
     void VulkanRenderPass::freeResources()

@@ -13,7 +13,7 @@ namespace crisp
         m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
     }
 
-    Spectrum DielectricBSDF::eval(const BSDF::Sample& bsdfSample) const
+    Spectrum DielectricBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const
     {
         return Spectrum(0.0f);
     }
@@ -55,7 +55,7 @@ namespace crisp
         return Spectrum(eta * eta);
     }
 
-    float DielectricBSDF::pdf(const BSDF::Sample& bsdfSample) const
+    float DielectricBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const
     {
         return 0.0f;
     }

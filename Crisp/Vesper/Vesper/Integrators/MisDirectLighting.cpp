@@ -25,7 +25,7 @@ namespace crisp
         }
     }
 
-    MisDirectLightingIntegrator::MisDirectLightingIntegrator(const VariantMap& params)
+    MisDirectLightingIntegrator::MisDirectLightingIntegrator(const VariantMap& /*params*/)
     {
     }
 
@@ -33,11 +33,11 @@ namespace crisp
     {
     }
 
-    void MisDirectLightingIntegrator::preprocess(Scene* scene)
+    void MisDirectLightingIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum MisDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum MisDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))

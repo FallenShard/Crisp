@@ -25,7 +25,6 @@ namespace crisp
 
         void begin(VkCommandBuffer cmdBuffer) const;
         void begin(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const;
-        void end(VkCommandBuffer cmdBuffer) const;
         void end(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const;
         void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
 
@@ -33,6 +32,7 @@ namespace crisp
         const VulkanImageView& getRenderTargetView(unsigned int renderTargetIndex, unsigned int frameIndex) const;
         std::vector<VulkanImageView*> getRenderTargetViews(unsigned int renderTargetIndex) const;
         std::unique_ptr<VulkanImageView> createRenderTargetView(unsigned int index, unsigned int numFrames) const;
+        std::unique_ptr<VulkanImageView> createRenderTargetView(unsigned int index, unsigned int baseLayer, unsigned int numLayers) const;
 
         inline uint32_t getNumSubpasses() const { return m_numSubpasses; }
 

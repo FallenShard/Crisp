@@ -5,7 +5,7 @@
 
 namespace crisp
 {
-    IsotropicPhaseFunction::IsotropicPhaseFunction(const VariantMap& params)
+    IsotropicPhaseFunction::IsotropicPhaseFunction(const VariantMap& /*params*/)
     {
     }
 
@@ -13,7 +13,7 @@ namespace crisp
     {
     }
 
-    float IsotropicPhaseFunction::eval(const Sample& pfSample) const
+    float IsotropicPhaseFunction::eval(const Sample& /*pfSample*/) const
     {
         return warp::squareToUniformSpherePdf();
     }
@@ -25,7 +25,7 @@ namespace crisp
         return 1.0f;
     }
 
-    float IsotropicPhaseFunction::pdf(const Sample& pfSample) const
+    float IsotropicPhaseFunction::pdf(const Sample& /*pfSample*/) const
     {
         return warp::squareToUniformSpherePdf();
     }

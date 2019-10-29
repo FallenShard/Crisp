@@ -34,12 +34,12 @@ namespace crisp::gui
 
         auto welcomeLabel = std::make_unique<Label>(form, "Welcome to Crisp!", 22);
         welcomeLabel->setPosition({ 0, 0 });
-        welcomeLabel->setAnchor(Anchor::CenterTop);
+        welcomeLabel->setAnchor(Anchor::TopCenter);
         introPanel->addControl(std::move(welcomeLabel));
 
         auto selectLabel = std::make_unique<Label>(form, "Select your environment:");
         selectLabel->setPosition({ 0, 50 });
-        selectLabel->setAnchor(Anchor::CenterTop);
+        selectLabel->setAnchor(Anchor::TopCenter);
         introPanel->addControl(std::move(selectLabel));
 
         auto crispButton = std::make_unique<Button>(form);
@@ -48,7 +48,7 @@ namespace crisp::gui
         crispButton->setFontSize(16);
         crispButton->setPosition({ 0, 80 });
         crispButton->setSizeHint({ 250, 50 });
-        crispButton->setAnchor(Anchor::CenterTop);
+        crispButton->setAnchor(Anchor::TopCenter);
         crispButton->clicked += [application, form, button = crispButton.get()]
         {
             button->setEnabled(false);
@@ -73,7 +73,7 @@ namespace crisp::gui
         vesperButton->setFontSize(16);
         vesperButton->setPosition({ 0, 150 });
         vesperButton->setSizeHint({ 250, 50 });
-        vesperButton->setAnchor(Anchor::CenterTop);
+        vesperButton->setAnchor(Anchor::TopCenter);
         vesperButton->clicked += [form, application, button = vesperButton.get()]
         {
             button->setEnabled(false);
@@ -90,7 +90,7 @@ namespace crisp::gui
         quitButton->setFontSize(18);
         quitButton->setPosition({ 0, 220 });
         quitButton->setSizeHint({ 250, 50 });
-        quitButton->setAnchor(Anchor::CenterTop);
+        quitButton->setAnchor(Anchor::TopCenter);
         quitButton->clicked += [application]
         {
             application->close();

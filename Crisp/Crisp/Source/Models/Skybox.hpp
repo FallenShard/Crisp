@@ -5,6 +5,7 @@
 #include <CrispCore/Math/Headers.hpp>
 
 #include "Renderer/DrawCommand.hpp"
+#include "Renderer/RenderNode.hpp"
 #include "Geometry/TransformPack.hpp"
 
 namespace crisp
@@ -25,11 +26,13 @@ namespace crisp
     {
     public:
         Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder);
+        Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, std::unique_ptr<VulkanImage> image, std::unique_ptr<VulkanImageView> imageView);
         ~Skybox();
 
         void updateTransforms(const glm::mat4& V, const glm::mat4& P);
 
         DrawCommand createDrawCommand() const;
+        RenderNode createRenderNode();
 
         VulkanImageView* getSkyboxView() const;
 

@@ -1,7 +1,5 @@
 #include "DirectionalLight.hpp"
 
-#include <glm/gtx/norm.hpp>
-
 #include <CrispCore/Math/Operations.hpp>
 
 namespace crisp
@@ -16,12 +14,12 @@ namespace crisp
     {
     }
 
-    Spectrum DirectionalLight::eval(const Light::Sample& sample) const
+    Spectrum DirectionalLight::eval(const Light::Sample& /*sample*/) const
     {
         return m_power;
     }
 
-    Spectrum DirectionalLight::sample(Light::Sample& sample, Sampler& sampler) const
+    Spectrum DirectionalLight::sample(Light::Sample& sample, Sampler& /*sampler*/) const
     {
         sample.p = -m_direction * 1000.0f;
         sample.pdf = 1.0f;
@@ -31,12 +29,12 @@ namespace crisp
         return m_power;
     }
 
-    float DirectionalLight::pdf(const Light::Sample& sample) const
+    float DirectionalLight::pdf(const Light::Sample& /*sample*/) const
     {
         return 0.0f;
     }
 
-    Spectrum DirectionalLight::samplePhoton(Ray3& ray, Sampler& sampler) const
+    Spectrum DirectionalLight::samplePhoton(Ray3& /*ray*/, Sampler& /*sampler*/) const
     {
         return Spectrum();
     }

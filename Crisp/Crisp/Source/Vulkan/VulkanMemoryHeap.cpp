@@ -83,8 +83,8 @@ namespace crisp
 
         if (!foundMemoryBlock)
         {
-            logWarning("[{}] Failed to find a free chunk.\n", tag);
-            logWarning("[{}] Allocating another memory block of size: {} MB.\n", tag, (blockSize >> 20));
+            logInfo("[{}] Failed to find a free chunk.\n", tag);
+            logInfo("[{}] Allocating another memory block of size: {} MB.\n", tag, (blockSize >> 20));
             auto* blockPtr = allocateVulkanMemoryBlock(blockSize);
             std::tie(foundChunkOffset, foundChunkSize) = findFreeChunkInBlock(*blockPtr, size, alignment);
             if (foundChunkSize != 0)

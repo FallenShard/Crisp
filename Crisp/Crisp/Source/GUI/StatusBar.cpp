@@ -21,12 +21,14 @@ namespace crisp::gui
         auto fpsLabel = std::make_unique<Label>(parentForm, "125.55 FPS");
         fpsLabel->setId("fpsLabel");
         fpsLabel->setAnchor(Anchor::CenterRight);
+        fpsLabel->setOrigin(Origin::CenterRight);
         m_fpsLabel = fpsLabel.get();
         addControl(std::move(fpsLabel));
 
         auto msLabel = std::make_unique<Label>(parentForm, "12.86 ms");
         msLabel->setId("msLabel");
         msLabel->setAnchor(Anchor::CenterRight);
+        msLabel->setOrigin(Origin::CenterRight);
         msLabel->setPosition({ 75, 0 });
         m_msLabel = msLabel.get();
         addControl(std::move(msLabel));

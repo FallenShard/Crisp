@@ -14,6 +14,34 @@ namespace crisp
 {
     using GeometryViewVariant = std::variant<ListGeometryView, IndexedGeometryView>;
 
+    struct PushConstantView
+    {
+        const void* data = nullptr;
+        VkDeviceSize size = 0;
+
+        PushConstantView() {}
+
+        template <typename T>
+        PushConstantView(const T& pushConstant)
+            : data(&pushConstant)
+            , size(sizeof(T))
+        {}
+
+        template <typename T>
+        inline void set(const T& pushConstant)
+        {
+            data = &pushConstant;
+            size = sizeof(T);
+        }
+
+        template <typename T, std::size_t Len>
+        inline void set(const std::array<T, Len>& pushConstants)
+        {
+            data = pushConstants.data();
+            size = Len * sizeof(T);
+        }
+    };
+
     namespace detail
     {
         using DrawFunc = void(*)(VkCommandBuffer, const GeometryViewVariant&);
@@ -41,48 +69,46 @@ namespace crisp
             else
                 return nullptr;
         }
-
-        template <unsigned int offset, typename T, typename... Args>
-        void insertElements(std::vector<char>& data, T&& value, Args&&... values)
-        {
-            memcpy(data.data() + offset, &value, sizeof(T));
-            if constexpr (sizeof...(Args) > 0)
-                insertElements<offset + sizeof(T), Args...>(data, std::forward<Args>(values)...);
-        }
     }
 
     struct DrawCommand
     {
         VkViewport viewport = {};
         VkRect2D scissor = {};
-        std::vector<DynamicBufferInfo> dynamicBuffers;
-        std::vector<char> pushConstants;
+        std::vector<DynamicBufferView> dynamicBufferViews;
+        std::vector<uint32_t> dynamicBufferOffsets;
         VulkanPipeline* pipeline;
         Material* material;
+
+        PushConstantView pushConstantView;
 
         Geometry* geometry;
         GeometryViewVariant geometryView;
         detail::DrawFunc drawFunc;
 
         template <typename GeometryView, typename... Args>
-        void setGeometryView(Args&&... args)
+        inline void setGeometryView(Args&&... args)
         {
             geometryView = GeometryView(std::forward<Args>(args)...);
             drawFunc = detail::getDrawFunc<GeometryView>();
         }
 
         template <typename GeometryView>
-        void setGeometryView(GeometryView&& view)
+        inline void setGeometryView(GeometryView&& view)
         {
             geometryView = std::move(view);
             drawFunc = detail::getDrawFunc<GeometryView>();
         }
 
-        template <typename... Args>
-        void setPushConstants(Args&&... values)
+        template <typename T>
+        inline void setPushConstantView(const T& data)
         {
-            pushConstants.resize(AggregateSizeof<Args...>::value);
-            detail::insertElements<0, Args...>(pushConstants, std::forward<Args>(values)...);
+            pushConstantView.set(data);
+        }
+
+        inline void setPushConstantView(PushConstantView view)
+        {
+            pushConstantView = view;
         }
     };
 }

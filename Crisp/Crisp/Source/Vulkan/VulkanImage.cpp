@@ -71,6 +71,13 @@ namespace crisp
         m_layouts[baseLayer][0] = newLayout;
     }
 
+    void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange subresourceRange)
+    {
+        for (uint32_t i = subresourceRange.baseArrayLayer; i < subresourceRange.baseArrayLayer + subresourceRange.layerCount; ++i)
+            for (uint32_t j = subresourceRange.baseMipLevel; j < subresourceRange.baseMipLevel + subresourceRange.levelCount; ++j)
+                m_layouts[i][j] = newLayout;
+    }
+
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
         transitionLayout(cmdBuffer, newLayout, 0, m_numLayers, srcStage, dstStage);

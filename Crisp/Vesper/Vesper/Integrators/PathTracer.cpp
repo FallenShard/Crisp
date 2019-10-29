@@ -8,7 +8,7 @@
 
 namespace crisp
 {
-    PathTracerIntegrator::PathTracerIntegrator(const VariantMap& attribs)
+    PathTracerIntegrator::PathTracerIntegrator(const VariantMap& /*attribs*/)
     {
     }
 
@@ -16,11 +16,11 @@ namespace crisp
     {
     }
 
-    void PathTracerIntegrator::preprocess(Scene* scene)
+    void PathTracerIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum PathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum PathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
     {
         Spectrum L(0.0f);
         Spectrum throughput(1.0f);

@@ -87,7 +87,7 @@ namespace crisp
         , m_texCoords(texCoords)
         , m_faces(faces)
     {
-        m_parts.emplace_back("", 0, m_faces.size() * 3);
+        m_parts.emplace_back("", 0, static_cast<uint32_t>(m_faces.size() * 3));
         for (const auto& attrib : vertexAttributes)
             if (attrib.type == VertexAttribute::Tangent || attrib.type == VertexAttribute::Bitangent)
             {

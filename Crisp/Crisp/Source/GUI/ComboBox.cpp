@@ -33,11 +33,13 @@ namespace crisp::gui
         m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
         m_label->setParent(this);
+        m_label->setOrigin(Origin::Center);
         m_label->setAnchor(Anchor::Center);
 
         m_itemsPanel->setParent(this);
         m_itemsPanel->setId("comboBoxItems");
         m_itemsPanel->setPosition({ 0.0f, 30.0f });
+        m_itemsPanel->setDepthOffset(10.0f);
         m_itemsPanel->setSizingPolicy(SizingPolicy::Fixed, SizingPolicy::WrapContent);
         m_itemsPanel->setSizeHint({ 100.0f, 0.0f });
         m_itemsPanel->setAnchor(Anchor::TopLeft);
@@ -198,7 +200,7 @@ namespace crisp::gui
         m_label->setText(items[0]);
     }
 
-    void ComboBox::setState(State state)
+    void ComboBox::setState(State /*state*/)
     {
     }
 }

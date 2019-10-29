@@ -20,6 +20,7 @@ namespace crisp
         ~VulkanImage();
 
         void setImageLayout(VkImageLayout newLayout, uint32_t baseLayer);
+        void setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange subresourceRange);
         void transitionLayout(VkCommandBuffer buffer, VkImageLayout newLayout, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
         void transitionLayout(VkCommandBuffer buffer, VkImageLayout newLayout, uint32_t baseLayer, uint32_t numLayers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
         void transitionLayout(VkCommandBuffer buffer, VkImageLayout newLayout, VkImageSubresourceRange subresRange, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);

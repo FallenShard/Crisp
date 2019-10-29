@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
+#include "Headers.hpp"
 #include "Operations.hpp"
 
 namespace crisp

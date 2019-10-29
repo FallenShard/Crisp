@@ -6,7 +6,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Renderer/DescriptorSetGroup.hpp"
 #include "Lights/DirectionalLight.hpp"
 
 namespace crisp

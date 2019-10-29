@@ -2,8 +2,7 @@
 
 #include <memory>
 
-#include <glm/glm.hpp>
-
+#include <CrispCore/Math/Headers.hpp>
 #include "Core/VariantMap.hpp"
 
 namespace crisp

@@ -7,7 +7,7 @@ namespace crisp
     HomogeneousMedium::HomogeneousMedium(const VariantMap& params)
     {
         m_samplingDensity = params.get<float>("density", 0.01f);
-        
+
         float scale = params.get<float>("scale", 1.0f);
         m_sigmaA = params.get<Spectrum>("sigmaA", Spectrum(0.1f)) * scale;
         m_sigmaS = params.get<Spectrum>("sigmaS", Spectrum(0.1f)) * scale;
@@ -48,7 +48,7 @@ namespace crisp
         eval(ray.maxT - ray.minT, sample);
     }
 
-    Spectrum HomogeneousMedium::evalTransmittance(const Ray3& ray, Sampler& sampler) const
+    Spectrum HomogeneousMedium::evalTransmittance(const Ray3& ray, Sampler& /*sampler*/) const
     {
         float negDistance = ray.minT - ray.maxT;
         Spectrum transmittance;
@@ -90,7 +90,7 @@ namespace crisp
         {
             medSample.t = sampledDistance + ray.minT;
             medSample.ref = ray(medSample.t);
-            
+
             if (medSample.ref == ray.o)
             {
                 isSuccess = false;

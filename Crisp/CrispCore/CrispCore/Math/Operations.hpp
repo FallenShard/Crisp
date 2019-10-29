@@ -1,8 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
-#include <CrispCore/Math/Constants.hpp>
+#include "Headers.hpp"
+#include "Constants.hpp"
 
 namespace crisp
 {

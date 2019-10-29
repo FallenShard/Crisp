@@ -10,7 +10,7 @@
 
 namespace crisp
 {
-    MatsDirectLightingIntegrator::MatsDirectLightingIntegrator(const VariantMap& params)
+    MatsDirectLightingIntegrator::MatsDirectLightingIntegrator(const VariantMap& /*params*/)
     {
     }
 
@@ -18,11 +18,11 @@ namespace crisp
     {
     }
 
-    void MatsDirectLightingIntegrator::preprocess(Scene* scene)
+    void MatsDirectLightingIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum MatsDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum MatsDirectLightingIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))

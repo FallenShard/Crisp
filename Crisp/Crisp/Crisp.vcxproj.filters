@@ -84,9 +84,6 @@
     <ClCompile Include="Source\Models\Skybox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Geometry\TriangleMeshBatch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Geometry\TriangleMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -394,6 +391,21 @@
     <ClCompile Include="Source\Renderer\RenderPasses\TexturePass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Techniques\ShadowMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanCommandBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Vulkan\VulkanCommandPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VirtualFrame.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp">
@@ -505,9 +517,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\VertexBuffer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\VertexBufferBindingGroup.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\UniformMultiBuffer.hpp">
@@ -774,9 +783,6 @@
     <ClInclude Include="Source\Lights\PointLight.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Lights\LightDescriptorData.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\DrawCommand.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -843,6 +849,24 @@
     <ClInclude Include="Source\Renderer\RenderPasses\TexturePass.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Lights\LightDescriptor.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Techniques\ShadowMapper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanCommandBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Vulkan\VulkanCommandPool.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VirtualFrame.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderNode.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Core\StringUtils.hpp" />
@@ -866,7 +890,6 @@
     <None Include="Source\Shaders\skybox-frag.glsl" />
     <None Include="Source\Shaders\blinn-phong-vert.glsl" />
     <None Include="Source\Shaders\blinn-phong-frag.glsl" />
-    <None Include="Source\Geometry\TriangleMeshBatch.hpp" />
     <None Include="Source\Shaders\shadow-map-vert.glsl" />
     <None Include="Source\Shaders\shadow-map-frag.glsl" />
     <None Include="Source\Shaders\outline-vert.glsl" />

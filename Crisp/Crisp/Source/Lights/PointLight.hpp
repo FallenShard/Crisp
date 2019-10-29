@@ -2,7 +2,7 @@
 
 #include <CrispCore/Math/Headers.hpp>
 
-#include "LightDescriptorData.hpp"
+#include "LightDescriptor.hpp"
 
 namespace crisp
 {
@@ -16,7 +16,7 @@ namespace crisp
 
         glm::mat4 createModelMatrix(float scale) const;
 
-        LightDescriptorData createDescriptorData() const;
+        LightDescriptor createDescriptorData() const;
 
     private:
         glm::vec3 m_power;

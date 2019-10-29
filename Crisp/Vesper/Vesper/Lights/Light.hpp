@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include <CrispCore/Math/Ray.hpp>
 #include "Spectrums/Spectrum.hpp"
 #include "Core/VariantMap.hpp"
@@ -27,20 +25,20 @@ namespace crisp
 
             Light* light;
 
-            Sample() {}
+            Sample() : pdf(0.0f), light(nullptr)  {}
 
             // To be used when sampling the emitter
-            Sample(const glm::vec3& ref) : ref(ref) {}
+            Sample(const glm::vec3& ref) : ref(ref), pdf(0.0f), light(nullptr) {}
 
             // To be used when evaluating the emitter
-            Sample(const glm::vec3& ref, const glm::vec3& p, const glm::vec3& n) : ref(ref), p(p), n(n) {}
+            Sample(const glm::vec3& ref, const glm::vec3& p, const glm::vec3& n) : ref(ref), p(p), n(n), pdf(0.0f), light(nullptr) {}
         };
 
         virtual ~Light() {};
 
         virtual bool isOnSurface() { return true; }
         void setShape(Shape* shape) { m_shape = shape; }
-        virtual void setBoundingSphere(const glm::vec4& sphereParams) {}
+        virtual void setBoundingSphere(const glm::vec4& /*sphereParams*/) {}
 
         // Evaluates emitted radiance Le
         virtual Spectrum eval(const Light::Sample& sample) const = 0;

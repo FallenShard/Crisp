@@ -17,6 +17,7 @@ namespace crisp::gui
         : m_renderSystem(std::move(renderSystem))
         , m_animator(std::make_unique<Animator>())
         , m_rootControlGroup(std::make_unique<ControlGroup>(this))
+        , m_focusedControl(nullptr)
     {
         m_rootControlGroup->setId("rootControlGroup");
         m_rootControlGroup->setDepthOffset(-32.0f);
@@ -158,7 +159,7 @@ namespace crisp::gui
         m_rootControlGroup->onMouseReleased(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y));
     }
 
-    std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float duration)
+    std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float /*duration*/)
     {
         auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f, [this, con = control.get()](const auto& t)
         {

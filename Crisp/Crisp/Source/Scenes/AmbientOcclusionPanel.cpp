@@ -28,7 +28,7 @@ namespace crisp::gui
 
         auto numSamplesSlider = std::make_unique<Slider>(parentForm);
         numSamplesSlider->setId("numSamplesSlider");
-        numSamplesSlider->setAnchor(Anchor::CenterTop);
+        numSamplesSlider->setAnchor(Anchor::TopCenter);
         numSamplesSlider->setPosition({ 0, y });
         numSamplesSlider->setValues({ 16, 32, 64, 128, 256, 512 });
         numSamplesSlider->setValue(3);
@@ -43,7 +43,7 @@ namespace crisp::gui
 
         auto radiusSlider = std::make_unique<DoubleSlider>(parentForm);
         radiusSlider->setId("radiusSlider");
-        radiusSlider->setAnchor(Anchor::CenterTop);
+        radiusSlider->setAnchor(Anchor::TopCenter);
         radiusSlider->setPosition({ 0, y });
         radiusSlider->setMinValue(0.1);
         radiusSlider->setMaxValue(2.0);

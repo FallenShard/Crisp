@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 
 #include "InputTranslator.hpp"
+#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -30,7 +31,7 @@ namespace crisp
         if (dispatcher) dispatcher->windowResized(width, height);
     }
 
-    void EventHub::keyboardCallback(GLFWwindow* window, int key, int scanCode, int action, int mode)
+    void EventHub::keyboardCallback(GLFWwindow* window, int key, int /*scanCode*/, int action, int mode)
     {
         if (action == GLFW_PRESS)
         {
@@ -69,7 +70,7 @@ namespace crisp
         }
     }
 
-    void EventHub::mouseWheelCallback(GLFWwindow* window, double xOffset, double yOffset)
+    void EventHub::mouseWheelCallback(GLFWwindow* window, double /*xOffset*/, double yOffset)
     {
         auto dispatcher = reinterpret_cast<EventHub*>(glfwGetWindowUserPointer(window));
         if (dispatcher) dispatcher->mouseWheelScrolled(yOffset);
@@ -98,5 +99,12 @@ namespace crisp
     void EventHub::focusCallback(GLFWwindow* window, int isFocused)
     {
         auto dispatcher = reinterpret_cast<EventHub*>(glfwGetWindowUserPointer(window));
+        if (dispatcher)
+        {
+            if (isFocused)
+                dispatcher->windowFocusGained();
+            else
+                dispatcher->windowFocusLost();
+        }
     }
 }

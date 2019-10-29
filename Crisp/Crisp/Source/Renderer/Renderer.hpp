@@ -1,5 +1,7 @@
 #pragma once
 
+#include "VirtualFrame.hpp"
+
 #include "Vulkan/VulkanContext.hpp"
 
 #include <memory>
@@ -21,6 +23,8 @@ namespace crisp
     class VulkanSampler;
     class VulkanImageView;
     class VulkanBuffer;
+    class VulkanCommandPool;
+    class VulkanCommandBuffer;
 
     class UniformBuffer;
     class Geometry;
@@ -89,11 +93,10 @@ namespace crisp
 
     private:
         void loadShaders(const std::filesystem::path& directoryPath);
-        VkCommandBuffer         acquireCommandBuffer();
-        std::optional<uint32_t> acquireSwapImageIndex();
+        std::optional<uint32_t> acquireSwapImageIndex(VirtualFrame& virtualFrame);
         void resetCommandBuffer(VkCommandBuffer cmdBuffer);
         void record(VkCommandBuffer commandBuffer);
-        void present(uint32_t VulkanSwapChainImageIndex);
+        void present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex);
 
         void recreateSwapChain();
 
@@ -111,15 +114,7 @@ namespace crisp
         VkViewport m_defaultViewport;
         VkRect2D   m_defaultScissor;
 
-        struct FrameResources
-        {
-            VkCommandPool   cmdPool;
-            VkCommandBuffer cmdBuffer;
-            VkFence         bufferFinishedFence;
-            VkSemaphore     imageAvailableSemaphore;
-            VkSemaphore     renderFinishedSemaphore;
-        };
-        std::array<FrameResources, NumVirtualFrames> m_frameResources;
+        std::array<VirtualFrame, NumVirtualFrames> m_virtualFrames;
 
         std::unordered_map<std::string, VkShaderModule> m_shaderModules;
 

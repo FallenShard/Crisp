@@ -459,11 +459,11 @@ namespace crisp
         insertComputeBarrier(cmdBuffer);
     }
 
-    void PositionBasedFluid::updateAll(VkCommandBuffer cmdBuffer, float timeDelta) const
+    void PositionBasedFluid::updateAll(VkCommandBuffer /*cmdBuffer*/, float /*timeDelta*/) const
     {
     }
 
-    void PositionBasedFluid::addVorticity(VkCommandBuffer cmdBuffer) const
+    void PositionBasedFluid::addVorticity(VkCommandBuffer /*cmdBuffer*/) const
     {
     }
 

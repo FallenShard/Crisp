@@ -33,7 +33,7 @@ layout(set = 1, binding = 0) uniform Light
     vec3 spectrum;
 } light;
 
-layout(set = 1, binding = 1) uniform sampler2D shadowMap;
+layout(set = 1, binding = 1) uniform sampler2DArray shadowMap;
 
 layout(set = 1, binding = 2) uniform CascadeSplit
 {
@@ -57,48 +57,41 @@ bool isInCascade(int cascadeIndex)
 {
     vec4 lightSpacePos = lightTransforms.VP[cascadeIndex] * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
-    
+
     if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
        return false;
     else
        return true;
 }
 
-float getShadowCoeff(float bias, mat4 lightvp, vec2 atlasOffset)
+float getShadowCoeff(float bias, mat4 LVP, int cascadeIndex)
 {
-    vec4 lightSpacePos = lightvp * vec4(worldPos, 1.0f);
+    vec4 lightSpacePos = LVP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
- 
+
     if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
         return 1.0f;
- 
+
     vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-    texCoord = texCoord * 0.5f + atlasOffset;
- 
-    ivec2 size = textureSize(shadowMap, 0);
+
+    ivec2 size = textureSize(shadowMap, 0).xy;
     vec2 texelSize = vec2(1) / size;
- 
+
     int radius = 5;
     float amount  = 0.0f;
-    float samples = 0.0f;
-    for (int i = -radius; i <= radius; i++) {
-        for (int j = -radius; j <= radius; j++) {
+    for (int i = -radius; i <= radius; i++)
+    {
+        for (int j = -radius; j <= radius; j++)
+        {
             vec2 tc = texCoord + vec2(i, j) * texelSize;
-            tc = clamp(tc, atlasOffset + texelSize * 0.5, atlasOffset + vec2(0.5f, 0.5f) - texelSize * 0.5);
-            //if (all(greaterThan(tc, atlasOffset)) && all(lessThan(tc, atlasOffset + vec2(0.5f))))
-            //{
-                float shadowMapDepth = texture(shadowMap, tc).r;
-                amount += shadowMapDepth < ndcPos.z - bias ? 0.0f : 1.0f;
-                samples += 1.0f;
-            //}
-            
-            
+            float shadowMapDepth = texture(shadowMap, vec3(tc, cascadeIndex)).r;
+            amount += shadowMapDepth > ndcPos.z - bias ? 0.0f : 1.0f;
         }
     }
- 
-    float numSamples = (2 * radius + 1) * (2 * radius + 1);
- 
-    return amount / samples;
+
+    const float numSamples = (2 * radius + 1) * (2 * radius + 1);
+
+    return amount / numSamples;
 }
 
 float distributionGGX(vec3 N, vec3 H, float roughness)
@@ -180,32 +173,28 @@ float getCsmShadowCoeff()
 float getCsmShadowCoeffDebug(float cosTheta, out vec3 color)
 {
     color = vec3(0.0f, 0.0f, 1.0f);
-    vec2 tcOffset = vec2(0.5f, 0.5f);
-    mat4 lightVP = lightTransforms.VP[3];
+    int cascadeIndex = 3;
     if (isInCascade(0))
     {
         color = vec3(1.0f, 0.0f, 0.0f);
-        tcOffset = vec2(0.0f, 0.0f);
-        lightVP = lightTransforms.VP[0];
+        cascadeIndex = 0;
     }
     else if (isInCascade(1))
     {
         color = vec3(1.0f, 1.0f, 0.0f);
-        lightVP = lightTransforms.VP[1];
-        tcOffset = vec2(0.5f, 0.0f);
+        cascadeIndex = 1;
     }
     else if (isInCascade(2))
     {
         color = vec3(0.0f, 1.0f, 0.0f);
-        lightVP = lightTransforms.VP[2];
-        tcOffset = vec2(0.0f, 0.5f);
+        cascadeIndex = 2;
     }
 
     color *= 0.3f;
 
     float bias = 0.005 * tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
     bias = clamp(bias, 0.0f, 0.01f);
-    return getShadowCoeff(bias, lightVP, tcOffset);
+    return getShadowCoeff(bias, lightTransforms.VP[cascadeIndex], cascadeIndex);
 }
 
 // Depth based
@@ -237,7 +226,25 @@ float getCsmShadowCoeffDebugDepth(float zDist, float cosTheta, out vec3 color)
 
     float bias = 0.005 * tan(acos(cosTheta)); // cosTheta is dot( n,l ), clamped between 0 and 1
     bias = clamp(bias, 0.0f, 0.01f);
-    return getShadowCoeff(bias, lightVP, tcOffset);
+    return getShadowCoeff(bias, lightVP, 0);
+}
+
+vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
+{
+    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    const vec3 irradiance = texture(irrMap, worldN).rgb;
+    const vec3 diffuse = irradiance * albedo;
+
+    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
+    const vec3 eyeR = reflect(-eyeV, eyeN);
+    const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+
+    const float MaxReflectionLod = 4.0f;
+    const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
+    const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
+    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
+
+    return (kD * diffuse + specular) * ao;
 }
 
 void main()
@@ -249,35 +256,24 @@ void main()
 
     const vec3 eyeN = getNormal(texCoord);
     const vec3 eyeV = normalize(-eyePosition);
-    const vec3 eyeR = reflect(-eyeV, eyeN);
-
-    const vec3 F0 = mix(vec3(0.04), albedo, metallic);
-
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
+    const vec3 F0 = mix(vec3(0.04), albedo, metallic);
     const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
     const vec3 kS = F;
     const vec3 kD = (1.0f - kS) * (1.0f - metallic);
 
-    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
-    const vec3 worldR = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
-    const vec3 irradiance = texture(irrMap, worldN).rgb;
-    const vec3 diffuse = irradiance * albedo;
-
-    const float MaxReflectionLod = 4.0f;
-    const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
-    const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
-
-    const vec3 Lenv = (kD * diffuse + specular) * ao;
-
-    const vec3 eyeLightPos = (V * (-light.position)).xyz;
-    const vec3 lightVec = eyeLightPos;//eyeLightPos - eyePosition;
+    // Directional light
+    //const vec3 eyeLightPos = (V * (-light.position)).xyz;
+    //const vec3 lightVec = eyeLightPos;//eyeLightPos - eyePosition;
+    const vec3 eyeLightPos = (V * light.position).xyz;
+    const vec3 lightVec = (2 * light.position.w - 1) * eyeLightPos - eyePosition * light.position.w;
+    
     const vec3 eyeL = normalize(lightVec);
     const vec3 eyeH = normalize(eyeL + eyeV);
 
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
-    
+
     const vec3 radiance = estimateRadiance(lightVec);
 
     const float D = distributionGGX(eyeN, eyeH, roughness);
@@ -291,23 +287,7 @@ void main()
     vec3 debugColor;
     float shadow = getCsmShadowCoeffDebug(dot(eyeN, eyeL), debugColor);
 
-    fragColor = vec4(Li * shadow + Lenv, 1.0f);
-    ////float shadow = getCsmShadowCoeffDebugDepth(abs(eyePosition.z), cosThetaRaw, albedo);
-    //fragColor = vec4(vec3(ambient + albedo * shadow) * ao, 1.0f);
-    //if (gl_FragCoord.x < 500 && gl_FragCoord.y < 500) {
-    //    float x = gl_FragCoord.x / 500.0f;
-    //    float y = gl_FragCoord.y / 500.0f;
-    //    float d = texture(shadowMap, vec2(x, y)).r;
-    //    fragColor.xyz = vec3(d / 100.0f);
-    //}
+    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
 
-
-    //fragColor = vec4(eyeNormal, 1.0f);
-    //fragColor = vec4(vec3(bias), 1.0f);
-//
-    ////fragColor = vec4(eyeBitangent, 1.0f);
-    //vec3 nn = getNormal(texCoord);
-    //cosTheta = max(dot(nn, wi), 0.0f);
-    //fragColor = vec4(radiance * cosTheta, 1.0f);
-    //fragColor = vec4(getNormal(texCoord), 1.0f);
+    fragColor = vec4(albedo, 1.0f);
 }

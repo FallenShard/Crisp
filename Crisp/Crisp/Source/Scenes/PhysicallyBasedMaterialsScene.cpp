@@ -100,16 +100,15 @@ namespace crisp
         DrawCommand drawCommand;
         drawCommand.pipeline = m_physBasedPipeline.get();
         drawCommand.material = m_materials[0].get();
-        drawCommand.dynamicBuffers.push_back({ *m_transformBuffer, 1 * sizeof(TransformPack) });
-        for (const auto& info : m_materials[0]->getDynamicBufferInfos())
-            drawCommand.dynamicBuffers.push_back(info);
+        drawCommand.dynamicBufferViews = m_materials[0]->getDynamicBufferViews();
+        drawCommand.dynamicBufferViews[0] = { m_transformBuffer.get(), 1 * sizeof(TransformPack) };
         drawCommand.geometry = m_geometries[0].get();
         drawCommand.setGeometryView(m_geometries[0]->createIndexedGeometryView());
 
 
         mainPass.addCommand(std::move(drawCommand));
 
-        m_renderGraph->executeDrawCommands();
+        m_renderGraph->executeCommandLists();
     }
 
     std::unique_ptr<Material> PhysicallyBasedMaterialsScene::createPbrMaterial(const std::string& type)
@@ -117,11 +116,11 @@ namespace crisp
         auto material = std::make_unique<Material>(m_physBasedPipeline.get());
         material->writeDescriptor(0, 0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         material->writeDescriptor(0, 1, 0, m_cameraBuffer->getDescriptorInfo());
-        material->addDynamicBufferInfo(*m_cameraBuffer, 0);
+        material->setDynamicBufferView(1, *m_cameraBuffer, 0);
 
         const std::vector<std::string> texNames = { "diffuse", "metallic", "roughness", "normal", "ao" };
         const std::vector<VkFormat> formats = { VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
-        for (size_t i = 0; i < texNames.size(); ++i)
+        for (uint32_t i = 0; i < texNames.size(); ++i)
         {
             const std::string& filename = "PbrMaterials/" + type + "/" + texNames[i] + ".png";
             const auto& path = m_renderer->getResourcesPath() / "Textures" / filename;
@@ -129,16 +128,16 @@ namespace crisp
             {
                 m_images.emplace_back(createTexture(m_renderer, filename, formats[i], true));
                 m_imageViews.emplace_back(m_images.back()->createView(VK_IMAGE_VIEW_TYPE_2D));
-                material->writeDescriptor(0, 2 + i, 0, *m_imageViews.back(), m_linearClampSampler->getHandle());
+                material->writeDescriptor(0, 2 + i, 0, *m_imageViews.back(), m_linearClampSampler.get());
             }
             else
             {
                 logWarning("Texture type {} is using default values for '{}'\n", type, texNames[i]);
-                material->writeDescriptor(0, 2 + i, 0, *m_imageViews[i], m_linearClampSampler->getHandle());
+                material->writeDescriptor(0, 2 + i, 0, *m_imageViews[i], m_linearClampSampler.get());
             }
         }
 
-        material->writeDescriptor(0, 7, 0, *m_imageViews[0], m_linearClampSampler->getHandle());
+        material->writeDescriptor(0, 7, 0, *m_imageViews[0], m_linearClampSampler.get());
         return material;
     }
 }

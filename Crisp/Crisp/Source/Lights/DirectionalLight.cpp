@@ -73,7 +73,7 @@ namespace crisp
 
         glm::vec3 lengths(maxCorner - minCorner);
         auto cubeCenter = (minCorner + maxCorner) / 2.0f;
-        auto squareSize = std::max(lengths.x, lengths.y) * 2.0f;
+        //auto squareSize = std::max(lengths.x, lengths.y) * 2.0f;
 
         //lengths.z *= 10.0f;
 
@@ -91,9 +91,9 @@ namespace crisp
         //    -cubeCenter.z - lengths.z * 14.0f / 2.0f, -cubeCenter.z + lengths.z / 2.0f);
     }
 
-    LightDescriptorData DirectionalLight::createDescriptorData() const
+    LightDescriptor DirectionalLight::createDescriptorData() const
     {
-        LightDescriptorData data;
+        LightDescriptor data;
         data.VP       = m_projection * m_view;
         data.V        = m_view;
         data.P        = m_projection;

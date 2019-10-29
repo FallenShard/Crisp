@@ -2,6 +2,7 @@
 
 #include "vulkan/VulkanPipeline.hpp"
 #include "vulkan/VulkanDevice.hpp"
+#include "vulkan/VulkanRenderPass.hpp"
 
 namespace crisp
 {
@@ -13,7 +14,7 @@ namespace crisp
         for (auto& setVector : m_sets)
             setVector.resize(setCount);
 
-        for (std::size_t i = 0; i < setCount; ++i)
+        for (uint32_t i = 0; i < setCount; ++i)
         {
             if (m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(i))
             {
@@ -27,6 +28,11 @@ namespace crisp
                     m_sets[j][i] = set;
             }
         }
+
+        m_dynamicBufferViews.resize(m_pipeline->getPipelineLayout()->getDynamicBufferCount());
+
+        for (auto& perFrameOffsets : m_dynamicOffsets)
+            perFrameOffsets.resize(m_dynamicBufferViews.size());
     }
 
     VkWriteDescriptorSet Material::makeDescriptorWrite(uint32_t setIndex, uint32_t binding, uint32_t frameIdx)
@@ -51,6 +57,66 @@ namespace crisp
         return write;
     }
 
+    void Material::writeDescriptor(uint32_t setId, uint32_t binding, const VulkanRenderPass& renderPass, uint32_t renderTargetIndex, const VulkanSampler* sampler)
+    {
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? Renderer::NumVirtualFrames : 1;
+        for (uint32_t i = 0; i < setsToUpdate; ++i)
+        {
+            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet          = m_sets[i][setId];
+            write.dstBinding      = binding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = m_pipeline->getDescriptorType(setId, binding);
+            write.descriptorCount = 1;
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), renderPass.getRenderTargetView(renderTargetIndex, i).getDescriptorInfo(sampler));
+        }
+    }
+
+    void Material::writeDescriptor(uint32_t setId, uint32_t binding, const UniformBuffer& uniformBuffer)
+    {
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? Renderer::NumVirtualFrames : 1;
+        for (uint32_t i = 0; i < setsToUpdate; ++i)
+        {
+            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet          = m_sets[i][setId];
+            write.dstBinding      = binding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = m_pipeline->getDescriptorType(setId, binding);
+            write.descriptorCount = 1;
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), uniformBuffer.getDescriptorInfo());
+        }
+    }
+
+    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo)
+    {
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        for (uint32_t i = 0; i < setsToUpdate; ++i)
+        {
+            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet          = m_sets[i][setIndex];
+            write.dstBinding      = binding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
+            write.descriptorCount = 1;
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), bufferInfo);
+        }
+    }
+
+    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler)
+    {
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        for (uint32_t i = 0; i < setsToUpdate; ++i)
+        {
+            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet          = m_sets[i][setIndex];
+            write.dstBinding      = binding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
+            write.descriptorCount = 1;
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
+        }
+    }
+
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, VkDescriptorBufferInfo&& bufferInfo)
     {
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -73,7 +139,7 @@ namespace crisp
         m_pipeline->getDevice()->postDescriptorWrite(std::move(write), std::forward<VkDescriptorImageInfo>(imageInfo));
     }
 
-    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, const VulkanImageView& imageView, VkSampler sampler)
+    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, const VulkanImageView& imageView, const VulkanSampler* sampler)
     {
         VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet          = m_sets[frameIdx][setIndex];
@@ -84,15 +150,8 @@ namespace crisp
         m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
     }
 
-    void Material::writeDescriptor(uint32_t setIdx, uint32_t binding, uint32_t arrayIndex, uint32_t frameIdx)
-    {
-    }
-
     void Material::setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset)
     {
-        if (m_dynamicOffsets[frameIdx].size() <= index)
-            m_dynamicOffsets[frameIdx].resize(index + 1);
-
         m_dynamicOffsets[frameIdx][index] = offset;
     }
 
@@ -103,8 +162,18 @@ namespace crisp
             static_cast<uint32_t>(m_dynamicOffsets[frameIdx].size()), m_dynamicOffsets[frameIdx].data());
     }
 
-    void Material::addDynamicBufferInfo(const UniformBuffer& dynamicUniformBuffer, uint32_t offset)
+    void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets)
     {
-        m_dynamicBufferInfos.push_back({ dynamicUniformBuffer, offset });
+        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout()->getHandle(),
+            0, static_cast<uint32_t>(m_sets[frameIdx].size()), m_sets[frameIdx].data(),
+            static_cast<uint32_t>(dynamicBufferOffsets.size()), dynamicBufferOffsets.data());
+    }
+
+    void Material::setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicUniformBuffer, uint32_t offset)
+    {
+        m_dynamicBufferViews.at(index) = { &dynamicUniformBuffer, offset };
+
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+            m_dynamicOffsets.at(i).at(index) = dynamicUniformBuffer.getDynamicOffset(i);
     }
 }

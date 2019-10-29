@@ -16,6 +16,14 @@ namespace crisp
         ~VulkanImageView();
 
         VkDescriptorImageInfo getDescriptorInfo(VkSampler sampler = VK_NULL_HANDLE, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
-        VkDescriptorImageInfo getDescriptorInfo(const VulkanSampler& sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
+        VkDescriptorImageInfo getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
+
+        VkImageSubresourceRange getSubresourceRange() const { return m_subresourceRange; }
+
+        const VulkanImage& getImage() const { return m_image; }
+
+    private:
+        const VulkanImage& m_image;
+        VkImageSubresourceRange m_subresourceRange;
     };
 }

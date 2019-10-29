@@ -41,6 +41,11 @@ namespace crisp
             return m_descriptorSetBufferedStatus[setIndex];
         }
 
+        inline std::size_t getDynamicBufferCount() const
+        {
+            return m_dynamicBufferCount;
+        }
+
     private:
         std::vector<VkDescriptorSetLayout>                     m_descriptorSetLayouts;
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_descriptorSetBindings;
@@ -48,6 +53,8 @@ namespace crisp
         std::vector<bool> m_descriptorSetBufferedStatus;
 
         VkDescriptorPool m_descriptorPool;
+
+        std::size_t m_dynamicBufferCount;
     };
 
     class PipelineLayoutBuilder;

@@ -90,7 +90,7 @@ namespace crisp
             const Scene* scene;
             const Integrator* integrator;
 
-            void operator()(std::vector<IrradiancePoint>& out, const std::vector<SurfacePoint>& in, size_t start, size_t end)
+            void operator()(std::vector<IrradiancePoint>& out, const std::vector<SurfacePoint>& in, size_t start, size_t end) const
             {
                 std::default_random_engine engine(std::random_device{}());
                 std::uniform_real_distribution<float> distrib(0.0f, 1.0f);
@@ -149,7 +149,10 @@ namespace crisp
                         leftOver--;
                     }
 
+#pragma warning(push)
+#pragma warning(disable:4239)
                     m_threads[i] = std::thread(f, out, in, start, end);
+#pragma warning(pop)
                 }
 
                 for (auto& thread : m_threads)
@@ -161,7 +164,7 @@ namespace crisp
         };
     }
 
-    DipoleBSSRDF::DipoleBSSRDF(const VariantMap& params)
+    DipoleBSSRDF::DipoleBSSRDF(const VariantMap& /*params*/)
     {
         std::string mat = "Ketchup"; // params.get("material", "");
         SubsurfaceParams ssParams = materials[mat];
@@ -241,15 +244,14 @@ namespace crisp
         m_irrPts.resize(surfacePoints.size());
         int numLightSamples = 16;
         const Integrator* integrator = scene->getIntegrator();
-        IrradianceTask irrTask(numLightSamples, scene, integrator);
 
         unsigned int numThreads = std::thread::hardware_concurrency();
-        if (numThreads < 1)
-            irrTask(m_irrPts, surfacePoints, 0, surfacePoints.size());
+        if (numThreads <= 1)
+            IrradianceTask(numLightSamples, scene, integrator)(m_irrPts, surfacePoints, 0, surfacePoints.size());
         else
         {
             Executor exec(numThreads);
-            exec.map(m_irrPts, surfacePoints, irrTask);
+            exec.map(m_irrPts, surfacePoints, IrradianceTask(numLightSamples, scene, integrator));
         }
 
         float areaPerElement = 1.0f / shape->pdfSurface(Shape::Sample()) / m_irrPts.size();

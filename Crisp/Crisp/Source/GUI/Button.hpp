@@ -55,12 +55,14 @@ namespace crisp::gui
         glm::vec4 m_borderColor;
         float m_borderOpacity;
 
-        std::shared_ptr<PropertyAnimation<glm::vec4, Easing::Linear>> m_colorAnim;
+        static constexpr Easing easing = Easing::SlowOut;
 
-        std::shared_ptr<PropertyAnimation<glm::vec4, Easing::Linear>> m_labelColorAnim;
+        std::shared_ptr<PropertyAnimation<glm::vec4, easing>> m_colorAnim;
+
+        std::shared_ptr<PropertyAnimation<glm::vec4, easing>> m_labelColorAnim;
         std::unique_ptr<Label> m_label;
 
-        std::shared_ptr<PropertyAnimation<glm::vec4, Easing::Linear>> m_borderColorAnim;
+        std::shared_ptr<PropertyAnimation<glm::vec4, easing>> m_borderColorAnim;
 
         ColorRectDrawComponent m_drawComponent;
     };

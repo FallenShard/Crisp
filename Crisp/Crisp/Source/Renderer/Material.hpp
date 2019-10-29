@@ -24,23 +24,27 @@ namespace crisp
         VkWriteDescriptorSet makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t frameIdx = 0);
         VkWriteDescriptorSet makeDescriptorWrite(uint32_t setIdx, uint32_t binding, uint32_t index, uint32_t frameIdx = 0);
 
+        void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanRenderPass& renderPass, uint32_t renderTargetIndex, const VulkanSampler* sampler);
+        void writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer);
+        void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo);
+        void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler);
         void writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, VkDescriptorBufferInfo&& bufferInfo);
         void writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, VkDescriptorImageInfo&& imageInfo);
-        void writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, const VulkanImageView& imageView, VkSampler sampler = VK_NULL_HANDLE);
-        void writeDescriptor(uint32_t setIdx, uint32_t binding, uint32_t arrayIndex, uint32_t frameIdx = 0);
+        void writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, const VulkanImageView& imageView, const VulkanSampler* sampler);
 
         void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
-        void bind(uint32_t frameIdx, VkCommandBuffer commandBuffer);
+        void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer);
+        void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
 
         inline VulkanPipeline* getPipeline() const { return m_pipeline; }
 
-        void addDynamicBufferInfo(const UniformBuffer& dynamicUniformBuffer, uint32_t offset);
-        inline const std::vector<DynamicBufferInfo>& getDynamicBufferInfos() const { return m_dynamicBufferInfos; }
+        void setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicBuffer, uint32_t offset);
+        inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const { return m_dynamicBufferViews; }
 
     private:
         std::array<std::vector<VkDescriptorSet>,  Renderer::NumVirtualFrames>  m_sets;
-        mutable std::array<std::vector<uint32_t>, Renderer::NumVirtualFrames>  m_dynamicOffsets;
-        std::vector<DynamicBufferInfo> m_dynamicBufferInfos;
+        std::array<std::vector<uint32_t>, Renderer::NumVirtualFrames>  m_dynamicOffsets;
+        std::vector<DynamicBufferView> m_dynamicBufferViews;
 
         VulkanPipeline* m_pipeline;
     };

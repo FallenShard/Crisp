@@ -4,7 +4,7 @@
 
 #include <CrispCore/Math/Headers.hpp>
 
-#include "LightDescriptorData.hpp"
+#include "LightDescriptor.hpp"
 
 namespace crisp
 {
@@ -16,7 +16,7 @@ namespace crisp
         void setDirection(glm::vec3 direction);
         void calculateProjection(float split, const std::array<glm::vec3, 8>& worldFrustumPoints);
 
-        LightDescriptorData createDescriptorData() const;
+        LightDescriptor createDescriptorData() const;
 
         const glm::vec3& getDirection() const;
         const glm::mat4& getViewMatrix() const;

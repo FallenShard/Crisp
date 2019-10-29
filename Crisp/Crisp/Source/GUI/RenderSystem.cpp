@@ -159,7 +159,10 @@ namespace crisp::gui
         textRes->isUpdatedOnDevice    = false;
         textRes->vertexBuffer         = std::make_unique<VertexBuffer>(m_renderer, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
         textRes->indexBuffer          = std::make_unique<IndexBuffer>(m_renderer, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame, textRes->allocatedFaceCount * sizeof(glm::u16vec3));
-        textRes->vertexBufferGroup    = { { textRes->vertexBuffer->get(), 0 } };
+        textRes->firstBinding         = 0;
+        textRes->bindingCount         = 1;
+        textRes->buffers              = { textRes->vertexBuffer->get() };
+        textRes->offsets              = { 0 };
         textRes->indexBufferOffset    = 0;
         textRes->indexCount           = 32;
         textRes->descSet              = m_fonts.at(fontId)->descSet;
@@ -234,7 +237,7 @@ namespace crisp::gui
                 if (!textRes->isUpdatedOnDevice)
                 {
                     textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % Renderer::NumVirtualFrames;
-                    textRes->vertexBufferGroup.offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
+                    textRes->offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
                     textRes->indexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
                     textRes->vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
                     textRes->indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
@@ -263,7 +266,7 @@ namespace crisp::gui
                 renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
             }
 
-            m_guiPass->end(commandBuffer);
+            m_guiPass->end(commandBuffer, currentFrame);
 
             auto size = m_drawCommands.size();
             m_drawCommands.clear();
@@ -288,7 +291,7 @@ namespace crisp::gui
         });
     }
 
-    void RenderSystem::resize(int width, int height)
+    void RenderSystem::resize(int /*width*/, int /*height*/)
     {
         m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f, static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
@@ -548,7 +551,7 @@ namespace crisp::gui
 
     void RenderSystem::TextGeometryResource::drawIndexed(VkCommandBuffer cmdBuffer) const
     {
-        vertexBufferGroup.bind(cmdBuffer);
+        vkCmdBindVertexBuffers(cmdBuffer, firstBinding, bindingCount, buffers.data(), offsets.data());
         indexBuffer->bind(cmdBuffer, indexBufferOffset);
         vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);
     }

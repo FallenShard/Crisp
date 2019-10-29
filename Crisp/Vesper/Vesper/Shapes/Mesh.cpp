@@ -43,7 +43,7 @@ namespace crisp
     {
     }
 
-    void Mesh::fillIntersection(unsigned int triangleId, const Ray3& ray, Intersection& its) const
+    void Mesh::fillIntersection(unsigned int triangleId, const Ray3& /*ray*/, Intersection& its) const
     {
         glm::vec3 barycentric;
         barycentric[0] = 1.0f - its.uv.x - its.uv.y;
@@ -89,7 +89,7 @@ namespace crisp
         shapeSample.pdf = m_pdf.getNormFactor();
     }
 
-    float Mesh::pdfSurface(const Shape::Sample& shapeSample) const
+    float Mesh::pdfSurface(const Shape::Sample& /*shapeSample*/) const
     {
         return m_pdf.getNormFactor();
     }

@@ -3,8 +3,11 @@
 #include <vector>
 #include <memory>
 
+#pragma warning(push)
+#pragma warning(disable: 4324) // alignment warning
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_ray.h>
+#pragma warning(pop)
 
 #include "Spectrums/Spectrum.hpp"
 #include "Core/Intersection.hpp"

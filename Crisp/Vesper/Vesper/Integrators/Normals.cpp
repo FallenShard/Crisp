@@ -5,7 +5,7 @@
 
 namespace crisp
 {
-    NormalsIntegrator::NormalsIntegrator(const VariantMap& params)
+    NormalsIntegrator::NormalsIntegrator(const VariantMap& /*params*/)
     {
     }
 
@@ -13,11 +13,11 @@ namespace crisp
     {
     }
 
-    void NormalsIntegrator::preprocess(Scene* scene)
+    void NormalsIntegrator::preprocess(Scene* /*scene*/)
     {
     }
 
-    Spectrum NormalsIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags illumFlags) const
+    Spectrum NormalsIntegrator::Li(const Scene* scene, Sampler& /*sampler*/, Ray3& ray, IlluminationFlags /*illumFlags*/) const
     {
         Intersection its;
         if (!scene->rayIntersect(ray, its))
@@ -30,5 +30,4 @@ namespace crisp
 
         return color;
     }
-
 }

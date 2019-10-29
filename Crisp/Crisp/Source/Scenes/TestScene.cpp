@@ -2,7 +2,7 @@
 
 namespace crisp
 {
-    TestScene::TestScene(Renderer* renderer, Application* app)
+    TestScene::TestScene(Renderer* /*renderer*/, Application* /*app*/)
     {
     }
 
@@ -10,11 +10,11 @@ namespace crisp
     {
     }
 
-    void TestScene::resize(int width, int height)
+    void TestScene::resize(int /*width*/, int /*height*/)
     {
     }
 
-    void TestScene::update(float dt)
+    void TestScene::update(float /*dt*/)
     {
     }
 

@@ -8,6 +8,7 @@ namespace crisp
 {
     VulkanImageView::VulkanImageView(VulkanDevice* device, const VulkanImage& image, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
         : VulkanResource(device)
+        , m_image(image)
     {
         VkImageViewCreateInfo viewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         viewInfo.image        = image.getHandle();
@@ -23,6 +24,8 @@ namespace crisp
         viewInfo.subresourceRange.baseArrayLayer = baseLayer;
         viewInfo.subresourceRange.layerCount     = numLayers;
 
+        m_subresourceRange = viewInfo.subresourceRange;
+
         vkCreateImageView(m_device->getHandle(), &viewInfo, nullptr, &m_handle);
     }
 
@@ -35,8 +38,8 @@ namespace crisp
     {
         return { sampler, m_handle, layout };
     }
-    VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler& sampler, VkImageLayout layout) const
+    VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const
     {
-        return { sampler.getHandle(), m_handle, layout };
+        return { sampler->getHandle(), m_handle, layout };
     }
 }

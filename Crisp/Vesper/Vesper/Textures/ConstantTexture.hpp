@@ -14,7 +14,7 @@ namespace crisp
             m_value = variantMap.get<T>("value", T(1.0f));
         }
 
-        virtual T eval(const glm::vec2& uv) const override
+        virtual T eval(const glm::vec2& /*uv*/) const override
         {
             return m_value;
         }

@@ -11,5 +11,7 @@ namespace crisp
 
     protected:
         virtual void createResources() override;
+
+        std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_individualLayerViews;
     };
 }

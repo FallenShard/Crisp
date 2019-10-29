@@ -29,8 +29,6 @@ namespace crisp
 
         m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-
-
         const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
 
         std::array<std::unique_ptr<ImageFileBuffer>, NumCubeMapFaces> cubeMapImages;
@@ -58,6 +56,27 @@ namespace crisp
         m_device->flushDescriptorUpdates();
     }
 
+    Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, std::unique_ptr<VulkanImage> image, std::unique_ptr<VulkanImageView> imageView)
+        : m_renderer(renderer)
+        , m_device(renderer->getDevice())
+        , m_cubeMap(std::move(image))
+        , m_cubeMapView(std::move(imageView))
+    {
+        std::vector<VertexAttributeDescriptor> vertexAttribs = { VertexAttribute::Position };
+        m_cubeGeometry = std::make_unique<Geometry>(m_renderer, renderer->getResourcesPath() / "Meshes/cube.obj", vertexAttribs);
+
+        m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
+
+        // create sampler
+        m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+
+        m_pipeline = createSkyboxPipeline(m_renderer, renderPass, 0);
+        m_material = std::make_unique<Material>(m_pipeline.get());
+        m_material->writeDescriptor(0, 0, 0, m_transformBuffer->getDescriptorInfo());
+        m_material->writeDescriptor(0, 1, 0, m_cubeMapView->getDescriptorInfo(m_sampler->getHandle()));
+        m_device->flushDescriptorUpdates();
+    }
+
     Skybox::~Skybox()
     {
     }
@@ -74,11 +93,20 @@ namespace crisp
     {
         DrawCommand draw;
         draw.pipeline = m_pipeline.get();
-        draw.dynamicBuffers.push_back({ *m_transformBuffer, 0 });
+        draw.dynamicBufferViews.push_back({ m_transformBuffer.get(), 0 });
         draw.material = m_material.get();
         draw.geometry = m_cubeGeometry.get();
         draw.setGeometryView(m_cubeGeometry->createIndexedGeometryView());
         return draw;
+    }
+
+    RenderNode Skybox::createRenderNode()
+    {
+        RenderNode node(m_transformBuffer.get(), &m_transformPack, 0);
+        node.geometry = m_cubeGeometry.get();
+        node.material = m_material.get();
+        node.pipeline = m_pipeline.get();
+        return node;
     }
 
     VulkanImageView* Skybox::getSkyboxView() const

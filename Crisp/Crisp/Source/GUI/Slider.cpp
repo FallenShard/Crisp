@@ -52,10 +52,12 @@ namespace crisp::gui
         m_indicatorRect->setDepthOffset(2.0f);
         m_indicatorRect->setColor(ForegroundColor);
         m_indicatorRect->setAnchor(Anchor::CenterLeft);
+        m_indicatorRect->setOrigin(Origin::Center);
         m_indicatorRect->setParent(this);
 
         m_label->setAnchor(Anchor::CenterRight);
-        m_label->setPosition({ 0.0f, 0.0f });
+        m_label->setOrigin(Origin::CenterLeft);
+        m_label->setPosition({ 15.0f, 0.0f });
         m_label->setParent(this);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
@@ -114,7 +116,7 @@ namespace crisp::gui
         setIncrement(1);
     }
 
-    void Slider::onMouseEntered(float x, float y)
+    void Slider::onMouseEntered(float /*x*/, float /*y*/)
     {
         if (m_state != State::Idle)
             return;
@@ -122,7 +124,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void Slider::onMouseExited(float x, float y)
+    void Slider::onMouseExited(float /*x*/, float /*y*/)
     {
         if (m_state != State::Hover)
             return;
@@ -238,19 +240,19 @@ namespace crisp::gui
     {
         Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
         float localPos = static_cast<float>((value - m_minValue) * bounds.width) / static_cast<float>(m_maxValue - m_minValue);
-        m_indicatorRect->setPosition({ localPos - m_indicatorRect->getSize().x / 2.0f, 0.0f });
+        m_indicatorRect->setPosition({ localPos, 0.0f });
         m_foregroundRect->setSizeHint({ localPos, 2.0f });
         setValidationFlags(Validation::Geometry);
     }
 
-    int Slider::getValueFromMousePosition(float x, float y)
+    int Slider::getValueFromMousePosition(float x, float /*y*/)
     {
         Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
         float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0], bounds.width));
 
         float t = std::max(0.0f, std::min(1.0f, indicatorPos / bounds.width));
         float rawValue = t * (m_maxValue - m_minValue);
-        float spillOver = std::fmod(rawValue, m_increment);
+        float spillOver = std::fmodf(rawValue, static_cast<float>(m_increment));
         float snappedValue = spillOver < m_increment / 2.0 ? rawValue - spillOver : rawValue + m_increment - spillOver;
 
         return static_cast<int>(std::round(snappedValue + m_minValue));

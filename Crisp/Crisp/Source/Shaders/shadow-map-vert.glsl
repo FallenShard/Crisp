@@ -17,7 +17,7 @@ layout(set = 0, binding = 1) uniform LightTransforms
 
 layout(push_constant) uniform PushConstant
 {
-	layout(offset = 0) uint value;
+    layout(offset = 0) uint value;
 } lightTransformIndex;
 
 void main()

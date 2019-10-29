@@ -37,11 +37,15 @@
 
 namespace crisp
 {
+    namespace
+    {
+        glm::vec4 pc(0.2f, 0.0f, 0.0f, 1.0f);
+    }
+
     AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* app)
         : m_renderer(renderer)
         , m_app(app)
-        , m_numSamples(128)
-        , m_radius(0.5f)
+        , m_ssaoParams{ 128, 0.5f }
     {
         m_cameraController = std::make_unique<CameraController>(m_app->getWindow());
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
@@ -93,7 +97,6 @@ namespace crisp
         m_sampleBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
 
         m_transforms.resize(2);
-        m_transforms[0].M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
         m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
         auto mainPass = std::make_unique<SceneRenderPass>(m_renderer);
@@ -107,14 +110,11 @@ namespace crisp
 
         auto ssaoPipeline   = createSsaoPipeline(m_renderer, ssaoPass.get());
         auto ssaoMaterial = std::make_unique<Material>(ssaoPipeline.get());
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
-        {
-            ssaoMaterial->writeDescriptor(0, 0, i, mainPass->getRenderTargetView(0, i).getDescriptorInfo(*m_nearestSampler));
-            ssaoMaterial->writeDescriptor(0, 1, i, m_cameraBuffer->getDescriptorInfo());
-            ssaoMaterial->writeDescriptor(0, 2, i, m_sampleBuffer->getDescriptorInfo());
-            ssaoMaterial->writeDescriptor(0, 3, i, noiseTexView->getDescriptorInfo(*m_noiseSampler));
-        }
-        ssaoMaterial->addDynamicBufferInfo(*m_cameraBuffer, 0);
+        ssaoMaterial->writeDescriptor(0, 0, *mainPass, 0, m_nearestSampler.get());
+        ssaoMaterial->writeDescriptor(0, 1, *m_cameraBuffer);
+        ssaoMaterial->writeDescriptor(0, 2, *m_sampleBuffer);
+        ssaoMaterial->writeDescriptor(0, 3, *noiseTexView, m_noiseSampler.get());
+        ssaoMaterial->setDynamicBufferView(0, *m_cameraBuffer, 0);
 
         m_renderer->getDevice()->flushDescriptorUpdates();
 
@@ -138,13 +138,36 @@ namespace crisp
         m_materials.push_back(std::move(ssaoMaterial));
 
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
-        m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
-        m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
+        auto& mainPassNode = m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
+        auto& ssaoPassNode = m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
         m_renderGraph->addRenderTargetLayoutTransition("mainPass", "ssaoPass", 0);
         m_renderGraph->addRenderTargetLayoutTransition("ssaoPass", "SCREEN", 0);
         m_renderGraph->sortRenderPasses();
 
         m_renderer->setSceneImageView(m_renderGraph->getNode("ssaoPass").renderPass.get(), 0);
+
+        RenderNode floor(m_transformBuffer.get(), &m_transforms[0], 0);
+        floor.geometry = m_geometries[0].get();
+        floor.material = m_materials[0].get();
+        floor.pipeline = m_pipelines[0].get();
+        floor.transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
+        floor.setPushConstantView(pc);
+        mainPassNode.renderNodes.push_back(floor);
+
+        RenderNode sponza(m_transformBuffer.get(), &m_transforms[1], 1);
+        sponza.geometry = m_geometries[1].get();
+        sponza.material = m_materials[0].get();
+        sponza.pipeline = m_pipelines[1].get();
+        sponza.setPushConstantView(pc);
+        mainPassNode.renderNodes.push_back(sponza);
+        mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
+
+        RenderNode ssao;
+        ssao.geometry = m_renderer->getFullScreenGeometry();
+        ssao.material = m_materials[1].get();
+        ssao.pipeline = m_pipelines[2].get();
+        ssao.setPushConstantView(m_ssaoParams);
+        ssaoPassNode.renderNodes.push_back(ssao);
 
         auto panel = std::make_unique<gui::AmbientOcclusionPanel>(app->getForm(), this);
         m_app->getForm()->add(std::move(panel));
@@ -172,8 +195,8 @@ namespace crisp
         m_cameraController->update(dt);
         m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
 
-        auto& V = m_cameraController->getViewMatrix();
-        auto& P = m_cameraController->getProjectionMatrix();
+        const auto& V = m_cameraController->getViewMatrix();
+        const auto& P = m_cameraController->getProjectionMatrix();
 
         for (auto& trans : m_transforms)
         {
@@ -188,56 +211,17 @@ namespace crisp
     void AmbientOcclusionScene::render()
     {
         m_renderGraph->clearCommandLists();
-
-        auto& mainPass = m_renderGraph->getNode("mainPass");
-        auto& ssaoPass = m_renderGraph->getNode("ssaoPass");
-
-        DrawCommand dc;
-        dc.pipeline = m_materials[0]->getPipeline();
-        dc.material = m_materials[0].get();
-        dc.dynamicBuffers.push_back({ *m_transformBuffer, 0 * sizeof(TransformPack) });
-        for (const auto& info : dc.material->getDynamicBufferInfos())
-            dc.dynamicBuffers.push_back(info);
-        dc.setPushConstants(glm::vec4(0.2f, 0.0f, 0.0f, 1.0f));
-        dc.geometry = m_geometries[0].get();
-        dc.setGeometryView(dc.geometry->createIndexedGeometryView());
-
-        mainPass.addCommand(std::move(dc));
-
-        DrawCommand sponza;
-        sponza.pipeline = m_pipelines[1].get();
-        sponza.material = m_materials[0].get();
-        sponza.dynamicBuffers.push_back({ *m_transformBuffer, 1 * sizeof(TransformPack) });
-        for (const auto& info : sponza.material->getDynamicBufferInfos())
-            sponza.dynamicBuffers.push_back(info);
-        sponza.setPushConstants(glm::vec4(0.2f, 0.0f, 0.0f, 1.0f));
-        sponza.geometry = m_geometries[1].get();
-        sponza.setGeometryView(sponza.geometry->createIndexedGeometryView());
-
-        mainPass.addCommand(std::move(sponza));
-        mainPass.addCommand(m_skybox->createDrawCommand());
-
-        DrawCommand ssao;
-        ssao.pipeline = m_pipelines[2].get();
-        ssao.material = m_materials[1].get();
-        for (const auto& info : ssao.material->getDynamicBufferInfos())
-            ssao.dynamicBuffers.push_back(info);
-        ssao.setPushConstants(m_numSamples, m_radius);
-        ssao.geometry = m_renderer->getFullScreenGeometry();
-        ssao.setGeometryView(ssao.geometry->createIndexedGeometryView());
-
-        ssaoPass.addCommand(std::move(ssao));
-
-        m_renderGraph->executeDrawCommands();
+        m_renderGraph->buildCommandLists();
+        m_renderGraph->executeCommandLists();
     }
 
     void AmbientOcclusionScene::setNumSamples(int numSamples)
     {
-        m_numSamples = numSamples;
+        m_ssaoParams.numSamples = numSamples;
     }
 
     void AmbientOcclusionScene::setRadius(double radius)
     {
-        m_radius = static_cast<float>(radius);
+        m_ssaoParams.radius = static_cast<float>(radius);
     }
 }

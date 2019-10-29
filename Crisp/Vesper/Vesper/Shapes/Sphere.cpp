@@ -121,7 +121,7 @@ namespace crisp
         }
     }
 
-    void Sphere::fillIntersection(unsigned int triangleId, const Ray3& ray, Intersection& its) const
+    void Sphere::fillIntersection(unsigned int /*triangleId*/, const Ray3& ray, Intersection& its) const
     {
         its.p = ray.o + ray.d * its.tHit;
         glm::vec3 normal = glm::normalize(its.p - m_center);

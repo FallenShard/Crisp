@@ -96,7 +96,7 @@ namespace crisp::gui
         return bounds.merge(m_label->getAbsoluteBounds());
     }
 
-    void CheckBox::onMouseEntered(float x, float y)
+    void CheckBox::onMouseEntered(float /*x*/, float /*y*/)
     {
         if (m_state == State::Disabled || m_state != State::Idle)
             return;
@@ -104,7 +104,7 @@ namespace crisp::gui
         setState(State::Hover);
     }
 
-    void CheckBox::onMouseExited(float x, float y)
+    void CheckBox::onMouseExited(float /*x*/, float /*y*/)
     {
         if (m_state == State::Disabled || m_state != State::Hover)
             return;
@@ -112,7 +112,7 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void CheckBox::onMousePressed(float x, float y)
+    void CheckBox::onMousePressed(float /*x*/, float /*y*/)
     {
         if (m_state == State::Disabled)
             return;

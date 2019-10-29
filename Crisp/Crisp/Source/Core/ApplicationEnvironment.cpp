@@ -1,5 +1,7 @@
 #include "ApplicationEnvironment.hpp"
 
+#include <CrispCore/Log.hpp>
+
 #include "Core/LuaConfig.hpp"
 
 #include <vulkan/vulkan.h>

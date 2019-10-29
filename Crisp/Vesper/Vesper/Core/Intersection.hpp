@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
+#include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/Math/CoordinateFrame.hpp>
 
 namespace crisp

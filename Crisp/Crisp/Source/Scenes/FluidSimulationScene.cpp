@@ -101,7 +101,7 @@ namespace crisp
             m_renderer->setDefaultScissor(commandBuffer);
             m_pointSpriteDescGroup.bind(commandBuffer, m_pointSpritePipeline->getPipelineLayout()->getHandle());
             m_fluidSimulation->drawGeometry(commandBuffer);
-            m_scenePass->end(commandBuffer);
+            m_scenePass->end(commandBuffer, frameIdx);
 
             m_scenePass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);

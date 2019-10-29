@@ -31,7 +31,7 @@ namespace crisp
         return *iter.first->second;
     }
 
-    void RenderGraph::resize(int width, int height)
+    void RenderGraph::resize(int /*width*/, int /*height*/)
     {
         for (auto& entry : m_nodes)
             entry.second->renderPass->recreate();
@@ -44,23 +44,28 @@ namespace crisp
 
     void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex)
     {
+        addRenderTargetLayoutTransition(sourcePass, destinationPass, sourceRenderTargetIndex, 1);
+    }
+
+    void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex, uint32_t layerMultiplier)
+    {
         RenderGraph::Node* sourceNode = m_nodes.at(sourcePass).get();
         VkImageAspectFlags attachmentAspect = sourceNode->renderPass->getRenderTarget(sourceRenderTargetIndex)->getAspectMask();
         if (attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT)
         {
-            sourceNode->dependencies[destinationPass] = [sourceRenderTargetIndex](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            sourceNode->dependencies[destinationPass] = [sourceRenderTargetIndex, layerMultiplier](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
             {
                 auto renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-                renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
+                renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex * layerMultiplier, layerMultiplier,
                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             };
         }
         else if (attachmentAspect == VK_IMAGE_ASPECT_DEPTH_BIT)
         {
-            sourceNode->dependencies[destinationPass] = [sourceRenderTargetIndex](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            sourceNode->dependencies[destinationPass] = [sourceRenderTargetIndex, layerMultiplier](const VulkanRenderPass& sourcePass, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
             {
                 auto renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-                renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex, 1,
+                renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIndex * layerMultiplier, layerMultiplier,
                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             };
         }
@@ -109,7 +114,17 @@ namespace crisp
                 subpassCommandList.clear();
     }
 
-    void RenderGraph::executeDrawCommands() const
+    void RenderGraph::buildCommandLists()
+    {
+        for (auto& graphNode : m_nodes)
+        {
+            auto& renderPass = graphNode.second;
+            for (const auto& renderNode : renderPass->renderNodes)
+                renderPass->addCommand(renderNode.createDrawCommand(m_renderer->getCurrentVirtualFrameIndex()), renderNode.subpassIndex);
+        }
+    }
+
+    void RenderGraph::executeCommandLists() const
     {
         m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer)
         {
@@ -142,21 +157,30 @@ namespace crisp
                                 m_renderer->setDefaultScissor(cmdBuffer);
                         }
 
-                        command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer, command.pushConstants.data());
+                        command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer, static_cast<const char*>(command.pushConstantView.data));
 
-                        for (uint32_t i = 0; i < command.dynamicBuffers.size(); ++i)
+                        if (command.dynamicBufferOffsets.empty())
                         {
-                            const auto& dynBuffer = command.dynamicBuffers[i];
-                            command.material->setDynamicOffset(frameIndex, i, dynBuffer.buffer.getDynamicOffset(frameIndex) + dynBuffer.subOffset);
+                            for (uint32_t i = 0; i < command.dynamicBufferViews.size(); ++i)
+                            {
+                                const auto& view = command.dynamicBufferViews[i];
+                                const uint32_t dynamicOffset = view.buffer->getDynamicOffset(frameIndex) + view.subOffset;
+                                command.material->setDynamicOffset(frameIndex, i, dynamicOffset);
+                            }
+
+                            command.material->bind(frameIndex, cmdBuffer);
+                        }
+                        else
+                        {
+                            command.material->bind(frameIndex, cmdBuffer, command.dynamicBufferOffsets);
                         }
 
-                        command.material->bind(frameIndex, cmdBuffer);
                         command.geometry->bindVertexBuffers(cmdBuffer);
                         command.drawFunc(cmdBuffer, command.geometryView);
                     }
                 }
 
-                node->renderPass->end(cmdBuffer);
+                node->renderPass->end(cmdBuffer, frameIndex);
                 for (const auto& dep : node->dependencies)
                     dep.second(*node->renderPass, cmdBuffer, frameIndex);
             }

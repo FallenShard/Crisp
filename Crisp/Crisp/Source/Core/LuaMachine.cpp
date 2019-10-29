@@ -16,8 +16,8 @@ namespace crisp
 
         Point() : x(10), y(20) {}
         Point(lua_State* L)
-            : x(luaL_checknumber(L, 1))
-            , y(luaL_checknumber(L, 1))
+            : x(static_cast<int>(luaL_checknumber(L, 1)))
+            , y(static_cast<int>(luaL_checknumber(L, 1)))
         {
         }
 
@@ -29,7 +29,7 @@ namespace crisp
 
         int setX(lua_State* L)
         {
-            x = luaL_checknumber(L, 1);
+            x = static_cast<int>(luaL_checknumber(L, 1));
             return 0;
         }
 
@@ -56,45 +56,45 @@ namespace crisp
         return 1;           // userdata containing pointer to T object
     }
 
-    static void weaktable(lua_State* L, const char* mode)
-    {
-        lua_newtable(L);
-        lua_pushvalue(L, -1);  // table is its own metatable
-        lua_setmetatable(L, -2);
-        lua_pushliteral(L, "__mode");
-        lua_pushstring(L, mode);
-        lua_settable(L, -3);   // metatable.__mode = mode
-    }
+    //static void weaktable(lua_State* L, const char* mode)
+    //{
+    //    lua_newtable(L);
+    //    lua_pushvalue(L, -1);  // table is its own metatable
+    //    lua_setmetatable(L, -2);
+    //    lua_pushliteral(L, "__mode");
+    //    lua_pushstring(L, mode);
+    //    lua_settable(L, -3);   // metatable.__mode = mode
+    //}
 
-    static void subtable(lua_State* L, int tindex, const char* name, const char* mode)
-    {
-        lua_pushstring(L, name);
-        lua_gettable(L, tindex);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            lua_checkstack(L, 3);
-            weaktable(L, mode);
-            lua_pushstring(L, name);
-            lua_pushvalue(L, -2);
-            lua_settable(L, tindex);
-        }
-    }
+    //static void subtable(lua_State* L, int tindex, const char* name, const char* mode)
+    //{
+    //    lua_pushstring(L, name);
+    //    lua_gettable(L, tindex);
+    //    if (lua_isnil(L, -1)) {
+    //        lua_pop(L, 1);
+    //        lua_checkstack(L, 3);
+    //        weaktable(L, mode);
+    //        lua_pushstring(L, name);
+    //        lua_pushvalue(L, -2);
+    //        lua_settable(L, tindex);
+    //    }
+    //}
 
-    static void *pushuserdata(lua_State* L, void* key, size_t sz) {
-        void* userData = nullptr;
-        lua_pushlightuserdata(L, key);
-        lua_gettable(L, -2);     // lookup[key]
-        if (lua_isnil(L, -1))
-        {
-            lua_pop(L, 1);         // drop nil
-            lua_checkstack(L, 3);
-            userData = lua_newuserdata(L, sz);  // create new userdata
-            lua_pushlightuserdata(L, key);
-            lua_pushvalue(L, -2);  // dup userdata
-            lua_settable(L, -4);   // lookup[key] = userdata
-        }
-        return userData;
-    }
+    //static void *pushuserdata(lua_State* L, void* key, size_t sz) {
+    //    void* userData = nullptr;
+    //    lua_pushlightuserdata(L, key);
+    //    lua_gettable(L, -2);     // lookup[key]
+    //    if (lua_isnil(L, -1))
+    //    {
+    //        lua_pop(L, 1);         // drop nil
+    //        lua_checkstack(L, 3);
+    //        userData = lua_newuserdata(L, sz);  // create new userdata
+    //        lua_pushlightuserdata(L, key);
+    //        lua_pushvalue(L, -2);  // dup userdata
+    //        lua_settable(L, -4);   // lookup[key] = userdata
+    //    }
+    //    return userData;
+    //}
 
     template <typename T>
     static int push(lua_State *L, T* obj, bool gc = false)
@@ -152,12 +152,12 @@ namespace crisp
         return obj;
     }
 
-    static void set(lua_State* L, int table_index, const char *key)
-    {
-        lua_pushstring(L, key);
-        lua_insert(L, -2);  // swap value and key
-        lua_settable(L, table_index);
-    }
+    //static void set(lua_State* L, int table_index, const char *key)
+    //{
+    //    lua_pushstring(L, key);
+    //    lua_insert(L, -2);  // swap value and key
+    //    lua_settable(L, table_index);
+    //}
 
     template <typename T>
     using MemFnPtrType = int(T::*)(lua_State*);
@@ -393,7 +393,7 @@ namespace crisp
         int x = luaL_checkint(L, 1);
         int y = luaL_checkint(L, 2);
 
-        MyPoint* point = createLuaObject<MyPoint>(L, x, y);
+        /*MyPoint* point = */createLuaObject<MyPoint>(L, x, y);
 
         luaL_getmetatable(L, "Tut.MyPoint");
         lua_setmetatable(L, -2);
@@ -552,7 +552,7 @@ namespace crisp
         lua_close(m_state);
     }
 
-    void LuaMachine::runScript(const std::filesystem::path& scriptPath)
+    void LuaMachine::runScript(const std::filesystem::path& /*scriptPath*/)
     {
     }
 }

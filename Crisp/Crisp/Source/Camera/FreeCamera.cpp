@@ -1,6 +1,9 @@
 #include "FreeCamera.hpp"
 
+#pragma warning(push)
+#pragma warning(disable: 4201) // nameless struct
 #include <glm/gtx/euler_angles.hpp>
+#pragma warning(pop)
 
 #include <iostream>
 
@@ -23,7 +26,7 @@ namespace crisp
         m_aspectRatio = 1.0f;
         m_zNear       = 0.5f;
         m_zFar        = 100.0f;
-        m_P           = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        //m_P           = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
         m_yawPitchRoll = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -45,7 +48,7 @@ namespace crisp
     {
     }
 
-    bool FreeCamera::update(float dt)
+    bool FreeCamera::update(float /*dt*/)
     {
         if (!m_recalculateViewMatrix)
             return false;

@@ -115,7 +115,7 @@ namespace crisp
         });
     }
 
-    void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize size)
+    void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize /*size*/)
     {
         m_renderer->enqueueResourceUpdate([this, &buffer](VkCommandBuffer cmdBuffer)
         {
@@ -125,7 +125,7 @@ namespace crisp
         });
     }
 
-    void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize size, uint32_t baseLayer, uint32_t numLayers)
+    void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize /*size*/, uint32_t baseLayer, uint32_t numLayers)
     {
         m_renderer->enqueueResourceUpdate([this, &buffer, baseLayer, numLayers](VkCommandBuffer cmdBuffer)
         {

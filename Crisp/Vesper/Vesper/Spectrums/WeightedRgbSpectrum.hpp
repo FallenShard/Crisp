@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <glm/glm.hpp>
 
 #include "RgbSpectrum.hpp"
 

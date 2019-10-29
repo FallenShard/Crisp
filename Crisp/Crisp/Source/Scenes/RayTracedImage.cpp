@@ -50,7 +50,7 @@ namespace crisp
         m_pipeline = createTonemappingPipeline(m_renderer, m_renderer->getDefaultRenderPass(), 0, true);
         m_material = std::make_unique<Material>(m_pipeline.get());
         for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
-            m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler->getHandle());
+            m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler.get());
         m_device->flushDescriptorUpdates();
     }
 

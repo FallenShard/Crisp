@@ -6,7 +6,6 @@
 #include <vulkan/vulkan.h>
 
 #include "Geometry/TransformPack.hpp"
-#include "Renderer/VertexBufferBindingGroup.hpp"
 #include "Renderer/DescriptorSetGroup.hpp"
 
 namespace crisp
@@ -47,7 +46,10 @@ namespace crisp
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
         std::unique_ptr<VertexBuffer> m_cubeVertexBuffer;
-        VertexBufferBindingGroup      m_cubeVertexBindingGroup;
+        uint32_t m_firstBinding;
+        uint32_t m_bindingCount;
+        std::vector<VkBuffer>     m_buffers;
+        std::vector<VkDeviceSize> m_offsets;
 
         std::unique_ptr<IndexBuffer> m_indexBuffer;
         uint32_t m_numIndices;

@@ -10,7 +10,7 @@
 #include <CrispCore/Math/Rect.hpp>
 #include "IO/FontLoader.hpp"
 
-#include "Renderer/VertexBufferBindingGroup.hpp"
+#include "Renderer/VertexBuffer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 
 #include "Geometry/Geometry.hpp"
@@ -135,7 +135,10 @@ namespace crisp
                 uint32_t vertexCount;
                 uint32_t allocatedFaceCount;
 
-                VertexBufferBindingGroup vertexBufferGroup;
+                uint32_t firstBinding;
+                uint32_t bindingCount;
+                std::vector<VkBuffer>     buffers;
+                std::vector<VkDeviceSize> offsets;
                 std::unique_ptr<VertexBuffer> vertexBuffer;
                 std::unique_ptr<IndexBuffer> indexBuffer;
                 VkDeviceSize indexBufferOffset;
@@ -164,7 +167,7 @@ namespace crisp
                 uint32_t textId;
                 float depth;
 
-                GuiDrawCommand(Callback callback, uint32_t transId, uint32_t colorId, float d) : drawFuncPtr(callback), transformId(transId), colorId(colorId), depth(d) {}
+                GuiDrawCommand(Callback callback, uint32_t transId, uint32_t colorId, float d) : drawFuncPtr(callback), transformId(transId), colorId(colorId), depth(d), textId(0) {}
                 GuiDrawCommand(Callback callback, uint32_t transId, uint32_t colorId, uint32_t textResId, float d) : drawFuncPtr(callback), transformId(transId), colorId(colorId), depth(d), textId(textResId) {}
             };
 

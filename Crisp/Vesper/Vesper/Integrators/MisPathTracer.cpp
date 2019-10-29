@@ -58,9 +58,9 @@ namespace crisp
                         {
                             if (scene.getEnvironmentLight())
                             {
-                                Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
-                                lightSample.wi = bsdfRay.d;
-                                float lightPdf = scene.getEnvironmentLight()->pdf(lightSample);
+                                Light::Sample envLightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                                envLightSample.wi = bsdfRay.d;
+                                float lightPdf = scene.getEnvironmentLight()->pdf(envLightSample);
                                 weight = miWeight(bsdfSample.pdf, lightPdf);
                             }
                             else
@@ -68,9 +68,9 @@ namespace crisp
                         }
                         else if (bsdfIts.shape->getLight() == &light)
                         {
-                            Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
-                            lightSample.wi = bsdfRay.d;
-                            float lightPdf = light.pdf(lightSample);
+                            Light::Sample lSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                            lSample.wi = bsdfRay.d;
+                            float lightPdf = light.pdf(lSample);
                             weight = miWeight(bsdfSample.pdf, lightPdf);
                         }
                         else
@@ -80,25 +80,25 @@ namespace crisp
                     Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
                     bool foundIntersection = scene.rayIntersect(bsdfRay, bsdfIts);
 
-                    Spectrum Li(0.0f);
+                    Spectrum bLi(0.0f);
                     if (foundIntersection)
                     {
                         if (bsdfIts.shape->getLight() == &light)
                         {
-                            Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
-                            lightSample.wi = bsdfRay.d;
-                            Li = light.eval(lightSample);
+                            Light::Sample alightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                            alightSample.wi = bsdfRay.d;
+                            bLi = light.eval(alightSample);
                         }
                     }
                     else if (scene.getEnvironmentLight())
                     {
-                        Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
-                        lightSample.wi = bsdfRay.d;
-                        Li = scene.getEnvironmentLight()->eval(lightSample);
+                        Light::Sample alightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
+                        alightSample.wi = bsdfRay.d;
+                        bLi = scene.getEnvironmentLight()->eval(alightSample);
                     }
 
                     if (!Li.isZero())
-                        Ld += f * Li * weight;
+                        Ld += f * bLi * weight;
                 }
             }
             return Ld;
@@ -135,7 +135,7 @@ namespace crisp
                 shape->getBSSRDF()->preprocess(shape.get(), scene);
     }
 
-    Spectrum MisPathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& r, IlluminationFlags illumFlags) const
+    Spectrum MisPathTracerIntegrator::Li(const Scene* scene, Sampler& sampler, Ray3& r, IlluminationFlags /*illumFlags*/) const
     {
         Spectrum L(0.0f);
         Spectrum throughput(1.0f);

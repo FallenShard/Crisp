@@ -8,8 +8,7 @@ layout(location = 4) in vec3 bitangent;
 
 layout(location = 0) out vec3 eyeNormal;
 layout(location = 1) out vec3 eyePosition;
-layout(location = 2) out vec3 eyeTangent;
-layout(location = 3) out vec3 eyeBitangent;
+layout(location = 2) out vec3 worldPos;
 
 layout(set = 0, binding = 0) uniform Transforms
 {
@@ -22,9 +21,8 @@ layout(set = 0, binding = 0) uniform Transforms
 void main()
 {
     eyeNormal    = normalize((N * vec4(normal, 0.0f)).xyz);
-    eyeTangent   = normalize((N * vec4(tangent, 0.0f)).xyz);
-    eyeBitangent = normalize((N * vec4(bitangent, 0.0f)).xyz);
     eyePosition  = (MV * vec4(position, 1.0f)).xyz;
+    worldPos     = (M * vec4(position, 1.0f)).xyz;
     
     gl_Position = MVP * vec4(position, 1.0f);
 }

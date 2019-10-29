@@ -8,6 +8,8 @@
 #include "Vulkan/VulkanSampler.hpp"
 #include "Vulkan/VulkanImageView.hpp"
 #include "Vulkan/VulkanBuffer.hpp"
+#include "vulkan/VulkanCommandPool.hpp"
+#include "Vulkan/VulkanCommandBuffer.hpp"
 
 #include "Renderer/RenderPasses/DefaultRenderPass.hpp"
 
@@ -33,23 +35,17 @@ namespace crisp
         m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), true);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
-        m_defaultViewport = m_swapChain->createViewport(0.0f, 1.0f);
+        m_defaultViewport = m_swapChain->createViewport();
         m_defaultScissor = m_swapChain->createScissor();
 
         // Create frame resources, such as command buffer, fence and semaphores
-        for (auto& frameRes : m_frameResources)
+        for (auto& frame : m_virtualFrames)
         {
-            frameRes.cmdPool = m_device->getGeneralQueue()->createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-            VkCommandBufferAllocateInfo cmdBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            cmdBufferAllocInfo.commandPool = frameRes.cmdPool;
-            cmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            cmdBufferAllocInfo.commandBufferCount = 1;
-            vkAllocateCommandBuffers(m_device->getHandle(), &cmdBufferAllocInfo, &frameRes.cmdBuffer);
-
-            frameRes.bufferFinishedFence = m_device->createFence(VK_FENCE_CREATE_SIGNALED_BIT);
-            frameRes.imageAvailableSemaphore = m_device->createSemaphore();
-            frameRes.renderFinishedSemaphore = m_device->createSemaphore();
+            frame.cmdPool   = std::make_unique<VulkanCommandPool>(m_device->getGeneralQueue(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+            frame.cmdBuffer = std::make_unique<VulkanCommandBuffer>(frame.cmdPool.get(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+            frame.bufferFinishedFence     = m_device->createFence(VK_FENCE_CREATE_SIGNALED_BIT);
+            frame.imageAvailableSemaphore = m_device->createSemaphore();
+            frame.renderFinishedSemaphore = m_device->createSemaphore();
         }
 
         // Creates a map of all shaders
@@ -67,9 +63,8 @@ namespace crisp
 
     Renderer::~Renderer()
     {
-        for (auto& frameRes : m_frameResources)
+        for (auto& frameRes : m_virtualFrames)
         {
-            vkDestroyCommandPool(m_device->getHandle(), frameRes.cmdPool, nullptr);
             vkDestroyFence(m_device->getHandle(), frameRes.bufferFinishedFence, nullptr);
             vkDestroySemaphore(m_device->getHandle(), frameRes.imageAvailableSemaphore, nullptr);
             vkDestroySemaphore(m_device->getHandle(), frameRes.renderFinishedSemaphore, nullptr);
@@ -146,7 +141,7 @@ namespace crisp
         return m_currentFrameIndex;
     }
 
-    void Renderer::resize(int width, int height)
+    void Renderer::resize(int /*width*/, int /*height*/)
     {
         recreateSwapChain();
 
@@ -208,14 +203,16 @@ namespace crisp
 
     void Renderer::drawFrame()
     {
-        auto cmdBuffer = acquireCommandBuffer();
+        auto& frame = m_virtualFrames[m_currentFrameIndex];
+
+        frame.waitCommandBuffer(m_device->getHandle());
 
         // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
         destroyResourcesScheduledForRemoval();
 
         m_device->flushMappedRanges();
 
-        std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex();
+        std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
         if (!swapImageIndex.has_value())
         {
             logError("Failed to acquire swap chain image!\n");
@@ -223,12 +220,10 @@ namespace crisp
         }
 
         m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapImageIndex.value()));
-        record(cmdBuffer);
-        const auto& frameRes = m_frameResources[m_currentFrameIndex];
-        m_device->getGeneralQueue()->submit(frameRes.imageAvailableSemaphore, frameRes.renderFinishedSemaphore,
-            frameRes.cmdBuffer, frameRes.bufferFinishedFence);
 
-        present(swapImageIndex.value());
+        record(frame.cmdBuffer->getHandle());
+        frame.submit(m_device->getGeneralQueue());
+        present(frame, swapImageIndex.value());
 
         m_resourceUpdates.clear();
         m_drawCommands.clear();
@@ -266,7 +261,7 @@ namespace crisp
         {
             m_sceneImageViews = renderPass->getRenderTargetViews(renderTargetIndex);
             for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
-                m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler->getHandle());
+                m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
 
             m_device->flushDescriptorUpdates();
         }
@@ -338,17 +333,11 @@ namespace crisp
         }
     }
 
-    VkCommandBuffer Renderer::acquireCommandBuffer()
-    {
-        vkWaitForFences(m_device->getHandle(), 1, &m_frameResources[m_currentFrameIndex].bufferFinishedFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-        vkResetFences(m_device->getHandle(),   1, &m_frameResources[m_currentFrameIndex].bufferFinishedFence);
-        return m_frameResources[m_currentFrameIndex].cmdBuffer;
-    }
-
-    std::optional<uint32_t> Renderer::acquireSwapImageIndex()
+    std::optional<uint32_t> Renderer::acquireSwapImageIndex(VirtualFrame& virtualFrame)
     {
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(), std::numeric_limits<uint64_t>::max(), m_frameResources[m_currentFrameIndex].imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(),
+            std::numeric_limits<uint64_t>::max(), virtualFrame.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             recreateSwapChain();
@@ -397,16 +386,15 @@ namespace crisp
 
         for (const auto& drawCommand : m_defaultPassDrawCommands)
             drawCommand(commandBuffer);
-        m_defaultRenderPass->end(commandBuffer);
+        m_defaultRenderPass->end(commandBuffer, m_currentFrameIndex);
 
         vkEndCommandBuffer(commandBuffer);
     }
 
-    void Renderer::present(uint32_t VulkanSwapChainImageIndex)
+    void Renderer::present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex)
     {
-        auto result = m_device->getGeneralQueue()->present(
-            m_frameResources[m_currentFrameIndex].renderFinishedSemaphore,
-            m_swapChain->getHandle(), VulkanSwapChainImageIndex);
+        VkResult result = m_device->getGeneralQueue()->present(virtualFrame.renderFinishedSemaphore,
+            m_swapChain->getHandle(), swapChainImageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {

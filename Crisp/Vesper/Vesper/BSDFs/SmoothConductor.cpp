@@ -17,12 +17,12 @@ namespace crisp
     {
     }
 
-    Spectrum SmoothConductorBSDF::eval(const BSDF::Sample& bsdfSample) const
+    Spectrum SmoothConductorBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const
     {
         return Spectrum(0.0f);
     }
 
-    Spectrum SmoothConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
+    Spectrum SmoothConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& /*sampler*/) const
     {
         float cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
         if (cosThetaI < 0.0f)
@@ -37,7 +37,7 @@ namespace crisp
         return Fresnel::conductorFull(cosThetaI, m_IOR);
     }
 
-    float SmoothConductorBSDF::pdf(const BSDF::Sample& bsdfSample) const
+    float SmoothConductorBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const
     {
         return 0.0f;
     }

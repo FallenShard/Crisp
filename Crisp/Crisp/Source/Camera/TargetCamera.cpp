@@ -1,6 +1,9 @@
 #include "TargetCamera.hpp"
 
+#pragma warning(push)
+#pragma warning(disable: 4201) // nameless struct
 #include <glm/gtx/euler_angles.hpp>
+#pragma warning(pop)
 
 namespace crisp
 {
@@ -9,13 +12,13 @@ namespace crisp
         glm::vec3 panTranslation = glm::vec3(0.0f, 0.0f, 0.0f);
     }
 
-    TargetCamera::TargetCamera(RotationStrategy rotationStrategy)
+    TargetCamera::TargetCamera(RotationStrategy /*rotationStrategy*/)
     {
         m_fov         = glm::radians(45.0f);
         m_aspectRatio = 1.0f;
         m_zNear       = 0.5f;
         m_zFar        = 100.0f;
-        m_P           = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        //m_P           = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
         m_orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -41,7 +44,7 @@ namespace crisp
     {
     }
 
-    bool TargetCamera::update(float dt)
+    bool TargetCamera::update(float /*dt*/)
     {
         if (!m_recalculateViewMatrix)
             return false;
@@ -53,7 +56,7 @@ namespace crisp
         }
 
         // View matrix rotation component
-        auto rotation = m_rotationStrategy == RotationStrategy::EulerAngles ? 
+        auto rotation = m_rotationStrategy == RotationStrategy::EulerAngles ?
             glm::yawPitchRoll(m_eulerAngles.x, m_eulerAngles.y, m_eulerAngles.z) :
             glm::mat4_cast(m_orientation);
 
@@ -97,7 +100,7 @@ namespace crisp
         m_recalculateViewMatrix = true;
     }
 
-    void TargetCamera::lift(float dt)
+    void TargetCamera::lift(float /*dt*/)
     {
     }
 

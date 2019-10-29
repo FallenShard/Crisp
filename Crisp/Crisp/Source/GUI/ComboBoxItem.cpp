@@ -32,7 +32,8 @@ namespace crisp::gui
         });
 
         m_label->setParent(this);
-        m_label->setAnchor(Anchor::CenterLeft);
+        m_label->setAnchor(Anchor::Center);
+        m_label->setOrigin(Origin::Center);
     }
 
     ComboBoxItem::~ComboBoxItem()

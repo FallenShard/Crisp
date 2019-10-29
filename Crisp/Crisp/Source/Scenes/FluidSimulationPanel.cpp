@@ -28,7 +28,8 @@ namespace crisp::gui
 
         auto gravityXSlider = std::make_unique<DoubleSlider>(parentForm);
         gravityXSlider->setId("gravityXSlider");
-        gravityXSlider->setAnchor(Anchor::CenterTop);
+        gravityXSlider->setAnchor(Anchor::TopCenter);
+        gravityXSlider->setOrigin(Origin::TopCenter);
         gravityXSlider->setPosition({ 0, y });
         gravityXSlider->setMinValue(-10.0);
         gravityXSlider->setMaxValue(+10.0);
@@ -50,7 +51,8 @@ namespace crisp::gui
 
         auto gravityYSlider = std::make_unique<DoubleSlider>(parentForm);
         gravityYSlider->setId("gravityYSlider");
-        gravityYSlider->setAnchor(Anchor::CenterTop);
+        gravityYSlider->setAnchor(Anchor::TopCenter);
+        gravityYSlider->setOrigin(Origin::TopCenter);
         gravityYSlider->setPosition({ 0, y });
         gravityYSlider->setMinValue(-10.0);
         gravityYSlider->setMaxValue(+10.0);
@@ -71,7 +73,8 @@ namespace crisp::gui
 
         auto gravityZSlider = std::make_unique<DoubleSlider>(parentForm);
         gravityZSlider->setId("gravityZSlider");
-        gravityZSlider->setAnchor(Anchor::CenterTop);
+        gravityZSlider->setAnchor(Anchor::TopCenter);
+        gravityZSlider->setOrigin(Origin::TopCenter);
         gravityZSlider->setPosition({ 0, y });
         gravityZSlider->setMinValue(-10.0);
         gravityZSlider->setMaxValue(+10.0);
@@ -92,7 +95,8 @@ namespace crisp::gui
 
         auto viscositySlider = std::make_unique<Slider>(parentForm);
         viscositySlider->setId("viscositySlider");
-        viscositySlider->setAnchor(Anchor::CenterTop);
+        viscositySlider->setAnchor(Anchor::TopCenter);
+        viscositySlider->setOrigin(Origin::TopCenter);
         viscositySlider->setPosition({ 0, y });
         viscositySlider->setMaxValue(30);
         viscositySlider->setMinValue(3);
@@ -111,7 +115,8 @@ namespace crisp::gui
 
         auto surfaceTensionSlider = std::make_unique<Slider>(parentForm);
         surfaceTensionSlider->setId("surfaceTensionSlider");
-        surfaceTensionSlider->setAnchor(Anchor::CenterTop);
+        surfaceTensionSlider->setAnchor(Anchor::TopCenter);
+        surfaceTensionSlider->setOrigin(Origin::TopCenter);
         surfaceTensionSlider->setPosition({ 0, y });
         surfaceTensionSlider->setMaxValue(50);
         surfaceTensionSlider->setMinValue(1);

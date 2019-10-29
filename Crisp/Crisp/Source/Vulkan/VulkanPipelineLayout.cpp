@@ -14,8 +14,15 @@ namespace crisp
         , m_descriptorSetBindings(std::move(setBindings))
         , m_pushConstants(std::move(pushConstants))
         , m_descriptorPool(descriptorPool)
+        , m_dynamicBufferCount(0)
     {
-        //m_numCopiesPerSet.resize(m_descriptorSetLayouts.size(), 1);
+        for (const auto& bindingSet : m_descriptorSetBindings)
+        {
+            for (const auto& binding : bindingSet)
+                if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+                    binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+                    ++m_dynamicBufferCount;
+        }
     }
 
     VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts,
@@ -27,7 +34,15 @@ namespace crisp
         , m_pushConstants(std::move(pushConstants))
         , m_descriptorSetBufferedStatus(descriptorSetBufferedStatus)
         , m_descriptorPool(descriptorPool)
+        , m_dynamicBufferCount(0)
     {
+        for (const auto& bindingSet : m_descriptorSetBindings)
+        {
+            for (const auto& binding : bindingSet)
+                if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+                    binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+                    ++m_dynamicBufferCount;
+        }
     }
 
     VulkanPipelineLayout::~VulkanPipelineLayout()

@@ -4,7 +4,7 @@
 
 namespace crisp
 {
-    UniformMultiBuffer::UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize resSize, const void* data)
+    UniformMultiBuffer::UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize /*resSize*/, const void* /*data*/)
         : m_renderer(renderer)
         , m_singleRegionSize(initialSize)
         , m_buffers(Renderer::NumVirtualFrames)

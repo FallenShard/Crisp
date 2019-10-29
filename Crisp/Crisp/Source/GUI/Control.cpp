@@ -15,6 +15,7 @@ namespace crisp::gui
         : m_id("Control_" + std::to_string(UniqueIdCounter++))
         , m_parent(nullptr)
         , m_anchor(Anchor::TopLeft)
+        , m_origin(Origin::TopLeft)
         , m_horizontalSizingPolicy(SizingPolicy::Fixed)
         , m_verticalSizingPolicy(SizingPolicy::Fixed)
         , m_parentSizePercent(1.0f, 1.0f)
@@ -65,6 +66,17 @@ namespace crisp::gui
     Anchor Control::getAnchor() const
     {
         return m_anchor;
+    }
+
+    void Control::setOrigin(Origin origin)
+    {
+        m_origin = origin;
+        setValidationFlags(Validation::Geometry);
+    }
+
+    Origin Control::getOrigin() const
+    {
+        return m_origin;
     }
 
     void Control::setSizingPolicy(SizingPolicy horizontal, SizingPolicy vertical, float widthPercent, float heightPercent)
@@ -201,6 +213,14 @@ namespace crisp::gui
         return m_scale;
     }
 
+    void Control::setColor(glm::vec3 color)
+    {
+        m_color.r = color.r;
+        m_color.g = color.g;
+        m_color.b = color.b;
+        setValidationFlags(Validation::Color);
+    }
+
     void Control::setColor(glm::vec4 color)
     {
         m_color.r = color.r;
@@ -329,146 +349,71 @@ namespace crisp::gui
         return m_parent ? m_parent->m_color.a : 1.0f;
     }
 
-    glm::vec2 Control::getAbsolutePosition() const
+    glm::vec2 Control::getAnchorOffset() const
     {
-        auto parentAbsPos  = getParentAbsolutePosition();
-        auto parentPadding = getParentPadding();
+        const glm::vec2 parentSize = getParentAbsoluteSize();
+        const glm::vec2 padding    = getParentPadding();
 
         switch (m_anchor)
         {
         default:
-        case Anchor::TopLeft:
+        case Anchor::TopLeft:      return padding;
+        case Anchor::TopCenter:    return glm::vec2(parentSize.x / 2.0f, padding.y);
+        case Anchor::TopRight:     return glm::vec2(parentSize.x - padding.x, padding.y);
+        case Anchor::CenterLeft:   return glm::vec2(padding.x, parentSize.y / 2.0f);
+        case Anchor::Center:       return parentSize / 2.0f;
+        case Anchor::CenterRight:  return glm::vec2(parentSize.x - padding.x, parentSize.y / 2.0f);
+        case Anchor::BottomLeft:   return glm::vec2(padding.x, parentSize.y - padding.y);
+        case Anchor::BottomCenter: return glm::vec2(parentSize.x / 2.0f, parentSize.y - padding.y);
+        case Anchor::BottomRight:  return parentSize - padding;
+        }
+    }
+
+    glm::vec2 Control::getOriginOffset() const
+    {
+        const glm::vec2 size = -getSize();
+
+        switch (m_origin)
         {
-            return parentAbsPos + parentPadding + m_position;
+        default:
+        case Origin::TopLeft:      return glm::vec2(0.0f);
+        case Origin::TopCenter:    return glm::vec2(size.x / 2.0f, 0.0f);
+        case Origin::TopRight:     return glm::vec2(size.x, 0.0f);
+        case Origin::CenterLeft:   return glm::vec2(0.0f, size.y / 2.0f);
+        case Origin::Center:       return size / 2.0f;
+        case Origin::CenterRight:  return glm::vec2(size.x, size.y / 2.0f);
+        case Origin::BottomLeft:   return glm::vec2(0.0f, size.y);
+        case Origin::BottomCenter: return glm::vec2(size.x / 2.0f, size.y);
+        case Origin::BottomRight:  return size;
         }
+    }
 
-        case Anchor::TopRight:
+    glm::vec2 Control::getOffsetDirection() const
+    {
+        switch (m_anchor)
         {
-            auto parentSize = getParentAbsoluteSize();
-
-            auto size = getSize();
-
-            auto absPos = parentAbsPos;
-            absPos.x += parentSize.x - parentPadding.x - size.x - m_position.x;
-            absPos.y += parentPadding.y + m_position.y;
-
-            return absPos;
+        default:
+        case Anchor::TopLeft:      return glm::vec2(1.0f);
+        case Anchor::TopCenter:    return glm::vec2(1.0f);
+        case Anchor::TopRight:     return glm::vec2(-1.0f, 1.0f);
+        case Anchor::CenterLeft:   return glm::vec2(1.0f);
+        case Anchor::Center:       return glm::vec2(1.0f);
+        case Anchor::CenterRight:  return glm::vec2(-1.0f, 1.0f);
+        case Anchor::BottomLeft:   return glm::vec2(1.0f, -1.0f);
+        case Anchor::BottomCenter: return glm::vec2(1.0f, -1.0f);
+        case Anchor::BottomRight:  return glm::vec2(-1.0f);
         }
+    }
 
-        case Anchor::BottomLeft:
-        {
-            auto parentSize = getParentAbsoluteSize();
+    glm::vec2 Control::getAbsolutePosition() const
+    {
+        const glm::vec2 parentAbsPos  = getParentAbsolutePosition();
+        const glm::vec2 dir = getOffsetDirection();
 
-            auto size = getSize();
+        const glm::vec2 anchorOffset = getAnchorOffset();
+        const glm::vec2 originOffset = getOriginOffset();
 
-            auto absPos = parentAbsPos;
-            absPos.x += parentPadding.x + m_position.x;
-            absPos.y += parentSize.y - parentPadding.y - size.y - m_position.y;
-
-            return absPos;
-        }
-
-        case Anchor::BottomRight:
-        {
-            auto parentSize = getParentAbsoluteSize();
-            auto size = getSize();
-
-            return parentAbsPos + parentSize - parentPadding - size - m_position;
-        }
-
-        case Anchor::Center:
-        {
-            auto parentSize = getParentAbsoluteSize();
-            auto size = getSize();
-
-            auto absPos = parentAbsPos;
-
-            if (m_horizontalSizingPolicy == SizingPolicy::FillParent)
-                absPos.x += parentPadding.x;
-            else
-                absPos.x += (parentSize.x - size.x) / 2.0f;
-
-            if (m_verticalSizingPolicy == SizingPolicy::FillParent)
-                absPos.y += parentPadding.y;
-            else
-                absPos.y += (parentSize.y - size.y) / 2.0f;
-
-            return absPos + m_position;
-        }
-
-        case Anchor::CenterTop:
-        {
-            auto parentSize = getParentAbsoluteSize();
-            auto size = getSize();
-
-            auto absPos = parentAbsPos;
-
-            if (m_horizontalSizingPolicy == SizingPolicy::FillParent)
-                absPos.x += parentPadding.x;
-            else
-                absPos.x += (parentSize.x - size.x) / 2.0f;
-
-            absPos.y += parentPadding.y;
-            absPos += m_position;
-
-            return absPos;
-        }
-
-        case Anchor::CenterLeft:
-        {
-            auto parentSize = getParentAbsoluteSize();
-            auto size = getSize();
-
-            auto absPos = parentAbsPos;
-
-            absPos.x += parentPadding.x;
-
-            if (m_verticalSizingPolicy == SizingPolicy::FillParent)
-                absPos.y += parentPadding.y;
-            else
-                absPos.y += (parentSize.y - size.y) / 2.0f;
-
-            absPos += m_position;
-
-            return absPos;
-        }
-
-        case Anchor::CenterBottom:
-        {
-            auto parentSize = getParentAbsoluteSize();
-            auto size = getSize();
-
-            auto absPos = parentAbsPos;
-
-            if (m_horizontalSizingPolicy == SizingPolicy::FillParent)
-                absPos.x += parentPadding.x;
-            else
-                absPos.x += (parentSize.x - size.x) / 2.0f;
-
-            absPos.x += m_position.x;
-            absPos.y += parentSize.y - parentPadding.y - size.y - m_position.y;
-
-            return absPos;
-        }
-
-        case Anchor::CenterRight:
-        {
-            auto parentSize = getParentAbsoluteSize();
-            auto size = getSize();
-
-            auto absPos = parentAbsPos;
-
-            if (m_verticalSizingPolicy == SizingPolicy::FillParent)
-                absPos.y += parentPadding.y;
-            else
-                absPos.y += (parentSize.y - size.y) / 2.0f;
-
-            absPos.x += parentSize.x - parentPadding.x - size.x - m_position.x;
-            absPos.y += m_position.y;
-
-            return absPos;
-        }
-        }
+        return parentAbsPos + anchorOffset + originOffset + dir * m_position;
     }
 
     float Control::getAbsoluteDepth() const

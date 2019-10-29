@@ -3,7 +3,6 @@
 #include <array>
 
 #include <CrispCore/Math/Headers.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 namespace crisp
 {
@@ -58,6 +57,8 @@ namespace crisp
         std::array<glm::vec3, 8> getFrustumPoints(float zNear, float zFar) const;
 
     protected:
+        void updateProjectionMatrix();
+
         float m_fov;
         float m_aspectRatio;
         float m_zNear;

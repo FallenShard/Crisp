@@ -1,7 +1,5 @@
 #include "EnvironmentLight.hpp"
 
-#include <glm/gtx/norm.hpp>
-
 #include <CrispCore/Math/Operations.hpp>
 #include <CrispCore/Math/Distribution1D.hpp>
 #include <CrispCore/Math/Warp.hpp>
@@ -146,7 +144,7 @@ namespace crisp
         auto samVal = sample(s, *fixed);
 
         auto ev = eval(s);
-        auto p = pdf(s);
+        //auto p = pdf(s);
     }
 
     EnvironmentLight::~EnvironmentLight()
@@ -262,7 +260,7 @@ namespace crisp
         //return p * InvTwoPI / sin(theta);
     }
 
-    Spectrum EnvironmentLight::samplePhoton(Ray3& ray, Sampler& sampler) const
+    Spectrum EnvironmentLight::samplePhoton(Ray3& /*ray*/, Sampler& /*sampler*/) const
     {
         return Spectrum();
     }
@@ -282,7 +280,7 @@ namespace crisp
         return false;
     }
 
-    glm::vec2 EnvironmentLight::sampleContinuous(const glm::vec2& point, float& pdf) const
+    glm::vec2 EnvironmentLight::sampleContinuous(const glm::vec2& /*point*/, float& /*pdf*/) const
     {
         //float uPdf = 0.0f;
         //float vPdf = 0.0f;
@@ -297,7 +295,7 @@ namespace crisp
         return { 0.0f, 0.0f };
     }
 
-    float EnvironmentLight::distributionPdf(float u, float v) const
+    float EnvironmentLight::distributionPdf(float /*u*/, float /*v*/) const
     {
         //int uOffset = clamp(int(u * m_phiPdfs[0].getSize()), 0, int(m_phiPdfs[0].getSize() - 1));
         //int vOffset = clamp(int(v * m_thetaPdf.getSize()), 0, int(m_thetaPdf.getSize() - 1));

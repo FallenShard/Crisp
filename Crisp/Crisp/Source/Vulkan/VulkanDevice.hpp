@@ -49,8 +49,8 @@ namespace crisp
         VulkanMemoryHeap* getDeviceImageHeap() const;
         VulkanMemoryHeap* getStagingBufferHeap() const;
 
-        void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo&& bufferInfo);
-        void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo&& imageInfo);
+        void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo);
+        void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo);
         void flushDescriptorUpdates();
 
     private:

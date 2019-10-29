@@ -1,13 +1,15 @@
 #pragma once
 
 #include <memory>
-#include <glm/glm.hpp>
 
+#pragma warning(push)
+#pragma warning(disable: 4324) // alignment warning
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_ray.h>
 #include <embree2/rtcore_scene.h>
 #include <embree2/rtcore_geometry.h>
 #include <embree2/rtcore_geometry_user.h>
+#pragma warning(pop)
 
 #include <CrispCore/Math/CoordinateFrame.hpp>
 #include <CrispCore/Math/Ray.hpp>
@@ -35,9 +37,9 @@ namespace crisp
             glm::vec3 n;   // Normal at the sampled point
             float pdf;     // pdf of the sample
 
-            Sample() {}
-            Sample(const glm::vec3& ref) : ref(ref) {}
-            Sample(const glm::vec3& ref, const glm::vec3& p) : ref(ref), p(p) {}
+            Sample() : pdf(0.0f) {}
+            Sample(const glm::vec3& ref) : ref(ref), pdf(0.0f) {}
+            Sample(const glm::vec3& ref, const glm::vec3& p) : ref(ref), p(p), pdf(0.0f) {}
         };
 
         Shape();

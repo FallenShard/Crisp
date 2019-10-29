@@ -15,7 +15,7 @@ namespace crisp
 
             for (int i = 1; i <= numArgs; i++)
             {
-                lua_Number x = lua_tonumber(state, i);
+                //lua_Number x = lua_tonumber(state, i);
                 //logDebug("I was called from Lua! Value: ", x);
             }
 
@@ -29,7 +29,7 @@ namespace crisp
 
             VesperPoint(int x, int y) : x(x), y(y) {}
 
-            void setX(int x) { this->x = x; }
+            void setX(int x_) { this->x = x_; }
 
             static const char className[];
         };
@@ -63,7 +63,7 @@ namespace crisp
 
             const lua_Number x = luaL_checknumber(L, 2);
             const lua_Number y = luaL_checknumber(L, 3);
-            *vp = new VesperPoint(x, y);
+            *vp = new VesperPoint(int(x), int(y));
 
             luaL_getmetatable(L, "VesperPoint");
             lua_setmetatable(L, -2);
@@ -132,7 +132,7 @@ namespace crisp
         lua_close(m_state);
     }
 
-    void LuaState::runScript(const std::string& scriptFile)
+    void LuaState::runScript(const std::string& /*scriptFile*/)
     {
         int status = luaL_dofile(m_state, (ScriptFolder / "callhost.lua").string().c_str());
         if (status != 0)

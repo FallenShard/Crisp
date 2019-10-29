@@ -17,6 +17,11 @@
 
 namespace crisp
 {
+    namespace
+    {
+        static const int PC0 = 0;
+    }
+
     Grass::Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* shadowRenderPass, CascadedShadowMapper* csm, UniformBuffer* cameraBuffer, VulkanSampler* sampler)
         : m_renderer(renderer)
     {
@@ -47,7 +52,7 @@ namespace crisp
 
         m_bladeGeometry = std::make_unique<Geometry>(m_renderer, createGrassBlade({ VertexAttribute::Position }));
         m_bladeGeometry->addVertexBuffer(std::move(instanceBuffer));
-        m_bladeGeometry->setInstanceCount(matrices.size());
+        m_bladeGeometry->setInstanceCount(static_cast<uint32_t>(matrices.size()));
 
         m_pipeline = createGrassPipeline(m_renderer, mainRenderPass);
         m_material = std::make_unique<Material>(m_pipeline.get());
@@ -58,15 +63,15 @@ namespace crisp
                 m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(1, 0, c, i), shadowRenderPass->getRenderTargetView(c, i).getDescriptorInfo(sampler->getHandle()));
 
         m_drawCommand.pipeline = m_pipeline.get();
-        m_drawCommand.dynamicBuffers.push_back({ *cameraBuffer, 0 });
-        m_drawCommand.dynamicBuffers.push_back({ *csm->getLightTransformBuffer(), 0 });
+        m_drawCommand.dynamicBufferViews.push_back({ cameraBuffer, 0 });
+        m_drawCommand.dynamicBufferViews.push_back({ csm->getLightTransformBuffer(), 0 });
         m_drawCommand.material = m_material.get();
         m_drawCommand.geometry = m_bladeGeometry.get();
         m_drawCommand.setGeometryView(m_bladeGeometry->createIndexedGeometryView());
 
         m_shadowDrawCommand.pipeline = m_shadowPipelines[0].get();
-        m_shadowDrawCommand.dynamicBuffers.push_back({ *csm->getLightTransformBuffer(), 0 });
-        m_shadowDrawCommand.setPushConstants(0);
+        m_shadowDrawCommand.dynamicBufferViews.push_back({ csm->getLightTransformBuffer(), 0 });
+        m_shadowDrawCommand.setPushConstantView(PC0);
         m_shadowDrawCommand.material = m_shadowMaterial.get();
         m_shadowDrawCommand.geometry = m_bladeGeometry.get();
         m_shadowDrawCommand.setGeometryView(m_bladeGeometry->createIndexedGeometryView());
@@ -84,7 +89,7 @@ namespace crisp
     DrawCommand Grass::createShadowCommand(uint32_t subpassIndex)
     {
         DrawCommand command = m_shadowDrawCommand;
-        command.setPushConstants(subpassIndex);
+        // TODO: command.setPushConstants(subpassIndex);
         command.pipeline = m_shadowPipelines[subpassIndex].get();
         return command;
     }

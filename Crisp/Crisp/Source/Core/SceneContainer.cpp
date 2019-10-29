@@ -26,7 +26,7 @@ namespace crisp
             "Test"
         };
 
-        static constexpr std::size_t DefaultSceneIndex = 1;
+        static constexpr std::size_t DefaultSceneIndex = 2;
 
         template <typename ...Args>
         std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... args)

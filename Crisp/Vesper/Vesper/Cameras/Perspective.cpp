@@ -40,7 +40,7 @@ namespace crisp
         }
     }
 
-    Spectrum PerspectiveCamera::sampleRay(Ray3& ray, const glm::vec2& posSample, const glm::vec2& apertureSample) const
+    Spectrum PerspectiveCamera::sampleRay(Ray3& ray, const glm::vec2& posSample, const glm::vec2& /*apertureSample*/) const
     {
         glm::vec3 screenPos = m_sampleToCamera.transformPoint(glm::vec3(posSample * m_invImageSize, 0.0f));
         glm::vec3 rayDir = glm::normalize(screenPos);
