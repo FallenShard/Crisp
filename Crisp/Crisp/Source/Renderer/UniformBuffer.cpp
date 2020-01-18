@@ -33,6 +33,26 @@ namespace crisp
         }
     }
 
+    UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, const void* data)
+        : m_renderer(renderer)
+        , m_updatePolicy(BufferUpdatePolicy::PerFrame)
+        , m_framesToUpdateOnGpu(Renderer::NumVirtualFrames)
+        , m_singleRegionSize(0)
+        , m_buffer(nullptr)
+    {
+        auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        auto device = m_renderer->getDevice();
+
+        if (isShaderStorageBuffer)
+        {
+            m_singleRegionSize = std::max(size, renderer->getContext()->getPhysicalDeviceLimits().minStorageBufferOffsetAlignment);
+            m_buffer = std::make_unique<VulkanBuffer>(device, Renderer::NumVirtualFrames * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+            if (data != nullptr)
+                m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);
+        }
+    }
+
     UniformBuffer::~UniformBuffer()
     {
         if (m_updatePolicy == BufferUpdatePolicy::PerFrame)

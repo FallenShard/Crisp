@@ -6,6 +6,7 @@
 #include "Geometry/GeometryPart.hpp"
 
 #include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/Math/BoundingBox.hpp>
 
 #include <filesystem>
 #include <vector>
@@ -68,5 +69,7 @@ namespace crisp
         std::vector<VertexAttributeDescriptor> m_interleavedFormat;
 
         std::string m_meshName;
+
+        BoundingBox3 m_boundingBox;
     };
 }

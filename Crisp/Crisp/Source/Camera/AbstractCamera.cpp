@@ -44,6 +44,14 @@ namespace crisp
         updateProjectionMatrix();
     }
 
+    void AbstractCamera::setupProjection(float fovY, float aspectRatio)
+    {
+        m_fov         = glm::radians(fovY);
+        m_aspectRatio = aspectRatio;
+
+        updateProjectionMatrix();
+    }
+
     const glm::mat4& AbstractCamera::getProjectionMatrix() const
     {
         return m_P;
@@ -188,6 +196,11 @@ namespace crisp
         std::array<glm::vec3, 8> result;
         std::transform(frustumPoints.begin(), frustumPoints.end(), result.begin(), [&camToWorld](const glm::vec3& pt) { return glm::vec3(camToWorld * glm::vec4(pt, 1.0f)); });
         return result;
+    }
+
+    std::array<glm::vec3, 8> AbstractCamera::getFrustumPoints() const
+    {
+        return getFrustumPoints(m_zNear, m_zFar);
     }
 
     void AbstractCamera::updateProjectionMatrix()

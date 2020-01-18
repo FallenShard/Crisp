@@ -44,5 +44,6 @@ namespace crisp
     {
         ConsoleColorizer colorizer(ConsoleColor::LightMagenta);
         fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
+        std::exit(-1);
     }
 }

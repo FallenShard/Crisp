@@ -30,6 +30,8 @@ namespace crisp
             fillVertexAttribs<loc, binding, 0, formats...>(vertexAttribs);
             return vertexAttribs;
         }
+
+
     }
 
     enum class PipelineState
@@ -55,6 +57,7 @@ namespace crisp
 
         PipelineBuilder& addShaderStage(VkPipelineShaderStageCreateInfo&& shaderStage);
         PipelineBuilder& setShaderStages(std::initializer_list<VkPipelineShaderStageCreateInfo> shaderStages);
+        PipelineBuilder& setShaderStages(std::vector<VkPipelineShaderStageCreateInfo>&& shaderStages);
 
         template <uint32_t binding, VkVertexInputRate inputRate, VkFormat... formats>
         PipelineBuilder& addVertexInputBinding() {
@@ -80,6 +83,9 @@ namespace crisp
             m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
             return *this;
         }
+
+        PipelineBuilder& addVertexInputBinding(uint32_t binding, VkVertexInputRate inputRate, const std::vector<VkFormat>& formats);
+        PipelineBuilder& addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats);
 
         PipelineBuilder& setFullScreenVertexLayout();
 

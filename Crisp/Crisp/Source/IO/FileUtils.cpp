@@ -3,6 +3,7 @@
 #include <Windows.h>
 
 #include <fstream>
+#include <sstream>
 
 #include <CrispCore/Log.hpp>
 
@@ -22,17 +23,22 @@ namespace crisp::fileutils
         return filenames;
     }
 
+    std::string fileToString(const std::filesystem::path& filePath)
+    {
+        return fileToString(filePath.string());
+    }
+
     std::string fileToString(const std::string& filePath)
     {
         std::ifstream inputFile(filePath);
-        std::string source;
+        std::stringstream stringStream;
 
         if (inputFile.is_open())
         {
             std::string line;
             while (std::getline(inputFile, line))
             {
-                source += line + '\n';
+                stringStream << line << '\n';
             }
             inputFile.close();
         }
@@ -41,7 +47,7 @@ namespace crisp::fileutils
             logError("Could not open file: {}\n", filePath);
         }
 
-        return source;
+        return stringStream.str();
     }
 
     std::vector<char> readBinaryFile(const std::filesystem::path& filePath)

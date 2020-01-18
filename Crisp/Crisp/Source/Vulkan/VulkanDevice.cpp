@@ -160,9 +160,16 @@ namespace crisp
 
     void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo)
     {
-        m_bufferInfos.emplace_back(bufferInfo);
+        m_bufferInfos.emplace_back(std::vector<VkDescriptorBufferInfo>(1, bufferInfo));
         m_descriptorWrites.emplace_back(write);
-        m_descriptorWrites.back().pBufferInfo = &m_bufferInfos.back();
+        m_descriptorWrites.back().pBufferInfo = m_bufferInfos.back().data();
+    }
+
+    void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos)
+    {
+        m_bufferInfos.emplace_back(std::move(bufferInfos));
+        m_descriptorWrites.emplace_back(write);
+        m_descriptorWrites.back().pBufferInfo = m_bufferInfos.back().data();
     }
 
     void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo)

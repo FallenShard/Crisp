@@ -87,6 +87,27 @@ namespace crisp
         }
     }
 
+    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer, int elementSize, int elementCount)
+    {
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        for (uint32_t i = 0; i < setsToUpdate; ++i)
+        {
+            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet          = m_sets[i][setIndex];
+            write.dstBinding      = binding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
+            write.descriptorCount = elementCount;
+
+            std::vector<VkDescriptorBufferInfo> infos;
+            infos.reserve(elementCount);
+            for (int j = 0; j < elementCount; ++j)
+                infos.emplace_back(uniformBuffer.getDescriptorInfo(elementSize * j, elementSize));
+
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), std::move(infos));
+        }
+    }
+
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo)
     {
         uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
@@ -104,6 +125,11 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler)
     {
+        writeDescriptor(setIndex, binding, imageView, sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+
+    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler, VkImageLayout imageLayout)
+    {
         uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
@@ -113,7 +139,22 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler, imageLayout));
+        }
+    }
+
+    void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const std::vector<std::unique_ptr<VulkanImageView>>& imageViews, const VulkanSampler* sampler, VkImageLayout imageLayout)
+    {
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        for (uint32_t i = 0; i < setsToUpdate; ++i)
+        {
+            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            write.dstSet          = m_sets[i][setIndex];
+            write.dstBinding      = binding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
+            write.descriptorCount = 1;
+            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
         }
     }
 
@@ -155,9 +196,9 @@ namespace crisp
         m_dynamicOffsets[frameIdx][index] = offset;
     }
 
-    void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer)
+    void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint)
     {
-        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout()->getHandle(),
+        vkCmdBindDescriptorSets(cmdBuffer, bindPoint, m_pipeline->getPipelineLayout()->getHandle(),
             0, static_cast<uint32_t>(m_sets[frameIdx].size()), m_sets[frameIdx].data(),
             static_cast<uint32_t>(m_dynamicOffsets[frameIdx].size()), m_dynamicOffsets[frameIdx].data());
     }

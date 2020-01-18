@@ -30,7 +30,7 @@ namespace crisp
 
         m_yawPitchRoll = glm::vec3(0.0f, 0.0f, 0.0f);
 
-        m_position = glm::vec3(0.0, 1.0f, 20.0f);
+        m_position = glm::vec3(0.0, 0.0f, 20.0f);
         m_look     = glm::vec3(0.0f, 0.0f, -1.0f);
         m_right    = glm::vec3(1.0f, 0.0f, 0.0f);
         m_up       = glm::vec3(0.0f, 1.0f, 0.0f);

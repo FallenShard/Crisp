@@ -31,6 +31,7 @@ namespace crisp::gui
     {
         setId("memoryUsageBar");
         setAnchor(Anchor::BottomLeft);
+        setOrigin(Origin::BottomLeft);
         setPosition({ 0, 0 });
         setSizeHint({ 0, 20 });
         setPadding({ 3, 3 });
@@ -40,6 +41,7 @@ namespace crisp::gui
         auto bufferLabel = std::make_unique<gui::Label>(parentForm, "");
         bufferLabel->setId("bufferMemoryLabel");
         bufferLabel->setAnchor(Anchor::CenterLeft);
+        bufferLabel->setOrigin(Origin::CenterLeft);
         m_bufferMemoryUsageLabel = bufferLabel.get();
         addControl(std::move(bufferLabel));
 
@@ -47,6 +49,7 @@ namespace crisp::gui
         auto imageLabel = std::make_unique<gui::Label>(parentForm, "");
         imageLabel->setId("imageMemoryLabel");
         imageLabel->setAnchor(Anchor::CenterLeft);
+        imageLabel->setOrigin(Origin::CenterLeft);
         imageLabel->setPosition({ 200, 0 });
         m_imageMemoryUsageLabel = imageLabel.get();
         addControl(std::move(imageLabel));
@@ -54,6 +57,7 @@ namespace crisp::gui
         auto stagingLabel = std::make_unique<gui::Label>(parentForm, "");
         stagingLabel->setId("stagingMemoryLabel");
         stagingLabel->setAnchor(Anchor::CenterLeft);
+        stagingLabel->setOrigin(Origin::CenterLeft);
         stagingLabel->setPosition({ 400, 0 });
         m_stagingMemoryUsageLabel = stagingLabel.get();
         addControl(std::move(stagingLabel));

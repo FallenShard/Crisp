@@ -1,8 +1,8 @@
 #pragma once
 
-#include <array>
-
 #include <vulkan/vulkan.h>
+
+#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -17,6 +17,19 @@ namespace crisp
         {
         case VK_FORMAT_R32G32B32A32_SFLOAT: return 4;
         default:                            return 0;
+        }
+    }
+
+    static constexpr uint32_t getSizeOf(VkFormat format)
+    {
+        switch (format)
+        {
+        case VK_FORMAT_R32G32B32A32_SFLOAT: return 4 * sizeof(float);
+        case VK_FORMAT_R32G32B32_SFLOAT:    return 3 * sizeof(float);
+        case VK_FORMAT_R32G32_SFLOAT:       return 2 * sizeof(float);
+        default:
+            logFatal("Unknown format specified {}\n", format);
+            return 0;
         }
     }
 

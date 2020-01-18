@@ -10,9 +10,17 @@ namespace crisp
     class VulkanDevice;
     class VulkanPipelineLayout;
 
+    namespace sl
+    {
+        class Reflection;
+    }
+
     class PipelineLayoutBuilder
     {
     public:
+        PipelineLayoutBuilder() {}
+        PipelineLayoutBuilder(const sl::Reflection& shaderReflection);
+
         PipelineLayoutBuilder& defineDescriptorSet(uint32_t set, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
         PipelineLayoutBuilder& defineDescriptorSet(uint32_t set, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
         PipelineLayoutBuilder& addPushConstant(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);

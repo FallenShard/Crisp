@@ -101,7 +101,6 @@ namespace crisp::gui
 
         glm::vec2 getAnchorOffset() const;
         glm::vec2 getOriginOffset() const;
-        glm::vec2 getPaddingOffset() const;
         glm::vec2 getOffsetDirection() const;
         glm::vec2 getAbsolutePosition() const;
         float getAbsoluteDepth() const;

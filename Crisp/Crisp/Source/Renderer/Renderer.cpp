@@ -81,6 +81,12 @@ namespace crisp
         return m_resourcesPath;
     }
 
+    std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const
+    {
+        static std::filesystem::path path("D:/version-control/Crisp/Crisp/Crisp/Source/Shaders");
+        return path / (shaderName + ".glsl");
+    }
+
     VulkanContext* Renderer::getContext() const
     {
         return m_context.get();
@@ -116,7 +122,7 @@ namespace crisp
         return m_defaultScissor;
     }
 
-    VkShaderModule Renderer::getShaderModule(std::string&& key) const
+    VkShaderModule Renderer::getShaderModule(const std::string& key) const
     {
         return m_shaderModules.at(key);
     }

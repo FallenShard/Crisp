@@ -13,6 +13,11 @@ namespace crisp
     {
     }
 
+    RenderNode::RenderNode(UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, int transformIndex)
+        : RenderNode(transformBuffer, &transformPacks[transformIndex], transformIndex)
+    {
+    }
+
     DrawCommand RenderNode::createDrawCommand(uint32_t frameIndex) const
     {
         DrawCommand drawCommand;

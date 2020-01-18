@@ -4,6 +4,8 @@
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanPipelineLayout.hpp"
 
+#include "ShadingLanguage/Reflection.hpp"
+
 #include <numeric>
 
 namespace crisp
@@ -57,6 +59,16 @@ namespace crisp
     VkDescriptorPool createDescriptorPool(VkDevice device, const PipelineLayoutBuilder& builder, const std::vector<uint32_t>& numCopies, uint32_t maxSetCount, VkDescriptorPoolCreateFlags flags)
     {
         return createDescriptorPool(device, calculateMinimumPoolSizes(builder.getDescriptorSetBindings(), numCopies), maxSetCount, flags);
+    }
+
+    PipelineLayoutBuilder::PipelineLayoutBuilder(const sl::Reflection& shaderReflection)
+    {
+        for (int setId = 0; setId < shaderReflection.getDescriptorSetCount(); ++setId)
+            defineDescriptorSet(setId, shaderReflection.isSetBuffered(setId),
+                shaderReflection.getDescriptorSetLayouts(setId));
+
+        for (const auto& pc : shaderReflection.getPushConstants())
+            addPushConstant(pc.stageFlags, pc.offset, pc.size);
     }
 
     PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t set, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)

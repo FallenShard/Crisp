@@ -38,8 +38,12 @@ namespace crisp
     {
         return { sampler, m_handle, layout };
     }
+
     VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const
     {
-        return { sampler->getHandle(), m_handle, layout };
+        if (sampler == nullptr)
+            return { VK_NULL_HANDLE, m_handle, layout };
+        else
+            return { sampler->getHandle(), m_handle, layout };
     }
 }

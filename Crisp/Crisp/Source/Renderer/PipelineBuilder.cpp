@@ -4,21 +4,41 @@
 
 #include "Vulkan/VulkanDevice.hpp"
 
-namespace crisp
+namespace
 {
-    PipelineDynamicState getPipelineDynamicState(VkDynamicState dynamicState)
+    std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(uint32_t binding, const std::vector<VkFormat>& formats)
+    {
+        std::vector<VkVertexInputAttributeDescription> vertexAttribs(formats.size());
+
+        uint32_t offset = 0;
+        for (uint32_t i = 0; i < vertexAttribs.size(); ++i)
+        {
+            vertexAttribs[i].location = i;
+            vertexAttribs[i].binding = binding;
+            vertexAttribs[i].format = formats[i];
+            vertexAttribs[i].offset = offset;
+            offset += crisp::getSizeOf(formats[i]);
+        }
+
+        return vertexAttribs;
+    }
+
+    crisp::PipelineDynamicState getPipelineDynamicState(VkDynamicState dynamicState)
     {
         switch (dynamicState)
         {
-        case VK_DYNAMIC_STATE_VIEWPORT: return PipelineDynamicState::Viewport;
-        case VK_DYNAMIC_STATE_SCISSOR:  return PipelineDynamicState::Scissor;
+        case VK_DYNAMIC_STATE_VIEWPORT: return crisp::PipelineDynamicState::Viewport;
+        case VK_DYNAMIC_STATE_SCISSOR:  return crisp::PipelineDynamicState::Scissor;
         default: {
-            logError("Invalid vulkan dynamic state received!");
-            return static_cast<PipelineDynamicState>(0);
+            crisp::logFatal("Invalid vulkan dynamic state received!");
+            return static_cast<crisp::PipelineDynamicState>(0);
         }
         }
     }
+}
 
+namespace crisp
+{
     PipelineBuilder::PipelineBuilder()
         : m_vertexInputState({ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO })
         , m_inputAssemblyState({ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO })
@@ -48,6 +68,33 @@ namespace crisp
     PipelineBuilder& PipelineBuilder::setShaderStages(std::initializer_list<VkPipelineShaderStageCreateInfo> shaderStages)
     {
         m_shaderStages = shaderStages;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setShaderStages(std::vector<VkPipelineShaderStageCreateInfo>&& shaderStages)
+    {
+        m_shaderStages = shaderStages;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::addVertexInputBinding(uint32_t binding, VkVertexInputRate inputRate, const std::vector<VkFormat>& formats)
+    {
+        uint32_t aggregateSize = 0;
+        for (const auto format : formats)
+            aggregateSize += getSizeOf(format);
+
+        m_vertexInputBindings.push_back({ binding, aggregateSize, inputRate });
+        m_vertexInputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertexInputBindings.size());
+        m_vertexInputState.pVertexBindingDescriptions    = m_vertexInputBindings.data();
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats)
+    {
+        auto attribs = generateVertexInputAttributes(binding, formats);
+        m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
+        m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
+        m_vertexInputState.pVertexAttributeDescriptions    = m_vertexInputAttributes.data();
         return *this;
     }
 

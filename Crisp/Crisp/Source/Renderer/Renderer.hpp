@@ -44,6 +44,7 @@ namespace crisp
         Renderer& operator=(Renderer&& other) = delete;
 
         const std::filesystem::path& getResourcesPath() const;
+        std::filesystem::path getShaderSourcePath(const std::string& shaderName) const;
 
         VulkanContext*    getContext() const;
         VulkanDevice*     getDevice() const;
@@ -54,7 +55,7 @@ namespace crisp
         VkViewport         getDefaultViewport() const;
         VkRect2D           getDefaultScissor() const;
 
-        VkShaderModule    getShaderModule(std::string&& key) const;
+        VkShaderModule    getShaderModule(const std::string& key) const;
 
         void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
         void setDefaultScissor(VkCommandBuffer cmdBuffer) const;

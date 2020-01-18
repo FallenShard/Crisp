@@ -44,11 +44,15 @@
     <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Source\;$(SourcePath)</SourcePath>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
+    <CustomBuildBeforeTargets>
+    </CustomBuildBeforeTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)Binaries\$(Platform)-$(Configuration)\</OutDir>
     <SourcePath>$(ProjectDir)Source\;$(SourcePath)</SourcePath>
     <IntDir>$(SolutionDir)Intermediate\$(Platform)-$(Configuration)\$(ProjectName)\</IntDir>
+    <CustomBuildBeforeTargets>
+    </CustomBuildBeforeTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -70,20 +74,27 @@
       <Command>xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;lua51.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;$(SolutionDir)Externals\Libraries\spirv\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glfw3d.lib;vulkan-1.lib;freetype27.lib;lua51.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>
       </AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>pushd $(ProjectDir)Source\Shaders\
-bash.exe "$(ProjectDir)Source\Shaders\compile-vulkan.sh"
-popd</Command>
+      <Command>$(SolutionDir)Resources\CrispShaderCompiler.exe "$(ProjectDir)Source\Shaders" "$(SolutionDir)Resources\Shaders"</Command>
+      <Message>Compiling SPIR-V Shaders</Message>
     </PreBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -106,20 +117,27 @@ popd</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;freetype27.lib;lua51.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3d.lib;vulkan-1.lib;freetype27.lib;lua51.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>pushd $(ProjectDir)Source\Shaders\
-bash.exe "$(ProjectDir)Source\Shaders\compile-vulkan.sh"
-popd</Command>
+      <Command>$(SolutionDir)Resources\CrispShaderCompiler.exe "$(ProjectDir)Source\Shaders" "$(SolutionDir)Resources\Shaders"</Command>
+      <Message>Compiling SPIR-V Shaders</Message>
     </PreBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\Animation\Animation.cpp" />
@@ -152,6 +170,7 @@ popd</Command>
     <ClCompile Include="Source\Models\Grass.cpp" />
     <ClCompile Include="Source\Models\SPH.cpp" />
     <ClCompile Include="Source\Models\PositionBasedFluid.cpp" />
+    <ClCompile Include="Source\Renderer\LuaPipelineBuilder.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\PipelineBuilder.cpp" />
     <ClCompile Include="Source\Renderer\PipelineLayoutBuilder.cpp" />
@@ -172,6 +191,7 @@ popd</Command>
     <ClCompile Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\BlurPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\CubeMapRenderPass.cpp" />
+    <ClCompile Include="Source\Renderer\RenderPasses\DepthPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\LightShaftPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\TexturePass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp" />
@@ -221,6 +241,11 @@ popd</Command>
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
     <ClCompile Include="Source\Scenes\TerrainScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
+    <ClCompile Include="Source\ShadingLanguage\Lexer.cpp" />
+    <ClCompile Include="Source\ShadingLanguage\Parser.cpp" />
+    <ClCompile Include="Source\ShadingLanguage\ShaderPreprocessor.cpp" />
+    <ClCompile Include="Source\ShadingLanguage\Reflection.cpp" />
+    <ClCompile Include="Source\ShadingLanguage\Token.cpp" />
     <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
     <ClCompile Include="Source\Techniques\ShadowMapper.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanCommandBuffer.cpp" />
@@ -293,6 +318,7 @@ popd</Command>
     <ClInclude Include="Source\Models\SPH.hpp" />
     <ClInclude Include="Source\Models\PositionBasedFluid.hpp" />
     <ClInclude Include="Source\Renderer\DrawCommand.hpp" />
+    <ClInclude Include="Source\Renderer\LuaPipelineBuilder.hpp" />
     <ClInclude Include="Source\Renderer\Material.hpp" />
     <ClInclude Include="Source\Renderer\PipelineBuilder.hpp" />
     <ClInclude Include="Source\Renderer\PipelineLayoutBuilder.hpp" />
@@ -313,6 +339,7 @@ popd</Command>
     <ClInclude Include="Source\Renderer\RenderPasses\AmbientOcclusionPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\BlurPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\CubeMapRenderPass.hpp" />
+    <ClInclude Include="Source\Renderer\RenderPasses\DepthPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\LightShaftPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\TexturePass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp" />
@@ -372,6 +399,16 @@ popd</Command>
     <ClInclude Include="Source\Renderer\RenderPasses\ShadowPass.hpp" />
     <ClInclude Include="Source\Renderer\Texture.hpp" />
     <ClInclude Include="Source\Geometry\TransformPack.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\ErrorLogger.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Expressions.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Lexer.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Parser.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\PrintVisitor.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\ShaderPreprocessor.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Reflection.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Statements.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Token.hpp" />
+    <ClInclude Include="Source\ShadingLanguage\Visitor.hpp" />
     <ClInclude Include="Source\Techniques\CascadedShadowMapper.hpp" />
     <ClInclude Include="Source\Techniques\ShadowMapper.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanCommandBuffer.hpp" />
@@ -428,6 +465,8 @@ popd</Command>
     <None Include="Source\Shaders\compute-cell-count-comp.glsl" />
     <None Include="Source\Shaders\compute-density-and-pressure-comp.glsl" />
     <None Include="Source\Shaders\compute-forces-comp.glsl" />
+    <None Include="Source\Shaders\depth-map-frag.glsl" />
+    <None Include="Source\Shaders\depth-map-vert.glsl" />
     <None Include="Source\Shaders\depth-normal-frag.glsl" />
     <None Include="Source\Shaders\depth-normal-vert.glsl" />
     <None Include="Source\Shaders\diffuse-frag.glsl" />
@@ -449,6 +488,7 @@ popd</Command>
     <None Include="Source\Shaders\gui-text-frag.glsl" />
     <None Include="Source\Shaders\gui-text-vert.glsl" />
     <None Include="Source\Shaders\integrate-comp.glsl" />
+    <None Include="Source\Shaders\light-culling-comp.glsl" />
     <None Include="Source\Shaders\liquid-frag.glsl" />
     <None Include="Source\Shaders\liquid-vert.glsl" />
     <None Include="Source\Shaders\normal-map-frag.glsl" />

@@ -17,6 +17,9 @@ namespace crisp
         glfwSetWindowPos(m_window, x, y);
 
         m_eventHub = std::make_unique<EventHub>(m_window);
+
+        if (glfwRawMouseMotionSupported())
+            glfwSetInputMode(m_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
 
     Window::~Window()

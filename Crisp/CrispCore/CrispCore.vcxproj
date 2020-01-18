@@ -150,12 +150,14 @@
     <ClInclude Include="CrispCore\Math\Transform.hpp" />
     <ClInclude Include="CrispCore\Math\Warp.hpp" />
     <ClInclude Include="CrispCore\Profiler.hpp" />
+    <ClInclude Include="CrispCore\StringUtils.hpp" />
     <ClInclude Include="CrispCore\Timer.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CrispCore\Math\Distribution1D.cpp" />
     <ClCompile Include="CrispCore\Math\Distribution2D.cpp" />
     <ClCompile Include="CrispCore\Math\Warp.cpp" />
+    <ClCompile Include="CrispCore\StringUtils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

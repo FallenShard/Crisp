@@ -75,6 +75,7 @@ namespace crisp
         void createDefaultPbrTextures();
         std::unique_ptr<Material> createPbrMaterial(const std::string& type, VulkanPipeline* pipeline);
         std::unique_ptr<Material> createUnifPbrMaterial(VulkanPipeline* pipeline);
+        std::unique_ptr<Material> createUnifPbrSmMaterial(VulkanPipeline* pipeline);
 
         void setupInput();
         std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(std::shared_ptr<VulkanImageView> equirectMapView);
@@ -114,10 +115,21 @@ namespace crisp
         std::vector<LightDescriptor> m_lights;
         std::unique_ptr<UniformBuffer> m_lightBuffer;
 
+        std::vector<ManyLightDescriptor> m_manyLights;
+        std::unique_ptr<UniformBuffer> m_manyLightsBuffer;
+
+        std::unique_ptr<UniformBuffer> m_tilePlaneBuffer;
+        std::unique_ptr<UniformBuffer> m_lightIndexCountBuffer;
+        std::unique_ptr<UniformBuffer> m_lightIndexListBuffer;
+        std::unique_ptr<VulkanImage> m_lightGrid;
+        std::vector<std::unique_ptr<VulkanImageView>> m_lightGridViews;
+
         PbrUnifMaterial m_pbrUnifMaterial;
         std::unique_ptr<UniformBuffer> m_pbrUnifMatBuffer;
 
         std::unique_ptr<RenderGraph> m_renderGraph;
+
+        std::unordered_map<std::string, std::unique_ptr<VulkanBuffer>> m_computeBuffers;
 
         //std::unique_ptr<Grass> m_grass;
 

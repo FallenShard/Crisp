@@ -12,28 +12,39 @@ namespace crisp
     {
     public:
         using DependencyCallback = std::function<void(const VulkanRenderPass&, VkCommandBuffer, uint32_t)>;
+
         struct Node
         {
             std::string name;
+            std::unordered_map<std::string, DependencyCallback> dependencies;
+
             std::unique_ptr<VulkanRenderPass> renderPass;
 
             // Rendered nodes can be culled/filtered down into commands
             std::vector<RenderNode> renderNodes;
             std::vector<std::vector<DrawCommand>> commands;
 
-            std::unordered_map<std::string, DependencyCallback> dependencies;
-
+            Node() = default;
             Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
             Node(Node&& node) = default;
             Node(const Node& node) = delete;
 
             void addCommand(DrawCommand&& command, uint32_t subpassIndex = 0);
+
+            bool isCompute = false;
+            std::unique_ptr<VulkanPipeline> pipeline;
+            std::unique_ptr<Material> material;
+            glm::ivec3 workGroupSize;
+            glm::ivec3 numWorkGroups;
+
+            std::function<void(VkCommandBuffer, uint32_t)> callback;
         };
 
         RenderGraph(Renderer* renderer);
         ~RenderGraph();
 
         Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
+        Node& addComputePass(std::string computePassName);
         void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
         void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex);
         void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex, uint32_t layerMultiplier);
@@ -50,6 +61,9 @@ namespace crisp
         Node& getNode(std::string name);
 
     private:
+        void executeRenderPass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
+        void executeComputePass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
+
         Renderer* m_renderer;
 
         std::vector<Node*> m_executionOrder;

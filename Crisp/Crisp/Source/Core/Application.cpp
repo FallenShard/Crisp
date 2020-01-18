@@ -14,6 +14,8 @@
 
 #include <CrispCore/Log.hpp>
 
+#include "ShadingLanguage/ShaderPreprocessor.hpp"
+
 namespace crisp
 {
     namespace
@@ -28,6 +30,10 @@ namespace crisp
         : m_frameTimeLogger(1000.0)
     {
         logInfo("Initializing application...\n");
+
+        std::system("D:/version-control/Crisp/Crisp/Resources/CrispShaderCompiler.exe "\
+                    "D:/version-control/Crisp/Crisp/Crisp/Source/Shaders "\
+                    "D:/version-control/Crisp/Crisp/Resources/Shaders");
 
         m_window   = createWindow();
         m_renderer = createRenderer();

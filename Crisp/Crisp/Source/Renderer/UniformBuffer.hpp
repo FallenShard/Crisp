@@ -16,6 +16,8 @@ namespace crisp
     {
     public:
         UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
+        UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, const void* data = nullptr);
+
         ~UniformBuffer();
 
         inline VkBuffer get() const { return m_buffer->getHandle(); }

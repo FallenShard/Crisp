@@ -50,6 +50,7 @@ namespace crisp
         VulkanMemoryHeap* getStagingBufferHeap() const;
 
         void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo);
+        void postDescriptorWrite(VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
         void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo);
         void flushDescriptorUpdates();
 
@@ -69,7 +70,7 @@ namespace crisp
 
         std::vector<VkMappedMemoryRange> m_unflushedRanges;
 
-        std::list<VkDescriptorBufferInfo> m_bufferInfos;
+        std::list<std::vector<VkDescriptorBufferInfo>> m_bufferInfos;
         std::list<VkDescriptorImageInfo>  m_imageInfos;
         std::vector<VkWriteDescriptorSet> m_descriptorWrites;
     };

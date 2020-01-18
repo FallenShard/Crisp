@@ -7,6 +7,7 @@
 namespace crisp::fileutils
 {
     std::vector<std::string> enumerateFiles(const std::filesystem::path& directoryPath, const std::string& extension);
+    std::string fileToString(const std::filesystem::path& filePath);
     std::string fileToString(const std::string& filePath);
     std::vector<char> readBinaryFile(const std::filesystem::path& filePath);
     std::string openFileDialog();

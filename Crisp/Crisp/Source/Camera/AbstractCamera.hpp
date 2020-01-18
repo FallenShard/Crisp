@@ -22,7 +22,8 @@ namespace crisp
         virtual void strafe(float dt) = 0;
         virtual void lift(float dt) = 0;
 
-        void setupProjection(float fovY, float aspectRatio, float zNear = 1.0f, float zFar = 1000.0f);
+        void setupProjection(float fovY, float aspectRatio, float zNear, float zFar);
+        void setupProjection(float fovY, float aspectRatio);
         const glm::mat4& getProjectionMatrix() const;
 
         void setFov(float fovY);
@@ -55,6 +56,7 @@ namespace crisp
         glm::vec4 getFrustumPlane(size_t index) const;
 
         std::array<glm::vec3, 8> getFrustumPoints(float zNear, float zFar) const;
+        std::array<glm::vec3, 8> getFrustumPoints() const;
 
     protected:
         void updateProjectionMatrix();

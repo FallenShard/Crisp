@@ -86,6 +86,8 @@ namespace crisp
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, uint32_t baseLayer, uint32_t numLayers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
         auto oldLayout = m_layouts[baseLayer][0];
+        if (oldLayout == newLayout)
+            return;
 
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         barrier.oldLayout           = oldLayout;
@@ -153,6 +155,7 @@ namespace crisp
         if (m_mipLevels > 1)
         {
             transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
             for (uint32_t i = 1; i < m_mipLevels; i++)
             {
                 VkImageBlit imageBlit = {};
@@ -161,16 +164,16 @@ namespace crisp
                 imageBlit.srcSubresource.baseArrayLayer = 0;
                 imageBlit.srcSubresource.layerCount     = 1;
                 imageBlit.srcSubresource.mipLevel       = i - 1;
-                imageBlit.srcOffsets[1].x = int32_t(m_extent.width  >> (i - 1));
-                imageBlit.srcOffsets[1].y = int32_t(m_extent.height >> (i - 1));
+                imageBlit.srcOffsets[1].x = std::max(int32_t(m_extent.width  >> (i - 1)), 1);
+                imageBlit.srcOffsets[1].y = std::max(int32_t(m_extent.height >> (i - 1)), 1);
                 imageBlit.srcOffsets[1].z = 1;
 
                 imageBlit.dstSubresource.aspectMask     = m_aspect;
                 imageBlit.dstSubresource.baseArrayLayer = 0;
                 imageBlit.dstSubresource.layerCount     = 1;
                 imageBlit.dstSubresource.mipLevel       = i;
-                imageBlit.dstOffsets[1].x = int32_t(m_extent.width  >> i);
-                imageBlit.dstOffsets[1].y = int32_t(m_extent.height >> i);
+                imageBlit.dstOffsets[1].x = std::max(int32_t(m_extent.width  >> i), 1);
+                imageBlit.dstOffsets[1].y = std::max(int32_t(m_extent.height >> i), 1);
                 imageBlit.dstOffsets[1].z = 1;
 
                 VkImageSubresourceRange mipRange = {};
@@ -271,6 +274,8 @@ namespace crisp
             return { 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { 0, VK_ACCESS_SHADER_READ_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_GENERAL)
+            return { 0, VK_ACCESS_SHADER_WRITE_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)

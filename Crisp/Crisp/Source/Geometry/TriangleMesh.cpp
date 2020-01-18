@@ -246,6 +246,9 @@ namespace crisp
     void TriangleMesh::setPositions(std::vector<glm::vec3>&& positions)
     {
         m_positions = std::move(positions);
+
+        for (const auto& p : m_positions)
+            m_boundingBox.expandBy(p);
     }
 
     void TriangleMesh::setNormals(std::vector<glm::vec3>&& normals)

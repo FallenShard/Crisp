@@ -75,6 +75,9 @@
     <ClInclude Include="CrispCore\Math\Warp.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CrispCore\StringUtils.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CrispCore\Math\Distribution1D.cpp">
@@ -84,6 +87,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CrispCore\Math\Warp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CrispCore\StringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

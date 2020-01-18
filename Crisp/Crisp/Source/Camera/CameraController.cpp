@@ -41,6 +41,11 @@ namespace crisp
         m_window->getEventHub().mouseButtonReleased.subscribe<&CameraController::onMouseReleased>(this);
         m_window->getEventHub().mouseMoved.subscribe<&CameraController::onMouseMoved>(this);
         m_window->getEventHub().mouseWheelScrolled.subscribe<&CameraController::onMouseWheelScrolled>(this);
+
+        m_cameraParameters.P          = m_camera.getProjectionMatrix();
+        m_cameraParameters.V          = m_camera.getViewMatrix();
+        m_cameraParameters.nearFar    = { m_camera.getNearPlaneDistance(), m_camera.getFarPlaneDistance() };
+        m_cameraParameters.screenSize = m_screenSize;
     }
 
     CameraController::~CameraController()
@@ -71,9 +76,9 @@ namespace crisp
 
         if (viewChanged)
         {
-            m_cameraParameters.P = m_camera.getProjectionMatrix();
-            m_cameraParameters.V = m_camera.getViewMatrix();
-            m_cameraParameters.nearFar = { 0.5f, 100.0f };
+            m_cameraParameters.P          = m_camera.getProjectionMatrix();
+            m_cameraParameters.V          = m_camera.getViewMatrix();
+            m_cameraParameters.nearFar    = { m_camera.getNearPlaneDistance(), m_camera.getFarPlaneDistance() };
             m_cameraParameters.screenSize = m_screenSize;
         }
 

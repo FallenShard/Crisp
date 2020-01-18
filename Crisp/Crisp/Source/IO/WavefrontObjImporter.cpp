@@ -44,16 +44,16 @@ namespace crisp
 
         struct ObjVertex
         {
-            int p = -1;
-            int n = -1;
-            int uv = -1;
+            int64_t p = -1;
+            int64_t n = -1;
+            int64_t uv = -1;
 
             inline ObjVertex() {};
             inline ObjVertex(std::string_view stringView)
             {
                 auto vertexAttribs = fixedTokenize<3>(stringView, "/");
 
-                auto parse = [](const std::string_view & line_view, int& val)
+                auto parse = [](const std::string_view & line_view, int64_t& val)
                 {
                     std::from_chars(line_view.data(), line_view.data() + line_view.size(), val);
                     --val; // OBJ face vertex indices start with 1
