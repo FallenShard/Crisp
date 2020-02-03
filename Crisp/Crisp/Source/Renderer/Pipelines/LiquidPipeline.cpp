@@ -11,7 +11,7 @@ namespace crisp
     std::unique_ptr<VulkanPipeline> createDielectricPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpass)
     {
         PipelineLayoutBuilder layoutBuilder;
-        layoutBuilder.defineDescriptorSet(0,
+        layoutBuilder.defineDescriptorSet(0, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       1, VK_SHADER_STAGE_FRAGMENT_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -21,9 +21,6 @@ namespace crisp
             });
 
         VulkanDevice* device = renderer->getDevice();
-
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -36,6 +33,6 @@ namespace crisp
             .setScissor(renderer->getDefaultScissor())
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
-            .create(device, std::move(layout), renderPass->getHandle(), subpass);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), subpass);
     }
 }

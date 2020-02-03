@@ -15,6 +15,9 @@ namespace crisp
         VulkanCommandBuffer(VkCommandBuffer commandBuffer);
         ~VulkanCommandBuffer();
 
+        void begin(VkCommandBufferUsageFlags commandBufferUsage);
+        void end();
+
         inline VkCommandBuffer getHandle() const { return m_handle; }
 
     private:

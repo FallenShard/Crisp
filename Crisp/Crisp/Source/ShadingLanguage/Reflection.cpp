@@ -6,35 +6,64 @@
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
-
-namespace
-{
-    VkPushConstantRange parsePushConstant(const crisp::sl::Statement* statement, VkShaderStageFlags stage)
-    {
-        using namespace crisp::sl;
-        VkPushConstantRange pc = {};
-        pc.stageFlags = stage;
-
-        const auto* block = dynamic_cast<const BlockDeclaration*>(statement);
-        if (block)
-        {
-            for (const auto& field : block->fields)
-            {
-                auto tokenType = field->fullType->specifier->type.type;
-                switch (tokenType)
-                {
-                case TokenType::Mat4: pc.size += 16 * sizeof(float); break;
-                case TokenType::Mat3: pc.size += 9 * sizeof(float); break;
-                }
-            }
-        }
-
-        return pc;
-    }
-}
+#include <CrispCore/Log.hpp>
 
 namespace crisp::sl
 {
+    namespace
+    {
+        uint32_t getPushConstantFieldOffset(const StructFieldDeclaration& field)
+        {
+            for (const auto& qualif : field.fullType->qualifiers)
+            {
+                if (qualif->qualifier.type == crisp::sl::TokenType::Layout)
+                {
+                    auto layoutQualifier = dynamic_cast<crisp::sl::LayoutQualifier*>(qualif.get());
+                    if (!layoutQualifier || layoutQualifier->ids.empty())
+                        return 0;
+
+                    if (auto bin = dynamic_cast<BinaryExpr*>(layoutQualifier->ids[0].get()))
+                    {
+                        auto* left = dynamic_cast<Variable*>(bin->left.get());
+                        auto* right = dynamic_cast<Literal*>(bin->right.get());
+                        if (left && right && left->name.lexeme == "offset")
+                            return std::any_cast<int>(right->value);
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        VkPushConstantRange parsePushConstant(const Statement* statement, VkShaderStageFlags stage)
+        {
+            VkPushConstantRange pc = {};
+            pc.stageFlags = stage;
+
+            const auto* block = dynamic_cast<const BlockDeclaration*>(statement);
+            if (block)
+            {
+                for (const auto& field : block->fields)
+                {
+                    auto tokenType = field->fullType->specifier->type.type;
+                    pc.offset = getPushConstantFieldOffset(*field);
+                    switch (tokenType)
+                    {
+                    case TokenType::Mat4: pc.size += 16 * sizeof(float); break;
+                    case TokenType::Mat3: pc.size += 9 * sizeof(float); break;
+                    case TokenType::Float: pc.size += sizeof(float); break;
+                    case TokenType::Uint: pc.size += sizeof(unsigned int); break;
+                    case TokenType::Int: pc.size += sizeof(int); break;
+
+                    default: crisp::logFatal("Unknown token size '{}' while parsing push constant!", field->fullType->specifier->type.lexeme); break;
+                    }
+                }
+            }
+
+            return pc;
+        }
+    }
+
     Reflection::Reflection()
     {
     }

@@ -8,14 +8,14 @@
 namespace crisp
 {
     class VulkanDevice;
+    class DescriptorSetAllocator;
 
     class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout>
     {
     public:
-        VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts,
-            std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants, VkDescriptorPool descriptorPool);
-        VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts,
-            std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants, std::vector<bool> descriptorSetBufferedStatus, VkDescriptorPool descriptorPool);
+        VulkanPipelineLayout(VulkanDevice* device, std::vector<VkDescriptorSetLayout>&& setLayouts,
+            std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants,
+            std::vector<bool> descriptorSetBufferedStatus, std::unique_ptr<DescriptorSetAllocator> setAllocator);
         virtual ~VulkanPipelineLayout();
 
         inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
@@ -52,12 +52,12 @@ namespace crisp
         std::vector<VkPushConstantRange>                       m_pushConstants;
         std::vector<bool> m_descriptorSetBufferedStatus;
 
-        VkDescriptorPool m_descriptorPool;
-
         std::size_t m_dynamicBufferCount;
+
+        std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
     };
 
-    class PipelineLayoutBuilder;
-    std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, VkDescriptorPool descriptorPool);
-    std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, std::vector<bool> setBuffered, VkDescriptorPool descriptorPool);
+    //class PipelineLayoutBuilder;
+    //std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, VkDescriptorPool descriptorPool);
+    //std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, std::vector<bool> setBuffered, VkDescriptorPool descriptorPool);
 }

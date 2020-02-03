@@ -22,6 +22,9 @@ namespace crisp
             static bool const value = true;
         };
 
+        template <class T>
+        inline constexpr bool is_vector_v = is_vector<T>::value;
+
         class ScopedVariable
         {
         public:
@@ -29,6 +32,13 @@ namespace crisp
                 : m_L(L)
             {
                 lua_getfield(m_L, tableIndex, name.data());
+            }
+
+            ScopedVariable(lua_State* L, int itemIndex)
+                : m_L(L)
+            {
+                lua_pushnumber(m_L, itemIndex + 1);
+                lua_gettable(m_L, -2);
             }
 
             ScopedVariable(const ScopedVariable&) = delete;
@@ -39,6 +49,11 @@ namespace crisp
                 lua_pop(m_L, 1);
             }
 
+            bool exists() const
+            {
+                return lua_type(m_L, -1) != LUA_TNIL;
+            }
+
             template <typename T>
             std::optional<T> convertTo()
             {
@@ -46,14 +61,19 @@ namespace crisp
                 {
                     if (lua_type(m_L, -1) == LUA_TNUMBER)
                         return static_cast<T>(lua_tonumber(m_L, -1));
+                    else if (lua_type(m_L, -1) == LUA_TBOOLEAN)
+                        return static_cast<T>(lua_toboolean(m_L, -1));
                 }
                 else if constexpr (std::is_convertible_v<T, std::string>)
                 {
                     if (lua_type(m_L, -1) == LUA_TSTRING)
                         return std::string(lua_tostring(m_L, -1));
                 }
-                else if constexpr (is_vector<T>::value)
+                else if constexpr (is_vector_v<T>)
                 {
+                    if (lua_type(m_L, -1) == LUA_TSTRING)
+                        return {};
+
                     using ElementType = typename T::value_type;
                     std::size_t numElements = lua_objlen(m_L, -1);
                     T vec;
@@ -89,6 +109,13 @@ namespace crisp
                 logWarning("Table '{}' is undefined\n", tableName);
         }
 
+        LuaTable(lua_State* L, int itemIndex)
+            : ScopedVariable(L, itemIndex)
+        {
+            if (!lua_istable(m_L, -1))
+                logWarning("Array/table is undefined at index {}\n", itemIndex);
+        }
+
         LuaTable(const LuaTable&) = delete;
         LuaTable operator=(const LuaTable&) = delete;
 
@@ -101,6 +128,16 @@ namespace crisp
         LuaTable operator[](std::string_view tableName)
         {
             return LuaTable(m_L, tableName, -1);
+        }
+
+        LuaTable operator[](int itemIndex)
+        {
+            return LuaTable(m_L, itemIndex);
+        }
+
+        std::size_t getLength() const
+        {
+            return lua_objlen(m_L, -1);
         }
     };
 
@@ -128,7 +165,8 @@ namespace crisp
 
         void openFile(const std::filesystem::path& configPath)
         {
-            int code = luaL_dofile(m_L, configPath.string().c_str());
+            m_scriptPath = configPath;
+            int code = luaL_dofile(m_L, m_scriptPath.string().c_str());
             if (code != 0)
                 logError("Error: {}\n", lua_tostring(m_L, -1));
         }
@@ -149,7 +187,13 @@ namespace crisp
             logInfo("Stack size: {}\n", lua_gettop(m_L));
         }
 
+        bool hasVariable(std::string_view varName)
+        {
+            return detail::ScopedVariable(m_L, varName, LUA_GLOBALSINDEX).exists();
+        }
+
     private:
         lua_State* m_L;
+        std::filesystem::path m_scriptPath;
     };
 }

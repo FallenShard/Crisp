@@ -1,6 +1,7 @@
 #include "PipelineLayoutBuilder.hpp"
 
 #include "Renderer/Renderer.hpp"
+#include "Renderer/DescriptorSetAllocator.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanPipelineLayout.hpp"
 
@@ -10,57 +11,6 @@
 
 namespace crisp
 {
-    std::vector<VkDescriptorPoolSize> calculateMinimumPoolSizes(const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopies)
-    {
-        std::vector<uint32_t> numSetCopies = numCopies;
-        if (numSetCopies.size() == 0)
-            numSetCopies.resize(setBindings.size(), 1);
-
-        std::vector<VkDescriptorPoolSize> poolSizes;
-        for (uint32_t i = 0; i < setBindings.size(); i++)
-        {
-            const std::vector<VkDescriptorSetLayoutBinding>& setBinding = setBindings.at(i);
-            for (const auto& descriptorBinding : setBinding)
-            {
-                uint32_t k = 0;
-                while (k < poolSizes.size())
-                {
-                    if (poolSizes[k].type == descriptorBinding.descriptorType)
-                        break;
-                    k++;
-                }
-
-
-                if (k == poolSizes.size())
-                    poolSizes.push_back({ descriptorBinding.descriptorType, 0 });
-
-                poolSizes[k].descriptorCount += descriptorBinding.descriptorCount * numSetCopies.at(i);
-            }
-        }
-        return poolSizes;
-    }
-
-    VkDescriptorPool createDescriptorPool(VkDevice device, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSetCount, VkDescriptorPoolCreateFlags flags)
-    {
-        if (poolSizes.empty())
-            return nullptr;
-
-        VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        poolInfo.flags         = flags;
-        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-        poolInfo.pPoolSizes    = poolSizes.data();
-        poolInfo.maxSets       = maxSetCount;
-
-        VkDescriptorPool descriptorPool;
-        vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
-        return descriptorPool;
-    }
-
-    VkDescriptorPool createDescriptorPool(VkDevice device, const PipelineLayoutBuilder& builder, const std::vector<uint32_t>& numCopies, uint32_t maxSetCount, VkDescriptorPoolCreateFlags flags)
-    {
-        return createDescriptorPool(device, calculateMinimumPoolSizes(builder.getDescriptorSetBindings(), numCopies), maxSetCount, flags);
-    }
-
     PipelineLayoutBuilder::PipelineLayoutBuilder(const sl::Reflection& shaderReflection)
     {
         for (int setId = 0; setId < shaderReflection.getDescriptorSetCount(); ++setId)
@@ -71,104 +21,107 @@ namespace crisp
             addPushConstant(pc.stageFlags, pc.offset, pc.size);
     }
 
-    PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t set, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
+    PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t setIndex, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
     {
-        if (m_setBindings.size() <= set)
-        {
-            std::size_t newSize = static_cast<std::size_t>(set) + 1;
-            m_setBindings.resize(newSize);
-            m_setCreateInfos.resize(newSize);
-            m_setBuffered.resize(newSize);
-        }
-
-        m_setBindings[set] = std::move(bindings);
-        m_setCreateInfos[set] = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        m_setCreateInfos[set].bindingCount = static_cast<uint32_t>(m_setBindings[set].size());
-        m_setCreateInfos[set].pBindings    = m_setBindings[set].data();
-        m_setCreateInfos[set].flags        = flags;
-        return *this;
+        return defineDescriptorSet(setIndex, false, std::forward<std::vector<VkDescriptorSetLayoutBinding>>(bindings), flags);
     }
 
-    PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t set, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
+    PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t setIndex, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
     {
-        if (m_setBindings.size() <= set)
+        if (m_setLayoutBindings.size() <= setIndex)
         {
-            std::size_t newSize = static_cast<std::size_t>(set) + 1;
-            m_setBindings.resize(newSize);
-            m_setCreateInfos.resize(newSize);
+            std::size_t newSize = static_cast<std::size_t>(setIndex) + 1;
+            m_setLayoutBindings.resize(newSize);
+            m_setLayoutCreateInfos.resize(newSize);
             m_setBuffered.resize(newSize);
         }
 
-        m_setBindings[set] = std::move(bindings);
-        m_setCreateInfos[set] = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        m_setCreateInfos[set].bindingCount = static_cast<uint32_t>(m_setBindings[set].size());
-        m_setCreateInfos[set].pBindings = m_setBindings[set].data();
-        m_setCreateInfos[set].flags = flags;
-        m_setBuffered[set] = isBuffered;
+        m_setLayoutBindings[setIndex] = std::move(bindings);
+        m_setLayoutCreateInfos[setIndex] = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        m_setLayoutCreateInfos[setIndex].bindingCount = static_cast<uint32_t>(m_setLayoutBindings[setIndex].size());
+        m_setLayoutCreateInfos[setIndex].pBindings    = m_setLayoutBindings[setIndex].data();
+        m_setLayoutCreateInfos[setIndex].flags        = flags;
+        m_setBuffered[setIndex] = isBuffered;
         return *this;
     }
 
     PipelineLayoutBuilder& PipelineLayoutBuilder::addPushConstant(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size)
     {
-        m_pushConstants.push_back({ stageFlags, offset, size });
+        m_pushConstantRanges.push_back({ stageFlags, offset, size });
         return *this;
     }
 
-    VkPipelineLayout PipelineLayoutBuilder::create(VkDevice device)
+    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayouts(VkDevice device)
     {
-        m_setLayouts.resize(m_setCreateInfos.size(), VK_NULL_HANDLE);
-        for (uint32_t i = 0; i < m_setCreateInfos.size(); i++)
-        {
-            vkCreateDescriptorSetLayout(device, &m_setCreateInfos[i], nullptr, &m_setLayouts[i]);
-        }
+        std::vector<VkDescriptorSetLayout> setLayouts(m_setLayoutCreateInfos.size(), VK_NULL_HANDLE);
+        for (uint32_t i = 0; i < setLayouts.size(); i++)
+            vkCreateDescriptorSetLayout(device, &m_setLayoutCreateInfos[i], nullptr, &setLayouts[i]);
 
+        return setLayouts;
+    }
+
+    VkPipelineLayout PipelineLayoutBuilder::createHandle(VkDevice device, VkDescriptorSetLayout* setLayouts, uint32_t setLayoutCount)
+    {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-        pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(m_setLayouts.size());
-        pipelineLayoutInfo.pSetLayouts            = m_setLayouts.data();
-        pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(m_pushConstants.size());
-        pipelineLayoutInfo.pPushConstantRanges    = m_pushConstants.data();
+        pipelineLayoutInfo.setLayoutCount         = setLayoutCount;
+        pipelineLayoutInfo.pSetLayouts            = setLayouts;
+        pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(m_pushConstantRanges.size());
+        pipelineLayoutInfo.pPushConstantRanges    = m_pushConstantRanges.data();
 
         VkPipelineLayout layout;
         vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
         return layout;
     }
 
-    std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(VulkanDevice* device, VkDescriptorPool descriptorPool)
-    {
-        return std::make_unique<VulkanPipelineLayout>(device, create(device->getHandle()),
-            std::move(m_setLayouts), std::move(m_setBindings), std::move(m_pushConstants), std::move(m_setBuffered), descriptorPool);
-    }
-
     std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
     {
-        return create(device, createMinimalDescriptorPool(device, numCopies, flags));
+        return std::make_unique<VulkanPipelineLayout>(device, createDescriptorSetLayouts(device->getHandle()),
+            getDescriptorSetLayoutBindings(), getPushConstantRanges(), getDescriptorSetBufferedStatuses(),
+            createMinimalDescriptorSetAllocator(device, numCopies, flags));
     }
 
-    VkDescriptorPool PipelineLayoutBuilder::createMinimalDescriptorPool(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
+    std::unique_ptr<DescriptorSetAllocator> PipelineLayoutBuilder::createMinimalDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
     {
-        std::vector<uint32_t> numCopiesPerSet = getNumCopiesPerSet(numCopies);
-        uint32_t maxSetCount = std::accumulate(numCopiesPerSet.begin(), numCopiesPerSet.end(), 0u);
-        return createDescriptorPool(device->getHandle(), calculateMinimumPoolSizes(getDescriptorSetBindings(), numCopiesPerSet), maxSetCount, flags);
+        return std::make_unique<DescriptorSetAllocator>(device, m_setLayoutBindings, getNumCopiesPerSet(numCopies), flags);
     }
 
-    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::extractDescriptorSetLayouts()
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::getDescriptorSetLayoutBindings() const
     {
-        return std::move(m_setLayouts);
+        return m_setLayoutBindings;
     }
 
-    std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::extractDescriptorSetBindings()
+    std::vector<VkPushConstantRange> PipelineLayoutBuilder::getPushConstantRanges() const
     {
-        return std::move(m_setBindings);
+        return m_pushConstantRanges;
     }
 
-    std::vector<VkPushConstantRange> PipelineLayoutBuilder::extractPushConstants()
+    std::vector<bool> PipelineLayoutBuilder::getDescriptorSetBufferedStatuses() const
     {
-        return std::move(m_pushConstants);
+        return m_setBuffered;
     }
 
-    const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& PipelineLayoutBuilder::getDescriptorSetBindings() const
+    void PipelineLayoutBuilder::setDescriptorSetBuffering(int index, bool isBuffered)
     {
-        return m_setBindings;
+        m_setBuffered.at(index) = isBuffered;
+    }
+
+    void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex, bool isDynamic)
+    {
+        VkDescriptorSetLayoutBinding& binding = m_setLayoutBindings.at(setIndex).at(bindingIndex);
+        if (isDynamic)
+        {
+            if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        }
+        else
+        {
+            if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        }
     }
 
     std::vector<uint32_t> PipelineLayoutBuilder::getNumCopiesPerSet(uint32_t numCopies) const

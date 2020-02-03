@@ -17,11 +17,19 @@ namespace crisp::sl
 
     std::vector<std::unique_ptr<Statement>> Parser::parse()
     {
-        std::vector<std::unique_ptr<Statement>> statements;
-        while (!isAtEnd())
-            statements.emplace_back(externalDeclaration());
+        try
+        {
+            std::vector<std::unique_ptr<Statement>> statements;
+            while (!isAtEnd())
+                statements.emplace_back(externalDeclaration());
 
-        return statements;
+            return statements;
+        }
+        catch (...)
+        {
+            logError("How did we get here?");
+        }
+        return {};
     }
 
     bool Parser::isAtEnd() const
@@ -118,13 +126,13 @@ namespace crisp::sl
             return group;
         }
 
-        throw std::runtime_error("Unknown primary expression!");
+        return nullptr;
     }
 
     std::unique_ptr<Expr> Parser::postfix()
     {
         auto list = std::make_unique<ListExpr>("");
-        if (auto p = tryParse<Expr>(&Parser::primary))
+        if (auto p = primary())
         {
             list->expressions.push_back(std::move(p));
         }
@@ -239,7 +247,6 @@ namespace crisp::sl
 
         return expr;
     }
-
 
     std::unique_ptr<Expr> Parser::comparison()
     {

@@ -5,36 +5,36 @@
 
 #include <CrispCore/Log.hpp>
 
+#include "Renderer/DescriptorSetAllocator.hpp"
+
 namespace crisp
 {
-    VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts,
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants, VkDescriptorPool descriptorPool)
-        : VulkanResource(device, pipelineLayoutHandle)
-        , m_descriptorSetLayouts(std::move(setLayouts))
-        , m_descriptorSetBindings(std::move(setBindings))
-        , m_pushConstants(std::move(pushConstants))
-        , m_descriptorPool(descriptorPool)
-        , m_dynamicBufferCount(0)
+    namespace
     {
-        for (const auto& bindingSet : m_descriptorSetBindings)
+        VkPipelineLayout createHandle(VkDevice device, const std::vector<VkDescriptorSetLayout>& setLayouts, const std::vector<VkPushConstantRange>& pushConstants)
         {
-            for (const auto& binding : bindingSet)
-                if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-                    binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
-                    ++m_dynamicBufferCount;
+            VkPipelineLayoutCreateInfo pipelineLayoutInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+            pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(setLayouts.size());
+            pipelineLayoutInfo.pSetLayouts            = setLayouts.data();
+            pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
+            pipelineLayoutInfo.pPushConstantRanges    = pushConstants.data();
+
+            VkPipelineLayout layout;
+            vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
+            return layout;
         }
     }
 
-    VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, VkPipelineLayout pipelineLayoutHandle, std::vector<VkDescriptorSetLayout>&& setLayouts,
+    VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, std::vector<VkDescriptorSetLayout>&& setLayouts,
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants,
-        std::vector<bool> descriptorSetBufferedStatus, VkDescriptorPool descriptorPool)
-        : VulkanResource(device, pipelineLayoutHandle)
+        std::vector<bool> descriptorSetBufferedStatus, std::unique_ptr<DescriptorSetAllocator> setAllocator)
+        : VulkanResource(device, createHandle(device->getHandle(), setLayouts, pushConstants))
         , m_descriptorSetLayouts(std::move(setLayouts))
         , m_descriptorSetBindings(std::move(setBindings))
         , m_pushConstants(std::move(pushConstants))
         , m_descriptorSetBufferedStatus(descriptorSetBufferedStatus)
-        , m_descriptorPool(descriptorPool)
         , m_dynamicBufferCount(0)
+        , m_setAllocator(std::move(setAllocator))
     {
         for (const auto& bindingSet : m_descriptorSetBindings)
         {
@@ -51,40 +51,10 @@ namespace crisp
             vkDestroyDescriptorSetLayout(m_device->getHandle(), setLayout, nullptr);
 
         vkDestroyPipelineLayout(m_device->getHandle(), m_handle, nullptr);
-        vkDestroyDescriptorPool(m_device->getHandle(), m_descriptorPool, nullptr);
     }
 
     VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const
     {
-        VkDescriptorSetAllocateInfo descSetInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-        descSetInfo.descriptorPool     = m_descriptorPool;
-        descSetInfo.descriptorSetCount = 1;
-        descSetInfo.pSetLayouts        = &m_descriptorSetLayouts.at(setIndex);
-
-        VkDescriptorSet descSet;
-        vkAllocateDescriptorSets(m_device->getHandle(), &descSetInfo, &descSet);
-        if (descSet == 0)
-            logError("Descriptor set is nullptr!");
-        return descSet;
-    }
-
-    std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, VkDescriptorPool descriptorPool)
-    {
-        VkDevice deviceHandle = device->getHandle();
-        auto pipelineLayout   = builder.create(deviceHandle);
-        auto setBindings      = builder.extractDescriptorSetBindings();
-        auto setLayouts       = builder.extractDescriptorSetLayouts();
-        auto pushConstants    = builder.extractPushConstants();
-        return std::make_unique<VulkanPipelineLayout>(device, pipelineLayout, std::move(setLayouts), std::move(setBindings), std::move(pushConstants), descriptorPool);
-    }
-
-    std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice * device, PipelineLayoutBuilder & builder, std::vector<bool> setBuffered, VkDescriptorPool descriptorPool)
-    {
-        VkDevice deviceHandle = device->getHandle();
-        auto pipelineLayout   = builder.create(deviceHandle);
-        auto setBindings      = builder.extractDescriptorSetBindings();
-        auto setLayouts       = builder.extractDescriptorSetLayouts();
-        auto pushConstants    = builder.extractPushConstants();
-        return std::make_unique<VulkanPipelineLayout>(device, pipelineLayout, std::move(setLayouts), std::move(setBindings), std::move(pushConstants), setBuffered, descriptorPool);
+        return m_setAllocator->allocate(m_descriptorSetLayouts.at(setIndex), m_descriptorSetBindings.at(setIndex));
     }
 }

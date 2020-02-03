@@ -72,6 +72,8 @@ namespace crisp
         void onMaterialSelected(const std::string& material);
 
     private:
+        void addRenderNode(std::string_view geometryName, int transformIndex, glm::vec3 translation, glm::vec3 scale);
+
         void createDefaultPbrTextures();
         std::unique_ptr<Material> createPbrMaterial(const std::string& type, VulkanPipeline* pipeline);
         std::unique_ptr<Material> createUnifPbrMaterial(VulkanPipeline* pipeline);

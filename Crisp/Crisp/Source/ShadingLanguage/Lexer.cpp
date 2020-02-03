@@ -445,6 +445,11 @@ namespace crisp::sl
         return c >= '0' && c <= '9';
     }
 
+    bool Lexer::isHexadecimalDigit(char c) const
+    {
+        return isDigit(c) || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F';
+    }
+
     void Lexer::addToken(TokenType type)
     {
         addToken(type, {});
@@ -480,8 +485,27 @@ namespace crisp::sl
 
     void Lexer::addNumber()
     {
-        while (isDigit(peek()))
-            advance();
+        int startOffset = 0;
+        int base = 10;
+        if (m_source[m_start] == '0')
+        {
+            startOffset = 1;
+            base = 8;
+        }
+
+        if (match('x'))
+        {
+            startOffset = 2;
+            base = 16;
+
+            while (isHexadecimalDigit(peek()))
+                advance();
+        }
+        else
+        {
+            while (isDigit(peek()))
+                advance();
+        }
 
         if (peek() == '.' && isDigit(peekNext()))
         {
@@ -489,6 +513,17 @@ namespace crisp::sl
 
             while (isDigit(peek()))
                 advance();
+
+            if (peek() == 'e' || peek() == 'E')
+            {
+                advance();
+
+                if (peek() == '+' || peek() == '-')
+                    advance();
+
+                while (isDigit(peek()))
+                    advance();
+            }
 
             if (peek() == 'f' || peek() == 'F')
             {
@@ -507,9 +542,19 @@ namespace crisp::sl
         }
         else
         {
-            int value = 0;
-            std::from_chars(&m_source[m_start], &m_source[m_current], value);
-            addToken(TokenType::IntConstant, value);
+            if (peek() == 'u')
+            {
+                unsigned int value = 0;
+                std::from_chars(&m_source[m_start + startOffset], &m_source[m_current], value, base);
+                addToken(TokenType::UintConstant, value);
+                advance();
+            }
+            else
+            {
+                int value = 0;
+                std::from_chars(&m_source[m_start + startOffset], &m_source[m_current], value, base);
+                addToken(TokenType::IntConstant, value);
+            }
         }
     }
 

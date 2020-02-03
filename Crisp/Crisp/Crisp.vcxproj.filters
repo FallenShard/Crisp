@@ -427,6 +427,12 @@
     <ClCompile Include="Source\Renderer\LuaPipelineBuilder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Techniques\ForwardClusteredShading.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\DescriptorSetAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Vulkan\VulkanContext.hpp">
@@ -922,6 +928,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\LuaPipelineBuilder.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Techniques\ForwardClusteredShading.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\DescriptorSetAllocator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -10,7 +10,7 @@ namespace crisp
     std::unique_ptr<VulkanPipeline> createSsaoPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
     {
         PipelineLayoutBuilder layoutBuilder;
-        layoutBuilder.defineDescriptorSet(0,
+        layoutBuilder.defineDescriptorSet(0, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -20,10 +20,6 @@ namespace crisp
             .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(int) + sizeof(float));
 
         VulkanDevice* device = renderer->getDevice();
-
-        std::vector<bool> setBuffered = { true };
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -38,6 +34,6 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setDepthTest(VK_FALSE)
             .setDepthWrite(VK_FALSE)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 }

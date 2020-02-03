@@ -12,16 +12,12 @@ namespace crisp
     {
         PipelineLayoutBuilder layoutBuilder;
         layoutBuilder
-            .defineDescriptorSet(0,
+            .defineDescriptorSet(0, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
             });
 
         VulkanDevice* device = renderer->getDevice();
-
-        std::vector<bool> setBuffered = { true };
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         VkShaderModule vs = useGammaCorrection ? renderer->getShaderModule("gamma-correct-vert") : renderer->getShaderModule("fullscreen-quad-vert");
         VkShaderModule fs = useGammaCorrection ? renderer->getShaderModule("gamma-correct-frag") : renderer->getShaderModule("fullscreen-quad-frag");
@@ -41,6 +37,6 @@ namespace crisp
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
             .setDepthWrite(VK_FALSE)
             .setDepthTest(VK_FALSE)
-            .create(device, std::move(layout), renderPass->getHandle(), subpass);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), subpass);
     }
 }

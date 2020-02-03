@@ -9,7 +9,7 @@ namespace crisp
     class VulkanDescriptorSet
     {
     public:
-        VulkanDescriptorSet(VkDescriptorSet set, uint32_t index, const VulkanPipelineLayout* pipelineLayout);
+        VulkanDescriptorSet(uint32_t index, const VulkanPipelineLayout* pipelineLayout);
 
         inline VkDescriptorSet getHandle() const { return m_set; }
 

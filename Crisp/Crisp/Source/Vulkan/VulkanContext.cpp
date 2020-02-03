@@ -51,11 +51,16 @@ namespace crisp
             std::stringstream stream;
             stream << "\n=== Vulkan Validation Layer ===\n";
             stream << "Severity: ";
-            if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)         stream << " | Info";
-            if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)             stream << " | Warning";
-            if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) stream << " | Performance";
-            if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)               stream << " | Error";
-            if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)               stream << " | Debug";
+            if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+                stream << " | Info";
+            if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+                stream << " | Warning";
+            if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+                stream << " | Performance";
+            if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+                stream << " | Error";
+            if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
+                stream << " | Debug";
 
             stream << '\n';
 

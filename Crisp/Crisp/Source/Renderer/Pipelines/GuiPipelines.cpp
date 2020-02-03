@@ -12,7 +12,7 @@ namespace crisp
     {
         PipelineLayoutBuilder layoutBuilder;
         layoutBuilder
-            .defineDescriptorSet(0,
+            .defineDescriptorSet(0, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
@@ -21,9 +21,6 @@ namespace crisp
             .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), sizeof(int));
 
         VulkanDevice* device = renderer->getDevice();
-
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -39,7 +36,7 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 
     std::unique_ptr<VulkanPipeline> createGuiDebugPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
@@ -50,9 +47,6 @@ namespace crisp
             .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(glm::vec4));
 
         VulkanDevice* device = renderer->getDevice();
-
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -69,19 +63,19 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 
     std::unique_ptr<VulkanPipeline> createGuiTextPipeline(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t maxFontTextures)
     {
         PipelineLayoutBuilder layoutBuilder;
         layoutBuilder
-            .defineDescriptorSet(0,
+            .defineDescriptorSet(0, false,
             {
                 { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
             })
-            .defineDescriptorSet(1,
+            .defineDescriptorSet(1, false,
             {
                 { 0, VK_DESCRIPTOR_TYPE_SAMPLER,       1, VK_SHADER_STAGE_FRAGMENT_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
@@ -90,9 +84,6 @@ namespace crisp
             .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(uint32_t), sizeof(uint32_t));
 
         VulkanDevice* device = renderer->getDevice();
-
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { maxFontTextures, maxFontTextures }, maxFontTextures);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -108,19 +99,19 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device, maxFontTextures), renderPass->getHandle(), 0);
     }
 
     std::unique_ptr<VulkanPipeline> createGuiTexturePipeline(Renderer* renderer, VulkanRenderPass* renderPass)
     {
         PipelineLayoutBuilder layoutBuilder;
         layoutBuilder
-            .defineDescriptorSet(0,
+            .defineDescriptorSet(0, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
             })
-            .defineDescriptorSet(1,
+            .defineDescriptorSet(1, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT }
@@ -129,9 +120,6 @@ namespace crisp
             .addPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), 2 * sizeof(int));
 
         VulkanDevice* device = renderer->getDevice();
-
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames, Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -147,7 +135,7 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setBlendState(0, VK_TRUE)
             .setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 }
 

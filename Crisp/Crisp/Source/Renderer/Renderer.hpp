@@ -92,6 +92,8 @@ namespace crisp
 
         Geometry* getFullScreenGeometry() const;
 
+        std::unique_ptr<VulkanPipeline> createPipelineFromLua(std::string_view pipelineName, VulkanRenderPass* renderPass, int subpassIndex);
+
     private:
         void loadShaders(const std::filesystem::path& directoryPath);
         std::optional<uint32_t> acquireSwapImageIndex(VirtualFrame& virtualFrame);

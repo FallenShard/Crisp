@@ -9,6 +9,7 @@ namespace crisp
 {
     class VulkanRenderPass;
     class Renderer;
+    class PipelineLayoutBuilder;
 
     class LuaPipelineBuilder
     {
@@ -21,7 +22,12 @@ namespace crisp
     private:
         std::unordered_map<VkShaderStageFlagBits, std::string> getShaderFileMap();
         void readVertexInputState();
-        void readViewportState(Renderer* renderer);
+        void readVertexInputBindings();
+        void readVertexAttributes();
+        void readViewportState(Renderer* renderer, VulkanRenderPass* renderPass);
+
+        void readDescriptorSetBufferedStatus(PipelineLayoutBuilder& layoutBuilder);
+        void readDynamicBufferDescriptorIds(PipelineLayoutBuilder& layoutBuilder);
 
         PipelineBuilder m_builder;
         LuaConfig       m_config;

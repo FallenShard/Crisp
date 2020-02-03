@@ -14,9 +14,9 @@ namespace
         for (uint32_t i = 0; i < vertexAttribs.size(); ++i)
         {
             vertexAttribs[i].location = i;
-            vertexAttribs[i].binding = binding;
-            vertexAttribs[i].format = formats[i];
-            vertexAttribs[i].offset = offset;
+            vertexAttribs[i].binding  = binding;
+            vertexAttribs[i].format   = formats[i];
+            vertexAttribs[i].offset   = offset;
             offset += crisp::getSizeOf(formats[i]);
         }
 

@@ -12,7 +12,7 @@ const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 
 // ----- Camera -----
 
-layout(set = 0, binding = 1, dynamic) uniform Camera
+layout(set = 0, binding = 1) uniform Camera
 {
     mat4 V;
     mat4 P;
@@ -24,7 +24,7 @@ layout(set = 0, binding = 1, dynamic) uniform Camera
 
 // ----- PBR Microfacet BRDF -------
 
-layout(set = 0, binding = 2, dynamic) uniform Material
+layout(set = 0, binding = 2) uniform Material
 {
     vec3 albedo;
     float metallic;
@@ -97,7 +97,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
 
 // ----- Light -----
 
-layout(set = 1, binding = 0, dynamic, buffered) uniform Light
+layout(set = 1, binding = 0) uniform Light
 {
     mat4 VP;
     mat4 V;
@@ -154,13 +154,13 @@ vec3 evalDirectionalLightRadiance(out vec3 eyeL)
 
 layout(set = 1, binding = 1) uniform sampler2DArray shadowMap;
 
-layout(set = 1, binding = 2, dynamic) uniform CascadeSplit
+layout(set = 1, binding = 2) uniform CascadeSplit
 {
     vec4 lo;
     vec4 hi;
 } cascadeSplit;
 
-layout(set = 1, binding = 3, dynamic) uniform LightTransforms
+layout(set = 1, binding = 3) uniform LightTransforms
 {
     mat4 VP[4];
 } lightTransforms;
@@ -206,7 +206,7 @@ float getShadowCoeff(float bias, mat4 LVP, int cascadeIndex, int pcfRadius)
 // ----- Standard Shadow Mapping -----
 
 layout(set = 1, binding = 4) uniform sampler2D pointShadowMap;
-layout(set = 1, binding = 5, dynamic) uniform LightTransforms2
+layout(set = 1, binding = 5) uniform LightTransforms2
 {
     mat4 VP[4];
 } pointLight;
@@ -225,9 +225,14 @@ layout(set = 1, binding = 6) uniform ManyLights
 } many;
 
 layout(set = 1, binding = 7, rg32ui) uniform readonly uimage2D lightGrid;
-layout(set = 1, binding = 8, dynamic) buffer LightIndexList
+layout(set = 1, binding = 8) buffer LightIndexList
 {
     uint lightIndexList[];
+};
+
+layout(push_constant) uniform LightTest
+{
+    layout(offset = 0) int switchMethod;
 };
 
 float getShadowCoeff(float bias, mat4 LVP, int pcfRadius)
@@ -371,21 +376,26 @@ void main()
     vec3 debugColor;
     //const float shadow = getCsmShadowCoeffDebug(, debugColor);
 
-    vec3 acc = vec3(0.5f);
-    //for (int i = 0; i < 1024; ++i)
-    //{
-    //   vec3 Le = evalPointLightRadiance(many.lights[i].position, many.lights[i].spectrum, eyeL);
-    //   acc += max(dot(eyeN, eyeL), 0.0f) * Le;
-    //}
+    vec3 acc = vec3(0.0f);
 
-    uvec2 lightIndexData = uvec2(imageLoad(lightGrid, ivec2(gl_FragCoord.xy) / ivec2(16)).xy);
-    for (uint i = 0; i < lightIndexData[1]; ++i)
+    if (switchMethod == 0)
     {
-        uint idx = lightIndexList[lightIndexData[0] + i];
-        vec3 Le = evalPointLightRadiance(many.lights[idx].position, many.lights[idx].spectrum, eyeL);
-        acc += max(dot(eyeN, eyeL), 0.0f) * Le;
+        for (int i = 0; i < 1024; ++i)
+            {
+            vec3 Le = evalPointLightRadiance(many.lights[i].position, many.lights[i].spectrum, eyeL);
+            acc += max(dot(eyeN, eyeL), 0.0f) * Le;
+            }
     }
-
+    else
+    {
+        uvec2 lightIndexData = uvec2(imageLoad(lightGrid, ivec2(gl_FragCoord.xy) / ivec2(16)).xy);
+            for (uint i = 0; i < lightIndexData[1]; ++i)
+            {
+               uint idx = lightIndexList[lightIndexData[0] + i];
+               vec3 Le = evalPointLightRadiance(many.lights[idx].position, many.lights[idx].spectrum, eyeL);
+               acc += max(dot(eyeN, eyeL), 0.0f) * Le;
+            }
+    }
 
     fragColor = vec4(Lenv * 0.0f + Li * getVsmCoeff(), 1.0f);
 

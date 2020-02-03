@@ -31,6 +31,6 @@ namespace crisp
 
     VulkanDescriptorSet VulkanPipeline::allocateDescriptorSet(uint32_t setId) const
     {
-        return VulkanDescriptorSet(m_pipelineLayout->allocateSet(setId), setId, m_pipelineLayout.get());
+        return VulkanDescriptorSet(setId, m_pipelineLayout.get());
     }
 }

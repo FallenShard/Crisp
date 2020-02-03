@@ -92,6 +92,7 @@ namespace crisp::sl
             }
             catch (std::runtime_error err)
             {
+                //logError("{}\n", err.what());
                 m_current = current; // Reset the token pointer
                 return nullptr;
             }

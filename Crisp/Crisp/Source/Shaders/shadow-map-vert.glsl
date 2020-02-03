@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 position;
 
-layout(set = 0, binding = 0) uniform Transforms
+layout(set = 0, binding = 0, dynamic) uniform Transforms
 {
     mat4 MVP;
     mat4 MV;
@@ -10,7 +10,7 @@ layout(set = 0, binding = 0) uniform Transforms
     mat4 N;
 };
 
-layout(set = 0, binding = 1) uniform LightTransforms
+layout(set = 0, binding = 1, dynamic) uniform LightTransforms
 {
     mat4 LVP[4];
 };

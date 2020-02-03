@@ -11,7 +11,7 @@ namespace crisp
     std::unique_ptr<VulkanPipeline> createTerrainPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
     {
         PipelineLayoutBuilder layoutBuilder;
-        layoutBuilder.defineDescriptorSet(0,
+        layoutBuilder.defineDescriptorSet(0, false,
             {
                 { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -20,10 +20,6 @@ namespace crisp
             .addPushConstant(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, 0, sizeof(float) + sizeof(float));
 
         VulkanDevice* device = renderer->getDevice();
-
-        std::vector<bool> setBuffered = { false };
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { 1 }, 1);
-        auto layout   = createPipelineLayout(device, layoutBuilder, setBuffered, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -42,6 +38,6 @@ namespace crisp
             .setScissor(renderer->getDefaultScissor())
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 }

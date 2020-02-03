@@ -23,4 +23,18 @@ namespace crisp
     VulkanCommandBuffer::~VulkanCommandBuffer()
     {
     }
+
+    void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage)
+    {
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.flags = commandBufferUsage;
+        beginInfo.pInheritanceInfo = nullptr;
+
+        vkBeginCommandBuffer(m_handle, &beginInfo);
+    }
+
+    void VulkanCommandBuffer::end()
+    {
+        vkEndCommandBuffer(m_handle);
+    }
 }

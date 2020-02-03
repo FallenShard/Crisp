@@ -11,16 +11,13 @@ namespace crisp
     std::unique_ptr<VulkanPipeline> createLightShaftPipeline(Renderer* renderer, VulkanRenderPass* renderPass)
     {
         PipelineLayoutBuilder layoutBuilder;
-        layoutBuilder.defineDescriptorSet(0,
+        layoutBuilder.defineDescriptorSet(0, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
                 { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_FRAGMENT_BIT },
             });
 
         VulkanDevice* device = renderer->getDevice();
-
-        auto descPool = createDescriptorPool(device->getHandle(), layoutBuilder, { Renderer::NumVirtualFrames }, Renderer::NumVirtualFrames);
-        auto layout   = createPipelineLayout(device, layoutBuilder, descPool);
 
         return PipelineBuilder()
             .setShaderStages
@@ -37,6 +34,6 @@ namespace crisp
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
             .setDepthTest(VK_FALSE)
             .setDepthWrite(VK_FALSE)
-            .create(device, std::move(layout), renderPass->getHandle(), 0);
+            .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 }

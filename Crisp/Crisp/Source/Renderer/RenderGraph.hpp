@@ -60,6 +60,8 @@ namespace crisp
         const Node& getNode(std::string name) const;
         Node& getNode(std::string name);
 
+        static void executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer, int virtualFrameIndex);
+
     private:
         void executeRenderPass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
         void executeComputePass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;

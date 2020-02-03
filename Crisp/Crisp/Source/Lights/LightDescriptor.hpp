@@ -23,9 +23,8 @@ namespace crisp
         glm::vec3 spectrum;
         float padding;
 
-        inline void calculateRadius()
+        inline void calculateRadius(float cutoff = 2.0f / 256.0f)
         {
-            float cutoff = 5.0f / 256.0f;
             float maxIllum = std::max(spectrum.r, std::max(spectrum.g, spectrum.b));
             radius = std::sqrt(maxIllum / cutoff);
         }

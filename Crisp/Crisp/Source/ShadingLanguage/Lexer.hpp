@@ -23,6 +23,7 @@ namespace crisp::sl
         char advance();
         bool match(char expected);
         bool isDigit(char c) const;
+        bool isHexadecimalDigit(char c) const;
         bool isAlpha(char c) const;
         bool isAlphaNumeric(char c) const;
 

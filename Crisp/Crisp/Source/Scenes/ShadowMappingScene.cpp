@@ -43,6 +43,7 @@
 
 #include "Techniques/CascadedShadowMapper.hpp"
 #include "Techniques/ShadowMapper.hpp"
+#include "Techniques/ForwardClusteredShading.hpp"
 #include "Models/BoxVisualizer.hpp"
 #include "Geometry/TriangleMesh.hpp"
 
@@ -132,6 +133,8 @@ namespace crisp
         };
 
         static const int DefaultShadowMap = 0;
+
+        int lightMode = 0;
     }
 
     ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Application* app)
@@ -183,7 +186,7 @@ namespace crisp
         int r = 32;
         int c = 32;
         std::default_random_engine eng;
-        std::uniform_real_distribution<double> dist(0.0, 1.0f);
+        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
         for (int i = 0; i < r; ++i)
         {
             float normI = static_cast<float>(i) / static_cast<float>(r - 1);
@@ -192,77 +195,29 @@ namespace crisp
             {
                 float normJ = static_cast<float>(j) / static_cast<float>(c - 1);
                 ManyLightDescriptor desc;
-                desc.spectrum = 1.0f * glm::vec3(dist(eng), dist(eng), dist(eng));
+                desc.spectrum = 5.0f * dist(eng) * glm::vec3(dist(eng), dist(eng), dist(eng));
                 desc.position = glm::vec3((normJ - 0.5f) * h, 1.0f, (normI - 0.5f) * w);
                 desc.calculateRadius();
                 m_manyLights.push_back(desc);
             }
         }
 
-        struct Tile
-        {
-            glm::vec3 screenSpacePoints[4];
-            glm::vec3 viewSpacePoints[4];
-            glm::vec4 planes[4];
-        };
+        //for (int i = 0; i < m_manyLights.size(); i += 2)
+        //{
+        //    m_manyLights[i].radius = 0.0f;
+        //    m_manyLights[i].spectrum = glm::vec3(0.0f);
+        //}
 
-        auto* params = m_cameraController->getCameraParameters();
-        glm::vec2 screenSize = params->screenSize;
-        glm::ivec2 tileSize(16);
-        glm::ivec2 numTiles = (glm::ivec2(screenSize) - glm::ivec2(1)) / tileSize + glm::ivec2(1);
-        uint32_t tileCount = numTiles.x * numTiles.y;
-
-        std::vector<Tile> tiles(numTiles.x * numTiles.y);
-        for (int j = 0; j < numTiles.y; ++j)
-        {
-            for (int i = 0; i < numTiles.x; ++i)
-            {
-                Tile& tile = tiles[j * numTiles.x + i];
-                for (int k = 0; k < 4; ++k)
-                {
-                    float x = tileSize.x * (i + k % 2);
-                    float y = tileSize.y * (j + k / 2);
-                    tile.screenSpacePoints[k] = glm::vec3(x, y, 1.0f);
-
-                    glm::vec4 ndc = glm::vec4(tile.screenSpacePoints[k], 1.0f);
-                    ndc.x /= screenSize.x;
-                    ndc.y /= screenSize.y;
-                    ndc.x = ndc.x * 2.0f - 1.0f;
-                    ndc.y = ndc.y * 2.0f - 1.0f;
-
-                    glm::vec4 view = glm::inverse(params->P) * ndc;
-                    view /= view.w;
-                    tile.viewSpacePoints[k] = view;
-                }
-
-                auto computePlane = [](const glm::vec3& a, const glm::vec3& b)
-                {
-                    glm::vec3 n = glm::normalize(glm::cross(a, b));
-                    float dist = glm::dot(n, a);
-                    return glm::vec4(n, dist);
-                };
-
-                tile.planes[0] = computePlane(tile.viewSpacePoints[1], tile.viewSpacePoints[0]);
-                tile.planes[1] = computePlane(tile.viewSpacePoints[3], tile.viewSpacePoints[1]);
-                tile.planes[2] = computePlane(tile.viewSpacePoints[2], tile.viewSpacePoints[3]);
-                tile.planes[3] = computePlane(tile.viewSpacePoints[0], tile.viewSpacePoints[2]);
-            }
-        }
-
-        std::vector<glm::vec4> tilePlanes;
-        for (auto& tile : tiles)
-        {
-            tilePlanes.push_back(tile.planes[0]);
-            tilePlanes.push_back(tile.planes[1]);
-            tilePlanes.push_back(tile.planes[2]);
-            tilePlanes.push_back(tile.planes[3]);
-        }
 
         m_manyLightsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_manyLights.size() * sizeof(ManyLightDescriptor), BufferUpdatePolicy::Constant, m_manyLights.data());
 
+        auto* params = m_cameraController->getCameraParameters();
+        glm::ivec2 tileSize(16);
+        glm::ivec2 tileGrid = calculateTileGridDims(tileSize, params->screenSize);
+        auto tilePlanes = createTileFrusta(tileSize, params->screenSize, params->P);
+        auto tileCount  = tilePlanes.size();
 
-
-        m_tilePlaneBuffer       = std::make_unique<UniformBuffer>(m_renderer, tileCount * sizeof(glm::vec4) * 4, true, tilePlanes.data());
+        m_tilePlaneBuffer       = std::make_unique<UniformBuffer>(m_renderer, tileCount * sizeof(TileFrustum), true, tilePlanes.data());
         m_lightIndexCountBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(uint32_t), true);
         m_lightIndexListBuffer  = std::make_unique<UniformBuffer>(m_renderer, tileCount * sizeof(uint32_t) * 1024, true);
 
@@ -270,7 +225,7 @@ namespace crisp
         createInfo.flags         = 0;
         createInfo.imageType     = VK_IMAGE_TYPE_2D;
         createInfo.format        = VK_FORMAT_R32G32_UINT;
-        createInfo.extent        = VkExtent3D{ (uint32_t)numTiles.x, (uint32_t)numTiles.y, 1u };
+        createInfo.extent        = VkExtent3D{ (uint32_t)tileGrid.x, (uint32_t)tileGrid.y, 1u };
         createInfo.mipLevels     = 1;
         createInfo.arrayLayers   = Renderer::NumVirtualFrames;
         createInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
@@ -288,7 +243,7 @@ namespace crisp
 
         auto& cullingPass = m_renderGraph->addComputePass(LightCullingPass);
         cullingPass.workGroupSize = glm::ivec3(tileSize, 1);
-        cullingPass.numWorkGroups = glm::ivec3(numTiles, 1);
+        cullingPass.numWorkGroups = glm::ivec3(tileGrid, 1);
         cullingPass.pipeline = createLightCullingComputePipeline(m_renderer, cullingPass.workGroupSize);
         cullingPass.material = std::make_unique<Material>(cullingPass.pipeline.get());
         cullingPass.material->writeDescriptor(0, 0, m_tilePlaneBuffer->getDescriptorInfo());
@@ -367,7 +322,10 @@ namespace crisp
         m_geometries.emplace("sphere", std::make_unique<Geometry>(m_renderer, createSphereMesh(pbrVertexFormat)));
         m_geometries.emplace("sphereShadow", std::make_unique<Geometry>(m_renderer, createSphereMesh(shadowVertexFormat)));
         //m_geometries.emplace(std::make_unique<Geometry>(m_renderer, m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj", pbrVertexFormat));
-        m_geometries.emplace("cubeShadow", std::make_unique<Geometry>(m_renderer, m_renderer->getResourcesPath() / "Meshes/cube.obj", shadowVertexFormat));
+        //m_geometries.emplace("cubeShadow", std::make_unique<Geometry>(m_renderer, m_renderer->getResourcesPath() / "Meshes/cube.obj", shadowVertexFormat));
+
+        m_geometries.emplace("cube", std::make_unique<Geometry>(m_renderer, createCubeMesh(pbrVertexFormat)));
+        m_geometries.emplace("cubeShadow", std::make_unique<Geometry>(m_renderer, createCubeMesh(shadowVertexFormat)));
 
         //// Shadow map material setup
         //auto csmPipeline = createShadowMapPipeline(m_renderer, csmPassNode.renderPass.get(), 0);
@@ -381,7 +339,7 @@ namespace crisp
         //m_materials.emplace("csm", std::move(shadowMapMaterial));
 
         // Point shadow map
-        auto smPipeline = createShadowMapPipeline(m_renderer, shadowPassNode.renderPass.get(), 0);
+        auto smPipeline = m_renderer->createPipelineFromLua("ShadowMap.lua", shadowPassNode.renderPass.get(), 0);
         auto smMaterial = std::make_unique<Material>(smPipeline.get());
         smMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         smMaterial->writeDescriptor(0, 1, m_shadowMapper->getLightTransformBuffer()->getDescriptorInfo());
@@ -389,7 +347,7 @@ namespace crisp
         m_pipelines.emplace("sm", std::move(smPipeline));
         m_materials.emplace("sm", std::move(smMaterial));
 
-        auto vsmPipeline = createVarianceShadowMapPipeline(m_renderer, vsmPassNode.renderPass.get());
+        auto vsmPipeline = m_renderer->createPipelineFromLua("VarianceShadowMap.lua", vsmPassNode.renderPass.get(), 0);
         auto vsmMaterial = std::make_unique<Material>(vsmPipeline.get());
         vsmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         vsmMaterial->writeDescriptor(0, 1, m_shadowMapper->getLightFullTransformBuffer()->getDescriptorInfo());
@@ -397,7 +355,7 @@ namespace crisp
         m_pipelines.emplace("vsm", std::move(vsmPipeline));
         m_materials.emplace("vsm", std::move(vsmMaterial));
 
-        auto depthPipeline = createDepthPipeline(m_renderer, depthPrePass.renderPass.get());
+        auto depthPipeline = m_renderer->createPipelineFromLua("DepthPrepass.lua", depthPrePass.renderPass.get(), 0);
         auto depthMaterial = std::make_unique<Material>(depthPipeline.get());
         depthMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
         m_pipelines.emplace("depth", std::move(depthPipeline));
@@ -406,10 +364,10 @@ namespace crisp
 
         // Common material components
         createDefaultPbrTextures();
-        m_linearClampSampler  = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 11.0f);
-        m_linearRepeatSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
+        m_linearClampSampler     = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 11.0f);
+        m_linearRepeatSampler    = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
         m_nearestNeighborSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        m_mipmapSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f);
+        m_mipmapSampler          = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f);
 
         LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
 
@@ -422,7 +380,7 @@ namespace crisp
         setupDiffuseEnvMap(*cubeMapView);
         setupReflectEnvMap(*cubeMapView);
 
-        m_brdfLut = integrateBrdfLut();// createTexture(m_renderer, "ibl_brdf_lut.png", VK_FORMAT_R8G8B8A8_UNORM, true);
+        m_brdfLut = integrateBrdfLut();
         m_brdfLutView = m_brdfLut->createView(VK_IMAGE_VIEW_TYPE_2D);
 
         // Physically-based material setup
@@ -436,7 +394,7 @@ namespace crisp
         m_pbrUnifMaterial.metallic = 0.0f;
         m_pbrUnifMaterial.roughness = 0.0f;
         m_pbrUnifMatBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(m_pbrUnifMaterial), BufferUpdatePolicy::PerFrame, &m_pbrUnifMaterial);
-        auto pbrUnifPipeline = createPbrUnifFprPipeline(m_renderer, mainPassNode.renderPass.get());
+        auto pbrUnifPipeline = m_renderer->createPipelineFromLua("PbrUnif.lua", mainPassNode.renderPass.get(), 0);
         m_materials.emplace("pbrUnif", createUnifPbrMaterial(pbrUnifPipeline.get()));
         m_pipelines.emplace("pbrUnif", std::move(pbrUnifPipeline));
 
@@ -452,61 +410,8 @@ namespace crisp
 
         m_app->getForm()->add(gui::createShadowMappingSceneGui(m_app->getForm(), this));
 
-        RenderNode floor(m_transformBuffer.get(), m_transforms, 0);
-        floor.geometry = m_geometries.at("floor").get();
-        floor.material = m_materials.at("pbrUnif").get();
-        floor.pipeline = m_pipelines.at("pbrUnif").get();
-        floor.transformPack->M = glm::rotate(glm::radians(planeTilt), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::scale(glm::vec3(100.0f, 1.0f, 100.0f));
-        mainPassNode.renderNodes.push_back(floor);
-
-        RenderNode shaderBall(m_transformBuffer.get(), m_transforms, 1);
-        shaderBall.geometry = m_geometries.at("floor").get();
-        shaderBall.material = m_materials.at("pbrUnif").get();
-        shaderBall.pipeline = m_pipelines.at("pbrUnif").get();
-        //shaderBall.transformPack->M = glm::scale(glm::vec3(0.05f)) * glm::rotate(glm::radians(-60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        shaderBall.transformPack->M = glm::translate(glm::vec3(0.0f, 2.0f, 0.0f)) * glm::scale(glm::vec3(3.0f, 1.0f, 3.0f));
-        mainPassNode.renderNodes.push_back(shaderBall);
-
-        //RenderNode rungholt(m_transformBuffer.get(), m_transforms, 1);
-        //rungholt.geometry = m_geometries.at("rungholt").get();
-        //rungholt.material = m_materials.at("pbrUnif").get();
-        //rungholt.pipeline = m_pipelines.at("pbrUnif").get();
-        ////shaderBall.transformPack->M = glm::scale(glm::vec3(0.05f)) * glm::rotate(glm::radians(-60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        //rungholt.transformPack->M = glm::translate(glm::vec3(0.0f, 2.0f, 0.0f)) * glm::scale(glm::vec3(3.0f, 1.0f, 3.0f));
-        //mainPassNode.renderNodes.push_back(rungholt);
-        //
-        //RenderNode shaderBallShadow = shaderBall;
-        //shaderBallShadow.geometry = m_geometries.at("shaderballShadow").get();
-        //shaderBallShadow.material = m_materials.at("sm").get();
-        //shaderBallShadow.pipeline = m_pipelines.at("sm").get();
-        //shaderBallShadow.pushConstantView.set(DefaultShadowMap);
-        //shadowPassNode.renderNodes.push_back(shaderBallShadow);
-
-        RenderNode shaderBallShadowVsm = shaderBall;
-        shaderBallShadowVsm.geometry = m_geometries.at("floorShadow").get();
-        shaderBallShadowVsm.material = m_materials.at("vsm").get();
-        shaderBallShadowVsm.pipeline = m_pipelines.at("vsm").get();
-        shaderBallShadowVsm.pushConstantView.set(DefaultShadowMap);
-        vsmPassNode.renderNodes.push_back(shaderBallShadowVsm);
-
-        RenderNode floorShadowVsm = floor;
-        floorShadowVsm.geometry = m_geometries.at("floorShadow").get();
-        floorShadowVsm.material = m_materials.at("vsm").get();
-        floorShadowVsm.pipeline = m_pipelines.at("vsm").get();
-        floorShadowVsm.pushConstantView.set(DefaultShadowMap);
-        vsmPassNode.renderNodes.push_back(floorShadowVsm);
-
-        RenderNode shaderBallDepth = shaderBall;
-        shaderBallDepth.geometry = m_geometries.at("floorShadow").get();
-        shaderBallDepth.material = m_materials.at("depth").get();
-        shaderBallDepth.pipeline = m_pipelines.at("depth").get();
-        depthPrePass.renderNodes.push_back(shaderBallDepth);
-
-        RenderNode floorShadowDepth = floor;
-        floorShadowDepth.geometry = m_geometries.at("floorShadow").get();
-        floorShadowDepth.material = m_materials.at("depth").get();
-        floorShadowDepth.pipeline = m_pipelines.at("depth").get();
-        depthPrePass.renderNodes.push_back(floorShadowDepth);
+        addRenderNode("floor", 0, glm::vec3(0.0f), glm::vec3(100.0f, 1.0f, 100.0f));
+        addRenderNode("sphere", 1, glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(1.0f));
     }
 
     ShadowMappingScene::~ShadowMappingScene()
@@ -662,6 +567,30 @@ namespace crisp
         //m_activeMaterial = modified;
     }
 
+    void ShadowMappingScene::addRenderNode(std::string_view geometryName, int transformIndex, glm::vec3 translation, glm::vec3 scale)
+    {
+        RenderNode floor(m_transformBuffer.get(), m_transforms, transformIndex);
+        floor.geometry = m_geometries.at(std::string(geometryName)).get();
+        floor.material = m_materials.at("pbrUnif").get();
+        floor.pipeline = m_pipelines.at("pbrUnif").get();
+        floor.transformPack->M = glm::translate(translation) * glm::scale(scale);
+        floor.setPushConstantView(lightMode);
+        m_renderGraph->getNode(MainPass).renderNodes.push_back(floor);
+
+        RenderNode shaderBallShadowVsm = floor;
+        shaderBallShadowVsm.geometry = m_geometries.at(std::string(geometryName) + "Shadow").get();
+        shaderBallShadowVsm.material = m_materials.at("vsm").get();
+        shaderBallShadowVsm.pipeline = m_pipelines.at("vsm").get();
+        shaderBallShadowVsm.pushConstantView.set(DefaultShadowMap);
+        m_renderGraph->getNode(VsmPass).renderNodes.push_back(shaderBallShadowVsm);
+
+        RenderNode shaderBallDepth = floor;
+        shaderBallDepth.geometry = m_geometries.at(std::string(geometryName) + "Shadow").get();
+        shaderBallDepth.material = m_materials.at("depth").get();
+        shaderBallDepth.pipeline = m_pipelines.at("depth").get();
+        m_renderGraph->getNode(DepthPrePass).renderNodes.push_back(shaderBallDepth);
+    }
+
     void ShadowMappingScene::createDefaultPbrTextures()
     {
         m_images.emplace_back(createTexture(m_renderer, 1, 1, { 255, 0, 255, 255 }, VK_FORMAT_R8G8B8A8_SRGB));
@@ -811,6 +740,9 @@ namespace crisp
 
             if (key == Key::Two)
                 MaterialIndex = 3;
+
+            if (key == Key::M)
+                lightMode = lightMode == 0 ? 1 : 0;
         };
 
         m_app->getWindow()->getEventHub().mouseWheelScrolled += [this](double delta)
@@ -831,7 +763,7 @@ namespace crisp
         auto cubeMapPass = std::make_unique<CubeMapRenderPass>(m_renderer, VkExtent2D{ 512, 512 });
         std::vector<std::unique_ptr<VulkanPipeline>> cubeMapPipelines(CubeMapFaceCount);
         for (int i = 0; i < CubeMapFaceCount; i++)
-            cubeMapPipelines[i] = createEquirectToCubeMapPipeline(m_renderer, cubeMapPass.get(), i);
+            cubeMapPipelines[i] = m_renderer->createPipelineFromLua("IrradianceMap.lua", cubeMapPass.get(), i);
 
         auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
         cubeMapMaterial->writeDescriptor(0, 0, 0, *equirectMapView, m_linearRepeatSampler.get());
@@ -893,8 +825,8 @@ namespace crisp
 
         auto convPass = std::make_shared<CubeMapRenderPass>(m_renderer, VkExtent2D{ 512, 512 });
         std::vector<std::unique_ptr<VulkanPipeline>> convPipelines(6);
-        for (int i = 0; i < 6; i++)
-            convPipelines[i] = createConvolvePipeline(m_renderer, convPass.get(), i);
+        for (int i = 0; i < CubeMapFaceCount; i++)
+            convPipelines[i] = m_renderer->createPipelineFromLua("ConvolveDiffuse.lua", convPass.get(), i);
 
         auto convMaterial = std::make_unique<Material>(convPipelines[0].get());
         convMaterial->writeDescriptor(0, 0, 0, cubeMapView, m_linearRepeatSampler.get());
@@ -949,6 +881,7 @@ namespace crisp
 
     void ShadowMappingScene::setupReflectEnvMap(const VulkanImageView& cubeMapView)
     {
+        static constexpr uint32_t CubeMapFaceCount = 6;
         constexpr uint32_t mipLevels = 5;
         m_filteredMap = createMipmapCubeMap(m_renderer, 512, 512, mipLevels);
         for (int i = 0; i < static_cast<int>(mipLevels); i++)
@@ -959,9 +892,9 @@ namespace crisp
             unsigned int h = static_cast<unsigned int>(512 * std::pow(0.5, i));
             std::shared_ptr<CubeMapRenderPass> prefilterPass = std::make_unique<CubeMapRenderPass>(m_renderer, VkExtent2D{ w, h });
 
-            std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(6);
-            for (int j = 0; j < 6; j++)
-                filterPipelines[j] = createPrefilterPipeline(m_renderer, prefilterPass.get(), j);
+            std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(CubeMapFaceCount);
+            for (int j = 0; j < CubeMapFaceCount; j++)
+                filterPipelines[j] = m_renderer->createPipelineFromLua("PrefilterSpecular.lua", prefilterPass.get(), j);
 
             std::shared_ptr filterMat = std::make_unique<Material>(filterPipelines[0].get());
             filterMat->writeDescriptor(0, 0, 0, cubeMapView, m_linearRepeatSampler.get());
@@ -1029,10 +962,9 @@ namespace crisp
     std::unique_ptr<VulkanImage> ShadowMappingScene::integrateBrdfLut()
     {
         auto texPass = std::make_shared<TexturePass>(m_renderer, VkExtent2D{ 1024, 1024 });
-        std::shared_ptr<VulkanPipeline> pipeline = createBrdfLutPipeline(m_renderer, texPass.get());
+        std::shared_ptr<VulkanPipeline> pipeline = m_renderer->createPipelineFromLua("BrdfLut.lua", texPass.get(), 0);
 
         auto material = std::make_shared<Material>(pipeline.get());
-        m_renderer->getDevice()->flushDescriptorUpdates();
 
         m_renderer->enqueueResourceUpdate([this, pipeline, texPass, material](VkCommandBuffer cmdBuffer)
         {

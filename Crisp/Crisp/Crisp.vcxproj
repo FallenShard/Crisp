@@ -170,6 +170,7 @@
     <ClCompile Include="Source\Models\Grass.cpp" />
     <ClCompile Include="Source\Models\SPH.cpp" />
     <ClCompile Include="Source\Models\PositionBasedFluid.cpp" />
+    <ClCompile Include="Source\Renderer\DescriptorSetAllocator.cpp" />
     <ClCompile Include="Source\Renderer\LuaPipelineBuilder.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\PipelineBuilder.cpp" />
@@ -247,6 +248,7 @@
     <ClCompile Include="Source\ShadingLanguage\Reflection.cpp" />
     <ClCompile Include="Source\ShadingLanguage\Token.cpp" />
     <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
+    <ClCompile Include="Source\Techniques\ForwardClusteredShading.cpp" />
     <ClCompile Include="Source\Techniques\ShadowMapper.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanCommandBuffer.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanCommandPool.cpp" />
@@ -317,6 +319,7 @@
     <ClInclude Include="Source\Models\Grass.hpp" />
     <ClInclude Include="Source\Models\SPH.hpp" />
     <ClInclude Include="Source\Models\PositionBasedFluid.hpp" />
+    <ClInclude Include="Source\Renderer\DescriptorSetAllocator.hpp" />
     <ClInclude Include="Source\Renderer\DrawCommand.hpp" />
     <ClInclude Include="Source\Renderer\LuaPipelineBuilder.hpp" />
     <ClInclude Include="Source\Renderer\Material.hpp" />
@@ -410,6 +413,7 @@
     <ClInclude Include="Source\ShadingLanguage\Token.hpp" />
     <ClInclude Include="Source\ShadingLanguage\Visitor.hpp" />
     <ClInclude Include="Source\Techniques\CascadedShadowMapper.hpp" />
+    <ClInclude Include="Source\Techniques\ForwardClusteredShading.hpp" />
     <ClInclude Include="Source\Techniques\ShadowMapper.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanCommandBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanCommandPool.hpp" />

@@ -130,7 +130,7 @@ namespace crisp
 
     TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     {
-        std::vector<glm::vec3> positions =
+        static std::vector<glm::vec3> positions =
         {
             // Front
             glm::vec3(-0.5f, -0.5f, +0.5f),
@@ -169,7 +169,7 @@ namespace crisp
             glm::vec3(-0.5f, -0.5f, +0.5f)
         };
 
-        std::vector<glm::vec3> normals =
+        static std::vector<glm::vec3> normals =
         {
             glm::vec3(0.0f, 0.0f, 1.0f),
             glm::vec3(0.0f, 0.0f, 1.0f),
@@ -202,7 +202,7 @@ namespace crisp
             glm::vec3(0.0f, -1.0f, 0.0f)
         };
 
-        std::vector<glm::vec2> texCoords =
+        static std::vector<glm::vec2> texCoords =
         {
             glm::vec2(0.0f, 0.0f),
             glm::vec2(0.0f, 1.0f),
@@ -235,7 +235,7 @@ namespace crisp
             glm::vec2(1.0f, 0.0f),
         };
 
-        std::vector<glm::uvec3> faces =
+        static std::vector<glm::uvec3> faces =
         {
             glm::uvec3(0, 1, 2),
             glm::uvec3(0, 2, 3),

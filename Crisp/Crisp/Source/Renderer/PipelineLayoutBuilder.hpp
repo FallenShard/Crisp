@@ -9,6 +9,7 @@ namespace crisp
 {
     class VulkanDevice;
     class VulkanPipelineLayout;
+    class DescriptorSetAllocator;
 
     namespace sl
     {
@@ -25,28 +26,26 @@ namespace crisp
         PipelineLayoutBuilder& defineDescriptorSet(uint32_t set, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
         PipelineLayoutBuilder& addPushConstant(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
 
-        VkPipelineLayout create(VkDevice device);
-        std::unique_ptr<VulkanPipelineLayout> create(VulkanDevice* device, VkDescriptorPool descriptorPool);
+        std::vector<VkDescriptorSetLayout> createDescriptorSetLayouts(VkDevice device);
+        VkPipelineLayout createHandle(VkDevice device, VkDescriptorSetLayout* setLayouts, uint32_t setLayoutCount);
         std::unique_ptr<VulkanPipelineLayout> create(VulkanDevice* device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
-        VkDescriptorPool createMinimalDescriptorPool(VulkanDevice* device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
+        std::unique_ptr<DescriptorSetAllocator> createMinimalDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
 
-        std::vector<VkDescriptorSetLayout> extractDescriptorSetLayouts();
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>> extractDescriptorSetBindings();
-        std::vector<VkPushConstantRange> extractPushConstants();
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>> getDescriptorSetLayoutBindings() const;
+        std::vector<bool> getDescriptorSetBufferedStatuses() const;
+        std::vector<VkPushConstantRange> getPushConstantRanges() const;
 
-        const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& getDescriptorSetBindings() const;
+
+        void setDescriptorSetBuffering(int index, bool isBuffered);
+        void setDescriptorDynamic(int setIndex, int binding, bool isDynamic);
 
     private:
         std::vector<uint32_t> getNumCopiesPerSet(uint32_t numCopies) const;
 
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_setBindings;
-        std::vector<VkDescriptorSetLayoutCreateInfo>           m_setCreateInfos;
-        std::vector<VkDescriptorSetLayout>                     m_setLayouts;
-        std::vector<VkPushConstantRange>                       m_pushConstants;
-        std::vector<bool>                                      m_setBuffered;
-    };
+        std::vector<VkDescriptorSetLayoutCreateInfo> m_setLayoutCreateInfos;
 
-    std::vector<VkDescriptorPoolSize> calculateMinimumPoolSizes(const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopies = {});
-    VkDescriptorPool createDescriptorPool(VkDevice device, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSetCount, VkDescriptorPoolCreateFlags flags = 0);
-    VkDescriptorPool createDescriptorPool(VkDevice device, const PipelineLayoutBuilder& builder, const std::vector<uint32_t>& numCopies, uint32_t maxSetCount, VkDescriptorPoolCreateFlags flags = 0);
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_setLayoutBindings;
+        std::vector<bool>                                      m_setBuffered;
+        std::vector<VkPushConstantRange>                       m_pushConstantRanges;
+    };
 }

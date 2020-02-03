@@ -22,6 +22,8 @@
 #include <CrispCore/Log.hpp>
 #include <CrispCore/Math/Headers.hpp>
 
+#include "LuaPipelineBuilder.hpp"
+
 namespace crisp
 {
     Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath)
@@ -227,7 +229,9 @@ namespace crisp
 
         m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapImageIndex.value()));
 
+        frame.cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         record(frame.cmdBuffer->getHandle());
+        frame.cmdBuffer->end();
         frame.submit(m_device->getGeneralQueue());
         present(frame, swapImageIndex.value());
 
@@ -290,6 +294,11 @@ namespace crisp
     Geometry* Renderer::getFullScreenGeometry() const
     {
         return m_fullScreenGeometry.get();
+    }
+
+    std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(std::string_view pipelineName, VulkanRenderPass* renderPass, int subpassIndex)
+    {
+        return LuaPipelineBuilder(getResourcesPath() / "Pipelines" / pipelineName).create(this, renderPass, subpassIndex);
     }
 
     void Renderer::destroyResourcesScheduledForRemoval()
@@ -365,12 +374,6 @@ namespace crisp
 
     void Renderer::record(VkCommandBuffer commandBuffer)
     {
-        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        beginInfo.pInheritanceInfo = nullptr;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
         for (auto& uniformBuffer : m_streamingUniformBuffers)
             uniformBuffer->updateDeviceBuffer(commandBuffer, m_currentFrameIndex);
 
@@ -393,8 +396,6 @@ namespace crisp
         for (const auto& drawCommand : m_defaultPassDrawCommands)
             drawCommand(commandBuffer);
         m_defaultRenderPass->end(commandBuffer, m_currentFrameIndex);
-
-        vkEndCommandBuffer(commandBuffer);
     }
 
     void Renderer::present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex)
