@@ -3,6 +3,8 @@
 #include <vector>
 #include <CrispCore/Math/Headers.hpp>
 
+#include "Renderer/UniformBuffer.hpp"
+
 namespace crisp
 {
     struct TileFrustum

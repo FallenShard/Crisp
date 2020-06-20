@@ -36,6 +36,8 @@ namespace crisp
 
         inline uint32_t getNumSubpasses() const { return m_numSubpasses; }
 
+        VkSampleCountFlagBits getDefaultSampleCount() const;
+
     protected:
         virtual void createResources() = 0;
         void freeResources();
@@ -45,6 +47,7 @@ namespace crisp
         uint32_t m_numSubpasses;
         bool m_isWindowSizeDependent;
         VkExtent2D m_renderArea;
+        VkSampleCountFlagBits m_defaultSampleCount;
 
         std::vector<VkImageLayout> m_finalLayouts;
         std::vector<std::unique_ptr<VulkanImage>> m_renderTargets;

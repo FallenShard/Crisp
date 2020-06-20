@@ -31,7 +31,6 @@ namespace
         case VK_DYNAMIC_STATE_SCISSOR:  return crisp::PipelineDynamicState::Scissor;
         default: {
             crisp::logFatal("Invalid vulkan dynamic state received!");
-            return static_cast<crisp::PipelineDynamicState>(0);
         }
         }
     }
@@ -143,6 +142,18 @@ namespace crisp
         return *this;
     }
 
+    PipelineBuilder& PipelineBuilder::setSampleCount(VkSampleCountFlagBits sampleCount)
+    {
+        m_multisampleState.rasterizationSamples = sampleCount;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setAlphaToCoverage(VkBool32 alphaToCoverageEnabled)
+    {
+        m_multisampleState.alphaToCoverageEnable = alphaToCoverageEnabled;
+        return *this;
+    }
+
     PipelineBuilder& PipelineBuilder::setViewport(VkViewport&& viewport)
     {
         m_viewports = { viewport };
@@ -189,6 +200,12 @@ namespace crisp
     PipelineBuilder& PipelineBuilder::setDepthTest(VkBool32 enabled)
     {
         m_depthStencilState.depthTestEnable = enabled;
+        return *this;
+    }
+
+    PipelineBuilder& PipelineBuilder::setDepthTestOperation(VkCompareOp testOperation)
+    {
+        m_depthStencilState.depthCompareOp = testOperation;
         return *this;
     }
 

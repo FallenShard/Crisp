@@ -15,9 +15,10 @@ namespace crisp
         ~VulkanQueue();
 
         VkResult submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer, VkFence fence) const;
-        VkResult submit(VkCommandBuffer cmdBuffer) const;
+        VkResult submit(VkCommandBuffer cmdBuffer, VkFence fence = VK_NULL_HANDLE) const;
         VkResult present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const;
 
+        void wait(VkFence fence) const;
         void waitIdle() const;
 
         VkCommandPool createCommandPool(VkCommandPoolCreateFlags flags) const;

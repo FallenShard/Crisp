@@ -46,11 +46,13 @@ namespace crisp
         uint32_t getNumIndices() const;
         uint32_t getNumVertices() const;
 
-        InterleavedVertexBuffer interleaveAttributes() const;
+        InterleavedVertexBuffer interleave() const;
+        InterleavedVertexBuffer interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const;
 
         static std::vector<glm::vec3> computeVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces);
         void computeTangentVectors();
         void computeVertexNormals();
+        void computeBoundingBox();
 
         const std::vector<GeometryPart> getGeometryParts() const;
 

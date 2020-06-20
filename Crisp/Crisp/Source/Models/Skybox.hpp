@@ -26,20 +26,16 @@ namespace crisp
     {
     public:
         Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder);
-        Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, std::unique_ptr<VulkanImage> image, std::unique_ptr<VulkanImageView> imageView);
+        Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const VulkanImageView& cubeMapView, const VulkanSampler& sampler);
         ~Skybox();
 
         void updateTransforms(const glm::mat4& V, const glm::mat4& P);
 
-        DrawCommand createDrawCommand() const;
-        RenderNode createRenderNode();
+        const RenderNode& getRenderNode();
 
         VulkanImageView* getSkyboxView() const;
 
     private:
-        Renderer* m_renderer;
-        VulkanDevice*   m_device;
-
         std::unique_ptr<Geometry> m_cubeGeometry;
 
         std::unique_ptr<VulkanPipeline> m_pipeline;
@@ -51,5 +47,7 @@ namespace crisp
         std::unique_ptr<VulkanImage> m_cubeMap;
         std::unique_ptr<VulkanImageView> m_cubeMapView;
         std::unique_ptr<VulkanSampler>   m_sampler;
+
+        RenderNode m_renderNode;
     };
 }

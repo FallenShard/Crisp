@@ -35,10 +35,23 @@ namespace crisp::sl
             return 0;
         }
 
+        uint32_t getPushConstantFieldArraySize(const StructFieldDeclaration& field)
+        {
+            if (field.variable->arraySpecifiers.empty())
+                return 1;
+            else if (auto e = dynamic_cast<Literal*>(field.variable->arraySpecifiers[0]->expr.get()))
+            {
+                return std::any_cast<int>(e->value);
+            }
+
+            return 1;
+        }
+
         VkPushConstantRange parsePushConstant(const Statement* statement, VkShaderStageFlags stage)
         {
             VkPushConstantRange pc = {};
             pc.stageFlags = stage;
+            pc.offset = 0xFFFFFFFF;
 
             const auto* block = dynamic_cast<const BlockDeclaration*>(statement);
             if (block)
@@ -46,17 +59,22 @@ namespace crisp::sl
                 for (const auto& field : block->fields)
                 {
                     auto tokenType = field->fullType->specifier->type.type;
-                    pc.offset = getPushConstantFieldOffset(*field);
+                    pc.offset = std::min(pc.offset, getPushConstantFieldOffset(*field));
+                    uint32_t multiplier = getPushConstantFieldArraySize(*field);
+                    uint32_t fieldSize = 0;
                     switch (tokenType)
                     {
-                    case TokenType::Mat4: pc.size += 16 * sizeof(float); break;
-                    case TokenType::Mat3: pc.size += 9 * sizeof(float); break;
-                    case TokenType::Float: pc.size += sizeof(float); break;
-                    case TokenType::Uint: pc.size += sizeof(unsigned int); break;
-                    case TokenType::Int: pc.size += sizeof(int); break;
+                    case TokenType::Mat4:  fieldSize = 16 * sizeof(float); break;
+                    case TokenType::Mat3:  fieldSize = 9 * sizeof(float); break;
+                    case TokenType::Vec4:  fieldSize = 4 * sizeof(float); break;
+                    case TokenType::Vec2:  fieldSize = 2 * sizeof(float); break;
+                    case TokenType::Float: fieldSize = sizeof(float); break;
+                    case TokenType::Uint:  fieldSize = sizeof(unsigned int); break;
+                    case TokenType::Int:   fieldSize = sizeof(int); break;
 
                     default: crisp::logFatal("Unknown token size '{}' while parsing push constant!", field->fullType->specifier->type.lexeme); break;
                     }
+                    pc.size += fieldSize * multiplier;
                 }
             }
 

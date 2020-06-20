@@ -45,7 +45,8 @@ namespace crisp
         data.V        = m_view;
         data.P        = m_projection;
         data.position = m_position;
-        data.spectrum = m_power;
+        data.spectrum = glm::vec4(m_power, 1.0f);
+        data.params.r = m_radius;
         return data;
     }
 }

@@ -1,5 +1,7 @@
 #include "VulkanQueueConfiguration.hpp"
 
+#include <stdexcept>
+
 namespace crisp
 {
     VulkanQueueConfiguration::VulkanQueueConfiguration(std::initializer_list<QueueTypeFlags> requestedQueuesList)
@@ -17,7 +19,7 @@ namespace crisp
     {
         m_queueIdentifiers = findQueueIds(context);
         if (m_queueIdentifiers.size() != m_requestedQueues.size())
-            throw std::exception("Queue configuration is not compatible with selected physical device!");
+            throw std::runtime_error("Queue configuration is not compatible with selected physical device!");
 
         auto queueFamilies = context->getQueueFamilyProperties();
 

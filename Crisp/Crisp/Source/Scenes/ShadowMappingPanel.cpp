@@ -96,15 +96,11 @@ namespace crisp::gui
         panel->addControl(std::move(blueSlider));
         y += 30;
 
-        std::vector<std::string> materials =
+        std::vector<std::string> materials;
+        for (auto dir : std::filesystem::directory_iterator("D:/version-control/Crisp/Crisp/Resources/Textures/PbrMaterials"))
         {
-            "RustedIron",
-            "Limestone",
-            "MetalGrid",
-            "MixedMoss",
-            "RedBricks",
-            "GreenCeramic"
-        };
+            materials.push_back(dir.path().stem().string());
+        }
 
         auto comboBox = std::make_unique<gui::ComboBox>(form);
         comboBox->setId("sceneComboBox");

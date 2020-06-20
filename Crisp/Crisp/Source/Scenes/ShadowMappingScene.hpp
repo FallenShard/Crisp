@@ -24,7 +24,7 @@ namespace crisp
 
     struct PbrUnifMaterial
     {
-        glm::vec3 albedo;
+        glm::vec4 albedo;
         float metallic;
         float roughness;
     };
@@ -32,7 +32,9 @@ namespace crisp
     class Application;
     class CameraController;
 
-    class CascadedShadowMapper;
+    class TransformBuffer;
+    class LightSystem;
+
     class ShadowMapper;
 
     class BlurPass;
@@ -43,6 +45,7 @@ namespace crisp
 
     class Renderer;
     class RenderGraph;
+    struct RenderNode;
 
     class VulkanDevice;
 
@@ -51,6 +54,10 @@ namespace crisp
     class Skybox;
 
     class Grass;
+    class RayTracingMaterial;
+    class VulkanRayTracer;
+
+    class ResourceContext;
 
     class ShadowMappingScene : public AbstractScene
     {
@@ -72,50 +79,39 @@ namespace crisp
         void onMaterialSelected(const std::string& material);
 
     private:
-        void addRenderNode(std::string_view geometryName, int transformIndex, glm::vec3 translation, glm::vec3 scale);
+        RenderNode* createRenderNode(std::string id, int transformIndex);
 
-        void createDefaultPbrTextures();
-        std::unique_ptr<Material> createPbrMaterial(const std::string& type, VulkanPipeline* pipeline);
-        std::unique_ptr<Material> createUnifPbrMaterial(VulkanPipeline* pipeline);
-        std::unique_ptr<Material> createUnifPbrSmMaterial(VulkanPipeline* pipeline);
+        void createCommonTextures();
+
+
+        Material* createPbrTexMaterial(const std::string& type);
+        void createSkyboxNode();
+        void createTerrain();
+        void createShaderballs();
+        void createTrees();
+        void createPlane();
+        void createBox();
 
         void setupInput();
-        std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(std::shared_ptr<VulkanImageView> equirectMapView);
-        void setupDiffuseEnvMap(const VulkanImageView& cubeMapView);
-        void setupReflectEnvMap(const VulkanImageView& cubeMapView);
+        std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize);
+        void setupDiffuseEnvMap(const VulkanImageView& cubeMapView, uint32_t cubeMapSize);
+        void setupReflectEnvMap(const VulkanImageView& cubeMapView, uint32_t cubeMapSize);
         std::unique_ptr<VulkanImage> integrateBrdfLut();
 
-        Renderer*     m_renderer;
-        Application*  m_app;
+        Renderer*    m_renderer;
+        Application* m_app;
 
         std::unique_ptr<CameraController> m_cameraController;
-        std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
-        std::unordered_map<std::string, std::unique_ptr<Geometry>> m_geometries;
-        std::unordered_map<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
+        std::unique_ptr<LightSystem> m_lightSystem;
 
-        std::vector<std::unique_ptr<VulkanImage>>     m_images;
-        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
-        std::unordered_map<std::string, std::unique_ptr<VulkanImageView>> m_defaultTexImageViews;
+        std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-        std::unique_ptr<VulkanImage> m_filteredMap;
-        std::unique_ptr<VulkanImageView> m_filteredMapView;
-
-        std::unique_ptr<VulkanImage> m_envIrrMap;
-        std::unique_ptr<VulkanImageView> m_envIrrMapView;
-
-        std::unique_ptr<VulkanImage> m_brdfLut;
-        std::unique_ptr<VulkanImageView> m_brdfLutView;
-
-        std::vector<TransformPack> m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformBuffer;
-
-        std::unique_ptr<CascadedShadowMapper> m_cascadedShadowMapper;
         std::unique_ptr<ShadowMapper> m_shadowMapper;
 
-        std::vector<LightDescriptor> m_lights;
-        std::unique_ptr<UniformBuffer> m_lightBuffer;
+        std::unordered_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+
+        std::unique_ptr<ResourceContext> m_resourceContext;
 
         std::vector<ManyLightDescriptor> m_manyLights;
         std::unique_ptr<UniformBuffer> m_manyLightsBuffer;
@@ -127,11 +123,16 @@ namespace crisp
         std::vector<std::unique_ptr<VulkanImageView>> m_lightGridViews;
 
         PbrUnifMaterial m_pbrUnifMaterial;
-        std::unique_ptr<UniformBuffer> m_pbrUnifMatBuffer;
 
         std::unique_ptr<RenderGraph> m_renderGraph;
 
         std::unordered_map<std::string, std::unique_ptr<VulkanBuffer>> m_computeBuffers;
+
+        std::unique_ptr<BoxVisualizer> m_boxVisualizer;
+        std::unique_ptr<Skybox>        m_skybox;
+
+        std::unique_ptr<VulkanRayTracer> m_rayTracer;
+        std::unique_ptr<RayTracingMaterial> m_rayTracingMaterial;
 
         //std::unique_ptr<Grass> m_grass;
 
@@ -149,13 +150,6 @@ namespace crisp
 
         ////std::unique_ptr<CascadedShadowMapper> m_csm;
 
-        std::unique_ptr<BoxVisualizer> m_boxVisualizer;
-        std::unique_ptr<Skybox> m_skybox;
-
-        std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        std::unique_ptr<VulkanSampler> m_nearestNeighborSampler;
-        std::unique_ptr<VulkanSampler> m_linearRepeatSampler;
-        std::unique_ptr<VulkanSampler> m_mipmapSampler;
         //
         //std::unique_ptr<BlurPass> m_blurPass;
         //std::unique_ptr<BlurPipeline> m_blurPipeline;

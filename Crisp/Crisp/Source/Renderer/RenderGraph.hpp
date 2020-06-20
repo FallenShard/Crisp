@@ -21,7 +21,7 @@ namespace crisp
             std::unique_ptr<VulkanRenderPass> renderPass;
 
             // Rendered nodes can be culled/filtered down into commands
-            std::vector<RenderNode> renderNodes;
+            //std::vector<RenderNode> renderNodes;
             std::vector<std::vector<DrawCommand>> commands;
 
             Node() = default;
@@ -54,11 +54,14 @@ namespace crisp
         void sortRenderPasses();
 
         void clearCommandLists();
-        void buildCommandLists();
+        void addToCommandLists(const RenderNode& renderNode);
+        void buildCommandLists(const std::unordered_map<std::string, std::unique_ptr<RenderNode>>& renderNodes);
         void executeCommandLists() const;
 
         const Node& getNode(std::string name) const;
         Node& getNode(std::string name);
+
+        const VulkanRenderPass& getRenderPass(std::string name);
 
         static void executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer, int virtualFrameIndex);
 

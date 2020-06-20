@@ -5,14 +5,14 @@
 
 namespace crisp
 {
-    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
+    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size)
     {
         std::vector<glm::vec3> positions =
         {
-            glm::vec3(-1.0f, 0.0f, +1.0f),
-            glm::vec3(+1.0f, 0.0f, +1.0f),
-            glm::vec3(+1.0f, 0.0f, -1.0f),
-            glm::vec3(-1.0f, 0.0f, -1.0f)
+            glm::vec3(-size, 0.0f, +size),
+            glm::vec3(+size, 0.0f, +size),
+            glm::vec3(+size, 0.0f, -size),
+            glm::vec3(-size, 0.0f, -size)
         };
 
         std::vector<glm::vec3> normals =

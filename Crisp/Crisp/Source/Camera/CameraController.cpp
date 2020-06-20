@@ -6,7 +6,6 @@
 #include "Animation/PropertyAnimation.hpp"
 
 #include "Core/Window.hpp"
-#include "Core/EventHub.hpp"
 
 namespace crisp
 {
@@ -24,6 +23,7 @@ namespace crisp
         , m_useMouseFiltering(true)
         , m_isMoving(false)
         , m_moveSpeed(2.0f)
+        , m_lookSpeed(2.0f)
         , m_refreshDeltasOnUpdate(true)
     {
         m_screenSize = m_window->getSize();
@@ -37,10 +37,10 @@ namespace crisp
         for (int i = 0; i < MouseFilterListSize; i++)
             m_mouseDeltas.push_front(glm::vec2(0.0f, 0.0f));
 
-        m_window->getEventHub().mouseButtonPressed.subscribe<&CameraController::onMousePressed>(this);
-        m_window->getEventHub().mouseButtonReleased.subscribe<&CameraController::onMouseReleased>(this);
-        m_window->getEventHub().mouseMoved.subscribe<&CameraController::onMouseMoved>(this);
-        m_window->getEventHub().mouseWheelScrolled.subscribe<&CameraController::onMouseWheelScrolled>(this);
+        m_window->mouseButtonPressed.subscribe<&CameraController::onMousePressed>(this);
+        m_window->mouseButtonReleased.subscribe<&CameraController::onMouseReleased>(this);
+        m_window->mouseMoved.subscribe<&CameraController::onMouseMoved>(this);
+        m_window->mouseWheelScrolled.subscribe<&CameraController::onMouseWheelScrolled>(this);
 
         m_cameraParameters.P          = m_camera.getProjectionMatrix();
         m_cameraParameters.V          = m_camera.getViewMatrix();
@@ -50,10 +50,10 @@ namespace crisp
 
     CameraController::~CameraController()
     {
-        m_window->getEventHub().mouseButtonPressed.unsubscribe<&CameraController::onMousePressed>(this);
-        m_window->getEventHub().mouseButtonReleased.unsubscribe<&CameraController::onMouseReleased>(this);
-        m_window->getEventHub().mouseMoved.unsubscribe<&CameraController::onMouseMoved>(this);
-        m_window->getEventHub().mouseWheelScrolled.unsubscribe<&CameraController::onMouseWheelScrolled>(this);
+        m_window->mouseButtonPressed.unsubscribe<&CameraController::onMousePressed>(this);
+        m_window->mouseButtonReleased.unsubscribe<&CameraController::onMouseReleased>(this);
+        m_window->mouseMoved.unsubscribe<&CameraController::onMouseMoved>(this);
+        m_window->mouseWheelScrolled.unsubscribe<&CameraController::onMouseWheelScrolled>(this);
     }
 
     bool CameraController::update(float dt)
@@ -122,7 +122,7 @@ namespace crisp
         if (m_isMoving)
         {
             auto delta = m_useMouseFiltering ? filterMouseMoves() : mousePos - m_prevMousePos;
-            auto moveAmount = -m_moveSpeed * delta / m_screenSize;
+            auto moveAmount = -m_lookSpeed * delta / m_screenSize;
             m_camera.rotate(moveAmount.x, moveAmount.y);
         }
 
@@ -173,17 +173,17 @@ namespace crisp
 
     void CameraController::checkKeyboardInput(float dt)
     {
-        if (m_window->getEventHub().isKeyDown(Key::A))
-            m_camera.strafe(-3.0f * dt);
+        if (m_window->isKeyDown(Key::A))
+            m_camera.strafe(-m_moveSpeed * dt);
 
-        if (m_window->getEventHub().isKeyDown(Key::D))
-            m_camera.strafe(+3.0f * dt);
+        if (m_window->isKeyDown(Key::D))
+            m_camera.strafe(+m_moveSpeed * dt);
 
-        if (m_window->getEventHub().isKeyDown(Key::S))
-            m_camera.walk(-3.0f * dt);
+        if (m_window->isKeyDown(Key::S))
+            m_camera.walk(-m_moveSpeed * dt);
 
-        if (m_window->getEventHub().isKeyDown(Key::W))
-            m_camera.walk(3.0f * dt);
+        if (m_window->isKeyDown(Key::W))
+            m_camera.walk(m_moveSpeed * dt);
     }
 
     glm::vec2 CameraController::filterMouseMoves()

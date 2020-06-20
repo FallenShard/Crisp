@@ -37,12 +37,12 @@ namespace crisp
         return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
     }
 
-    VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer) const
+    VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer, VkFence fence) const
     {
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount   = 1;
         submitInfo.pCommandBuffers      = &cmdBuffer;
-        return vkQueueSubmit(m_handle, 1, &submitInfo, VK_NULL_HANDLE);
+        return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
     }
 
     VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const
@@ -55,6 +55,11 @@ namespace crisp
         presentInfo.pImageIndices      = &imageIndex;
         presentInfo.pResults           = nullptr;
         return vkQueuePresentKHR(m_handle, &presentInfo);
+    }
+
+    void VulkanQueue::wait(VkFence fence) const
+    {
+        vkWaitForFences(m_device->getHandle(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     }
 
     void VulkanQueue::waitIdle() const

@@ -16,7 +16,10 @@ namespace crisp
 
     VulkanPipeline::~VulkanPipeline()
     {
-        vkDestroyPipeline(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+            m_device->deferDestruction(m_handle, vkDestroyPipeline);
+        else
+            vkDestroyPipeline(m_device->getHandle(), m_handle, nullptr);
     }
 
     void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const

@@ -2,7 +2,6 @@
 
 #include "Geometry/VertexAttributeTraits.hpp"
 
-#include <variant>
 #include <string>
 
 #include <vulkan/vulkan.h>

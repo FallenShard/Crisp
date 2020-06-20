@@ -7,15 +7,7 @@ namespace crisp
     class SceneRenderPass : public VulkanRenderPass
     {
     public:
-        enum RenderTarget
-        {
-            Opaque,
-            Depth,
-
-            Count
-        };
-
-        SceneRenderPass(Renderer* renderer);
+        SceneRenderPass(Renderer* renderer, VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
 
     protected:
         virtual void createResources() override;

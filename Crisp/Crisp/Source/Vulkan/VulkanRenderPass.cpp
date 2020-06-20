@@ -13,13 +13,18 @@ namespace crisp
         , m_renderer(renderer)
         , m_isWindowSizeDependent(isWindowSizeDependent)
         , m_numSubpasses(numSubpasses)
+        , m_defaultSampleCount(VK_SAMPLE_COUNT_1_BIT)
     {
     }
 
     VulkanRenderPass::~VulkanRenderPass()
     {
         freeResources();
-        vkDestroyRenderPass(m_device->getHandle(), m_handle, nullptr);
+
+        if (m_deferDestruction)
+            m_device->deferDestruction(m_handle, vkDestroyRenderPass);
+        else
+            vkDestroyRenderPass(m_device->getHandle(), m_handle, nullptr);
     }
 
     void VulkanRenderPass::recreate()
@@ -78,9 +83,12 @@ namespace crisp
 
         for (uint32_t i = 0; i < m_renderTargetViews.size(); ++i)
         {
-            auto& attachmentView = m_renderTargetViews[i][frameIndex];
-            auto& image = const_cast<VulkanImage&>(attachmentView->getImage());
-            image.setImageLayout(m_finalLayouts[i], attachmentView->getSubresourceRange());
+            if (frameIndex < m_renderTargetViews[i].size())
+            {
+                auto& attachmentView = m_renderTargetViews[i][frameIndex];
+                auto& image = const_cast<VulkanImage&>(attachmentView->getImage());
+                image.setImageLayout(m_finalLayouts[i], attachmentView->getSubresourceRange());
+            }
         }
     }
 
@@ -115,6 +123,11 @@ namespace crisp
     std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(unsigned int index, unsigned int baseLayer, unsigned int numLayers) const
     {
         return std::make_unique<VulkanImageView>(m_renderer->getDevice(), *m_renderTargets.at(index), numLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D, baseLayer, numLayers);
+    }
+
+    VkSampleCountFlagBits VulkanRenderPass::getDefaultSampleCount() const
+    {
+        return m_defaultSampleCount;
     }
 
     void VulkanRenderPass::freeResources()

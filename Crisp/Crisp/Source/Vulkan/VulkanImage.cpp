@@ -62,8 +62,19 @@ namespace crisp
 
     VulkanImage::~VulkanImage()
     {
-        m_memoryChunk.free();
-        vkDestroyImage(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+        {
+            m_device->deferDestruction([h = m_handle, mem = m_memoryChunk](VkDevice device) mutable
+                {
+                    mem.free();
+                    vkDestroyImage(device, h, nullptr);
+                });
+        }
+        else
+        {
+            m_memoryChunk.free();
+            vkDestroyImage(m_device->getHandle(), m_handle, nullptr);
+        }
     }
 
     void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)
@@ -80,38 +91,47 @@ namespace crisp
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
-        transitionLayout(cmdBuffer, newLayout, 0, m_numLayers, srcStage, dstStage);
+        VkImageSubresourceRange subresRange;
+        subresRange.baseMipLevel   = 0;
+        subresRange.levelCount     = m_mipLevels;
+        subresRange.baseArrayLayer = 0;
+        subresRange.layerCount     = m_numLayers;
+        subresRange.aspectMask     = m_aspect;
+        transitionLayout(cmdBuffer, newLayout, subresRange, srcStage, dstStage);
     }
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, uint32_t baseLayer, uint32_t numLayers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
+        baseLayer = std::min(baseLayer, static_cast<uint32_t>(m_layouts.size()) - 1);
         auto oldLayout = m_layouts[baseLayer][0];
         if (oldLayout == newLayout)
             return;
 
-        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        barrier.oldLayout           = oldLayout;
-        barrier.newLayout           = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image               = m_handle;
-        barrier.subresourceRange.baseMipLevel   = 0;
-        barrier.subresourceRange.levelCount     = 1;
-        barrier.subresourceRange.baseArrayLayer = baseLayer;
-        barrier.subresourceRange.layerCount     = numLayers;
-        barrier.subresourceRange.aspectMask     = m_aspect;
-        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(oldLayout, newLayout);
+        VkImageSubresourceRange subresRange;
+        subresRange.baseMipLevel   = 0;
+        subresRange.levelCount     = m_mipLevels;
+        subresRange.baseArrayLayer = baseLayer;
+        subresRange.layerCount     = numLayers;
+        subresRange.aspectMask     = m_aspect;
+        transitionLayout(cmdBuffer, newLayout, subresRange, srcStage, dstStage);
+    }
 
-        vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-        for (auto i = baseLayer; i < baseLayer + numLayers; ++i) {
-            m_layouts[i][0] = newLayout;
-        }
+    void VulkanImage::transitionLayout(VkCommandBuffer buffer, VkImageLayout newLayout, uint32_t baseLayer, uint32_t numLayers, uint32_t baseLevel, uint32_t levelCount, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
+    {
+        VkImageSubresourceRange subresRange;
+        subresRange.baseMipLevel   = baseLevel;
+        subresRange.levelCount     = levelCount;
+        subresRange.baseArrayLayer = baseLayer;
+        subresRange.layerCount     = numLayers;
+        subresRange.aspectMask     = m_aspect;
+        transitionLayout(buffer, newLayout, subresRange, srcStage, dstStage);
     }
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkImageSubresourceRange subresRange, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
         auto oldLayout = m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel];
+        if (oldLayout == newLayout)
+            return;
 
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         barrier.oldLayout           = oldLayout;
@@ -154,7 +174,14 @@ namespace crisp
     {
         if (m_mipLevels > 1)
         {
-            transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 1, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            VkImageSubresourceRange subresRange = {};
+            subresRange.aspectMask     = m_aspect;
+            subresRange.baseMipLevel   = 0;
+            subresRange.levelCount     = 1;
+            subresRange.baseArrayLayer = 0;
+            subresRange.layerCount     = m_numLayers;
+
+            transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
             for (uint32_t i = 1; i < m_mipLevels; i++)
             {
@@ -162,7 +189,7 @@ namespace crisp
 
                 imageBlit.srcSubresource.aspectMask     = m_aspect;
                 imageBlit.srcSubresource.baseArrayLayer = 0;
-                imageBlit.srcSubresource.layerCount     = 1;
+                imageBlit.srcSubresource.layerCount     = m_numLayers;
                 imageBlit.srcSubresource.mipLevel       = i - 1;
                 imageBlit.srcOffsets[1].x = std::max(int32_t(m_extent.width  >> (i - 1)), 1);
                 imageBlit.srcOffsets[1].y = std::max(int32_t(m_extent.height >> (i - 1)), 1);
@@ -170,22 +197,21 @@ namespace crisp
 
                 imageBlit.dstSubresource.aspectMask     = m_aspect;
                 imageBlit.dstSubresource.baseArrayLayer = 0;
-                imageBlit.dstSubresource.layerCount     = 1;
+                imageBlit.dstSubresource.layerCount     = m_numLayers;
                 imageBlit.dstSubresource.mipLevel       = i;
                 imageBlit.dstOffsets[1].x = std::max(int32_t(m_extent.width  >> i), 1);
                 imageBlit.dstOffsets[1].y = std::max(int32_t(m_extent.height >> i), 1);
                 imageBlit.dstOffsets[1].z = 1;
 
-                VkImageSubresourceRange mipRange = {};
-                mipRange.aspectMask     = m_aspect;
-                mipRange.baseMipLevel   = i;
-                mipRange.levelCount     = 1;
-                mipRange.baseArrayLayer = 0;
-                mipRange.layerCount     = 1;
+                subresRange.aspectMask     = m_aspect;
+                subresRange.baseMipLevel   = i;
+                subresRange.levelCount     = 1;
+                subresRange.baseArrayLayer = 0;
+                subresRange.layerCount     = m_numLayers;
 
-                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                 vkCmdBlitImage(commandBuffer, m_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
-                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
             }
         }
     }
@@ -258,13 +284,23 @@ namespace crisp
 
     std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(VkImageLayout oldLayout, VkImageLayout newLayout) const
     {
-        if      (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED           && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-            return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED           && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-            return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        switch (oldLayout)
+        {
+        case VK_IMAGE_LAYOUT_PREINITIALIZED:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT };
+            }
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:     return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
+            }
+        }
+
+        if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
             return { 0, VK_ACCESS_TRANSFER_WRITE_BIT };
@@ -278,14 +314,18 @@ namespace crisp
             return { 0, VK_ACCESS_SHADER_WRITE_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-            return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
             return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
             return { VK_ACCESS_SHADER_READ_BIT,  VK_ACCESS_TRANSFER_WRITE_BIT };
         else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
             return { VK_ACCESS_SHADER_READ_BIT,  VK_ACCESS_TRANSFER_READ_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+            return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,  VK_ACCESS_TRANSFER_READ_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            return { VK_ACCESS_SHADER_WRITE_BIT,  VK_ACCESS_SHADER_READ_BIT };
+        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL)
+            return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT };
 
         logError("Unsupported layout transition: {} to {}!\n", oldLayout, newLayout);
         return { 0, 0 };

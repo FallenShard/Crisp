@@ -8,8 +8,9 @@
 
 namespace crisp
 {
-    VulkanDevice::VulkanDevice(VulkanContext* vulkanContext)
+    VulkanDevice::VulkanDevice(VulkanContext* vulkanContext, int virtualFrameCount)
         : m_context(vulkanContext)
+        , m_virtualFrameCount(virtualFrameCount)
         , m_device(VK_NULL_HANDLE)
     {
         VulkanQueueConfiguration config({
@@ -42,6 +43,10 @@ namespace crisp
 
     VulkanDevice::~VulkanDevice()
     {
+        // Free all resources incl. suballocations
+        runDeferredDestructions();
+
+        // Free all vkCreateMemory allocations
         m_deviceBufferHeap->freeVulkanMemoryBlocks();
         m_deviceImageHeap->freeVulkanMemoryBlocks();
         m_stagingBufferHeap->freeVulkanMemoryBlocks();
@@ -75,6 +80,13 @@ namespace crisp
         memRange.memory = memory;
         memRange.offset = offset;
         memRange.size   = size;
+
+        /*auto atomSize = m_context->getPhysicalDeviceLimits().nonCoherentAtomSize;
+        auto old = offset;
+        offset = (offset / atomSize) * atomSize;
+        if (old != offset)
+            std::cout << "Old: " << old << " New: " << offset << std::endl;*/
+
         m_unflushedRanges.emplace_back(memRange);
     }
 
@@ -94,6 +106,27 @@ namespace crisp
             vkFlushMappedMemoryRanges(m_device, static_cast<uint32_t>(m_unflushedRanges.size()), m_unflushedRanges.data());
             m_unflushedRanges.clear();
         }
+    }
+
+    void VulkanDevice::updateDeferredDestructions()
+    {
+        for (auto& destructor : m_deferredDestructors)
+        {
+            if (--destructor.framesRemaining <= 0)
+                destructor.fun(m_device);
+        }
+
+        m_deferredDestructors.erase(std::remove_if(
+            m_deferredDestructors.begin(),
+            m_deferredDestructors.end(), [](const auto& a) {
+                return a.framesRemaining <= 0;
+            }), m_deferredDestructors.end());
+    }
+
+    void VulkanDevice::runDeferredDestructions()
+    {
+        for (auto& destr : m_deferredDestructors)
+            destr.fun(m_device);
     }
 
     VkSemaphore VulkanDevice::createSemaphore() const

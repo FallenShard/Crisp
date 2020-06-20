@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 position;
 
-layout(set = 0, binding = 0, dynamic) uniform Transforms
+layout(set = 0, binding = 0) uniform Transforms
 {
     mat4 MVP;
     mat4 MV;
@@ -10,17 +10,18 @@ layout(set = 0, binding = 0, dynamic) uniform Transforms
     mat4 N;
 };
 
-layout(set = 0, binding = 1, dynamic) uniform LightTransforms
+layout(set = 0, binding = 1) uniform Light
 {
-    mat4 LVP[4];
-};
-
-layout(push_constant) uniform PushConstant
-{
-    layout(offset = 0) uint value;
-} lightTransformIndex;
+    mat4 V;
+    mat4 P;
+    mat4 VP;
+    vec4 position;
+    vec4 direction;
+    vec4 spectrum;
+    vec4 params;
+} light;
 
 void main()
 {
-    gl_Position = LVP[lightTransformIndex.value] * M * vec4(position, 1.0f);
+    gl_Position = light.VP * M * vec4(position, 1.0f);
 }

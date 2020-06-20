@@ -75,7 +75,7 @@
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;$(SolutionDir)Externals\Libraries\spirv\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3d.lib;vulkan-1.lib;freetype27.lib;lua51.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3d.lib;vulkan-1.lib;freetype27.lib;lua51.lib;zlib.lib;tbb_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>
       </AdditionalOptions>
     </Link>
@@ -117,7 +117,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)Externals\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3d.lib;vulkan-1.lib;freetype27.lib;lua51.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3d.lib;vulkan-1.lib;freetype27.lib;lua51.lib;zlib.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(SolutionDir)Externals\DLLs" "$(OutDir)" /E /Y /I /R /S /D</Command>
@@ -155,6 +155,7 @@
     <ClCompile Include="Source\Core\Window.cpp" />
     <ClCompile Include="Source\Geometry\Geometry.cpp" />
     <ClCompile Include="Source\Geometry\MeshGenerators.cpp" />
+    <ClCompile Include="Source\Geometry\TransformBuffer.cpp" />
     <ClCompile Include="Source\Geometry\TriangleMesh.cpp" />
     <ClCompile Include="Source\Geometry\VertexAttributeDescriptor.cpp" />
     <ClCompile Include="Source\GUI\ComboBox.cpp" />
@@ -164,8 +165,10 @@
     <ClCompile Include="Source\GUI\DoubleSlider.cpp" />
     <ClCompile Include="Source\GUI\DynamicUniformBufferResource.cpp" />
     <ClCompile Include="Source\GUI\ListBox.cpp" />
+    <ClCompile Include="Source\IO\FbxImporter.cpp" />
     <ClCompile Include="Source\IO\MeshImporter.cpp" />
     <ClCompile Include="Source\IO\WavefrontObjImporter.cpp" />
+    <ClCompile Include="Source\Lights\LightSystem.cpp" />
     <ClCompile Include="Source\Lights\PointLight.cpp" />
     <ClCompile Include="Source\Models\Grass.cpp" />
     <ClCompile Include="Source\Models\SPH.cpp" />
@@ -182,9 +185,7 @@
     <ClCompile Include="Source\Renderer\Pipelines\GuiPipelines.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\LightShaftPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\NormalMapPipeline.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\SsaoPipeline.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\TerrainPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\ShadowMapPipelines.cpp" />
     <ClCompile Include="Source\Renderer\RenderGraph.cpp" />
     <ClCompile Include="Source\Renderer\RenderNode.cpp" />
@@ -196,11 +197,13 @@
     <ClCompile Include="Source\Renderer\RenderPasses\LightShaftPass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\TexturePass.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.cpp" />
+    <ClCompile Include="Source\Renderer\ResourceContext.cpp" />
     <ClCompile Include="Source\Renderer\VirtualFrame.cpp" />
     <ClCompile Include="Source\Renderer\VulkanBufferUtils.cpp" />
     <ClCompile Include="Source\Renderer\VulkanImageUtils.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionPanel.cpp" />
     <ClCompile Include="Source\Scenes\AmbientOcclusionScene.cpp" />
+    <ClCompile Include="Source\Scenes\ClusteredLightingScene.cpp" />
     <ClCompile Include="Source\Scenes\FluidSimulationPanel.cpp" />
     <ClCompile Include="Source\GUI\IntroductionPanel.cpp" />
     <ClCompile Include="Source\GUI\MemoryUsageBar.cpp" />
@@ -215,15 +218,14 @@
     <ClCompile Include="Source\GUI\Control.cpp" />
     <ClCompile Include="Source\GUI\ControlGroup.cpp" />
     <ClCompile Include="Source\GUI\Form.cpp" />
-    <ClCompile Include="Source\Core\EventHub.cpp" />
     <ClCompile Include="Source\GUI\Label.cpp" />
     <ClCompile Include="Source\GUI\Panel.cpp" />
     <ClCompile Include="Source\GUI\RenderSystem.cpp" />
     <ClCompile Include="Source\IO\OpenEXRWriter.cpp" />
     <ClCompile Include="Source\Lights\DirectionalLight.cpp" />
     <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\Scenes\PbrScene.cpp" />
     <ClCompile Include="Source\Scenes\RaytracedImage.cpp" />
-    <ClCompile Include="Source\Models\BoxDrawer.cpp" />
     <ClCompile Include="Source\Models\BoxVisualizer.cpp" />
     <ClCompile Include="Source\Models\Skybox.cpp" />
     <ClCompile Include="Source\Renderer\DescriptorSetGroup.cpp" />
@@ -235,21 +237,21 @@
     <ClCompile Include="Source\Renderer\RenderPasses\ShadowPass.cpp" />
     <ClCompile Include="Source\Renderer\Texture.cpp" />
     <ClCompile Include="Source\Scenes\FluidSimulationScene.cpp" />
-    <ClCompile Include="Source\Scenes\PhysicallyBasedMaterialsScene.cpp" />
     <ClCompile Include="Source\Scenes\RayTracerGui.cpp" />
     <ClCompile Include="Source\Scenes\RayTracerScene.cpp" />
+    <ClCompile Include="Source\Scenes\Scene.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingPanel.cpp" />
     <ClCompile Include="Source\Scenes\ShadowMappingScene.cpp" />
-    <ClCompile Include="Source\Scenes\TerrainScene.cpp" />
     <ClCompile Include="Source\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\ShadingLanguage\Lexer.cpp" />
     <ClCompile Include="Source\ShadingLanguage\Parser.cpp" />
     <ClCompile Include="Source\ShadingLanguage\ShaderPreprocessor.cpp" />
     <ClCompile Include="Source\ShadingLanguage\Reflection.cpp" />
     <ClCompile Include="Source\ShadingLanguage\Token.cpp" />
-    <ClCompile Include="Source\Techniques\CascadedShadowMapper.cpp" />
+    <ClCompile Include="Source\Lights\EnvironmentLighting.cpp" />
     <ClCompile Include="Source\Techniques\ForwardClusteredShading.cpp" />
     <ClCompile Include="Source\Techniques\ShadowMapper.cpp" />
+    <ClCompile Include="Source\Vulkan\RayTracingMaterial.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanCommandBuffer.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanCommandPool.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanImageView.cpp" />
@@ -257,7 +259,6 @@
     <ClCompile Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\LiquidPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\PointSphereSpritePipeline.cpp" />
-    <ClCompile Include="Source\Renderer\Pipelines\SkyboxPipeline.cpp" />
     <ClCompile Include="Source\Renderer\Pipelines\UniformColorPipeline.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanPipeline.cpp" />
     <ClCompile Include="Source\Renderer\RenderPasses\DefaultRenderPass.cpp" />
@@ -276,6 +277,7 @@
     <ClCompile Include="Source\Vulkan\VulkanQueue.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanQueueConfiguration.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
+    <ClCompile Include="Source\Vulkan\VulkanRayTracer.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanRenderPass.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanSampler.cpp" />
     <ClCompile Include="Source\Vulkan\VulkanSwapChain.cpp" />
@@ -301,6 +303,7 @@
     <ClInclude Include="Source\Geometry\GeometryPart.hpp" />
     <ClInclude Include="Source\Geometry\GeometryView.hpp" />
     <ClInclude Include="Source\Geometry\MeshGenerators.hpp" />
+    <ClInclude Include="Source\Geometry\TransformBuffer.hpp" />
     <ClInclude Include="Source\Geometry\VertexAttributeBuffer.hpp" />
     <ClInclude Include="Source\Geometry\VertexAttributeDescriptor.hpp" />
     <ClInclude Include="Source\Geometry\VertexAttributeTraits.hpp" />
@@ -311,9 +314,11 @@
     <ClInclude Include="Source\GUI\ComboBox.hpp" />
     <ClInclude Include="Source\GUI\DrawComponents\TextDrawComponent.hpp" />
     <ClInclude Include="Source\GUI\ListBox.hpp" />
+    <ClInclude Include="Source\IO\FbxImporter.hpp" />
     <ClInclude Include="Source\IO\MeshImporter.hpp" />
     <ClInclude Include="Source\IO\WavefrontObjImporter.hpp" />
     <ClInclude Include="Source\Lights\LightDescriptor.hpp" />
+    <ClInclude Include="Source\Lights\LightSystem.hpp" />
     <ClInclude Include="Source\Lights\PointLight.hpp" />
     <ClInclude Include="Source\Models\FluidSimulation.hpp" />
     <ClInclude Include="Source\Models\Grass.hpp" />
@@ -332,9 +337,7 @@
     <ClInclude Include="Source\Renderer\Pipelines\GuiPipelines.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\LightShaftPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\NormalMapPipeline.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\PhysicallyBasedPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\SsaoPipeline.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\TerrainPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\ShadowMapPipelines.hpp" />
     <ClInclude Include="Source\Renderer\RenderGraph.hpp" />
     <ClInclude Include="Source\Renderer\RenderNode.hpp" />
@@ -346,19 +349,20 @@
     <ClInclude Include="Source\Renderer\RenderPasses\LightShaftPass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\TexturePass.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\VarianceShadowMapPass.hpp" />
+    <ClInclude Include="Source\Renderer\ResourceContext.hpp" />
     <ClInclude Include="Source\Renderer\VulkanBufferUtils.hpp" />
     <ClInclude Include="Source\Renderer\VulkanImageUtils.hpp" />
     <ClInclude Include="Source\Renderer\VirtualFrame.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionPanel.hpp" />
     <ClInclude Include="Source\Scenes\AmbientOcclusionScene.hpp" />
+    <ClInclude Include="Source\Scenes\ClusteredLightingScene.hpp" />
     <ClInclude Include="Source\Scenes\FluidSimulationScene.hpp" />
-    <ClInclude Include="Source\Scenes\PhysicallyBasedMaterialsScene.hpp" />
+    <ClInclude Include="Source\Scenes\PbrScene.hpp" />
     <ClInclude Include="Source\Scenes\RayTracerGui.hpp" />
     <ClInclude Include="Source\Scenes\RayTracerScene.hpp" />
     <ClInclude Include="Source\Scenes\Scene.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingPanel.hpp" />
     <ClInclude Include="Source\Scenes\ShadowMappingScene.hpp" />
-    <ClInclude Include="Source\Scenes\TerrainScene.hpp" />
     <ClInclude Include="Source\Scenes\TestScene.hpp" />
     <ClInclude Include="Source\Core\Window.hpp" />
     <ClInclude Include="Source\Geometry\TriangleMesh.hpp" />
@@ -382,14 +386,12 @@
     <ClInclude Include="Source\GUI\Control.hpp" />
     <ClInclude Include="Source\GUI\ControlGroup.hpp" />
     <ClInclude Include="Source\GUI\Form.hpp" />
-    <ClInclude Include="Source\Core\EventHub.hpp" />
     <ClInclude Include="Source\GUI\Label.hpp" />
     <ClInclude Include="Source\GUI\Panel.hpp" />
     <ClInclude Include="Source\GUI\RenderSystem.hpp" />
     <ClInclude Include="Source\IO\OpenEXRWriter.hpp" />
     <ClInclude Include="Source\Lights\DirectionalLight.hpp" />
     <ClInclude Include="Source\Scenes\RaytracedImage.hpp" />
-    <ClInclude Include="Source\Models\BoxDrawer.hpp" />
     <ClInclude Include="Source\Models\BoxVisualizer.hpp" />
     <ClInclude Include="Source\Models\FluidSimulationParams.hpp" />
     <ClInclude Include="Source\Models\Skybox.hpp" />
@@ -412,9 +414,10 @@
     <ClInclude Include="Source\ShadingLanguage\Statements.hpp" />
     <ClInclude Include="Source\ShadingLanguage\Token.hpp" />
     <ClInclude Include="Source\ShadingLanguage\Visitor.hpp" />
-    <ClInclude Include="Source\Techniques\CascadedShadowMapper.hpp" />
+    <ClInclude Include="Source\Lights\EnvironmentLighting.hpp" />
     <ClInclude Include="Source\Techniques\ForwardClusteredShading.hpp" />
     <ClInclude Include="Source\Techniques\ShadowMapper.hpp" />
+    <ClInclude Include="Source\Vulkan\RayTracingMaterial.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanCommandBuffer.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanCommandPool.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanFormatTraits.hpp" />
@@ -424,7 +427,6 @@
     <ClInclude Include="Source\Renderer\Pipelines\FullScreenQuadPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\LiquidPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\PointSphereSpritePipeline.hpp" />
-    <ClInclude Include="Source\Renderer\Pipelines\SkyboxPipeline.hpp" />
     <ClInclude Include="Source\Renderer\Pipelines\UniformColorPipeline.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanPipeline.hpp" />
     <ClInclude Include="Source\Renderer\RenderPasses\DefaultRenderPass.hpp" />
@@ -444,6 +446,7 @@
     <ClInclude Include="Source\Vulkan\VulkanQueue.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanQueueConfiguration.hpp" />
     <ClInclude Include="Source\Renderer\Renderer.hpp" />
+    <ClInclude Include="Source\Vulkan\VulkanRayTracer.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanRenderPass.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanResource.hpp" />
     <ClInclude Include="Source\Vulkan\VulkanSampler.hpp" />
@@ -493,6 +496,7 @@
     <None Include="Source\Shaders\gui-text-vert.glsl" />
     <None Include="Source\Shaders\integrate-comp.glsl" />
     <None Include="Source\Shaders\light-culling-comp.glsl" />
+    <None Include="Source\Shaders\lights.part" />
     <None Include="Source\Shaders\liquid-frag.glsl" />
     <None Include="Source\Shaders\liquid-vert.glsl" />
     <None Include="Source\Shaders\normal-map-frag.glsl" />

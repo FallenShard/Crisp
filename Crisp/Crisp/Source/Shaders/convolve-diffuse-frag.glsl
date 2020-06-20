@@ -21,18 +21,19 @@ vec3 getIrradiance(vec3 normal)
     {
         for (float theta = 0.0f; theta < 0.5f * PI; theta += sampleDelta)
         {
+            float cosTheta = cos(theta);
+            float sinTheta = sin(theta);
             // spherical to cartesian (in tangent space)
-            vec3 tangentSample = vec3(sin(theta) * cos(phi),  sin(theta) * sin(phi), cos(theta));
+            vec3 tangentSample = vec3(sinTheta * cos(phi),  sinTheta * sin(phi), cosTheta);
             // tangent space to world
             vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
 
-            irradiance += texture(cubeMap, sampleVec).rgb * cos(theta) * sin(theta);
+            irradiance += texture(cubeMap, sampleVec).rgb * cosTheta * sinTheta;
             nrSamples++;
         }
     }
     return PI * irradiance * (1.0f / float(nrSamples));
 }
-
 
 void main()
 {		

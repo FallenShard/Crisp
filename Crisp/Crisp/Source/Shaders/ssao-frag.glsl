@@ -26,7 +26,8 @@ layout(push_constant) uniform AoParams
 
 float getEyeDepth(float fragDepth)
 {
-    return P[3][2] / (1.0f - 2.0f * fragDepth - P[2][2]);
+    //return P[3][2] / (1.0f - 2.0f * fragDepth - P[2][2]);
+    return P[3][2] / (-fragDepth - P[2][2]);
 }
 
 vec3 screenToEye(vec2 uv, float eyeDepth)
@@ -46,7 +47,8 @@ vec4 projectToScreen(vec3 eyePos)
 	vec4 clipPos = P * vec4(eyePos, 1.0f);
 	float invW = 1.0f / clipPos.w;
 	vec3 ndcPos = clipPos.xyz * invW;
-    vec3 screenPos = ndcPos * 0.5f + 0.5f;
+    //vec3 screenPos = ndcPos * 0.5f + 0.5f;
+    vec3 screenPos = vec3(ndcPos.xy * 0.5f + 0.5f, ndcPos.z);
 	return vec4(screenPos, invW);
 }
 
@@ -56,6 +58,7 @@ void main()
 
     vec3 origin = screenToEye(texCoord, getEyeDepth(normalDepth.w));
     vec3 normal = normalize(normalDepth.rgb);
+    origin += 0.01 * normal;
 
     vec2 noiseScale = screenSize / vec2(4.0f, 4.0f);
     vec3 rvec = texture(noiseTex, texCoord * noiseScale).xyz * 2.0f - 1.0f;

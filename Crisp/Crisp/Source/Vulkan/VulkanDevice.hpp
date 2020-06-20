@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
+#include <any>
 
 #include <vulkan/vulkan.h>
 #include "VulkanMemoryHeap.hpp"
@@ -24,10 +25,16 @@ namespace crisp
         uint64_t stagingMemoryUsed;
     };
 
+    struct DeferredDestructor
+    {
+        int framesRemaining = 3;
+        std::function<void(VkDevice)> fun;
+    };
+
     class VulkanDevice
     {
     public:
-        VulkanDevice(VulkanContext* vulkanContext);
+        VulkanDevice(VulkanContext* vulkanContext, int virtualFrameCount);
         ~VulkanDevice();
 
         VkDevice getHandle() const;
@@ -37,6 +44,25 @@ namespace crisp
 
         void invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
         void flushMappedRanges();
+
+        template <typename F>
+        void deferDestruction(F&& deleter)
+        {
+            m_deferredDestructors.push_back({ m_virtualFrameCount, std::move(deleter) });
+        }
+
+        template <typename VkT>
+        void deferDestruction(VkT handle, void(*destroyFunc)(VkDevice, VkT, const VkAllocationCallbacks*))
+        {
+            m_deferredDestructors.push_back({ m_virtualFrameCount, [handle, destroyFunc](VkDevice device)
+                {
+                    destroyFunc(device, handle, nullptr);
+                }
+                });
+        }
+
+        void updateDeferredDestructions();
+        void runDeferredDestructions();
 
         VkSemaphore createSemaphore() const;
         VkFence createFence(VkFenceCreateFlags flags) const;
@@ -59,6 +85,7 @@ namespace crisp
         static constexpr VkDeviceSize StagingHeapSize = 256 << 20; // 256 MB
 
         VulkanContext* m_context;
+        int m_virtualFrameCount;
 
         VkDevice m_device;
         std::unique_ptr<VulkanQueue> m_generalQueue;
@@ -73,5 +100,7 @@ namespace crisp
         std::list<std::vector<VkDescriptorBufferInfo>> m_bufferInfos;
         std::list<VkDescriptorImageInfo>  m_imageInfos;
         std::vector<VkWriteDescriptorSet> m_descriptorWrites;
+
+        std::vector<DeferredDestructor> m_deferredDestructors;
     };
 }

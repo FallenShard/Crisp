@@ -29,7 +29,6 @@ namespace crisp
         case VK_FORMAT_R32G32_SFLOAT:       return 2 * sizeof(float);
         default:
             logFatal("Unknown format specified {}\n", format);
-            return 0;
         }
     }
 

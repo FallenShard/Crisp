@@ -1,10 +1,5 @@
 #include "FreeCamera.hpp"
 
-#pragma warning(push)
-#pragma warning(disable: 4201) // nameless struct
-#include <glm/gtx/euler_angles.hpp>
-#pragma warning(pop)
-
 #include <iostream>
 
 namespace crisp
@@ -24,11 +19,12 @@ namespace crisp
     {
         m_fov         = glm::radians(45.0f);
         m_aspectRatio = 1.0f;
-        m_zNear       = 0.5f;
+        m_zNear       = 1.0f;
         m_zFar        = 100.0f;
         //m_P           = glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
 
-        m_yawPitchRoll = glm::vec3(0.0f, 0.0f, 0.0f);
+        //m_yawPitchRoll = glm::radians(glm::vec3(45.0f, -30.0f, 0.0f));
+        m_yawPitchRoll = glm::radians(glm::vec3(0.0f));
 
         m_position = glm::vec3(0.0, 0.0f, 20.0f);
         m_look     = glm::vec3(0.0f, 0.0f, -1.0f);

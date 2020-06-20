@@ -130,13 +130,28 @@ namespace crisp
                 subpassCommandList.clear();
     }
 
-    void RenderGraph::buildCommandLists()
+    void RenderGraph::addToCommandLists(const RenderNode& renderNode)
     {
-        for (auto& graphNode : m_nodes)
+        const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
+        if (renderNode.isVisible)
         {
-            auto& renderPass = graphNode.second;
-            for (const auto& renderNode : renderPass->renderNodes)
-                renderPass->addCommand(renderNode.createDrawCommand(m_renderer->getCurrentVirtualFrameIndex()), renderNode.subpassIndex);
+            for (const auto& [key, materialMap] : renderNode.materials)
+                for (const auto& [part, material] : materialMap)
+                    m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(virtualFrameIndex, renderNode), key.subpassIndex);
+        }
+    }
+
+    void RenderGraph::buildCommandLists(const std::unordered_map<std::string, std::unique_ptr<RenderNode>>& renderNodes)
+    {
+        const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
+        for (const auto& [id, renderNode] : renderNodes)
+        {
+            if (renderNode->isVisible)
+            {
+                for (const auto& [key, materialMap] : renderNode->materials)
+                    for (const auto& [part, material] : materialMap)
+                        m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(virtualFrameIndex, *renderNode), key.subpassIndex);
+            }
         }
     }
 
@@ -165,6 +180,41 @@ namespace crisp
         return *m_nodes.at(name);
     }
 
+    const VulkanRenderPass& RenderGraph::getRenderPass(std::string name)
+    {
+        return *m_nodes.at(name)->renderPass;
+    }
+
+    void RenderGraph::executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer, int virtualFrameIndex)
+    {
+        constexpr auto sz = sizeof(DrawCommand);
+        command.pipeline->bind(cmdBuffer);
+        auto dynamicState = command.pipeline->getDynamicStateFlags();
+        if (dynamicState & PipelineDynamicState::Viewport)
+        {
+            if (command.viewport.width != 0.0f)
+                vkCmdSetViewport(cmdBuffer, 0, 1, &command.viewport);
+            else
+                renderer->setDefaultViewport(cmdBuffer);
+        }
+
+        if (dynamicState & PipelineDynamicState::Scissor)
+        {
+            if (command.scissor.extent.width != 0)
+                vkCmdSetScissor(cmdBuffer, 0, 1, &command.scissor);
+            else
+                renderer->setDefaultScissor(cmdBuffer);
+        }
+
+        command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer, static_cast<const char*>(command.pushConstantView.data));
+
+        if (command.material)
+            command.material->bind(virtualFrameIndex, cmdBuffer, command.dynamicBufferOffsets);
+
+        command.geometry->bindVertexBuffers(cmdBuffer);
+        command.drawFunc(cmdBuffer, command.geometryView);
+    }
+
     void RenderGraph::executeRenderPass(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
     {
         node.renderPass->begin(cmdBuffer);
@@ -174,46 +224,7 @@ namespace crisp
                 node.renderPass->nextSubpass(cmdBuffer);
 
             for (const auto& command : node.commands[subpassIndex])
-            {
-                command.pipeline->bind(cmdBuffer);
-                auto dynamicState = command.pipeline->getDynamicStateFlags();
-                if (dynamicState & PipelineDynamicState::Viewport)
-                {
-                    if (command.viewport.width != 0.0f)
-                        vkCmdSetViewport(cmdBuffer, 0, 1, &command.viewport);
-                    else
-                        m_renderer->setDefaultViewport(cmdBuffer);
-                }
-
-                if (dynamicState & PipelineDynamicState::Scissor)
-                {
-                    if (command.scissor.extent.width != 0)
-                        vkCmdSetScissor(cmdBuffer, 0, 1, &command.scissor);
-                    else
-                        m_renderer->setDefaultScissor(cmdBuffer);
-                }
-
-                command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer, static_cast<const char*>(command.pushConstantView.data));
-
-                if (command.dynamicBufferOffsets.empty())
-                {
-                    for (uint32_t i = 0; i < command.dynamicBufferViews.size(); ++i)
-                    {
-                        const auto& view = command.dynamicBufferViews[i];
-                        const uint32_t dynamicOffset = view.buffer->getDynamicOffset(virtualFrameIndex) + view.subOffset;
-                        command.material->setDynamicOffset(virtualFrameIndex, i, dynamicOffset);
-                    }
-
-                    command.material->bind(virtualFrameIndex, cmdBuffer);
-                }
-                else
-                {
-                    command.material->bind(virtualFrameIndex, cmdBuffer, command.dynamicBufferOffsets);
-                }
-
-                command.geometry->bindVertexBuffers(cmdBuffer);
-                command.drawFunc(cmdBuffer, command.geometryView);
-            }
+                executeDrawCommand(command, m_renderer, cmdBuffer, virtualFrameIndex);
         }
 
         node.renderPass->end(cmdBuffer, virtualFrameIndex);
@@ -228,6 +239,9 @@ namespace crisp
         node.pipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         node.material->bind(virtualFrameIndex, cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
         vkCmdDispatch(cmdBuffer, node.numWorkGroups.x, node.numWorkGroups.y, node.numWorkGroups.z);
+
+        for (const auto& dep : node.dependencies)
+            dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);
     }
 
     RenderGraph::Node::Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)

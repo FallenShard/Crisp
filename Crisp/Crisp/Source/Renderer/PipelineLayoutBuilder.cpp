@@ -13,7 +13,7 @@ namespace crisp
 {
     PipelineLayoutBuilder::PipelineLayoutBuilder(const sl::Reflection& shaderReflection)
     {
-        for (int setId = 0; setId < shaderReflection.getDescriptorSetCount(); ++setId)
+        for (uint32_t setId = 0; setId < shaderReflection.getDescriptorSetCount(); ++setId)
             defineDescriptorSet(setId, shaderReflection.isSetBuffered(setId),
                 shaderReflection.getDescriptorSetLayouts(setId));
 

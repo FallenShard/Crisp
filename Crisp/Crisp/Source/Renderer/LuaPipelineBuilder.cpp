@@ -19,23 +19,33 @@ namespace crisp
     {
     }
 
-    std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(Renderer* renderer, VulkanRenderPass* renderPass, uint32_t subpassIndex)
+    std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(Renderer* renderer, const VulkanRenderPass& renderPass, uint32_t subpassIndex)
     {
         const auto shaderFileMap = getShaderFileMap();
         sl::Reflection reflection;
         for (const auto& [stageFlag, fileStem] : shaderFileMap)
         {
+            renderer->loadShaderModule(fileStem);
             reflection.parseDescriptorSets(renderer->getShaderSourcePath(fileStem));
             m_builder.addShaderStage(createShaderStageInfo(stageFlag, renderer->getShaderModule(fileStem)));
         }
 
+        if (shaderFileMap.size() == 4)
+            m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
+
         readVertexInputState();
+        readInputAssemblyState();
+        readTessellationState();
         readViewportState(renderer, renderPass);
+        readRasterizationState();
+        readMultisampleState(renderPass);
+        readBlendState();
+        readDepthStencilState();
 
         PipelineLayoutBuilder layoutBuilder(reflection);
         readDescriptorSetBufferedStatus(layoutBuilder);
         readDynamicBufferDescriptorIds(layoutBuilder);
-        return m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()), renderPass->getHandle(), subpassIndex);
+        return m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()), renderPass.getHandle(), subpassIndex);
     }
 
     std::unordered_map<VkShaderStageFlagBits, std::string> LuaPipelineBuilder::getShaderFileMap()
@@ -115,8 +125,65 @@ namespace crisp
         }
     }
 
-    void LuaPipelineBuilder::readViewportState(Renderer* renderer, VulkanRenderPass* renderPass)
+    void LuaPipelineBuilder::readInputAssemblyState()
     {
+        if (!m_config.hasVariable("inputAssembly"))
+            return;
+
+        auto& inputAssembly = m_config["inputAssembly"];
+        if (auto topology = inputAssembly.get<std::string>("primitiveTopology"))
+        {
+            if (topology == "Lines")
+                m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+        }
+    }
+
+    void LuaPipelineBuilder::readTessellationState()
+    {
+        if (!m_config.hasVariable("tessellation"))
+            return;
+
+        auto& tessellation = m_config["tessellation"];
+        if (auto controlPointCount = tessellation.get<int>("controlPointCount"))
+        {
+            if (controlPointCount.has_value())
+                m_builder.setTessellationControlPoints(controlPointCount.value());
+        }
+    }
+
+    void LuaPipelineBuilder::readViewportState(Renderer* renderer, const VulkanRenderPass& renderPass)
+    {
+        if (!m_config.hasVariable("viewport"))
+        {
+            m_builder.setViewport(renderer->getDefaultViewport())
+                .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
+            m_builder.setScissor(renderer->getDefaultScissor())
+                .addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
+            return;
+        }
+
+        auto& viewportState = m_config["viewport"];
+        {
+            auto viewports = viewportState["viewports"];
+            for (int i = 0; i < viewports.getLength(); ++i)
+            {
+                auto vp = viewports[0];
+                if (vp.convertTo<std::string>() == "pass")
+                    m_builder.setViewport(renderPass.createViewport());
+            }
+        }
+
+        auto scissors = viewportState["scissors"];
+        {
+            for (int i = 0; i < scissors.getLength(); ++i)
+            {
+                auto scissor = scissors[0];
+                if (scissor.convertTo<std::string>() == "pass")
+                    m_builder.setScissor(renderPass.createScissor());
+            }
+        }
+        /*if (auto viewports = viewport[)
+
         if (auto viewport = m_config.get<std::vector<float>>("viewport"); viewport && viewport.value().size() == 4)
         {
             const auto& vec = viewport.value();
@@ -124,12 +191,7 @@ namespace crisp
         }
         else if (auto viewport = m_config.get<std::string>("viewport"); viewport == "pass")
         {
-            m_builder.setViewport(renderPass->createViewport());
-        }
-        else
-        {
-            m_builder.setViewport(renderer->getDefaultViewport())
-                .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
+            m_builder.setViewport(renderPass.createViewport());
         }
 
         if (auto scissor = m_config.get<std::vector<int32_t>>("scissor"); scissor && scissor.value().size() == 4)
@@ -139,12 +201,70 @@ namespace crisp
         }
         else if (auto scissor = m_config.get<std::string>("scissor"); scissor == "pass")
         {
-            m_builder.setScissor(renderPass->createScissor());
-        }
-        else
+            m_builder.setScissor(renderPass.createScissor());
+        }*/
+    }
+
+    void LuaPipelineBuilder::readRasterizationState()
+    {
+        if (!m_config.hasVariable("rasterization"))
+            return;
+
+        auto& rasterization = m_config["rasterization"];
+        if (auto cullMode = rasterization.get<std::string>("cullMode"))
         {
-            m_builder.setScissor(renderer->getDefaultScissor())
-                .addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
+            if (cullMode == "front")
+                m_builder.setCullMode(VK_CULL_MODE_FRONT_BIT);
+            else if (cullMode == "none")
+                m_builder.setCullMode(VK_CULL_MODE_NONE);
+        }
+    }
+
+    void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& renderPass)
+    {
+        m_builder.setSampleCount(renderPass.getDefaultSampleCount());
+        if (!m_config.hasVariable("multisample"))
+            return;
+
+        auto& multisample = m_config["multisample"];
+
+        if (auto enabled = multisample.get<bool>("alphaToCoverage"); enabled.has_value())
+        {
+            m_builder.setAlphaToCoverage(enabled.value());
+        }
+    }
+
+    void LuaPipelineBuilder::readBlendState()
+    {
+        if (!m_config.hasVariable("colorBlend"))
+            return;
+
+        auto& blend = m_config["colorBlend"];
+        if (auto enabled = blend.get<bool>("enabled"); enabled.has_value())
+        {
+            m_builder.setBlendState(0, enabled.value());
+            m_builder.setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+        }
+    }
+
+    void LuaPipelineBuilder::readDepthStencilState()
+    {
+        if (!m_config.hasVariable("depthStencil"))
+            return;
+
+        auto& depthStencil = m_config["depthStencil"];
+        if (auto reverseDepth = depthStencil.get<bool>("reverseDepth"); reverseDepth.has_value())
+        {
+            if (reverseDepth.value())
+                m_builder.setDepthTestOperation(VK_COMPARE_OP_GREATER_OR_EQUAL);
+        }
+
+        if (auto depthWrite = depthStencil.get<bool>("depthWriteEnabled"); depthWrite.has_value())
+        {
+            if (depthWrite.value())
+                m_builder.setDepthWrite(VK_TRUE);
+            else
+                m_builder.setDepthWrite(VK_FALSE);
         }
     }
 

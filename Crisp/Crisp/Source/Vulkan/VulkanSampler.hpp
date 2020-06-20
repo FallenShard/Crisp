@@ -11,6 +11,7 @@ namespace crisp
     public:
         VulkanSampler(VulkanDevice* device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode);
         VulkanSampler(VulkanDevice* device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod);
-         ~VulkanSampler();
+
+        ~VulkanSampler();
     };
 }

@@ -386,9 +386,7 @@ namespace crisp::gui
 
     void RenderSystem::updateFullScreenMaterial()
     {
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
-            m_fsMaterial->writeDescriptor(0, 0, i, m_guiPass->getRenderTargetView(0, i).getDescriptorInfo(m_linearClampSampler->getHandle()));
-
+        m_fsMaterial->writeDescriptor(0, 0, *m_guiPass, 0, m_linearClampSampler.get());
         m_device->flushDescriptorUpdates();
     }
 

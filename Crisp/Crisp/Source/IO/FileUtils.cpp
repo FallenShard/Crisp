@@ -55,7 +55,7 @@ namespace crisp::fileutils
         std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
         if (!file.is_open())
-            throw std::exception("Failed to open file!");
+            throw std::runtime_error("Failed to open file!");
 
         size_t fileSize = static_cast<size_t>(file.tellg());
         std::vector<char> buffer(fileSize);

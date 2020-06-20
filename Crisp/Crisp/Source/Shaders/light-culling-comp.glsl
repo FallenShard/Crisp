@@ -16,18 +16,21 @@ layout (set = 0, binding = 1) buffer LightIndexCounter
 };
 
 
-
-struct LightInfo
+struct Light
 {
-    vec3 position;
-    float radius;
-    vec3 spectrum;
-    float padding;
+    mat4 V;
+    mat4 P;
+    mat4 VP;
+    vec4 position;
+    vec4 direction;
+    vec4 spectrum;
+    vec4 params;
 };
 
-layout(set = 0, binding = 2) uniform Lights
+#define TotalLightCount 1024
+layout(set = 0, binding = 2) buffer Lights
 {
-    LightInfo lights[1024];
+    Light lights[];
 };
 
 layout(set = 0, binding = 3) uniform Camera
@@ -43,9 +46,9 @@ layout (set = 0, binding = 4) buffer LightIndexList
     uint lightIndexList[];
 };
 
-layout(set = 1, binding = 0, r32f) uniform readonly image2D depthBuffer;
+//layout(set = 1, binding = 0, r32f) uniform readonly image2D depthBuffer;
 
-layout(set = 2, binding = 0, rg32ui) uniform writeonly uimage2D lightGrid;
+layout(set = 1, binding = 0, rg32ui) uniform writeonly uimage2D lightGrid;
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
@@ -76,7 +79,7 @@ uint getGlobalGroupIndex()
 
 shared uint lightCount;
 shared uint lightIndexStartOffset;
-shared uint lightList[1024];
+shared uint lightList[TotalLightCount];
 
 shared TileFrustum groupFrustum;
 
@@ -87,19 +90,19 @@ void appendLight(uint lightId)
         lightList[index] = lightId;
 }
 
-bool SphereInsidePlane(in LightInfo sphere, vec4 plane)
+bool SphereInsidePlane(vec3 center, float radius, vec4 plane)
 {
-    return dot(plane.xyz, sphere.position) - plane.w < -sphere.radius;
+    return dot(plane.xyz, center) - plane.w < -radius;
 }
 
-bool SphereInsideFrustum(in LightInfo sphere, in TileFrustum frustum, float zNear, float zFar )
+bool SphereInsideFrustum(vec3 center, float radius, in TileFrustum frustum, float zNear, float zFar)
 {
     bool result = true;
  
     // First check depth
     // Note: Here, the view vector points in the -Z axis so the 
     // far depth value will be approaching -infinity.
-    if ( sphere.position.z - sphere.radius > zNear || sphere.position.z + sphere.radius < zFar )
+    if (center.z - radius > zNear || center.z + radius < zFar)
     {
         result = false;
     }
@@ -107,7 +110,7 @@ bool SphereInsideFrustum(in LightInfo sphere, in TileFrustum frustum, float zNea
     // Then check frustum planes
     for ( int i = 0; i < 4 && result; i++ )
     {
-        if ( SphereInsidePlane( sphere, frustum.planes[i] ) )
+        if (SphereInsidePlane(center, radius, frustum.planes[i]))
         {
             result = false;
         }
@@ -134,17 +137,16 @@ void main()
     barrier();
 
     float minDepth = -0.5f;
-    float maxDepth = -100.0f;
+    float maxDepth = -1000.0f;
 
     uint localThreadCount = gl_WorkGroupSize.z * gl_WorkGroupSize.y * gl_WorkGroupSize.x;
 
-    for (uint i = gl_LocalInvocationIndex; i < 1024; i += localThreadCount)
+    for (uint i = gl_LocalInvocationIndex; i < TotalLightCount; i += localThreadCount)
     {
-       LightInfo light = lights[i];
+       vec3 center = (V * vec4(lights[i].position.xyz, 1.0f)).xyz;
+       float radius = lights[i].params.r;
 
-       light.position = (V * vec4(light.position.xyz, 1.0f)).xyz;
-
-       if (SphereInsideFrustum(light, groupFrustum, minDepth, maxDepth))
+       if (SphereInsideFrustum(center, radius, groupFrustum, minDepth, maxDepth))
            appendLight(i);
     }
 

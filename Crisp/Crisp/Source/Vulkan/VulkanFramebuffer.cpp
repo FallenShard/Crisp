@@ -19,7 +19,10 @@ namespace crisp
 
     VulkanFramebuffer::~VulkanFramebuffer()
     {
-        vkDestroyFramebuffer(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+            m_device->deferDestruction(m_handle, vkDestroyFramebuffer);
+        else
+            vkDestroyFramebuffer(m_device->getHandle(), m_handle, nullptr);
     }
 }
 

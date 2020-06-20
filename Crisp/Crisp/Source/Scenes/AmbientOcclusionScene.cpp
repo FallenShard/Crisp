@@ -11,10 +11,12 @@
 
 #include "Renderer/RenderPasses/SceneRenderPass.hpp"
 #include "Renderer/RenderPasses/AmbientOcclusionPass.hpp"
+#include "Renderer/RenderPasses/BlurPass.hpp"
 #include "Renderer/Pipelines/UniformColorPipeline.hpp"
 #include "Renderer/Pipelines/NormalPipeline.hpp"
 #include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Pipelines/SsaoPipeline.hpp"
+#include "Renderer/Pipelines/BlurPipeline.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/VulkanImageUtils.hpp"
 
@@ -40,6 +42,17 @@ namespace crisp
     namespace
     {
         glm::vec4 pc(0.2f, 0.0f, 0.0f, 1.0f);
+
+        struct BlurParams
+        {
+            float dirX;
+            float dirY;
+            float sigma;
+            int radius;
+        };
+
+        BlurParams blurH = { 0.0f, 1.0f / Application::DefaultWindowWidth,  1.0f, 3 };
+        BlurParams blurV = { 1.0f / Application::DefaultWindowHeight, 0.0f, 1.0f, 3 };
     }
 
     AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* app)
@@ -101,10 +114,12 @@ namespace crisp
 
         auto mainPass = std::make_unique<SceneRenderPass>(m_renderer);
         auto ssaoPass = std::make_unique<AmbientOcclusionPass>(m_renderer);
+        auto blurHPass = std::make_unique<BlurPass>(m_renderer, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent());
+        auto blurVPass = std::make_unique<BlurPass>(m_renderer, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent());
 
         auto colorPipeline = createColorPipeline(m_renderer, mainPass.get());
         auto colorMaterial = std::make_unique<Material>(colorPipeline.get());
-        colorMaterial->writeDescriptor(0, 0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
+        colorMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
 
         auto normalPipeline = createNormalPipeline(m_renderer, mainPass.get());
 
@@ -115,6 +130,14 @@ namespace crisp
         ssaoMaterial->writeDescriptor(0, 2, *m_sampleBuffer);
         ssaoMaterial->writeDescriptor(0, 3, *noiseTexView, m_noiseSampler.get());
         ssaoMaterial->setDynamicBufferView(0, *m_cameraBuffer, 0);
+
+        auto blurHPipeline = createBlurPipeline(m_renderer, blurHPass.get());
+        auto blurHMaterial = std::make_unique<Material>(blurHPipeline.get());
+        blurHMaterial->writeDescriptor(0, 0, *ssaoPass, 0, m_linearClampSampler.get());
+
+        auto blurVPipeline = createBlurPipeline(m_renderer, blurVPass.get());
+        auto blurVMaterial = std::make_unique<Material>(blurVPipeline.get());
+        blurVMaterial->writeDescriptor(0, 0, *blurHPass, 0, m_linearClampSampler.get());
 
         m_renderer->getDevice()->flushDescriptorUpdates();
 
@@ -131,43 +154,60 @@ namespace crisp
 
         m_geometries.push_back(std::move(planeGeometry));
         m_geometries.push_back(std::move(sponzaGeometry));
+
         m_pipelines.push_back(std::move(colorPipeline));
         m_pipelines.push_back(std::move(normalPipeline));
         m_pipelines.push_back(std::move(ssaoPipeline));
+        m_pipelines.push_back(std::move(blurHPipeline));
+        m_pipelines.push_back(std::move(blurVPipeline));
+
         m_materials.push_back(std::move(colorMaterial));
         m_materials.push_back(std::move(ssaoMaterial));
+        m_materials.push_back(std::move(blurHMaterial));
+        m_materials.push_back(std::move(blurVMaterial));
 
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
-        auto& mainPassNode = m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
-        auto& ssaoPassNode = m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
+        m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
+        m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
+        m_renderGraph->addRenderPass("blurHPass", std::move(blurHPass));
+        m_renderGraph->addRenderPass("blurVPass", std::move(blurVPass));
         m_renderGraph->addRenderTargetLayoutTransition("mainPass", "ssaoPass", 0);
-        m_renderGraph->addRenderTargetLayoutTransition("ssaoPass", "SCREEN", 0);
+        m_renderGraph->addRenderTargetLayoutTransition("ssaoPass", "blurHPass", 0);
+        m_renderGraph->addRenderTargetLayoutTransition("blurHPass", "blurVPass", 0);
+        m_renderGraph->addRenderTargetLayoutTransition("blurVPass", "SCREEN", 0);
         m_renderGraph->sortRenderPasses();
 
-        m_renderer->setSceneImageView(m_renderGraph->getNode("ssaoPass").renderPass.get(), 0);
+        m_renderer->setSceneImageView(m_renderGraph->getNode("blurVPass").renderPass.get(), 0);
 
-        RenderNode floor(m_transformBuffer.get(), &m_transforms[0], 0);
-        floor.geometry = m_geometries[0].get();
-        floor.material = m_materials[0].get();
-        floor.pipeline = m_pipelines[0].get();
-        floor.transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
-        floor.setPushConstantView(pc);
-        mainPassNode.renderNodes.push_back(floor);
+        m_floorNode = std::make_unique<RenderNode>(m_transformBuffer.get(), &m_transforms[0], 0);
+        m_floorNode->transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
+        m_floorNode->geometry = m_geometries[0].get();
+        m_floorNode->pass("mainPass").material = m_materials[0].get();
+        m_floorNode->pass("mainPass").setPushConstantView(pc);
 
-        RenderNode sponza(m_transformBuffer.get(), &m_transforms[1], 1);
-        sponza.geometry = m_geometries[1].get();
-        sponza.material = m_materials[0].get();
-        sponza.pipeline = m_pipelines[1].get();
-        sponza.setPushConstantView(pc);
-        mainPassNode.renderNodes.push_back(sponza);
-        mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
+        m_sponzaNode = std::make_unique<RenderNode>(m_transformBuffer.get(), &m_transforms[1], 1);
+        m_sponzaNode->transformPack->M = glm::mat4(1.0f);
+        m_sponzaNode->geometry = m_geometries[1].get();
+        m_sponzaNode->pass("mainPass").material = m_materials[0].get();
+        m_sponzaNode->pass("mainPass").pipeline = m_pipelines[1].get();
+        m_sponzaNode->pass("mainPass").setPushConstantView(pc);
 
-        RenderNode ssao;
-        ssao.geometry = m_renderer->getFullScreenGeometry();
-        ssao.material = m_materials[1].get();
-        ssao.pipeline = m_pipelines[2].get();
-        ssao.setPushConstantView(m_ssaoParams);
-        ssaoPassNode.renderNodes.push_back(ssao);
+        //mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
+
+        m_ssaoNode = std::make_unique<RenderNode>();
+        m_ssaoNode->geometry = m_renderer->getFullScreenGeometry();
+        m_ssaoNode->pass("ssaoPass").material = m_materials[1].get();
+        m_ssaoNode->pass("ssaoPass").setPushConstantView(m_ssaoParams);
+
+        m_blurHNode = std::make_unique<RenderNode>();
+        m_blurHNode->geometry = m_renderer->getFullScreenGeometry();
+        m_blurHNode->pass("blurHPass").material = m_materials[2].get();
+        m_blurHNode->pass("blurHPass").setPushConstantView(blurH);
+
+        m_blurVNode = std::make_unique<RenderNode>();
+        m_blurVNode->geometry = m_renderer->getFullScreenGeometry();
+        m_blurVNode->pass("blurVPass").material = m_materials[3].get();
+        m_blurVNode->pass("blurVPass").setPushConstantView(blurV);
 
         auto panel = std::make_unique<gui::AmbientOcclusionPanel>(app->getForm(), this);
         m_app->getForm()->add(std::move(panel));
@@ -186,8 +226,7 @@ namespace crisp
         m_renderer->setSceneImageView(m_renderGraph->getNode("ssaoPass").renderPass.get(), 0);
 
         auto* mainPass = m_renderGraph->getNode("mainPass").renderPass.get();
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
-            m_materials[1]->writeDescriptor(0, 0, i, mainPass->getRenderTargetView(0, i).getDescriptorInfo(*m_nearestSampler));
+        m_materials[1]->writeDescriptor(0, 0, *mainPass, 0, m_nearestSampler.get());
     }
 
     void AmbientOcclusionScene::update(float dt)
@@ -211,7 +250,11 @@ namespace crisp
     void AmbientOcclusionScene::render()
     {
         m_renderGraph->clearCommandLists();
-        m_renderGraph->buildCommandLists();
+        m_renderGraph->addToCommandLists(*m_floorNode);
+        m_renderGraph->addToCommandLists(*m_sponzaNode);
+        m_renderGraph->addToCommandLists(*m_ssaoNode);
+        m_renderGraph->addToCommandLists(*m_blurHNode);
+        m_renderGraph->addToCommandLists(*m_blurVNode);
         m_renderGraph->executeCommandLists();
     }
 

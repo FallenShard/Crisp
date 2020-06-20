@@ -10,14 +10,14 @@ namespace crisp
     {
     public:
         Profiler()
+            : m_timePoint(std::chrono::high_resolution_clock::now())
         {
-            m_timePoint = std::chrono::high_resolution_clock::now();
         }
 
         Profiler(const std::string& sectionName)
             : m_sectionName(sectionName)
+            , m_timePoint(std::chrono::high_resolution_clock::now())
         {
-
         }
 
         ~Profiler()

@@ -58,6 +58,8 @@ namespace crisp
         std::array<glm::vec3, 8> getFrustumPoints(float zNear, float zFar) const;
         std::array<glm::vec3, 8> getFrustumPoints() const;
 
+        glm::vec4 calculateBoundingSphere(float zNear, float zFar) const;
+
     protected:
         void updateProjectionMatrix();
 

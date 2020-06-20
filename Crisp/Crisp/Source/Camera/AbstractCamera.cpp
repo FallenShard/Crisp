@@ -8,15 +8,21 @@ namespace crisp
 
         glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar)
         {
-            //glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
-            //float f = 1.0f / std::tan(fovY / 2.0f);
+            glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
+            float f = 1.0f / std::tan(fovY / 2.0f);
             //return glm::mat4(
             //    f / aspectRatio, 0.0f,  0.0f,  0.0f,
             //               0.0f,    f,  0.0f,  0.0f,
-            //               0.0f, 0.0f,  0.0f, -1.0f,
-            //               0.0f, 0.0f, zNear,  0.0f);
+            //               0.0f, 0.0f,  -zFar / (zNear - zFar) - 1, -1.0f,
+            //               0.0f, 0.0f, -zNear * zFar / (zNear - zFar),  0.0f);
 
-            return glm::perspective(fovY, aspectRatio, zNear, zFar);
+            // Infinite projection
+            return glm::mat4(
+                f / aspectRatio, 0.0f,  0.0f,  0.0f,
+                           0.0f,    f,  0.0f,  0.0f,
+                           0.0f, 0.0f,  0.0f, -1.0f,
+                           0.0f, 0.0f, zNear,  0.0f);
+            //return glm::perspective(fovY, aspectRatio, zFar, zNear);
             //return glm::perspective(fovY, aspectRatio, 500.0f, zNear);
         }
     }
@@ -191,11 +197,44 @@ namespace crisp
             glm::vec3(-halfFarW, +halfFarH, -zFar)
         };
 
-        auto camToWorld = glm::inverse(m_V);
+        std::array<glm::vec4, 8> ffs =
+        {
+            glm::vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+            glm::vec4(+1.0f, -1.0f, 0.0f, 1.0f),
+            glm::vec4(+1.0f, +1.0f, 0.0f, 1.0f),
+            glm::vec4(-1.0f, +1.0f, 0.0f, 1.0f),
+            glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),
+            glm::vec4(+1.0f, -1.0f, 1.0f, 1.0f),
+            glm::vec4(+1.0f, +1.0f, 1.0f, 1.0f),
+            glm::vec4(-1.0f, +1.0f, 1.0f, 1.0f)
+        };
 
-        std::array<glm::vec3, 8> result;
-        std::transform(frustumPoints.begin(), frustumPoints.end(), result.begin(), [&camToWorld](const glm::vec3& pt) { return glm::vec3(camToWorld * glm::vec4(pt, 1.0f)); });
-        return result;
+        //glm::mat4 inverseP = glm::inverse(glm::perspective(m_fov, m_aspectRatio, zNear, zFar));
+        //for (auto& ff : ffs)
+        //{
+        //    ff = inverseP * ff;
+        //    ff /= ff.w;
+        //}
+
+
+        //std::array<glm::vec3, 8> frustumPoints =
+        //{
+        //    glm::vec3(-1.0f, -1.0f, 0.0f),
+        //    glm::vec3(+1.0f, -1.0f, 0.0f),
+        //    glm::vec3(+1.0f, +1.0f, 0.0f),
+        //    glm::vec3(-1.0f, +1.0f, 0.0f),
+        //    glm::vec3(-1.0f, -1.0f, 1.0f),
+        //    glm::vec3(+1.0f, -1.0f, 1.0f),
+        //    glm::vec3(+1.0f, +1.0f, 1.0f),
+        //    glm::vec3(-1.0f, +1.0f, 1.0f)
+        //};
+
+        //glm::mat4 tempP = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, zNear, zFar);
+        auto camToWorld = glm::inverse(m_V);
+        for (auto& p : frustumPoints)
+            p = glm::vec3(camToWorld * glm::vec4(p, 1.0f));
+
+        return frustumPoints;
     }
 
     std::array<glm::vec3, 8> AbstractCamera::getFrustumPoints() const
@@ -203,9 +242,29 @@ namespace crisp
         return getFrustumPoints(m_zNear, m_zFar);
     }
 
+    glm::vec4 AbstractCamera::calculateBoundingSphere(float n, float f) const
+    {
+        float k = std::sqrt(1.0f + m_aspectRatio * m_aspectRatio) * std::tan(m_fov / 2.0f);
+        if (k * k >= (f - n) / (f + n))
+        {
+            glm::vec3 center(0.0f, 0.0f, -f);
+            center = glm::inverse(m_V) * glm::vec4(center, 1.0f);
+            return glm::vec4(center, f * k);
+        }
+        else
+        {
+            glm::vec3 center(0.0f, 0.0f, -0.5f * (f + n) * (1 + k * k));
+            center = glm::inverse(m_V) * glm::vec4(center, 1.0f);
+            float radius = 0.5f * std::sqrt((f - n) * (f - n)
+                + 2.0f * (f * f + n * n) * k * k
+                + (f + n) * (f + n) * k * k * k * k);
+            return glm::vec4(center, radius);
+        }
+    }
+
     void AbstractCamera::updateProjectionMatrix()
     {
-        //m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = invertProjectionY * glm::perspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
         m_P = invertProjectionY * reverseZPerspective(m_fov, m_aspectRatio, m_zNear, m_zFar);
     }
 }

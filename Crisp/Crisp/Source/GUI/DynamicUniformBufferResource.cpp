@@ -41,7 +41,7 @@ namespace crisp::gui
     uint32_t DynamicUniformBufferResource::registerResource()
     {
         auto freeId = *m_idPool.begin(); // Smallest element in a set is at .begin()
-        m_idPool.erase(freeId);
+        m_idPool.erase(m_idPool.begin());
         m_numRegistered++;
 
         // If we use up all free resource ids, resize the buffers

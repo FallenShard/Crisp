@@ -44,7 +44,7 @@ namespace crisp
         return ResourcesPath;
     }
 
-    std::vector<std::string> ApplicationEnvironment::getVulkanExtensions()
+    std::vector<std::string> ApplicationEnvironment::getRequiredVulkanExtensions()
     {
         std::vector<std::string> extensions;
         unsigned int glfwExtensionCount = 0;

@@ -18,9 +18,21 @@ namespace crisp
 
     VulkanSwapChain::~VulkanSwapChain()
     {
-        for (auto imageView : m_imageViews)
-            vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
-        vkDestroySwapchainKHR(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+        {
+            m_device->deferDestruction([h = m_handle, views = m_imageViews](VkDevice device)
+            {
+                for (auto imageView : views)
+                    vkDestroyImageView(device, imageView, nullptr);
+                vkDestroySwapchainKHR(device, h, nullptr);
+            });
+        }
+        else
+        {
+            for (auto imageView : m_imageViews)
+                vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
+            vkDestroySwapchainKHR(m_device->getHandle(), m_handle, nullptr);
+        }
     }
 
     VkFormat VulkanSwapChain::getImageFormat() const

@@ -46,13 +46,18 @@ namespace crisp
             return m_dynamicBufferCount;
         }
 
+        uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const;
+
+        void swap(VulkanPipelineLayout& other);
+
     private:
         std::vector<VkDescriptorSetLayout>                     m_descriptorSetLayouts;
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_descriptorSetBindings;
         std::vector<VkPushConstantRange>                       m_pushConstants;
         std::vector<bool> m_descriptorSetBufferedStatus;
 
-        std::size_t m_dynamicBufferCount;
+        std::vector<std::vector<uint32_t>> m_dynamicBufferIndices;
+        uint32_t m_dynamicBufferCount;
 
         std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
     };

@@ -40,6 +40,12 @@ namespace crisp
             data = pushConstants.data();
             size = Len * sizeof(T);
         }
+
+        inline void set(const std::vector<unsigned char>& buffer)
+        {
+            data = buffer.data();
+            size = buffer.size();
+        }
     };
 
     namespace detail

@@ -1,5 +1,7 @@
 #include "GaussianFilter.hpp"
 
+#include <cmath>
+
 namespace crisp
 {
     GaussianFilter::GaussianFilter()

@@ -8,7 +8,7 @@
 #include "Geometry/TransformPack.hpp"
 #include "Geometry/Geometry.hpp"
 #include "Renderer/Material.hpp"
-#include "Renderer/DrawCommand.hpp"
+#include "Renderer/RenderNode.hpp"
 
 namespace crisp
 {
@@ -20,36 +20,39 @@ namespace crisp
     class IndexBuffer;
 
     class MeshGeometry;
-    class CascadedShadowMapper;
     class VulkanPipeline;
     class VulkanRenderPass;
 
     class BoxVisualizer
     {
     public:
-        BoxVisualizer(Renderer* renderer, uint32_t numBoxes, uint32_t numFrusta, const VulkanRenderPass& renderPass);
+        BoxVisualizer(Renderer* renderer, uint32_t numBoxes, const VulkanRenderPass& renderPass);
         ~BoxVisualizer();
 
-        void updateFrusta(CascadedShadowMapper* shadowMapper, CameraController* cameraController);
+        void setBoxCorners(uint32_t i, const std::array<glm::vec3, 8>& corners);
+        void setBoxColor(uint32_t i, glm::vec4 color);
 
-        void updateDeviceBuffers(VkCommandBuffer commandBuffer, uint32_t frameIndex);
+        void update(const glm::mat4& V, const glm::mat4& P);
 
-        std::vector<DrawCommand> createDrawCommands() const;
+        std::vector<RenderNode> createRenderNodes() const;
 
 
     private:
         Renderer* m_renderer;
 
-        uint32_t m_numBoxes;
+        struct BoxData
+        {
+            std::array<glm::vec4, 8> points;
+            glm::mat4 transform;
+            glm::vec4 color;
+        };
 
-        std::vector<glm::vec3> m_frustumPoints;
-        std::vector<std::unique_ptr<Geometry>> m_frusta;
-        std::vector<std::unique_ptr<VulkanBuffer>> m_stagingBuffers;
+        std::vector<BoxData> m_boxes;
+        std::vector<glm::mat4> m_transforms;
+        glm::mat4 m_VP;
 
+        std::unique_ptr<Geometry> m_indexGeometry;
         std::unique_ptr<VulkanPipeline> m_outlinePipeline;
         std::unique_ptr<Material> m_outlineMaterial;
-
-        std::vector<TransformPack> m_outlineTransforms;
-        std::unique_ptr<UniformBuffer> m_outlineTransformsBuffer;
     };
 }

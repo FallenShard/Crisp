@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include "Scene.hpp"
 
@@ -21,6 +22,7 @@ namespace crisp
     class VulkanDevice;
     class Renderer;
     class VulkanSampler;
+    class RenderGraph;
 
     class FluidSimulationScene : public AbstractScene
     {
@@ -34,7 +36,6 @@ namespace crisp
 
     private:
         Renderer*     m_renderer;
-        VulkanDevice* m_device;
         Application*  m_app;
 
         std::unique_ptr<CameraController> m_cameraController;
@@ -53,9 +54,8 @@ namespace crisp
             float screenSpaceScale;
         };
         ParticleParams m_particleParams;
-        std::unique_ptr<UniformBuffer> m_paramsBuffer;
 
-        std::unique_ptr<SceneRenderPass> m_scenePass;
-        std::unique_ptr<UniformBuffer> m_cameraBuffer;
+        std::unordered_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
+        std::unique_ptr<RenderGraph> m_renderGraph;
     };
 }

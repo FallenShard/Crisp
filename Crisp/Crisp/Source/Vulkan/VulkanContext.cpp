@@ -21,12 +21,14 @@ namespace crisp
 
         const std::vector<const char*> ValidationLayers =
         {
-            "VK_LAYER_LUNARG_standard_validation"
+            "VK_LAYER_KHRONOS_validation"
         };
 
         const std::vector<const char*> DeviceExtensions =
         {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            //VK_NV_RAY_TRACING_EXTENSION_NAME,
+            VK_KHR_MAINTENANCE2_EXTENSION_NAME
         };
 
         VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
@@ -132,7 +134,7 @@ namespace crisp
             appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
             appInfo.pEngineName        = "CrispEngine";
             appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
-            appInfo.apiVersion         = VK_API_VERSION_1_1;
+            appInfo.apiVersion         = VK_API_VERSION_1_2;
 
             if (EnableValidationLayers)
                 reqPlatformExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -272,8 +274,9 @@ namespace crisp
 
         bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface)
         {
-            VkPhysicalDeviceProperties deviceProps;
-            vkGetPhysicalDeviceProperties(device, &deviceProps);
+            VkPhysicalDeviceProperties2 deviceProps = {};
+            deviceProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            vkGetPhysicalDeviceProperties2(device, &deviceProps);
 
             VkPhysicalDeviceFeatures deviceFeatures;
             vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
@@ -289,7 +292,7 @@ namespace crisp
                 VulkanSwapChainAdequate = !VulkanSwapChainSupport.formats.empty() && !VulkanSwapChainSupport.presentModes.empty();
             }
 
-            bool isDiscreteGpu = deviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+            bool isDiscreteGpu = deviceProps.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 
             return isDiscreteGpu && indices.isComplete() && extensionsSupported && VulkanSwapChainAdequate;
         }
@@ -323,9 +326,13 @@ namespace crisp
         , m_debugCallback(detail::createDebugCallback(m_instance))
         , m_surface(detail::createSurface(m_instance, surfaceCreator))
         , m_physicalDevice(detail::pickPhysicalDevice(m_instance, m_surface))
+        , m_physicalDeviceProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 })
+        , m_physicalDeviceRayTracingProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV })
     {
         vkGetPhysicalDeviceFeatures(m_physicalDevice, &m_physicalDeviceFeatures);
-        vkGetPhysicalDeviceProperties(m_physicalDevice, &m_physicalDeviceProperties);
+
+        m_physicalDeviceProperties.pNext = &m_physicalDeviceRayTracingProperties;
+        vkGetPhysicalDeviceProperties2(m_physicalDevice, &m_physicalDeviceProperties);
     }
 
     VulkanContext::~VulkanContext()
@@ -353,8 +360,10 @@ namespace crisp
         createInfo.pQueueCreateInfos       = config.getQueueCreateInfos().data();
         createInfo.enabledExtensionCount   = static_cast<uint32_t>(detail::DeviceExtensions.size());
         createInfo.ppEnabledExtensionNames = detail::DeviceExtensions.data();
-        createInfo.enabledLayerCount       = detail::EnableValidationLayers ? static_cast<uint32_t>(detail::ValidationLayers.size()) : 0;
-        createInfo.ppEnabledLayerNames     = detail::EnableValidationLayers ? detail::ValidationLayers.data() : nullptr;
+
+        // Deprecated in 1.2
+        //createInfo.enabledLayerCount       = detail::EnableValidationLayers ? static_cast<uint32_t>(detail::ValidationLayers.size()) : 0;
+        //createInfo.ppEnabledLayerNames     = detail::EnableValidationLayers ? detail::ValidationLayers.data() : nullptr;
 
         VkDevice device(VK_NULL_HANDLE);
         vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &device);
@@ -499,11 +508,16 @@ namespace crisp
 
     const VkPhysicalDeviceLimits& VulkanContext::getPhysicalDeviceLimits() const
     {
-        return m_physicalDeviceProperties.limits;
+        return m_physicalDeviceProperties.properties.limits;
+    }
+
+    const VkPhysicalDeviceRayTracingPropertiesNV& VulkanContext::getPhysicalDeviceRayTracingProperties() const
+    {
+        return m_physicalDeviceRayTracingProperties;
     }
 
     const VkPhysicalDeviceProperties& VulkanContext::getPhysicalDeviceProperties() const
     {
-        return m_physicalDeviceProperties;
+        return m_physicalDeviceProperties.properties;
     }
 }

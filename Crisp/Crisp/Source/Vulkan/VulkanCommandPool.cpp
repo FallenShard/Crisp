@@ -18,7 +18,10 @@ namespace crisp
 
     VulkanCommandPool::~VulkanCommandPool()
     {
-        vkDestroyCommandPool(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+            m_device->deferDestruction(m_handle, vkDestroyCommandPool);
+        else
+            vkDestroyCommandPool(m_device->getHandle(), m_handle, nullptr);
     }
 
     std::unique_ptr<VulkanCommandBuffer> VulkanCommandPool::allocateCommandBuffer(VkCommandBufferLevel level) const

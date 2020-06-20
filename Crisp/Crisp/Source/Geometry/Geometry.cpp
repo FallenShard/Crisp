@@ -5,13 +5,13 @@
 
 namespace crisp
 {
-    Geometry::Geometry(Renderer* renderer, const TriangleMesh& triangleMesh)
-        : Geometry(renderer, triangleMesh.interleaveAttributes(), triangleMesh.getFaces(), triangleMesh.getGeometryParts())
+    Geometry::Geometry(Renderer* renderer, const TriangleMesh& mesh)
+        : Geometry(renderer, mesh.interleave(), mesh.getFaces(), mesh.getGeometryParts())
     {
     }
 
-    Geometry::Geometry(Renderer* renderer, const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttribs)
-        : Geometry(renderer, TriangleMesh(path, vertexAttribs))
+    Geometry::Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat)
+        : Geometry(renderer, mesh.interleave(vertexFormat), mesh.getFaces(), mesh.getGeometryParts())
     {
     }
 
@@ -72,12 +72,14 @@ namespace crisp
 
     void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer) const
     {
-        vkCmdBindVertexBuffers(cmdBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
+        if (m_bindingCount > 0)
+            vkCmdBindVertexBuffers(cmdBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
     }
 
     void Geometry::bind(VkCommandBuffer commandBuffer) const
     {
-        vkCmdBindVertexBuffers(commandBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
+        if (m_bindingCount > 0)
+            vkCmdBindVertexBuffers(commandBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
         if (m_indexBuffer)
             vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
     }
@@ -92,7 +94,9 @@ namespace crisp
 
     void Geometry::bindAndDraw(VkCommandBuffer commandBuffer) const
     {
-        vkCmdBindVertexBuffers(commandBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
+        if (m_bindingCount > 0)
+            vkCmdBindVertexBuffers(commandBuffer, m_firstBinding, m_bindingCount, m_buffers.data(), m_offsets.data());
+
         if (m_indexBuffer)
         {
             vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
@@ -107,5 +111,15 @@ namespace crisp
     IndexedGeometryView Geometry::createIndexedGeometryView() const
     {
         return { m_indexBuffer->getHandle(), m_indexCount, m_instanceCount, 0, 0, 0 };
+    }
+
+    IndexedGeometryView Geometry::createIndexedGeometryView(uint32_t partIndex) const
+    {
+        return { m_indexBuffer->getHandle(), m_parts[partIndex].count, m_instanceCount, m_parts[partIndex].first, 0, 0 };
+    }
+
+    std::unique_ptr<VulkanBuffer> createVertexBuffer(const TriangleMesh& triangleMesh, const std::vector<VertexAttributeDescriptor>& vertexAttribs)
+    {
+        return std::unique_ptr<VulkanBuffer>();
     }
 }

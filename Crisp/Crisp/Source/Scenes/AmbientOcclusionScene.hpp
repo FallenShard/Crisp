@@ -21,6 +21,7 @@ namespace crisp
     class VulkanImage;
     class VulkanImageView;
     class VulkanSampler;
+    class RenderNode;
 
     class Skybox;
 
@@ -70,5 +71,11 @@ namespace crisp
 
         SsaoParams m_ssaoParams;
         std::unique_ptr<UniformBuffer> m_sampleBuffer;
+
+        std::unique_ptr<RenderNode> m_floorNode;
+        std::unique_ptr<RenderNode> m_sponzaNode;
+        std::unique_ptr<RenderNode> m_ssaoNode;
+        std::unique_ptr<RenderNode> m_blurHNode;
+        std::unique_ptr<RenderNode> m_blurVNode;
     };
 }

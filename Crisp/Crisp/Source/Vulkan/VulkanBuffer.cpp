@@ -29,8 +29,19 @@ namespace crisp
 
     VulkanBuffer::~VulkanBuffer()
     {
-        m_memoryChunk.free();
-        vkDestroyBuffer(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+        {
+            m_device->deferDestruction([h = m_handle, mem = m_memoryChunk](VkDevice device) mutable
+                {
+                    mem.free();
+                    vkDestroyBuffer(device, h, nullptr);
+                });
+        }
+        else
+        {
+            m_memoryChunk.free();
+            vkDestroyBuffer(m_device->getHandle(), m_handle, nullptr);
+        }
     }
 
     VkDeviceSize VulkanBuffer::getSize() const

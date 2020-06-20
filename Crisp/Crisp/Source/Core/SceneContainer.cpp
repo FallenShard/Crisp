@@ -5,8 +5,8 @@
 #include "Scenes/ShadowMappingScene.hpp"
 #include "Scenes/AmbientOcclusionScene.hpp"
 #include "Scenes/RayTracerScene.hpp"
-#include "Scenes/PhysicallyBasedMaterialsScene.hpp"
-#include "Scenes/TerrainScene.hpp"
+#include "Scenes/PbrScene.hpp"
+#include "Scenes/ClusteredLightingScene.hpp"
 #include "Application.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/ComboBox.hpp"
@@ -21,8 +21,8 @@ namespace crisp
             "Liquid Simulation",
             "Shadow Mapping",
             "Ray Tracer",
-            "Physically Based Materials",
-            "Terrain Tessellation",
+            "Physically-based Rendering",
+            "Clustered Lighting",
             "Test"
         };
 
@@ -35,8 +35,8 @@ namespace crisp
             else if (name == sceneNames[1]) return std::make_unique<FluidSimulationScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[2]) return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[3]) return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
-            else if (name == sceneNames[4]) return std::make_unique<PhysicallyBasedMaterialsScene>(std::forward<Args>(args)...);
-            else if (name == sceneNames[5]) return std::make_unique<TerrainScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[4]) return std::make_unique<PbrScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[5]) return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
             else                            return std::make_unique<TestScene>(std::forward<Args>(args)...);
         }
     }
@@ -76,6 +76,7 @@ namespace crisp
     void SceneContainer::onSceneSelected(std::string sceneName)
     {
         m_renderer->finish();
+        m_scene.reset();
         m_scene = createScene(sceneName, m_renderer, m_application);
     }
 

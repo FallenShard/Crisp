@@ -43,7 +43,7 @@ namespace crisp
         }
 
         // For storage in containers as a key
-        bool operator<(const Delegate& other) const
+        inline bool operator<(const Delegate& other) const
         {
             if (m_receiverObject < other.m_receiverObject)
                 return true;
@@ -51,6 +51,11 @@ namespace crisp
                 return m_callbackFunction < other.m_callbackFunction;
             else
                 return false;
+        }
+
+        inline bool isFromObject(void* obj) const
+        {
+            return m_receiverObject == obj;
         }
 
     private:

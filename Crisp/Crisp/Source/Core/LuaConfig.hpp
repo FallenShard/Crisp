@@ -90,6 +90,8 @@ namespace crisp
 
                     return vec;
                 }
+                else
+                    return {};
 
                 return {};
             }
@@ -112,8 +114,8 @@ namespace crisp
         LuaTable(lua_State* L, int itemIndex)
             : ScopedVariable(L, itemIndex)
         {
-            if (!lua_istable(m_L, -1))
-                logWarning("Array/table is undefined at index {}\n", itemIndex);
+            /*if (!lua_istable(m_L, -1))
+                logWarning("Array/table is undefined at index {}\n", itemIndex);*/
         }
 
         LuaTable(const LuaTable&) = delete;

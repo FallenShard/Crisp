@@ -8,9 +8,9 @@ layout(location = 4) in vec3 bitangent;
 
 layout(location = 0) out vec3 eyeNormal;
 layout(location = 1) out vec3 eyePosition;
-layout(location = 2) out vec3 worldPos;
+layout(location = 2) out vec3 worldPosition;
 
-layout(set = 0, binding = 0) uniform Transforms
+layout(set = 0, binding = 0) uniform TransformPack
 {
     mat4 MVP;
     mat4 MV;
@@ -20,10 +20,9 @@ layout(set = 0, binding = 0) uniform Transforms
 
 void main()
 {
-    float x = position.length();
-    eyeNormal    = normalize((N * vec4(normal, 0.0f)).xyz);
-    eyePosition  = (MV * vec4(position, 1.0f)).xyz;
-    worldPos     = (M * vec4(position, 1.0f)).xyz;
-    
-    gl_Position = MVP * vec4(position, 1.0f);
+    eyeNormal     = normalize((N * vec4(normal, 0.0f)).xyz);
+    eyePosition   = (MV * vec4(position, 1.0f)).xyz;
+    worldPosition = (M * vec4(position, 1.0f)).xyz;
+
+    gl_Position   = MVP * vec4(position, 1.0f);
 }

@@ -31,7 +31,10 @@ namespace crisp
 
     VulkanImageView::~VulkanImageView()
     {
-        vkDestroyImageView(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+            m_device->deferDestruction(m_handle, vkDestroyImageView);
+        else
+            vkDestroyImageView(m_device->getHandle(), m_handle, nullptr);
     }
 
     VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(VkSampler sampler, VkImageLayout layout) const
@@ -41,9 +44,6 @@ namespace crisp
 
     VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const
     {
-        if (sampler == nullptr)
-            return { VK_NULL_HANDLE, m_handle, layout };
-        else
-            return { sampler->getHandle(), m_handle, layout };
+        return { sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout };
     }
 }

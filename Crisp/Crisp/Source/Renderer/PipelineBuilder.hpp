@@ -97,6 +97,9 @@ namespace crisp
         PipelineBuilder& setCullMode(VkCullModeFlags cullMode);
         PipelineBuilder& setLineWidth(float lineWidth);
 
+        PipelineBuilder& setSampleCount(VkSampleCountFlagBits sampleCount);
+        PipelineBuilder& setAlphaToCoverage(VkBool32 alphaToCoverageEnabled);
+
         PipelineBuilder& setViewport(VkViewport&& viewport);
         PipelineBuilder& setScissor(VkRect2D&& scissor);
 
@@ -104,6 +107,7 @@ namespace crisp
         PipelineBuilder& setBlendFactors(uint32_t index, VkBlendFactor srcFactor, VkBlendFactor dstFactor);
 
         PipelineBuilder& setDepthTest(VkBool32 enabled);
+        PipelineBuilder& setDepthTestOperation(VkCompareOp testOperation);
         PipelineBuilder& setDepthWrite(VkBool32 enabled);
 
         PipelineBuilder& enableState(PipelineState pipelineState);

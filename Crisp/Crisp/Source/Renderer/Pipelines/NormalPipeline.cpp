@@ -31,6 +31,7 @@ namespace crisp
             .setScissor(renderer->getDefaultScissor())
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)
             .addDynamicState(VK_DYNAMIC_STATE_SCISSOR)
+            .setDepthTestOperation(VK_COMPARE_OP_GREATER_OR_EQUAL)
             .create(device, layoutBuilder.create(device), renderPass->getHandle(), 0);
     }
 }

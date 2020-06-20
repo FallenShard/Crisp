@@ -8,12 +8,13 @@ namespace crisp
 {
     struct LightDescriptor
     {
-        glm::mat4 VP;
         glm::mat4 V;
         glm::mat4 P;
+        glm::mat4 VP;
         glm::vec4 position;
-        glm::vec3 spectrum;
-        unsigned char padding[36];
+        glm::vec4 direction;
+        glm::vec4 spectrum;
+        glm::vec4 params;
     };
 
     struct ManyLightDescriptor

@@ -55,7 +55,9 @@ namespace crisp
         VkViewport         getDefaultViewport() const;
         VkRect2D           getDefaultScissor() const;
 
-        VkShaderModule    getShaderModule(const std::string& key) const;
+        VkShaderModule loadShaderModule(const std::string& key);
+        VkShaderModule compileGlsl(const std::filesystem::path& path, std::string id, std::string type);
+        VkShaderModule getShaderModule(const std::string& key) const;
 
         void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
         void setDefaultScissor(VkCommandBuffer cmdBuffer) const;
@@ -69,7 +71,7 @@ namespace crisp
         void enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
         void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 
-        void flushResourceUpdates();
+        void flushResourceUpdates(bool waitOnAllQueues);
 
         void drawFrame();
 
@@ -86,16 +88,24 @@ namespace crisp
         void scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive = NumVirtualFrames);
 
         void setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex);
+        void setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews);
 
         void registerStreamingUniformBuffer(UniformBuffer* buffer);
         void unregisterStreamingUniformBuffer(UniformBuffer* buffer);
 
         Geometry* getFullScreenGeometry() const;
 
-        std::unique_ptr<VulkanPipeline> createPipelineFromLua(std::string_view pipelineName, VulkanRenderPass* renderPass, int subpassIndex);
+        std::unique_ptr<VulkanPipeline> createPipelineFromLua(std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex);
+
+        template <typename ...Args>
+        std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args)
+        {
+            return std::make_unique<UniformBuffer>(this, std::forward<Args>(args)...);
+        }
 
     private:
         void loadShaders(const std::filesystem::path& directoryPath);
+        VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
         std::optional<uint32_t> acquireSwapImageIndex(VirtualFrame& virtualFrame);
         void resetCommandBuffer(VkCommandBuffer cmdBuffer);
         void record(VkCommandBuffer commandBuffer);
@@ -119,7 +129,13 @@ namespace crisp
 
         std::array<VirtualFrame, NumVirtualFrames> m_virtualFrames;
 
-        std::unordered_map<std::string, VkShaderModule> m_shaderModules;
+        struct ShaderModule
+        {
+            VkShaderModule handle;
+            std::filesystem::file_time_type lastModifiedTimestamp;
+        };
+
+        std::unordered_map<std::string, ShaderModule> m_shaderModules;
 
         using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
         FunctionVector m_resourceUpdates;

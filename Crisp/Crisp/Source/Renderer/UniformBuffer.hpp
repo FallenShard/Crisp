@@ -17,6 +17,19 @@ namespace crisp
     public:
         UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
         UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, const void* data = nullptr);
+        UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
+
+        template <typename T>
+        inline UniformBuffer(Renderer* renderer, T&& data)
+            : UniformBuffer(renderer, sizeof(T), BufferUpdatePolicy::Constant, &data)
+        {
+        }
+
+        template <typename T>
+        inline UniformBuffer(Renderer* renderer, const T& data, BufferUpdatePolicy updatePolicy)
+            : UniformBuffer(renderer, sizeof(T), updatePolicy, &data)
+        {
+        }
 
         ~UniformBuffer();
 
@@ -25,7 +38,7 @@ namespace crisp
         template <typename T>
         void updateStagingBuffer(T&& data)
         {
-            updateStagingBuffer(&data, sizeof(T));
+            updateStagingBuffer(&data, sizeof(T), 0);
         }
 
         void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);

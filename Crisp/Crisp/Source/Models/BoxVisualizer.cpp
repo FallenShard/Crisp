@@ -5,20 +5,14 @@
 #include "Renderer/Renderer.hpp"
 #include "Renderer/IndexBuffer.hpp"
 #include "Renderer/UniformBuffer.hpp"
-
-#include "Techniques/CascadedShadowMapper.hpp"
-
-#include "Geometry/TriangleMesh.hpp"
-
-#include "Renderer/Pipelines/OutlinePipeline.hpp"
+#include "vulkan/VulkanPipeline.hpp"
 
 namespace crisp
 {
-    BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, uint32_t numFrusta, const VulkanRenderPass& renderPass)
+    BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, const VulkanRenderPass& renderPass)
         : m_renderer(renderer)
-        , m_numBoxes(numBoxes)
-        , m_frusta(numFrusta)
-        , m_stagingBuffers(numFrusta)
+        , m_boxes(numBoxes)
+        , m_transforms(numBoxes, glm::mat4(1.0f))
     {
         std::vector<glm::uvec2> lines =
         {
@@ -38,189 +32,64 @@ namespace crisp
             { 1, 5 }
         };
 
-        for (auto& stagingBuffer : m_stagingBuffers)
-            stagingBuffer = createStagingBuffer(renderer->getDevice(), 8 * sizeof(glm::vec3), nullptr);
+        m_indexGeometry = std::make_unique<Geometry>(renderer, std::vector<glm::vec4>{}, lines);
 
-        for (auto& frustum : m_frusta)
-            frustum = std::make_unique<Geometry>(renderer, 8, lines);
-
-        m_outlineTransforms.resize(m_frusta.size() + m_numBoxes);
-        m_outlineTransforms[0].M = glm::scale(glm::vec3{ 3.0f });
-        m_outlineTransforms[1].M = glm::translate(glm::vec3{ -5.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
-        m_outlineTransforms[2].M = glm::translate(glm::vec3{ -15.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
-        m_outlineTransforms[3].M = glm::translate(glm::vec3{ -25.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
-
-        m_outlineTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_outlineTransforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
-
-        m_outlinePipeline = createOutlinePipeline(m_renderer, &renderPass);
+        m_outlinePipeline = m_renderer->createPipelineFromLua("DebugBox.lua", renderPass, 0);
         m_outlineMaterial = std::make_unique<Material>(m_outlinePipeline.get());
-        m_outlineMaterial->writeDescriptor(0, 0, 0, m_outlineTransformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
-        /*m_cubeGeometry = std::make_unique<MeshGeometry>(m_renderer, "cube.obj", std::initializer_list<VertexAttribute>{ VertexAttribute::Position });
 
-        std::vector<glm::u16vec2> lines =
+        for (int i = 0; i < m_boxes.size(); ++i)
         {
-            { 0, 1 },
-            { 1, 2 },
-            { 2, 3 },
-            { 3, 0 },
+            glm::vec4 translation((i / 2) * 5.0f, 0.0f, (i % 2) * 5.0f, 0.0f);
 
-            { 4, 5 },
-            { 5, 6 },
-            { 6, 7 },
-            { 7, 4 },
+            m_boxes[i].points[0] = glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f);
+            m_boxes[i].points[1] = glm::vec4(+1.0f, -1.0f, 1.0f, 1.0f);
+            m_boxes[i].points[2] = glm::vec4(+1.0f, +1.0f, 1.0f, 1.0f);
+            m_boxes[i].points[3] = glm::vec4(-1.0f, +1.0f, 1.0f, 1.0f);
 
-            { 0, 4 },
-            { 3, 7 },
-            { 2, 6 },
-            { 1, 5 }
-        };
+            m_boxes[i].points[4] = glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f);
+            m_boxes[i].points[5] = glm::vec4(+1.0f, -1.0f, -1.0f, 1.0f);
+            m_boxes[i].points[6] = glm::vec4(+1.0f, +1.0f, -1.0f, 1.0f);
+            m_boxes[i].points[7] = glm::vec4(-1.0f, +1.0f, -1.0f, 1.0f);
 
-        m_indexBuffer = std::make_unique<IndexBuffer>(m_renderer, lines);
-        m_numIndices = static_cast<uint32_t>(lines.size()) * 2;
+            for (auto& p : m_boxes[i].points)
+                p += translation;
 
-        m_frustumPoints =
-        {
-            { -1.0f, -1.0f, -1.0f },
-            { +1.0f, -1.0f, -1.0f },
-            { +1.0f, +1.0f, -1.0f },
-            { -1.0f, +1.0f, -1.0f },
-
-            { -2.0f, -2.0f, -5.0f },
-            { +2.0f, -2.0f, -5.0f },
-            { +2.0f, +2.0f, -5.0f },
-            { -2.0f, +2.0f, -5.0f }
-        };
-
-        m_frusta.resize(4);
-        for (auto& frustum : m_frusta)
-        {
-            frustum.vertexBuffer = std::make_unique<VertexBuffer>(m_renderer, AbstractCamera::NumFrustumPoints * sizeof(glm::vec3), BufferUpdatePolicy::PerFrame);
-            frustum.vertexBindingGroup =
-            {
-                { frustum.vertexBuffer->get(), 0 }
-            };
+            m_boxes[i].color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
         }
 
-        std::vector<glm::vec3> cubePoints =
-        {
-            { -0.5f, -0.5f, +0.5f },
-            { +0.5f, -0.5f, +0.5f },
-            { +0.5f, +0.5f, +0.5f },
-            { -0.5f, +0.5f, +0.5f },
-
-            { -0.5f, -0.5f, -0.5f },
-            { +0.5f, -0.5f, -0.5f },
-            { +0.5f, +0.5f, -0.5f },
-            { -0.5f, +0.5f, -0.5f }
-        };
-
-        m_cubeVertexBuffer = std::make_unique<VertexBuffer>(m_renderer, cubePoints);
-        m_cubeVertexBindingGroup =
-        {
-            { m_cubeVertexBuffer->get(), 0 }
-        };
-
-        m_outlineTransforms.resize(m_numFrusta + m_numBoxes);
-        m_outlineTransforms[0].M = glm::scale(glm::vec3{ 3.0f });
-        m_outlineTransforms[1].M = glm::translate(glm::vec3{ -5.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
-        m_outlineTransforms[2].M = glm::translate(glm::vec3{ -15.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
-        m_outlineTransforms[3].M = glm::translate(glm::vec3{ -25.0f, 0.0f, 0.0f }) * glm::scale(glm::vec3{ 3.0f });
-
-        m_outlineTransformsBuffer = std::make_unique<UniformBuffer>(m_renderer, m_outlineTransforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
-
-        m_outlinePipeline = createOutlinePipeline(m_renderer, renderPass);
-        m_outlineDesc =
-        {
-            m_outlinePipeline->allocateDescriptorSet(0)
-        };
-        m_outlineDesc.postBufferUpdate(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, m_outlineTransformsBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
-        m_outlineDesc.flushUpdates(m_renderer->getDevice());*/
     }
 
     BoxVisualizer::~BoxVisualizer()
     {
     }
 
-    void BoxVisualizer::updateFrusta(CascadedShadowMapper* shadowMapper, CameraController* cameraController)
+    void BoxVisualizer::setBoxCorners(uint32_t i, const std::array<glm::vec3, 8>& corners)
     {
-        auto& camera = cameraController->getCamera();
-
-        auto camPos = camera.getPosition();
-
-        m_outlineTransforms[0].M = glm::mat4(1.0f);
-        m_outlineTransforms[1].M = glm::mat4(1.0f);
-        m_outlineTransforms[2].M = glm::mat4(1.0f);
-        m_outlineTransforms[3].M = glm::mat4(1.0f);
-
-        auto& bounds = shadowMapper->getBoundingBoxExtents();
-        std::vector<glm::vec3> vertices;
-        for (int i = 0; i < 4; i++)
-        {
-            vertices.clear();
-            vertices.emplace_back(bounds[i][0].x, bounds[i][0].y, bounds[i][0].z);
-            vertices.emplace_back(bounds[i][1].x, bounds[i][0].y, bounds[i][0].z);
-            vertices.emplace_back(bounds[i][1].x, bounds[i][1].y, bounds[i][0].z);
-            vertices.emplace_back(bounds[i][0].x, bounds[i][1].y, bounds[i][0].z);
-            vertices.emplace_back(bounds[i][0].x, bounds[i][0].y, bounds[i][1].z);
-            vertices.emplace_back(bounds[i][1].x, bounds[i][0].y, bounds[i][1].z);
-            vertices.emplace_back(bounds[i][1].x, bounds[i][1].y, bounds[i][1].z);
-            vertices.emplace_back(bounds[i][0].x, bounds[i][1].y, bounds[i][1].z);
-            /*vertices.emplace_back(-5 * i, -5 * i, -5 * i);
-            vertices.emplace_back(+5, -5, -5);
-            vertices.emplace_back(+5, +5, -5);
-            vertices.emplace_back(-5, +5, -5);
-            vertices.emplace_back(-5, -5, +5);
-            vertices.emplace_back(+5, -5, +5);
-            vertices.emplace_back(+5, +5, +5);
-            vertices.emplace_back(-5, +5, +5);*/
-
-            m_stagingBuffers[i]->updateFromHost(vertices);
-
-            m_outlineTransforms[i].M = glm::mat4(1.0f);
-        }
-
-        for (auto& trans : m_outlineTransforms)
-        {
-            trans.MV = camera.getViewMatrix() * trans.M;
-            trans.MVP = camera.getProjectionMatrix() * trans.MV;
-        }
-
-        m_outlineTransformsBuffer->updateStagingBuffer(m_outlineTransforms.data(), m_outlineTransforms.size() * sizeof(TransformPack));
-
+        for (uint32_t j = 0; j < corners.size(); ++j)
+            m_boxes[i].points[j] = glm::vec4(corners[j], 1.0f);
     }
 
-    void BoxVisualizer::updateDeviceBuffers(VkCommandBuffer commandBuffer, uint32_t frameIndex)
+    void BoxVisualizer::setBoxColor(uint32_t i, glm::vec4 color)
     {
-        for (int i = 0; i < 4; i++)
-        {
-            uint32_t offset = frameIndex * 8 * sizeof(glm::vec3);
-            m_frusta[i]->getVertexBuffer()->copyFrom(commandBuffer, *m_stagingBuffers[i], 0, offset, 8 * sizeof(glm::vec3));
-            m_frusta[i]->setVertexBufferOffset(0, frameIndex * 8 * sizeof(glm::vec3));
-        }
+        m_boxes[i].color = color;
     }
 
-    std::vector<DrawCommand> BoxVisualizer::createDrawCommands() const
+    void BoxVisualizer::update(const glm::mat4& V, const glm::mat4& P)
     {
-        static const std::vector<glm::vec4> colors =
-        {
-            { 1.0f, 0.0f, 0.0f, 1.0f },
-            { 1.0f, 1.0f, 0.0f, 1.0f },
-            { 0.0f, 1.0f, 0.0f, 1.0f },
-            { 0.0f, 0.0f, 1.0f, 1.0f }
-        };
+        for (uint32_t i = 0; i < m_boxes.size(); ++i)
+            m_boxes[i].transform = P * V * m_transforms[i];
+    }
 
-        std::vector<DrawCommand> drawCommands(4);
-        for (int i = 0; i < 4; ++i)
+    std::vector<RenderNode> BoxVisualizer::createRenderNodes() const
+    {
+        std::vector<RenderNode> nodes(m_boxes.size());
+        for (std::size_t i = 0; i < nodes.size(); ++i)
         {
-            drawCommands[i].pipeline = m_outlinePipeline.get();
-            drawCommands[i].material = m_outlineMaterial.get();
-            drawCommands[i].dynamicBufferViews = m_outlineMaterial->getDynamicBufferViews();
-            drawCommands[i].dynamicBufferViews[0] = { m_outlineTransformsBuffer.get(), i * sizeof(TransformPack) };
-            drawCommands[i].setPushConstantView(colors[i]);
-            drawCommands[i].geometry = m_frusta[i].get();
-            drawCommands[i].setGeometryView(drawCommands[i].geometry->createIndexedGeometryView());
+            //nodes[i].geometry = m_indexGeometry.get();
+            //nodes[i].material = nullptr;
+            //nodes[i].pipeline = m_outlinePipeline.get();
+            //nodes[i].setPushConstantView(m_boxes[i]);
         }
-
-        return drawCommands;
+        return nodes;
     }
 }

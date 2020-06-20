@@ -31,7 +31,14 @@ namespace crisp
 
     VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout()
     {
-        vkDestroyDescriptorSetLayout(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+        {
+            m_device->deferDestruction(m_handle, vkDestroyDescriptorSetLayout);
+        }
+        else
+        {
+            vkDestroyDescriptorSetLayout(m_device->getHandle(), m_handle, nullptr);
+        }
     }
 
     VkDescriptorType VulkanDescriptorSetLayout::getDescriptorType(uint32_t bindingIndex) const

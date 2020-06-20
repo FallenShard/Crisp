@@ -14,13 +14,12 @@ namespace crisp
     class VulkanRenderPass;
     class UniformBuffer;
 
-    class CascadedShadowMapper;
     class VulkanSampler;
 
     class Grass
     {
     public:
-        Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* renderPass, CascadedShadowMapper* csm, UniformBuffer* cameraBuffer, VulkanSampler* sampler);
+        Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* renderPass, UniformBuffer* cameraBuffer, VulkanSampler* sampler);
         ~Grass();
 
         DrawCommand createDrawCommand();

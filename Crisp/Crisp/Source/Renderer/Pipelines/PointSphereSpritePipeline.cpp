@@ -34,6 +34,7 @@ namespace crisp
             .addVertexAttributes<0, 0, VK_FORMAT_R32G32B32A32_SFLOAT>()
             .addVertexAttributes<1, 1, VK_FORMAT_R32G32B32A32_SFLOAT>()
             .setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
+            .setDepthTestOperation(VK_COMPARE_OP_GREATER_OR_EQUAL)
             .setViewport(renderer->getDefaultViewport())
             .setScissor(renderer->getDefaultScissor())
             .addDynamicState(VK_DYNAMIC_STATE_VIEWPORT)

@@ -47,6 +47,11 @@ float RadicalInverse_VdC(uint bits)
     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
 }
 // ----------------------------------------------------------------------------
+float rand(vec2 co)
+{
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
 vec2 Hammersley(uint i, uint N)
 {
     return vec2(float(i)/float(N), RadicalInverse_VdC(i));
@@ -74,6 +79,21 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
     vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
     return normalize(sampleVec);
 }
+
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+    float a      = roughness * roughness;
+    float a2     = a * a;
+    float NdotH  = max(dot(N, H), 0.0f);
+    float NdotH2 = NdotH * NdotH;
+
+    float denom  = NdotH2 * (a2 - 1.0f) + 1.0f;
+    denom        = PI * denom * denom;
+
+    return a2 / denom;
+}
+
+
   
 void main()
 {		
@@ -81,7 +101,7 @@ void main()
     vec3 R = N;
     vec3 V = R;
 
-    const uint SAMPLE_COUNT = 4096u;
+    const uint SAMPLE_COUNT = 4096;
     float totalWeight = 0.0;   
     vec3 prefilteredColor = vec3(0.0);     
     for (uint i = 0u; i < SAMPLE_COUNT; ++i)
@@ -93,7 +113,19 @@ void main()
         float NdotL = max(dot(N, L), 0.0);
         if (NdotL > 0.0)
         {
-            prefilteredColor += texture(cubeMap, L).rgb * NdotL;
+            float NdotH = max(dot(N, H), 0.0);
+            float HdotV = max(dot(H, V), 0.0);
+            float D   = DistributionGGX(N, H, roughness);
+            float pdf = (D * NdotH / (4.0 * HdotV)) + 0.0001; 
+
+            float resolution = 1024.0; // resolution of source cubemap (per face)
+            float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
+            float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
+
+            float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel); 
+
+            prefilteredColor += textureLod(cubeMap, L, mipLevel).rgb * NdotL;
+            //prefilteredColor += texture(cubeMap, L).rgb * NdotL;
             totalWeight      += NdotL;
         }
     }

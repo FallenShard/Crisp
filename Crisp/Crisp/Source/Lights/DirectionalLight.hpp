@@ -14,9 +14,10 @@ namespace crisp
         DirectionalLight(const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& extentMin, const glm::vec3& extentMax);
 
         void setDirection(glm::vec3 direction);
-        void calculateProjection(float split, const std::array<glm::vec3, 8>& worldFrustumPoints);
+        void fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints);
+        void fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints, const glm::vec3& center, float radius, uint32_t shadowMapSize);
 
-        LightDescriptor createDescriptorData() const;
+        LightDescriptor createDescriptor() const;
 
         const glm::vec3& getDirection() const;
         const glm::mat4& getViewMatrix() const;

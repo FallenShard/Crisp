@@ -9,6 +9,9 @@
 #include <fstream>
 #include <string>
 #include <unordered_set>
+#include <optional>
+
+#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -45,28 +48,31 @@ namespace crisp
         struct ObjVertex
         {
             int64_t p = -1;
-            int64_t n = -1;
-            int64_t uv = -1;
+            std::optional<int64_t> n;
+            std::optional<int64_t> uv;
 
             inline ObjVertex() {};
             inline ObjVertex(std::string_view stringView)
             {
                 auto vertexAttribs = fixedTokenize<3>(stringView, "/");
 
-                auto parse = [](const std::string_view & line_view, int64_t& val)
+                auto parse = [](const std::string_view& line_view)
                 {
+                    int64_t val;
                     std::from_chars(line_view.data(), line_view.data() + line_view.size(), val);
-                    --val; // OBJ face vertex indices start with 1
+                    return val < 0 ? val : val - 1; // return negative if it is a negative value, otherwise 0-based
                 };
 
-                if (vertexAttribs.size() > 0)
-                    parse(vertexAttribs[0], p);
+                if (!vertexAttribs[0].empty())
+                    p = parse(vertexAttribs[0]);
+                else
+                    logFatal("Invalid vertex specification in an obj file.");
 
-                if (vertexAttribs.size() > 1 && !vertexAttribs[1].empty())
-                    parse(vertexAttribs[1], uv);
+                if (!vertexAttribs[1].empty())
+                    uv = parse(vertexAttribs[1]);
 
-                if (vertexAttribs.size() > 2 && !vertexAttribs[2].empty())
-                    parse(vertexAttribs[2], n);
+                if (!vertexAttribs[2].empty())
+                    n = parse(vertexAttribs[2]);
             }
 
             inline bool operator==(const ObjVertex& v) const
@@ -79,9 +85,15 @@ namespace crisp
         {
             std::size_t operator()(const ObjVertex& v) const
             {
-                size_t hash = std::hash<int>()(v.p);
-                hash = hash * 37 + std::hash<int>()(v.uv);
-                hash = hash * 37 + std::hash<int>()(v.n);
+                using IndexType = int64_t;
+                size_t hash = std::hash<IndexType>()(v.p);
+
+                if (v.uv)
+                    hash = hash * 37 + std::hash<IndexType>()(v.uv.value());
+
+                if (v.n)
+                    hash = hash * 37 + std::hash<IndexType>()(v.n.value());
+
                 return hash;
             }
         };
@@ -103,9 +115,12 @@ namespace crisp
         std::ifstream file(m_path);
 
         std::unordered_map<ObjVertex, unsigned int, ObjVertexHasher> vertexMap;
-        std::vector<glm::vec3> tempPositions;
-        std::vector<glm::vec3> tempNormals;
-        std::vector<glm::vec2> tempTexCoords;
+        std::vector<glm::vec3> positionList;
+        std::vector<glm::vec3> normalList;
+        std::vector<glm::vec2> texCoordList;
+        std::vector<glm::vec3> paramList;
+        std::vector<MeshPart> materialList;
+
         std::string line;
         unsigned int uniqueVertexId = 0;
         while (std::getline(file, line))
@@ -126,11 +141,11 @@ namespace crisp
             {
                 glm::vec3 pos;
 
-                auto tokens = fixedTokenize<4>(line, " ");
-                for (int i = 0; i < glm::vec3::length(); ++i)
+                auto tokens = fixedTokenize<4>(line, " "); // v x y z, ignore w
+                for (int i = 0; i < decltype(pos)::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), pos[i]);
 
-                tempPositions.push_back(pos);
+                positionList.push_back(pos);
             }
             else if (prefix == "vt")
             {
@@ -140,7 +155,7 @@ namespace crisp
                 for (int i = 0; i < glm::vec2::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), texCoord[i]);
 
-                tempTexCoords.push_back(texCoord);
+                texCoordList.push_back(texCoord);
             }
             else if (prefix == "vn")
             {
@@ -150,7 +165,17 @@ namespace crisp
                 for (int i = 0; i < glm::vec3::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), normal[i]);
 
-                tempNormals.push_back(glm::normalize(normal));
+                normalList.push_back(glm::normalize(normal));
+            }
+            else if (prefix == "vp")
+            {
+                glm::vec3 param;
+
+                auto tokens = fixedTokenize<4>(line, " ");
+                for (int i = 0; i < glm::vec3::length(); ++i)
+                    std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), param[i]);
+
+                paramList.push_back(param);
             }
             else if (prefix == "f")
             {
@@ -181,26 +206,52 @@ namespace crisp
 
                 m_triangles.push_back(faceIndices);
             }
+            else if (prefix == "usemtl")
+            {
+                auto tokens = fixedTokenize<2>(line, " ");
+                MeshPart meshPart;
+                meshPart.tag    = tokens[1];
+                meshPart.offset = 3 * static_cast<uint32_t>(m_triangles.size());
+                meshPart.count  = 0;
+                m_meshParts.push_back(meshPart);
+            }
+            else if (prefix == "#")
+            {
+                // comment;
+            }
         }
 
         m_triangles.shrink_to_fit();
 
-        m_positions.resize(tempPositions.empty() ? 0 : vertexMap.size());
-        m_normals.resize(tempNormals.empty() ? 0 : vertexMap.size());
-        m_texCoords.resize(tempTexCoords.empty() ? 0 : vertexMap.size());
+        m_positions.resize(positionList.empty() ? 0 : vertexMap.size());
+        m_normals.resize(normalList.empty() ? 0 : vertexMap.size());
+        m_texCoords.resize(texCoordList.empty() ? 0 : vertexMap.size());
 
         for (const auto& item : vertexMap)
         {
             unsigned int vertexIdx = item.second;
             ObjVertex attribIndices = item.first;
+            if (attribIndices.p < 0)
+                attribIndices.p = positionList.size() + attribIndices.p;
 
-            m_positions[vertexIdx] = tempPositions[attribIndices.p];
+            m_positions[vertexIdx] = positionList[attribIndices.p];
 
-            if (attribIndices.n != -1)
-                m_normals[vertexIdx] = tempNormals[attribIndices.n];
+            if (attribIndices.n)
+            {
+                int64_t n = attribIndices.n.value();
+                if (n < 0)
+                    n = normalList.size() + n;
+                m_normals[vertexIdx] = normalList[n];
+            }
 
-            if (attribIndices.uv != -1)
-                m_texCoords[vertexIdx] = tempTexCoords[attribIndices.uv];
+
+            if (attribIndices.uv)
+            {
+                int64_t uv = attribIndices.uv.value();
+                if (uv < 0)
+                    uv = texCoordList.size() + uv;
+                m_texCoords[vertexIdx] = texCoordList[uv];
+            }
         }
 
         if (m_meshParts.size() >= 1)
@@ -269,6 +320,7 @@ namespace crisp
             parts.emplace_back(part.tag, part.offset, part.count);
 
         triangleMesh.setParts(std::move(parts));
+        triangleMesh.computeBoundingBox();
     }
 
     const std::filesystem::path& WavefrontObjImporter::getPath() const

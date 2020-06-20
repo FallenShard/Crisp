@@ -20,8 +20,8 @@ namespace crisp
     class Geometry
     {
     public:
-        Geometry(Renderer* renderer, const TriangleMesh& triangleMesh);
-        Geometry(Renderer* renderer, const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttribs);
+        Geometry(Renderer* renderer, const TriangleMesh& mesh);
+        Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat);
         Geometry(Renderer* renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
 
         Geometry(Renderer* renderer, InterleavedVertexBuffer&& interleavedVertexBuffer, const std::vector<glm::uvec3>& faces, const std::vector<GeometryPart>& parts = {});
@@ -33,9 +33,12 @@ namespace crisp
             , m_vertexCount(0)
             , m_instanceCount(0)
         {
-            auto vertexBuffer = createVertexBuffer(renderer->getDevice(), vertices.size() * sizeof(VertexType));
-            renderer->fillDeviceBuffer(vertexBuffer.get(), vertices);
-            m_vertexBuffers.push_back(std::move(vertexBuffer));
+            if (!vertices.empty())
+            {
+                auto vertexBuffer = createVertexBuffer(renderer->getDevice(), vertices.size() * sizeof(VertexType));
+                renderer->fillDeviceBuffer(vertexBuffer.get(), vertices);
+                m_vertexBuffers.push_back(std::move(vertexBuffer));
+            }
 
             m_indexBuffer = createIndexBuffer(renderer->getDevice(), faces.size() * sizeof(IndexType));
             renderer->fillDeviceBuffer(m_indexBuffer.get(), faces);
@@ -73,6 +76,7 @@ namespace crisp
         inline void setVertexBufferOffset(uint32_t bufferIndex, VkDeviceSize offset) { m_offsets.at(bufferIndex) = offset; }
 
         IndexedGeometryView createIndexedGeometryView() const;
+        IndexedGeometryView createIndexedGeometryView(uint32_t partIndex) const;
 
     private:
         std::vector<std::unique_ptr<VulkanBuffer>> m_vertexBuffers;

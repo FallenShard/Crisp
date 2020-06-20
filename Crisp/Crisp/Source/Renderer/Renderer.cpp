@@ -26,15 +26,27 @@
 
 namespace crisp
 {
+    namespace
+    {
+        static const std::filesystem::path ShaderSourcePath("D:/version-control/Crisp/Crisp/Crisp/Source/Shaders");
+    }
+
     Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath)
         : m_numFramesRendered(0)
         , m_currentFrameIndex(0)
         , m_resourcesPath(std::move(resourcesPath))
     {
+        std::string command = (m_resourcesPath / "CrispShaderCompiler.exe").make_preferred().string();
+        command += ' ';
+        command += std::filesystem::path(ShaderSourcePath).make_preferred().string();
+        command += ' ';
+        command += (m_resourcesPath / "Shaders").make_preferred().string();
+        std::system(command.c_str());
+
         // Create fundamental objects for the API
         m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<std::string>>(extensions));
-        m_device            = std::make_unique<VulkanDevice>(m_context.get());
-        m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), true);
+        m_device            = std::make_unique<VulkanDevice>(m_context.get(), NumVirtualFrames);
+        m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), false);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
 
         m_defaultViewport = m_swapChain->createViewport();
@@ -74,7 +86,7 @@ namespace crisp
 
         for (auto& shaderModule : m_shaderModules)
         {
-            vkDestroyShaderModule(m_device->getHandle(), shaderModule.second, nullptr);
+            vkDestroyShaderModule(m_device->getHandle(), shaderModule.second.handle, nullptr);
         }
     }
 
@@ -124,9 +136,26 @@ namespace crisp
         return m_defaultScissor;
     }
 
+    VkShaderModule Renderer::loadShaderModule(const std::string& key)
+    {
+        return loadSpirvShaderModule(m_resourcesPath / "Shaders" / (key + ".spv"));
+    }
+
+    VkShaderModule Renderer::compileGlsl(const std::filesystem::path& path, std::string id, std::string type)
+    {
+        std::cout << "Compiling: " << path << '\n';
+        std::string command = "glslangValidator.exe -V -o ";
+        command += (m_resourcesPath / "Shaders" / (id + ".spv")).make_preferred().string();
+        command += ' ';
+        command += (ShaderSourcePath / path).make_preferred().string();
+        std::system(command.c_str());
+
+        return loadShaderModule(id);
+    }
+
     VkShaderModule Renderer::getShaderModule(const std::string& key) const
     {
-        return m_shaderModules.at(key);
+        return m_shaderModules.at(key).handle;
     }
 
     void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const
@@ -157,7 +186,7 @@ namespace crisp
         m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
         m_defaultScissor.extent = m_swapChain->getExtent();
 
-        flushResourceUpdates();
+        flushResourceUpdates(true);
     }
 
     void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
@@ -175,7 +204,7 @@ namespace crisp
         m_drawCommands.emplace_back(drawAction);
     }
 
-    void Renderer::flushResourceUpdates()
+    void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     {
         if (m_resourceUpdates.empty())
             return;
@@ -200,10 +229,18 @@ namespace crisp
 
         vkEndCommandBuffer(commandBuffer);
 
-        generalQueue->submit(commandBuffer);
+        VkFence tempFence = m_device->createFence(0);
+        generalQueue->submit(commandBuffer, tempFence);
+
         generalQueue->waitIdle();
+        generalQueue->wait(tempFence);
+        vkDestroyFence(m_device->getHandle(), tempFence, nullptr);
+
+        if (waitOnAllQueues)
+            finish();
 
         vkFreeCommandBuffers(m_device->getHandle(), cmdPool, 1, &commandBuffer);
+        vkResetCommandPool(m_device->getHandle(), cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
         vkDestroyCommandPool(m_device->getHandle(), cmdPool, nullptr);
 
         m_resourceUpdates.clear();
@@ -218,6 +255,7 @@ namespace crisp
         // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
         destroyResourcesScheduledForRemoval();
 
+        m_device->updateDeferredDestructions();
         m_device->flushMappedRanges();
 
         std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
@@ -244,6 +282,7 @@ namespace crisp
 
     void Renderer::finish()
     {
+        logTagWarning("Renderer", "Calling vkDeviceWaitIdle()\n");
         vkDeviceWaitIdle(m_device->getHandle());
     }
 
@@ -281,6 +320,17 @@ namespace crisp
         }
     }
 
+    void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews)
+    {
+        m_sceneImageViews.clear();
+        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+            m_sceneImageViews.push_back(imageViews[i].get());
+
+        m_sceneMaterial->writeDescriptor(0, 0, imageViews, m_linearClampSampler.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        m_device->flushDescriptorUpdates();
+    }
+
     void Renderer::registerStreamingUniformBuffer(UniformBuffer* buffer)
     {
         m_streamingUniformBuffers.insert(buffer);
@@ -296,7 +346,7 @@ namespace crisp
         return m_fullScreenGeometry.get();
     }
 
-    std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(std::string_view pipelineName, VulkanRenderPass* renderPass, int subpassIndex)
+    std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex)
     {
         return LuaPipelineBuilder(getResourcesPath() / "Pipelines" / pipelineName).create(this, renderPass, subpassIndex);
     }
@@ -324,28 +374,40 @@ namespace crisp
     {
         auto files = fileutils::enumerateFiles(directoryPath, "spv");
         for (auto& file : files)
+            loadSpirvShaderModule(directoryPath / file);
+    }
+
+    VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath)
+    {
+        auto timestamp = std::filesystem::last_write_time(shaderModulePath);
+
+        auto shaderKey = shaderModulePath.stem().string();
+        auto existingItem = m_shaderModules.find(shaderKey);
+        if (existingItem != m_shaderModules.end())
         {
-            auto path = directoryPath / file;
-            auto shaderCode = fileutils::readBinaryFile(path);
-
-            VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-            createInfo.codeSize = shaderCode.size();
-            createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
-
-            VkShaderModule shaderModule(VK_NULL_HANDLE);
-            vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
-
-            auto shaderKey = path.stem().string();
-
-            auto existingItem = m_shaderModules.find(shaderKey);
-            if (existingItem != m_shaderModules.end())
+            // Cached shader module is same or newer
+            if (existingItem->second.lastModifiedTimestamp >= timestamp)
             {
-                logWarning("Warning: {} was already present in the renderer!\n", shaderKey);
-                vkDestroyShaderModule(m_device->getHandle(), existingItem->second, nullptr);
+                return existingItem->second.handle;
             }
-
-            m_shaderModules.insert_or_assign(shaderKey, shaderModule);
+            else
+            {
+                logInfo("Reloading shader module: {}\n", shaderKey);
+                vkDestroyShaderModule(m_device->getHandle(), existingItem->second.handle, nullptr);
+            }
         }
+
+        auto shaderCode = fileutils::readBinaryFile(shaderModulePath);
+
+        VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+        createInfo.codeSize = shaderCode.size();
+        createInfo.pCode    = reinterpret_cast<const uint32_t*>(shaderCode.data());
+
+        VkShaderModule shaderModule(VK_NULL_HANDLE);
+        vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
+
+        m_shaderModules.insert_or_assign(shaderKey, ShaderModule{ shaderModule, timestamp });
+        return shaderModule;
     }
 
     std::optional<uint32_t> Renderer::acquireSwapImageIndex(VirtualFrame& virtualFrame)
@@ -409,7 +471,7 @@ namespace crisp
         }
         else if (result != VK_SUCCESS)
         {
-            throw std::exception("Failed to present swap chain image!");
+            throw std::runtime_error("Failed to present swap chain image!");
         }
     }
 

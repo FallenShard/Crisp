@@ -93,7 +93,7 @@ namespace crisp
             }
             else
             {
-                logFatal("[{}] CRITICAL ERROR: Allocation failed: {} MB\n", tag, (blockSize >> 20));
+                logError("[{}] CRITICAL ERROR: Allocation failed: {} MB\n", tag, (blockSize >> 20));
                 logFatal("[{}] Requested size: {} bytes, but heap supports max {} MB allocations.\n", tag, size, (blockSize >> 20));
                 return allocResult;
             }
@@ -133,7 +133,7 @@ namespace crisp
         memoryBlocks.push_back(internal::VulkanAllocationBlock());
         auto& block = memoryBlocks.back();
         block.memory = memory;
-        block.freeChunks.insert(std::make_pair(0, size));
+        block.freeChunks.emplace(0, size);
         block.mappedPtr = (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? mapMemoryBlock(block) : nullptr;
         return &block;
     }
@@ -182,10 +182,7 @@ namespace crisp
     void* VulkanMemoryHeap::mapMemoryBlock(internal::VulkanAllocationBlock& block) const
     {
         if (!(properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
-        {
             logFatal("[{}] Attempted invalid MapMemory!\n", tag);
-            return nullptr;
-        }
 
         void* mappedPtr;
         vkMapMemory(device, block.memory, 0, blockSize, 0, &mappedPtr);

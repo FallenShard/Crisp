@@ -1,10 +1,5 @@
 #include "TargetCamera.hpp"
 
-#pragma warning(push)
-#pragma warning(disable: 4201) // nameless struct
-#include <glm/gtx/euler_angles.hpp>
-#pragma warning(pop)
-
 namespace crisp
 {
     namespace

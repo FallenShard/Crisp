@@ -46,4 +46,44 @@ namespace crisp
         fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
         throw std::runtime_error("");
     }
+
+    template <typename TagType, typename StringType, typename... Args>
+    inline static void logTagInfo(TagType&& tag, StringType&& string, Args&&... args)
+    {
+        fmt::print("[{}]: ", std::forward<TagType>(tag));
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
+    }
+
+    template <typename TagType, typename StringType, typename... Args>
+    inline static void logTagDebug(TagType&& tag, StringType&& string, Args&&... args)
+    {
+        ConsoleColorizer colorizer(ConsoleColor::LightCyan);
+        fmt::print("[{}]: ", std::forward<TagType>(tag));
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
+    }
+
+    template <typename TagType, typename StringType, typename... Args>
+    inline static void logTagWarning(TagType&& tag, StringType&& string, Args&&... args)
+    {
+        ConsoleColorizer colorizer(ConsoleColor::Yellow);
+        fmt::print("[{}]: ", std::forward<TagType>(tag));
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
+    }
+
+    template <typename TagType, typename StringType, typename... Args>
+    inline static void logTagError(TagType&& tag, StringType&& string, Args&&... args)
+    {
+        ConsoleColorizer colorizer(ConsoleColor::LightRed);
+        fmt::print("[{}]: ", std::forward<TagType>(tag));
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
+    }
+
+    template <typename TagType, typename StringType, typename... Args>
+    inline static void logTagFatal(TagType&& tag, StringType&& string, Args&&... args)
+    {
+        ConsoleColorizer colorizer(ConsoleColor::LightMagenta);
+        fmt::print("[{}]: ", std::forward<TagType>(tag));
+        fmt::print(std::forward<StringType>(string), std::forward<Args>(args)...);
+        throw std::runtime_error("");
+    }
 }

@@ -15,6 +15,7 @@ layout(set = 0, binding = 0) uniform Transforms
 void main()
 {
     vec4 pos = MVP * vec4(position, 1.0f);
-    gl_Position = pos.xyww;
+    pos.z = 0.0f;
+    gl_Position = pos.xyzw;
     texCoords = position;
 }

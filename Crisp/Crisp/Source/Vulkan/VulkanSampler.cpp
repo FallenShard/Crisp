@@ -33,6 +33,9 @@ namespace crisp
 
     VulkanSampler::~VulkanSampler()
     {
-        vkDestroySampler(m_device->getHandle(), m_handle, nullptr);
+        if (m_deferDestruction)
+            m_device->deferDestruction(m_handle, vkDestroySampler);
+        else
+            vkDestroySampler(m_device->getHandle(), m_handle, nullptr);
     }
 }

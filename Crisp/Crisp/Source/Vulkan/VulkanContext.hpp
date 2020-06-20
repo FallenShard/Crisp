@@ -39,8 +39,8 @@ namespace crisp
         ~VulkanContext();
 
         VkPhysicalDevice getPhysicalDevice() const;
-        VkSurfaceKHR getSurface() const;
-        VkDevice createLogicalDevice(const VulkanQueueConfiguration& config) const;
+        VkSurfaceKHR     getSurface() const;
+        VkDevice         createLogicalDevice(const VulkanQueueConfiguration& config) const;
 
         bool getQueueFamilyPresentationSupport(uint32_t familyIndex) const;
         std::vector<VkQueueFamilyProperties> getQueueFamilyProperties() const;
@@ -59,16 +59,25 @@ namespace crisp
         const VkPhysicalDeviceProperties& getPhysicalDeviceProperties() const;
         const VkPhysicalDeviceFeatures&   getPhysicalDeviceFeatures() const;
         const VkPhysicalDeviceLimits&     getPhysicalDeviceLimits() const;
+        const VkPhysicalDeviceRayTracingPropertiesNV& getPhysicalDeviceRayTracingProperties() const;
 
         inline const VkInstance& getInstance() const { return m_instance; }
+
+        //template<typename F>
+        //F getFunctionPtr(const char* functionName) const
+        //{
+        //    auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetDeviceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+        //
+        //}
 
     private:
         VkInstance               m_instance;
         VkDebugReportCallbackEXT m_debugCallback;
         VkSurfaceKHR             m_surface;
 
-        VkPhysicalDevice           m_physicalDevice; // Implicitly cleaned up with VkInstance
-        VkPhysicalDeviceFeatures   m_physicalDeviceFeatures;
-        VkPhysicalDeviceProperties m_physicalDeviceProperties;
+        VkPhysicalDevice            m_physicalDevice; // Implicitly cleaned up with VkInstance
+        VkPhysicalDeviceFeatures    m_physicalDeviceFeatures;
+        VkPhysicalDeviceProperties2 m_physicalDeviceProperties;
+        VkPhysicalDeviceRayTracingPropertiesNV m_physicalDeviceRayTracingProperties;
     };
 }

@@ -55,6 +55,18 @@ namespace crisp
             m_delegates.erase(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
         }
 
+        void unsubscribe(void* obj)
+        {
+            auto it = m_delegates.begin();
+            while (it != m_delegates.end())
+            {
+                if (it->isFromObject(obj))
+                    it = m_delegates.erase(it);
+                else
+                    ++it;
+            }
+        }
+
         void operator()(ParamTypes... args)
         {
             for (auto& delegate : m_delegates)

@@ -66,6 +66,7 @@ namespace crisp
         glm::vec2 m_prevMousePos;
 
         float m_moveSpeed;
+        float m_lookSpeed;
 
         static constexpr size_t MouseFilterListSize    = 10;
         static constexpr float  MouseFilterWeight      = 1.0f;

@@ -1,5 +1,3 @@
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-
 #include "Perspective.hpp"
 
 #include <CrispCore/Math/Operations.hpp>

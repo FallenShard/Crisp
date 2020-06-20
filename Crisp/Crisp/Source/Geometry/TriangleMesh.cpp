@@ -4,6 +4,7 @@
 #include <CrispCore/Log.hpp>
 
 #include "IO/WavefrontObjImporter.hpp"
+#include "IO/FbxImporter.hpp"
 
 namespace crisp
 {
@@ -25,21 +26,6 @@ namespace crisp
                 memcpy(&interleavedBuffer[i * vertexSize + offset], &attribute[i], sizeof(T));
             }
         }
-
-        template <typename T>
-        static void fill(std::vector<float>& buffer, const std::vector<T>& attribute)
-        {
-            buffer.resize(attribute.size() * sizeof(T) / sizeof(float));
-            memcpy(buffer.data(), attribute.data(), buffer.size() * sizeof(float));
-        }
-
-        template <VertexAttribute attribute, typename T>
-        void insertAttribute(std::unordered_map<VertexAttribute, std::vector<float>>& attributes, const std::vector<T>& attribData)
-        {
-            attributes[attribute] = std::vector<float>(attribData.size() * VertexAttributeTraits<attribute>::numComponents);
-            auto& attribBuffer = attributes[attribute];
-            memcpy(attribBuffer.data(), attribData.data(), attribData.size() * sizeof(T));
-        }
     }
 
     TriangleMesh::TriangleMesh()
@@ -47,21 +33,8 @@ namespace crisp
     }
 
     TriangleMesh::TriangleMesh(const std::filesystem::path& path)
-        : m_meshName(path.filename().stem().string())
-        , m_interleavedFormat({ VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord })
+        : TriangleMesh(path, { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord })
     {
-        if (WavefrontObjImporter::isWavefrontObjFile(path))
-        {
-            WavefrontObjImporter importer(path);
-            importer.moveDataToTriangleMesh(*this, m_interleavedFormat);
-            return;
-        }
-
-        MeshLoader meshLoader;
-        meshLoader.load(path, m_positions, m_normals, m_texCoords, m_faces);
-
-        if (m_normals.empty())
-            computeVertexNormals();
     }
 
     TriangleMesh::TriangleMesh(const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
@@ -74,9 +47,19 @@ namespace crisp
             importer.moveDataToTriangleMesh(*this, m_interleavedFormat);
             return;
         }
+        else if (FbxImporter::isFbxFile(path))
+        {
+            FbxImporter importer(path);
+            importer.moveDataToTriangleMesh(*this, m_interleavedFormat);
+            return;
+        }
 
         MeshLoader meshLoader;
         meshLoader.load(path, m_positions, m_normals, m_texCoords, m_faces);
+        computeBoundingBox();
+
+        if (m_normals.empty())
+            computeVertexNormals();
     }
 
     TriangleMesh::TriangleMesh(const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& texCoords,
@@ -94,6 +77,8 @@ namespace crisp
                 computeTangentVectors();
                 break;
             }
+
+        computeBoundingBox();
     }
 
     TriangleMesh::~TriangleMesh()
@@ -120,19 +105,24 @@ namespace crisp
         return static_cast<uint32_t>(m_positions.size());
     }
 
-    InterleavedVertexBuffer TriangleMesh::interleaveAttributes() const
+    InterleavedVertexBuffer TriangleMesh::interleave() const
+    {
+        return interleave(m_interleavedFormat);
+    }
+
+    InterleavedVertexBuffer TriangleMesh::interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const
     {
         InterleavedVertexBuffer interleavedBuffer;
 
         interleavedBuffer.vertexSize = 0;
-        for (const auto& attrib : m_interleavedFormat)
+        for (const auto& attrib : vertexAttribs)
             interleavedBuffer.vertexSize += attrib.size;
 
         uint32_t numVertices = getNumVertices();
         interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * numVertices);
 
         uint32_t currOffset = 0;
-        for (const auto& attrib : m_interleavedFormat)
+        for (const auto& attrib : vertexAttribs)
         {
             if (attrib.type == VertexAttribute::Position)
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_positions);
@@ -228,6 +218,14 @@ namespace crisp
         m_normals = computeVertexNormals(m_positions, m_faces);
     }
 
+    void TriangleMesh::computeBoundingBox()
+    {
+        m_boundingBox = BoundingBox3();
+
+        for (const auto& p : m_positions)
+            m_boundingBox.expandBy(p);
+    }
+
     const std::vector<GeometryPart> TriangleMesh::getGeometryParts() const
     {
         return m_parts;
@@ -246,9 +244,7 @@ namespace crisp
     void TriangleMesh::setPositions(std::vector<glm::vec3>&& positions)
     {
         m_positions = std::move(positions);
-
-        for (const auto& p : m_positions)
-            m_boundingBox.expandBy(p);
+        computeBoundingBox();
     }
 
     void TriangleMesh::setNormals(std::vector<glm::vec3>&& normals)

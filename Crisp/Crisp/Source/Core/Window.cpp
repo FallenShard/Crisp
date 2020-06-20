@@ -1,5 +1,8 @@
 #include "Window.hpp"
-#include "Core/EventHub.hpp"
+
+#include "InputTranslator.hpp"
+
+#include <CrispCore/Log.hpp>
 
 #include <glfw/glfw3.h>
 
@@ -16,7 +19,14 @@ namespace crisp
         m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
         glfwSetWindowPos(m_window, x, y);
 
-        m_eventHub = std::make_unique<EventHub>(m_window);
+        glfwSetWindowUserPointer(m_window, this);
+        glfwSetWindowSizeCallback(m_window, resizeCallback);
+        glfwSetWindowCloseCallback(m_window, closeCallback);
+        glfwSetKeyCallback(m_window, keyboardCallback);
+        glfwSetMouseButtonCallback(m_window, mouseButtonCallback);
+        glfwSetScrollCallback(m_window, mouseWheelCallback);
+        glfwSetCursorPosCallback(m_window, mouseMoveCallback);
+        glfwSetCursorEnterCallback(m_window, mouseEnterCallback);
 
         if (glfwRawMouseMotionSupported())
             glfwSetInputMode(m_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
@@ -78,13 +88,111 @@ namespace crisp
         return { static_cast<float>(x), static_cast<float>(y) };
     }
 
-    EventHub& Window::getEventHub()
-    {
-        return *m_eventHub;
-    }
-
     VkResult Window::createRenderingSurface(VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) const
     {
         return glfwCreateWindowSurface(instance, m_window, allocCallbacks, surface);
+    }
+
+    bool Window::isKeyDown(Key key) const
+    {
+        return glfwGetKey(m_window, translateKeyToGlfw(key)) == GLFW_PRESS;
+    }
+
+    void Window::clearAllEvents()
+    {
+        resized.clear();
+        keyPressed.clear();
+        mouseMoved.clear();
+        mouseButtonPressed.clear();
+        mouseButtonReleased.clear();
+        mouseWheelScrolled.clear();
+        mouseEntered.clear();
+        mouseExited.clear();
+        closed.clear();
+        focusGained.clear();
+        focusLost.clear();
+    }
+
+    void Window::resizeCallback(GLFWwindow* window, int width, int height)
+    {
+        auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (dispatcher) dispatcher->resized(width, height);
+    }
+
+    void Window::keyboardCallback(GLFWwindow* window, int key, int /*scanCode*/, int action, int mode)
+    {
+        if (action == GLFW_PRESS)
+        {
+            auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+            if (dispatcher) dispatcher->keyPressed(translateGlfwToKey(key), mode);
+        }
+    }
+
+    void Window::mouseMoveCallback(GLFWwindow* window, double xPos, double yPos)
+    {
+        auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (dispatcher) dispatcher->mouseMoved(xPos, yPos);
+    }
+
+    void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+    {
+        if (action == GLFW_PRESS)
+        {
+            auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+            if (dispatcher)
+            {
+                double xPos, yPos;
+                glfwGetCursorPos(window, &xPos, &yPos);
+                dispatcher->mouseButtonPressed({ translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos });
+            }
+        }
+        else if (action == GLFW_RELEASE)
+        {
+            auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+            if (dispatcher)
+            {
+                double xPos, yPos;
+                glfwGetCursorPos(window, &xPos, &yPos);
+                dispatcher->mouseButtonReleased({ translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos });
+            }
+        }
+    }
+
+    void Window::mouseWheelCallback(GLFWwindow* window, double /*xOffset*/, double yOffset)
+    {
+        auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (dispatcher) dispatcher->mouseWheelScrolled(yOffset);
+    }
+
+    void Window::mouseEnterCallback(GLFWwindow* window, int entered)
+    {
+        auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (dispatcher)
+        {
+            double xPos, yPos;
+            glfwGetCursorPos(window, &xPos, &yPos);
+            if (entered)
+                dispatcher->mouseEntered(xPos, yPos);
+            else
+                dispatcher->mouseExited(xPos, yPos);
+        }
+    }
+
+    void Window::closeCallback(GLFWwindow* window)
+    {
+        auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (dispatcher) dispatcher->closed();
+    }
+
+    void Window::focusCallback(GLFWwindow* window, int isFocused)
+    {
+        auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (dispatcher)
+        {
+            if (isFocused)
+                dispatcher->focusGained();
+            else
+                dispatcher->focusLost();
+        }
     }
 }

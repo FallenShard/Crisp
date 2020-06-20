@@ -199,7 +199,7 @@ namespace crisp
 
             m_prevSection = m_currentSection;
             m_currentSection = currentFrameIdx;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 2; i++)
             {
                 clearCellCounts(cmdBuffer);
                 computeCellCounts(cmdBuffer);
@@ -207,7 +207,7 @@ namespace crisp
                 reindex(cmdBuffer);
                 computeDensityAndPressure(cmdBuffer);
                 computeForces(cmdBuffer);
-                integrate(cmdBuffer, m_timeDelta / 5.0f);
+                integrate(cmdBuffer, m_timeDelta / 2.0f);
                 insertComputeBarrier(cmdBuffer);
                 m_prevSection = m_currentSection;
                 m_currentSection = (m_currentSection + 1) % Renderer::NumVirtualFrames;
