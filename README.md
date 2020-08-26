@@ -9,9 +9,13 @@ Currently, the following techniques have an implementation for the real-time ren
   - SPH simulation with compute shaders
   - Shadow maps (standard, PCF, variance, cascaded)
   - Simple physically-based shading model
+  - Image-based lighting with split sum approximation
   - Screen-space reflections
   - Normal mapping
   - Simple point sprite rendering
+  - Basic alpha masking for foliage
+  - Tiled forward shading demo
+  - Dynamic tessellation with terrain
   
 The ray tracing section of the code (codenamed Vesper in the source) has the following features:
   - BRDFs
