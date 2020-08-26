@@ -1,0 +1,77 @@
+#pragma once
+
+#include "vulkan/VulkanRenderPass.hpp"
+#include "DrawCommand.hpp"
+#include "RenderNode.hpp"
+
+namespace crisp
+{
+    class Renderer;
+
+    class RenderGraph
+    {
+    public:
+        using DependencyCallback = std::function<void(const VulkanRenderPass&, VkCommandBuffer, uint32_t)>;
+
+        struct Node
+        {
+            std::string name;
+            std::unordered_map<std::string, DependencyCallback> dependencies;
+
+            std::unique_ptr<VulkanRenderPass> renderPass;
+
+            // Rendered nodes can be culled/filtered down into commands
+            //std::vector<RenderNode> renderNodes;
+            std::vector<std::vector<DrawCommand>> commands;
+
+            Node() = default;
+            Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
+            Node(Node&& node) = default;
+            Node(const Node& node) = delete;
+
+            void addCommand(DrawCommand&& command, uint32_t subpassIndex = 0);
+
+            bool isCompute = false;
+            std::unique_ptr<VulkanPipeline> pipeline;
+            std::unique_ptr<Material> material;
+            glm::ivec3 workGroupSize;
+            glm::ivec3 numWorkGroups;
+
+            std::function<void(VkCommandBuffer, uint32_t)> callback;
+        };
+
+        RenderGraph(Renderer* renderer);
+        ~RenderGraph();
+
+        Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
+        Node& addComputePass(std::string computePassName);
+        void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
+        void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex);
+        void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex, uint32_t layerMultiplier);
+
+        void resize(int width, int height);
+
+        void sortRenderPasses();
+
+        void clearCommandLists();
+        void addToCommandLists(const RenderNode& renderNode);
+        void buildCommandLists(const std::unordered_map<std::string, std::unique_ptr<RenderNode>>& renderNodes);
+        void executeCommandLists() const;
+
+        const Node& getNode(std::string name) const;
+        Node& getNode(std::string name);
+
+        const VulkanRenderPass& getRenderPass(std::string name);
+
+        static void executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer, int virtualFrameIndex);
+
+    private:
+        void executeRenderPass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
+        void executeComputePass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
+
+        Renderer* m_renderer;
+
+        std::vector<Node*> m_executionOrder;
+        std::unordered_map<std::string, std::unique_ptr<Node>> m_nodes;
+    };
+}
