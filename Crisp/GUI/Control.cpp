@@ -21,19 +21,24 @@ namespace crisp::gui
         , m_parentSizePercent(1.0f, 1.0f)
         , m_position(0.0f)
         , m_sizeHint(50.0f)
-        , m_padding(0.0f)
+        , m_paddingX(0.0f)
+        , m_paddingY(0.0f)
         , m_depthOffset(1.0f)
         , m_color(glm::vec4(1.0f))
         , m_opacity(1.0f)
         , m_scale(1.0f)
-        , m_validationFlags(Validation::All)
+        , m_needsValidation(true)
+        //, m_validationFlags(Validation::All)
         , m_form(form)
         , m_renderSystem(form->getRenderSystem())
+        , m_M()
     {
     }
 
     Control::~Control()
     {
+        logDebug("Destroying control: {}\n", m_id);
+        m_form->removeFromValidationList(this);
     }
 
     void Control::setId(std::string&& id)
@@ -123,6 +128,18 @@ namespace crisp::gui
         return m_position;
     }
 
+    void Control::setWidthHint(float widthHint)
+    {
+        m_sizeHint.x = widthHint;
+        setValidationFlags(Validation::Geometry);
+    }
+
+    void Control::setHeightHint(float heightHint)
+    {
+        m_sizeHint.y = heightHint;
+        setValidationFlags(Validation::Geometry);
+    }
+
     void Control::setSizeHint(const glm::vec2& sizeHint)
     {
         m_sizeHint = sizeHint;
@@ -139,17 +156,18 @@ namespace crisp::gui
         if (!m_parent)
             return m_sizeHint.x;
 
+        const glm::vec2 parentPaddingX = getParentPaddingX();
         switch (m_horizontalSizingPolicy)
         {
         case SizingPolicy::FillParent:
-            return (m_parent->getWidth() - 2.0f * getParentPadding().x) * m_parentSizePercent.x;
+            return (m_parent->getWidth() - (parentPaddingX[0] + parentPaddingX[1])) * m_parentSizePercent.x;
 
         case SizingPolicy::Fixed:
             // If parent is not fixed (wrapping children or filling its own parent), use size hint
             if (m_parent->getHorizontalSizingPolicy() != SizingPolicy::Fixed)
                 return m_sizeHint.x;
             else
-                return std::min(m_sizeHint.x, m_parent->getWidth() - 2.0f * getParentPadding().x);
+                return std::min(m_sizeHint.x, m_parent->getWidth() - (parentPaddingX[0] + parentPaddingX[1]));
 
         default:
             logError("Attempting to use 'WrapContent' for width on a control which does not support children.");
@@ -162,17 +180,18 @@ namespace crisp::gui
         if (!m_parent)
             return m_sizeHint.y;
 
+        const glm::vec2 parentPaddingY = getParentPaddingY();
         switch (m_verticalSizingPolicy)
         {
         case SizingPolicy::FillParent:
-            return (m_parent->getHeight() - 2.0f * getParentPadding().y) * m_parentSizePercent.y;
+            return (m_parent->getHeight() - (parentPaddingY[0] + parentPaddingY[1])) * m_parentSizePercent.y;
 
         case SizingPolicy::Fixed:
             // If parent is not fixed (wrapping children or filling its own parent), use size hint
             if (m_parent->getVerticalSizingPolicy() != SizingPolicy::Fixed)
                 return m_sizeHint.y;
             else
-                return std::min(m_sizeHint.y, m_parent->getHeight() - 2.0f * getParentPadding().y);
+                return std::min(m_sizeHint.y, m_parent->getHeight() - (parentPaddingY[0] + parentPaddingY[1]));
 
         default:
             logError("Attempting to use 'WrapContent' for height on a control which does not support children.");
@@ -180,15 +199,28 @@ namespace crisp::gui
         }
     }
 
-    void Control::setPadding(glm::vec2&& padding)
+    void Control::setPadding(glm::vec2&& paddingX, glm::vec2 paddingY)
     {
-        m_padding = padding;
+        m_paddingX = paddingX;
+        m_paddingY = paddingY;
         setValidationFlags(Validation::Geometry);
     }
 
-    glm::vec2 Control::getPadding() const
+    void Control::setPadding(glm::vec2&& padding)
     {
-        return m_padding;
+        m_paddingX[0] = m_paddingX[1] = padding[0];
+        m_paddingY[0] = m_paddingY[1] = padding[1];
+        setValidationFlags(Validation::Geometry);
+    }
+
+    glm::vec2 Control::getPaddingX() const
+    {
+        return m_paddingX;
+    }
+
+    glm::vec2 Control::getPaddingY() const
+    {
+        return m_paddingY;
     }
 
     void Control::setDepthOffset(float depthOffset)
@@ -273,32 +305,38 @@ namespace crisp::gui
     {
     }
 
-    void Control::onMousePressed(float, float)
+    bool Control::onMousePressed(float, float)
     {
+        return false;
     }
 
-    void Control::onMouseReleased(float, float)
+    bool Control::onMouseReleased(float, float)
     {
+        return false;
     }
 
     void Control::setValidationFlags(ValidationFlags validationFlags)
     {
-        m_validationFlags |= validationFlags;
+        m_needsValidation = validationFlags != Validation::None;
+
+        m_form->addToValidationList(this);
     }
 
     void Control::clearValidationFlags()
     {
-        m_validationFlags = Validation::None;
-    }
-
-    ValidationFlags Control::getValidationFlags() const
-    {
-        return m_validationFlags;
+        m_needsValidation = false;
     }
 
     bool Control::needsValidation()
     {
-        return m_validationFlags != Validation::None;
+        return m_needsValidation;// m_validationFlags != Validation::None;
+    }
+
+    void Control::validateAndClearFlags()
+    {
+        //logDebug("Validating: {}\n", m_id);
+        validate();
+        clearValidationFlags();
     }
 
     Control* Control::getControlById(const std::string& id)
@@ -334,9 +372,14 @@ namespace crisp::gui
         return m_parent ? m_parent->m_M[3][2] : 0.0f;
     }
 
-    glm::vec2 Control::getParentPadding() const
+    glm::vec2 Control::getParentPaddingX() const
     {
-        return m_parent ? m_parent->getPadding() : glm::vec2(0.0f);
+        return m_parent ? m_parent->getPaddingX() : glm::vec2(0.0f);
+    }
+
+    glm::vec2 Control::getParentPaddingY() const
+    {
+        return m_parent ? m_parent->getPaddingY() : glm::vec2(0.0f);
     }
 
     glm::vec2 Control::getParentAbsoluteSize() const
@@ -352,20 +395,21 @@ namespace crisp::gui
     glm::vec2 Control::getAnchorOffset() const
     {
         const glm::vec2 parentSize = getParentAbsoluteSize();
-        const glm::vec2 padding    = getParentPadding();
+        const glm::vec2 paddingX   = getParentPaddingX();
+        const glm::vec2 paddingY   = getParentPaddingY();
 
         switch (m_anchor)
         {
         default:
-        case Anchor::TopLeft:      return padding;
-        case Anchor::TopCenter:    return glm::vec2(parentSize.x / 2.0f, padding.y);
-        case Anchor::TopRight:     return glm::vec2(parentSize.x - padding.x, padding.y);
-        case Anchor::CenterLeft:   return glm::vec2(padding.x, parentSize.y / 2.0f);
+        case Anchor::TopLeft:      return glm::vec2(paddingX[0], paddingY[0]);
+        case Anchor::TopCenter:    return glm::vec2(parentSize.x / 2.0f, paddingY[0]);
+        case Anchor::TopRight:     return glm::vec2(parentSize.x - paddingX[1], paddingY[0]);
+        case Anchor::CenterLeft:   return glm::vec2(paddingX[0], parentSize.y / 2.0f);
         case Anchor::Center:       return parentSize / 2.0f;
-        case Anchor::CenterRight:  return glm::vec2(parentSize.x - padding.x, parentSize.y / 2.0f);
-        case Anchor::BottomLeft:   return glm::vec2(padding.x, parentSize.y - padding.y);
-        case Anchor::BottomCenter: return glm::vec2(parentSize.x / 2.0f, parentSize.y - padding.y);
-        case Anchor::BottomRight:  return parentSize - padding;
+        case Anchor::CenterRight:  return glm::vec2(parentSize.x - paddingX[1], parentSize.y / 2.0f);
+        case Anchor::BottomLeft:   return glm::vec2(paddingX[0], parentSize.y - paddingY[1]);
+        case Anchor::BottomCenter: return glm::vec2(parentSize.x / 2.0f, parentSize.y - paddingY[1]);
+        case Anchor::BottomRight:  return parentSize - glm::vec2(paddingX[1], paddingY[1]);
         }
     }
 

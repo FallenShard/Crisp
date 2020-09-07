@@ -7,7 +7,7 @@ namespace crisp::gui
     class StopWatch
     {
     public:
-        StopWatch(double triggerPeriod) : m_triggerPeriod(triggerPeriod) {}
+        StopWatch(double triggerPeriod) : m_time(0.0), m_triggerPeriod(triggerPeriod) {}
         ~StopWatch() {}
 
         void accumulate(double dt)

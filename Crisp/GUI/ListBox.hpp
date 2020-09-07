@@ -5,7 +5,7 @@
 #include "Animation/PropertyAnimation.hpp"
 
 #include "ControlGroup.hpp"
-#include "DrawComponents/ColorRectDrawComponent.hpp"
+#include "DrawComponents/RectDrawComponent.hpp"
 
 namespace crisp::gui
 {

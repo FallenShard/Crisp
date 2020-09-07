@@ -39,6 +39,8 @@ namespace crisp
         void setRadius(double radius);
 
     private:
+        void createGui();
+
         struct SsaoParams
         {
             int numSamples;

@@ -77,7 +77,7 @@ namespace crisp
                 m_elapsedTime += dt;
 
                 double frameTime = interpolateTime(m_elapsedTime / m_duration);
-                if (m_elapsedTime > m_duration)
+                if (hasElapsed())
                     frameTime = 1.0f;
 
                 if (m_updater)
@@ -86,14 +86,15 @@ namespace crisp
                     m_updater(lerpVal);
                 }
             }
-            else
+
+            if (hasElapsed())
             {
                 m_loopsCompleted++;
 
                 if (m_isLooped && m_loopsCompleted < m_loopCount)
                 {
                     m_isFinished = false;
-                    m_elapsedTime = 0.0;
+                    m_elapsedTime -= m_duration;
                 }
                 else
                 {
@@ -101,6 +102,11 @@ namespace crisp
                     finished();
                 }
             }
+        }
+
+        inline bool hasElapsed() const
+        {
+            return std::abs(m_elapsedTime - m_duration) <= 1e-5;
         }
 
         void reset(T start, T end)

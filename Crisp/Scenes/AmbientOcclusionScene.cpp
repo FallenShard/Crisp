@@ -31,7 +31,8 @@
 #include "Models/Skybox.hpp"
 
 #include "GUI/Form.hpp"
-#include "AmbientOcclusionPanel.hpp"
+#include "GUI/Label.hpp"
+#include "GUI/Slider.hpp"
 
 #include <CrispCore/Math/Warp.hpp>
 
@@ -72,7 +73,9 @@ namespace crisp
             float y = distribution(randomEngine);
             float r = distribution(randomEngine);
             glm::vec3 s = r * warp::squareToUniformHemisphere(glm::vec2(x, y));
-            float scale = float(i) / float(512.0f);
+            //float scale = float(i) / float(512.0f);
+            //float scale = distribution(randomEngine);
+            float scale = 1.0f;
             scale = glm::mix(0.1f, 1.0f, scale * scale);
             samples[i].x = s.x * scale;
             samples[i].y = s.y * scale;
@@ -209,8 +212,7 @@ namespace crisp
         m_blurVNode->pass("blurVPass").material = m_materials[3].get();
         m_blurVNode->pass("blurVPass").setPushConstantView(blurV);
 
-        auto panel = std::make_unique<gui::AmbientOcclusionPanel>(app->getForm(), this);
-        m_app->getForm()->add(std::move(panel));
+        createGui();
     }
 
     AmbientOcclusionScene::~AmbientOcclusionScene()
@@ -266,5 +268,51 @@ namespace crisp
     void AmbientOcclusionScene::setRadius(double radius)
     {
         m_ssaoParams.radius = static_cast<float>(radius);
+    }
+
+    void AmbientOcclusionScene::createGui()
+    {
+        using namespace gui;
+        auto panel = std::make_unique<Panel>(m_app->getForm());
+        panel->setId("ambientOcclusionPanel");
+        panel->setPadding({ 20, 20 });
+        panel->setPosition({ 20, 40 });
+        panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
+        panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
+
+        int y = 0;
+
+        auto numSamplesLabel = std::make_unique<Label>(m_app->getForm(), "Number of samples");
+        numSamplesLabel->setPosition({ 0, y });
+        panel->addControl(std::move(numSamplesLabel));
+        y += 20;
+
+        auto numSamplesSlider = std::make_unique<IntSlider>(m_app->getForm());
+        numSamplesSlider->setId("numSamplesSlider");
+        numSamplesSlider->setPosition({ 0, y });
+        numSamplesSlider->setDiscreteValues({ 16, 32, 64, 128, 256, 512 });
+        numSamplesSlider->setIndexValue(3);
+        numSamplesSlider->valueChanged.subscribe<&AmbientOcclusionScene::setNumSamples>(this);
+        panel->addControl(std::move(numSamplesSlider));
+        y += 30;
+
+        auto radiusLabel = std::make_unique<Label>(m_app->getForm(), "Radius");
+        radiusLabel->setPosition({ 0, y });
+        panel->addControl(std::move(radiusLabel));
+        y += 20;
+
+        auto radiusSlider = std::make_unique<DoubleSlider>(m_app->getForm());
+        radiusSlider->setId("radiusSlider");
+        radiusSlider->setPosition({ 0, y });
+        radiusSlider->setMinValue(0.1);
+        radiusSlider->setMaxValue(2.0);
+        radiusSlider->setIncrement(0.1);
+        radiusSlider->setPrecision(1);
+        radiusSlider->setValue(0.5);
+        radiusSlider->valueChanged.subscribe<&AmbientOcclusionScene::setRadius>(this);
+        panel->addControl(std::move(radiusSlider));
+        y += 30;
+
+        m_app->getForm()->add(std::move(panel));
     }
 }

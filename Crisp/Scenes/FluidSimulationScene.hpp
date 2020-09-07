@@ -35,6 +35,8 @@ namespace crisp
         virtual void render() override;
 
     private:
+        void createGui();
+
         Renderer*     m_renderer;
         Application*  m_app;
 

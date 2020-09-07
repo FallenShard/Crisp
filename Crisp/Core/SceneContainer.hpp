@@ -23,6 +23,7 @@ namespace crisp
 
         static std::vector<std::string> getSceneNames();
         static const std::string& getDefaultScene();
+        static std::size_t getDefaultSceneIndex();
 
         void resize(int width, int height);
         void update(float dt);

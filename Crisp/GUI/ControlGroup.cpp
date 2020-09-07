@@ -24,10 +24,15 @@ namespace crisp::gui
         m_form->postGuiUpdate([this, cc = control.release()]() mutable
         {
             std::unique_ptr<Control> con = std::unique_ptr<Control>(cc);
-            con->setParent(this);
-            m_children.push_back(std::move(con));
-            setValidationFlags(Validation::All);
+            addControlDirect(std::move(con));
         });
+    }
+
+    void ControlGroup::addControlDirect(std::unique_ptr<Control> control)
+    {
+        control->setParent(this);
+        m_children.push_back(std::move(control));
+        setValidationFlags(Validation::All);
     }
 
     void ControlGroup::removeControl(const std::string& id)
@@ -65,7 +70,7 @@ namespace crisp::gui
                 childrenWidth = std::max(childrenWidth, childPosX + childWidth);
             }
 
-            return childrenWidth + 2.0f * m_padding.x;
+            return childrenWidth + m_paddingX[0] + m_paddingX[1];
         }
         else
         {
@@ -88,7 +93,7 @@ namespace crisp::gui
                 childrenHeight = std::max(childrenHeight, childPosY + childHeight);
             }
 
-            return childrenHeight + 2.0f * m_padding.y;
+            return childrenHeight + m_paddingY[0] + m_paddingY[1];
         }
         else
         {
@@ -156,41 +161,29 @@ namespace crisp::gui
         m_prevMousePos = { -1.0f, -1.0f };
     }
 
-    void ControlGroup::onMousePressed(float x, float y)
+    bool ControlGroup::onMousePressed(float x, float y)
     {
         for (auto& child : m_children)
         {
             if (child->getInteractionBounds().contains(x, y))
-                child->onMousePressed(x, y);
+            {
+                if (child->onMousePressed(x, y))
+                    return true;
+            }
         }
+
+        return false;
     }
 
-    void ControlGroup::onMouseReleased(float x, float y)
+    bool ControlGroup::onMouseReleased(float x, float y)
     {
-        for (auto& child : m_children)
-        {
-            child->onMouseReleased(x, y);
-        }
-    }
+        //for (auto& child : m_children)
+        //{
+        //    if (child->onMouseReleased(x, y))
+        //        return true;
+        //}
 
-    void ControlGroup::setValidationFlags(ValidationFlags validationFlags)
-    {
-        m_validationFlags = m_validationFlags | validationFlags;
-
-        for (auto& child : m_children)
-            child->setValidationFlags(validationFlags);
-    }
-
-    bool ControlGroup::needsValidation()
-    {
-        if (m_validationFlags != Validation::None)
-            return true;
-
-        bool childrenValid = false;
-        for (auto& child : m_children)
-            childrenValid |= child->needsValidation();
-
-        return childrenValid;
+        return false;
     }
 
     void ControlGroup::validate()
@@ -198,17 +191,10 @@ namespace crisp::gui
         auto size = getSize();
         auto absPos = getAbsolutePosition();
         auto absDepth = getAbsoluteDepth();
-
         m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(size, 1.0f));
 
         for (auto& child : m_children)
-        {
-            if (child->needsValidation())
-            {
-                child->validate();
-                child->clearValidationFlags();
-            }
-        }
+            child->validateAndClearFlags();
     }
 
     void ControlGroup::draw(const RenderSystem& visitor) const

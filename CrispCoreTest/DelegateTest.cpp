@@ -44,7 +44,10 @@ TEST(DelegateTest, IsFromObject)
     Delegate<void, int> del = Delegate<void, int>::fromMemberFunction<&DelegateTester::onEventTriggered>(&tester);
     del(10);
 
+    DelegateTester tester2;
+
     EXPECT_TRUE(del.isFromObject(&tester));
+    EXPECT_FALSE(del.isFromObject(&tester2));
 }
 
 TEST(DelegateTest, Comparison)

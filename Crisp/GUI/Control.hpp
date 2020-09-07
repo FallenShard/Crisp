@@ -43,14 +43,18 @@ namespace crisp::gui
         void setPosition(const glm::vec2& position);
         glm::vec2 getPosition() const;
 
+        void setWidthHint(float widthHint);
+        void setHeightHint(float heightHint);
         void setSizeHint(const glm::vec2& sizeHint);
         glm::vec2 getSize() const;
 
         virtual float getWidth() const;
         virtual float getHeight() const;
 
+        void setPadding(glm::vec2&& paddingX, glm::vec2 paddingY);
         void setPadding(glm::vec2&& padding);
-        glm::vec2 getPadding() const;
+        glm::vec2 getPaddingX() const;
+        glm::vec2 getPaddingY() const;
 
         void setDepthOffset(float depthOffset);
         float getDepthOffset() const;
@@ -72,13 +76,13 @@ namespace crisp::gui
         virtual void onMouseMoved(float x, float y);
         virtual void onMouseEntered(float x, float y);
         virtual void onMouseExited(float x, float y);
-        virtual void onMousePressed(float x, float y);
-        virtual void onMouseReleased(float x, float y);
+        virtual bool onMousePressed(float x, float y);
+        virtual bool onMouseReleased(float x, float y);
 
-        virtual void setValidationFlags(ValidationFlags validationFlags);
+        void setValidationFlags(ValidationFlags validationFlags);
         void clearValidationFlags();
-        ValidationFlags getValidationFlags() const;
-        virtual bool needsValidation();
+        bool needsValidation();
+        void validateAndClearFlags();
         virtual void validate() = 0;
 
         virtual void draw(const RenderSystem& renderSystem) const = 0;
@@ -94,7 +98,8 @@ namespace crisp::gui
     protected:
         glm::vec2 getParentAbsolutePosition() const;
         float getParentAbsoluteDepth() const;
-        glm::vec2 getParentPadding() const;
+        glm::vec2 getParentPaddingX() const;
+        glm::vec2 getParentPaddingY() const;
         glm::vec2 getParentAbsoluteSize() const;
 
         float getParentAbsoluteOpacity() const;
@@ -113,18 +118,19 @@ namespace crisp::gui
         Anchor       m_anchor;
         SizingPolicy m_horizontalSizingPolicy;
         SizingPolicy m_verticalSizingPolicy;
-        glm::vec2    m_parentSizePercent;
+        glm::vec2    m_parentSizePercent; // Used only when filling up the parent control
 
         glm::vec2 m_position;
         glm::vec2 m_sizeHint;
-        glm::vec2 m_padding;
+        glm::vec2 m_paddingX; // Minimum distance of children from this element's borders [left, right]
+        glm::vec2 m_paddingY; // Padding [top, bottom]
 
         glm::mat4 m_M; // Captures absolute position and scale etc.
 
         float m_scale;
         float m_depthOffset;
 
-        BitFlags<Validation> m_validationFlags;
+        bool m_needsValidation; // Do we need to recalculate this widget's attributes
 
         Form* m_form;
         RenderSystem* m_renderSystem;

@@ -3,7 +3,7 @@
 #include <functional>
 
 #include "ControlGroup.hpp"
-#include "DrawComponents/ColorRectDrawComponent.hpp"
+#include "DrawComponents/RectDrawComponent.hpp"
 
 namespace crisp
 {
@@ -19,10 +19,12 @@ namespace crisp
 
             virtual void draw(const RenderSystem& renderSystem) const override;
 
+            void applyVerticalLayout(float spacing);
+
         private:
             std::function<void()> m_clickCallback;
 
-            ColorRectDrawComponent m_drawComponent;
+            RectDrawComponent m_drawComponent;
         };
     }
 }

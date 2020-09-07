@@ -6,6 +6,8 @@
 #include <rlutil/rlutil.h>
 #pragma warning(pop)
 
+#include <stack>
+
 namespace crisp
 {
     enum class ConsoleColor
@@ -33,32 +35,43 @@ namespace crisp
     class ConsoleColorizer
     {
     public:
-        explicit ConsoleColorizer(ConsoleColor color)
+        static std::stack<ConsoleColor> colorStack;
+
+        inline explicit ConsoleColorizer(ConsoleColor color)
         {
+            if (colorStack.empty())
+                saveDefault();
+
+            colorStack.push(color);
             rlutil::setColor(static_cast<std::underlying_type<ConsoleColor>::type>(color));
         }
 
-        void set(ConsoleColor color)
+        inline ~ConsoleColorizer()
         {
+            colorStack.pop();
+            if (!colorStack.empty())
+                rlutil::setColor(static_cast<std::underlying_type<ConsoleColor>::type>(colorStack.top()));
+            else
+                restoreDefault();
+        }
+
+        inline void set(ConsoleColor color)
+        {
+            colorStack.top() = color;
             rlutil::setColor(static_cast<std::underlying_type<ConsoleColor>::type>(color));
         }
 
-        ~ConsoleColorizer()
+        inline void restore()
         {
             rlutil::resetColor();
         }
 
-        void restore()
-        {
-            rlutil::resetColor();
-        }
-
-        static void saveDefault()
+        inline static void saveDefault()
         {
             rlutil::saveDefaultColor();
         }
 
-        static void restoreDefault()
+        inline static void restoreDefault()
         {
             rlutil::resetColor();
         }

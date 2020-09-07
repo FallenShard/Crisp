@@ -39,6 +39,7 @@ namespace crisp::gui
         m_label->setParent(this);
         m_label->setPosition({ m_sizeHint.x + 5.0f, 1.0f });
         m_label->setAnchor(Anchor::CenterLeft);
+        m_label->setOrigin(Origin::CenterLeft);
     }
 
     CheckBox::~CheckBox()
@@ -52,6 +53,13 @@ namespace crisp::gui
     bool CheckBox::isChecked() const
     {
         return m_isChecked;
+    }
+
+    void CheckBox::setChecked(bool isChecked)
+    {
+        m_isChecked = isChecked;
+        checked(m_isChecked);
+        updateTexCoordResource();
     }
 
     void CheckBox::setText(const std::string& text)
@@ -112,53 +120,47 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void CheckBox::onMousePressed(float /*x*/, float /*y*/)
+    bool CheckBox::onMousePressed(float /*x*/, float /*y*/)
     {
         if (m_state == State::Disabled)
-            return;
+            return false;
 
         setState(State::Pressed);
+        m_form->setFocusedControl(this);
+        return true;
     }
 
-    void CheckBox::onMouseReleased(float x, float y)
+    bool CheckBox::onMouseReleased(float x, float y)
     {
         if (m_state == State::Disabled)
-            return;
+            return false;
 
         if (getAbsoluteBounds().contains(x, y) && m_state == State::Pressed)
         {
-            m_isChecked = !m_isChecked;
-            checked(m_isChecked);
-
-            updateTexCoordResource();
+            setChecked(!m_isChecked);
             setState(State::Hover);
         }
         else
         {
             setState(State::Idle);
         }
+
+        m_form->setFocusedControl(nullptr);
+        return true;
     }
 
     void CheckBox::validate()
     {
-        if (m_validationFlags & Validation::Geometry)
-        {
-            auto absPos   = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
+        auto absPos   = getAbsolutePosition();
+        auto absDepth = getAbsoluteDepth();
 
-            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
-            m_renderSystem->updateTransformResource(m_transformId, m_M);
-        }
+        m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
+        m_renderSystem->updateTransformResource(m_transformId, m_M);
 
-        if (m_validationFlags & Validation::Color)
-        {
-            m_color.a = getParentAbsoluteOpacity() * m_opacity;
-            m_renderSystem->updateColorResource(m_colorId, m_color);
-        }
+        m_color.a = getParentAbsoluteOpacity() * m_opacity;
+        m_renderSystem->updateColorResource(m_colorId, m_color);
 
-        m_label->setValidationFlags(m_validationFlags);
-        m_label->validate();
-        m_label->clearValidationFlags();
+        m_label->validateAndClearFlags();
     }
 
     void CheckBox::draw(const RenderSystem& renderSystem) const

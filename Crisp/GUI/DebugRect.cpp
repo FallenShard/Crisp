@@ -39,9 +39,7 @@ namespace crisp::gui
         str << " S: " << bounds.width << ", " << bounds.height;
 
         m_label->setText(str.str());
-        m_label->setValidationFlags(m_validationFlags);
-        m_label->validate();
-        m_label->clearValidationFlags();
+        m_label->validateAndClearFlags();
     }
 
     void DebugRect::draw(const RenderSystem& renderSystem) const

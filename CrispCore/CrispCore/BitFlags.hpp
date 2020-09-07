@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <bitset>
 
 template <typename Enum>
 struct IsBitFlag
@@ -39,11 +40,6 @@ public:
     {
     }
 
-    BitFlags(const BitFlags& rhs)
-        : m_mask(rhs.m_mask)
-    {
-    }
-
     BitFlags& operator=(const BitFlags& rhs)
     {
         m_mask = rhs.m_mask;
@@ -72,7 +68,7 @@ public:
         return BitFlags(m_mask | rhs.m_mask);
     }
 
-    bool operator==(const BitFlags& rhs)
+    inline bool operator==(const BitFlags& rhs) const
     {
         return m_mask == rhs.m_mask;
     }
@@ -82,9 +78,24 @@ public:
         return m_mask == static_cast<MaskType>(bit);
     }
 
+    inline bool operator==(const MaskType mask) const
+    {
+        return m_mask == mask;
+    }
+
+    inline bool operator!=(const BitFlags& rhs) const
+    {
+        return m_mask != rhs.m_mask;
+    }
+
     inline bool operator!=(const EnumBits bit) const
     {
         return m_mask != static_cast<MaskType>(bit);
+    }
+
+    inline bool operator!=(const MaskType mask) const
+    {
+        return m_mask != mask;
     }
 
     inline bool operator&(const EnumBits bits) const
@@ -99,7 +110,7 @@ public:
 
     void print()
     {
-        std::cout << m_mask << '\n';
+        std::cout << std::bitset<sizeof(MaskType)>(m_mask);
     }
 
     void disable(const EnumBits bit)

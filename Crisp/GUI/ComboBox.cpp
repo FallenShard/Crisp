@@ -33,15 +33,16 @@ namespace crisp::gui
         m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
         m_label->setParent(this);
-        m_label->setOrigin(Origin::Center);
-        m_label->setAnchor(Anchor::Center);
+        m_label->setPosition({ 6.0f, 0.0f });
+        m_label->setOrigin(Origin::CenterLeft);
+        m_label->setAnchor(Anchor::CenterLeft);
 
         m_itemsPanel->setParent(this);
         m_itemsPanel->setId("comboBoxItems");
         m_itemsPanel->setPosition({ 0.0f, 30.0f });
         m_itemsPanel->setDepthOffset(10.0f);
-        m_itemsPanel->setSizingPolicy(SizingPolicy::Fixed, SizingPolicy::WrapContent);
-        m_itemsPanel->setSizeHint({ 100.0f, 0.0f });
+        m_itemsPanel->setSizingPolicy(SizingPolicy::FillParent, SizingPolicy::WrapContent);
+        m_itemsPanel->setSizeHint({ 0.0f, 0.0f });
         m_itemsPanel->setAnchor(Anchor::TopLeft);
 
         std::vector<std::string> labels = { "SSAO", "HBAO+", "SSDO" };
@@ -51,6 +52,7 @@ namespace crisp::gui
             item->setId("Item " + std::to_string(i));
             item->setPosition({ 0.0f, i * 20.0f });
             item->setSizeHint({ 100.0f, 20.0f });
+            item->setHorizontalSizingPolicy(SizingPolicy::FillParent);
             item->clicked += [this, item = item.get()]()
             {
                 itemSelected(item->getText());
@@ -100,16 +102,22 @@ namespace crisp::gui
         }
     }
 
-    void ComboBox::onMousePressed(float x, float y)
+    bool ComboBox::onMousePressed(float x, float y)
     {
         if (m_showPanel)
         {
             m_itemsPanel->onMousePressed(x, y);
             setValidationFlags(Validation::Color);
         }
+        else
+        {
+            m_form->setFocusedControl(this);
+        }
+
+        return true;
     }
 
-    void ComboBox::onMouseReleased(float x, float y)
+    bool ComboBox::onMouseReleased(float x, float y)
     {
         if (getInteractionBounds().contains(x, y))
         {
@@ -121,7 +129,6 @@ namespace crisp::gui
             else
             {
                 m_showPanel = true;
-                m_form->setFocusedControl(this);
             }
         }
         else
@@ -129,45 +136,25 @@ namespace crisp::gui
             m_showPanel = false;
             m_form->setFocusedControl(nullptr);
         }
-    }
 
-    bool ComboBox::needsValidation()
-    {
-        if (m_validationFlags != Validation::None)
-            return true;
-
-        if (m_showPanel)
-            return m_itemsPanel->needsValidation();
-        else
-            return false;
+        return true;
     }
 
     void ComboBox::validate()
     {
-        if (m_validationFlags & Validation::Geometry)
-        {
-            auto absPos = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
-            auto absSize = getSize();
-            m_itemsPanel->setPosition({ 0.0f, absSize.y });
+        auto absPos = getAbsolutePosition();
+        auto absDepth = getAbsoluteDepth();
+        auto absSize = getSize();
+        m_itemsPanel->setPosition({ 0.0f, absSize.y });
 
-            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
-            m_drawComponent.update(m_M);
-        }
+        m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
+        m_drawComponent.update(m_M);
 
-        if (m_validationFlags & Validation::Color)
-        {
-            m_color.a = getParentAbsoluteOpacity() * m_opacity;
-            m_drawComponent.update(m_color);
-        }
+        m_color.a = getParentAbsoluteOpacity() * m_opacity;
+        m_drawComponent.update(m_color);
 
-        m_label->setValidationFlags(m_validationFlags);
-        m_label->validate();
-        m_label->clearValidationFlags();
-
-        m_itemsPanel->setValidationFlags(m_validationFlags);
-        m_itemsPanel->validate();
-        m_itemsPanel->clearValidationFlags();
+        m_label->validateAndClearFlags();
+        m_itemsPanel->validateAndClearFlags();
     }
 
     void ComboBox::draw(const RenderSystem& renderSystem) const
@@ -188,6 +175,7 @@ namespace crisp::gui
             item->setId("Item " + std::to_string(i));
             item->setPosition({ 0.0f, i * 20.0f });
             item->setSizeHint({ 100.0f, 20.0f });
+            item->setHorizontalSizingPolicy(SizingPolicy::FillParent);
             item->clicked += [this, item = item.get()]()
             {
                 itemSelected(item->getText());
@@ -198,6 +186,13 @@ namespace crisp::gui
         }
 
         m_label->setText(items[0]);
+    }
+
+    void ComboBox::selectItem(std::size_t index)
+    {
+        auto item = m_itemsPanel->getTypedControlById<ComboBoxItem>("Item " + std::to_string(index));
+        if (item)
+            item->clicked();
     }
 
     void ComboBox::setState(State /*state*/)

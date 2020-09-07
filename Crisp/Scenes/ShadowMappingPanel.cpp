@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include "GUI/Slider.hpp"
-#include "GUI/DoubleSlider.hpp"
 #include "GUI/Button.hpp"
+#include "GUI/Slider.hpp"
 #include "GUI/ComboBox.hpp"
 
 #include "ShadowMappingScene.hpp"
@@ -95,19 +95,6 @@ namespace crisp::gui
         blueSlider->valueChanged.subscribe<&ShadowMappingScene::setBlueAlbedo>(scene);
         panel->addControl(std::move(blueSlider));
         y += 30;
-
-        std::vector<std::string> materials;
-        for (auto dir : std::filesystem::directory_iterator("D:/version-control/Crisp/Crisp/Resources/Textures/PbrMaterials"))
-        {
-            materials.push_back(dir.path().stem().string());
-        }
-
-        auto comboBox = std::make_unique<gui::ComboBox>(form);
-        comboBox->setId("sceneComboBox");
-        comboBox->setPosition({ 0, y });
-        comboBox->setItems(materials);
-        comboBox->itemSelected.subscribe<&ShadowMappingScene::onMaterialSelected>(scene);
-        panel->addControl(std::move(comboBox));
 
         return panel;
     }

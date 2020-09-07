@@ -18,23 +18,29 @@ namespace crisp::gui
 
     void Panel::validate()
     {
-        if (m_validationFlags & Validation::Color)
-        {
-            m_color.a = getParentAbsoluteOpacity() * m_opacity;
-            m_drawComponent.update(m_color);
-        }
-
         ControlGroup::validate();
 
-        if (m_validationFlags & Validation::Geometry)
-        {
-            m_drawComponent.update(m_M);
-        }
+        m_color.a = getParentAbsoluteOpacity() * m_opacity;
+        m_drawComponent.update(m_color);
+        m_drawComponent.update(m_M);
     }
 
-    void Panel::draw(const RenderSystem& visitor) const
+    void Panel::draw(const RenderSystem& renderSystem) const
     {
         m_drawComponent.draw(m_M[3][2]);
-        ControlGroup::draw(visitor);
+        //renderSystem.drawDebugRect(getAbsoluteBounds(), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+        ControlGroup::draw(renderSystem);
+    }
+
+    void Panel::applyVerticalLayout(float spacing)
+    {
+        float y = 0.0f;
+        for (auto& c : m_children)
+        {
+            c->setPosition({ c->getPosition().x, y });
+            y += c->getSize().y + spacing;
+        }
+
+        setValidationFlags(Validation::Geometry);
     }
 }

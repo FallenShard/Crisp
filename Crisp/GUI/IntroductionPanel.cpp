@@ -12,7 +12,6 @@
 #include "ComboBox.hpp"
 #include "Panel.hpp"
 #include "DebugRect.hpp"
-#include "DoubleSlider.hpp"
 
 #include "VesperGui.hpp"
 

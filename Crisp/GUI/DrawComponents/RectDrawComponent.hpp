@@ -4,20 +4,20 @@
 
 namespace crisp::gui
 {
-    struct ColorRectDrawComponent
+    struct RectDrawComponent
     {
         RenderSystem* renderSystem;
         unsigned int transformId;
         unsigned int colorId;
 
-        ColorRectDrawComponent(RenderSystem* renderSystem)
+        RectDrawComponent(RenderSystem* renderSystem)
             : renderSystem(renderSystem)
             , transformId(renderSystem->registerTransformResource())
             , colorId(renderSystem->registerColorResource())
         {
         }
 
-        ~ColorRectDrawComponent()
+        ~RectDrawComponent()
         {
             renderSystem->unregisterTransformResource(transformId);
             renderSystem->unregisterColorResource(colorId);

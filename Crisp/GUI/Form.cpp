@@ -19,7 +19,7 @@ namespace crisp::gui
         , m_rootControlGroup(std::make_unique<ControlGroup>(this))
         , m_focusedControl(nullptr)
     {
-        m_rootControlGroup->setId("rootControlGroup");
+        m_rootControlGroup->setId("root");
         m_rootControlGroup->setDepthOffset(-32.0f);
         m_rootControlGroup->setSizeHint(m_renderSystem->getScreenSize());
     }
@@ -55,7 +55,9 @@ namespace crisp::gui
 
     void Form::add(std::unique_ptr<Control> control, bool useFadeInAnimation)
     {
-        m_rootControlGroup->addControl(useFadeInAnimation ? fadeIn(std::move(control)) : std::move(control));
+        // TODO: Rethink animations for GUI tree manipulations
+        //m_rootControlGroup->addControl(useFadeInAnimation ? fadeIn(std::move(control)) : std::move(control));
+        m_rootControlGroup->addControl(std::move(control));
     }
 
     void Form::remove(std::string controlId, float duration)
@@ -67,7 +69,13 @@ namespace crisp::gui
             return;
         }
 
-        auto colorAnim = std::make_shared<PropertyAnimation<float>>(duration, 1.0f, 0.0f, [control](const auto& t)
+        // TODO: Rethink animations for GUI tree manipulations
+        auto parent = static_cast<ControlGroup*>(control->getParent());
+        if (parent)
+        {
+            parent->removeControl(controlId);
+        }
+        /*auto colorAnim = std::make_shared<PropertyAnimation<float>>(duration, 1.0f, 0.0f, [control](const auto& t)
         {
             control->setOpacity(t);
         });
@@ -76,7 +84,20 @@ namespace crisp::gui
         {
             m_rootControlGroup->removeControl(control->getId());
         });
-        m_animator->add(colorAnim);
+        m_animator->add(colorAnim);*/
+    }
+
+    void Form::processGuiUpdates()
+    {
+        if (!m_guiUpdates.empty())
+        {
+            for (auto& guiUpdate : m_guiUpdates)
+                guiUpdate();
+
+            m_guiUpdates.clear();
+
+            printGuiTree();
+        }
     }
 
     void Form::update(double dt)
@@ -85,23 +106,11 @@ namespace crisp::gui
             stopWatch->accumulate(dt);
 
         m_animator->update(dt);
-
-        if (!m_guiUpdates.empty())
-        {
-            for (auto& guiUpdate : m_guiUpdates)
-                guiUpdate();
-
-            m_guiUpdates.clear();
-        }
     }
 
     void Form::draw()
     {
-        if (m_rootControlGroup->needsValidation())
-        {
-            m_rootControlGroup->validate();
-            m_rootControlGroup->clearValidationFlags();
-        }
+        validateControls();
 
         m_rootControlGroup->draw(*m_renderSystem);
         m_renderSystem->submitDrawCommands();
@@ -117,6 +126,16 @@ namespace crisp::gui
         m_rootControlGroup->visit(func);
     }
 
+    void Form::removeFromValidationList(Control* control)
+    {
+        m_validationSet.erase(control);
+    }
+
+    void Form::addToValidationList(Control* control)
+    {
+        m_validationSet.insert(control);
+    }
+
     void Form::resize(int width, int height)
     {
         m_renderSystem->resize(width, height);
@@ -126,6 +145,10 @@ namespace crisp::gui
     void Form::setFocusedControl(Control* control)
     {
         m_focusedControl = control;
+        if (m_focusedControl)
+            logDebug("Focused control is: {}\n", control->getId());
+        else
+            logDebug("Focus cleared.\n");
     }
 
     void Form::onMouseEntered(double mouseX, double mouseY)
@@ -156,7 +179,37 @@ namespace crisp::gui
 
     void Form::onMouseReleased(const MouseEventArgs& mouseEventArgs)
     {
-        m_rootControlGroup->onMouseReleased(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y));
+        if (m_focusedControl)
+        {
+            Control* control = m_focusedControl;
+            while (control && !control->onMouseReleased(static_cast<float>(mouseEventArgs.x), static_cast<float>(mouseEventArgs.y)))
+                control = control->getParent();
+        }
+    }
+
+    void Form::validateControls()
+    {
+        while (!m_validationSet.empty())
+        {
+            Control* control = *m_validationSet.begin();
+            m_validationSet.erase(*m_validationSet.begin());
+
+            if (control && control->needsValidation())
+            {
+                Control* iter = control->getParent();
+                while (iter)
+                {
+                    bool resizedWithChildren = iter->getHorizontalSizingPolicy() == SizingPolicy::WrapContent
+                        || iter->getVerticalSizingPolicy() == SizingPolicy::WrapContent;
+                    if (iter->needsValidation() || resizedWithChildren)
+                        control = iter;
+
+                    iter = iter->getParent();
+                }
+
+                control->validateAndClearFlags();
+            }
+        }
     }
 
     std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float /*duration*/)

@@ -3,7 +3,7 @@
 #include <CrispCore/Event.hpp>
 
 #include "GUI/Control.hpp"
-#include "GUI/DrawComponents/ColorRectDrawComponent.hpp"
+#include "GUI/DrawComponents/RectDrawComponent.hpp"
 
 namespace crisp::gui
 {
@@ -20,10 +20,9 @@ namespace crisp::gui
         virtual void onMouseEntered(float x, float y) override;
         virtual void onMouseMoved(float x, float y) override;
         virtual void onMouseExited(float x, float y) override;
-        virtual void onMousePressed(float x, float y) override;
-        virtual void onMouseReleased(float x, float y) override;
+        virtual bool onMousePressed(float x, float y) override;
+        virtual bool onMouseReleased(float x, float y) override;
 
-        virtual bool needsValidation() override;
         virtual void validate() override;
 
         virtual void draw(const RenderSystem& renderSystem) const override;
@@ -31,6 +30,7 @@ namespace crisp::gui
         Event<std::string> itemSelected;
 
         void setItems(const std::vector<std::string>& items);
+        void selectItem(std::size_t index);
 
     private:
         void setState(State state);
@@ -47,7 +47,7 @@ namespace crisp::gui
 
         std::unique_ptr<Label> m_label;
 
-        ColorRectDrawComponent m_drawComponent;
+        RectDrawComponent m_drawComponent;
 
         std::unique_ptr<ControlGroup> m_itemsPanel;
 

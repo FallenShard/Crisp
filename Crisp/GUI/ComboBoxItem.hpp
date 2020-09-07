@@ -5,7 +5,7 @@
 #include "Animation/PropertyAnimation.hpp"
 
 #include "Control.hpp"
-#include "DrawComponents/ColorRectDrawComponent.hpp"
+#include "DrawComponents/RectDrawComponent.hpp"
 
 namespace crisp::gui
 {
@@ -29,8 +29,8 @@ namespace crisp::gui
 
         virtual void onMouseEntered(float x, float y) override;
         virtual void onMouseExited(float x, float y) override;
-        virtual void onMousePressed(float x, float y) override;
-        virtual void onMouseReleased(float x, float y) override;
+        virtual bool onMousePressed(float x, float y) override;
+        virtual bool onMouseReleased(float x, float y) override;
 
         virtual void validate() override;
 
@@ -56,6 +56,6 @@ namespace crisp::gui
         std::shared_ptr<PropertyAnimation<glm::vec4, Easing::SlowOut>> m_labelColorAnim;
         std::unique_ptr<Label> m_label;
 
-        ColorRectDrawComponent m_drawComponent;
+        RectDrawComponent m_drawComponent;
     };
 }

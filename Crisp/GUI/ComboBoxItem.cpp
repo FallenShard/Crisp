@@ -15,25 +15,28 @@ namespace crisp::gui
         , m_drawComponent(parentForm->getRenderSystem())
     {
         setBackgroundColor(glm::vec3(0.3f));
-        setTextColor(glm::vec3(1.0f, 0.6f, 0.0f));
+        setTextColor(glm::vec3(1.0f), State::Idle);
+        setTextColor(glm::vec3(0.3f, 0.8f, 1.0f), State::Hover);
+        setTextColor(glm::vec3(0.2f, 0.7f, 0.9f), State::Pressed);
+        setTextColor(glm::vec3(0.5f), State::Disabled);
         setPadding({ 3.0f, 3.0f });
 
         m_M = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
         m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
         glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.4, color, color, [this](const glm::vec4& t)
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, color, color, [this](const glm::vec4& t)
         {
             setColor(t);
         });
-        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.4, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
+        m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, glm::vec4(1.0f), glm::vec4(1.0f), [this](const glm::vec4& t)
         {
             m_label->setColor(t);
         });
 
         m_label->setParent(this);
-        m_label->setAnchor(Anchor::Center);
-        m_label->setOrigin(Origin::Center);
+        m_label->setAnchor(Anchor::CenterLeft);
+        m_label->setOrigin(Origin::CenterLeft);
     }
 
     ComboBoxItem::~ComboBoxItem()
@@ -117,46 +120,41 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void ComboBoxItem::onMousePressed(float, float)
+    bool ComboBoxItem::onMousePressed(float, float)
     {
         if (m_state == State::Disabled)
-            return;
+            return false;
 
         setState(State::Pressed);
+        m_form->setFocusedControl(this);
+        return true;
     }
 
-    void ComboBoxItem::onMouseReleased(float x, float y)
+    bool ComboBoxItem::onMouseReleased(float x, float y)
     {
         if (m_state == State::Disabled)
-            return;
+            return false;
 
         if (getInteractionBounds().contains(x, y) && m_state == State::Pressed)
             clicked();
 
         setState(State::Idle);
+        m_form->setFocusedControl(nullptr);
+        return false;
     }
 
     void ComboBoxItem::validate()
     {
-        if (m_validationFlags & Validation::Geometry)
-        {
-            auto absPos = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
-            auto absSize = getSize();
+        auto absPos = getAbsolutePosition();
+        auto absDepth = getAbsoluteDepth();
+        auto absSize = getSize();
+        m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
+        m_drawComponent.update(m_M);
 
-            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
-            m_drawComponent.update(m_M);
-        }
+        m_color.a = getParentAbsoluteOpacity() * m_opacity;
+        m_drawComponent.update(m_color);
 
-        if (m_validationFlags & Validation::Color)
-        {
-            m_color.a = getParentAbsoluteOpacity() * m_opacity;
-            m_drawComponent.update(m_color);
-        }
-
-        m_label->setValidationFlags(m_validationFlags);
-        m_label->validate();
-        m_label->clearValidationFlags();
+        m_label->validateAndClearFlags();
     }
 
     void ComboBoxItem::draw(const RenderSystem& renderSystem) const

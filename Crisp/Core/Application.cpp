@@ -10,6 +10,7 @@
 #include "GUI/MemoryUsageBar.hpp"
 #include "GUI/ComboBox.hpp"
 #include "GUI/IntroductionPanel.hpp"
+#include "GUI/Label.hpp"
 
 #include <CrispCore/Log.hpp>
 
@@ -49,8 +50,8 @@ namespace crisp
         comboBox->setId("sceneComboBox");
         comboBox->setPosition({ 0, 0 });
         comboBox->setItems(SceneContainer::getSceneNames());
-        comboBox->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-        comboBox->itemSelected(SceneContainer::getDefaultScene());
+        comboBox->setWidthHint(200.0f);
+        auto cb = comboBox.get();
 
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
         statusBar->addControl(std::move(comboBox));
@@ -59,6 +60,11 @@ namespace crisp
 
         m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
         //m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
+        m_guiForm->processGuiUpdates();
+        m_guiForm->printGuiTree();
+
+        cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+        cb->selectItem(SceneContainer::getDefaultSceneIndex());
     }
 
     Application::~Application()
@@ -81,6 +87,7 @@ namespace crisp
             timeSinceLastUpdate += timeDelta;
 
             Window::pollEvents();
+            m_guiForm->processGuiUpdates();
 
             while (timeSinceLastUpdate > TimePerFrame)
             {

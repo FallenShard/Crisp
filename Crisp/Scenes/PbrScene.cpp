@@ -38,7 +38,7 @@
 #include "GUI/CheckBox.hpp"
 #include "GUI/Button.hpp"
 #include "GUI/ComboBox.hpp"
-#include "GUI/DoubleSlider.hpp"
+#include "GUI/Slider.hpp"
 
 #include <CrispCore/Math/Constants.hpp>
 #include <CrispCore/Profiler.hpp>
@@ -425,8 +425,8 @@ namespace crisp
         addLabeledSlider("Red", m_uniformMaterialParams.albedo.r, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setRedAlbedo>(this);
         addLabeledSlider("Green", m_uniformMaterialParams.albedo.g, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setGreenAlbedo>(this);
         addLabeledSlider("Blue", m_uniformMaterialParams.albedo.b, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setBlueAlbedo>(this);
-        addLabeledSlider("U scale", m_uniformMaterialParams.albedo.b, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setUScale>(this);
-        addLabeledSlider("V scale", m_uniformMaterialParams.albedo.b, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setVScale>(this);
+        addLabeledSlider("U scale", m_shaderBallUVScale.s, 1.0, 20.0)->valueChanged.subscribe<&PbrScene::setUScale>(this);
+        addLabeledSlider("V scale", m_shaderBallUVScale.t, 1.0, 20.0)->valueChanged.subscribe<&PbrScene::setVScale>(this);
 
         std::vector<std::string> materials;
         for (auto dir : std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/PbrMaterials"))
@@ -439,6 +439,13 @@ namespace crisp
         comboBox->setItems(materials);
         comboBox->itemSelected.subscribe<&PbrScene::onMaterialSelected>(this);
         panel->addControl(std::move(comboBox));
+        y += 40;
+
+        auto floorCheckBox = std::make_unique<gui::CheckBox>(form);
+        floorCheckBox->setChecked(true);
+        floorCheckBox->setText("Show Floor");
+        floorCheckBox->setPosition({ 0, y });
+        panel->addControl(std::move(floorCheckBox));
 
         form->add(std::move(panel));
     }

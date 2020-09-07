@@ -3,15 +3,35 @@
 #include <set>
 #include <vector>
 #include <functional>
+#include <variant>
+#include <algorithm>
 
 #include "Delegate.hpp"
 
 namespace crisp
 {
+    using ConnectionToken = std::size_t;
+
     template<typename ...ParamTypes>
     class Event
     {
     public:
+        struct Connection
+        {
+            Connection(ConnectionToken token, std::function<void(ParamTypes...)> callback)
+                : key(token)
+                , callback(callback)
+            {}
+
+            Connection(void* obj, std::function<void(ParamTypes...)> callback)
+                : key(obj)
+                , callback(callback)
+            {}
+
+            std::variant<ConnectionToken, void*> key;
+            std::function<void(ParamTypes...)> callback;
+        };
+
         Event() = default;
         ~Event() = default;
 
@@ -32,19 +52,32 @@ namespace crisp
         }
 
         template <typename FuncType>
-        void subscribe(FuncType&& func)
+        ConnectionToken subscribe(FuncType&& func)
         {
-            m_functors.emplace_back(std::forward<FuncType>(func));
+            ConnectionToken token = m_tokenCounter++;
+            m_connections.emplace_back(token, std::forward<FuncType>(func));
+            return token;
         }
 
         template <typename FuncType>
-        void operator+=(FuncType&& func)
+        ConnectionToken operator+=(FuncType&& func)
         {
-            m_functors.emplace_back(std::forward<FuncType>(func));
+            ConnectionToken token = m_tokenCounter++;
+            m_connections.emplace_back(token, std::forward<FuncType>(func));
+            return token;
         }
 
-        template<typename T>
+        void operator+=(Connection connection)
+        {
+            m_connections.emplace_back(connection);
+        }
+
         void subscribe(Delegate<void, ParamTypes...> del)
+        {
+            m_delegates.insert(del);
+        }
+
+        void operator+=(Delegate<void, ParamTypes...> del)
         {
             m_delegates.insert(del);
         }
@@ -53,6 +86,11 @@ namespace crisp
         void unsubscribe(ReceiverType* obj)
         {
             m_delegates.erase(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
+        }
+
+        void operator-=(Delegate<void, ParamTypes...> del)
+        {
+            m_delegates.erase(del);
         }
 
         void unsubscribe(void* obj)
@@ -65,25 +103,61 @@ namespace crisp
                 else
                     ++it;
             }
+
+            m_connections.erase(std::remove_if(m_connections.begin(), m_connections.end(), [obj](const Connection& conn)
+            {
+                return std::visit([obj](auto&& arg)
+                {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, void*>)
+                        return arg == obj;
+                    else
+                        return false;
+                }, conn.key);
+            }), m_connections.end());
         }
 
-        void operator()(ParamTypes... args)
+        void unsubscribe(std::variant<ConnectionToken, void*> connectionKey)
+        {
+            m_connections.erase(std::remove_if(m_connections.begin(), m_connections.end(), [&connectionKey](const Connection& conn)
+            {
+                return conn.key == connectionKey;
+            }), m_connections.end());
+        }
+
+        void operator()(const ParamTypes&... args)
         {
             for (auto& delegate : m_delegates)
                 delegate(args...);
 
-            for (auto& func : m_functors)
-                func(args...);
+            for (auto& conn : m_connections)
+                conn.callback(args...);
         }
 
         void clear()
         {
             m_delegates.clear();
-            m_functors.clear();
+            m_connections.clear();
+        }
+
+        std::size_t getSubscriberCount() const
+        {
+            return m_delegates.size() + m_connections.size();
+        }
+
+        std::size_t getDelegateCount() const
+        {
+            return m_delegates.size();
+        }
+
+        std::size_t getFunctorCount() const
+        {
+            return m_connections.size();
         }
 
     private:
-        std::set<Delegate<void, ParamTypes...>>         m_delegates;
-        std::vector<std::function<void(ParamTypes...)>> m_functors;
+        std::set<Delegate<void, ParamTypes...>> m_delegates;
+        std::vector<Connection>                 m_connections;
+        ConnectionToken m_tokenCounter = 0;
     };
 }

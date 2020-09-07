@@ -15,6 +15,7 @@ namespace crisp::gui
         virtual ~ControlGroup();
 
         void addControl(std::unique_ptr<Control> control);
+        void addControlDirect(std::unique_ptr<Control> control);
         void removeControl(const std::string& id);
         void clearControls();
 
@@ -25,11 +26,9 @@ namespace crisp::gui
         virtual void onMouseMoved(float x, float y);
         virtual void onMouseEntered(float x, float y);
         virtual void onMouseExited(float x, float y);
-        virtual void onMousePressed(float x, float y);
-        virtual void onMouseReleased(float x, float y);
+        virtual bool onMousePressed(float x, float y);
+        virtual bool onMouseReleased(float x, float y);
 
-        virtual void setValidationFlags(ValidationFlags validationFlags) override;
-        virtual bool needsValidation() override;
         virtual void validate() override;
 
         virtual void draw(const RenderSystem& renderSystem) const override;

@@ -9,7 +9,7 @@ namespace crisp::gui
 {
     Label::Label(Form* parentForm, const std::string& text, unsigned int fontSize)
         : Control(parentForm)
-        , m_fontName("Expressway.ttf")
+        , m_fontName("DinPro.ttf")
         , m_text(text)
         , m_drawComponent(parentForm->getRenderSystem(), m_text, m_fontName, fontSize)
     {
@@ -68,26 +68,22 @@ namespace crisp::gui
 
     void Label::validate()
     {
-        if (m_validationFlags & Validation::Geometry)
-        {
-            auto absPos   = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
+        auto absPos   = getAbsolutePosition();
+        auto absDepth = getAbsoluteDepth();
 
-            glm::vec2 renderedPos(std::round(absPos.x), std::round(absPos.y + m_textExtent.y));
-            m_M = glm::translate(glm::vec3(renderedPos, absDepth));
+        glm::vec2 renderedPos(std::round(absPos.x), std::round(absPos.y + m_textExtent.y));
+        m_M = glm::translate(glm::vec3(renderedPos, absDepth));
+        m_drawComponent.update(m_M);
 
-            m_drawComponent.update(m_M);
-        }
-
-        if (m_validationFlags & Validation::Color)
-        {
-            m_color.a = getParentAbsoluteOpacity() * m_opacity;
-            m_drawComponent.update(m_color);
-        }
+        m_color.a = getParentAbsoluteOpacity() * m_opacity;
+        m_drawComponent.update(m_color);
     }
 
-    void Label::draw(const RenderSystem& /*renderSystem*/) const
+    void Label::draw(const RenderSystem& renderSystem) const
     {
+        Rect<float> bounds = getAbsoluteBounds();
+        bounds.y -= m_textExtent.y;
+        //renderSystem.drawDebugRect(bounds, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
         m_drawComponent.draw(m_M[3][2]);
     }
 }

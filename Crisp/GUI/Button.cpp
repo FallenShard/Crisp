@@ -140,18 +140,20 @@ namespace crisp::gui
         setState(State::Idle);
     }
 
-    void Button::onMousePressed(float, float)
+    bool Button::onMousePressed(float, float)
     {
         if (m_state == State::Disabled)
-            return;
+            return false;
 
         setState(State::Pressed);
+        m_form->setFocusedControl(this);
+        return true;
     }
 
-    void Button::onMouseReleased(float x, float y)
+    bool Button::onMouseReleased(float x, float y)
     {
         if (m_state == State::Disabled)
-            return;
+            return false;
 
         if (getInteractionBounds().contains(x, y) && m_state == State::Pressed)
         {
@@ -164,35 +166,32 @@ namespace crisp::gui
         {
             setState(State::Idle);
         }
+
+        m_form->setFocusedControl(nullptr);
+
+        logWarning("onMouseReleased: {} - {}\n", typeid(this).name(), m_id);
+        return true;
     }
 
     void Button::validate()
     {
-        if (m_validationFlags & Validation::Geometry)
-        {
-            auto absPos   = getAbsolutePosition();
-            auto absDepth = getAbsoluteDepth();
-            auto absSize  = getSize();
+        auto absPos   = getAbsolutePosition();
+        auto absDepth = getAbsoluteDepth();
+        auto absSize  = getSize();
 
-            m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
-            m_drawComponent.update(m_M);
-        }
+        m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
+        m_drawComponent.update(m_M);
 
-        if (m_validationFlags & Validation::Color)
-        {
-            m_color.a = getParentAbsoluteOpacity() * m_opacity;
-            m_drawComponent.update(m_color);
-        }
+        m_color.a = getParentAbsoluteOpacity() * m_opacity;
+        m_drawComponent.update(m_color);
 
-        m_label->setValidationFlags(m_validationFlags);
-        m_label->validate();
-        m_label->clearValidationFlags();
+        m_label->validateAndClearFlags();
     }
 
     void Button::draw(const RenderSystem& renderSystem) const
     {
         m_drawComponent.draw(m_M[3][2]);
-        renderSystem.drawDebugRect(getAbsoluteBounds(), m_borderColor);
+        //renderSystem.drawDebugRect(getAbsoluteBounds(), m_borderColor);
         m_label->draw(renderSystem);
     }
 

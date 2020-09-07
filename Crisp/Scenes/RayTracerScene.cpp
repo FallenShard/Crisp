@@ -8,9 +8,16 @@
 #include "Core/Window.hpp"
 #include "IO/FileUtils.hpp"
 #include "IO/OpenEXRWriter.hpp"
-#include "RayTracerGui.hpp"
 #include "RaytracedImage.hpp"
 #include "GUI/Form.hpp"
+#include "GUI/Control.hpp"
+#include "GUI/Panel.hpp"
+#include "GUI/Button.hpp"
+#include "GUI/Form.hpp"
+#include "GUI/Label.hpp"
+#include "GUI/Slider.hpp"
+#include "GUI/ComboBox.hpp"
+#include "GUI/MemoryUsageBar.hpp"
 #include "vulkan/VulkanImageView.hpp"
 
 namespace crisp
@@ -38,8 +45,7 @@ namespace crisp
         });
         m_renderer->setSceneImageView(nullptr, 0);
 
-        m_app->getForm()->add(buildSceneOptions(m_app->getForm(), this));
-        m_app->getForm()->add(buildProgressBar(m_app->getForm(), this));
+        createGui();
     }
 
     RayTracerScene::~RayTracerScene()
@@ -136,6 +142,104 @@ namespace crisp
 
     void RayTracerScene::createGui()
     {
-        //gui::Form* form = m_app->getForm();
+        gui::Form* form = m_app->getForm();
+
+        auto panel = std::make_unique<gui::Panel>(form);
+        panel->setId("vesperOptionsPanel");
+        panel->setPosition({ 10, 30 });
+        panel->setSizeHint({ 200, 500 });
+        panel->setPadding({ 10, 10 });
+        panel->setAnchor(gui::Anchor::TopLeft);
+        panel->setVerticalSizingPolicy(gui::SizingPolicy::WrapContent);
+
+        auto button = std::make_unique<gui::Button>(form);
+        button->setId("openButton");
+        button->setText("Open XML Scene");
+        button->setSizeHint({ 100, 30 });
+        button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
+        button->clicked += [this]()
+        {
+            openSceneFileFromDialog();
+        };
+        panel->addControl(std::move(button));
+
+        button = std::make_unique<gui::Button>(form);
+        button->setId("renderButton");
+        button->setText("Start Raytracing");
+        button->setPosition({ 0, 40 });
+        button->setSizeHint({ 100, 30 });
+        button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
+        button->clicked += [this]()
+        {
+            startRendering();
+        };
+        panel->addControl(std::move(button));
+
+        button = std::make_unique<gui::Button>(form);
+        button->setId("stopButton");
+        button->setText("Stop Raytracing");
+        button->setPosition({ 0, 80 });
+        button->setSizeHint({ 100, 30 });
+        button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
+        button->clicked += [this]()
+        {
+            stopRendering();
+        };
+        panel->addControl(std::move(button));
+
+        button = std::make_unique<gui::Button>(form);
+        button->setId("saveButton");
+        button->setText("Save as EXR");
+        button->setPosition({ 0, 120 });
+        button->setSizeHint({ 100, 30 });
+        button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
+        button->clicked += [this]()
+        {
+            writeImageToExr();
+        };
+        panel->addControl(std::move(button));
+        form->add(std::move(panel));
+
+        // Progress bar
+
+        auto progressBarBg = std::make_unique<gui::Panel>(form);
+        progressBarBg->setId("progressBarBg");
+        progressBarBg->setPosition({ 0, 0 });
+        progressBarBg->setSizeHint({ 500, 20 });
+        progressBarBg->setPadding({ 3, 3 });
+        progressBarBg->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
+        progressBarBg->setAnchor(gui::Anchor::BottomRight);
+        progressBarBg->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent, 0.5f);
+
+        auto progressBar = std::make_unique<gui::Panel>(form);
+        progressBar->setId("progressBar");
+        progressBar->setPosition({ 0, 0 });
+        progressBar->setSizeHint({ 500, 20 });
+        progressBar->setPadding({ 3, 3 });
+        progressBar->setColor(glm::vec4(0.1f, 0.5f, 0.1f, 1.0f));
+        progressBar->setAnchor(gui::Anchor::BottomLeft);
+        progressBar->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent, 0.0);
+
+        auto label = std::make_unique<gui::Label>(form, "100.0%");
+        label->setId("progressLabel");
+        label->setAnchor(gui::Anchor::Center);
+        label->setOrigin(gui::Origin::Center);
+        label->setColor(glm::vec4(1.0f));
+
+        rayTracerProgressed += [form, label = label.get(), bar = progressBar.get()](float percentage, float timeSpent)
+        {
+            float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
+
+            std::stringstream stringStream;
+            stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100 << " %    ETA: " << remainingPct << " s";
+            label->setText(stringStream.str());
+            bar->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent, percentage);
+        };
+
+        progressBarBg->addControl(std::move(progressBar));
+        progressBarBg->addControl(std::move(label));
+
+        auto* memBar = form->getControlById<gui::MemoryUsageBar>("memoryUsageBar");
+        memBar->addControl(std::move(progressBarBg));
     }
 }

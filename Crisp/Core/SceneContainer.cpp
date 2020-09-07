@@ -33,10 +33,10 @@ namespace crisp
         {
             if      (name == sceneNames[0]) return std::make_unique<AmbientOcclusionScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[1]) return std::make_unique<FluidSimulationScene>(std::forward<Args>(args)...);
-            //else if (name == sceneNames[2]) return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[2]) return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[3]) return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
             else if (name == sceneNames[4]) return std::make_unique<PbrScene>(std::forward<Args>(args)...);
-            //else if (name == sceneNames[5]) return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
+            else if (name == sceneNames[5]) return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
             else {
                 logError("Scene with the name {} is invalid/disabled\n", name);
                 return std::make_unique<TestScene>(std::forward<Args>(args)...);
@@ -62,6 +62,11 @@ namespace crisp
     const std::string& SceneContainer::getDefaultScene()
     {
         return sceneNames.at(DefaultSceneIndex);
+    }
+
+    std::size_t SceneContainer::getDefaultSceneIndex()
+    {
+        return DefaultSceneIndex;
     }
 
     void SceneContainer::update(float dt)

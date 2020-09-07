@@ -19,6 +19,7 @@ namespace crisp::gui
         virtual ~CheckBox();
 
         bool isChecked() const;
+        void setChecked(bool checked);
         void setText(const std::string& text);
 
         void setEnabled(bool enabled);
@@ -31,8 +32,8 @@ namespace crisp::gui
 
         virtual void onMouseEntered(float x, float y) override;
         virtual void onMouseExited(float x, float y) override;
-        virtual void onMousePressed(float x, float y) override;
-        virtual void onMouseReleased(float x, float y) override;
+        virtual bool onMousePressed(float x, float y) override;
+        virtual bool onMouseReleased(float x, float y) override;
 
         virtual void validate() override;
 

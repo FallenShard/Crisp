@@ -38,7 +38,7 @@
 #include "GUI/CheckBox.hpp"
 #include "GUI/Button.hpp"
 #include "GUI/ComboBox.hpp"
-#include "GUI/DoubleSlider.hpp"
+#include "GUI/Slider.hpp"
 
 #include <CrispCore/Math/Constants.hpp>
 #include <CrispCore/Profiler.hpp>

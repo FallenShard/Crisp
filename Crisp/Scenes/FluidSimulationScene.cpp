@@ -18,7 +18,10 @@
 #include "vulkan/VulkanSampler.hpp"
 
 #include "GUI/Form.hpp"
-#include "FluidSimulationPanel.hpp"
+#include "GUI/Label.hpp"
+#include "GUI/Button.hpp"
+#include "GUI/Slider.hpp"
+
 #include "Renderer/RenderGraph.hpp"
 
 namespace crisp
@@ -44,8 +47,7 @@ namespace crisp
         m_fluidSimulation = std::make_unique<SPH>(m_renderer);
         m_app->getWindow()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
-        auto fluidPanel = std::make_unique<gui::FluidSimulationPanel>(app->getForm(), m_fluidSimulation.get());
-        m_app->getForm()->add(std::move(fluidPanel));
+        createGui();
 
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
         m_uniformBuffers.emplace("params", std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame));
@@ -118,5 +120,98 @@ namespace crisp
             passNode.renderPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
+    }
+
+    void FluidSimulationScene::createGui()
+    {
+        using namespace gui;
+        std::unique_ptr<Panel> panel = std::make_unique<Panel>(m_app->getForm());
+
+        panel->setId("fluidSimulationPanel");
+        panel->setPadding({ 20, 20 });
+        panel->setPosition({ 20, 40 });
+        panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
+        panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
+
+        int y = 0;
+        auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal) {
+            auto label = std::make_unique<Label>(m_app->getForm(), labelText);
+            label->setPosition({ 0, y });
+            panel->addControl(std::move(label));
+            y += 20;
+
+            auto slider = std::make_unique<DoubleSlider>(m_app->getForm(), minVal, maxVal);
+            slider->setId(labelText + "Slider");
+            slider->setAnchor(Anchor::TopCenter);
+            slider->setOrigin(Origin::TopCenter);
+            slider->setPosition({ 0, y });
+            slider->setValue(val);
+            slider->setIncrement(0.1);
+            slider->setPrecision(1);
+
+            DoubleSlider* sliderPtr = slider.get();
+            panel->addControl(std::move(slider));
+            y += 30;
+
+            return sliderPtr;
+        };
+
+        addLabeledSlider("Gravity X", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
+        addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
+        addLabeledSlider("Gravity Z", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
+
+        auto viscoLabel = std::make_unique<Label>(m_app->getForm(), "Viscosity");
+        viscoLabel->setPosition({ 0, y });
+        panel->addControl(std::move(viscoLabel));
+        y += 20;
+
+        auto viscositySlider = std::make_unique<IntSlider>(m_app->getForm());
+        viscositySlider->setId("viscositySlider");
+        viscositySlider->setAnchor(Anchor::TopCenter);
+        viscositySlider->setOrigin(Origin::TopCenter);
+        viscositySlider->setPosition({ 0, y });
+        viscositySlider->setMaxValue(30);
+        viscositySlider->setMinValue(3);
+        viscositySlider->setValue(3);
+        viscositySlider->valueChanged += [this](int value)
+        {
+            m_fluidSimulation->setViscosity(static_cast<float>(value));
+        };
+        panel->addControl(std::move(viscositySlider));
+        y += 30;
+
+        auto surfaceTensionLabel = std::make_unique<Label>(m_app->getForm(), "Surface Tension");
+        surfaceTensionLabel->setPosition({ 0, y });
+        panel->addControl(std::move(surfaceTensionLabel));
+        y += 20;
+
+        auto surfaceTensionSlider = std::make_unique<IntSlider>(m_app->getForm());
+        surfaceTensionSlider->setId("surfaceTensionSlider");
+        surfaceTensionSlider->setAnchor(Anchor::TopCenter);
+        surfaceTensionSlider->setOrigin(Origin::TopCenter);
+        surfaceTensionSlider->setPosition({ 0, y });
+        surfaceTensionSlider->setMaxValue(50);
+        surfaceTensionSlider->setMinValue(1);
+        surfaceTensionSlider->setValue(1);
+        surfaceTensionSlider->valueChanged += [this](int value)
+        {
+            m_fluidSimulation->setSurfaceTension(static_cast<float>(value));
+        };
+        panel->addControl(std::move(surfaceTensionSlider));
+        y += 30;
+
+        auto resetButton = std::make_unique<Button>(m_app->getForm());
+        resetButton->setId("resetButton");
+        resetButton->setPosition({ 0, y });
+        resetButton->setSizeHint({ 0, 30 });
+        resetButton->setText("Reset Simulation");
+        resetButton->setHorizontalSizingPolicy(SizingPolicy::FillParent);
+        resetButton->clicked += [this]()
+        {
+            m_fluidSimulation->reset();
+        };
+        panel->addControl(std::move(resetButton));
+
+        m_app->getForm()->add(std::move(panel));
     }
 }

@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <set>
+#include <unordered_set>
 
 #include <CrispCore/Math/Headers.hpp>
 #include "Animation/Animator.hpp"
@@ -24,7 +24,6 @@ namespace crisp::gui
 
         Form(const Form& other) = delete;
         Form& operator=(const Form& other) = delete;
-        Form& operator=(Form&& other) = delete;
 
         RenderSystem* getRenderSystem();
         Animator*     getAnimator();
@@ -48,20 +47,27 @@ namespace crisp::gui
         void onMousePressed(const MouseEventArgs& mouseEventArgs);
         void onMouseReleased(const MouseEventArgs& mouseEventArgs);
 
+        void processGuiUpdates();
         void update(double dt);
         void draw();
 
         void printGuiTree();
         void visit(std::function<void(Control*)> func);
 
+        void addToValidationList(Control* control);
+        void removeFromValidationList(Control* control);
+
     private:
+        void validateControls();
+
         std::unique_ptr<Control> fadeIn(std::unique_ptr<Control> controlGroup, float duration = 1.0f);
 
         std::unique_ptr<RenderSystem>      m_renderSystem;
         std::unique_ptr<Animator>          m_animator;
+        std::unordered_set<Control*>       m_validationSet;
 
         std::vector<std::function<void()>> m_guiUpdates;
-        std::set<StopWatch*>               m_stopWatches;
+        std::unordered_set<StopWatch*>     m_stopWatches;
 
         std::unique_ptr<ControlGroup>      m_rootControlGroup;
 
