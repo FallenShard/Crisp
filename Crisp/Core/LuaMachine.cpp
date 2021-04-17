@@ -5,7 +5,6 @@
 #include <string_view>
 
 #include <lua/lua.hpp>
-#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -305,8 +304,8 @@ namespace crisp
             : L(L)
         {
             int code = luaL_dostring(L, configContent);
-            if (code != 0)
-                logError("Error: {}\n", lua_tostring(L, -1));
+            //if (code != 0)
+            //    logError("Error: {}\n", lua_tostring(L, -1));
         }
 
         template <typename T>

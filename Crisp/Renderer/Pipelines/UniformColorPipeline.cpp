@@ -22,8 +22,8 @@ namespace crisp
         return PipelineBuilder()
             .setShaderStages
             ({
-                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("unif-col-vert")),
-                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("unif-col-frag")),
+                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("unif-col.vert")),
+                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("unif-col.frag")),
             })
             .addVertexInputBinding<0, VK_VERTEX_INPUT_RATE_VERTEX, VK_FORMAT_R32G32B32_SFLOAT>()
             .addVertexAttributes<0, 0, VK_FORMAT_R32G32B32_SFLOAT>()

@@ -49,11 +49,13 @@ namespace crisp
         pipelineInfo.layout                    = layout->getHandle();
         pipelineInfo.basePipelineHandle        = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex         = -1;
-        VkPipeline pipeline;
-        vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-        workGroupSizes[pipeline] = workGroupSize;
+        VkPipeline pipelineHandle;
+        vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineHandle);
+        workGroupSizes[pipelineHandle] = workGroupSize;
 
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
+        auto pipeline = std::make_unique<VulkanPipeline>(device, pipelineHandle, std::move(layout), PipelineDynamicStateFlags());
+        pipeline->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
+        return std::move(pipeline);
     }
 
     std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
@@ -95,7 +97,7 @@ namespace crisp
         specInfo.pData         = glm::value_ptr(workGroupSize);
 
         VkComputePipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-        pipelineInfo.stage                     = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getShaderModule("light-culling-comp"));
+        pipelineInfo.stage                     = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getShaderModule("light-culling.comp"));
         pipelineInfo.stage.pSpecializationInfo = &specInfo;
         pipelineInfo.layout                    = layout->getHandle();
         pipelineInfo.basePipelineHandle        = VK_NULL_HANDLE;

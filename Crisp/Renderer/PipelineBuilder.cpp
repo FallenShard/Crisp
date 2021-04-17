@@ -1,19 +1,19 @@
 #include "Renderer/PipelineBuilder.hpp"
 
-#include <CrispCore/Log.hpp>
-
 #include "Vulkan/VulkanDevice.hpp"
+
+#include <spdlog/spdlog.h>
 
 namespace
 {
-    std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(uint32_t binding, const std::vector<VkFormat>& formats)
+    std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(uint32_t locationOffset, uint32_t binding, const std::vector<VkFormat>& formats)
     {
         std::vector<VkVertexInputAttributeDescription> vertexAttribs(formats.size());
 
         uint32_t offset = 0;
         for (uint32_t i = 0; i < vertexAttribs.size(); ++i)
         {
-            vertexAttribs[i].location = i;
+            vertexAttribs[i].location = locationOffset + i;
             vertexAttribs[i].binding  = binding;
             vertexAttribs[i].format   = formats[i];
             vertexAttribs[i].offset   = offset;
@@ -30,7 +30,7 @@ namespace
         case VK_DYNAMIC_STATE_VIEWPORT: return crisp::PipelineDynamicState::Viewport;
         case VK_DYNAMIC_STATE_SCISSOR:  return crisp::PipelineDynamicState::Scissor;
         default: {
-            crisp::logFatal("Invalid vulkan dynamic state received!");
+            spdlog::critical("Invalid vulkan dynamic state received!");
         }
         }
 
@@ -92,7 +92,8 @@ namespace crisp
 
     PipelineBuilder& PipelineBuilder::addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats)
     {
-        auto attribs = generateVertexInputAttributes(binding, formats);
+        const uint32_t locOffset = m_vertexInputAttributes.size();
+        auto attribs = generateVertexInputAttributes(locOffset, binding, formats);
         m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
         m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
         m_vertexInputState.pVertexAttributeDescriptions    = m_vertexInputAttributes.data();

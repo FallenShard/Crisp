@@ -1,9 +1,6 @@
 #include "Vulkan/VulkanPipeline.hpp"
 
-#include <algorithm>
-
 #include "Vulkan/VulkanDevice.hpp"
-#include "Vulkan/VulkanRenderPass.hpp"
 
 namespace crisp
 {
@@ -11,25 +8,23 @@ namespace crisp
         : VulkanResource(device, pipelineHandle)
         , m_pipelineLayout(std::move(pipelineLayout))
         , m_dynamicStateFlags(dynamicStateFlags)
+        , m_subpassIndex(0)
+        , m_bindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
     {
     }
 
     VulkanPipeline::~VulkanPipeline()
     {
-        if (m_deferDestruction)
-            m_device->deferDestruction(m_handle, vkDestroyPipeline);
-        else
-            vkDestroyPipeline(m_device->getHandle(), m_handle, nullptr);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        {
+            spdlog::debug("Destroying pipeline: {}", handle);
+            vkDestroyPipeline(device, static_cast<VkPipeline>(handle), nullptr);
+        });
     }
 
     void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const
     {
-        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_handle);
-    }
-
-    void VulkanPipeline::bind(VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint) const
-    {
-        vkCmdBindPipeline(cmdBuffer, bindPoint, m_handle);
+        vkCmdBindPipeline(cmdBuffer, m_bindPoint, m_handle);
     }
 
     VulkanDescriptorSet VulkanPipeline::allocateDescriptorSet(uint32_t setId) const

@@ -51,7 +51,7 @@ namespace crisp
         return *this;
     }
 
-    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayouts(VkDevice device)
+    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayouts(VkDevice device) const
     {
         std::vector<VkDescriptorSetLayout> setLayouts(m_setLayoutCreateInfos.size(), VK_NULL_HANDLE);
         for (uint32_t i = 0; i < setLayouts.size(); i++)
@@ -73,7 +73,7 @@ namespace crisp
         return layout;
     }
 
-    std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
+    std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
     {
         return std::make_unique<VulkanPipelineLayout>(device, createDescriptorSetLayouts(device->getHandle()),
             getDescriptorSetLayoutBindings(), getPushConstantRanges(), getDescriptorSetBufferedStatuses(),
@@ -93,6 +93,11 @@ namespace crisp
     std::vector<VkPushConstantRange> PipelineLayoutBuilder::getPushConstantRanges() const
     {
         return m_pushConstantRanges;
+    }
+
+    std::size_t PipelineLayoutBuilder::getDescriptorSetLayoutCount() const
+    {
+        return m_setLayoutBindings.size();
     }
 
     std::vector<bool> PipelineLayoutBuilder::getDescriptorSetBufferedStatuses() const

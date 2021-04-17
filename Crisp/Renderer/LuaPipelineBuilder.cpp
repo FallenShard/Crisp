@@ -1,12 +1,18 @@
 #include "LuaPipelineBuilder.hpp"
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "ShadingLanguage/Reflection.hpp"
 #include "Renderer.hpp"
 #include "Vulkan/VulkanRenderPass.hpp"
 
 #include "PipelineLayoutBuilder.hpp"
+
+namespace
+{
+    auto logger = spdlog::stdout_color_mt("LuaPipelineBuilder");
+}
 
 namespace crisp
 {
@@ -94,12 +100,14 @@ namespace crisp
                     bindingFormats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
                 else if (f == "vec2")
                     bindingFormats.push_back(VK_FORMAT_R32G32_SFLOAT);
+                else if (f == "vec4")
+                    bindingFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
                 else if (f == "instance")
                     inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
                 else if (f == "vertex")
                     inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
                 else
-                    logError("Unknown format: {}\n", f);
+                    logger->error("Unknown format: {}", f);
             }
             m_builder.addVertexInputBinding(i, inputRate, bindingFormats);
         }
@@ -118,8 +126,10 @@ namespace crisp
                     vulkanFormats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
                 else if (format == "vec2")
                     vulkanFormats.push_back(VK_FORMAT_R32G32_SFLOAT);
+                else if (format == "vec4")
+                    vulkanFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
                 else
-                    logError("Unknown format: {}\n", format);
+                    logger->error("Unknown format: {}", format);
             }
             m_builder.addVertexAttributes(i, vulkanFormats);
         }
@@ -133,8 +143,10 @@ namespace crisp
         auto& inputAssembly = m_config["inputAssembly"];
         if (auto topology = inputAssembly.get<std::string>("primitiveTopology"))
         {
-            if (topology == "Lines")
+            if (topology == "lineList")
                 m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+            else if (topology == "pointList")
+                m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
         }
     }
 
@@ -218,6 +230,14 @@ namespace crisp
             else if (cullMode == "none")
                 m_builder.setCullMode(VK_CULL_MODE_NONE);
         }
+
+        if (auto polygonMode = rasterization.get<std::string>("polygonMode"))
+        {
+            if (polygonMode == "line")
+                m_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
+            else if (polygonMode == "fill")
+                m_builder.setPolygonMode(VK_POLYGON_MODE_FILL);
+        }
     }
 
     void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& renderPass)
@@ -271,9 +291,17 @@ namespace crisp
     void LuaPipelineBuilder::readDescriptorSetBufferedStatus(PipelineLayoutBuilder& layoutBuilder)
     {
         if (m_config.hasVariable("setBuffering"))
-            if (auto setBuffering = m_config.get<std::vector<bool>>("setBuffering"))
-                for (uint32_t i = 0; i < setBuffering.value().size(); ++i)
-                    layoutBuilder.setDescriptorSetBuffering(i, setBuffering.value()[i]);
+        {
+            auto setBufferingFlags = m_config.get<std::vector<bool>>("setBuffering");
+            if (setBufferingFlags)
+            {
+                if (setBufferingFlags.value().size() != layoutBuilder.getDescriptorSetLayoutCount())
+                    logger->warn("Mismatch in descriptor set count.");
+
+                for (uint32_t i = 0; i < setBufferingFlags.value().size(); ++i)
+                    layoutBuilder.setDescriptorSetBuffering(i, setBufferingFlags.value()[i]);
+            }
+        }
     }
 
     void LuaPipelineBuilder::readDynamicBufferDescriptorIds(PipelineLayoutBuilder& layoutBuilder)

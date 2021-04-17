@@ -3,8 +3,6 @@
 #include "VulkanDevice.hpp"
 #include "Renderer/PipelineLayoutBuilder.hpp"
 
-#include <CrispCore/Log.hpp>
-
 #include "Renderer/DescriptorSetAllocator.hpp"
 
 namespace crisp
@@ -49,21 +47,20 @@ namespace crisp
 
     VulkanPipelineLayout::~VulkanPipelineLayout()
     {
-        if (m_deferDestruction)
+        for (auto setLayout : m_descriptorSetLayouts)
         {
-            m_device->deferDestruction([h = m_handle, sets = m_descriptorSetLayouts](VkDevice device)
-                {
-                    for (auto& setLayout : sets)
-                        vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
-                    vkDestroyPipelineLayout(device, h, nullptr);
-                });
+            m_device->deferDestruction(m_framesToLive, setLayout, [](void* handle, VkDevice device)
+            {
+                    spdlog::debug("Destroying set layout: {}", handle);
+                vkDestroyDescriptorSetLayout(device, static_cast<VkDescriptorSetLayout>(handle), nullptr);
+            });
         }
-        else
+
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
         {
-            for (auto& setLayout : m_descriptorSetLayouts)
-                vkDestroyDescriptorSetLayout(m_device->getHandle(), setLayout, nullptr);
-            vkDestroyPipelineLayout(m_device->getHandle(), m_handle, nullptr);
-        }
+                spdlog::debug("Destroying pipeline layout: {}", handle);
+            vkDestroyPipelineLayout(device, static_cast<VkPipelineLayout>(handle), nullptr);
+        });
     }
 
     VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const

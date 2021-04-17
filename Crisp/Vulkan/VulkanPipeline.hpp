@@ -1,17 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <memory>
+#include "Vulkan/VulkanResource.hpp"
+#include "Vulkan/VulkanFormatTraits.hpp"
+#include "Vulkan/VulkanDescriptorSetLayout.hpp"
+#include "Vulkan/VulkanDescriptorSet.hpp"
+#include "Vulkan/VulkanPipelineLayout.hpp"
 
 #include <CrispCore/BitFlags.hpp>
 #include <CrispCore/Math/Headers.hpp>
 
-#include "VulkanResource.hpp"
-
-#include "vulkan/VulkanFormatTraits.hpp"
-#include "vulkan/VulkanDescriptorSetLayout.hpp"
-#include "vulkan/VulkanDescriptorSet.hpp"
-#include "Vulkan/VulkanPipelineLayout.hpp"
+#include <filesystem>
 
 namespace crisp
 {
@@ -35,10 +33,11 @@ namespace crisp
 
         inline VulkanPipelineLayout* getPipelineLayout() const { return m_pipelineLayout.get(); }
 
-        void bind(VkCommandBuffer buffer) const;
-        void bind(VkCommandBuffer buffer, VkPipelineBindPoint bindPoint) const;
+        void setBindPoint(VkPipelineBindPoint pipelineBindPoint) { m_bindPoint = pipelineBindPoint; }
 
-        VulkanDescriptorSet          allocateDescriptorSet(uint32_t setId) const;
+        void bind(VkCommandBuffer buffer) const;
+
+        VulkanDescriptorSet allocateDescriptorSet(uint32_t setId) const;
 
         inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
         {
@@ -64,6 +63,11 @@ namespace crisp
 
         inline PipelineDynamicStateFlags getDynamicStateFlags() const { return m_dynamicStateFlags; }
 
+        inline void setLuaFilepath(std::filesystem::path path)
+        {
+            m_luaFilepath = path;
+        }
+
     protected:
         template <typename T, typename ...Ts>
         inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
@@ -75,7 +79,13 @@ namespace crisp
         }
 
         std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;
-
         PipelineDynamicStateFlags m_dynamicStateFlags;
+
+        std::filesystem::path m_luaFilepath; // Config file where the pipeline is described
+        const VulkanRenderPass* m_renderPass;
+        const uint32_t m_subpassIndex;
+
+        VkPipelineBindPoint m_bindPoint;
+
     };
 }

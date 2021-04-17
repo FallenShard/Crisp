@@ -25,8 +25,8 @@ namespace crisp
         return PipelineBuilder()
             .setShaderStages
             ({
-                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("liquid-vert")),
-                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("liquid-frag"))
+                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("liquid.vert")),
+                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("liquid.frag"))
             })
             .setFullScreenVertexLayout()
             .setViewport(renderer->getDefaultViewport())

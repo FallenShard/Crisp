@@ -1,4 +1,4 @@
-#include "SsaoPipeline.hpp"
+#include "LightShaftPipeline.hpp"
 
 #include "Vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanRenderPass.hpp"
@@ -22,8 +22,8 @@ namespace crisp
         return PipelineBuilder()
             .setShaderStages
             ({
-                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("light-shaft-vert")),
-                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("light-shaft-frag"))
+                createShaderStageInfo(VK_SHADER_STAGE_VERTEX_BIT,   renderer->getShaderModule("light-shaft.vert")),
+                createShaderStageInfo(VK_SHADER_STAGE_FRAGMENT_BIT, renderer->getShaderModule("light-shaft.frag"))
             })
             .setFullScreenVertexLayout()
             .setViewport(renderer->getDefaultViewport())
