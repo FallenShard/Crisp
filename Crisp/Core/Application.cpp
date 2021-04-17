@@ -12,33 +12,41 @@
 #include "GUI/IntroductionPanel.hpp"
 #include "GUI/Label.hpp"
 
-#include <CrispCore/Log.hpp>
+#include <CrispCore/ChromeProfiler.hpp>
+
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace crisp
 {
     namespace
     {
+        auto logger = spdlog::stdout_color_mt("Application");
         void logFpsToConsole(double frameTime, double fps)
         {
-            logDebug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
+            logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
         }
-
-        static constexpr const char* LogTag = "Application";
     }
 
     Application::Application(const ApplicationEnvironment&)
         : m_frameTimeLogger(1000.0)
     {
-        logTagInfo(LogTag, "Initializing application...\n");
+        logger->info("Initializing...");
+
         m_window   = createWindow();
+        logger->info("Window opened!");
+
         m_renderer = createRenderer();
+        logger->info("Renderer created!");
 
         m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
+        logger->info("SceneContainer created!");
 
         m_window->resized.subscribe<&Application::onResize>(this);
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
+        logger->info("GUI Created");
         m_window->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
         m_window->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
         m_window->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
@@ -65,6 +73,7 @@ namespace crisp
 
         cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
         cb->selectItem(SceneContainer::getDefaultSceneIndex());
+        logger->info("Initialized start-up scene");
     }
 
     Application::~Application()
@@ -73,8 +82,8 @@ namespace crisp
 
     void Application::run()
     {
-        logTagInfo(LogTag, "Hello world from Crisp! The application is up and running!\n");
-        logTagInfo(LogTag, "Use WASD to move and hold down right click to rotate the camera.\n");
+        logger->info("Hello world from Crisp! The application is up and running!");
+        logger->info("Use WASD to move and hold down right click to rotate the camera.");
 
         m_renderer->flushResourceUpdates(true);
 
@@ -83,7 +92,7 @@ namespace crisp
         double timeSinceLastUpdate = 0.0;
         while (!m_window->shouldClose())
         {
-            auto timeDelta = updateTimer.restart() / 1000.0;
+            const double timeDelta = updateTimer.restart() / 1000.0;
             timeSinceLastUpdate += timeDelta;
 
             Window::pollEvents();
@@ -92,16 +101,12 @@ namespace crisp
             while (timeSinceLastUpdate > TimePerFrame)
             {
                 m_sceneContainer->update(static_cast<float>(TimePerFrame));
-
                 m_guiForm->update(TimePerFrame);
-
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
             m_sceneContainer->render();
-
             m_guiForm->draw();
-
             m_renderer->drawFrame();
 
             m_frameTimeLogger.update();
@@ -117,7 +122,7 @@ namespace crisp
 
     void Application::onResize(int width, int height)
     {
-        logInfo("New window dims: [{}, {}]\n", width, height);
+        logger->info("New window dims: [{}, {}]", width, height);
         if (width == 0 || height == 0)
             return;
 
@@ -144,8 +149,8 @@ namespace crisp
 
     std::unique_ptr<Window> Application::createWindow()
     {
-        glm::ivec2 desktopRes = Window::getDesktopResolution();
-        glm::ivec2 size(DefaultWindowWidth, DefaultWindowHeight);
+        const glm::ivec2 desktopRes = Window::getDesktopResolution();
+        constexpr glm::ivec2 size(DefaultWindowWidth, DefaultWindowHeight);
 
         return std::make_unique<Window>((desktopRes - size) / 2, size, Title);
     }
