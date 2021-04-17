@@ -1,8 +1,8 @@
 #pragma once
 
-#include <CrispCore/Math/Constants.hpp>
+#include "Animation/Animation.hpp"
 
-#include "Animation.hpp"
+#include <CrispCore/Math/Constants.hpp>
 
 namespace crisp
 {
@@ -75,16 +75,15 @@ namespace crisp
             if (m_elapsedTime < m_duration)
             {
                 m_elapsedTime += dt;
-
-                double frameTime = interpolateTime(m_elapsedTime / m_duration);
-                if (hasElapsed())
-                    frameTime = 1.0f;
+                const double frameTime = hasElapsed() ? 1.0 : interpolateTime(m_elapsedTime / m_duration);
 
                 if (m_updater)
                 {
-                    T lerpVal = m_propertyStart + (m_propertyEnd - m_propertyStart) * static_cast<float>(frameTime);
+                    const T lerpVal = m_propertyStart + (m_propertyEnd - m_propertyStart) * static_cast<float>(frameTime);
                     m_updater(lerpVal);
                 }
+
+                m_framesCompleted++;
             }
 
             if (hasElapsed())
@@ -106,7 +105,7 @@ namespace crisp
 
         inline bool hasElapsed() const
         {
-            return std::abs(m_elapsedTime - m_duration) <= 1e-5;
+            return std::abs(m_elapsedTime - m_duration) <= 1e-7;
         }
 
         void reset(T start, T end)
@@ -151,7 +150,7 @@ namespace crisp
             else if constexpr (easing == Easing::Root)
                 return std::sqrt(dt);
             else if constexpr (easing == Easing::Sine)
-                return std::sin(dt * math::PI / 2.0);
+                return std::sin(dt * PI<double> / 2.0);
             else
                 return dt;
         }

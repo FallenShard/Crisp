@@ -9,10 +9,6 @@ namespace crisp
     {
     }
 
-    Animator::~Animator()
-    {
-    }
-
     void Animator::update(double dt)
     {
         // Clear all animations if requested
@@ -21,6 +17,7 @@ namespace crisp
             m_pendingAnimations.clear();
             m_activeAnimations.clear();
             m_removedAnimations.clear();
+            m_animationLifetimes.clear();
             m_clearAllAnimations = false;
         }
 
@@ -29,11 +26,14 @@ namespace crisp
         {
             m_activeAnimations.erase(std::remove_if(m_activeAnimations.begin(), m_activeAnimations.end(), [this](const std::shared_ptr<Animation>& anim)
             {
-                for (auto& removedAnim : m_removedAnimations)
-                    if (anim.get() == removedAnim.get())
-                        return true;
-                return false;
+                return m_removedAnimations.contains(anim);
             }), m_activeAnimations.end());
+
+            m_pendingAnimations.erase(std::remove_if(m_pendingAnimations.begin(), m_pendingAnimations.end(), [this](const std::shared_ptr<Animation>& anim)
+            {
+                return m_removedAnimations.contains(anim);
+            }), m_pendingAnimations.end());
+
             m_removedAnimations.clear();
         }
 
@@ -72,13 +72,32 @@ namespace crisp
         anim->setActive(true);
     }
 
+    void Animator::add(std::shared_ptr<Animation> animation, void* targetObject)
+    {
+        m_pendingAnimations.emplace_back(animation);
+        m_animationLifetimes[targetObject].emplace_back(animation);
+        animation->setActive(true);
+    }
+
     void Animator::remove(std::shared_ptr<Animation> anim)
     {
-        m_removedAnimations.emplace_back(anim);
+        m_removedAnimations.insert(anim);
     }
 
     void Animator::clearAllAnimations()
     {
         m_clearAllAnimations = true;
+    }
+
+    void Animator::clearObjectAnimations(void* targetObject)
+    {
+        auto iter = m_animationLifetimes.find(targetObject);
+        if (iter == m_animationLifetimes.end())
+            return;
+
+        for (auto& anim : iter->second)
+            m_removedAnimations.insert(anim);
+
+        m_animationLifetimes.erase(iter);
     }
 }

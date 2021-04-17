@@ -1,13 +1,8 @@
-#include "Animation.hpp"
-#include "Animator.hpp"
+#include "Animation/Animation.hpp"
+#include "Animation/Animator.hpp"
 
 namespace crisp
 {
-    namespace
-    {
-        static int Id = 0;
-    }
-
     Animation::Animation(double startDelay, double duration, bool isLooped, int loopCount)
         : m_startDelay(startDelay)
         , m_duration(duration)
@@ -18,10 +13,7 @@ namespace crisp
         , m_loopsCompleted(0)
         , m_elapsedTime(0)
         , m_elapsedDelayTime(0)
-    {
-    }
-
-    Animation::~Animation()
+        , m_framesCompleted(0)
     {
     }
 

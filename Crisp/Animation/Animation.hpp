@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/Event.hpp>
 
@@ -11,10 +9,7 @@ namespace crisp
     {
     public:
         Animation(double startDelay, double duration, bool isLooped = false, int loopCount = 1);
-        virtual ~Animation();
-
-        Event<> started;
-        Event<> finished;
+        virtual ~Animation() = default;
 
         void setDuration(double duration);
         double getDuration() const;
@@ -32,6 +27,9 @@ namespace crisp
 
         virtual void reset();
 
+        Event<> started;
+        Event<> finished;
+
     protected:
         double m_duration;
         double m_startDelay;
@@ -45,5 +43,6 @@ namespace crisp
         int m_loopCount;
 
         int m_loopsCompleted;
+        int m_framesCompleted;
     };
 }
