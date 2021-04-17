@@ -13,9 +13,11 @@ namespace crisp
         ~ApplicationEnvironment();
 
         static std::filesystem::path getResourcesPath();
+        static std::filesystem::path getShaderSourcesPath();
         static std::vector<std::string> getRequiredVulkanExtensions();
 
     private:
         static std::filesystem::path ResourcesPath;
+        static std::filesystem::path ShaderSourcesPath;
     };
 }
