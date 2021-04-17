@@ -108,4 +108,6 @@ void main()
     positions[threadIdx] = vec4(newPosition, 1.0f);
 
     colors[threadIdx].xyz = vec3(force.w / 1000.0f);
+    //positions[threadIdx] = vec4(prevPositions[threadIdx].xyz + pushConst.timeDelta, 1.0f);
+    //colors[threadIdx].xyz = vec3(1, 0, 0);
 }

@@ -3,8 +3,7 @@
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 texCoord;
-layout(location = 3) in vec3 tangent;
-layout(location = 4) in vec3 bitangent;
+layout(location = 3) in vec4 tangent;
 
 layout(location = 0) out vec3 eyePos;
 layout(location = 1) out vec3 eyeNormal;
@@ -27,7 +26,7 @@ void main()
     eyeNormal    = (N  * vec4(normal,   0.0f)).xyz;
     worldPos     = (M  * vec4(position, 1.0f)).xyz;
     outTexCoord  = texCoord;
-    eyeTangent   = (N  * vec4(tangent, 0.0f)).xyz;
-    eyeBitangent = (N  * vec4(bitangent, 0.0f)).xyz;
+    eyeTangent   = (N * vec4(tangent.xyz, 0.0f)).xyz;
+    eyeBitangent = normalize((N * vec4(tangent.w * cross(normal, tangent.xyz), 0.0f)).xyz);
     gl_Position  = MVP * vec4(position, 1.0f);
 }

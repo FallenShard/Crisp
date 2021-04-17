@@ -28,17 +28,19 @@ layout(set = 0, binding = 1) uniform Camera
 //layout(set = 1, binding = 1) uniform sampler2D vsm;
 
 layout(set = 1, binding = 0) uniform sampler2D normalMap;
-
-layout(set = 2, binding = 0) uniform Light
-{
-    mat4 VP;
-    mat4 V;
-    mat4 P;
-    vec4 position;
-    vec3 spectrum;
-} light;
-
-layout(set = 2, binding = 1) uniform sampler2D shadowMap;
+layout(set = 1, binding = 1) uniform sampler2D diffuseMap;
+layout(set = 1, binding = 2) uniform sampler2D specularMap;
+//
+//layout(set = 2, binding = 0) uniform Light
+//{
+//    mat4 VP;
+//    mat4 V;
+//    mat4 P;
+//    vec4 position;
+//    vec3 spectrum;
+//} light;
+//
+//layout(set = 2, binding = 1) uniform sampler2D shadowMap;
 
 #define PI         3.14159265358979323846
 #define InvPI      0.31830988618379067154
@@ -56,19 +58,19 @@ const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 const vec4 splitNear = vec4(0.1f, 10.0f, 30.0f, 70.0f);
 const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
 
-float getShadowCoeff()
-{
-   vec4 lightSpacePos = light.VP * vec4(worldPos, 1.0f);
-   vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
-
-   if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-       return 1.0f;
-
-   vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-   float shadowMapDepth = texture(shadowMap, texCoord).r;
-
-   return shadowMapDepth < ndcPos.z ? 0.0f : 1.0f;
-}
+//float getShadowCoeff()
+//{
+//   vec4 lightSpacePos = light.VP * vec4(worldPos, 1.0f);
+//   vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+//
+//   if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
+//       return 1.0f;
+//
+//   vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+//   float shadowMapDepth = texture(shadowMap, texCoord).r;
+//
+//   return shadowMapDepth < ndcPos.z ? 0.0f : 1.0f;
+//}
 
 //float getVSMCoeff() {
 //    vec4 lightViewPos = pushConst.LV * vec4(worldPos, 1.0f);
@@ -173,115 +175,61 @@ float getShadowCoeff()
 //         return vec3(0.15, 0.15, 0.75) * InvPI;
 // }
 
-vec3 Li(out vec3 wi)
-{
-    if (light.position.w == 0.0f)
-    {
-        wi = -vec3(V * light.position);
-        return light.spectrum;
-    }
-    else
-    {
-        wi = vec3(V * light.position) - eyePos;
-        float dist2 = dot(wi, wi);
-        return light.spectrum * InvFourPI / dist2;
-    }
-}
+//vec3 Li(out vec3 wi)
+//{
+//    if (light.position.w == 0.0f)
+//    {
+//        wi = -vec3(V * light.position);
+//        return light.spectrum;
+//    }
+//    else
+//    {
+//        wi = vec3(V * light.position) - eyePos;
+//        float dist2 = dot(wi, wi);
+//        return light.spectrum * InvFourPI / dist2;
+//    }
+//}
 
 void main()
 {
-    //// Get radiance and direction from point towards the light in eye space
-    //vec3 wi;
-    //vec3 Li = Li(wi);
-//
-    //// Albedo, lambertian material
-    //vec3 f = vec3(0.84f, 0.95f, 0.67f) * InvPI;
-//
-    //vec3 tangent = normalize(eyeTangent);
-    //vec3 normal  = normalize(eyeNormal);
-    //
-    ////tangent = normalize(tangent - dot(tangent, normal) * normal);
-    //vec3 bitangent = normalize(eyeBitangent);//cross(normal, tangent);
-//
-    //vec3 col = vec3(1.0f, 0.0f, 0.0f);
-    //if (dot(cross(normal, tangent), bitangent) < 0.0)
-    //{
-    //    col = vec3(0.0f, 1.0f, 0.0f);
-    //    tangent = -tangent;
-    //}
-//
-    //vec3 wNorm = normalize(vec3(inverse(N) * vec4(normalize(eyeNormal), 0.0f)));
-    //    
-//
-    //mat3 TBN = transpose(mat3(tangent, bitangent, normal));
-//
+    vec3 normal  = normalize(eyeNormal);
+    vec3 tangent = normalize(eyeTangent);
+    vec3 bitangent = normalize(eyeBitangent);
+
+    // Gram-Schmidt reorthogonalization
+    tangent   = normalize(tangent   - normal * dot(tangent, normal));
+    bitangent = normalize(bitangent - normal * dot(bitangent, normal) - tangent * dot(bitangent, tangent));
+    mat3 TBN = mat3(tangent, bitangent, normal);
+
+    vec2 texCoord = outTexCoord * 1;
+
     //// In tangent space
-    //normal = texture(normalMap, outTexCoord).rgb;
-    //normal = normalize(normal * 2.0f - 1.0f);
-    //wi = normalize(TBN * normalize(wi));
-    //float cosThetaI = max(0.0f, dot(normal, wi));
-//
-    //wNorm = transpose(TBN) * normalize(normal);
-    ////wNorm = normalize(vec3(inverse(N) * vec4(normalize(wNorm), 0.0f)));
-//
-    //float shadowCoeff = getShadowCoeff();
+    normal = texture(normalMap, texCoord).rgb;
+    normal = normalize(normal * 2.0f - 1.0f);
+    normal = TBN * normal;
+
+    vec3 lightPos = vec3(0.0f, 1.0f, 1.0f);
+    vec3 posToLight = lightPos - worldPos;
+    float distSq = dot(posToLight, posToLight);
+    vec3 lightDir = normalize(posToLight);
+    vec3 Le = vec3(10.0f) / distSq;
+
+    vec3 wi = (V * vec4(lightDir, 0.0f)).xyz; // light direction in view space
+
+    // Diffuse
+    vec3 albedo = texture(diffuseMap, texCoord).rgb;
+    float cosTheta = max(dot(wi, normal), 0.0f);
+    vec3 diffuse = cosTheta * Le * albedo / PI;
+
+    // Specular
+    vec3 specCoeff = texture(specularMap, texCoord).rgb;
+    vec3 viewDir = normalize(-eyePos);
+    vec3 reflectDir = reflect(-wi, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 50.0f);
+    vec3 specular = Le * spec * specCoeff;
 
     finalColor = vec4(vec3(1.0f, 0.2f, 0.2f), 1.0f);
-    //finalColor = vec4(shadowCoeff * vec3(f * Li * cosThetaI), 1.0f);
-    //finalColor = vec4(vec3(transpose(V) * vec4(tangent, 0.0f)), 1.0f);
-    //finalColor = vec4(outTexCoord, 0.0f, 1.0f);
-    
-    //vec3 eyeLightPos = (V * lightPos).xyz;
-    //
-    //vec3 wi = eyeLightPos - eyePos;
-    //
-    //float dist2 = dot(wi, wi);
-    //float dist = sqrt(dist2);
-    //wi = wi / dist;
-    //
-    //vec3 lightPower = vec3(500.0f);
-    //
-    //float cosThetaI = max(0, dot(wi, eyeNormal));
-    //
-    //vec3 f = vec3(0.12f, 0.45f, 0.67f) * InvPI;
-    //vec3 Li = lightPower * InvFourPI / dist2;
-    //
-    //float bias   = 0.0005f * tan(acos(cosThetaI));
-    //float V = shadowEstimate(worldPos, bias);
-    //
-    //finalColor = vec4(V * f * Li * cosThetaI, 1.0f);
-
-    //vec3 wi = (V * lightDir).xyz;
-    //vec3 intensity = vec3(1.0f);
-    //
-    //float cosThetaI = max(0, dot(wi, eyeNormal));
-    //
-    //vec3 f = getColor(eyePos);
-    //vec3 Li = intensity;
-    //
-    //float bias       = 0.005f;//0.0005f * tan(acos(cosThetaI));
-    //
-    //float eyeDist = abs(eyePos.z);
-    //int sam = 0;
-    //if (eyeDist > 20.0f)
-    //{
-    //    sam = 3;
-    //}
-    //else if (eyeDist > 10.0f)
-    //{
-    //    sam = 2;
-    //}
-    //else if (eyeDist > 5.0f)
-    //{
-    //    sam = 1;
-    //}
-    //
-    //vec3 V = shadowEstimate(worldPos, bias, shadowMaps[sam], LVP[sam]);
-    //
-    //
-    //
-    //finalColor = vec4(V * f * Li * cosThetaI, 1.0f);
-
-    //finalColor = vec4(shadowDebug(worldPos), 1.0f);
-    //finalColor = vec4(worldPos / 5.0f, 1.0f);
+    finalColor.rgb = vec3(0.0f);
+    finalColor.rgb += diffuse;
+    finalColor.rgb += specular;
 }

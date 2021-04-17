@@ -15,7 +15,7 @@ vec3 getIrradiance(vec3 normal)
     vec3 right = cross(up, normal);
     up         = cross(normal, right);
 
-    float sampleDelta = 0.02f;
+    float sampleDelta = 0.01f;
     float nrSamples = 0.0f; 
     for (float phi = 0.0f; phi < 2.0f * PI; phi += sampleDelta)
     {
