@@ -1,12 +1,5 @@
 #include "Parser.hpp"
 
-#include "ErrorLogger.hpp"
-
-namespace
-{
-
-}
-
 namespace crisp::sl
 {
     Parser::Parser(const std::vector<Token>& tokens)
@@ -17,19 +10,11 @@ namespace crisp::sl
 
     std::vector<std::unique_ptr<Statement>> Parser::parse()
     {
-        try
-        {
-            std::vector<std::unique_ptr<Statement>> statements;
-            while (!isAtEnd())
-                statements.emplace_back(externalDeclaration());
+        std::vector<std::unique_ptr<Statement>> statements;
+        while (!isAtEnd())
+            statements.emplace_back(externalDeclaration());
 
-            return statements;
-        }
-        catch (...)
-        {
-            logError("How did we get here?");
-        }
-        return {};
+        return statements;
     }
 
     bool Parser::isAtEnd() const
@@ -45,12 +30,12 @@ namespace crisp::sl
         return peek().type == type;
     }
 
-    const Token& Parser::peek() const
+    Token Parser::peek() const
     {
         return m_tokens[m_current];
     }
 
-    const Token& Parser::advance()
+    Token Parser::advance()
     {
         if (!isAtEnd())
             ++m_current;
@@ -58,28 +43,26 @@ namespace crisp::sl
         return previous();
     }
 
-    const Token& Parser::previous() const
+    Token Parser::previous() const
     {
         return m_tokens[m_current - 1];
     }
 
-    const Token& Parser::consume(TokenType type)
+    std::optional<Token> Parser::consume(TokenType type)
     {
         if (check(type))
             return advance();
 
-        //ErrorLogger::report(peek().line, "Expected type ", type);
-
-        throw std::runtime_error("What the hell?");
+        return {};
     }
 
-    const Token& Parser::consume(std::initializer_list<TokenType> types)
+    std::optional<Token> Parser::consume(std::initializer_list<TokenType> types)
     {
         for (const auto type : types)
             if (check(type))
                 return advance();
 
-        throw std::runtime_error("What the hell multi-consume?");
+        return {};
     }
 
     bool Parser::match(TokenType type)
@@ -107,12 +90,11 @@ namespace crisp::sl
         return false;
     }
 
-    std::unique_ptr<Expr> Parser::primary()
+    ExpressionPtr Parser::primary()
     {
         if (match({ TokenType::BoolConstant,
             TokenType::IntConstant, TokenType::UintConstant,
-            TokenType::FloatConstant, TokenType::DoubleConstant,
-            TokenType::String }))
+            TokenType::FloatConstant, TokenType::DoubleConstant }))
             return std::make_unique<Literal>(previous().type, previous().literal);
 
         if (match(TokenType::Identifier))
@@ -122,14 +104,16 @@ namespace crisp::sl
         {
             auto group = std::make_unique<GroupingExpr>();
             group->expr = expression();
-            consume(TokenType::RightParen);
+            if (!match(TokenType::RightParen))
+                return nullptr;
+
             return group;
         }
 
         return nullptr;
     }
 
-    std::unique_ptr<Expr> Parser::postfix()
+    ExpressionPtr Parser::postfix()
     {
         auto list = std::make_unique<ListExpr>("");
         if (auto p = primary())
@@ -139,7 +123,9 @@ namespace crisp::sl
         else
         {
             list->expressions.push_back(typeSpecifier());
-            consume(TokenType::LeftParen);
+            if (!match(TokenType::LeftParen))
+                return nullptr;
+
             list->expressions.push_back(callArgs("Ctor"));
         }
 
@@ -151,7 +137,9 @@ namespace crisp::sl
             }
             else if (match(TokenType::Dot))
             {
-                consume(TokenType::Identifier);
+                if (!match(TokenType::Identifier))
+                    return nullptr;
+
                 list->expressions.push_back(std::make_unique<Variable>(previous()));
             }
             else if (match({ TokenType::PlusPlus, TokenType::MinusMinus }))
@@ -161,7 +149,8 @@ namespace crisp::sl
             else if (match(TokenType::LeftBracket))
             {
                 list->expressions.push_back(expression());
-                consume(TokenType::RightBracket);
+                if (!match(TokenType::RightBracket))
+                    return nullptr;
             }
             else
                 break;
@@ -173,7 +162,7 @@ namespace crisp::sl
             return list;
     }
 
-    ExprPtr Parser::callArgs(std::string semanticName)
+    ExpressionPtr Parser::callArgs(std::string semanticName)
     {
         auto args = std::make_unique<ListExpr>(semanticName);
         match(TokenType::Void);
@@ -182,13 +171,15 @@ namespace crisp::sl
             args->expressions.push_back(assignment());
             while (match(TokenType::Comma))
                 args->expressions.push_back(assignment());
-            consume(TokenType::RightParen);
+
+            if (!match(TokenType::RightParen))
+                return nullptr;
         }
 
         return args;
     }
 
-    std::unique_ptr<Expr> Parser::unary()
+    ExpressionPtr Parser::unary()
     {
         if (match({ TokenType::PlusPlus, TokenType::MinusMinus,
             TokenType::Plus, TokenType::Minus, TokenType::ExclamationMark,
@@ -200,9 +191,9 @@ namespace crisp::sl
         return postfix();
     }
 
-    std::unique_ptr<Expr> Parser::multiplication()
+    ExpressionPtr Parser::multiplication()
     {
-        std::unique_ptr<Expr> expr = unary();
+        ExpressionPtr expr = unary();
 
         while (match({ TokenType::Star, TokenType::Slash, TokenType::Percent }))
         {
@@ -216,9 +207,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::addition()
+    ExpressionPtr Parser::addition()
     {
-        std::unique_ptr<Expr> expr = multiplication();
+        ExpressionPtr expr = multiplication();
 
         while (match({ TokenType::Plus, TokenType::Minus }))
         {
@@ -232,9 +223,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::shift()
+    ExpressionPtr Parser::shift()
     {
-        std::unique_ptr<Expr> expr = addition();
+        ExpressionPtr expr = addition();
 
         while (match({ TokenType::BitShiftLeft, TokenType::BitShiftRight }))
         {
@@ -248,9 +239,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::comparison()
+    ExpressionPtr Parser::comparison()
     {
-        std::unique_ptr<Expr> expr = shift();
+        ExpressionPtr expr = shift();
 
         while (match({ TokenType::GreaterThan, TokenType::GreaterThanEqual,
             TokenType::LessThan, TokenType::LessThanEqual }))
@@ -265,9 +256,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::equality()
+    ExpressionPtr Parser::equality()
     {
-        std::unique_ptr<Expr> expr = comparison();
+        ExpressionPtr expr = comparison();
 
         while (match({ TokenType::NotEqual, TokenType::EqualEqual }))
         {
@@ -281,9 +272,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::bitwiseAnd()
+    ExpressionPtr Parser::bitwiseAnd()
     {
-        std::unique_ptr<Expr> expr = equality();
+        ExpressionPtr expr = equality();
 
         while (match({ TokenType::BitwiseAnd }))
         {
@@ -297,9 +288,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::bitwiseXor()
+    ExpressionPtr Parser::bitwiseXor()
     {
-        std::unique_ptr<Expr> expr = bitwiseAnd();
+        ExpressionPtr expr = bitwiseAnd();
 
         while (match({ TokenType::BitwiseXor }))
         {
@@ -313,9 +304,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::bitwiseOr()
+    ExpressionPtr Parser::bitwiseOr()
     {
-        std::unique_ptr<Expr> expr = bitwiseXor();
+        ExpressionPtr expr = bitwiseXor();
 
         while (match({ TokenType::BitwiseOr }))
         {
@@ -329,9 +320,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::logicalAnd()
+    ExpressionPtr Parser::logicalAnd()
     {
-        std::unique_ptr<Expr> expr = bitwiseOr();
+        ExpressionPtr expr = bitwiseOr();
 
         while (match({ TokenType::LogicalAnd }))
         {
@@ -345,9 +336,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::logicalXor()
+    ExpressionPtr Parser::logicalXor()
     {
-        std::unique_ptr<Expr> expr = logicalAnd();
+        ExpressionPtr expr = logicalAnd();
 
         while (match({ TokenType::LogicalXor }))
         {
@@ -361,9 +352,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::logicalOr()
+    ExpressionPtr Parser::logicalOr()
     {
-        std::unique_ptr<Expr> expr = logicalXor();
+        ExpressionPtr expr = logicalXor();
 
         while (match({ TokenType::LogicalOr }))
         {
@@ -377,16 +368,18 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::conditional()
+    ExpressionPtr Parser::conditional()
     {
-        std::unique_ptr<Expr> expr = logicalOr();
+        ExpressionPtr expr = logicalOr();
 
         if (match(TokenType::QuestionMark))
         {
             auto ternary = std::make_unique<ConditionalExpr>();
             ternary->test = std::move(expr);
             ternary->thenExpr = expression();
-            consume(TokenType::FullColon);
+            if (!match(TokenType::FullColon))
+                return nullptr;
+
             ternary->elseExpr = assignment();
             return ternary;
         }
@@ -394,9 +387,9 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::assignment()
+    ExpressionPtr Parser::assignment()
     {
-        std::unique_ptr<Expr> expr = conditional();
+        ExpressionPtr expr = conditional();
 
         // TODO: Add the rest of assignment operators
         while (match({ TokenType::Equal,
@@ -404,7 +397,7 @@ namespace crisp::sl
             TokenType::StarEqual, TokenType::SlashEqual }))
         {
             Token op = previous();
-            std::unique_ptr<Expr> right = assignment();
+            ExpressionPtr right = assignment();
 
             auto binary = std::make_unique<BinaryExpr>();
             binary->left  = std::move(expr);
@@ -429,7 +422,7 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::expression()
+    ExpressionPtr Parser::expression()
     {
         auto listExpr = std::make_unique<ListExpr>("CommaSepExprs");
         listExpr->expressions.push_back(assignment());
@@ -448,18 +441,25 @@ namespace crisp::sl
         if (match(TokenType::Precision))
         {
             auto qualifier = consume({ TokenType::LowP, TokenType::MediumP, TokenType::HighP });
+            if (!qualifier)
+                return nullptr;
+
             auto type = typeSpecifier();
             if (!type)
-                throw std::runtime_error("Invalid type in a precision statement.");
+                return nullptr;
 
-            consume(TokenType::Semicolon);
-            return std::make_unique<PrecisionDeclaration>(qualifier, std::move(type));
+            if (!match(TokenType::Semicolon))
+                return nullptr;
+
+            return std::make_unique<PrecisionDeclaration>(qualifier.value(), std::move(type));
         }
 
         // is it a func prototype?
-        if (auto a = tryParse<Expr>(&Parser::functionPrototype))
+        if (auto a = tryParse<Expression>(&Parser::functionPrototype))
         {
-            consume(TokenType::Semicolon);
+            if (!match(TokenType::Semicolon))
+                return nullptr;
+
             return std::make_unique<ExprStatement>(std::move(a));
         }
 
@@ -495,15 +495,19 @@ namespace crisp::sl
                     block->variables.push_back(std::move(var));
                 }
 
-                consume(TokenType::Semicolon);
+                if (!match(TokenType::Semicolon))
+                    return nullptr;
+
                 return block;
             }
 
             // TODO: Global variable with a list of identifiers? But where's the type
             std::vector<Token> ids = { id };
             while (match(TokenType::Comma))
-                ids.push_back(consume(TokenType::Identifier));
-            consume(TokenType::Semicolon);
+                ids.push_back(consume(TokenType::Identifier).value());
+
+            if (!match(TokenType::Semicolon))
+                return nullptr;
 
             // Nullify it for now
             return std::make_unique<ExprStatement>(std::make_unique<ListExpr>("typeQualifiers", std::move(typeQualifiers)));
@@ -516,15 +520,22 @@ namespace crisp::sl
     {
         auto fun = std::make_unique<FunctionPrototype>();
         fun->fullType = fullySpecifiedType();
-        fun->name = consume(TokenType::Identifier);
-        consume(TokenType::LeftParen);
+        auto identifier = consume(TokenType::Identifier);
+        if (!identifier)
+            return nullptr;
+        fun->name = identifier.value();
+
+        if (!match(TokenType::LeftParen))
+            return nullptr;
+
         if (!match(TokenType::RightParen))
         {
             fun->params.push_back(paramDeclaration());
             while (match(TokenType::Comma))
                 fun->params.push_back(paramDeclaration());
 
-            consume(TokenType::RightParen);
+            if (!match(TokenType::RightParen))
+                return nullptr;
         }
 
         return fun;
@@ -559,7 +570,7 @@ namespace crisp::sl
 
         while (match(TokenType::Comma))
         {
-            auto var = std::make_unique<Variable>(consume(TokenType::Identifier));
+            auto var = std::make_unique<Variable>(consume(TokenType::Identifier).value());
             var->arraySpecifiers = arraySpecifiers();
             stmt->vars.push_back(std::move(var));
 
@@ -567,7 +578,8 @@ namespace crisp::sl
                 stmt->initializers.push_back(initializer());
         }
 
-        consume(TokenType::Semicolon);
+        if (!match(TokenType::Semicolon))
+            return nullptr;
         return stmt;
     }
 
@@ -585,22 +597,25 @@ namespace crisp::sl
             return nullptr;
 
         auto layout = std::make_unique<LayoutQualifier>(previous());
-        consume(TokenType::LeftParen);
+        if (!match(TokenType::LeftParen))
+            return nullptr;
 
         layout->ids.push_back(layoutQualifierId());
         while (match(TokenType::Comma))
             layout->ids.push_back(layoutQualifierId());
 
-        consume(TokenType::RightParen);
+        if (!match(TokenType::RightParen))
+            return nullptr;
+
         return layout;
     }
 
-    std::unique_ptr<Expr> Parser::layoutQualifierId()
+    ExpressionPtr Parser::layoutQualifierId()
     {
         if (match(TokenType::Shared))
             return std::make_unique<Variable>(previous());
 
-        ExprPtr id = std::make_unique<Variable>(consume(TokenType::Identifier));
+        ExpressionPtr id = std::make_unique<Variable>(consume(TokenType::Identifier).value());
         if (match(TokenType::Equal))
         {
             auto binaryExpr   = std::make_unique<BinaryExpr>();
@@ -641,11 +656,13 @@ namespace crisp::sl
             if (match(TokenType::LeftParen))
             {
                 auto list = std::make_unique<ListExpr>("typeNames");
-                expr->exprs.push_back(std::make_unique<Variable>(consume(TokenType::Identifier)));
+                expr->exprs.push_back(std::make_unique<Variable>(consume(TokenType::Identifier).value()));
                 while (match(TokenType::Comma))
-                    expr->exprs.push_back(std::make_unique<Variable>(consume(TokenType::Identifier)));
+                    expr->exprs.push_back(std::make_unique<Variable>(consume(TokenType::Identifier).value()));
 
-                consume(TokenType::RightParen);
+                if (!match(TokenType::RightParen))
+                    return nullptr;
+
                 return expr;
             }
 
@@ -682,6 +699,9 @@ namespace crisp::sl
     std::unique_ptr<TypeSpecifier> Parser::typeSpecifier()
     {
         auto expr = typeSpecifierNonarray();
+        if (!expr)
+            return nullptr;
+
         expr->arraySpecifiers = arraySpecifiers();
         return expr;
     }
@@ -699,7 +719,8 @@ namespace crisp::sl
             else
             {
                 exprs.emplace_back(std::make_unique<ArraySpecifier>(conditional()));
-                consume(TokenType::RightBracket);
+                if (!match(TokenType::RightBracket))
+                    return {};
             }
         }
 
@@ -828,7 +849,51 @@ namespace crisp::sl
             TokenType::Uimage2DMS,
             TokenType::Image2DMSArray,
             TokenType::Iimage2DMSArray,
-            TokenType::Uimage2DMSArray }))
+            TokenType::Uimage2DMSArray,
+
+            TokenType::Texture1D,
+            TokenType::Texture1DArray,
+            TokenType::ITexture1D,
+            TokenType::ITexture1DArray,
+            TokenType::UTexture1D,
+            TokenType::UTexture1DArray,
+            TokenType::Texture2D,
+            TokenType::Texture2DArray,
+            TokenType::ITexture2D,
+            TokenType::ITexture2DArray,
+            TokenType::UTexture2D,
+            TokenType::UTexture2DArray,
+            TokenType::Texture2DRect,
+            TokenType::ITexture2DRect,
+            TokenType::UTexture2DRect,
+            TokenType::Texture2DMS,
+            TokenType::ITexture2DMS,
+            TokenType::UTexture2DMS,
+            TokenType::Texture2DMSArray,
+            TokenType::ITexture2DMSArray,
+            TokenType::UTexture2DMSArray,
+            TokenType::Texture3D,
+            TokenType::ITexture3D,
+            TokenType::UTexture3D,
+            TokenType::TextureCube,
+            TokenType::ITextureCube,
+            TokenType::UTextureCube,
+            TokenType::TextureCubeArray,
+            TokenType::ITextureCubeArray,
+            TokenType::UTextureCubeArray,
+            TokenType::TextureBuffer,
+            TokenType::ITextureBuffer,
+            TokenType::UTextureBuffer,
+
+            TokenType::Sampler,
+            TokenType::SamplerShadow,
+
+            TokenType::SubpassInput,
+            TokenType::ISubpassInput,
+            TokenType::USubpassInput,
+            TokenType::SubpassInputMS,
+            TokenType::ISubpassInputMS,
+            TokenType::USubpassInputMS, }))
             return std::make_unique<TypeSpecifier>(previous());
 
         if (match(TokenType::Struct))
@@ -836,7 +901,8 @@ namespace crisp::sl
             auto structSpec = std::make_unique<StructSpecifier>(previous());
             if (match(TokenType::Identifier))
                 structSpec->structName = previous();
-            consume(TokenType::LeftBrace);
+            if (!match(TokenType::LeftBrace))
+                return nullptr;
 
             structSpec->fields.push_back(structFieldDeclaration());
 
@@ -848,39 +914,43 @@ namespace crisp::sl
         else if (match(TokenType::Identifier))
             return std::make_unique<TypeSpecifier>(previous());
 
-        throw std::runtime_error("Cannot parse type!");
+        return nullptr;
     }
 
     std::unique_ptr<StructFieldDeclaration> Parser::structFieldDeclaration()
     {
         auto structField = std::make_unique<StructFieldDeclaration>();
         structField->fullType = fullySpecifiedType();
-        structField->variable = std::make_unique<Variable>(consume(TokenType::Identifier));
+        structField->variable = std::make_unique<Variable>(consume(TokenType::Identifier).value());
         structField->variable->arraySpecifiers = arraySpecifiers();
 
         while (match(TokenType::Comma))
         {
-            auto var = std::make_unique<Variable>(consume(TokenType::Identifier));
+            auto var = std::make_unique<Variable>(consume(TokenType::Identifier).value());
             var->arraySpecifiers = arraySpecifiers();
 
             structField->varList.push_back(std::move(var));
         }
 
-        consume(TokenType::Semicolon);
+        if (!match(TokenType::Semicolon))
+            return nullptr;
+
         return structField;
     }
 
-    std::unique_ptr<Expr> Parser::initializer()
+    ExpressionPtr Parser::initializer()
     {
         if (match(TokenType::LeftBrace))
         {
             auto init = initializer();
-            std::vector<ExprPtr> inits;
+            std::vector<ExpressionPtr> inits;
             while (match(TokenType::Comma))
                 inits.push_back(initializer());
 
             match(TokenType::Comma);
-            consume(TokenType::RightBrace);
+            if (!match(TokenType::RightBrace))
+                return nullptr;
+
             return init;
         }
         else
@@ -924,16 +994,22 @@ namespace crisp::sl
             return std::make_unique<ExprStatement>(nullptr);
 
         auto s = std::make_unique<ExprStatement>(expression());
-        consume(TokenType::Semicolon);
+        if (!match(TokenType::Semicolon))
+            return nullptr;
+
         return s;
     }
 
     std::unique_ptr<IfStatement> Parser::selectionStatement()
     {
         auto expr = std::make_unique<IfStatement>(previous());
-        consume(TokenType::LeftParen);
+        if (!match(TokenType::LeftParen))
+            return nullptr;
+
         expr->condition = expression();
-        consume(TokenType::RightParen);
+        if (!match(TokenType::RightParen))
+            return nullptr;
+
         expr->thenBranch = statement();
         if (match(TokenType::Else))
             expr->elseBranch = statement();
@@ -941,15 +1017,19 @@ namespace crisp::sl
         return expr;
     }
 
-    std::unique_ptr<Expr> Parser::conditionExpr()
+    ExpressionPtr Parser::conditionExpr()
     {
-        if (auto e = tryParse<Expr>(&Parser::expression))
+        if (auto e = tryParse<Expression>(&Parser::expression))
             return e;
         else
         {
             auto type = fullySpecifiedType();
-            consume(TokenType::Identifier);
-            consume(TokenType::Equal);
+            if (!match(TokenType::Identifier))
+                return nullptr;
+
+            if (!match(TokenType::Equal))
+                return nullptr;
+
             auto init = initializer();
             return init;
         }
@@ -958,10 +1038,16 @@ namespace crisp::sl
     std::unique_ptr<SwitchStatement> Parser::switchStatement()
     {
         auto stmt = std::make_unique<SwitchStatement>(previous());
-        consume(TokenType::LeftParen);
+        if (!match(TokenType::LeftParen))
+            return nullptr;
+
         stmt->condition = expression();
-        consume(TokenType::RightParen);
-        consume(TokenType::LeftBrace);
+        if (!match(TokenType::RightParen))
+            return nullptr;
+
+        if (!match(TokenType::LeftBrace))
+            return nullptr;
+
         while (!match(TokenType::RightBrace))
             stmt->body.push_back(statement());
 
@@ -974,12 +1060,16 @@ namespace crisp::sl
         {
             auto lab = std::make_unique<CaseLabel>(previous());
             lab->condition = expression();
-            consume(TokenType::FullColon);
+            if (!match(TokenType::FullColon))
+                return nullptr;
+
             return lab;
         }
 
-        auto lab = std::make_unique<CaseLabel>(consume(TokenType::Default));
-        consume(TokenType::FullColon);
+        auto lab = std::make_unique<CaseLabel>(consume(TokenType::Default).value());
+        if (!match(TokenType::FullColon))
+            return nullptr;
+
         return lab;
     }
 
@@ -988,9 +1078,13 @@ namespace crisp::sl
         if (match(TokenType::While))
         {
             auto stmt = std::make_unique<LoopStatement>(previous());
-            consume(TokenType::LeftParen);
+            if (!match(TokenType::LeftParen))
+                return nullptr;
+
             stmt->condition = conditionExpr();
-            consume(TokenType::RightParen);
+            if (!match(TokenType::RightParen))
+                return nullptr;
+
             stmt->body = statement();
             return stmt;
         }
@@ -999,18 +1093,26 @@ namespace crisp::sl
         {
             auto stmt = std::make_unique<LoopStatement>(previous());
             stmt->body = statement();
-            consume(TokenType::While);
-            consume(TokenType::LeftParen);
+            if (!match(TokenType::While))
+                return nullptr;
+            if (!match(TokenType::LeftParen))
+                return nullptr;
+
             stmt->condition = expression();
-            consume(TokenType::RightParen);
-            consume(TokenType::Semicolon);
+            if (!match(TokenType::RightParen))
+                return nullptr;
+            if (!match(TokenType::Semicolon))
+                return nullptr;
+
             return stmt;
         }
 
         if (match(TokenType::For))
         {
             auto stmt = std::make_unique<ForStatement>(previous());
-            consume(TokenType::LeftParen);
+            if (!match(TokenType::LeftParen))
+                return nullptr;
+
             if (auto s = tryParse<Statement>(&Parser::expressionStatement))
                 stmt->init = std::move(s);
             else
@@ -1019,13 +1121,15 @@ namespace crisp::sl
             if (!match(TokenType::Semicolon))
             {
                 stmt->condition = conditionExpr();
-                consume(TokenType::Semicolon);
+                if (!match(TokenType::Semicolon))
+                    return nullptr;
             }
 
             if (!match(TokenType::RightParen))
             {
                 stmt->increment = expression();
-                consume(TokenType::RightParen);
+                if (!match(TokenType::RightParen))
+                    return nullptr;
             }
 
             stmt->body = statement();
@@ -1040,12 +1144,14 @@ namespace crisp::sl
         auto stmt = std::make_unique<JumpStatement>(previous());
         if (previous().type != TokenType::Return)
         {
-            consume(TokenType::Semicolon);
+            if (!match(TokenType::Semicolon))
+                return nullptr;
         }
         else if (!match(TokenType::Semicolon))
         {
             stmt->result = expression();
-            consume(TokenType::Semicolon);
+            if (!match(TokenType::Semicolon))
+                return nullptr;
         }
 
         return stmt;
@@ -1067,7 +1173,9 @@ namespace crisp::sl
         auto func = std::make_unique<FunctionDefinition>();
         func->prototype = functionPrototype();
 
-        consume(TokenType::LeftBrace);
+        if (!match(TokenType::LeftBrace))
+            return nullptr;
+
         func->scope = std::make_unique<StatementBlock>("funcBody");
         while (!match(TokenType::RightBrace))
             func->scope->statements.push_back(statement());

@@ -6,7 +6,8 @@
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
-#include <CrispCore/Log.hpp>
+
+#include <spdlog/spdlog.h>
 
 namespace crisp::sl
 {
@@ -72,7 +73,7 @@ namespace crisp::sl
                     case TokenType::Uint:  fieldSize = sizeof(unsigned int); break;
                     case TokenType::Int:   fieldSize = sizeof(int); break;
 
-                    default: crisp::logFatal("Unknown token size '{}' while parsing push constant!", field->fullType->specifier->type.lexeme); break;
+                    default: spdlog::critical("Unknown token size '{}' while parsing push constant!", field->fullType->specifier->type.lexeme); break;
                     }
                     pc.size += fieldSize * multiplier;
                 }
@@ -88,10 +89,7 @@ namespace crisp::sl
 
     void Reflection::parseDescriptorSets(const std::filesystem::path& sourcePath)
     {
-        auto shaderType = sourcePath.stem().string();
-        auto shaderTypeOffset = shaderType.find_last_of('-');
-        if (shaderType.size() > 4)
-            shaderType = shaderType.substr(shaderTypeOffset + 1);
+        auto shaderType = sourcePath.stem().extension().string().substr(1);
 
         VkShaderStageFlags stageFlags = 0;
         if (shaderType == "vert")
@@ -106,6 +104,8 @@ namespace crisp::sl
             stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
         else if (shaderType == "comp")
             stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        else
+            std::terminate();
 
         auto tokens = sl::Lexer(sourcePath).scanTokens();
         auto statements = sl::Parser(tokens).parse();
@@ -118,6 +118,7 @@ namespace crisp::sl
             binding.stageFlags = stageFlags;
             bool isDynamic = false;
             bool isBuffered = false;
+            std::string name;
 
             auto parseLayoutQualifier = [&](const sl::LayoutQualifier& layoutQualifier)
             {
@@ -155,6 +156,8 @@ namespace crisp::sl
                     {
                         auto layoutQualifier = dynamic_cast<sl::LayoutQualifier*>(qualifier.get());
                         parseLayoutQualifier(*layoutQualifier);
+
+                        name = initList->vars[0]->name.lexeme;
                     }
                 }
 
@@ -176,8 +179,11 @@ namespace crisp::sl
             }
             else if (auto block = dynamic_cast<sl::BlockDeclaration*>(statement.get()))
             {
-                for (auto& qualifier : block->qualifiers)
+                name = block->name.lexeme;
+                for (uint32_t i = 0; i < block->qualifiers.size(); ++i)
                 {
+                    const auto& qualifier = block->qualifiers[i];
+
                     if (qualifier->qualifier.type == sl::TokenType::Layout)
                     {
                         auto layoutQualifier = dynamic_cast<sl::LayoutQualifier*>(qualifier.get());
@@ -197,7 +203,11 @@ namespace crisp::sl
             }
 
             if (setId)
+            {
                 addSetLayoutBinding(setId.value(), binding, isBuffered);
+                //std::cout << "Name: " << name << " (" << setId.value() << ", " << binding.binding << ")\n";
+            }
+
         }
     }
 

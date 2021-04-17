@@ -7,6 +7,7 @@
 #include "Statements.hpp"
 
 #include <iostream>
+#include <optional>
 
 namespace crisp::sl
 {
@@ -18,36 +19,61 @@ namespace crisp::sl
         std::vector<std::unique_ptr<Statement>> parse();
 
     private:
+        /// <summary>
+        /// Checks if the parser has reached the last token in the stream.
+        /// </summary>
+        /// <returns>Bool if the current token is EndOfFile</returns>
         bool isAtEnd() const;
+
+        /// <summary>
+        /// Checks if the parser is currently on the token with the given type.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>Bool if the current token is the given type.</returns>
         bool check(TokenType type) const;
-        const Token& peek() const;
-        const Token& advance();
-        const Token& previous() const;
-        const Token& consume(TokenType type);
-        const Token& consume(std::initializer_list<TokenType> types);
+
+        /// <summary>
+        /// Returns a copy of the current token.
+        /// </summary>
+        /// <returns></returns>
+        Token peek() const;
+
+        /// <summary>
+        /// Returns a copy of the previous token.
+        /// </summary>
+        /// <returns></returns>
+        Token previous() const;
+
+        /// <summary>
+        /// Returns a copy of the current token and increments the current token index.
+        /// </summary>
+        /// <returns></returns>
+        Token advance();
+        std::optional<Token> consume(TokenType type);
+        std::optional<Token> consume(std::initializer_list<TokenType> types);
 
         bool match(TokenType type);
         bool match(std::initializer_list<TokenType> types);
 
-        ExprPtr primary();
-        ExprPtr postfix();
-        ExprPtr callArgs(std::string semanticName);
+        ExpressionPtr primary();
+        ExpressionPtr postfix();
+        ExpressionPtr callArgs(std::string semanticName);
 
-        ExprPtr unary();
-        ExprPtr multiplication();
-        ExprPtr addition();
-        ExprPtr shift();
-        ExprPtr comparison();
-        ExprPtr equality();
-        ExprPtr bitwiseAnd();
-        ExprPtr bitwiseXor();
-        ExprPtr bitwiseOr();
-        ExprPtr logicalAnd();
-        ExprPtr logicalXor();
-        ExprPtr logicalOr();
-        ExprPtr conditional();
-        ExprPtr assignment();
-        ExprPtr expression();
+        ExpressionPtr unary();
+        ExpressionPtr multiplication();
+        ExpressionPtr addition();
+        ExpressionPtr shift();
+        ExpressionPtr comparison();
+        ExpressionPtr equality();
+        ExpressionPtr bitwiseAnd();
+        ExpressionPtr bitwiseXor();
+        ExpressionPtr bitwiseOr();
+        ExpressionPtr logicalAnd();
+        ExpressionPtr logicalXor();
+        ExpressionPtr logicalOr();
+        ExpressionPtr conditional();
+        ExpressionPtr assignment();
+        ExpressionPtr expression();
 
         StatementPtr declaration();
         std::unique_ptr<FunctionPrototype> functionPrototype();
@@ -56,7 +82,7 @@ namespace crisp::sl
 
         std::unique_ptr<FullType> fullySpecifiedType();
         std::unique_ptr<LayoutQualifier> layoutQualifier();
-        ExprPtr layoutQualifierId();
+        ExpressionPtr layoutQualifierId();
 
         std::unique_ptr<TypeQualifier> typeQualifier();
         std::vector<std::unique_ptr<TypeQualifier>> typeQualifierList();
@@ -66,13 +92,13 @@ namespace crisp::sl
 
         std::unique_ptr<TypeSpecifier> typeSpecifierNonarray();
         std::unique_ptr<StructFieldDeclaration> structFieldDeclaration();
-        ExprPtr initializer();
+        ExpressionPtr initializer();
 
         StatementPtr statement();
         StatementPtr simpleStatement();
         std::unique_ptr<ExprStatement> expressionStatement();
         std::unique_ptr<IfStatement> selectionStatement();
-        ExprPtr conditionExpr();
+        ExpressionPtr conditionExpr();
         std::unique_ptr<SwitchStatement> switchStatement();
         std::unique_ptr<CaseLabel> caseLabel();
         std::unique_ptr<LoopStatement> iterationStatement();
@@ -85,17 +111,13 @@ namespace crisp::sl
         inline std::unique_ptr<ReturnType> tryParse(F func)
         {
             int current = m_current;
-            try
-            {
-                auto statement = (this->*func)();
-                return statement;
-            }
-            catch (std::runtime_error err)
-            {
-                //logError("{}\n", err.what());
-                m_current = current; // Reset the token pointer
-                return nullptr;
-            }
+            auto statement = (this->*func)();
+
+            // Reset pointer if the parsing failed
+            if (!statement)
+                m_current = current;
+
+            return statement;
         }
 
         std::vector<Token> m_tokens;

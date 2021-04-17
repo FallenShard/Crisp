@@ -22,8 +22,8 @@ namespace crisp::sl
 
     struct ExprStatement : public Statement
     {
-        ExprStatement(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
-        std::unique_ptr<Expr> expr;
+        ExprStatement(ExpressionPtr expr) : expr(std::move(expr)) {}
+        ExpressionPtr expr;
 
         virtual void accept(Visitor& visitor) override
         {
@@ -78,7 +78,7 @@ namespace crisp::sl
     struct JumpStatement : public Statement
     {
         Token jump;
-        ExprPtr result;
+        ExpressionPtr result;
 
         JumpStatement(Token name) : jump(name) {}
 
@@ -91,7 +91,7 @@ namespace crisp::sl
     struct LoopStatement : public Statement
     {
         Token loop;
-        ExprPtr condition;
+        ExpressionPtr condition;
         StatementPtr body;
 
         LoopStatement(Token name) : loop(name) {}
@@ -105,7 +105,7 @@ namespace crisp::sl
     struct ForStatement : public LoopStatement
     {
         StatementPtr init;
-        ExprPtr increment;
+        ExpressionPtr increment;
 
         ForStatement(Token name) : LoopStatement(name) {}
 
@@ -118,7 +118,7 @@ namespace crisp::sl
     struct CaseLabel : public Statement
     {
         Token token;
-        ExprPtr condition;
+        ExpressionPtr condition;
 
         CaseLabel(Token name) : token(name) {}
 
@@ -131,7 +131,7 @@ namespace crisp::sl
     struct SwitchStatement : public Statement
     {
         Token token;
-        ExprPtr condition;
+        ExpressionPtr condition;
         std::vector<StatementPtr> body;
 
         SwitchStatement(Token name) : token(name) {}
@@ -145,7 +145,7 @@ namespace crisp::sl
     struct IfStatement : public Statement
     {
         Token token;
-        ExprPtr condition;
+        ExpressionPtr condition;
         StatementPtr thenBranch;
         StatementPtr elseBranch;
 
@@ -173,7 +173,7 @@ namespace crisp::sl
     {
         std::unique_ptr<FullType> fullType;
         std::vector<std::unique_ptr<Variable>> vars;
-        std::vector<std::unique_ptr<Expr>> initializers;
+        std::vector<ExpressionPtr> initializers;
 
         virtual void accept(Visitor& visitor) override
         {

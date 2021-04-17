@@ -8,7 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 namespace crisp::sl
 {
@@ -115,7 +115,7 @@ namespace crisp::sl
                     auto l = p->left->as<Variable>();
                     if (auto r = p->right->as<Literal>(); r && l && l->name.lexeme == "set")
                     {
-                        logDebug("Set: {} ", std::any_cast<int>(r->value));
+                        spdlog::debug("Set: {} ", std::any_cast<int>(r->value));
                     }
                 }
 
@@ -124,7 +124,7 @@ namespace crisp::sl
                     auto l = p->left->as<Variable>();
                     if (auto r = p->right->as<Literal>(); r&& l&& l->name.lexeme == "binding")
                     {
-                        logDebug("Binding: {}", std::any_cast<int>(r->value));
+                        spdlog::debug("Binding: {}", std::any_cast<int>(r->value));
                     }
                 }
                 std::cout << '\n';

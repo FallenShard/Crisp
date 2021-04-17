@@ -1,12 +1,11 @@
 #include "Lexer.hpp"
 
 #include <IO/FileUtils.hpp>
-#include <CrispCore/Log.hpp>
 
 #include <charconv>
 #include <unordered_map>
 
-#include "ErrorLogger.hpp"
+#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -364,6 +363,13 @@ namespace crisp::sl
                 while (peek() != '\n' && !isAtEnd())
                     advance();
             }
+            else if (match('*'))
+            {
+                while (peek() != '*' || peekNext() != '/')
+                    advance();
+                while (peek() != '\n')
+                    advance();
+            }
             else if (match('='))
                 addToken(TokenType::SlashEqual);
             else
@@ -392,7 +398,7 @@ namespace crisp::sl
             }
             else
             {
-                ErrorLogger::report(m_line, "Unexpected character", c);
+                spdlog::error("{} Unexpected character: {}", m_line, c);
             }
         }
     }
@@ -473,7 +479,7 @@ namespace crisp::sl
 
         if (!isAtEnd())
         {
-            logError("{}: Unterminated string.", m_line);
+            spdlog::error("Unexpected string at line: {}", m_line);
             return;
         }
 

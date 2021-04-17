@@ -8,9 +8,9 @@
 
 namespace crisp::sl
 {
-    struct Expr
+    struct Expression
     {
-        virtual ~Expr() {}
+        virtual ~Expression() {}
 
         template <typename T>
         inline T* as()
@@ -20,13 +20,9 @@ namespace crisp::sl
 
         virtual void accept(Visitor& visitor) = 0;
     };
+    using ExpressionPtr = std::unique_ptr<Expression>;
 
-    using ExprPtr = std::unique_ptr<Expr>;
-
-    struct Statement;
-    using StatementPtr = std::unique_ptr<Statement>;
-
-    struct Literal : public Expr
+    struct Literal : public Expression
     {
         Literal(TokenType type, std::any value) : type(type), value(value) {}
         TokenType type;
@@ -38,11 +34,11 @@ namespace crisp::sl
         }
     };
 
-    struct ArraySpecifier : public Expr
+    struct ArraySpecifier : public Expression
     {
         ArraySpecifier() : expr(nullptr) {}
-        ArraySpecifier(ExprPtr expr) : expr(std::move(expr)) {}
-        ExprPtr expr;
+        ArraySpecifier(ExpressionPtr expr) : expr(std::move(expr)) {}
+        ExpressionPtr expr;
 
         virtual void accept(Visitor& visitor) override
         {
@@ -50,7 +46,7 @@ namespace crisp::sl
         }
     };
 
-    struct TypeSpecifier : public Expr
+    struct TypeSpecifier : public Expression
     {
         TypeSpecifier(Token typeToken) : type(typeToken) {}
         Token type;
@@ -62,7 +58,7 @@ namespace crisp::sl
         }
     };
 
-    struct Variable : public Expr
+    struct Variable : public Expression
     {
         Variable(Token name) : name(name) {}
         Token name;
@@ -74,7 +70,7 @@ namespace crisp::sl
         }
     };
 
-    struct TypeQualifier : public Expr
+    struct TypeQualifier : public Expression
     {
         TypeQualifier(Token qualifier) : qualifier(qualifier) {}
 
@@ -89,9 +85,9 @@ namespace crisp::sl
     struct SubroutineQualifier : public TypeQualifier
     {
         SubroutineQualifier(Token name) : TypeQualifier(name) {}
-        SubroutineQualifier(Token name, std::vector<ExprPtr> exprs) : TypeQualifier(name), exprs(std::move(exprs)) {}
+        SubroutineQualifier(Token name, std::vector<ExpressionPtr>&& exprs) : TypeQualifier(name), exprs(std::move(exprs)) {}
 
-        std::vector<ExprPtr> exprs;
+        std::vector<ExpressionPtr> exprs;
 
         virtual void accept(Visitor& visitor) override
         {
@@ -102,9 +98,9 @@ namespace crisp::sl
     struct LayoutQualifier : public TypeQualifier
     {
         LayoutQualifier(Token name) : TypeQualifier(name) {}
-        LayoutQualifier(Token name, std::vector<ExprPtr> exprs) : TypeQualifier(name), ids(std::move(exprs)) {}
+        LayoutQualifier(Token name, std::vector<ExpressionPtr>&& exprs) : TypeQualifier(name), ids(std::move(exprs)) {}
 
-        std::vector<ExprPtr> ids;
+        std::vector<ExpressionPtr> ids;
 
         virtual void accept(Visitor& visitor) override
         {
@@ -112,7 +108,7 @@ namespace crisp::sl
         }
     };
 
-    struct FullType : public Expr
+    struct FullType : public Expression
     {
         std::vector<std::unique_ptr<TypeQualifier>> qualifiers;
         std::unique_ptr<TypeSpecifier> specifier;
@@ -123,11 +119,11 @@ namespace crisp::sl
         }
     };
 
-    struct UnaryExpr : public Expr
+    struct UnaryExpr : public Expression
     {
-        UnaryExpr(Token op, ExprPtr expr) : op(op), expr(std::move(expr)) {}
+        UnaryExpr(Token op, ExpressionPtr expr) : op(op), expr(std::move(expr)) {}
 
-        ExprPtr expr;
+        ExpressionPtr expr;
         Token op;
 
         virtual void accept(Visitor& visitor) override
@@ -136,10 +132,10 @@ namespace crisp::sl
         }
     };
 
-    struct BinaryExpr : public Expr
+    struct BinaryExpr : public Expression
     {
-        ExprPtr left;
-        ExprPtr right;
+        ExpressionPtr left;
+        ExpressionPtr right;
         Token op;
 
         virtual void accept(Visitor& visitor) override
@@ -148,11 +144,11 @@ namespace crisp::sl
         }
     };
 
-    struct ConditionalExpr : public Expr
+    struct ConditionalExpr : public Expression
     {
-        ExprPtr test;
-        ExprPtr thenExpr;
-        ExprPtr elseExpr;
+        ExpressionPtr test;
+        ExpressionPtr thenExpr;
+        ExpressionPtr elseExpr;
 
         virtual void accept(Visitor& visitor) override
         {
@@ -160,13 +156,13 @@ namespace crisp::sl
         }
     };
 
-    struct ListExpr : public Expr
+    struct ListExpr : public Expression
     {
         std::string name;
-        std::vector<ExprPtr> expressions;
+        std::vector<ExpressionPtr> expressions;
 
         ListExpr(std::string name) : name(name) {}
-        ListExpr(std::string name, std::vector<ExprPtr>&& exprs) : name(name), expressions(std::move(exprs)) {}
+        ListExpr(std::string name, std::vector<ExpressionPtr>&& exprs) : name(name), expressions(std::move(exprs)) {}
 
         template <typename BaseType>
         ListExpr(std::string name, std::vector<BaseType>&& exprs)
@@ -182,9 +178,9 @@ namespace crisp::sl
         }
     };
 
-    struct GroupingExpr : public Expr
+    struct GroupingExpr : public Expression
     {
-        ExprPtr expr;
+        ExpressionPtr expr;
 
         virtual void accept(Visitor& visitor) override
         {
@@ -205,7 +201,7 @@ namespace crisp::sl
         }
     };
 
-    struct ParameterDeclaration : public Expr
+    struct ParameterDeclaration : public Expression
     {
         std::unique_ptr<FullType> fullType;
         std::unique_ptr<Variable> var;
@@ -216,7 +212,7 @@ namespace crisp::sl
         }
     };
 
-    struct FunctionPrototype : public Expr
+    struct FunctionPrototype : public Expression
     {
         std::unique_ptr<FullType> fullType;
         Token name;
