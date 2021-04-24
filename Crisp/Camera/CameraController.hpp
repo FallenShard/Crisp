@@ -44,6 +44,8 @@ namespace crisp
         const glm::mat4& getViewMatrix() const;
         const glm::mat4& getProjectionMatrix() const;
 
+        void updateFov(float fovDelta);
+
     private:
         void checkKeyboardInput(float dt);
         glm::vec2 filterMouseMoves();

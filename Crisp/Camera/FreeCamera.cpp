@@ -17,7 +17,7 @@ namespace crisp
 
     FreeCamera::FreeCamera()
     {
-        m_fov         = glm::radians(45.0f);
+        m_fovY        = glm::radians(45.0f);
         m_aspectRatio = 1.0f;
         m_zNear       = 1.0f;
         m_zFar        = 100.0f;
@@ -34,7 +34,6 @@ namespace crisp
 
         m_translation = glm::vec3(0.0f);
 
-        m_recalculateViewMatrix = true;
         m_normalizationCount = 0;
 
         m_speed = 3.0f;
@@ -44,13 +43,8 @@ namespace crisp
     {
     }
 
-    bool FreeCamera::update(float /*dt*/)
+    void FreeCamera::update(float /*dt*/)
     {
-        if (!m_recalculateViewMatrix)
-            return false;
-
-        m_recalculateViewMatrix = false;
-
         auto rotation = glm::yawPitchRoll(m_yawPitchRoll.x, m_yawPitchRoll.y, m_yawPitchRoll.z);
 
         m_position += m_translation * m_speed;
@@ -58,38 +52,43 @@ namespace crisp
 
         m_look  = glm::vec3(-rotation[2]);
         m_up    = glm::vec3(rotation[1]);
-        m_right = glm::cross(m_look, m_up);
+        m_right = glm::vec3(rotation[0]);
+        //m_right = glm::cross(m_look, m_up);
         m_V = glm::transpose(rotation) * glm::translate(-m_position);
 
         calculateFrustumPlanes();
-
-        return true;
     }
 
     void FreeCamera::rotate(float dx, float dy)
     {
         m_yawPitchRoll.x += dx;
         m_yawPitchRoll.y += dy;
+    }
 
-        m_recalculateViewMatrix = true;
+    void FreeCamera::setRotation(float yaw, float pitch, float roll)
+    {
+        m_yawPitchRoll.x = yaw;
+        m_yawPitchRoll.y = pitch;
+        m_yawPitchRoll.z = roll;
     }
 
     void FreeCamera::walk(float dt)
     {
         m_translation += m_look * dt;
-        m_recalculateViewMatrix = true;
     }
 
     void FreeCamera::strafe(float dt)
     {
         m_translation += m_right * dt;
-        m_recalculateViewMatrix = true;
     }
 
     void FreeCamera::lift(float dt)
     {
         m_translation += m_up * dt;
-        m_recalculateViewMatrix = true;
+    }
+
+    void FreeCamera::setTarget(const glm::vec3& target)
+    {
     }
 
     void FreeCamera::setTranslation(const glm::vec3& translation)

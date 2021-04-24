@@ -10,12 +10,15 @@ namespace crisp
         FreeCamera();
         ~FreeCamera();
 
-        virtual bool update(float dt) override;
+        virtual void update(float dt) override;
         virtual void rotate(float dx, float dy) override;
+        virtual void setRotation(float yaw, float pitch, float roll) override;
 
         virtual void walk(float dt) override;
         virtual void strafe(float dt) override;
         virtual void lift(float dt) override;
+
+        virtual void setTarget(const glm::vec3& target) override;
 
         void setTranslation(const glm::vec3& translation);
         glm::vec3 getTranslation() const;

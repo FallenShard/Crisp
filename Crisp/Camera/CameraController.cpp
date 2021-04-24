@@ -27,14 +27,16 @@ namespace crisp
         , m_refreshDeltasOnUpdate(true)
     {
         m_screenSize = m_window->getSize();
-        float aspectRatio = m_screenSize.x / m_screenSize.y;
-        m_camera.setupProjection(35.0f, aspectRatio);
+        const float aspectRatio = m_screenSize.x / m_screenSize.y;
+        m_camera.setupProjection(45.0f, aspectRatio);
+        m_camera.setPosition(glm::vec3(15.0f, 12.0f, 20.0f));
+        m_camera.rotate(glm::pi<float>() * 0.25f, -glm::pi<float>() / 6.0f);
 
         m_prevMousePos = m_window->getCursorPosition();
 
         m_animator = std::make_unique<Animator>();
 
-        for (int i = 0; i < MouseFilterListSize; i++)
+        for (size_t i = 0; i < MouseFilterListSize; i++)
             m_mouseDeltas.push_front(glm::vec2(0.0f, 0.0f));
 
         m_window->mouseButtonPressed.subscribe<&CameraController::onMousePressed>(this);
@@ -72,17 +74,13 @@ namespace crisp
 
         m_animator->update(dt);
 
-        bool viewChanged = m_camera.update(dt);
+        m_camera.update(dt);
+        m_cameraParameters.P          = m_camera.getProjectionMatrix();
+        m_cameraParameters.V          = m_camera.getViewMatrix();
+        m_cameraParameters.nearFar    = { m_camera.getNearPlaneDistance(), m_camera.getFarPlaneDistance() };
+        m_cameraParameters.screenSize = m_screenSize;
 
-        if (viewChanged)
-        {
-            m_cameraParameters.P          = m_camera.getProjectionMatrix();
-            m_cameraParameters.V          = m_camera.getViewMatrix();
-            m_cameraParameters.nearFar    = { m_camera.getNearPlaneDistance(), m_camera.getFarPlaneDistance() };
-            m_cameraParameters.screenSize = m_screenSize;
-        }
-
-        return viewChanged;
+        return true;
     }
 
     void CameraController::onMousePressed(const MouseEventArgs& mouseEventArgs)
@@ -169,6 +167,11 @@ namespace crisp
     const glm::mat4& CameraController::getProjectionMatrix() const
     {
         return m_camera.getProjectionMatrix();
+    }
+
+    void CameraController::updateFov(float fovDelta)
+    {
+        m_camera.setFovY(std::clamp(m_camera.getFovY() + fovDelta, 5.0f, 90.0f));
     }
 
     void CameraController::checkKeyboardInput(float dt)

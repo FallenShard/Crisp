@@ -16,16 +16,16 @@ namespace crisp
         TargetCamera(RotationStrategy rotationStrategy = RotationStrategy::EulerAngles);
         ~TargetCamera();
 
-        virtual bool update(float dt) override;
+        virtual void update(float dt) override;
         virtual void rotate(float dx, float dy) override;
 
         virtual void walk(float dt) override;
         virtual void strafe(float dt) override;
         virtual void lift(float dt) override;
 
-        void setTarget(const glm::vec3& target);
+        virtual void setTarget(const glm::vec3& target) override;
         glm::vec3 getTarget() const;
-        
+
         glm::quat getOrientation() const;
 
         void zoom(float amount);

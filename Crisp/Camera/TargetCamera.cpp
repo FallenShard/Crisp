@@ -8,8 +8,9 @@ namespace crisp
     }
 
     TargetCamera::TargetCamera(RotationStrategy /*rotationStrategy*/)
+        : m_rotationStrategy(RotationStrategy::IncrementalQuaternions)
     {
-        m_fov         = glm::radians(45.0f);
+        m_fovY        = glm::radians(45.0f);
         m_aspectRatio = 1.0f;
         m_zNear       = 0.5f;
         m_zFar        = 100.0f;
@@ -17,7 +18,7 @@ namespace crisp
 
         m_orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
-        m_position = glm::vec3(0.0f, 0.0f, 5.0f);
+        m_position = glm::vec3(5.0f, 5.0f, 5.0f);
         m_target   = glm::vec3(0.0f, 0.0f, 0.0f);
         m_look     = glm::normalize(m_target - m_position);
         m_right    = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -27,7 +28,7 @@ namespace crisp
         m_translation   = glm::vec3(0.0f);
         m_distance      = glm::distance(m_position, m_target);
         m_minDistance   = 1.0f;
-        m_maxDistance   = 10.0f;
+        m_maxDistance   = 100.0f;
 
         m_absPos = m_position + m_translation;
         m_absTarget = m_target + m_translation;
@@ -39,11 +40,8 @@ namespace crisp
     {
     }
 
-    bool TargetCamera::update(float /*dt*/)
+    void TargetCamera::update(float /*dt*/)
     {
-        if (!m_recalculateViewMatrix)
-            return false;
-
         if (++m_normalizationCount == NormalizationFrequency)
         {
             m_orientation        = glm::normalize(m_orientation);
@@ -51,7 +49,7 @@ namespace crisp
         }
 
         // View matrix rotation component
-        auto rotation = m_rotationStrategy == RotationStrategy::EulerAngles ?
+        const glm::mat4 rotation = m_rotationStrategy == RotationStrategy::EulerAngles ?
             glm::yawPitchRoll(m_eulerAngles.x, m_eulerAngles.y, m_eulerAngles.z) :
             glm::mat4_cast(m_orientation);
 
@@ -62,9 +60,6 @@ namespace crisp
         m_up    = glm::vec3(rotation[1]);
         m_right = glm::cross(m_look, m_up);
         m_V     = glm::lookAt(m_position + m_translation, m_target + m_translation, m_up);
-
-        m_recalculateViewMatrix = false;
-        return true;
     }
 
     void TargetCamera::rotate(float dx, float dy)
@@ -79,20 +74,16 @@ namespace crisp
             glm::quat quat(glm::vec3(dy, dx, 0.0f));
             m_orientation *= quat;
         }
-
-        m_recalculateViewMatrix = true;
     }
 
     void TargetCamera::walk(float dt)
     {
-        m_translation += m_up * dt;
-        m_recalculateViewMatrix = true;
+        m_translation += m_look * dt;
     }
 
     void TargetCamera::strafe(float dt)
     {
         m_translation += m_right * dt;
-        m_recalculateViewMatrix = true;
     }
 
     void TargetCamera::lift(float /*dt*/)
@@ -102,7 +93,6 @@ namespace crisp
     void TargetCamera::setTarget(const glm::vec3& target)
     {
         m_target = target;
-        m_recalculateViewMatrix = true;
     }
 
     glm::vec3 TargetCamera::getTarget() const
@@ -118,13 +108,11 @@ namespace crisp
     void TargetCamera::zoom(float amount)
     {
         m_distance = glm::clamp(m_distance + amount, m_minDistance, m_maxDistance);
-        m_recalculateViewMatrix = true;
     }
 
     void TargetCamera::setZoom(float zoom)
     {
         m_distance = glm::clamp(zoom, m_minDistance, m_maxDistance);
-        m_recalculateViewMatrix = true;
     }
 
     float TargetCamera::getDistance() const
