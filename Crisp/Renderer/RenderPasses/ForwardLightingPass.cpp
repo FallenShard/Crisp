@@ -1,4 +1,4 @@
-#include "SceneRenderPass.hpp"
+#include "ForwardLightingPass.hpp"
 
 #include "Renderer/Renderer.hpp"
 #include "Renderer/RenderPassBuilder.hpp"
@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-    SceneRenderPass::SceneRenderPass(Renderer* renderer, VkSampleCountFlagBits sampleCount)
+    ForwardLightingPass::ForwardLightingPass(Renderer* renderer, VkSampleCountFlagBits sampleCount)
         : VulkanRenderPass(renderer, true, 1)
     {
         m_clearValues.resize(3);
@@ -35,7 +35,6 @@ namespace crisp
                     VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
                 .create(m_device->getHandle());
             m_finalLayouts = { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
         }
         else
         {
@@ -62,7 +61,7 @@ namespace crisp
         createResources();
     }
 
-    void SceneRenderPass::createResources()
+    void ForwardLightingPass::createResources()
     {
         if (m_defaultSampleCount == VK_SAMPLE_COUNT_1_BIT)
         {

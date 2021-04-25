@@ -4,10 +4,10 @@
 
 namespace crisp
 {
-    class SceneRenderPass : public VulkanRenderPass
+    class ForwardLightingPass : public VulkanRenderPass
     {
     public:
-        SceneRenderPass(Renderer* renderer, VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
+        ForwardLightingPass(Renderer* renderer, VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
 
     protected:
         virtual void createResources() override;
