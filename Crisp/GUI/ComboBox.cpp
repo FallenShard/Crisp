@@ -7,8 +7,6 @@
 
 #include <iostream>
 
-#include <CrispCore/ConsoleUtils.hpp>
-
 namespace crisp::gui
 {
     ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)

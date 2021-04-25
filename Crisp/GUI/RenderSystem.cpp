@@ -15,19 +15,20 @@
 #include "vulkan/VulkanDescriptorSet.hpp"
 
 #include "Renderer/Renderer.hpp"
-#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
-#include "Renderer/Pipelines/GuiPipelines.hpp"
 #include "Renderer/RenderPasses/GuiRenderPass.hpp"
 #include "Renderer/RenderPasses/DefaultRenderPass.hpp"
 #include "Renderer/Texture.hpp"
 
 #include "GUI/DynamicUniformBufferResource.hpp"
 
-#include <CrispCore/ConsoleUtils.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace
 {
     static constexpr float DepthLayers = 32.0f;
+
+    auto logger = spdlog::stdout_color_mt("RenderSystem");
 }
 
 namespace crisp::gui
@@ -45,10 +46,12 @@ namespace crisp::gui
 
         // Create pipelines for different types of drawable objects
         createPipelines();
+        logger->info("Pipelines initialized");
 
         // Gui texture atlas
         loadTextureAtlas();
         m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        logger->info("Texture initialized");
 
         // Initialize gui render target rendering resources
         initGuiRenderTargetResources();
@@ -73,7 +76,7 @@ namespace crisp::gui
 
         for (auto& set : tcSets)
         {
-            const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler->getHandle());
+            const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler.get());
 
             VkWriteDescriptorSet descWrite = {};
             descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -86,6 +89,8 @@ namespace crisp::gui
             vkUpdateDescriptorSets(m_device->getHandle(), 1, &descWrite, 0, nullptr);
         }
         m_tcTransforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, tcSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
+
+        logger->info("Initialized");
     }
 
     RenderSystem::~RenderSystem()
@@ -331,7 +336,7 @@ namespace crisp::gui
         fontTexture->texture->fill(fontTexture->font->textureData.data(), byteSize);
         fontTexture->VulkanImageView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
-        auto imageInfo = fontTexture->VulkanImageView->getDescriptorInfo(m_linearClampSampler->getHandle());
+        auto imageInfo = fontTexture->VulkanImageView->getDescriptorInfo(m_linearClampSampler.get());
 
         fontTexture->descSet = m_textPipeline->allocateDescriptorSet(1).getHandle();
 
@@ -361,11 +366,11 @@ namespace crisp::gui
 
     void RenderSystem::createPipelines()
     {
-        m_colorQuadPipeline = createGuiColorPipeline(m_renderer, m_guiPass.get());
-        m_textPipeline      = createGuiTextPipeline(m_renderer, m_guiPass.get(), 5);
-        m_texQuadPipeline   = createGuiTexturePipeline(m_renderer, m_guiPass.get());
-        m_debugRectPipeline = createGuiDebugPipeline(m_renderer, m_guiPass.get());
-        m_fsQuadPipeline    = createTonemappingPipeline(m_renderer, m_renderer->getDefaultRenderPass(), 0, false);
+        m_colorQuadPipeline = m_renderer->createPipelineFromLua("GuiColor.lua", *m_guiPass.get(), 0);
+        m_textPipeline      = m_renderer->createPipelineFromLua("GuiText.lua", *m_guiPass.get(), 0);
+        m_texQuadPipeline   = m_renderer->createPipelineFromLua("GuiTexture.lua", *m_guiPass.get(), 0);
+        m_debugRectPipeline = m_renderer->createPipelineFromLua("GuiDebug.lua", *m_guiPass.get(), 0);
+        m_fsQuadPipeline    = m_renderer->createPipelineFromLua("Fullscreen.lua", *m_renderer->getDefaultRenderPass(), 0);
     }
 
     void RenderSystem::initGeometryBuffers()

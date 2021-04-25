@@ -5,7 +5,6 @@
 
 #include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/Math/Rect.hpp>
-#include <CrispCore/ConsoleUtils.hpp>
 
 #include "RenderSystem.hpp"
 #include "GUI/GuiEnums.hpp"
@@ -40,6 +39,8 @@ namespace crisp::gui
         void setVerticalSizingPolicy(SizingPolicy sizing, float heightPercent = 1.0f);
         SizingPolicy getVerticalSizingPolicy() const;
 
+        void setPositionX(float xPos);
+        void setPositionY(float yPos);
         void setPosition(const glm::vec2& position);
         glm::vec2 getPosition() const;
 

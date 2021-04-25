@@ -336,7 +336,6 @@ namespace crisp::gui
             moveIndicators(m_model.getNormalizedValue(), m_model.getValue());
             setValidationFlags(Validation::Geometry);
 
-            logWarning("onMouseReleased: {} - {}\n", typeid(this).name(), m_id);
             m_form->setFocusedControl(nullptr);
 
             return true;

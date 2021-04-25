@@ -4,7 +4,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include <CrispCore/ConsoleUtils.hpp>
 #include "GUI/Form.hpp"
 
 namespace crisp::gui

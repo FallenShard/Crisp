@@ -65,7 +65,7 @@ namespace crisp::gui
         m_stopWatch = std::make_unique<StopWatch>(2.0);
         m_stopWatch->triggered += [this]()
         {
-            auto metrics = m_renderSystem->getRenderer().getDevice()->getDeviceMemoryUsage();
+            auto metrics = m_renderSystem->getRenderer().getDevice()->getMemoryAllocator()->getDeviceMemoryUsage();
 
             auto transformToMb = [](uint64_t bytes)
             {

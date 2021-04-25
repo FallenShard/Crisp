@@ -168,8 +168,6 @@ namespace crisp::gui
         }
 
         m_form->setFocusedControl(nullptr);
-
-        logWarning("onMouseReleased: {} - {}\n", typeid(this).name(), m_id);
         return true;
     }
 

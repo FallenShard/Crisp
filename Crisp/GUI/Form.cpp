@@ -2,7 +2,8 @@
 
 #include <iostream>
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "RenderSystem.hpp"
 #include "StopWatch.hpp"
@@ -10,6 +11,11 @@
 #include "Animation/PropertyAnimation.hpp"
 
 #include "Panel.hpp"
+
+namespace
+{
+    auto logger = spdlog::stderr_color_mt("Form");
+}
 
 namespace crisp::gui
 {
@@ -65,7 +71,7 @@ namespace crisp::gui
         auto control = m_rootControlGroup->getControlById(controlId);
         if (!control)
         {
-            logWarning("Attempt to delete a non-existing control with id: {}\n", controlId);
+            logger->warn("Attempt to delete a non-existing control with id: {}", controlId);
             return;
         }
 
@@ -146,9 +152,9 @@ namespace crisp::gui
     {
         m_focusedControl = control;
         if (m_focusedControl)
-            logDebug("Focused control is: {}\n", control->getId());
+            logger->debug("Focused control is: {}", control->getId());
         else
-            logDebug("Focus cleared.\n");
+            logger->debug("Focus cleared.");
     }
 
     void Form::onMouseEntered(double mouseX, double mouseY)

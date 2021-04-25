@@ -1,8 +1,9 @@
 #include "Control.hpp"
 
-#include <CrispCore/Log.hpp>
-
 #include "Form.hpp"
+
+#include <spdlog/spdlog.h>
+#include <sstream>
 
 namespace crisp::gui
 {
@@ -37,7 +38,7 @@ namespace crisp::gui
 
     Control::~Control()
     {
-        logDebug("Destroying control: {}\n", m_id);
+        spdlog::debug("Destroying control: {}", m_id);
         m_form->removeFromValidationList(this);
     }
 
@@ -117,6 +118,18 @@ namespace crisp::gui
         return m_verticalSizingPolicy;
     }
 
+    void Control::setPositionX(float xPos)
+    {
+        m_position.x = xPos;
+        setValidationFlags(Validation::Geometry);
+    }
+
+    void Control::setPositionY(float yPos)
+    {
+        m_position.y = yPos;
+        setValidationFlags(Validation::Geometry);
+    }
+
     void Control::setPosition(const glm::vec2& position)
     {
         m_position = position;
@@ -170,7 +183,7 @@ namespace crisp::gui
                 return std::min(m_sizeHint.x, m_parent->getWidth() - (parentPaddingX[0] + parentPaddingX[1]));
 
         default:
-            logError("Attempting to use 'WrapContent' for width on a control which does not support children.");
+            spdlog::error("Attempting to use 'WrapContent' for width on a control which does not support children.");
             return 0.0f;
         }
     }
@@ -194,7 +207,7 @@ namespace crisp::gui
                 return std::min(m_sizeHint.y, m_parent->getHeight() - (parentPaddingY[0] + parentPaddingY[1]));
 
         default:
-            logError("Attempting to use 'WrapContent' for height on a control which does not support children.");
+            spdlog::error("Attempting to use 'WrapContent' for height on a control which does not support children.");
             return 0.0f;
         }
     }
@@ -351,10 +364,11 @@ namespace crisp::gui
 
     void Control::printDebugId() const
     {
+        std::stringstream str;
         for (unsigned int i = 0; i < getRootDistance(); i++)
-            std::cout << "    ";
+            str << "  ";
 
-        std::cout << m_id << '\n';
+        spdlog::info("{}{}", str.str(), m_id);
     }
 
     void Control::visit(std::function<void(Control*)> func)
