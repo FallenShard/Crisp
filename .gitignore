@@ -279,3 +279,4 @@ Intermediate/
 
 # VS Code stuff
 .vscode/
+*.code-workspace
