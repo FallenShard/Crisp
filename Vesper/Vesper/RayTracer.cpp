@@ -8,6 +8,7 @@
 #include <tbb/blocked_range.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
+#include <tbb/task_scheduler_init.h>
 
 #include "Core/Scene.hpp"
 #include "Cameras/Camera.hpp"
@@ -73,6 +74,9 @@ namespace crisp
             auto size = m_image.getSize();
             generateImageBlocks(size.x, size.y);
 
+#ifdef _DEBUG
+            tbb::task_scheduler_init init(1);
+#endif
             std::cout << "Using " << tbb::this_task_arena::max_concurrency() << " thread(s)." << std::endl;
 
             tbb::concurrent_vector<std::unique_ptr<Sampler>> samplers(m_totalBlocks);

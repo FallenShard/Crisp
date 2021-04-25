@@ -17,7 +17,7 @@ namespace crisp
 
     Spectrum PointLight::eval(const Light::Sample& sample) const
     {
-        return m_power * InvFourPI / glm::length2(m_position - sample.ref);
+        return m_power * InvFourPI<> / glm::length2(m_position - sample.ref);
     }
 
     Spectrum PointLight::sample(Light::Sample& sample, Sampler& /*sampler*/) const
@@ -30,7 +30,7 @@ namespace crisp
         sample.wi = glm::normalize(sample.wi);
         sample.shadowRay = Ray3(sample.ref, sample.wi, Ray3::Epsilon, sqrtf(squaredDist));
 
-        return m_power * InvFourPI / squaredDist;
+        return m_power * InvFourPI<> / squaredDist;
     }
 
     float PointLight::pdf(const Light::Sample& /*sample*/) const

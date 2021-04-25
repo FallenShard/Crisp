@@ -36,7 +36,7 @@ namespace crisp
 
         glm::vec3 m = glm::normalize(bsdfSample.wi + bsdfSample.wo);
 
-        Spectrum diffuse = m_kd * InvPI;
+        Spectrum diffuse = m_kd * InvPI<>;
 
         float F = Fresnel::dielectric(glm::dot(bsdfSample.wi, m), m_extIOR, m_intIOR);
         float D = m_distrib->D(m);

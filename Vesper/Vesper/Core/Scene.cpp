@@ -7,7 +7,13 @@
 #include "Lights/PointLight.hpp"
 #include "BSDFs/BSDF.hpp"
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
+namespace
+{
+    auto logger = spdlog::stderr_color_mt("VesperScene");
+}
 
 namespace crisp
 {
@@ -15,7 +21,7 @@ namespace crisp
     {
         void logEmbreeError(void* userPtr, RTCError code, const char* str)
         {
-            logTagError("Embree", "Error code {} - {}\n", code, str);
+            logger->error("Error code {} - {}", code, str);
         }
     }
 

@@ -21,7 +21,7 @@ namespace crisp
         float denominator = 1.0f - m_alpha * m_alpha * log(1.0f - sample.y);
         float cosTheta = sqrtf(fabs(1.0f / denominator));
         float theta = acosf(cosTheta);
-        float phi = 2.0f * PI * sample.x;
+        float phi = 2.0f * PI<> * sample.x;
         float sinTheta = sinf(theta);
 
         return glm::vec3(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
@@ -41,7 +41,7 @@ namespace crisp
         float temp = CoordinateFrame::tanTheta(m) / m_alpha;
         float alphaCosTheta2 = m_alpha * cosTheta * cosTheta;
 
-        return std::exp(-temp * temp) * InvPI / (alphaCosTheta2 * alphaCosTheta2);
+        return std::exp(-temp * temp) * InvPI<> / (alphaCosTheta2 * alphaCosTheta2);
     }
 
     float BeckmannDistribution::G(const glm::vec3& wi, const glm::vec3& wo, const glm::vec3& m) const

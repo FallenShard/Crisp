@@ -75,7 +75,7 @@ namespace crisp
 
         ray = Ray3(shapeSample.p, frame.toWorld(dir));
 
-        return PI * m_radiance / m_shape->pdfSurface(shapeSample);
+        return PI<> * m_radiance / m_shape->pdfSurface(shapeSample);
     }
 
     bool AreaLight::isDelta() const

@@ -4,7 +4,7 @@
 #include <sstream>
 #include <filesystem>
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
@@ -93,14 +93,14 @@ namespace crisp
 
         if (loadModelCache(cachedModelPath.string(), positions, normals, texCoords, faces))
         {
-            logInfo("Loading cached version of Wavefront Obj mesh: {}\n", cachedModelPath.filename().string());
+            spdlog::info("Loading cached version of Wavefront Obj mesh: {}", cachedModelPath.filename().string());
             return true;
         }
 
 
         if (ext == ".obj")
         {
-            logInfo("Loading Wavefront Obj mesh: {}\n", path.filename().string());
+            spdlog::info("Loading Wavefront Obj mesh: {}", path.filename().string());
             loadWavefrontObj(meshFile, positions, normals, texCoords, faces);
             createModelCache(cachedModelPath.string(), positions, normals, texCoords, faces);
             return true;

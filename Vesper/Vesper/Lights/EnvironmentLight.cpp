@@ -85,7 +85,7 @@ namespace crisp
                 m_cdfCols[colPos - x - 1] *= normalization;
             m_cdfCols[colPos - 1] = 1.0f;
 
-            float weight = std::sin((y + 0.5f) * PI / h);
+            float weight = std::sin((y + 0.5f) * PI<> / h);
             m_rowWeights[y] = weight;
             rowSum += colSum * weight;
             m_cdfRows[rowPos++] = rowSum;
@@ -96,7 +96,7 @@ namespace crisp
             m_cdfRows[rowPos - y - 1] *= normalization;
         m_cdfRows[rowPos - 1] = 1.0f;
 
-        m_normalization = 1.0f / (rowSum * (2.0f * PI / w) * (PI / h));
+        m_normalization = 1.0f / (rowSum * (2.0f * PI<> / w) * (PI<> / h));
 
 
         //// h pdfs for individual rows
@@ -131,7 +131,7 @@ namespace crisp
         //
         //auto sum = m_thetaPdf.normalize();
 
-        m_pixelSize = glm::vec2(2 * PI / w, PI / h);
+        m_pixelSize = glm::vec2(2 * PI<> / w, PI<> / h);
 
         Light::Sample s;
         s.ref = glm::vec3(0, 0, 0);
@@ -153,8 +153,8 @@ namespace crisp
 
     Spectrum EnvironmentLight::eval(const Light::Sample& sample) const
     {
-        float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI) * 0.5f;
-        float v = acosf(std::min(1.0f, sample.wi.y)) * InvPI;
+        float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI<>) * 0.5f;
+        float v = acosf(std::min(1.0f, sample.wi.y)) * InvPI<>;
 
         return m_scale * m_probe->evalLerp(u, v);
     }
@@ -184,10 +184,10 @@ namespace crisp
         float pdf = (val1.getLuminance() * m_rowWeights[clamp(yPos, 0, m_probe->getHeight())] +
                      val2.getLuminance() * m_rowWeights[clamp(yPos+1,0,m_probe->getHeight())]) * m_normalization;
 
-        auto theta = PI * (pos.y + 0.5f) / m_probe->getHeight();
+        auto theta = PI<> * (pos.y + 0.5f) / m_probe->getHeight();
 
         float x = (pos.x + 0.5f) / m_probe->getWidth();
-        auto phi = PI * (2.0f * x - 1.0f);
+        auto phi = PI<> * (2.0f * x - 1.0f);
 
         float sinTheta = sinf(theta);
         glm::vec3 dir(sinTheta * sinf(phi), cosf(theta), -sinTheta * cosf(phi));
@@ -223,8 +223,8 @@ namespace crisp
 
     float EnvironmentLight::pdf(const Light::Sample& sample) const
     {
-        float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI) * 0.5f;
-        float v = acosf(sample.wi.y) * InvPI;
+        float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI<>) * 0.5f;
+        float v = acosf(sample.wi.y) * InvPI<>;
 
         float fracU = u * m_probe->getWidth() - 0.5f;
         float fracV = v * m_probe->getHeight() - 0.5f;
@@ -272,7 +272,7 @@ namespace crisp
         m_sceneCenter.z = sphereParams.z;
         m_sceneRadius = sphereParams.w;
 
-        m_power = 4 * PI * m_sceneRadius * m_sceneRadius * m_scale / m_normalization;
+        m_power = 4 * PI<> * m_sceneRadius * m_sceneRadius * m_scale / m_normalization;
     }
 
     bool EnvironmentLight::isDelta() const

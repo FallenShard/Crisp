@@ -144,8 +144,8 @@ namespace crisp
         auto alpha = asinf(normal.z);
         auto beta = atan2f(normal.y, normal.x);
 
-        float u = clamp(0.5f + beta * InvTwoPI, 0.0f, 1.0f);
-        float v = clamp(0.5f - alpha * InvPI, 0.0f, 1.0f);
+        const float u = clamp(0.5f + beta * InvTwoPI<float>, 0.0f, 1.0f);
+        const float v = clamp(0.5f - alpha * InvPI<float>, 0.0f, 1.0f);
         its.uv = { u, 1.0f - v };
 
         its.shape = this;

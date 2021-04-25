@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include <iostream>
+#include <functional>
 
 #include <CrispCore/Math/Constants.hpp>
 #include <CrispCore/Math/Warp.hpp>
@@ -52,7 +53,7 @@ namespace crisp
                 Spectrum c1 = zPos * (dPos * sigmaTr + Spectrum(1.0f));
                 Spectrum c2 = zNeg * (dNeg * sigmaTr + Spectrum(1.0f));
 
-                Spectrum radiance = InvFourPI * (
+                Spectrum radiance = InvFourPI<> * (
                     (c1 * (-sigmaTr * dPos).exp()) / (dPos * dPos * dPos) +
                     (c2 * (-sigmaTr * dNeg).exp()) / (dNeg * dNeg * dNeg));
                 return radiance.clamp();
@@ -115,7 +116,7 @@ namespace crisp
                         Ray3 ray(in[i].p, dir);
 
                         // TODO: Request ONLY INDIRECT
-                        color += integrator->Li(scene, *sampler, ray, Illumination::Indirect) * PI;
+                        color += integrator->Li(scene, *sampler, ray, Illumination::Indirect) * PI<>;
                     }
 
                     color /= static_cast<float>(numLightSamples);
@@ -133,7 +134,7 @@ namespace crisp
             }
 
             template <typename OutType, typename InType, typename Func>
-            void map(std::vector<OutType>& out, const std::vector<InType>& in, Func f)
+            void map(std::vector<OutType>& out, const std::vector<InType>& in, Func&& f)
             {
                 size_t itemsPerThread = out.size() / m_threads.size();
                 size_t leftOver = out.size() % m_threads.size();
@@ -149,10 +150,10 @@ namespace crisp
                         leftOver--;
                     }
 
-#pragma warning(push)
-#pragma warning(disable:4239)
-                    m_threads[i] = std::thread(f, out, in, start, end);
-#pragma warning(pop)
+                    m_threads[i] = std::thread([&out, &in, f, start, end]
+                        {
+                            f(out, in, start, end);
+                        });
                 }
 
                 for (auto& thread : m_threads)
@@ -231,7 +232,7 @@ namespace crisp
             if (!check.failed)
             {
                 glm::vec3 delta(m_minDist);
-                float area = PI * m_minDist * m_minDist / 4.0f;
+                float area = PI<> * m_minDist * m_minDist / 4.0f;
                 SurfacePoint surfPt(shapeSample.p, shapeSample.n, area);
                 m_octree->add(surfPt, BoundingBox3(shapeSample.p - delta, shapeSample.p + delta));
                 surfacePoints.emplace_back(surfPt);

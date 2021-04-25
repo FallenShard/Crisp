@@ -41,7 +41,7 @@ namespace crisp
             CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f)
             return 0.0f;
 
-        return m_albedo->eval(bsdfSample.uv) * InvPI * CoordinateFrame::cosTheta(bsdfSample.wo);
+        return m_albedo->eval(bsdfSample.uv) * InvPI<> * CoordinateFrame::cosTheta(bsdfSample.wo);
     }
 
     Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
@@ -52,7 +52,7 @@ namespace crisp
         bsdfSample.sampledLobe = Lobe::Diffuse;
         bsdfSample.eta         = 1.0f;
 
-        // eval() * cosThetaO / pdf() = albedo * invPI / (cosThetaI * invPI) * cosThetaI(subtension)
+        // eval() / pdf() = albedo * invPI / (cosThetaO * invPI) * cosThetaO(subtension)
         // account for cosine subtension = just albedo
         return m_albedo->eval(bsdfSample.uv);
     }
@@ -64,6 +64,6 @@ namespace crisp
             CoordinateFrame::cosTheta(bsdfSample.wi) <= 0.0f)
             return 0.0f;
 
-        return InvPI * cosThetaO;
+        return InvPI<> * cosThetaO;
     }
 }

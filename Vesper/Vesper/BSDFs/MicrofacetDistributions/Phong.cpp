@@ -20,7 +20,7 @@ namespace crisp
     {
         float cosTheta = std::sqrtf(std::powf(sample.y, 1.0f / (m_alpha + 2.0f)));
         float theta = acosf(cosTheta);
-        float phi = 2.0f * PI * sample.x;
+        float phi = 2.0f * PI<> * sample.x;
         float sinTheta = sinf(theta);
 
         return glm::vec3(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
@@ -37,7 +37,7 @@ namespace crisp
         if (cosTheta < 0.0f)
             return 0.0f;
 
-        return std::pow(cosTheta, m_alpha) * (m_alpha + 2) * InvTwoPI;
+        return std::pow(cosTheta, m_alpha) * (m_alpha + 2) * InvTwoPI<>;
     }
 
     float PhongDistribution::G(const glm::vec3& wi, const glm::vec3& wo, const glm::vec3& m) const

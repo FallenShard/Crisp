@@ -22,7 +22,7 @@ namespace crisp
         //float cosTheta = sqrtf((1.0f - sample.y) / denominator);
         float tanTheta2 = m_alpha * m_alpha * sample.y / (1.0f - sample.y);
         float cosTheta = 1.0f / std::sqrt(1.0f + tanTheta2);
-        float phi = 2.0f * PI * sample.x;
+        float phi = 2.0f * PI<> * sample.x;
         float sinTheta = std::sqrt(1.0f - cosTheta * cosTheta);
 
         return glm::vec3(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
@@ -44,7 +44,7 @@ namespace crisp
         float alpha2 = m_alpha * m_alpha;
         float sqTerm = alpha2 + tanTheta2;
 
-        return alpha2 * InvPI / (cosTheta2 * cosTheta2 * sqTerm * sqTerm);
+        return alpha2 * InvPI<> / (cosTheta2 * cosTheta2 * sqTerm * sqTerm);
     }
 
     float GGXDistribution::G(const glm::vec3& wi, const glm::vec3& wo, const glm::vec3& m) const
