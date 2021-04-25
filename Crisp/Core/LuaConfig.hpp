@@ -55,7 +55,7 @@ namespace crisp
             }
 
             template <typename T>
-            std::optional<T> convertTo()
+            std::optional<T> convertTo() const
             {
                 if constexpr (std::is_arithmetic_v<T>)
                 {
@@ -122,17 +122,17 @@ namespace crisp
         LuaTable operator=(const LuaTable&) = delete;
 
         template <typename T>
-        std::optional<T> get(std::string_view variableName)
+        std::optional<T> get(std::string_view variableName) const
         {
             return detail::ScopedVariable(m_L, variableName, -1).convertTo<T>();
         }
 
-        LuaTable operator[](std::string_view tableName)
+        LuaTable operator[](std::string_view tableName) const
         {
             return LuaTable(m_L, tableName, -1);
         }
 
-        LuaTable operator[](int itemIndex)
+        LuaTable operator[](int itemIndex) const
         {
             return LuaTable(m_L, itemIndex);
         }

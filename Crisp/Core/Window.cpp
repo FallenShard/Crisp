@@ -2,8 +2,6 @@
 
 #include "InputTranslator.hpp"
 
-#include <CrispCore/Log.hpp>
-
 #include <glfw/glfw3.h>
 
 namespace crisp

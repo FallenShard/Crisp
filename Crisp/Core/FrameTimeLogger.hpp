@@ -12,9 +12,9 @@ namespace crisp
     namespace internal
     {
         template <typename T> struct StringRepresentation;
-        template <>           struct StringRepresentation<std::nano>  { static constexpr char* value = "ns"; };
-        template <>           struct StringRepresentation<std::micro> { static constexpr char* value = "us"; };
-        template <>           struct StringRepresentation<std::milli> { static constexpr char* value = "ms"; };
+        template <>           struct StringRepresentation<std::nano>  { static constexpr const char* value = "ns"; };
+        template <>           struct StringRepresentation<std::micro> { static constexpr const char* value = "us"; };
+        template <>           struct StringRepresentation<std::milli> { static constexpr const char* value = "ms"; };
     }
 
     template <typename Timer>
@@ -45,7 +45,7 @@ namespace crisp
     template <typename Timer>
     void FrameTimeLogger<Timer>::update()
     {
-        double frameTime = restart();
+        double frameTime = Timer::restart();
         m_accumulatedTime += frameTime;
         m_accumulatedFrames++;
 
