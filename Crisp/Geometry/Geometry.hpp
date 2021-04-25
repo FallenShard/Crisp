@@ -5,6 +5,7 @@
 #include "Geometry/GeometryView.hpp"
 #include "Geometry/GeometryPart.hpp"
 
+#include "Renderer/Renderer.hpp"
 #include "Renderer/VulkanBufferUtils.hpp"
 
 #include <filesystem>
@@ -20,8 +21,10 @@ namespace crisp
     class Geometry
     {
     public:
+        Geometry(Renderer* renderer);
         Geometry(Renderer* renderer, const TriangleMesh& mesh);
         Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat);
+        Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat, bool padToVec4, VkBufferUsageFlagBits usageFlags);
         Geometry(Renderer* renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
 
         Geometry(Renderer* renderer, InterleavedVertexBuffer&& interleavedVertexBuffer, const std::vector<glm::uvec3>& faces, const std::vector<GeometryPart>& parts = {});
@@ -57,6 +60,7 @@ namespace crisp
         }
 
         void addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer);
+        void addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer);
 
         void bindVertexBuffers(VkCommandBuffer cmdBuffer) const;
         void bind(VkCommandBuffer commandBuffer) const;
@@ -71,12 +75,14 @@ namespace crisp
         inline uint32_t getVertexCount() const { return m_vertexCount; }
         inline uint32_t getInstanceCount() const { return m_instanceCount; }
 
+        inline void setVertexCount(uint32_t vertexCount) { m_vertexCount = vertexCount; }
         inline void setInstanceCount(uint32_t instanceCount) { m_instanceCount = instanceCount; }
 
         inline void setVertexBufferOffset(uint32_t bufferIndex, VkDeviceSize offset) { m_offsets.at(bufferIndex) = offset; }
 
         IndexedGeometryView createIndexedGeometryView() const;
         IndexedGeometryView createIndexedGeometryView(uint32_t partIndex) const;
+        ListGeometryView createListGeometryView() const;
 
     private:
         std::vector<std::unique_ptr<VulkanBuffer>> m_vertexBuffers;

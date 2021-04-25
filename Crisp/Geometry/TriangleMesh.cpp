@@ -1,7 +1,6 @@
 #include "TriangleMesh.hpp"
 
 #include <Vesper/Shapes/MeshLoader.hpp>
-#include <CrispCore/Log.hpp>
 
 #include "IO/WavefrontObjImporter.hpp"
 #include "IO/FbxImporter.hpp"
@@ -146,6 +145,39 @@ namespace crisp
         return interleavedBuffer;
     }
 
+    InterleavedVertexBuffer TriangleMesh::interleavePadded(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const
+    {
+        InterleavedVertexBuffer interleavedBuffer;
+        interleavedBuffer.vertexSize = vertexAttribs.size() * sizeof(glm::vec4);
+
+        uint32_t numVertices = getNumVertices();
+        interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * numVertices);
+
+        uint32_t currOffset = 0;
+        for (const auto& attrib : vertexAttribs)
+        {
+            if (attrib.type == VertexAttribute::Position)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_positions);
+            else if (attrib.type == VertexAttribute::Normal)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_normals);
+            else if (attrib.type == VertexAttribute::TexCoord)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_texCoords);
+            else if (attrib.type == VertexAttribute::Tangent)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_tangents);
+            else if (attrib.type == VertexAttribute::Bitangent)
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_bitangents);
+            else if (attrib.type == VertexAttribute::Custom)
+            {
+                auto& attribBuffer = m_customAttributes.at(attrib.name);
+                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, attribBuffer.buffer, attribBuffer.descriptor.size);
+            }
+
+            currOffset += sizeof(glm::vec4);
+        }
+
+        return interleavedBuffer;
+    }
+
     std::vector<glm::vec3> TriangleMesh::computeVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces)
     {
         std::vector<glm::vec3> normals(positions.size(), glm::vec3(0.0f));
@@ -168,7 +200,7 @@ namespace crisp
 
     void TriangleMesh::computeTangentVectors()
     {
-        m_tangents   = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
+        m_tangents   = std::vector<glm::vec4>(m_positions.size(), glm::vec4(0.0f));
         m_bitangents = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
 
         for (const auto& face : m_faces)
@@ -188,14 +220,12 @@ namespace crisp
             glm::vec2 t = w3 - w1;
 
             float r = 1.0f / (s.x * t.y - t.x * s.y);
-            glm::vec3 sDir = glm::vec3(t.y * e1.x - s.y * e2.x, t.y * e1.y - s.x * e2.y,
-                t.y * e1.z - s.y * e2.z) * r;
-            glm::vec3 tDir = glm::vec3(s.x * e2.x - t.x * e1.x, s.x * e2.y - t.x * e1.y,
-                s.x * e2.z - t.x * e1.z) * r;
+            glm::vec3 sDir = (e1 * t.y - e2 * s.y) * r;
+            glm::vec3 tDir = (e2 * s.x - e1 * t.x) * r;
 
-            m_tangents[face[0]]   += sDir;
-            m_tangents[face[1]]   += sDir;
-            m_tangents[face[2]]   += sDir;
+            m_tangents[face[0]]   += glm::vec4(sDir, 0.0f);
+            m_tangents[face[1]]   += glm::vec4(sDir, 0.0f);
+            m_tangents[face[2]]   += glm::vec4(sDir, 0.0f);
             m_bitangents[face[0]] += tDir;
             m_bitangents[face[1]] += tDir;
             m_bitangents[face[2]] += tDir;
@@ -204,12 +234,13 @@ namespace crisp
         for (std::size_t i = 0; i < m_tangents.size(); ++i)
         {
             const glm::vec3& n = m_normals[i];
-            const glm::vec3& t = m_tangents[i];
+            const glm::vec3 t = m_tangents[i];
+            const glm::vec3& b = m_bitangents[i];
 
-            m_tangents[i]   = glm::normalize(t - n * glm::dot(n, t));
-            // handedness = glm::dot(glm::cross(n, t), m_bitangents[i]) < 0.0f ? -1.0f : 1.0f;
+            const glm::vec3 clearT = glm::normalize(t - n * glm::dot(t, n));
 
-            m_bitangents[i] = glm::normalize(glm::cross(n, t));
+            float handedness = glm::dot(glm::cross(t, b), n) > 0.0f ? 1.0f : -1.0f;
+            m_tangents[i] = glm::vec4(clearT, handedness);
         }
     }
 
@@ -226,9 +257,48 @@ namespace crisp
             m_boundingBox.expandBy(p);
     }
 
-    const std::vector<GeometryPart> TriangleMesh::getGeometryParts() const
+    const std::vector<GeometryPart>& TriangleMesh::getGeometryParts() const
     {
         return m_parts;
+    }
+
+    void TriangleMesh::normalizeToUnitBox()
+    {
+        glm::vec3 minCorner(std::numeric_limits<float>::max());
+        glm::vec3 maxCorner(std::numeric_limits<float>::lowest());
+
+        for (const auto& p : m_positions)
+        {
+            minCorner = glm::min(minCorner, p);
+            maxCorner = glm::max(maxCorner, p);
+        }
+
+        float longestAxis = std::max(maxCorner.x - minCorner.x, std::max(maxCorner.y - minCorner.y, maxCorner.z - minCorner.z));
+        float scalingFactor = 1.0f / longestAxis;
+
+        glm::vec3 center = (minCorner + maxCorner) * 0.5f;
+
+        for (auto& p : m_positions)
+        {
+            p -= center;
+            p *= scalingFactor;
+        }
+    }
+
+    void TriangleMesh::transform(const glm::mat4& transform)
+    {
+        for (auto& p : m_positions)
+            p = glm::vec3(transform * glm::vec4(p, 1.0f));
+
+        glm::mat4 invTransp = glm::inverse(glm::transpose(transform));
+        for (auto& n : m_normals)
+            n = glm::vec3(invTransp * glm::vec4(n, 0.0f));
+
+        for (auto& t : m_tangents)
+            t = glm::vec4(glm::vec3(invTransp * glm::vec4(t.x, t.y, t.z, 0.0f)), t.w);
+
+        for (auto& b : m_bitangents)
+            b = glm::vec3(invTransp * glm::vec4(b, 0.0f));
     }
 
     void TriangleMesh::setMeshName(std::string&& meshName)

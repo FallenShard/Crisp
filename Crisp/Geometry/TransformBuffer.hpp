@@ -5,6 +5,8 @@
 #include "TransformPack.hpp"
 #include "Renderer/UniformBuffer.hpp"
 
+#include <Core/ThreadPool.hpp>
+
 namespace crisp
 {
     class TransformBuffer
@@ -28,5 +30,6 @@ namespace crisp
     private:
         std::vector<TransformPack>     m_transforms;
         std::unique_ptr<UniformBuffer> m_transformBuffer;
+        ThreadPool m_threadPool;
     };
 }

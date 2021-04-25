@@ -45,9 +45,9 @@ namespace crisp
     template <>
     struct VertexAttributeTraits<VertexAttribute::Tangent>
     {
-        using Type = glm::vec3;
+        using Type = glm::vec4;
         static constexpr std::size_t byteSize = sizeof(Type);
-        static constexpr std::size_t numComponents = 3;
+        static constexpr std::size_t numComponents = 4;
     };
 
     template <>
@@ -62,11 +62,11 @@ namespace crisp
     {
         switch (attribute)
         {
-            case VertexAttribute::Position:  return 3;
-            case VertexAttribute::Normal:    return 3;
-            case VertexAttribute::TexCoord:  return 2;
-            case VertexAttribute::Tangent:   return 3;
-            case VertexAttribute::Bitangent: return 3;
+            case VertexAttribute::Position:  return VertexAttributeTraits<VertexAttribute::Position>::numComponents;
+            case VertexAttribute::Normal:    return VertexAttributeTraits<VertexAttribute::Normal>::numComponents;
+            case VertexAttribute::TexCoord:  return VertexAttributeTraits<VertexAttribute::TexCoord>::numComponents;
+            case VertexAttribute::Tangent:   return VertexAttributeTraits<VertexAttribute::Tangent>::numComponents;
+            case VertexAttribute::Bitangent: return VertexAttributeTraits<VertexAttribute::Bitangent>::numComponents;
             default: return 0;
         }
     }
@@ -75,11 +75,11 @@ namespace crisp
     {
         switch (attribute)
         {
-            case VertexAttribute::Position:  return 12;
-            case VertexAttribute::Normal:    return 12;
-            case VertexAttribute::TexCoord:  return 8;
-            case VertexAttribute::Tangent:   return 12;
-            case VertexAttribute::Bitangent: return 12;
+            case VertexAttribute::Position:  return VertexAttributeTraits<VertexAttribute::Position>::byteSize;
+            case VertexAttribute::Normal:    return VertexAttributeTraits<VertexAttribute::Normal>::byteSize;
+            case VertexAttribute::TexCoord:  return VertexAttributeTraits<VertexAttribute::TexCoord>::byteSize;
+            case VertexAttribute::Tangent:   return VertexAttributeTraits<VertexAttribute::Tangent>::byteSize;
+            case VertexAttribute::Bitangent: return VertexAttributeTraits<VertexAttribute::Bitangent>::byteSize;
             default: return 0;
         }
     }
@@ -91,7 +91,7 @@ namespace crisp
             case VertexAttribute::Position:  return VK_FORMAT_R32G32B32_SFLOAT;
             case VertexAttribute::Normal:    return VK_FORMAT_R32G32B32_SFLOAT;
             case VertexAttribute::TexCoord:  return VK_FORMAT_R32G32_SFLOAT;
-            case VertexAttribute::Tangent:   return VK_FORMAT_R32G32B32_SFLOAT;
+            case VertexAttribute::Tangent:   return VK_FORMAT_R32G32B32A32_SFLOAT;
             case VertexAttribute::Bitangent: return VK_FORMAT_R32G32B32_SFLOAT;
             default: return VkFormat();
         }

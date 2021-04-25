@@ -48,19 +48,24 @@ namespace crisp
 
         InterleavedVertexBuffer interleave() const;
         InterleavedVertexBuffer interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const;
+        InterleavedVertexBuffer interleavePadded(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const;
 
         static std::vector<glm::vec3> computeVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces);
         void computeTangentVectors();
         void computeVertexNormals();
         void computeBoundingBox();
 
-        const std::vector<GeometryPart> getGeometryParts() const;
+        const std::vector<GeometryPart>& getGeometryParts() const;
+
+        void normalizeToUnitBox();
+
+        void transform(const glm::mat4& transform);
 
     private:
         std::vector<glm::vec3> m_positions;
         std::vector<glm::vec3> m_normals;
         std::vector<glm::vec2> m_texCoords;
-        std::vector<glm::vec3> m_tangents;
+        std::vector<glm::vec4> m_tangents;
         std::vector<glm::vec3> m_bitangents;
         std::unordered_map<std::string, VertexAttributeBuffer> m_customAttributes;
 

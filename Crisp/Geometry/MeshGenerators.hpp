@@ -7,6 +7,7 @@
 namespace crisp
 {
     TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size = 1.0f);
+    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size, int tessellation);
     TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
     TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
     TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);

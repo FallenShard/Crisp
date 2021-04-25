@@ -1,7 +1,6 @@
 #include "MeshGenerators.hpp"
 
 #include <CrispCore/Math/Constants.hpp>
-#include <CrispCore/Log.hpp>
 
 namespace crisp
 {
@@ -36,6 +35,40 @@ namespace crisp
             glm::uvec3(0, 1, 2),
             glm::uvec3(0, 2, 3)
         };
+
+        return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
+    }
+
+    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size, int tessellation)
+    {
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> texCoords;
+        std::vector<glm::uvec3> faces;
+
+        float scale = size / tessellation;
+        for (int i = 0; i <= tessellation; ++i)
+        {
+            for (int j = 0; j <= tessellation; ++j)
+            {
+                float z = -i * scale + size / 2;
+                float x = j * scale - size / 2;
+                positions.emplace_back(x, 0.0f, z);
+                normals.emplace_back(0.0f, 1.0f, 0.0f);
+                texCoords.emplace_back(x, z);
+
+                if (i < tessellation && j < tessellation)
+                {
+                    uint32_t curr   = i * (tessellation + 1) + j;
+                    uint32_t nextX  = curr + 1;
+                    uint32_t nextZ  = curr + tessellation + 1;
+                    uint32_t nextXZ = curr + tessellation + 2;
+
+                    faces.emplace_back(curr, nextX, nextXZ);
+                    faces.emplace_back(curr, nextXZ, nextZ);
+                }
+            }
+        }
 
         return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
     }
