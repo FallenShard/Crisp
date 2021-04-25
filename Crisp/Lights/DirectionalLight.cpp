@@ -1,6 +1,6 @@
 #include "DirectionalLight.hpp"
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
@@ -58,7 +58,7 @@ namespace crisp
 
             static int C = 0;
             if (C % 4 == 0)
-                logDebug("Length {}, {}\n", orthoMax.x - orthoMin.x, orthoMax.y - orthoMin.y);
+                spdlog::debug("Length {}, {}", orthoMax.x - orthoMin.x, orthoMax.y - orthoMin.y);
             C++;
 
             // zNear and zFar represent distances along the -Z axis from the viewer
@@ -105,7 +105,7 @@ namespace crisp
             const glm::vec3 orthoMax(+radius, +radius, center.z + radius);
 
             if (C % 4 == 0)
-                logDebug("Sphere Radius {}, Z Range: {}, {}\n", radius, orthoMin.z, orthoMax.z);
+                spdlog::debug("Sphere Radius {}, Z Range: {}, {}\n", radius, orthoMin.z, orthoMax.z);
             C++;
 
             // zNear and zFar represent distances along the -Z axis from the viewer

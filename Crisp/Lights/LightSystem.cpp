@@ -248,7 +248,7 @@ namespace crisp
         cullingPass.material->setDynamicBufferView(1, *m_pointLightBuffer, 0);
         cullingPass.material->setDynamicBufferView(2, cameraBuffer, 0);
         cullingPass.material->setDynamicBufferView(3, *m_lightIndexListBuffer, 0);
-        cullingPass.callback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        cullingPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
         {
             glm::uvec4 zero(0);
 
