@@ -6,7 +6,7 @@
 #include "Scene.hpp"
 
 #include "Geometry/TransformPack.hpp"
-#include "Renderer/DescriptorSetGroup.hpp"
+#include "Renderer/RenderNode.hpp"
 
 namespace crisp
 {
@@ -45,7 +45,7 @@ namespace crisp
         std::unique_ptr<FluidSimulation> m_fluidSimulation;
 
         std::unique_ptr<VulkanPipeline> m_pointSpritePipeline;
-        DescriptorSetGroup m_pointSpriteDescGroup;
+        std::unique_ptr<Material> m_pointSpriteMaterial;
 
         TransformPack m_transforms;
         std::unique_ptr<UniformBuffer> m_transformsBuffer;
@@ -59,5 +59,9 @@ namespace crisp
 
         std::unordered_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
         std::unique_ptr<RenderGraph> m_renderGraph;
+
+        RenderNode m_fluidRenderNode;
+
+        std::unique_ptr<Geometry> m_fluidGeometry;
     };
 }

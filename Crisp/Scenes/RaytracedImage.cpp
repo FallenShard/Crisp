@@ -7,9 +7,9 @@
 #include "Vulkan/VulkanImage.hpp"
 #include "Vulkan/VulkanImageView.hpp"
 #include "Vulkan/VulkanSampler.hpp"
+#include "Vulkan/VulkanPipeline.hpp"
 
 #include "Renderer/Renderer.hpp"
-#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
 #include "Renderer/Material.hpp"
 
 namespace crisp
@@ -47,7 +47,7 @@ namespace crisp
         // create sampler
         m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        m_pipeline = createTonemappingPipeline(m_renderer, m_renderer->getDefaultRenderPass(), 0, true);
+        m_pipeline = m_renderer->createPipelineFromLua("Tonemapping.lua", *m_renderer->getDefaultRenderPass(), 0);
         m_material = std::make_unique<Material>(m_pipeline.get());
         for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
             m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler.get());

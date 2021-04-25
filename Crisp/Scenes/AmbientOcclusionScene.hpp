@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace crisp
 {
@@ -39,6 +40,7 @@ namespace crisp
         void setRadius(double radius);
 
     private:
+        std::unique_ptr<RenderNode> createPostProcessingEffect(std::string renderPassName, std::string pipelineLuaFile);
         void createGui();
 
         struct SsaoParams

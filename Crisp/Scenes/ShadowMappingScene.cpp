@@ -5,7 +5,7 @@
 #include "Camera/CameraController.hpp"
 
 #include "Renderer/RenderPasses/ShadowPass.hpp"
-#include "Renderer/RenderPasses/SceneRenderPass.hpp"
+#include "Renderer/RenderPasses/ForwardLightingPass.hpp"
 #include "Renderer/RenderPasses/VarianceShadowMapPass.hpp"
 #include "Renderer/RenderPasses/CubeMapRenderPass.hpp"
 #include "Renderer/RenderPasses/TexturePass.hpp"
@@ -59,6 +59,8 @@
 
 #include "Renderer/ResourceContext.hpp"
 
+#include <spdlog/spdlog.h>
+
 namespace crisp
 {
     namespace
@@ -104,141 +106,140 @@ namespace crisp
     {
         setupInput();
 
-        // Camera
-        m_cameraController = std::make_unique<CameraController>(app->getWindow());
-        m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+        //// Camera
+        //m_cameraController = std::make_unique<CameraController>(app->getWindow());
+        //m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-        m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
+        //m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
-        // Main render pass
-        m_renderGraph->addRenderPass(MainPass, std::make_unique<SceneRenderPass>(m_renderer, VK_SAMPLE_COUNT_4_BIT));
+        //// Main render pass
+        //m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_4_BIT));
 
-        //auto& depthPrePass = m_renderGraph->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
-        //m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, MainPass, 0);
+        ////auto& depthPrePass = m_renderGraph->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
+        ////m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, MainPass, 0);
 
-        // Shadow map pass
-        m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
-        m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
-        //
-        //auto& vsmPassNode = m_renderGraph->addRenderPass(VsmPass, std::make_unique<VarianceShadowMapPass>(m_renderer, ShadowMapSize));
-        //m_renderGraph->addRenderTargetLayoutTransition(VsmPass, MainPass, 0);
-        //
+        //// Shadow map pass
+        //m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
+        //m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
+        ////
+        ////auto& vsmPassNode = m_renderGraph->addRenderPass(VsmPass, std::make_unique<VarianceShadowMapPass>(m_renderer, ShadowMapSize));
+        ////m_renderGraph->addRenderTargetLayoutTransition(VsmPass, MainPass, 0);
+        ////
 
-        // Wrap-up render graph definition
-        m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);
-        m_renderGraph->sortRenderPasses();
-        m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
+        //// Wrap-up render graph definition
+        //m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);
+        //m_renderGraph->sortRenderPasses();
+        //m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
 
-        m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
-        DirectionalLight dirLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5));
-        m_lightSystem->setDirectionalLight(dirLight);
-        m_lightSystem->enableCascadedShadowMapping(CascadeCount, ShadowMapSize);
+        //m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
+        //DirectionalLight dirLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5));
+        //m_lightSystem->setDirectionalLight(dirLight);
+        //m_lightSystem->enableCascadedShadowMapping(CascadeCount, ShadowMapSize);
 
-        // Object transforms
-        m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
+        //// Object transforms
+        //m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
 
-        // Geometry setup
-        std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
-        m_resourceContext->addGeometry("cubeRT", std::make_unique<Geometry>(m_renderer, createCubeMesh({ VertexAttribute::Position, VertexAttribute::Normal })));
-        m_resourceContext->addGeometry("cubeShadow", std::make_unique<Geometry>(m_renderer, createCubeMesh(shadowVertexFormat)));
-        m_resourceContext->addGeometry("sphereShadow", std::make_unique<Geometry>(m_renderer, createSphereMesh(shadowVertexFormat)));
-        m_resourceContext->addGeometry("floorShadow", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowVertexFormat)));
+        //// Geometry setup
+        //std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
+        //m_resourceContext->addGeometry("cubeRT", std::make_unique<Geometry>(m_renderer, createCubeMesh({ VertexAttribute::Position, VertexAttribute::Normal })));
+        //m_resourceContext->addGeometry("cubeShadow", std::make_unique<Geometry>(m_renderer, createCubeMesh(shadowVertexFormat)));
+        //m_resourceContext->addGeometry("sphereShadow", std::make_unique<Geometry>(m_renderer, createSphereMesh(shadowVertexFormat)));
+        //m_resourceContext->addGeometry("floorShadow", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowVertexFormat)));
 
 
-        {
-            Profiler profiler("Common");
-            createCommonTextures();
+        //{
+        //    Profiler profiler("Common");
+        //    createCommonTextures();
 
-            for (uint32_t i = 0; i < CascadeCount; ++i)
-            {
-                std::string key = "cascadedShadowMap" + std::to_string(i);
-                auto csmPipeline = m_resourceContext->createPipeline(key, "ShadowMap.lua", m_renderGraph->getRenderPass(CsmPass), i);
-                auto csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
-                csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-                csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
-            }
-        }
-        {
+        //    for (uint32_t i = 0; i < CascadeCount; ++i)
+        //    {
+        //        std::string key = "cascadedShadowMap" + std::to_string(i);
+        //        auto csmPipeline = m_resourceContext->createPipeline(key, "ShadowMap.lua", m_renderGraph->getRenderPass(CsmPass), i);
+        //        auto csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
+        //        csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+        //        csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
+        //    }
+        //}
+        //{
 
-            Profiler profiler("Plane, boxes, balls");
-            createPlane();
-            createBox();
-            createShaderballs();
-        }
+        //    Profiler profiler("Plane, boxes, balls");
+        //    createPlane();
+        //    createBox();
+        //    createShaderballs();
+        //}
 
-        m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
+        //m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
 
-        createTrees();
+        //createTrees();
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        //m_renderer->getDevice()->flushDescriptorUpdates();
 
         //createTerrain();
 
-        m_app->getForm()->add(gui::createShadowMappingSceneGui(m_app->getForm(), this));
+        //m_app->getForm()->add(gui::createShadowMappingSceneGui(m_app->getForm(), this));
     }
 
     ShadowMappingScene::~ShadowMappingScene()
     {
-        m_renderer->setSceneImageView(nullptr, 0);
         m_app->getForm()->remove("shadowMappingPanel");
     }
 
     void ShadowMappingScene::resize(int width, int height)
     {
-        m_cameraController->resize(width, height);
+       /* m_cameraController->resize(width, height);
 
         m_renderGraph->resize(width, height);
-        m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
+        m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);*/
     }
 
     void ShadowMappingScene::update(float dt)
     {
-        //static float t = 0;
-        //
-        ////if (animate)
-        ////{
-        ////    angle += 2.0f * PI * dt / 5.0f;
-        ////    pointLightPos.x = 5.0f * std::cosf(angle);
-        ////    pointLightPos.z = 5.0f * std::sinf(angle);
-        ////    m_transforms[3].M = glm::translate(glm::vec3(pointLightPos)) * glm::scale(glm::vec3(0.2f));
-        ////}
-        //
-        m_cameraController->update(dt);
-        const auto& V = m_cameraController->getViewMatrix();
-        const auto& P = m_cameraController->getProjectionMatrix();
-
-        m_transformBuffer->update(V, P);
-        m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
-
-        m_lightSystem->update(m_cameraController->getCamera(), dt);
-
-        if (m_boxVisualizer)
-            m_boxVisualizer->update(V, P);
-        m_skybox->updateTransforms(V, P);
-
-        //m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_pbrUnifMaterial);
-
-
-        ////auto screen = m_renderer->getVulkanSwapChainExtent();
+        ////static float t = 0;
         ////
-        ////glm::vec3 pt = glm::project(lightWorldPos, V, P, glm::vec4(0.0f, 0.0f, screen.width, screen.height));
-        ////pt.x /= screen.width;
-        ////pt.y /= screen.height;
-        ////m_lightShaftParams.lightPos = glm::vec2(pt);
-        ////m_lightShaftBuffer->updateStagingBuffer(m_lightShaftParams);
-        //
-        //m_cascadedShadowMapper->setZ(2.0f * PI * t / 5.0f);
-        //m_cascadedShadowMapper->recalculateLightProjections(m_cameraController->getCamera());
-        //
-        //m_lightBuffer->updateStagingBuffer(m_lights.data(), m_lights.size() * sizeof(LightDescriptor));
-        //
+        //////if (animate)
+        //////{
+        //////    angle += 2.0f * PI * dt / 5.0f;
+        //////    pointLightPos.x = 5.0f * std::cosf(angle);
+        //////    pointLightPos.z = 5.0f * std::sinf(angle);
+        //////    m_transforms[3].M = glm::translate(glm::vec3(pointLightPos)) * glm::scale(glm::vec3(0.2f));
+        //////}
+        ////
+        //m_cameraController->update(dt);
+        //const auto& V = m_cameraController->getViewMatrix();
+        //const auto& P = m_cameraController->getProjectionMatrix();
 
-        //m_boxVisualizer->updateFrusta(m_cascadedShadowMapper.get(), m_cameraController.get());
-        //
-        //m_shadowMapper->setLightTransform(0, pointLight.getProjectionMatrix() * pointLight.getViewMatrix());
-        //m_shadowMapper->setLightFullTransform(0, pointLight.getViewMatrix(), pointLight.getProjectionMatrix());
-        //
-        //t += dt;
+        //m_transformBuffer->update(V, P);
+        //m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
+
+        //m_lightSystem->update(m_cameraController->getCamera(), dt);
+
+        //if (m_boxVisualizer)
+        //    m_boxVisualizer->update(V, P);
+        //m_skybox->updateTransforms(V, P);
+
+        ////m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_pbrUnifMaterial);
+
+
+        //////auto screen = m_renderer->getVulkanSwapChainExtent();
+        //////
+        //////glm::vec3 pt = glm::project(lightWorldPos, V, P, glm::vec4(0.0f, 0.0f, screen.width, screen.height));
+        //////pt.x /= screen.width;
+        //////pt.y /= screen.height;
+        //////m_lightShaftParams.lightPos = glm::vec2(pt);
+        //////m_lightShaftBuffer->updateStagingBuffer(m_lightShaftParams);
+        ////
+        ////m_cascadedShadowMapper->setZ(2.0f * PI * t / 5.0f);
+        ////m_cascadedShadowMapper->recalculateLightProjections(m_cameraController->getCamera());
+        ////
+        ////m_lightBuffer->updateStagingBuffer(m_lights.data(), m_lights.size() * sizeof(LightDescriptor));
+        ////
+
+        ////m_boxVisualizer->updateFrusta(m_cascadedShadowMapper.get(), m_cameraController.get());
+        ////
+        ////m_shadowMapper->setLightTransform(0, pointLight.getProjectionMatrix() * pointLight.getViewMatrix());
+        ////m_shadowMapper->setLightFullTransform(0, pointLight.getViewMatrix(), pointLight.getProjectionMatrix());
+        ////
+        ////t += dt;
     }
 
     void ShadowMappingScene::render()
@@ -248,12 +249,12 @@ namespace crisp
         //    m_rayTracer->traceRays(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), *m_rayTracingMaterial);
         //});
 
-        m_renderGraph->clearCommandLists();
+       /* m_renderGraph->clearCommandLists();
         if (renderAll)
             m_renderGraph->buildCommandLists(m_renderNodes);
 
         m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
-        m_renderGraph->executeCommandLists();
+        m_renderGraph->executeCommandLists();*/
     }
 
     void ShadowMappingScene::setBlurRadius(int /*radius*/)
@@ -313,7 +314,7 @@ namespace crisp
             }
             else
             {
-                logWarning("Texture type {} is using default values for '{}'\n", materialName, texNames[i]);
+                spdlog::warn("Texture type {} is using default values for '{}'", materialName, texNames[i]);
                 std::string key = "default-" + texNames[i];
                 material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
             }
@@ -382,7 +383,7 @@ namespace crisp
             }
             else
             {
-                logWarning("Texture type {} is using default values for '{}'\n", type, texNames[i]);
+                spdlog::warn("Texture type {} is using default values for '{}'\n", type, texNames[i]);
                 std::string key = "default-" + texNames[i];
                 material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
             }
@@ -755,12 +756,12 @@ namespace crisp
 
         m_app->getWindow()->mouseWheelScrolled += [this](double delta)
         {
-            float fov = m_cameraController->getCamera().getFov();
+            float fov = m_cameraController->getCamera().getFovY();
             if (delta < 0)
                 fov = std::min(90.0f, fov + 5.0f);
             else
                 fov = std::max(5.0f, fov - 5.0f);
-            m_cameraController->getCamera().setFov(fov);
+            m_cameraController->getCamera().setFovY(fov);
         };
     }
 

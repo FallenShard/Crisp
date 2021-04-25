@@ -7,8 +7,6 @@
 
 #include <Vesper/RayTracerUpdate.hpp>
 
-#include "Renderer/DescriptorSetGroup.hpp"
-
 namespace crisp
 {
     class Renderer;

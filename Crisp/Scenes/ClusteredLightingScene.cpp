@@ -20,7 +20,7 @@
 #include "Renderer/VulkanImageUtils.hpp"
 #include "Renderer/ResourceContext.hpp"
 #include "Renderer/RenderPasses/ShadowPass.hpp"
-#include "Renderer/RenderPasses/SceneRenderPass.hpp"
+#include "Renderer/RenderPasses/ForwardLightingPass.hpp"
 
 #include "Models/Skybox.hpp"
 #include "Geometry/TriangleMesh.hpp"
@@ -69,7 +69,7 @@ namespace crisp
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
         // Main render pass
-        m_renderGraph->addRenderPass(MainPass, std::make_unique<SceneRenderPass>(m_renderer, VK_SAMPLE_COUNT_8_BIT));
+        m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_8_BIT));
 
         // Shadow map pass
         //m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
@@ -286,12 +286,12 @@ namespace crisp
 
         m_app->getWindow()->mouseWheelScrolled += [this](double delta)
         {
-            float fov = m_cameraController->getCamera().getFov();
+            float fov = m_cameraController->getCamera().getFovY();
             if (delta < 0)
                 fov = std::min(90.0f, fov + 5.0f);
             else
                 fov = std::max(5.0f, fov - 5.0f);
-            m_cameraController->getCamera().setFov(fov);
+            m_cameraController->getCamera().setFovY(fov);
         };
     }
 

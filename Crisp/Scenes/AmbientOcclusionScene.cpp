@@ -9,14 +9,11 @@
 #include "Renderer/RenderGraph.hpp"
 #include "Renderer/Material.hpp"
 
-#include "Renderer/RenderPasses/SceneRenderPass.hpp"
+#include "Renderer/RenderPasses/ForwardLightingPass.hpp"
 #include "Renderer/RenderPasses/AmbientOcclusionPass.hpp"
 #include "Renderer/RenderPasses/BlurPass.hpp"
 #include "Renderer/Pipelines/UniformColorPipeline.hpp"
 #include "Renderer/Pipelines/NormalPipeline.hpp"
-#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
-#include "Renderer/Pipelines/SsaoPipeline.hpp"
-#include "Renderer/Pipelines/BlurPipeline.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Renderer/VulkanImageUtils.hpp"
 
@@ -62,6 +59,8 @@ namespace crisp
         , m_ssaoParams{ 128, 0.5f }
     {
         m_cameraController = std::make_unique<CameraController>(m_app->getWindow());
+        m_cameraController->getCamera().setRotation(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
+        m_cameraController->getCamera().setPosition(glm::vec3(0.0f, 2.0f, 1.0f));
         m_cameraBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
         std::default_random_engine randomEngine(std::random_device{}());
@@ -72,15 +71,8 @@ namespace crisp
             float x = distribution(randomEngine);
             float y = distribution(randomEngine);
             float r = distribution(randomEngine);
-            glm::vec3 s = r * warp::squareToUniformHemisphere(glm::vec2(x, y));
-            //float scale = float(i) / float(512.0f);
-            //float scale = distribution(randomEngine);
-            float scale = 1.0f;
-            scale = glm::mix(0.1f, 1.0f, scale * scale);
-            samples[i].x = s.x * scale;
-            samples[i].y = s.y * scale;
-            samples[i].z = s.z * scale;
-            samples[i].w = 1.0f;
+            glm::vec3 s = std::sqrt(r) * warp::squareToUniformHemisphere(glm::vec2(x, y));
+            samples[i] = glm::vec4(s, 1.0f);
         }
 
         std::vector<glm::vec4> noiseTexData;
@@ -104,6 +96,7 @@ namespace crisp
         noiseTexInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
         noiseTexInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         auto noiseTex = createTexture(m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+        noiseTex->setTag("noiseTex");
         auto noiseTexView = noiseTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
         m_noiseSampler       = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR,  VK_FILTER_LINEAR,  VK_SAMPLER_ADDRESS_MODE_REPEAT);
@@ -115,10 +108,12 @@ namespace crisp
         m_transforms.resize(2);
         m_transformBuffer = std::make_unique<UniformBuffer>(m_renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-        auto mainPass = std::make_unique<SceneRenderPass>(m_renderer);
+        auto mainPass = std::make_unique<ForwardLightingPass>(m_renderer);
         auto ssaoPass = std::make_unique<AmbientOcclusionPass>(m_renderer);
         auto blurHPass = std::make_unique<BlurPass>(m_renderer, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent());
         auto blurVPass = std::make_unique<BlurPass>(m_renderer, VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent());
+
+
 
         auto colorPipeline = createColorPipeline(m_renderer, mainPass.get());
         auto colorMaterial = std::make_unique<Material>(colorPipeline.get());
@@ -126,29 +121,15 @@ namespace crisp
 
         auto normalPipeline = createNormalPipeline(m_renderer, mainPass.get());
 
-        auto ssaoPipeline   = createSsaoPipeline(m_renderer, ssaoPass.get());
-        auto ssaoMaterial = std::make_unique<Material>(ssaoPipeline.get());
-        ssaoMaterial->writeDescriptor(0, 0, *mainPass, 0, m_nearestSampler.get());
-        ssaoMaterial->writeDescriptor(0, 1, *m_cameraBuffer);
-        ssaoMaterial->writeDescriptor(0, 2, *m_sampleBuffer);
-        ssaoMaterial->writeDescriptor(0, 3, *noiseTexView, m_noiseSampler.get());
-        ssaoMaterial->setDynamicBufferView(0, *m_cameraBuffer, 0);
 
-        auto blurHPipeline = createBlurPipeline(m_renderer, blurHPass.get());
-        auto blurHMaterial = std::make_unique<Material>(blurHPipeline.get());
-        blurHMaterial->writeDescriptor(0, 0, *ssaoPass, 0, m_linearClampSampler.get());
 
-        auto blurVPipeline = createBlurPipeline(m_renderer, blurVPass.get());
-        auto blurVMaterial = std::make_unique<Material>(blurVPipeline.get());
-        blurVMaterial->writeDescriptor(0, 0, *blurHPass, 0, m_linearClampSampler.get());
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
 
         std::vector<VertexAttributeDescriptor> shadowFormat = { VertexAttribute::Position };
         auto planeGeometry = std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowFormat));
 
         std::vector<VertexAttributeDescriptor> vertexFormat = { VertexAttribute::Position, VertexAttribute::Normal };
-        auto sponzaGeometry = std::make_unique<Geometry>(m_renderer, m_renderer->getResourcesPath() / "Meshes/sponza_fixed.obj", vertexFormat);
+        auto sponzaGeometry = std::make_unique<Geometry>(m_renderer, m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", vertexFormat);
 
         m_skybox = std::make_unique<Skybox>(m_renderer, *mainPass, "Creek");
 
@@ -160,14 +141,8 @@ namespace crisp
 
         m_pipelines.push_back(std::move(colorPipeline));
         m_pipelines.push_back(std::move(normalPipeline));
-        m_pipelines.push_back(std::move(ssaoPipeline));
-        m_pipelines.push_back(std::move(blurHPipeline));
-        m_pipelines.push_back(std::move(blurVPipeline));
 
         m_materials.push_back(std::move(colorMaterial));
-        m_materials.push_back(std::move(ssaoMaterial));
-        m_materials.push_back(std::move(blurHMaterial));
-        m_materials.push_back(std::move(blurVMaterial));
 
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
         m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
@@ -197,20 +172,22 @@ namespace crisp
 
         //mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
 
-        m_ssaoNode = std::make_unique<RenderNode>();
-        m_ssaoNode->geometry = m_renderer->getFullScreenGeometry();
-        m_ssaoNode->pass("ssaoPass").material = m_materials[1].get();
+        m_ssaoNode = createPostProcessingEffect("ssaoPass", "Ssao.lua");
+        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 0, *m_renderGraph->getNode("mainPass").renderPass, 0, m_nearestSampler.get());
+        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 1, *m_cameraBuffer);
+        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 2, *m_sampleBuffer);
+        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 3, *m_imageViews.back(), m_noiseSampler.get());
         m_ssaoNode->pass("ssaoPass").setPushConstantView(m_ssaoParams);
 
-        m_blurHNode = std::make_unique<RenderNode>();
-        m_blurHNode->geometry = m_renderer->getFullScreenGeometry();
-        m_blurHNode->pass("blurHPass").material = m_materials[2].get();
+        m_blurHNode = createPostProcessingEffect("blurHPass", "GaussianBlur.lua");
+        m_blurHNode->pass("blurHPass").material->writeDescriptor(0, 0, *m_renderGraph->getNode("ssaoPass").renderPass,  0, m_linearClampSampler.get());
         m_blurHNode->pass("blurHPass").setPushConstantView(blurH);
 
-        m_blurVNode = std::make_unique<RenderNode>();
-        m_blurVNode->geometry = m_renderer->getFullScreenGeometry();
-        m_blurVNode->pass("blurVPass").material = m_materials[3].get();
+        m_blurVNode = createPostProcessingEffect("blurVPass", "GaussianBlur.lua");
+        m_blurVNode->pass("blurVPass").material->writeDescriptor(0, 0, *m_renderGraph->getNode("blurHPass").renderPass, 0, m_linearClampSampler.get());
         m_blurVNode->pass("blurVPass").setPushConstantView(blurV);
+
+        m_renderer->getDevice()->flushDescriptorUpdates();
 
         createGui();
     }
@@ -235,6 +212,7 @@ namespace crisp
     {
         m_cameraController->update(dt);
         m_cameraBuffer->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
+        auto pos = m_cameraController->getCamera().getPosition();
 
         const auto& V = m_cameraController->getViewMatrix();
         const auto& P = m_cameraController->getProjectionMatrix();
@@ -268,6 +246,19 @@ namespace crisp
     void AmbientOcclusionScene::setRadius(double radius)
     {
         m_ssaoParams.radius = static_cast<float>(radius);
+    }
+
+    std::unique_ptr<RenderNode> AmbientOcclusionScene::createPostProcessingEffect(std::string renderPassName, std::string pipelineLuaFile)
+    {
+        auto& pass = m_renderGraph->getNode(renderPassName).renderPass;
+        m_pipelines.push_back(m_renderer->createPipelineFromLua(pipelineLuaFile, *pass, 0));
+        m_materials.push_back(std::make_unique<Material>(m_pipelines.back().get()));
+
+        auto renderNode = std::make_unique<RenderNode>();
+        renderNode->geometry = m_renderer->getFullScreenGeometry();
+        renderNode->pass(renderPassName).material = m_materials.back().get();
+        renderNode->pass(renderPassName).setPushConstantView(m_ssaoParams);
+        return renderNode;
     }
 
     void AmbientOcclusionScene::createGui()

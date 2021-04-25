@@ -8,9 +8,8 @@
 #include "Core/Window.hpp"
 #include "Camera/CameraController.hpp"
 
-#include "Renderer/RenderPasses/SceneRenderPass.hpp"
-#include "Renderer/Pipelines/PointSphereSpritePipeline.hpp"
-#include "Renderer/Pipelines/FullScreenQuadPipeline.hpp"
+#include "Renderer/RenderPasses/ForwardLightingPass.hpp"
+#include "Vulkan/VulkanPipeline.hpp"
 #include "vulkan/VulkanImageView.hpp"
 #include "vulkan/VulkanImage.hpp"
 #include "Renderer/Renderer.hpp"
@@ -38,13 +37,20 @@ namespace crisp
         m_cameraController = std::make_unique<CameraController>(app->getWindow());
         m_uniformBuffers.emplace("camera", std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
 
+
+
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
-        auto& mainPassNode = m_renderGraph->addRenderPass(MainPass, std::make_unique<SceneRenderPass>(m_renderer));
+
+
+        m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
+
+
+        auto& mainPassNode = m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer));
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
         m_renderGraph->sortRenderPasses();
         m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
 
-        m_fluidSimulation = std::make_unique<SPH>(m_renderer);
+
         m_app->getWindow()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
         createGui();
@@ -52,15 +58,28 @@ namespace crisp
         m_transformsBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
         m_uniformBuffers.emplace("params", std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame));
 
-        m_pointSpritePipeline = createPointSphereSpritePipeline(m_renderer, mainPassNode.renderPass.get());
-        m_pointSpriteDescGroup =
-        {
-            m_pointSpritePipeline->allocateDescriptorSet(0),
-            m_pointSpritePipeline->allocateDescriptorSet(1)
-        };
-        m_pointSpriteDescGroup.postBufferUpdate(0, 0, m_transformsBuffer->getDescriptorInfo());
-        m_pointSpriteDescGroup.postBufferUpdate(1, 0, m_uniformBuffers.at("params")->getDescriptorInfo());
-        m_pointSpriteDescGroup.flushUpdates(m_renderer->getDevice());
+        m_pointSpritePipeline = m_renderer->createPipelineFromLua("PointSprite.lua", *mainPassNode.renderPass, 0);
+        m_pointSpriteMaterial = std::make_unique<Material>(m_pointSpritePipeline.get());
+        m_pointSpriteMaterial->writeDescriptor(0, 0, *m_transformsBuffer);
+        m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
+
+        m_renderer->getDevice()->flushDescriptorUpdates();
+
+        m_fluidGeometry = std::make_unique<Geometry>(m_renderer);
+        m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("position"));
+        m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("color"));
+        m_fluidGeometry->setVertexCount(m_fluidSimulation->getParticleCount());
+        m_fluidGeometry->setInstanceCount(1);
+
+        m_renderer->getDevice()->flushDescriptorUpdates();
+
+
+        m_fluidRenderNode.transformBuffer = m_transformsBuffer.get();
+        m_fluidRenderNode.transformIndex = 0;
+        m_fluidRenderNode.transformPack = &m_transforms;
+        m_fluidRenderNode.geometry = m_fluidGeometry.get();
+        m_fluidRenderNode.pass(MainPass).material = m_pointSpriteMaterial.get();
+
     }
 
     FluidSimulationScene::~FluidSimulationScene()
@@ -92,34 +111,18 @@ namespace crisp
         m_uniformBuffers["params"]->updateStagingBuffer(m_particleParams);
 
         m_fluidSimulation->update(dt);
+        const uint32_t bufferSectionSize = m_fluidSimulation->getParticleCount() * sizeof(glm::vec4);
+        m_fluidGeometry->setVertexBufferOffset(0, m_fluidSimulation->getCurrentSection() * bufferSectionSize);
+        m_fluidGeometry->setVertexBufferOffset(1, m_fluidSimulation->getCurrentSection() * bufferSectionSize);
+
+
     }
 
     void FluidSimulationScene::render()
     {
-        //m_renderGraph->clearCommandLists();
-        //m_renderGraph->buildCommandLists();
-        //m_renderGraph->executeCommandLists();
-
-        m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer)
-        {
-            auto frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-
-            auto& passNode = m_renderGraph->getNode(MainPass);
-
-            m_fluidSimulation->dispatchCompute(commandBuffer, frameIdx);
-            passNode.renderPass->begin(commandBuffer);
-            m_pointSpriteDescGroup.setDynamicOffset(0, m_transformsBuffer->getDynamicOffset(frameIdx));
-            m_pointSpriteDescGroup.setDynamicOffset(1, m_uniformBuffers["params"]->getDynamicOffset(frameIdx));
-            m_pointSpritePipeline->bind(commandBuffer);
-            m_renderer->setDefaultViewport(commandBuffer);
-            m_renderer->setDefaultScissor(commandBuffer);
-            m_pointSpriteDescGroup.bind(commandBuffer, m_pointSpritePipeline->getPipelineLayout()->getHandle());
-            m_fluidSimulation->drawGeometry(commandBuffer);
-            passNode.renderPass->end(commandBuffer, frameIdx);
-
-            passNode.renderPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        });
+        m_renderGraph->clearCommandLists();
+        m_renderGraph->addToCommandLists(m_fluidRenderNode);
+        m_renderGraph->executeCommandLists();
     }
 
     void FluidSimulationScene::createGui()
@@ -157,8 +160,8 @@ namespace crisp
         };
 
         addLabeledSlider("Gravity X", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
-        addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
-        addLabeledSlider("Gravity Z", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
+        addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityY(val); };
+        addLabeledSlider("Gravity Z", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityZ(val); };
 
         auto viscoLabel = std::make_unique<Label>(m_app->getForm(), "Viscosity");
         viscoLabel->setPosition({ 0, y });
