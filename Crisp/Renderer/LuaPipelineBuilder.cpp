@@ -140,7 +140,7 @@ namespace crisp
         if (!m_config.hasVariable("inputAssembly"))
             return;
 
-        auto& inputAssembly = m_config["inputAssembly"];
+        const auto& inputAssembly = m_config["inputAssembly"];
         if (auto topology = inputAssembly.get<std::string>("primitiveTopology"))
         {
             if (topology == "lineList")
@@ -155,7 +155,7 @@ namespace crisp
         if (!m_config.hasVariable("tessellation"))
             return;
 
-        auto& tessellation = m_config["tessellation"];
+        const auto& tessellation = m_config["tessellation"];
         if (auto controlPointCount = tessellation.get<int>("controlPointCount"))
         {
             if (controlPointCount.has_value())
@@ -174,9 +174,9 @@ namespace crisp
             return;
         }
 
-        auto& viewportState = m_config["viewport"];
+        const auto& viewportState = m_config["viewport"];
         {
-            auto viewports = viewportState["viewports"];
+            const auto& viewports = viewportState["viewports"];
             for (int i = 0; i < viewports.getLength(); ++i)
             {
                 auto vp = viewports[0];
@@ -185,11 +185,11 @@ namespace crisp
             }
         }
 
-        auto scissors = viewportState["scissors"];
+        const auto& scissors = viewportState["scissors"];
         {
             for (int i = 0; i < scissors.getLength(); ++i)
             {
-                auto scissor = scissors[0];
+                const auto& scissor = scissors[0];
                 if (scissor.convertTo<std::string>() == "pass")
                     m_builder.setScissor(renderPass.createScissor());
             }
@@ -222,7 +222,7 @@ namespace crisp
         if (!m_config.hasVariable("rasterization"))
             return;
 
-        auto& rasterization = m_config["rasterization"];
+        const auto& rasterization = m_config["rasterization"];
         if (auto cullMode = rasterization.get<std::string>("cullMode"))
         {
             if (cullMode == "front")
@@ -246,7 +246,7 @@ namespace crisp
         if (!m_config.hasVariable("multisample"))
             return;
 
-        auto& multisample = m_config["multisample"];
+        const auto& multisample = m_config["multisample"];
 
         if (auto enabled = multisample.get<bool>("alphaToCoverage"); enabled.has_value())
         {
@@ -259,7 +259,7 @@ namespace crisp
         if (!m_config.hasVariable("colorBlend"))
             return;
 
-        auto& blend = m_config["colorBlend"];
+        const auto& blend = m_config["colorBlend"];
         if (auto enabled = blend.get<bool>("enabled"); enabled.has_value())
         {
             m_builder.setBlendState(0, enabled.value());
@@ -272,7 +272,7 @@ namespace crisp
         if (!m_config.hasVariable("depthStencil"))
             return;
 
-        auto& depthStencil = m_config["depthStencil"];
+        const auto& depthStencil = m_config["depthStencil"];
         if (auto reverseDepth = depthStencil.get<bool>("reverseDepth"); reverseDepth.has_value())
         {
             if (reverseDepth.value())

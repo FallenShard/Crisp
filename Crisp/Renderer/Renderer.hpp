@@ -12,6 +12,8 @@
 #include <unordered_set>
 #include <filesystem>
 
+#include "Renderer/VulkanWorker.hpp"
+
 namespace crisp
 {
     class VulkanDevice;
@@ -64,6 +66,7 @@ namespace crisp
         void drawFullScreenQuad(VkCommandBuffer cmdBuffer) const;
 
         uint32_t getCurrentVirtualFrameIndex() const;
+        uint32_t getCurrentFrameIndex() const;
 
         void resize(int width, int height);
 
@@ -85,8 +88,6 @@ namespace crisp
             fillDeviceBuffer(buffer, data.data(), data.size() * sizeof(T), offset);
         }
 
-        void scheduleBufferForRemoval(std::shared_ptr<VulkanBuffer> buffer, uint32_t framesToLive = NumVirtualFrames);
-
         void setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex);
         void setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews);
 
@@ -107,16 +108,12 @@ namespace crisp
         void loadShaders(const std::filesystem::path& directoryPath);
         VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
         std::optional<uint32_t> acquireSwapImageIndex(VirtualFrame& virtualFrame);
-        void resetCommandBuffer(VkCommandBuffer cmdBuffer);
         void record(VkCommandBuffer commandBuffer);
         void present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex);
 
         void recreateSwapChain();
 
-        void destroyResourcesScheduledForRemoval();
-
-        uint32_t m_numFramesRendered;
-        uint32_t m_currentFrameIndex;
+        uint64_t m_currentFrameIndex;
         std::filesystem::path m_resourcesPath;
 
         std::unique_ptr<VulkanContext>     m_context;
@@ -144,7 +141,6 @@ namespace crisp
 
         std::unique_ptr<Geometry> m_fullScreenGeometry;
 
-        std::unordered_map<std::shared_ptr<VulkanBuffer>, uint32_t> m_removedBuffers;
         std::unordered_set<UniformBuffer*> m_streamingUniformBuffers;
 
         std::unique_ptr<VulkanPipeline>  m_scenePipeline;
@@ -152,5 +148,7 @@ namespace crisp
         std::unique_ptr<Material>        m_sceneMaterial;
 
         std::vector<VulkanImageView*> m_sceneImageViews;
+
+        std::vector<std::unique_ptr<VulkanWorker>> m_workers;
     };
 }

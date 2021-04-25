@@ -22,6 +22,13 @@ namespace crisp
     public:
         ResourceContext(Renderer* renderer);
 
+        template <typename T>
+        UniformBuffer* createUniformBuffer(std::string id, const std::vector<T>& data, BufferUpdatePolicy updatePolicy)
+        {
+            m_uniformBuffers[id] = std::make_unique<UniformBuffer>(m_renderer, data.size() * sizeof(T), updatePolicy, data.data());
+            return m_uniformBuffers[id].get();
+        }
+
         UniformBuffer*  createUniformBuffer(std::string id, VkDeviceSize size, BufferUpdatePolicy updatePolicy);
         VulkanPipeline* createPipeline(std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex);
         Material*       createMaterial(std::string materialId, std::string pipelineId);
@@ -39,6 +46,7 @@ namespace crisp
         Material*        getMaterial(std::string id);
         UniformBuffer*   getUniformBuffer(std::string id);
         VulkanSampler*   getSampler(std::string id);
+        VulkanImage*     getImage(std::string id);
         VulkanImageView* getImageView(std::string id);
 
         void recreatePipelines();

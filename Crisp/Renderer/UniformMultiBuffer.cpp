@@ -43,7 +43,6 @@ namespace crisp
         auto newBuffer = std::make_unique<VulkanBuffer>(m_renderer->getDevice(), newSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         newBuffer->updateFromStaging(*m_stagingBuffer);
 
-        m_renderer->scheduleBufferForRemoval(std::move(m_stagingBuffer));
         m_stagingBuffer = std::move(newBuffer);
 
         m_singleRegionSize = newSize;

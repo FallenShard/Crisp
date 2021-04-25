@@ -18,8 +18,6 @@ namespace crisp
             image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layerIdx, numLayers, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
             image.copyFrom(cmdBuffer, *stagingBuffer, layerIdx, numLayers);
             image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, layerIdx, numLayers, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-            renderer->scheduleBufferForRemoval(stagingBuffer);
         });
     }
 
@@ -53,8 +51,6 @@ namespace crisp
             mipRange.baseArrayLayer = 0;
             mipRange.layerCount     = 1;
             image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-            renderer->scheduleBufferForRemoval(stagingBuffer);
         });
 
         return image;
@@ -90,8 +86,6 @@ namespace crisp
             mipRange.baseArrayLayer = 0;
             mipRange.layerCount     = 1;
             image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-            renderer->scheduleBufferForRemoval(stagingBuffer);
         });
 
         return image;
@@ -121,9 +115,6 @@ namespace crisp
             mipRange.baseArrayLayer = 0;
             mipRange.layerCount     = 1;
             image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-
-            renderer->scheduleBufferForRemoval(stagingBuffer);
         });
 
         return image;

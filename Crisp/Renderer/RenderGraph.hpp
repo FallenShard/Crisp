@@ -4,6 +4,11 @@
 #include "DrawCommand.hpp"
 #include "RenderNode.hpp"
 
+#include "Core/ThreadPool.hpp"
+
+#include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_vector.h>
+
 namespace crisp
 {
     class Renderer;
@@ -21,8 +26,10 @@ namespace crisp
             std::unique_ptr<VulkanRenderPass> renderPass;
 
             // Rendered nodes can be culled/filtered down into commands
-            //std::vector<RenderNode> renderNodes;
-            std::vector<std::vector<DrawCommand>> commands;
+            //std::vector<std::vector<DrawCommand>> commands;
+
+            tbb::concurrent_vector<tbb::concurrent_vector<DrawCommand>> commands;
+
 
             Node() = default;
             Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
@@ -37,7 +44,8 @@ namespace crisp
             glm::ivec3 workGroupSize;
             glm::ivec3 numWorkGroups;
 
-            std::function<void(VkCommandBuffer, uint32_t)> callback;
+            std::function<void(VkCommandBuffer, uint32_t)> preDispatchCallback;
+            bool isEnabled = true;
         };
 
         RenderGraph(Renderer* renderer);
@@ -56,6 +64,7 @@ namespace crisp
         void clearCommandLists();
         void addToCommandLists(const RenderNode& renderNode);
         void buildCommandLists(const std::unordered_map<std::string, std::unique_ptr<RenderNode>>& renderNodes);
+        void buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes);
         void executeCommandLists() const;
 
         const Node& getNode(std::string name) const;
@@ -73,5 +82,16 @@ namespace crisp
 
         std::vector<Node*> m_executionOrder;
         std::unordered_map<std::string, std::unique_ptr<Node>> m_nodes;
+
+
+        struct CmdBufferContext
+        {
+            std::unique_ptr<VulkanCommandPool> pool;
+            std::unique_ptr<VulkanCommandBuffer> cmdBuffer;
+        };
+
+        mutable ThreadPool m_threadPool;
+        std::mutex m_commandListMutex;
+        std::vector<std::vector<CmdBufferContext>> m_secondaryCommandBuffers;
     };
 }

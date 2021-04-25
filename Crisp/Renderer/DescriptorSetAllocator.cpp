@@ -1,7 +1,7 @@
 #include "DescriptorSetAllocator.hpp"
 #include "Vulkan/VulkanDevice.hpp"
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 #include <numeric>
 
@@ -144,7 +144,7 @@ namespace crisp
         VkDescriptorSet descSet;
         vkAllocateDescriptorSets(device, &descSetInfo, &descSet);
         if (descSet == 0)
-            logError("Descriptor set is nullptr!");
+            spdlog::error("Descriptor set is nullptr!");
 
         return descSet;
     }

@@ -1,5 +1,9 @@
 #include "ResourceContext.hpp"
 
+#include "ShadingLanguage/ShaderCompiler.hpp"
+
+#include "Core/ApplicationEnvironment.hpp"
+
 namespace crisp
 {
     ResourceContext::ResourceContext(Renderer* renderer)
@@ -94,6 +98,11 @@ namespace crisp
         return m_samplers[id].get();
     }
 
+    VulkanImage* ResourceContext::getImage(std::string id)
+    {
+        return m_images[id].get();
+    }
+
     VulkanImageView* ResourceContext::getImageView(std::string id)
     {
         return m_imageViews[id].get();
@@ -101,9 +110,9 @@ namespace crisp
 
     void ResourceContext::recreatePipelines()
     {
-        std::system("D:/version-control/Crisp/Crisp/Resources/CrispShaderCompiler.exe "\
-            "D:/version-control/Crisp/Crisp/Crisp/Source/Shaders "\
-            "D:/version-control/Crisp/Crisp/Resources/Shaders");
+        ShaderCompiler compiler;
+        compiler.compileDir(ApplicationEnvironment::getShaderSourcesPath(),
+            ApplicationEnvironment::getResourcesPath() / "Shaders");
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer buffer)
         {
@@ -115,4 +124,3 @@ namespace crisp
         });
     }
 }
-

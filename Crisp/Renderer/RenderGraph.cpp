@@ -5,17 +5,38 @@
 #include "Renderer/Material.hpp"
 #include "Geometry/Geometry.hpp"
 
-#include <CrispCore/Log.hpp>
+
+#include "Vulkan/VulkanFramebuffer.hpp"
+
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <stack>
 #include <string_view>
 #include <exception>
 
+#include "CrispCore/ChromeProfiler.hpp"
+
 namespace crisp
 {
+    namespace
+    {
+        auto logger = spdlog::stdout_color_mt("RenderGraph");
+    }
+
     RenderGraph::RenderGraph(Renderer* renderer)
         : m_renderer(renderer)
     {
+        m_secondaryCommandBuffers.resize(Renderer::NumVirtualFrames);
+        for (auto& perFrameCtx : m_secondaryCommandBuffers)
+        {
+            perFrameCtx.resize(std::thread::hardware_concurrency());
+            for (auto& ctx : perFrameCtx)
+            {
+                ctx.pool = std::make_unique<VulkanCommandPool>(*m_renderer->getDevice()->getGeneralQueue(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+                ctx.cmdBuffer = std::make_unique<VulkanCommandBuffer>(ctx.pool.get(), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+            }
+        }
     }
 
     RenderGraph::~RenderGraph()
@@ -25,7 +46,7 @@ namespace crisp
     RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)
     {
         if (m_nodes.count(name) > 0)
-            logWarning("Render graph already contains a node named {}\n", name);
+            logger->warn("Render graph already contains a node named {}\n", name);
 
         auto iter = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
         return *iter.first->second;
@@ -34,7 +55,7 @@ namespace crisp
     RenderGraph::Node& RenderGraph::addComputePass(std::string computePassName)
     {
         if (m_nodes.count(computePassName) > 0)
-            logWarning("Render graph already contains a node named {}\n", computePassName);
+            logger->warn("Render graph already contains a node named {}\n", computePassName);
 
         auto iter = m_nodes.emplace(computePassName, std::make_unique<Node>());
         iter.first->second->name = computePassName;
@@ -44,8 +65,8 @@ namespace crisp
 
     void RenderGraph::resize(int /*width*/, int /*height*/)
     {
-        for (auto& entry : m_nodes)
-            entry.second->renderPass->recreate();
+        for (auto& [key, node] : m_nodes)
+            node->renderPass->recreate();
     }
 
     void RenderGraph::addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback)
@@ -155,6 +176,28 @@ namespace crisp
         }
     }
 
+    void RenderGraph::buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes)
+    {
+        m_threadPool.parallelJob(renderNodes.size(), [this, &renderNodes](int start, int end, int jobIdx) {
+            uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+
+            std::unordered_map<std::string, std::vector<std::vector<DrawCommand>>> commands;
+
+            for (std::size_t k = start; k < end; ++k)
+            {
+                const auto& renderNode = renderNodes[k];
+                if (renderNode->isVisible)
+                {
+                    for (const auto& [key, materialMap] : renderNode->materials)
+                        for (const auto& [part, material] : materialMap)
+                        {
+                            m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(frameIdx, *renderNode), key.subpassIndex);
+                        }
+                }
+            }
+        });
+    }
+
     void RenderGraph::executeCommandLists() const
     {
         m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer)
@@ -217,14 +260,46 @@ namespace crisp
 
     void RenderGraph::executeRenderPass(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
     {
-        node.renderPass->begin(cmdBuffer);
+        bool useSecondaries = node.commands[0].size() > 100;
+
+        node.renderPass->begin(cmdBuffer, useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
         for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getNumSubpasses(); subpassIndex++)
         {
             if (subpassIndex > 0)
-                node.renderPass->nextSubpass(cmdBuffer);
+            {
+                useSecondaries = node.commands[subpassIndex].size() > 100;
+                node.renderPass->nextSubpass(cmdBuffer, useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
+            }
 
-            for (const auto& command : node.commands[subpassIndex])
-                executeDrawCommand(command, m_renderer, cmdBuffer, virtualFrameIndex);
+            if (useSecondaries)
+            {
+                m_threadPool.parallelJob(node.commands[subpassIndex].size(), [this, &node, subpassIndex](int start, int end, int jobIdx) {
+                    uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+                    auto& cmdCtx = m_secondaryCommandBuffers[frameIdx][jobIdx];
+
+                    VkCommandBufferInheritanceInfo inheritance = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+                    inheritance.framebuffer = node.renderPass->getFramebuffer(frameIdx)->getHandle();
+                    inheritance.renderPass = node.renderPass->getHandle();
+                    inheritance.subpass = subpassIndex;
+                    cmdCtx.cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance);
+
+                    for (std::size_t k = start; k < end; ++k)
+                        executeDrawCommand(node.commands[subpassIndex][k], m_renderer, cmdCtx.cmdBuffer->getHandle(), frameIdx);
+
+                    cmdCtx.cmdBuffer->end();
+                });
+
+                std::vector<VkCommandBuffer> secondaryBuffers;
+                for (auto& cmdCtx : m_secondaryCommandBuffers[virtualFrameIndex])
+                    secondaryBuffers.push_back(cmdCtx.cmdBuffer->getHandle());
+
+                vkCmdExecuteCommands(cmdBuffer, secondaryBuffers.size(), secondaryBuffers.data());
+            }
+            else
+            {
+                for (const auto& command : node.commands[subpassIndex])
+                    executeDrawCommand(command, m_renderer, cmdBuffer, virtualFrameIndex);
+            }
         }
 
         node.renderPass->end(cmdBuffer, virtualFrameIndex);
@@ -234,10 +309,13 @@ namespace crisp
 
     void RenderGraph::executeComputePass(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
     {
-        if (node.callback)
-            node.callback(cmdBuffer, virtualFrameIndex);
-        node.pipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        if (!node.isEnabled)
+            return;
+
+        node.pipeline->bind(cmdBuffer);
         node.material->bind(virtualFrameIndex, cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+        if (node.preDispatchCallback)
+            node.preDispatchCallback(cmdBuffer, virtualFrameIndex);
         vkCmdDispatch(cmdBuffer, node.numWorkGroups.x, node.numWorkGroups.y, node.numWorkGroups.z);
 
         for (const auto& dep : node.dependencies)

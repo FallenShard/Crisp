@@ -42,7 +42,9 @@ namespace crisp
         drawCommand.setPushConstantView(pushConstantView);
 
         drawCommand.geometry = geometry ? geometry : renderNode.geometry;
-        if (part != -1)
+        if (!drawCommand.geometry->getIndexBuffer())
+            drawCommand.setGeometryView(drawCommand.geometry->createListGeometryView());
+        else if (part != -1)
             drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView(part));
         else
             drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView());
