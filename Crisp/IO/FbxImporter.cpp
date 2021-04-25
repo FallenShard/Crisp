@@ -7,7 +7,7 @@
 #include <iostream>
 #include <streambuf>
 
-#include "CrispCore/Log.hpp"
+#include <spdlog/spdlog.h>
 
 #include <gzip/decompress.hpp>
 
@@ -28,7 +28,8 @@ namespace crisp
             if (typeCode == 'D' || typeCode == 'L')
                 return 8;
 
-            logFatal("Unknown typeCode {}", typeCode);
+            spdlog::error("Unknown typeCode {}", typeCode);
+            return 0;
         }
 
         struct membuf : std::streambuf

@@ -28,6 +28,22 @@ namespace crisp
 
         static bool isWavefrontObjFile(const std::filesystem::path& path);
 
+        struct Material
+        {
+            glm::vec3 ambient;
+            glm::vec3 diffuse;
+            glm::vec3 specular;
+
+            float ns;
+            float ni;
+            float d;
+            int illumination;
+
+            std::string albedoMap;
+            std::string normalMap;
+            std::string specularMap;
+        };
+
     private:
         std::filesystem::path m_path;
 
@@ -44,5 +60,6 @@ namespace crisp
             uint32_t count;
         };
         std::vector<MeshPart> m_meshParts;
+        std::unordered_map<std::string, Material> m_materials;
     };
 }

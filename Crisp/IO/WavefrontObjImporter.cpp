@@ -11,40 +11,14 @@
 #include <unordered_set>
 #include <optional>
 
-#include <CrispCore/Log.hpp>
+#include <CrispCore/StringUtils.hpp>
+
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
     namespace
     {
-        template <std::size_t MaxNumTokens>
-        std::array<std::string_view, MaxNumTokens> fixedTokenize(std::string_view string, std::string_view delimiter)
-        {
-            std::array<std::string_view, MaxNumTokens> result;
-            size_t start = 0;
-            size_t end = 0;
-
-            size_t idx = 0;
-
-            while (start < string.size())
-            {
-                end = string.find_first_of(delimiter, start);
-
-                if (start != end && idx < MaxNumTokens)
-                {
-                    result[idx] = string.substr(start, end - start);
-                    ++idx;
-                }
-
-                if (end == std::string_view::npos)
-                    break;
-
-                start = end + 1;
-            }
-
-            return result;
-        }
-
         struct ObjVertex
         {
             int64_t p = -1;
@@ -54,7 +28,7 @@ namespace crisp
             inline ObjVertex() {};
             inline ObjVertex(std::string_view stringView)
             {
-                auto vertexAttribs = fixedTokenize<3>(stringView, "/");
+                auto vertexAttribs = fixedTokenize<3>(stringView, "/", false);
 
                 auto parse = [](const std::string_view& line_view)
                 {
@@ -66,7 +40,7 @@ namespace crisp
                 if (!vertexAttribs[0].empty())
                     p = parse(vertexAttribs[0]);
                 else
-                    logFatal("Invalid vertex specification in an obj file.");
+                    spdlog::critical("Invalid vertex specification in an obj file.");
 
                 if (!vertexAttribs[1].empty())
                     uv = parse(vertexAttribs[1]);
@@ -97,6 +71,93 @@ namespace crisp
                 return hash;
             }
         };
+
+
+
+        std::unordered_map<std::string, WavefrontObjImporter::Material> loadMaterials(const std::filesystem::path& path)
+        {
+            std::unordered_map<std::string, WavefrontObjImporter::Material> materials;
+
+            WavefrontObjImporter::Material* currMat = nullptr;
+            std::ifstream file(path);
+            std::string line;
+            while (std::getline(file, line))
+            {
+                std::size_t prefixEnd = line.find_first_of(' ', 0);
+                std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
+
+                if (prefix == "newmtl")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    currMat = &materials[std::string(tokens[1])];
+                }
+                else if (prefix == "Ns")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), currMat->ns);
+                }
+                else if (prefix == "Ka")
+                {
+                    auto tokens = fixedTokenize<4>(line, " ");
+                    if (currMat)
+                        for (int i = 0; i < decltype(currMat->ambient)::length(); ++i)
+                            std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), currMat->ambient[i]);
+                }
+                else if (prefix == "Kd")
+                {
+                    auto tokens = fixedTokenize<4>(line, " ");
+                    if (currMat)
+                        for (int i = 0; i < decltype(currMat->diffuse)::length(); ++i)
+                            std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), currMat->diffuse[i]);
+                }
+                else if (prefix == "Ks")
+                {
+                    auto tokens = fixedTokenize<4>(line, " ");
+                    if (currMat)
+                        for (int i = 0; i < decltype(currMat->specular)::length(); ++i)
+                            std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), currMat->specular[i]);
+                }
+                else if (prefix == "Ni")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), currMat->ni);
+                }
+                else if (prefix == "d")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), currMat->d);
+                }
+                else if (prefix == "illum")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), currMat->illumination);
+                }
+                else if (prefix == "map_Kd")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        currMat->albedoMap = std::string(tokens[1]);
+                }
+                else if (prefix == "map_Bump")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        currMat->normalMap = std::string(tokens[1]);
+                }
+                else if (prefix == "map_Ks")
+                {
+                    auto tokens = fixedTokenize<2>(line, " ");
+                    if (currMat)
+                        currMat->specularMap = std::string(tokens[1]);
+                }
+            }
+
+            return materials;
+        }
     }
 
     WavefrontObjImporter::WavefrontObjImporter(const std::filesystem::path& objFilePath)
@@ -120,6 +181,7 @@ namespace crisp
         std::vector<glm::vec2> texCoordList;
         std::vector<glm::vec3> paramList;
         std::vector<MeshPart> materialList;
+        std::unordered_map<std::string, Material> materials;
 
         std::string line;
         unsigned int uniqueVertexId = 0;
@@ -136,6 +198,14 @@ namespace crisp
                 meshPart.offset = 3 * static_cast<uint32_t>(m_triangles.size());
                 meshPart.count  = 0;
                 m_meshParts.push_back(meshPart);
+            }
+            else if (prefix == "mtllib")
+            {
+                auto tokens = fixedTokenize<2>(line, " ");
+                std::string_view materialFilename = tokens[1];
+                std::filesystem::path materialFilePath = objFilePath.parent_path() / materialFilename;
+                if (std::filesystem::exists(materialFilePath))
+                    m_materials = loadMaterials(materialFilePath);
             }
             else if (prefix == "v")
             {
@@ -261,6 +331,10 @@ namespace crisp
 
             m_meshParts.back().count = static_cast<uint32_t>(3 * m_triangles.size() - m_meshParts.back().offset);
         }
+
+        m_meshParts.erase(std::remove_if(m_meshParts.begin(), m_meshParts.end(), [](const MeshPart& part) {
+            return part.count == 0;
+        }), m_meshParts.end());
 
         return true;
     }

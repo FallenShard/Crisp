@@ -1,9 +1,10 @@
 #define NOMINMAX
 #include "FontLoader.hpp"
 
-#include <CrispCore/Log.hpp>
 #include <cmath>
 #include <iostream>
+
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
@@ -39,7 +40,7 @@ namespace crisp
         FT_Face face;
         if (FT_New_Face(m_context, fontPath.string().c_str(), 0, &face))
         {
-            logError("Failed to create new face: {}\n", fontPath.string());
+            spdlog::error("Failed to create new face: {}\n", fontPath.string());
             return nullptr;
         }
 

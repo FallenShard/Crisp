@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 namespace crisp::fileutils
 {
@@ -44,7 +44,7 @@ namespace crisp::fileutils
         }
         else
         {
-            logError("Could not open file: {}\n", filePath);
+            spdlog::error("Could not open file: {}", filePath);
         }
 
         return stringStream.str();
