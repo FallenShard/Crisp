@@ -50,7 +50,7 @@ namespace crisp
         m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);
         m_material = std::make_unique<Material>(m_pipeline.get());
         m_material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-        m_material->writeDescriptor(0, 1, m_cubeMapView->getDescriptorInfo(m_sampler->getHandle()));
+        m_material->writeDescriptor(0, 1, m_cubeMapView->getDescriptorInfo(m_sampler.get()));
         renderer->getDevice()->flushDescriptorUpdates();
 
         m_renderNode.transformBuffer = m_transformBuffer.get();
@@ -70,7 +70,7 @@ namespace crisp
 
         m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
         m_material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-        m_material->writeDescriptor(0, 1, cubeMapView.getDescriptorInfo(sampler.getHandle()));
+        m_material->writeDescriptor(0, 1, cubeMapView.getDescriptorInfo(&sampler));
 
         renderer->getDevice()->flushDescriptorUpdates();
 

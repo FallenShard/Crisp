@@ -4,10 +4,9 @@
 
 #include <CrispCore/Math/Headers.hpp>
 
-#include "Renderer/DescriptorSetGroup.hpp"
-
 #include "Renderer/Renderer.hpp"
 #include "vulkan/VulkanBuffer.hpp"
+#include "Renderer/Material.hpp"
 
 #include "FluidSimulation.hpp"
 
@@ -17,11 +16,12 @@ namespace crisp
     class Renderer;
     class VulkanDevice;
     class UniformBuffer;
+    class RenderGraph;
 
     class SPH : public FluidSimulation
     {
     public:
-        SPH(Renderer* renderer);
+        SPH(Renderer* renderer, RenderGraph* renderGraph);
         virtual ~SPH();
 
         virtual void update(float dt) override;
@@ -40,17 +40,13 @@ namespace crisp
 
         virtual void drawGeometry(VkCommandBuffer cmdBuffer) const override;
 
+        virtual VulkanBuffer* getVertexBuffer(std::string_view key) const override;
+
+        virtual uint32_t getParticleCount() const override;
+
+        virtual uint32_t getCurrentSection() const override;
+
     private:
-        void clearCellCounts(VkCommandBuffer cmdBuffer) const;
-        void computeCellCounts(VkCommandBuffer cmdBuffer) const;
-        void scanCellCounts(VkCommandBuffer cmdBuffer) const;
-        void reindex(VkCommandBuffer cmdBuffer) const;
-        void computeDensityAndPressure(VkCommandBuffer cmdBuffer) const;
-        void computeForces(VkCommandBuffer cmdBuffer) const;
-        void integrate(VkCommandBuffer cmdBuffer, float timeDelta) const;
-
-        void insertComputeBarrier(VkCommandBuffer cmdBuffer) const;
-
         std::vector<glm::vec4> createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const;
 
         Renderer* m_renderer;
@@ -76,34 +72,9 @@ namespace crisp
         glm::uvec3 m_fluidDim;
 
         float m_timeDelta;
-        mutable bool m_runCompute;
 
         mutable uint32_t m_prevSection;
         mutable uint32_t m_currentSection;
-        std::unique_ptr<VulkanPipeline> m_integratePipeline;
-        DescriptorSetGroup m_integrateDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_clearHashGridPipeline;
-        DescriptorSetGroup m_clearGridDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_computeCellCountPipeline;
-        DescriptorSetGroup m_computeCellCountDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_scanPipeline;
-        DescriptorSetGroup m_scanDescGroup;
-        DescriptorSetGroup m_scanBlockDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_combineScanPipeline;
-        DescriptorSetGroup m_combineScanDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_reindexPipeline;
-        DescriptorSetGroup m_reindexDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_densityPressurePipeline;
-        DescriptorSetGroup m_densityPressureDescGroup;
-
-        std::unique_ptr<VulkanPipeline> m_forcesPipeline;
-        DescriptorSetGroup m_forcesDescGroup;
 
         struct GridParams
         {
@@ -123,5 +94,7 @@ namespace crisp
         float m_kappa = 1.0f;
         glm::vec3 m_gravity = { 0.0f, -9.81f, 0.0f };
         bool m_runSimulation = false;
+
+        RenderGraph* m_renderGraph;
     };
 }
