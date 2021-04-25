@@ -7,7 +7,7 @@ namespace crisp
 {
     inline static float degToRad(float value)
     {
-        return value * PI / 180.0f;
+        return value * PI<> / 180.0f;
     }
 
     inline static void coordinateSystem(const glm::vec3& v1, glm::vec3& v2, glm::vec3& v3)

@@ -45,10 +45,11 @@ namespace crisp
             m_delegates.insert(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
         }
 
-        template<void(*callbackMethod)(ParamTypes...)>
-        void subscribe()
+        template<auto F>
+        void subscribeStatic()
         {
-            m_delegates.insert(Delegate<void, ParamTypes...>::fromStaticFunction<callbackMethod>());
+            //auto del = Delegate<void, ParamTypes...>::fromStaticFunction<F>();
+            //m_delegates.insert(Delegate<void, ParamTypes...>::fromStaticFunction<callbackMethod>());
         }
 
         template <typename FuncType>

@@ -2,6 +2,8 @@
 
 #include <CrispCore/Math/Headers.hpp>
 
+#include <iostream>
+
 namespace crisp
 {
     template <typename T>

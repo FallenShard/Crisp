@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
 #include "CrispCore/BitFlags.hpp"
-#include "CrispCore/ConsoleUtils.hpp"
 
 namespace
 {

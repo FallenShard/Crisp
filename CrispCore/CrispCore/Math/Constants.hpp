@@ -2,10 +2,21 @@
 
 namespace crisp
 {
-    static constexpr float PI         = 3.14159265358979323846f;
-    static constexpr float InvPI      = 0.31830988618379067154f;
-    static constexpr float InvTwoPI   = 0.15915494309189533577f;
-    static constexpr float InvFourPI  = 0.07957747154594766788f;
-    static constexpr float SqrtTwo    = 1.41421356237309504880f;
-    static constexpr float InvSqrtTwo = 0.70710678118654752440f;
+    template<class T = float>
+    static constexpr T PI = T(3.14159265358979323846);
+
+    template<class T = float>
+    static constexpr T InvPI = T(1.0) / PI<T>;
+
+    template<class T = float>
+    static constexpr T InvTwoPI = T(1.0) / (T(2.0) * PI<T>);
+
+    template<class T = float>
+    static constexpr T InvFourPI = T(1.0) / (T(4.0) * PI<T>);
+
+    template<class T = float>
+    static constexpr T SqrtTwo = T(1.41421356237309504880);
+
+    template<class T = float>
+    static constexpr T InvSqrtTwo = T(1.0) / SqrtTwo<T>;
 }

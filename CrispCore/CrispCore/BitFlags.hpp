@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <bitset>
+#include <iostream>
 
 template <typename Enum>
 struct IsBitFlag

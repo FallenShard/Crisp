@@ -12,7 +12,7 @@ namespace crisp
         glm::vec3 squareToUniformCylinder(const glm::vec2& sample, float cosThetaMin, float cosThetaMax)
         {
             float z = cosThetaMin + sample.y * (cosThetaMax - cosThetaMin);
-            float phi = 2.0f * PI * sample.x;
+            float phi = 2.0f * PI<> * sample.x;
 
             return glm::vec3(cosf(phi), sinf(phi), z);
         }
@@ -40,13 +40,13 @@ namespace crisp
         glm::vec2 squareToUniformDisk(const glm::vec2& sample)
         {
             float r = sqrtf(sample.y);
-            float theta = 2.0f * PI * sample.x;
+            float theta = 2.0f * PI<> * sample.x;
             return { r * cosf(theta), r * sinf(theta) };
         }
 
         float squareToUniformDiskPdf()
         {
-            return InvPI;
+            return InvPI<>;
         }
 
         glm::vec3 squareToUniformSphere(const glm::vec2& sample)
@@ -56,7 +56,7 @@ namespace crisp
 
         float squareToUniformSpherePdf()
         {
-            return InvFourPI;
+            return InvFourPI<>;
         }
 
         glm::vec3 squareToUniformHemisphere(const glm::vec2& sample)
@@ -66,7 +66,7 @@ namespace crisp
 
         float squareToUniformHemispherePdf(const glm::vec3&)
         {
-            return InvTwoPI;
+            return InvTwoPI<>;
         }
 
         glm::vec3 squareToUniformSphereCap(const glm::vec2& sample, float cosThetaMax)
@@ -76,13 +76,13 @@ namespace crisp
 
         float squareToUniformSphereCapPdf(float cosThetaMax)
         {
-            return InvTwoPI / (1.0f - cosThetaMax);
+            return InvTwoPI<> / (1.0f - cosThetaMax);
         }
 
         glm::vec3 squareToCosineHemisphere(const glm::vec2& sample)
         {
             float radius = std::sqrt(sample.y);
-            float theta = 2.0f * PI * sample.x;
+            float theta = 2.0f * PI<> * sample.x;
             float x = radius * std::cos(theta);
             float y = radius * std::sin(theta);
             float z = std::sqrt(std::max(0.0f, 1.0f - x * x - y * y));
@@ -91,7 +91,7 @@ namespace crisp
 
         float squareToCosineHemispherePdf(const glm::vec3& v)
         {
-            return v.z * InvPI;
+            return v.z * InvPI<>;
         }
 
         glm::vec3 squareToUniformTriangle(const glm::vec2& sample)

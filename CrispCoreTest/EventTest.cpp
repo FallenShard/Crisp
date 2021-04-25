@@ -47,6 +47,10 @@ namespace
             state = evData.x * evData.y;
         }
     };
+
+    void printStuff(const std::string& message)
+    {
+    }
 }
 
 TEST(EventTest, Subscriptions)
@@ -94,4 +98,10 @@ TEST(EventTest, Disconnects)
 
     event.unsubscribe(&tester);
     EXPECT_EQ(event.getSubscriberCount(), 0);
+}
+
+TEST(EventTest, StaticFunctions)
+{
+    Event<const std::string&> event;
+    Delegate<void, const std::string&> del = Delegate<void, const std::string&>::fromStaticFunction<&printStuff>();
 }

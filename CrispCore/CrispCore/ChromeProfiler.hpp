@@ -35,7 +35,6 @@ namespace crisp
             std::ostream& stream = getThreadStream();
             stream << "{\"pid\":" << 1 << ",\"tid\":\"" << getThreadName() << "\",\"ts\":" << getCurrentTime()
                 << ",\"ph\":\"B\",\"name\":\"" << message << "\"},\n";
-                
         }
 
         static void end()

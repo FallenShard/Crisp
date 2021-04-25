@@ -24,10 +24,10 @@ namespace crisp
             return Delegate(receiverObject, &memberFunctionCaller<MemFn, ReceiverType>);
         }
 
-        template<ReturnType(*SMethod)(ParamTypes...)>
+        template<auto StaticFn>
         static Delegate fromStaticFunction()
         {
-            return Delegate(nullptr, &staticFunctionCaller<SMethod>);
+            return Delegate(nullptr, &staticFunctionCaller<StaticFn>);
         }
 
         // Executes the stored callback
