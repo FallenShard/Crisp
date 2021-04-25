@@ -13,7 +13,7 @@ namespace crisp
     class VulkanCommandPool : public VulkanResource<VkCommandPool>
     {
     public:
-        VulkanCommandPool(const VulkanQueue* vulkanQueue, VkCommandPoolCreateFlags flags);
+        VulkanCommandPool(const VulkanQueue& vulkanQueue, VkCommandPoolCreateFlags flags);
         ~VulkanCommandPool();
 
         std::unique_ptr<VulkanCommandBuffer> allocateCommandBuffer(VkCommandBufferLevel level) const;

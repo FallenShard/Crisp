@@ -16,6 +16,8 @@ namespace crisp
         ~VulkanCommandBuffer();
 
         void begin(VkCommandBufferUsageFlags commandBufferUsage);
+        void begin(VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance);
+
         void end();
 
         inline VkCommandBuffer getHandle() const { return m_handle; }

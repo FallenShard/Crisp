@@ -20,11 +20,10 @@ namespace crisp
     VulkanRenderPass::~VulkanRenderPass()
     {
         freeResources();
-
-        if (m_deferDestruction)
-            m_device->deferDestruction(m_handle, vkDestroyRenderPass);
-        else
-            vkDestroyRenderPass(m_device->getHandle(), m_handle, nullptr);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        {
+            vkDestroyRenderPass(device, static_cast<VkRenderPass>(handle), nullptr);
+        });
     }
 
     void VulkanRenderPass::recreate()
@@ -62,6 +61,19 @@ namespace crisp
         renderPassInfo.pClearValues      = m_clearValues.data();
 
         vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    void VulkanRenderPass::begin(VkCommandBuffer cmdBuffer, VkSubpassContents content) const
+    {
+        VkRenderPassBeginInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        renderPassInfo.renderPass        = m_handle;
+        renderPassInfo.framebuffer       = m_framebuffers[m_renderer->getCurrentVirtualFrameIndex()]->getHandle();
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = m_renderArea;
+        renderPassInfo.clearValueCount   = static_cast<uint32_t>(m_clearValues.size());
+        renderPassInfo.pClearValues      = m_clearValues.data();
+
+        vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, content);
     }
 
     void VulkanRenderPass::begin(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const

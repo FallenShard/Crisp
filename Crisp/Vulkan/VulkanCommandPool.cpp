@@ -6,11 +6,11 @@
 
 namespace crisp
 {
-    VulkanCommandPool::VulkanCommandPool(const VulkanQueue* vulkanQueue, VkCommandPoolCreateFlags flags)
-        : VulkanResource(vulkanQueue->getDevice())
+    VulkanCommandPool::VulkanCommandPool(const VulkanQueue& vulkanQueue, VkCommandPoolCreateFlags flags)
+        : VulkanResource(vulkanQueue.getDevice())
     {
         VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-        poolInfo.queueFamilyIndex = vulkanQueue->getFamilyIndex();
+        poolInfo.queueFamilyIndex = vulkanQueue.getFamilyIndex();
         poolInfo.flags            = flags;
 
         vkCreateCommandPool(m_device->getHandle(), &poolInfo, nullptr, &m_handle);
@@ -18,10 +18,10 @@ namespace crisp
 
     VulkanCommandPool::~VulkanCommandPool()
     {
-        if (m_deferDestruction)
-            m_device->deferDestruction(m_handle, vkDestroyCommandPool);
-        else
-            vkDestroyCommandPool(m_device->getHandle(), m_handle, nullptr);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        {
+            vkDestroyCommandPool(device, static_cast<VkCommandPool>(handle), nullptr);
+        });
     }
 
     std::unique_ptr<VulkanCommandBuffer> VulkanCommandPool::allocateCommandBuffer(VkCommandBufferLevel level) const

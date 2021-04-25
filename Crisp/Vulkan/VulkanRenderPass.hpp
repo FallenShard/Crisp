@@ -24,6 +24,7 @@ namespace crisp
         VkRect2D createScissor() const;
 
         void begin(VkCommandBuffer cmdBuffer) const;
+        void begin(VkCommandBuffer cmdBuffer, VkSubpassContents content) const;
         void begin(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const;
         void end(VkCommandBuffer cmdBuffer, uint32_t frameIndex) const;
         void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
@@ -37,6 +38,8 @@ namespace crisp
         inline uint32_t getNumSubpasses() const { return m_numSubpasses; }
 
         VkSampleCountFlagBits getDefaultSampleCount() const;
+
+        const VulkanFramebuffer* getFramebuffer(uint32_t frameIdx) const { return m_framebuffers.at(frameIdx).get(); }
 
     protected:
         virtual void createResources() = 0;

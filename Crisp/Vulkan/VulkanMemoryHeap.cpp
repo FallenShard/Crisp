@@ -3,7 +3,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
@@ -28,7 +28,7 @@ namespace crisp
 
         if (block.freeChunks.size() > 10)
         {
-            logWarning("[{}] Possible memory fragmentation - free chunks: {}\n", tag, block.freeChunks.size());
+            spdlog::warn("[{}] Possible memory fragmentation - free chunks: {}", tag, block.freeChunks.size());
         }
         else if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == blockSize)
         {
@@ -39,7 +39,7 @@ namespace crisp
 
             memoryBlocks.remove(block);
 
-            logInfo("[{}] Freeing a memory block.\n", tag);
+            spdlog::info("[{}] Freeing a memory block.", tag);
         }
     }
 
@@ -83,8 +83,8 @@ namespace crisp
 
         if (!foundMemoryBlock)
         {
-            logInfo("[{}] Failed to find a free chunk.\n", tag);
-            logInfo("[{}] Allocating another memory block of size: {} MB.\n", tag, (blockSize >> 20));
+            spdlog::info("[{}] Failed to find a free chunk.", tag);
+            spdlog::info("[{}] Allocating another memory block of size: {} MB.", tag, (blockSize >> 20));
             auto* blockPtr = allocateVulkanMemoryBlock(blockSize);
             std::tie(foundChunkOffset, foundChunkSize) = findFreeChunkInBlock(*blockPtr, size, alignment);
             if (foundChunkSize != 0)
@@ -93,8 +93,8 @@ namespace crisp
             }
             else
             {
-                logError("[{}] CRITICAL ERROR: Allocation failed: {} MB\n", tag, (blockSize >> 20));
-                logFatal("[{}] Requested size: {} bytes, but heap supports max {} MB allocations.\n", tag, size, (blockSize >> 20));
+                spdlog::error("[{}] CRITICAL ERROR: Allocation failed: {} MB", tag, (blockSize >> 20));
+                spdlog::error("[{}] Requested size: {} bytes, but heap supports max {} MB allocations.", tag, size, (blockSize >> 20));
                 return allocResult;
             }
         }
@@ -182,7 +182,7 @@ namespace crisp
     void* VulkanMemoryHeap::mapMemoryBlock(internal::VulkanAllocationBlock& block) const
     {
         if (!(properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
-            logFatal("[{}] Attempted invalid MapMemory!\n", tag);
+            spdlog::critical("[{}] Attempted invalid MapMemory!", tag);
 
         void* mappedPtr;
         vkMapMemory(device, block.memory, 0, blockSize, 0, &mappedPtr);

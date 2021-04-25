@@ -8,27 +8,22 @@
 #include <any>
 
 #include <vulkan/vulkan.h>
-#include "VulkanMemoryHeap.hpp"
+#include "VulkanMemoryAllocator.hpp"
+
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
     class VulkanContext;
     class VulkanQueue;
 
-    struct DeviceMemoryMetrics
+    using VulkanDestructorCallback = void(*)(void*, VkDevice);
+    struct StoredDestructor
     {
-        uint64_t bufferMemorySize;
-        uint64_t bufferMemoryUsed;
-        uint64_t imageMemorySize;
-        uint64_t imageMemoryUsed;
-        uint64_t stagingMemorySize;
-        uint64_t stagingMemoryUsed;
-    };
-
-    struct DeferredDestructor
-    {
-        int framesRemaining = 3;
-        std::function<void(VkDevice)> fun;
+        uint64_t deferredFrameIndex;
+        int32_t framesRemaining;
+        void* vulkanHandle;
+        VulkanDestructorCallback destructorCallback;
     };
 
     class VulkanDevice
@@ -45,55 +40,44 @@ namespace crisp
         void invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
         void flushMappedRanges();
 
-        template <typename F>
-        void deferDestruction(F&& deleter)
+        template <typename VkHandleType>
+        void deferDestruction(int32_t framesToLive, VkHandleType handle, VulkanDestructorCallback callback)
         {
-            m_deferredDestructors.push_back({ m_virtualFrameCount, std::move(deleter) });
+            m_deferredDestructors.push_back({ m_currentFrameIndex, framesToLive, handle, callback });
         }
 
-        template <typename VkT>
-        void deferDestruction(VkT handle, void(*destroyFunc)(VkDevice, VkT, const VkAllocationCallbacks*))
+        void deferMemoryChunk(int32_t framesToLive, VulkanMemoryChunk chunk)
         {
-            m_deferredDestructors.push_back({ m_virtualFrameCount, [handle, destroyFunc](VkDevice device)
-                {
-                    destroyFunc(device, handle, nullptr);
-                }
-                });
+            m_deferredMemoryChunks.emplace_back(framesToLive, chunk);
         }
 
         void updateDeferredDestructions();
-        void runDeferredDestructions();
 
         VkSemaphore createSemaphore() const;
         VkFence createFence(VkFenceCreateFlags flags) const;
 
-        void printMemoryStatus();
-        DeviceMemoryMetrics getDeviceMemoryUsage();
-
-        VulkanMemoryHeap* getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
-        VulkanMemoryHeap* getDeviceBufferHeap() const;
-        VulkanMemoryHeap* getDeviceImageHeap() const;
-        VulkanMemoryHeap* getStagingBufferHeap() const;
+        VulkanMemoryAllocator* getMemoryAllocator() const { return m_memoryAllocator.get(); }
 
         void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo);
         void postDescriptorWrite(VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
         void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo);
         void flushDescriptorUpdates();
 
-    private:
-        static constexpr VkDeviceSize DeviceHeapSize  = 256 << 20; // 256 MB
-        static constexpr VkDeviceSize StagingHeapSize = 256 << 20; // 256 MB
+        void setCurrentFrameIndex(uint64_t frameIndex);
 
+        inline uint64_t getCurrentFrameIndex() const { return m_currentFrameIndex; }
+
+    private:
         VulkanContext* m_context;
         int m_virtualFrameCount;
+        uint64_t m_currentFrameIndex;
 
         VkDevice m_device;
         std::unique_ptr<VulkanQueue> m_generalQueue;
+        std::unique_ptr<VulkanQueue> m_computeQueue;
         std::unique_ptr<VulkanQueue> m_transferQueue;
 
-        std::unique_ptr<VulkanMemoryHeap> m_deviceBufferHeap;
-        std::unique_ptr<VulkanMemoryHeap> m_deviceImageHeap;
-        std::unique_ptr<VulkanMemoryHeap> m_stagingBufferHeap;
+        std::unique_ptr<VulkanMemoryAllocator> m_memoryAllocator;
 
         std::vector<VkMappedMemoryRange> m_unflushedRanges;
 
@@ -101,6 +85,7 @@ namespace crisp
         std::list<VkDescriptorImageInfo>  m_imageInfos;
         std::vector<VkWriteDescriptorSet> m_descriptorWrites;
 
-        std::vector<DeferredDestructor> m_deferredDestructors;
+        std::vector<StoredDestructor> m_deferredDestructors;
+        std::vector<std::pair<uint32_t, VulkanMemoryChunk>> m_deferredMemoryChunks;
     };
 }

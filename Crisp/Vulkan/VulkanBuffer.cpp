@@ -21,7 +21,7 @@ namespace crisp
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
 
-        auto heap = m_device->getHeapFromMemProps(memProps, memRequirements.memoryTypeBits);
+        auto heap = m_device->getMemoryAllocator()->getHeapFromMemProps(memProps, memRequirements.memoryTypeBits);
         m_memoryChunk = heap->allocate(memRequirements.size, memRequirements.alignment);
 
         vkBindBufferMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
@@ -29,19 +29,11 @@ namespace crisp
 
     VulkanBuffer::~VulkanBuffer()
     {
-        if (m_deferDestruction)
+        m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* vulkanHandle, VkDevice device)
         {
-            m_device->deferDestruction([h = m_handle, mem = m_memoryChunk](VkDevice device) mutable
-                {
-                    mem.free();
-                    vkDestroyBuffer(device, h, nullptr);
-                });
-        }
-        else
-        {
-            m_memoryChunk.free();
-            vkDestroyBuffer(m_device->getHandle(), m_handle, nullptr);
-        }
+            vkDestroyBuffer(device, static_cast<VkBuffer>(vulkanHandle), nullptr);
+        });
     }
 
     VkDeviceSize VulkanBuffer::getSize() const

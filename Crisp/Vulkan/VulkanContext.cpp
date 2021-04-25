@@ -1,20 +1,25 @@
 #include "VulkanContext.hpp"
 
-#include <algorithm>
-#include <set>
-#include <iostream>
-#include <sstream>
-
-#include <CrispCore/Log.hpp>
 #include "Core/Application.hpp"
 #include "VulkanQueueConfiguration.hpp"
 
+#include <algorithm>
+#include <unordered_set>
+
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 namespace crisp
 {
+    namespace
+    {
+        auto logger = spdlog::stderr_color_mt("VulkanContext");
+    }
+
     namespace detail
     {
 #ifndef _DEBUG
-        constexpr bool EnableValidationLayers = false;
+        constexpr bool EnableValidationLayers = true;
 #else
         constexpr bool EnableValidationLayers = true;
 #endif
@@ -31,100 +36,99 @@ namespace crisp
             VK_KHR_MAINTENANCE2_EXTENSION_NAME
         };
 
-        VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
-            const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
+        VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
+            const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* messenger)
         {
-            auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+            auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
             if (func != nullptr)
-                return func(instance, pCreateInfo, pAllocator, pCallback);
+                return func(instance, createInfo, allocator, messenger);
             else
                 return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
-        void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
+        void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator)
         {
-            auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
             if (func != nullptr)
-                func(instance, callback, pAllocator);
+                func(instance, messenger, pAllocator);
         }
 
-        VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char* message, void*)
+        VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData)
         {
-            std::stringstream stream;
-            stream << "\n=== Vulkan Validation Layer ===\n";
-            stream << "Severity: ";
-            if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-                stream << " | Info";
-            if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-                stream << " | Warning";
-            if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-                stream << " | Performance";
-            if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-                stream << " | Error";
-            if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-                stream << " | Debug";
+            const char* typeStr = "Unknown";
+            if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+                typeStr = "General";
+            if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+                typeStr = "Performance";
+            if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+                typeStr = "Validation";
 
-            stream << '\n';
-
-            ConsoleColor color = flags & VK_DEBUG_REPORT_ERROR_BIT_EXT ? ConsoleColor::LightRed :
-                flags & VK_DEBUG_REPORT_WARNING_BIT_EXT || flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT ? ConsoleColor::Yellow : ConsoleColor::LightCyan;
-
-            stream << message << "\n\n";
-
-            ConsoleColorizer colorizer(color);
-            fmt::print(stream.str());
+            if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+                logger->debug("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
+            else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+                logger->info("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
+            else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+                logger->warn("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
+            else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+                logger->error("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
+            else
+                logger->error("{} {} {} {}", "Unknown", callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
             return VK_FALSE;
         }
 
-        bool checkRequiredExtensions(std::vector<const char*> reqExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
+        void assertRequiredExtensionSupport(std::vector<const char*> requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
         {
-            std::set<std::string> reqExtsSet;
+            std::unordered_set<std::string> pendingExtensions;
 
-            ConsoleColorizer colorizer(ConsoleColor::Yellow);
-            std::cout << "Platform-required Vulkan extensions: \n";
-            for (auto extensionName : reqExtensions)
+            logger->info("Platform-required Vulkan extensions ({}):", requiredExtensions.size());
+            for (auto extensionName : requiredExtensions)
             {
-                std::cout << "\t" << extensionName << '\n';
-                reqExtsSet.insert(std::string(extensionName));
+                logger->info("\t{}", extensionName);
+                pendingExtensions.insert(std::string(extensionName));
             }
 
-            colorizer.set(ConsoleColor::Green);
-            std::cout << "Supported extensions: " << '\n';
+            logger->info("Supported extensions ({}):", supportedExtensions.size());
             for (const auto& ext : supportedExtensions)
             {
-
-                std::cout << "\t" << ext.extensionName << '\n';
-                reqExtsSet.erase(ext.extensionName); // Will hold unsupported required extensions, if any
+                logger->info("\t{}", ext.extensionName);
+                pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any
             }
 
-            size_t numSupportedReqExts = reqExtensions.size() - reqExtsSet.size();
+            size_t numSupportedReqExts = requiredExtensions.size() - pendingExtensions.size();
 
-            colorizer.set(ConsoleColor::LightGreen);
-            std::cout << numSupportedReqExts << "/" << reqExtensions.size() << " required extensions supported." << '\n';
-            std::cout << supportedExtensions.size() << " extensions supported total." << '\n';
+            logger->info("{}/{} required extensions supported.", numSupportedReqExts, requiredExtensions.size());
 
-            return numSupportedReqExts == reqExtensions.size();
+            if (!pendingExtensions.empty())
+            {
+                logger->error("The following required extensions are not supported:");
+                for (const auto& ext : pendingExtensions)
+                    logger->error("{}", ext);
+
+                logger->critical("Aborting the application.");
+                std::exit(-1);
+            }
         }
 
-        bool areValidationLayersSupported()
+        void assertValidationLayerSupport()
         {
+            if (!EnableValidationLayers)
+                return;
+
             uint32_t layerCount;
             vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
             std::vector<VkLayerProperties> availableLayers(layerCount);
             vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-            std::set<std::string> availableLayersSet;
+            std::unordered_set<std::string> availableLayersSet;
             for (const auto& layer : availableLayers)
                 availableLayersSet.insert(layer.layerName);
 
             for (const auto& validationLayer : ValidationLayers)
                 if (availableLayersSet.find(validationLayer) == availableLayersSet.end())
-                    return false;
+                    logger->critical("Validation layer {} is not requested, but not supported!", validationLayer);
 
-            std::cout << "Validation layers are supported!\n";
-
-            return true;
+            logger->info("Validation layers are supported!");
         }
 
         VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions)
@@ -137,7 +141,7 @@ namespace crisp
             appInfo.apiVersion         = VK_API_VERSION_1_2;
 
             if (EnableValidationLayers)
-                reqPlatformExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+                reqPlatformExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
             std::vector<const char*> enabledExtensions;
             std::transform(reqPlatformExtensions.begin(), reqPlatformExtensions.end(), std::back_inserter(enabledExtensions), [](const auto& ext) { return ext.c_str(); });
@@ -158,27 +162,25 @@ namespace crisp
             std::vector<VkExtensionProperties> extensionProps(extensionCount);
             vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data());
 
-            bool allExtensionsSupported    = checkRequiredExtensions(enabledExtensions, extensionProps);
-            bool validationLayersSupported = !EnableValidationLayers || areValidationLayersSupported();
-
-            if (!allExtensionsSupported)
-                throw std::runtime_error("Required extensions are not supported!");
-            if (!validationLayersSupported)
-                throw std::runtime_error("Validation layers requested are not available!");
+            assertRequiredExtensionSupport(enabledExtensions, extensionProps);
+            assertValidationLayerSupport();
 
             return instance;
         }
 
-        VkDebugReportCallbackEXT createDebugCallback(VkInstance instance)
+        VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
         {
             if (!EnableValidationLayers) return nullptr;
 
-            VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
-            createInfo.flags       = VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-            createInfo.pfnCallback = reinterpret_cast<PFN_vkDebugReportCallbackEXT>(debugCallback);
+            VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+            createInfo.flags = 0;
+            createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+            createInfo.pfnUserCallback = debugMessengerCallback;
 
-            VkDebugReportCallbackEXT callback;
-            CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback);
+            VkDebugUtilsMessengerEXT callback;
+            CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
+            logger->info("Debug messenger created!");
             return callback;
         }
 
@@ -239,7 +241,7 @@ namespace crisp
             std::vector<VkExtensionProperties> availableExtensions(extensionCount);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-            std::set<std::string> requiredExtensions(DeviceExtensions.begin(), DeviceExtensions.end());
+            std::unordered_set<std::string> requiredExtensions(DeviceExtensions.begin(), DeviceExtensions.end());
 
             for (const auto& ext : availableExtensions)
                 requiredExtensions.erase(ext.extensionName);
@@ -274,27 +276,26 @@ namespace crisp
 
         bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface)
         {
-            VkPhysicalDeviceProperties2 deviceProps = {};
-            deviceProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            VkPhysicalDeviceProperties2 deviceProps = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
             vkGetPhysicalDeviceProperties2(device, &deviceProps);
 
-            VkPhysicalDeviceFeatures deviceFeatures;
-            vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+            VkPhysicalDeviceFeatures2 deviceFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+            vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
 
             QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
             bool extensionsSupported = checkDeviceExtensionSupport(device);
 
-            bool VulkanSwapChainAdequate = false;
+            bool swapChainAdequate = false;
             if (extensionsSupported)
             {
-                VulkanSwapChainSupportDetails VulkanSwapChainSupport = queryVulkanSwapChainSupport(device, surface);
-                VulkanSwapChainAdequate = !VulkanSwapChainSupport.formats.empty() && !VulkanSwapChainSupport.presentModes.empty();
+                VulkanSwapChainSupportDetails swapChainSupport = queryVulkanSwapChainSupport(device, surface);
+                swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
             }
 
             bool isDiscreteGpu = deviceProps.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 
-            return isDiscreteGpu && indices.isComplete() && extensionsSupported && VulkanSwapChainAdequate;
+            return isDiscreteGpu && indices.isComplete() && extensionsSupported && swapChainAdequate;
         }
 
         VkPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
@@ -316,14 +317,15 @@ namespace crisp
             }
 
             if (!preferredDevice)
-                throw std::runtime_error("Failed to find a suitable physical device!");
+                logger->critical("Failed to find a suitable physical device!");
+
             return preferredDevice;
         }
     }
 
     VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions)
         : m_instance(detail::createInstance(std::forward<std::vector<std::string>>(reqPlatformExtensions)))
-        , m_debugCallback(detail::createDebugCallback(m_instance))
+        , m_debugMessenger(detail::createDebugMessenger(m_instance))
         , m_surface(detail::createSurface(m_instance, surfaceCreator))
         , m_physicalDevice(detail::pickPhysicalDevice(m_instance, m_surface))
         , m_physicalDeviceProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 })
@@ -333,12 +335,14 @@ namespace crisp
 
         m_physicalDeviceProperties.pNext = &m_physicalDeviceRayTracingProperties;
         vkGetPhysicalDeviceProperties2(m_physicalDevice, &m_physicalDeviceProperties);
+
+        logger->info("Constructed!");
     }
 
     VulkanContext::~VulkanContext()
     {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-        detail::DestroyDebugReportCallbackEXT(m_instance, m_debugCallback, nullptr);
+        detail::DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
         vkDestroyInstance(m_instance, nullptr);
     }
 
@@ -360,10 +364,6 @@ namespace crisp
         createInfo.pQueueCreateInfos       = config.getQueueCreateInfos().data();
         createInfo.enabledExtensionCount   = static_cast<uint32_t>(detail::DeviceExtensions.size());
         createInfo.ppEnabledExtensionNames = detail::DeviceExtensions.data();
-
-        // Deprecated in 1.2
-        //createInfo.enabledLayerCount       = detail::EnableValidationLayers ? static_cast<uint32_t>(detail::ValidationLayers.size()) : 0;
-        //createInfo.ppEnabledLayerNames     = detail::EnableValidationLayers ? detail::ValidationLayers.data() : nullptr;
 
         VkDevice device(VK_NULL_HANDLE);
         vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &device);
@@ -420,7 +420,7 @@ namespace crisp
         return {};
     }
 
-    std::optional<uint32_t> VulkanContext::findDeviceImageMemoryType(VkDevice device)
+    std::optional<uint32_t> VulkanContext::findDeviceImageMemoryType(VkDevice device) const
     {
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -446,7 +446,7 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    std::optional<uint32_t> VulkanContext::findDeviceBufferMemoryType(VkDevice device)
+    std::optional<uint32_t> VulkanContext::findDeviceBufferMemoryType(VkDevice device) const
     {
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size        = 1;
@@ -462,7 +462,7 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    std::optional<uint32_t> VulkanContext::findStagingBufferMemoryType(VkDevice device)
+    std::optional<uint32_t> VulkanContext::findStagingBufferMemoryType(VkDevice device) const
     {
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size        = 1;
@@ -492,7 +492,7 @@ namespace crisp
                 return format;
         }
 
-        std::cerr << "Could not find supported format!\n";
+        logger->critical("Could not find a supported format");
         return VkFormat();
     }
 

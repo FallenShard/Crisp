@@ -2,13 +2,18 @@
 
 #include <iostream>
 
-#include <CrispCore/Log.hpp>
 #include "VulkanDevice.hpp"
 #include "VulkanBuffer.hpp"
 #include "VulkanImageView.hpp"
 
+#include <spdlog/spdlog.h>
+
 namespace crisp
 {
+    namespace {
+        uint32_t id = 0;
+    }
+
     VulkanImage::VulkanImage(VulkanDevice* device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
         : VulkanResource(device)
         , m_type(createInfo.imageType)
@@ -24,7 +29,7 @@ namespace crisp
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
-        m_memoryChunk = m_device->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
+        m_memoryChunk = m_device->getMemoryAllocator()->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
         vkBindImageMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
     }
 
@@ -56,25 +61,17 @@ namespace crisp
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
         vkGetImageMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
-        m_memoryChunk = m_device->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
+        m_memoryChunk = m_device->getMemoryAllocator()->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
         vkBindImageMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
     }
 
     VulkanImage::~VulkanImage()
     {
-        if (m_deferDestruction)
+        m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
         {
-            m_device->deferDestruction([h = m_handle, mem = m_memoryChunk](VkDevice device) mutable
-                {
-                    mem.free();
-                    vkDestroyImage(device, h, nullptr);
-                });
-        }
-        else
-        {
-            m_memoryChunk.free();
-            vkDestroyImage(m_device->getHandle(), m_handle, nullptr);
-        }
+            vkDestroyImage(device, static_cast<VkImage>(handle), nullptr);
+        });
     }
 
     void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)
@@ -292,42 +289,61 @@ namespace crisp
             case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
             case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return { VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT };
             }
+
         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
             switch (newLayout)
             {
             case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
             case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:     return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
+            case VK_IMAGE_LAYOUT_GENERAL:                  return { VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+            }
+
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return { VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT };
+            }
+
+        case VK_IMAGE_LAYOUT_UNDEFINED:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:             return { 0, VK_ACCESS_TRANSFER_WRITE_BIT };
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return { 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT };
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:         return { 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT };
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:         return { 0, VK_ACCESS_SHADER_READ_BIT };
+            case VK_IMAGE_LAYOUT_GENERAL:                          return { 0, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT };
+            }
+
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return { VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT };
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return { VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT };
+            case VK_IMAGE_LAYOUT_GENERAL:              return { VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT };
+            }
+
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:     return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT };
+            }
+
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+            }
+
+        case VK_IMAGE_LAYOUT_GENERAL:
+            switch (newLayout)
+            {
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return { VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:     return { VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT };
             }
         }
 
-        if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL     && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            return { VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-            return { 0, VK_ACCESS_TRANSFER_WRITE_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-            return { 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            return { 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            return { 0, VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED                && newLayout == VK_IMAGE_LAYOUT_GENERAL)
-            return { 0, VK_ACCESS_SHADER_WRITE_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            return { VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-            return { VK_ACCESS_SHADER_READ_BIT,  VK_ACCESS_TRANSFER_WRITE_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-            return { VK_ACCESS_SHADER_READ_BIT,  VK_ACCESS_TRANSFER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-            return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,  VK_ACCESS_TRANSFER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            return { VK_ACCESS_SHADER_WRITE_BIT,  VK_ACCESS_SHADER_READ_BIT };
-        else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL)
-            return { VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT };
-
-        logError("Unsupported layout transition: {} to {}!\n", oldLayout, newLayout);
+        spdlog::error("Unsupported layout transition: {} to {}!", oldLayout, newLayout);
         return { 0, 0 };
     }
 }

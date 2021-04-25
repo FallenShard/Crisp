@@ -90,7 +90,7 @@ namespace crisp
         vkGeometry.geometry.triangles.vertexData   = geometry.getVertexBuffer()->getHandle();
         vkGeometry.geometry.triangles.vertexOffset = 0;
         vkGeometry.geometry.triangles.vertexCount  = geometry.getVertexCount();
-        vkGeometry.geometry.triangles.vertexStride = sizeof(glm::vec3);
+        vkGeometry.geometry.triangles.vertexStride = sizeof(glm::vec4) * 2;
         vkGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         vkGeometry.geometry.triangles.indexData    = geometry.getIndexBuffer()->getHandle();
         vkGeometry.geometry.triangles.indexOffset  = 0;
@@ -132,7 +132,7 @@ namespace crisp
             VkMemoryRequirements2 memReq2 = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
             vkGetAccelerationStructureMemoryRequirements(m_device->getHandle(), &memReqInfo, &memReq2);
 
-            auto* memHeap = m_device->getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq2.memoryRequirements.memoryTypeBits);
+            auto* memHeap = m_device->getMemoryAllocator()->getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq2.memoryRequirements.memoryTypeBits);
             accelStruct.memoryChunk = memHeap->allocate(memReq2.memoryRequirements.size, memReq2.memoryRequirements.alignment);
 
             // Bind the object and memory
@@ -187,7 +187,7 @@ namespace crisp
         VkMemoryRequirements2 memReq = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
         vkGetAccelerationStructureMemoryRequirements(m_device->getHandle(), &memReqInfo, &memReq);
 
-        auto* memHeap = m_device->getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq.memoryRequirements.memoryTypeBits);
+        auto* memHeap = m_device->getMemoryAllocator()->getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq.memoryRequirements.memoryTypeBits);
         m_tlas.memoryChunk = memHeap->allocate(memReq.memoryRequirements.size, memReq.memoryRequirements.alignment);
 
         // Bind
@@ -259,7 +259,7 @@ namespace crisp
         createInfo.format        = VK_FORMAT_R32G32B32A32_SFLOAT;
         createInfo.extent        = VkExtent3D{ width, height, 1 };
         createInfo.mipLevels     = 1;
-        createInfo.arrayLayers   = layerCount;
+        createInfo.arrayLayers   = 1;//layerCount;
         createInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
         createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         createInfo.usage         = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -267,7 +267,7 @@ namespace crisp
         m_image = std::make_unique<VulkanImage>(m_device, createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
 
         for (uint32_t i = 0; i < layerCount; ++i)
-            m_imageViews.emplace_back(m_image->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
+            m_imageViews.emplace_back(m_image->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     }
 
     VulkanImage* VulkanRayTracer::getImage() const
@@ -287,7 +287,7 @@ namespace crisp
 
     void VulkanRayTracer::traceRays(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, const RayTracingMaterial& material) const
     {
-        m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, virtualFrameIndex, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV);
+        m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, 0, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV);
 
         material.bind(cmdBuffer, virtualFrameIndex);
         VkDeviceSize progSize       = material.getShaderGroupHandleSize();
@@ -307,6 +307,24 @@ namespace crisp
             sbtBuffer->getHandle(), 0, 0,
             extent.width, extent.height, 1);
 
-        m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, virtualFrameIndex, 1, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+
+        //VkImageMemoryBarrier barrier = {};
+        //barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        //barrier.image = m_image->getHandle();
+        //barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        //barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        //barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        //barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        //barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        //barrier.subresourceRange.baseArrayLayer = virtualFrameIndex;
+        //barrier.subresourceRange.layerCount = 1;
+        //barrier.subresourceRange.baseMipLevel = 0;
+        //barrier.subresourceRange.levelCount = 1;
+        //vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        //
+        //m_renderer->waitIdle();
+
+        m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 1, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
 }

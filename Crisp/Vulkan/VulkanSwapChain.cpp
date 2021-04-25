@@ -18,21 +18,18 @@ namespace crisp
 
     VulkanSwapChain::~VulkanSwapChain()
     {
-        if (m_deferDestruction)
+        for (auto imageView : m_imageViews)
         {
-            m_device->deferDestruction([h = m_handle, views = m_imageViews](VkDevice device)
+            m_device->deferDestruction(m_framesToLive, imageView, [](void* handle, VkDevice device)
             {
-                for (auto imageView : views)
-                    vkDestroyImageView(device, imageView, nullptr);
-                vkDestroySwapchainKHR(device, h, nullptr);
+                vkDestroyImageView(device, static_cast<VkImageView>(handle), nullptr);
             });
         }
-        else
+
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
         {
-            for (auto imageView : m_imageViews)
-                vkDestroyImageView(m_device->getHandle(), imageView, nullptr);
-            vkDestroySwapchainKHR(m_device->getHandle(), m_handle, nullptr);
-        }
+            vkDestroySwapchainKHR(device, static_cast<VkSwapchainKHR>(handle), nullptr);
+        });
     }
 
     VkFormat VulkanSwapChain::getImageFormat() const
@@ -116,7 +113,7 @@ namespace crisp
 
         createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode    = presentMode;
+        createInfo.presentMode    = VK_PRESENT_MODE_MAILBOX_KHR;
         createInfo.clipped        = VK_TRUE;
         createInfo.oldSwapchain   = m_handle;
 

@@ -31,15 +31,10 @@ namespace crisp
 
     VulkanImageView::~VulkanImageView()
     {
-        if (m_deferDestruction)
-            m_device->deferDestruction(m_handle, vkDestroyImageView);
-        else
-            vkDestroyImageView(m_device->getHandle(), m_handle, nullptr);
-    }
-
-    VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(VkSampler sampler, VkImageLayout layout) const
-    {
-        return { sampler, m_handle, layout };
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        {
+            vkDestroyImageView(device, static_cast<VkImageView>(handle), nullptr);
+        });
     }
 
     VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const

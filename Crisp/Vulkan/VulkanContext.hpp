@@ -49,9 +49,9 @@ namespace crisp
 
         std::optional<uint32_t> findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
         std::optional<uint32_t> findMemoryType(VkMemoryPropertyFlags properties) const;
-        std::optional<uint32_t> findDeviceImageMemoryType(VkDevice device);
-        std::optional<uint32_t> findDeviceBufferMemoryType(VkDevice device);
-        std::optional<uint32_t> findStagingBufferMemoryType(VkDevice device);
+        std::optional<uint32_t> findDeviceImageMemoryType(VkDevice device) const;
+        std::optional<uint32_t> findDeviceBufferMemoryType(VkDevice device) const;
+        std::optional<uint32_t> findStagingBufferMemoryType(VkDevice device) const;
 
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat findSupportedDepthFormat() const;
@@ -63,16 +63,9 @@ namespace crisp
 
         inline const VkInstance& getInstance() const { return m_instance; }
 
-        //template<typename F>
-        //F getFunctionPtr(const char* functionName) const
-        //{
-        //    auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetDeviceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-        //
-        //}
-
     private:
         VkInstance               m_instance;
-        VkDebugReportCallbackEXT m_debugCallback;
+        VkDebugUtilsMessengerEXT m_debugMessenger;
         VkSurfaceKHR             m_surface;
 
         VkPhysicalDevice            m_physicalDevice; // Implicitly cleaned up with VkInstance

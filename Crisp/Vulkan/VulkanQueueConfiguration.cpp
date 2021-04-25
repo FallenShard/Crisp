@@ -57,7 +57,10 @@ namespace crisp
 
     std::vector<QueueIdentifier> VulkanQueueConfiguration::findQueueIds(const VulkanContext* context) const
     {
+        // Get the queue families that our current physical device has
         auto exposedQueueFamilies = context->getQueueFamilyProperties();
+
+        // From each family, we can request up to a maximum queue number dependent on the family
         std::vector<uint32_t> usedFamilyCounts(exposedQueueFamilies.size(), 0);
 
         std::vector<QueueIdentifier> queueIds(m_requestedQueues.size());
@@ -70,9 +73,7 @@ namespace crisp
                 continue;
 
             queueIds[idx].familyIndex = familyIndex;
-            queueIds[idx].index = usedFamilyCounts[static_cast<size_t>(familyIndex)];
-
-            usedFamilyCounts[static_cast<size_t>(familyIndex)]++;
+            queueIds[idx].index = usedFamilyCounts[static_cast<size_t>(familyIndex)]++;
 
             idx++;
         }
@@ -91,6 +92,20 @@ namespace crisp
                 return i;
 
             i++;
+        }
+
+        // Check if we are requesting a compute only queue
+        if (queueType == QueueType::Compute)
+        {
+            i = 0;
+            for (const auto& family : exposedQueueFamilies)
+            {
+                auto familyType = getFamilyType(context, static_cast<uint32_t>(i), family.queueFlags);
+                if ((familyType & QueueType::Compute) && !(familyType & QueueType::Graphics))
+                    return i;
+
+                i++;
+            }
         }
 
         // Find a more general family for the queueType

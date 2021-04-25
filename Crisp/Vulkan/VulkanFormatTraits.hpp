@@ -1,8 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-
-#include <CrispCore/Log.hpp>
+#include <spdlog/spdlog.h>
 
 namespace crisp
 {
@@ -28,7 +27,7 @@ namespace crisp
         case VK_FORMAT_R32G32B32_SFLOAT:    return 3 * sizeof(float);
         case VK_FORMAT_R32G32_SFLOAT:       return 2 * sizeof(float);
         default:
-            logFatal("Unknown format specified {}\n", format);
+            spdlog::critical("Unknown format specified {}", format);
         }
 
         return ~0u;

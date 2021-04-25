@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include <CrispCore/Log.hpp>
-
 #include "VulkanDevice.hpp"
 
 #include <string>
@@ -20,11 +18,11 @@ namespace crisp
         VulkanResource(VulkanResource&& other) noexcept
             : m_device(std::move(other.m_device))
             , m_handle(std::move(other.m_handle))
-            , m_deferDestruction(std::move(other.m_deferDestruction))
+            , m_framesToLive(std::move(other.m_framesToLive))
         {
             other.m_device = nullptr;
             other.m_handle = VK_NULL_HANDLE;
-            other.m_deferDestruction = true;
+            other.m_framesToLive = true;
         }
 
         virtual ~VulkanResource() = 0 {};
@@ -36,10 +34,10 @@ namespace crisp
             {
                 m_device = std::move(other.m_device);
                 m_handle = std::move(other.m_handle);
-                m_deferDestruction = std::move(other.m_deferDestruction);
+                m_framesToLive = std::move(other.m_framesToLive);
                 other.m_device = nullptr;
                 other.m_handle = VK_NULL_HANDLE;
-                other.m_deferDestruction = true;
+                other.m_framesToLive = 0;
             }
 
             return *this;
@@ -52,17 +50,17 @@ namespace crisp
         {
             std::swap(m_device, rhs.m_device);
             std::swap(m_handle, rhs.m_handle);
-            std::swap(m_deferDestruction, rhs.m_deferDestruction);
+            std::swap(m_framesToLive, rhs.m_framesToLive);
         }
 
-        inline void setDeferredDestruction(bool isEnabled) { m_deferDestruction = isEnabled; }
+        inline void setDeferredDestruction(bool isEnabled) { m_framesToLive = isEnabled ? 3 : 1; }
 
         inline void setTag(const std::string& tag) { m_tag = tag; }
 
     protected:
         VulkanDevice* m_device;
         T             m_handle;
-        bool m_deferDestruction = true;
+        int32_t m_framesToLive = 3;
 
         std::string m_tag;
     };
