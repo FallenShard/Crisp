@@ -10,6 +10,5 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}
 target_link_libraries(CrispCoreTest PRIVATE gtest)
 target_link_libraries(CrispCoreTest PRIVATE gtestMain)
 target_link_libraries(CrispCoreTest PRIVATE CrispCore)
-target_link_libraries(CrispCoreTest PRIVATE Crisp)
 
 target_compile_features(CrispCoreTest PUBLIC cxx_std_20)
