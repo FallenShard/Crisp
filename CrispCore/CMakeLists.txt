@@ -9,8 +9,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}
 
 target_link_libraries(CrispCore PUBLIC glm)
 target_link_libraries(CrispCore PUBLIC fmt)
-target_link_libraries(CrispCore PUBLIC rlutil)
 target_link_libraries(CrispCore PUBLIC spdlog)
+target_link_libraries(CrispCore PUBLIC tinyexr)
 
 target_include_directories(CrispCore PUBLIC ".")
 

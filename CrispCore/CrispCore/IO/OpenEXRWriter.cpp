@@ -3,7 +3,6 @@
 #include <vector>
 #include <iostream>
 
-#define TINYEXR_IMPLEMENTATION
 #include <tinyexr/tinyexr.h>
 
 namespace crisp

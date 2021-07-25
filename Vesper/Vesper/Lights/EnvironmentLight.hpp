@@ -28,7 +28,7 @@ namespace crisp
         glm::vec2 sampleContinuous(const glm::vec2& point, float& pdf) const;
         float distributionPdf(float u, float v) const;
 
-        std::unique_ptr<MipMap<Spectrum>> m_probe;
+        std::unique_ptr<MipMap> m_probe;
         float m_scale;
 
         std::vector<float> m_cdfCols;

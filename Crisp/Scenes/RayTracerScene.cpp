@@ -7,7 +7,7 @@
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
 #include "IO/FileUtils.hpp"
-#include "IO/OpenEXRWriter.hpp"
+#include "CrispCore/IO/OpenEXRWriter.hpp"
 #include "RaytracedImage.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/Control.hpp"

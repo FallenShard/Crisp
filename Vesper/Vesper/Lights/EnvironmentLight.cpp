@@ -51,7 +51,7 @@ namespace crisp
         m_scale = params.get<float>("scale", 1.0f);
 
 
-        m_probe = std::make_unique<MipMap<Spectrum>>("../../Resources/Textures/" + probeFilename);
+        m_probe = std::make_unique<MipMap>("../../Resources/Textures/" + probeFilename);
 
         int w = m_probe->getWidth();
         int h = m_probe->getHeight();
