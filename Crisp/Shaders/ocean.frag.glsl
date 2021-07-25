@@ -88,8 +88,8 @@ void main()
     vec3 ocean_color = pow(vec3(0,55,87) / 255.0, vec3(2.2));
     // Material properties
     const vec3  albedo    = ocean_color;
-    const float roughness = 0.3;
-    const float metallic  = 0.1;
+    const float roughness = 0.0;
+    const float metallic  = 0.0;
 
     const vec3 F0 = mix(vec3(0.02), albedo, metallic);
     const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);

@@ -18,6 +18,14 @@ layout(push_constant) uniform PushConstant
     int M;
     float Lx;
     float Lz;
+    float windSpeedX;
+    float windSpeedZ;
+    float windSpeedNormX;
+    float windSpeedNormZ;
+    float windMagnitude;
+    float Lw;
+    float A;
+    float smallWaves;
 };
 
 const int logTable32[32] =
@@ -58,6 +66,27 @@ vec2 complexMul(vec2 z1, vec2 z2)
                 z1[0] * z2[1] + z1[1] * z2[0]);
 }
 
+struct Wind
+{
+    vec2 speed;
+    vec2 speedNorm;
+    float magnitude;
+    float Lw;
+};
+
+float calculatePhillipsSpectrum(const Wind wind, const vec2 k)
+{
+    const float kLen2 = dot(k, k) + 0.000001;
+    const vec2 kNorm = kLen2 == 0.0f ? vec2(0.0f) : k / sqrt(kLen2);
+
+    const float midterm = exp(-1.0 / (kLen2 * wind.Lw * wind.Lw)) / pow(kLen2, 2);
+    const float kDotW = dot(kNorm, wind.speedNorm);
+
+    const float tail = exp(-kLen2 * smallWaves * smallWaves);
+
+    return A * midterm * pow(kDotW, 2) * tail;
+}
+
 void main()
 {
     ivec2 idx = ivec2(gl_GlobalInvocationID.xy) - ivec2(N, M) / 2;
@@ -69,6 +98,16 @@ void main()
 
     vec2 h0 = initialSpectrum.xy;
     vec2 h0_star = initialSpectrum.zw;
+
+    Wind wind;
+    wind.speed = vec2( windSpeedX, windSpeedZ );
+    wind.magnitude = windMagnitude;
+    wind.speedNorm = wind.speed / wind.magnitude;
+    wind.Lw = wind.magnitude * wind.magnitude / g;
+
+    h0 = h0 * 1.0f / sqrt(2.0f) * sqrt(calculatePhillipsSpectrum(wind, k));
+    h0_star = h0_star * 1.0f / sqrt(2.0f) * sqrt(calculatePhillipsSpectrum(wind, -k));
+    h0_star.y = -h0_star.y;
 
     // The dispersion relation
     const float wk = sqrt(g * kLen);

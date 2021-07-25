@@ -15,8 +15,13 @@
 
 #include "Renderer/PipelineBuilder.hpp"
 #include "Renderer/PipelineLayoutBuilder.hpp"
+#include "Models/Skybox.hpp"
 #include "Lights/EnvironmentLighting.hpp"
 #include "Core/LuaConfig.hpp"
+
+#include "GUI/Panel.hpp"
+#include "GUI/Slider.hpp"
+#include "GUI/Label.hpp"
 
 #include <random>
 #include <spdlog/spdlog.h>
@@ -37,6 +42,32 @@ namespace crisp
         constexpr int N = 2048;
         const int logN = std::log2(N);
         constexpr float Lx = 2.0f * N;
+
+        struct MainPCData
+        {
+            float time;
+            int32_t numN;
+            int32_t numM;
+            float Lx;
+            float Lz;
+
+            float windSpeedX;
+            float windSpeedZ;
+            float windSpeedNormX;
+            float windSpeedNormZ;
+            float magnitude;
+            float Lw;
+            float A;
+            float smallWaves;
+        };
+
+        glm::vec2 getNormVector(float x, float z) {
+            return glm::vec2(x, z) / std::sqrt(x * x + z * z);
+        }
+
+        constexpr float g = 9.81;
+        MainPCData values = { 0.0, N, N, Lx, Lx, 40.0, 40.0, getNormVector(40, 40)[0], getNormVector(40, 40)[1], std::sqrt(40 * 40.0 + 40 * 40.0),
+            std::sqrt(40 * 40.0 + 40 * 40.0) * std::sqrt(40 * 40.0 + 40 * 40.0)  / g, 1000.0, 1.0};
 
         std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize, const PipelineLayoutBuilder& layoutBuilder, const std::string& shaderName)
         {
@@ -84,7 +115,7 @@ namespace crisp
                     { 5, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT }
                 });
 
-            layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, 2 * sizeof(int32_t) + 3 * sizeof(float));
+            layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(MainPCData));
             return createComputePipeline(renderer, workGroupSize, layoutBuilder, "ocean-oscillate.comp");
         }
 
@@ -226,16 +257,6 @@ namespace crisp
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
-            struct PCData
-            {
-                float time;
-                int32_t numN;
-                int32_t numM;
-                float Lx;
-                float Lz;
-            };
-
-            PCData values = { m_time, N, N, Lx, Lx };
             pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, values);
         };
 
@@ -273,7 +294,7 @@ namespace crisp
 
         // Environment map
         LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
-        auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
+        auto hdrName = "satara_night_4k.hdr";// config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
         auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, true);
         std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
 
@@ -308,6 +329,9 @@ namespace crisp
         material->writeDescriptor(1, 2, *m_resourceContext->getImageView("filteredMap"), m_resourceContext->getSampler("linearMipmap"));
         material->writeDescriptor(1, 3, *m_resourceContext->getImageView("brdfLut"), m_resourceContext->getSampler("linearClamp"));
 
+        m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
+
+
         for (int i = 0; i < 1; ++i)
         {
             for (int j = 0; j < 1; ++j)
@@ -333,6 +357,8 @@ namespace crisp
         }
 
         m_renderer->getDevice()->flushDescriptorUpdates();
+
+        createGui(m_app->getForm());
     }
 
     OceanScene::~OceanScene()
@@ -354,23 +380,27 @@ namespace crisp
         const auto& P = m_cameraController->getProjectionMatrix();
 
         m_transformBuffer->update(V, P);
+        m_skybox->updateTransforms(V, P);
 
         m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
 
         if (!paused)
             m_time += dt;
+
+        values.time = m_time;
     }
 
     void OceanScene::render()
     {
         m_renderGraph->clearCommandLists();
         m_renderGraph->buildCommandLists(m_renderNodes);
+        m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
         m_renderGraph->executeCommandLists();
     }
 
     std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum()
     {
-        constexpr float g = 9.81;
+
         struct Wind
         {
             glm::vec2 speed;
@@ -390,7 +420,7 @@ namespace crisp
             const float kLen2 = glm::dot(k, k) + 0.000001;
             const glm::vec2 kNorm = kLen2 == 0.0f ? glm::vec2(0.0f) : k / std::sqrtf(kLen2);
 
-            const float A = 100.0f;
+            const float A = 1000.0f;
             const float midterm = std::exp(-1.0 / (kLen2 * wind.Lw * wind.Lw)) / std::powf(kLen2, 2);
             const float kDotW = glm::dot(kNorm, wind.speedNorm);
 
@@ -410,12 +440,16 @@ namespace crisp
                 const glm::ivec2 idx = glm::ivec2(j, i) - glm::ivec2(N, N) / 2;
                 const glm::vec2 k = glm::vec2(idx) * 2.0f * glm::pi<float>() / glm::vec2(Lx, Lx);
 
+                const glm::vec2 eps0 = glm::vec2(distrib(gen), distrib(gen));
+                const glm::vec2 eps1 = glm::vec2(distrib(gen), distrib(gen));
 
-                const glm::vec2 h0 = glm::vec2(distrib(gen), distrib(gen)) * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, k));
-                glm::vec2 h0Star   = glm::vec2(distrib(gen), distrib(gen)) * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, -k));
+
+                const glm::vec2 h0 = eps0 * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, k));
+                glm::vec2 h0Star   = eps1 * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, -k));
                 h0Star.y = -h0Star.y;
 
-                initialSpectrum.emplace_back(h0, h0Star);
+                //initialSpectrum.emplace_back(h0, h0Star);
+                initialSpectrum.emplace_back(eps0, eps1);
             }
         }
 
@@ -713,5 +747,65 @@ namespace crisp
         }
 
         return imageLayerRead;
+    }
+
+    void OceanScene::createGui(gui::Form* form)
+    {
+        using namespace gui;
+        std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
+
+        panel->setId("shadowMappingPanel");
+        panel->setPadding({ 20, 20 });
+        panel->setPosition({ 20, 40 });
+        panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
+        panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
+
+        int y = 0;
+        auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal, double incr = 0.01) {
+            auto label = std::make_unique<Label>(form, labelText);
+            label->setPosition({ 0, y });
+            panel->addControl(std::move(label));
+            y += 20;
+
+            auto slider = std::make_unique<DoubleSlider>(form, minVal, maxVal);
+            slider->setId(labelText + "Slider");
+            slider->setAnchor(Anchor::TopCenter);
+            slider->setOrigin(Origin::TopCenter);
+            slider->setPosition({ 0, y });
+            slider->setValue(val);
+            slider->setIncrement(incr);
+
+            DoubleSlider* sliderPtr = slider.get();
+            panel->addControl(std::move(slider));
+            y += 30;
+
+            return sliderPtr;
+        };
+        addLabeledSlider("Wind Speed X", values.windSpeedX, 0.0, 100.0, 1.0)->valueChanged += [](double val) {
+            values.windSpeedX = val;
+
+            glm::vec2 speed = { values.windSpeedX, values.windSpeedZ };
+            values.magnitude = std::sqrt(glm::dot(speed, speed));
+            values.windSpeedNormX = values.windSpeedX / values.magnitude;
+            values.windSpeedNormZ = values.windSpeedZ / values.magnitude;
+        };
+        addLabeledSlider("Wind Speed Z", values.windSpeedZ, 0.0, 100.0, 1.0)->valueChanged += [](double val) {
+            values.windSpeedZ = val;
+
+            glm::vec2 speed = { values.windSpeedX, values.windSpeedZ };
+            values.magnitude = std::sqrt(glm::dot(speed, speed));
+            values.windSpeedNormX = values.windSpeedX / values.magnitude;
+            values.windSpeedNormZ = values.windSpeedZ / values.magnitude;
+
+        };
+        addLabeledSlider("Amplitude", values.A, 0.0, 1000.0, 5.0)->valueChanged += [](double val) {
+            values.A = val;
+
+        };
+        addLabeledSlider("smallWaves", values.smallWaves, 0.0, 10.0)->valueChanged += [](double val) {
+            values.smallWaves = val;
+        };
+
+        form->add(std::move(panel));
     }
 }

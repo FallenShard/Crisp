@@ -15,6 +15,12 @@ namespace crisp
     class ResourceContext;
     class RenderGraph;
     struct RenderNode;
+    class Skybox;
+
+    namespace gui
+    {
+        class Form;
+    }
 
     class VulkanImage;
 
@@ -31,6 +37,7 @@ namespace crisp
     private:
         std::unique_ptr<VulkanImage> createInitialSpectrum();
         int applyFFT(std::string image);
+        void createGui(gui::Form* form);
 
         Application* m_app;
 
@@ -42,6 +49,8 @@ namespace crisp
         std::unique_ptr<TransformBuffer>  m_transformBuffer;
 
         std::vector<std::unique_ptr<RenderNode>> m_renderNodes;
+
+        std::unique_ptr<Skybox> m_skybox;
 
         float m_time = 0.0;
     };
