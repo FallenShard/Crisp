@@ -271,6 +271,8 @@ namespace crisp::gui
                 renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
             }
 
+
+
             m_guiPass->end(commandBuffer, currentFrame);
 
             auto size = m_drawCommands.size();

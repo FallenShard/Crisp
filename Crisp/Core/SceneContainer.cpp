@@ -92,7 +92,7 @@ namespace crisp
             m_scene->render();
     }
 
-    void SceneContainer::onSceneSelected(std::string sceneName)
+    void SceneContainer::onSceneSelected(const std::string& sceneName)
     {
         m_renderer->finish();
         m_scene.reset();

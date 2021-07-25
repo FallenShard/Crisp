@@ -230,7 +230,6 @@ namespace crisp
 
     void RenderGraph::executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer, int virtualFrameIndex)
     {
-        constexpr auto sz = sizeof(DrawCommand);
         command.pipeline->bind(cmdBuffer);
         auto dynamicState = command.pipeline->getDynamicStateFlags();
         if (dynamicState & PipelineDynamicState::Viewport)

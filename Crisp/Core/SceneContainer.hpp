@@ -29,7 +29,7 @@ namespace crisp
         void update(float dt);
         void render() const;
 
-        void onSceneSelected(std::string sceneName);
+        void onSceneSelected(const std::string& sceneName);
 
     private:
         std::unique_ptr<AbstractScene> m_scene;

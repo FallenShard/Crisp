@@ -254,7 +254,7 @@ namespace crisp
 
     void Renderer::drawFrame()
     {
-        uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
+        const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
         // Obtain a frame that we can safely draw into
         auto& frame = m_virtualFrames[virtualFrameIndex];
         frame.waitCompletion(m_device->getHandle());

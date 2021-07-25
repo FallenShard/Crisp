@@ -27,7 +27,7 @@ namespace crisp::gui
 
         virtual void draw(const RenderSystem& renderSystem) const override;
 
-        Event<std::string> itemSelected;
+        Event<const std::string&> itemSelected;
 
         void setItems(const std::vector<std::string>& items);
         void selectItem(std::size_t index);
