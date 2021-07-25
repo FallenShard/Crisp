@@ -5,10 +5,10 @@ namespace crisp
     namespace detail
     {
         template<typename ReturnType, typename ClassType, typename... Args>
-        ClassType deduceMemberFunctionClass(ReturnType(ClassType::*)(Args...)) {}
+        ClassType deduceMemberFunctionClassType(ReturnType(ClassType::*)(Args...)) {}
 
         template<auto MemFn>
-        using MemFnClassType = decltype(deduceMemberFunctionClass(MemFn));
+        using MemFnClassType = decltype(deduceMemberFunctionClassType(MemFn));
     }
 
     template<typename ReturnType, typename... ParamTypes>
@@ -24,10 +24,10 @@ namespace crisp
             return Delegate(receiverObject, &memberFunctionCaller<MemFn, ReceiverType>);
         }
 
-        template<auto StaticFn>
+        template<auto FreeFn>
         static Delegate fromStaticFunction()
         {
-            return Delegate(nullptr, &staticFunctionCaller<StaticFn>);
+            return Delegate(nullptr, &freeFunctionCaller<FreeFn>);
         }
 
         // Executes the stored callback
@@ -64,7 +64,7 @@ namespace crisp
         void*        m_receiverObject;
         CallbackType m_callbackFunction;
 
-        Delegate(void* receiverObject, CallbackType function)
+        explicit Delegate(void* receiverObject, CallbackType function)
             : m_receiverObject(receiverObject)
             , m_callbackFunction(function)
         {
@@ -77,10 +77,52 @@ namespace crisp
             return (static_cast<ReceiverType*>(receiverObject)->*MemFn)(args...);
         }
 
-        template<ReturnType(*SMethod)(ParamTypes...)>
-        static ReturnType staticFunctionCaller(void* receiverObject, ParamTypes... args)
+        template<auto FreeFn>
+        static ReturnType freeFunctionCaller(void* receiverObject, ParamTypes... args)
         {
-            return (*SMethod)(args...);
+            return (*FreeFn)(args...);
         }
     };
+
+    namespace detail
+    {
+        template <auto MemFn>
+        struct MemFnDeductionContext {};
+
+        template <typename ReturnType, typename ClassType, typename... Args, auto (ClassType::* MemFn)(Args...)->ReturnType>
+        struct MemFnDeductionContext<MemFn>
+        {
+            static Delegate<ReturnType, Args...> fromMemberFunction(ClassType* obj)
+            {
+                return Delegate<ReturnType, Args...>::template fromMemberFunction<MemFn>(obj);
+            }
+        };
+
+        template <auto FreeFn>
+        struct FreeFnDeductionContext {};
+
+        template <typename ReturnType, typename... Args, auto (*FreeFn)(Args...)->ReturnType>
+        struct FreeFnDeductionContext<FreeFn>
+        {
+            static Delegate<ReturnType, Args...> fromFreeFunction()
+            {
+                return Delegate<ReturnType, Args...>::template fromStaticFunction<FreeFn>();
+            }
+
+            ReturnType operator()(Args... args) const
+            {
+                return FreeFn(args...);
+            }
+        };
+    }
+
+    template <auto MemFn, typename ReceiverType = detail::MemFnClassType<MemFn>>
+    auto createDelegate(ReceiverType* obj) {
+        return detail::MemFnDeductionContext<MemFn>::template fromMemberFunction(obj);
+    }
+
+    template<auto FreeFn>
+    auto createDelegate() {
+        return detail::FreeFnDeductionContext<FreeFn>::template fromFreeFunction();
+    }
 }

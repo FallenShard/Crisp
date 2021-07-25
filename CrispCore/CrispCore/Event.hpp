@@ -4,6 +4,7 @@
 #include <vector>
 #include <functional>
 #include <variant>
+#include <iostream>
 #include <algorithm>
 
 #include "Delegate.hpp"
@@ -42,14 +43,13 @@ namespace crisp
         template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
         void subscribe(ReceiverType* obj)
         {
-            m_delegates.insert(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
+            m_delegates.insert(createDelegate<F>(obj));
         }
 
-        template<auto F>
+        template<auto Fn>
         void subscribeStatic()
         {
-            //auto del = Delegate<void, ParamTypes...>::fromStaticFunction<F>();
-            //m_delegates.insert(Delegate<void, ParamTypes...>::fromStaticFunction<callbackMethod>());
+            m_delegates.insert(createDelegate<Fn>());
         }
 
         template <typename FuncType>
@@ -86,7 +86,7 @@ namespace crisp
         template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
         void unsubscribe(ReceiverType* obj)
         {
-            m_delegates.erase(Delegate<void, ParamTypes...>::fromMemberFunction<F>(obj));
+            m_delegates.erase(createDelegate<F>(obj));
         }
 
         void operator-=(Delegate<void, ParamTypes...> del)

@@ -58,7 +58,7 @@ TEST(EventTest, Subscriptions)
     Event<int, std::string> customEvent;
     DelegateTester tester;
 
-    Delegate<void, int, std::string> del = Delegate<void, int, std::string>::fromMemberFunction<&DelegateTester::onEventTriggered>(&tester);
+    const auto del = createDelegate<&DelegateTester::onEventTriggered>(&tester);
 
     customEvent += del;
 
@@ -82,7 +82,7 @@ TEST(EventTest, Disconnects)
     Event<const EventData&> event;
     DelegateTester tester;
 
-    Delegate<void, const EventData&> del = Delegate<void, const EventData&>::fromMemberFunction<&DelegateTester::onEventData>(&tester);
+    const auto del = createDelegate<&DelegateTester::onEventData>(&tester);
 
     event += del;
     event += {&tester, [](const EventData& data) {}};
@@ -103,5 +103,9 @@ TEST(EventTest, Disconnects)
 TEST(EventTest, StaticFunctions)
 {
     Event<const std::string&> event;
-    Delegate<void, const std::string&> del = Delegate<void, const std::string&>::fromStaticFunction<&printStuff>();
+
+    const auto freeDelegate = createDelegate<printStuff>();
+    freeDelegate("Hello World!");
+
+    event.subscribeStatic<&printStuff>();
 }
