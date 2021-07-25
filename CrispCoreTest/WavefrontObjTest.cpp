@@ -4,41 +4,46 @@
 
 using namespace crisp;
 
+namespace
+{
+    const std::filesystem::path ResourceDir("D:/version-control/Crisp/Resources/Meshes");
+}
 
-//TEST(WavefrontObjTest, LoadAjax)
-//{
-//    WavefrontObjReader reader("D:/version-control/Crisp/Resources/Meshes/ajax.obj");
-//    EXPECT_EQ(reader.getPositions().size(), 409'676);
-//    EXPECT_EQ(reader.getTriangles().size(), 544'566);
-//}
-//
-//TEST(WavefrontObjTest, LoadBuddha)
-//{
-//    auto reader = WavefrontObjReader("D:/version-control/Crisp/Resources/Meshes/buddha.obj");
-//    EXPECT_EQ(reader.getPositions().size(), 49'990);
-//    EXPECT_EQ(reader.getTriangles().size(), 100'000);
-//}
-//
-//TEST(WavefrontObjTest, LoadCube)
-//{
-//    auto reader = WavefrontObjReader("D:/version-control/Crisp/Resources/Meshes/cube.obj");
-//    EXPECT_EQ(reader.getPositions().size(), 24);
-//    EXPECT_EQ(reader.getTriangles().size(), 12);
-//}
-//
-//TEST(WavefrontObjTest, LoadShaderBall)
-//{
-//    auto reader = WavefrontObjReader("D:/version-control/Crisp/Resources/Meshes/shader_ball.obj");
-//    EXPECT_EQ(reader.getPositions().size(), 35'877);
-//    EXPECT_EQ(reader.getTriangles().size(), 67'832);
-//}
-//
-//TEST(WavefrontObjTest, LoadCamelHead)
-//{
-//    auto reader = WavefrontObjReader("D:/version-control/Crisp/Resources/Meshes/camelhead.obj");
-//    EXPECT_EQ(reader.getPositions().size(), 11'381);
-//    EXPECT_EQ(reader.getTriangles().size(), 22'704);
-//}
+
+TEST(WavefrontObjTest, LoadAjax)
+{
+    WavefrontObjReader reader(ResourceDir / "ajax.obj");
+    EXPECT_EQ(reader.getPositions().size(), 409'676);
+    EXPECT_EQ(reader.getTriangles().size(), 544'566);
+}
+
+TEST(WavefrontObjTest, LoadBuddha)
+{
+    auto reader = WavefrontObjReader(ResourceDir / "buddha.obj");
+    EXPECT_EQ(reader.getPositions().size(), 49'990);
+    EXPECT_EQ(reader.getTriangles().size(), 100'000);
+}
+
+TEST(WavefrontObjTest, LoadCube)
+{
+    auto reader = WavefrontObjReader(ResourceDir / "cube.obj");
+    EXPECT_EQ(reader.getPositions().size(), 24);
+    EXPECT_EQ(reader.getTriangles().size(), 12);
+}
+
+TEST(WavefrontObjTest, LoadShaderBall)
+{
+    auto reader = WavefrontObjReader(ResourceDir / "shader_ball.obj");
+    EXPECT_EQ(reader.getPositions().size(), 35'877);
+    EXPECT_EQ(reader.getTriangles().size(), 67'832);
+}
+
+TEST(WavefrontObjTest, LoadCamelHead)
+{
+    auto reader = WavefrontObjReader(ResourceDir / "camelhead.obj");
+    EXPECT_EQ(reader.getPositions().size(), 11'381);
+    EXPECT_EQ(reader.getTriangles().size(), 22'704);
+}
 
 //glm::vec2 compMul(const glm::vec2& z, const glm::vec2& w)
 //{

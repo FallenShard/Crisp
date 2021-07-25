@@ -3,8 +3,10 @@
 #include "CrispCore/StringUtils.hpp"
 
 #include <spdlog/spdlog.h>
+#include <robin_hood/robin_hood.h>
 
 #include <iostream>
+#include <sstream>
 #include <charconv>
 #include <array>
 #include <string_view>
@@ -171,24 +173,24 @@ namespace crisp
 
         std::ifstream file(m_path);
 
-        std::unordered_map<ObjVertex, unsigned int, ObjVertexHasher> vertexMap;
+        robin_hood::unordered_flat_map<ObjVertex, unsigned int, ObjVertexHasher> vertexMap;
         std::vector<glm::vec3> positionList;
         std::vector<glm::vec3> normalList;
         std::vector<glm::vec2> texCoordList;
         std::vector<glm::vec3> paramList;
         std::vector<MeshPart> materialList;
-        std::unordered_map<std::string, Material> materials;
+        robin_hood::unordered_flat_map<std::string, Material> materials;
 
         std::string line;
         unsigned int uniqueVertexId = 0;
         while (std::getline(file, line))
         {
-            std::size_t prefixEnd = line.find(' ', 0);
-            std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
+            const std::size_t prefixEnd = line.find(' ', 0);
+            const std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
 
             if (prefix == "o")
             {
-                auto tokens = fixedTokenize<2>(line, " ");
+                const auto tokens = fixedTokenize<2>(line, " ");
                 MeshPart meshPart;
                 meshPart.tag = tokens[1];
                 meshPart.offset = 3 * static_cast<uint32_t>(m_triangles.size());
@@ -197,7 +199,7 @@ namespace crisp
             }
             else if (prefix == "mtllib")
             {
-                auto tokens = fixedTokenize<2>(line, " ");
+                const auto tokens = fixedTokenize<2>(line, " ");
                 std::string_view materialFilename = tokens[1];
                 std::filesystem::path materialFilePath = objFilePath.parent_path() / materialFilename;
                 if (std::filesystem::exists(materialFilePath))
@@ -207,7 +209,7 @@ namespace crisp
             {
                 glm::vec3 pos;
 
-                auto tokens = fixedTokenize<4>(line, " "); // v x y z, ignore w
+                const auto tokens = fixedTokenize<4>(line, " "); // v x y z, ignore w
                 for (int i = 0; i < decltype(pos)::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), pos[i]);
 
@@ -217,7 +219,7 @@ namespace crisp
             {
                 glm::vec2 texCoord;
 
-                auto tokens = fixedTokenize<3>(line, " ");
+                const auto tokens = fixedTokenize<3>(line, " ");
                 for (int i = 0; i < glm::vec2::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), texCoord[i]);
 
@@ -227,7 +229,7 @@ namespace crisp
             {
                 glm::vec3 normal;
 
-                auto tokens = fixedTokenize<4>(line, " ");
+                const auto tokens = fixedTokenize<4>(line, " ");
                 for (int i = 0; i < glm::vec3::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), normal[i]);
 
@@ -237,7 +239,7 @@ namespace crisp
             {
                 glm::vec3 param;
 
-                auto tokens = fixedTokenize<4>(line, " ");
+                const auto tokens = fixedTokenize<4>(line, " ");
                 for (int i = 0; i < glm::vec3::length(); ++i)
                     std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), param[i]);
 
@@ -247,7 +249,7 @@ namespace crisp
             {
                 glm::uvec3 faceIndices;
 
-                auto tokens = fixedTokenize<4>(line, " ");
+                const auto tokens = fixedTokenize<4>(line, " ");
                 std::array<ObjVertex, 3> vertices;
 
                 for (int i = 0; i < 3; i++)
@@ -257,7 +259,7 @@ namespace crisp
 
                 for (int i = 0; i < 3; i++)
                 {
-                    auto it = vertexMap.find(vertices[i]);
+                    const auto it = vertexMap.find(vertices[i]);
                     if (it == vertexMap.end())
                     {
                         vertexMap[vertices[i]] = uniqueVertexId;
@@ -274,7 +276,7 @@ namespace crisp
             }
             else if (prefix == "usemtl")
             {
-                auto tokens = fixedTokenize<2>(line, " ");
+                const auto tokens = fixedTokenize<2>(line, " ");
                 MeshPart meshPart;
                 meshPart.tag = tokens[1];
                 meshPart.offset = 3 * static_cast<uint32_t>(m_triangles.size());

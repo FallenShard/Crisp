@@ -1,12 +1,19 @@
 #include "OpenEXRWriter.hpp"
 
+#include <tinyexr/tinyexr.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 #include <vector>
 #include <iostream>
 
-#include <tinyexr/tinyexr.h>
-
 namespace crisp
 {
+    namespace
+    {
+        auto logger = spdlog::stdout_color_st("OpenEXRWriter");
+    }
+
     OpenEXRWriter::OpenEXRWriter()
     {
     }
@@ -68,17 +75,16 @@ namespace crisp
             header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF;  // pixel type of output image to be stored in .EXR
         }
 
-        const char* err;
-        int ret = SaveEXRImageToFile(&image, &header, fileName.c_str(), &err);
-        if (ret != TINYEXR_SUCCESS)
+        const char* err = nullptr;
+        if (SaveEXRImageToFile(&image, &header, fileName.c_str(), &err) != TINYEXR_SUCCESS)
         {
-            std::cerr << "Failed to save exr file: " << err << std::endl;
+            logger->error("Failed to save EXR image into file {}: {}", fileName, err);
+            FreeEXRHeader(&header);
+            FreeEXRImage(&image);
             return;
         }
-        std::cout << "Saved exr file: " << fileName << std::endl;
 
-        free(header.channels);
-        free(header.pixel_types);
-        free(header.requested_pixel_types);
+        FreeEXRHeader(&header);
+        FreeEXRImage(&image);
     }
 }

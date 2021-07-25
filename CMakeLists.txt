@@ -22,6 +22,7 @@ add_subdirectory(Externals/gzip)
 add_subdirectory(Externals/zlib)
 add_subdirectory(Externals/gtest)
 add_subdirectory(Externals/spdlog)
+add_subdirectory(Externals/robin_hood)
 
 add_subdirectory(CrispCore)
 add_subdirectory(CrispCoreTest)

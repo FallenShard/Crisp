@@ -7,7 +7,7 @@
 
 namespace crisp
 {
-    std::vector<std::string> tokenize(const std::string& string, const std::string& delimiter);
+    std::vector<std::string> tokenize(const std::string_view string, const std::string& delimiter);
 
     template <std::size_t TokenCount>
     std::array<std::string_view, TokenCount> fixedTokenize(const std::string_view string, const std::string_view delimiter, bool skipEmptyTokens = true)
@@ -18,29 +18,16 @@ namespace crisp
 
         size_t tokenIdx = 0;
 
-        while (start < string.size())
+        while (start < string.size() && end != std::string::npos && tokenIdx < TokenCount)
         {
             end = string.find(delimiter, start);
 
-            if (tokenIdx < TokenCount)
+            if (!skipEmptyTokens || end != start)
             {
-                if (skipEmptyTokens)
-                {
-                    if (end != start)
-                        result[tokenIdx++] = string.substr(start, end - start);
-                }
-                else
-                {
-                    result[tokenIdx++] = string.substr(start, end - start);
-                }
+                result[tokenIdx++] = string.substr(start, end - start);
             }
-            else
-                break;
 
-            if (end == std::string_view::npos)
-                break;
-
-            start = end + 1;
+            start = end + delimiter.size();
         }
 
         return result;
