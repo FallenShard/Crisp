@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "Delegate.hpp"
+#include "ConnectionHandler.hpp"
 
 namespace crisp
 {
@@ -53,7 +54,7 @@ namespace crisp
         }
 
         template <typename FuncType>
-        ConnectionToken subscribe(FuncType&& func)
+        ConnectionToken operator+=(FuncType&& func)
         {
             ConnectionToken token = m_tokenCounter++;
             m_connections.emplace_back(token, std::forward<FuncType>(func));
@@ -61,11 +62,14 @@ namespace crisp
         }
 
         template <typename FuncType>
-        ConnectionToken operator+=(FuncType&& func)
+        ConnectionHandler subscribe(FuncType&& func)
         {
             ConnectionToken token = m_tokenCounter++;
             m_connections.emplace_back(token, std::forward<FuncType>(func));
-            return token;
+            return ConnectionHandler([this, token]
+            {
+                unsubscribe(token);
+            });
         }
 
         void operator+=(Connection connection)

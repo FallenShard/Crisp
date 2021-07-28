@@ -108,4 +108,18 @@ TEST(EventTest, StaticFunctions)
     freeDelegate("Hello World!");
 
     event.subscribeStatic<&printStuff>();
+    EXPECT_EQ(event.getSubscriberCount(), 1);
+}
+
+TEST(EventTest, Autodisconnect)
+{
+    Event<const std::string&> event;
+    event.subscribeStatic<&printStuff>();
+
+    {
+        const auto handler = event.subscribe([](const std::string& a) { std::cout << a.size() << std::endl; });
+        EXPECT_EQ(event.getSubscriberCount(), 2);
+    }
+
+    EXPECT_EQ(event.getSubscriberCount(), 1);
 }
