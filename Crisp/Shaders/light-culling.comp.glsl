@@ -46,8 +46,6 @@ layout (set = 0, binding = 4) buffer LightIndexList
     uint lightIndexList[];
 };
 
-//layout(set = 1, binding = 0, r32f) uniform readonly image2D depthBuffer;
-
 layout(set = 1, binding = 0, rg32ui) uniform writeonly uimage2D lightGrid;
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;

@@ -21,7 +21,7 @@ layout(set = 0, binding = 1) uniform Camera
 // ----- PBR Microfacet BRDF -------
 layout(set = 0, binding = 2) uniform Material
 {
-    vec3 albedo;
+    vec4 albedo;
     float metallic;
     float roughness;
 } mat;
@@ -169,15 +169,18 @@ void main()
     //vec3 debugColor;
     //const float shadow = getCsmShadowCoeffDebug(, debugColor);
 
+    fragColor = vec4(vec3(eyeN), 1.0f);
+
     vec3 acc = vec3(0.0f);
 
-    vec3 eyeL;
-    //for (int i = 0; i < 1024; ++i)
-    //{
-    //    vec3 Le = evalPointLightRadiance(pointLights[i].position.xyz, pointLights[i].spectrum.xyz, eyeL);
-    //    acc += max(dot(eyeN, eyeL), 0.0f) * Le;
-    //}
+//     vec3 eyeL;
+//     //for (int i = 0; i < 1024; ++i)
+//     //{
+//     //    vec3 Le = evalPointLightRadiance(pointLights[i].position.xyz, pointLights[i].spectrum.xyz, eyeL);
+//     //    acc += max(dot(eyeN, eyeL), 0.0f) * Le;
+//     //}
 
+    vec3 eyeL;
     uvec2 lightIndexData = uvec2(imageLoad(lightGrid, ivec2(gl_FragCoord.xy) / ivec2(16)).xy);
     for (uint i = 0; i < lightIndexData[1]; ++i)
     {
@@ -187,12 +190,12 @@ void main()
     }
 
 
-    //vec3 Le = evalPointLightRadiance(pointLights[0].position.xyz, pointLights[0].spectrum.xyz, pointLights[0].params.r, eyeL);
-    //acc = max(dot(eyeN, eyeL), 0.0f) * Le;
-//
-//
-//
-    //fragColor = vec4(Lenv * 0.0f + Li * getVsmCoeff(), 1.0f);
+//     //vec3 Le = evalPointLightRadiance(pointLights[0].position.xyz, pointLights[0].spectrum.xyz, pointLights[0].params.r, eyeL);
+//     //acc = max(dot(eyeN, eyeL), 0.0f) * Le;
+// //
+// //
+// //
+//     //fragColor = vec4(Lenv * 0.0f + Li * getVsmCoeff(), 1.0f);
 
     fragColor = vec4(acc, 1.0f);
     //fragColor = vec4(vec3(shadow), 1.0f);

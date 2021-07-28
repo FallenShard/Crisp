@@ -202,15 +202,15 @@ namespace crisp
 
         auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
 
-        auto [diffEnv, diffEnvView] = setupDiffuseEnvMap(m_renderer, *cubeMapView, 512);
+        auto [diffEnv, diffEnvView] = setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
         m_resourceContext->addImageWithView("envIrrMap", std::move(diffEnv), std::move(diffEnvView));
-        auto [reflEnv, reflEnvView] = setupReflectEnvMap(m_renderer, *cubeMapView, 1024);
+        auto [reflEnv, reflEnvView] = setupReflectEnvMap(m_renderer, *cubeMapView, 512);
         m_resourceContext->addImageWithView("filteredMap", std::move(reflEnv), std::move(reflEnvView));
 
         m_resourceContext->addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
         m_resourceContext->addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
 
-        auto pbrPipeline = m_resourceContext->createPipeline("pbrUnif", "Pbr.lua", m_renderGraph->getRenderPass(MainPass), 0);
+        auto pbrPipeline = m_resourceContext->createPipeline("pbrUnif", "PbrClusteredLights.lua", m_renderGraph->getRenderPass(MainPass), 0);
         auto pbrMaterial = m_resourceContext->createMaterial("pbrUnif", pbrPipeline);
         pbrMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
         pbrMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
@@ -234,7 +234,7 @@ namespace crisp
     void ClusteredLightingScene::createShaderball()
     {
         std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
-        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent, VertexAttribute::Bitangent };
+        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
 
         TriangleMesh mesh(m_renderer->getResourcesPath() / "Meshes/sponza_fixed.obj", pbrVertexFormat);
         m_resourceContext->addGeometry("shaderBallPbr", std::make_unique<Geometry>(m_renderer, mesh, pbrVertexFormat));

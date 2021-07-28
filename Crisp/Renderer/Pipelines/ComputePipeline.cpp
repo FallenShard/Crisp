@@ -69,17 +69,12 @@ namespace crisp
                 { 3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT },
                 { 4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT }
             })
-            //.defineDescriptorSet(1, true,
-            //{
-            //    { 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT },
-            //})
             .defineDescriptorSet(1, true,
             {
                 { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT },
             });
 
         VulkanDevice* device = renderer->getDevice();
-
         auto layout = layoutBuilder.create(renderer->getDevice());
 
         std::vector<VkSpecializationMapEntry> specEntries =
@@ -106,6 +101,8 @@ namespace crisp
         vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
         workGroupSizes[pipeline] = workGroupSize;
 
-        return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
+        auto uniqueHandle = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
+        uniqueHandle->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
+        return uniqueHandle;
     }
 }

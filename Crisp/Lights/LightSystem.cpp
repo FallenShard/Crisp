@@ -242,7 +242,6 @@ namespace crisp
         cullingPass.material->writeDescriptor(0, 2, m_pointLightBuffer->getDescriptorInfo());
         cullingPass.material->writeDescriptor(0, 3, cameraBuffer.getDescriptorInfo());
         cullingPass.material->writeDescriptor(0, 4, m_lightIndexListBuffer->getDescriptorInfo());
-        //cullingPass.material->writeDescriptor(1, 0, *depthPrePass.renderPass, 0, nullptr);
         cullingPass.material->writeDescriptor(1, 0, m_lightGridViews, nullptr, VK_IMAGE_LAYOUT_GENERAL );
         cullingPass.material->setDynamicBufferView(0, *m_lightIndexCountBuffer, 0);
         cullingPass.material->setDynamicBufferView(1, *m_pointLightBuffer, 0);
@@ -250,6 +249,7 @@ namespace crisp
         cullingPass.material->setDynamicBufferView(3, *m_lightIndexListBuffer, 0);
         cullingPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
         {
+            // Before culling can start, zero out the light index count buffer
             glm::uvec4 zero(0);
 
             VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
@@ -278,19 +278,6 @@ namespace crisp
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 0, 0, nullptr, 1, &barrier, 0, nullptr);
         });
-
-        ////m_computeCellCountPipeline->bind(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
-        ////m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.dim);
-        ////m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(m_gridParams.dim), m_gridParams.cellSize);
-        ////m_computeCellCountPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(m_gridParams.dim) + sizeof(m_gridParams.cellSize), m_numParticles);
-        ////m_computeCellCountDescGroup.setDynamicOffset(0, m_prevSection* m_numParticles * sizeof(glm::vec4));
-        ////m_computeCellCountDescGroup.setDynamicOffset(1, m_currentSection* m_gridParams.numCells * sizeof(uint32_t));
-        ////m_computeCellCountDescGroup.setDynamicOffset(2, m_currentSection* m_numParticles * sizeof(uint32_t));
-        ////m_computeCellCountDescGroup.bind<VK_PIPELINE_BIND_POINT_COMPUTE>(cmdBuffer, m_computeCellCountPipeline->getPipelineLayout()->getHandle());
-        ////
-        ////glm::uvec3 numGroups = getNumWorkGroups(glm::uvec3(m_numParticles, 1, 1), *m_computeCellCountPipeline);
-        ////vkCmdDispatch(cmdBuffer, numGroups.x, numGroups.y, numGroups.z);
-        ////insertComputeBarrier(cmdBuffer);
 
         // TODO: Unsorted
 
