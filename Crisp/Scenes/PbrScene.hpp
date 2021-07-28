@@ -4,6 +4,7 @@
 #include "Renderer/Renderer.hpp"
 
 #include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/ConnectionHandler.hpp>
 
 namespace crisp
 {
@@ -68,6 +69,8 @@ namespace crisp
 
         Renderer*    m_renderer;
         Application* m_app;
+
+        std::vector<ConnectionHandler> m_connectionHandlers;
 
         std::unique_ptr<CameraController> m_cameraController;
         std::unique_ptr<LightSystem>      m_lightSystem;

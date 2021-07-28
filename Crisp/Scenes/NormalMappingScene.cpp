@@ -152,9 +152,9 @@ namespace crisp
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 10.0f)));
 
         m_resourceContext->addSampler("linearRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "hex-stones1-normal-dx.png", VK_FORMAT_R8G8B8A8_UNORM, false));
-        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "hex-stones1-albedo.png", VK_FORMAT_R8G8B8A8_SRGB, false));
-        m_resourceContext->addImageWithView("specularMap", createTexture(m_renderer, "hex-stones1-metallic.png", VK_FORMAT_R8G8B8A8_UNORM, false));
+        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "PbrMaterials/Hexstone/normal.png", VK_FORMAT_R8G8B8A8_UNORM, false));
+        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "PbrMaterials/Hexstone/diffuse.png", VK_FORMAT_R8G8B8A8_SRGB, false));
+        m_resourceContext->addImageWithView("specularMap", createTexture(m_renderer, "PbrMaterials/Hexstone/metallic.png", VK_FORMAT_R8G8B8A8_UNORM, false));
 
         VulkanPipeline* pipeline = m_resourceContext->createPipeline("normalMap", "NormalMap.lua", m_renderGraph->getRenderPass(MainPass), 0);
         Material* material = m_resourceContext->createMaterial("normalMap", pipeline);

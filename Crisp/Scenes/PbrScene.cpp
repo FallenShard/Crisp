@@ -351,7 +351,7 @@ namespace crisp
         std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
         std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
 
-        TriangleMesh mesh(m_renderer->getResourcesPath() / "Meshes/ShaderBall_FWVN_PosX.obj", pbrVertexFormat);
+        const TriangleMesh mesh(m_renderer->getResourcesPath() / "Meshes/ShaderBall_FWVN_PosX.obj", pbrVertexFormat);
         m_resourceContext->addGeometry("shaderBallPbr", std::make_unique<Geometry>(m_renderer, mesh, pbrVertexFormat));
         m_resourceContext->addGeometry("shaderBallShadow", std::make_unique<Geometry>(m_renderer, mesh, shadowVertexFormat));
 
@@ -402,7 +402,7 @@ namespace crisp
 
     void PbrScene::setupInput()
     {
-        m_app->getWindow()->keyPressed += [this](Key key, int)
+        m_connectionHandlers.emplace_back(m_app->getWindow()->keyPressed.subscribe([this](Key key, int)
         {
             switch (key)
             {
@@ -410,17 +410,13 @@ namespace crisp
                 m_resourceContext->recreatePipelines();
                 break;
             }
-        };
+        }));
 
-        m_app->getWindow()->mouseWheelScrolled += [this](double delta)
+        m_connectionHandlers.emplace_back(m_app->getWindow()->mouseWheelScrolled.subscribe([this](double delta)
         {
-            float fov = m_cameraController->getCamera().getFovY();
-            if (delta < 0)
-                fov = std::min(90.0f, fov + 5.0f);
-            else
-                fov = std::max(5.0f, fov - 5.0f);
-            m_cameraController->getCamera().setFovY(fov);
-        };
+            const float fovY = std::max(5.0f, std::min(90.0f, m_cameraController->getCamera().getFovY() + std::copysignf(5.0f, -delta)));
+            m_cameraController->getCamera().setFovY(fovY);
+        }));
     }
 
     void PbrScene::createGui(gui::Form* form)

@@ -117,8 +117,7 @@ namespace crisp
         for (const auto& attrib : vertexAttribs)
             interleavedBuffer.vertexSize += attrib.size;
 
-        uint32_t numVertices = getNumVertices();
-        interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * numVertices);
+        interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * getNumVertices());
 
         uint32_t currOffset = 0;
         for (const auto& attrib : vertexAttribs)
