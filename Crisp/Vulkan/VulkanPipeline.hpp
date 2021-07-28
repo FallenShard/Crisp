@@ -68,6 +68,8 @@ namespace crisp
             m_luaFilepath = path;
         }
 
+        void swapAll(VulkanPipeline& other);
+
     protected:
         template <typename T, typename ...Ts>
         inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const

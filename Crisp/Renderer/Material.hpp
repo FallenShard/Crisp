@@ -43,8 +43,8 @@ namespace crisp
         inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const { return m_dynamicBufferViews; }
 
     private:
-        std::array<std::vector<VkDescriptorSet>, Renderer::NumVirtualFrames>  m_sets;
-        std::array<std::vector<uint32_t>,        Renderer::NumVirtualFrames>  m_dynamicOffsets;
+        std::array<std::vector<VkDescriptorSet>, Renderer::NumVirtualFrames> m_sets;
+        std::array<std::vector<uint32_t>,        Renderer::NumVirtualFrames> m_dynamicOffsets;
         std::vector<DynamicBufferView> m_dynamicBufferViews;
 
         VulkanPipeline* m_pipeline;

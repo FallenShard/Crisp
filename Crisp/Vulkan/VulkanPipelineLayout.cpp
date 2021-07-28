@@ -75,14 +75,15 @@ namespace crisp
 
     void VulkanPipelineLayout::swap(VulkanPipelineLayout& other)
     {
-        /*std::vector<VkDescriptorSetLayout>                     m_descriptorSetLayouts;
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_descriptorSetBindings;
-        std::vector<VkPushConstantRange>                       m_pushConstants;
-        std::vector<bool> m_descriptorSetBufferedStatus;
+        std::swap(m_descriptorSetLayouts, other.m_descriptorSetLayouts);
+        std::swap(m_descriptorSetBindings, other.m_descriptorSetBindings);
+        std::swap(m_pushConstants, other.m_pushConstants);
+        std::swap(m_descriptorSetBufferedStatus, other.m_descriptorSetBufferedStatus);
 
-        std::vector<std::vector<uint32_t>> m_dynamicBufferIndices;
-        std::size_t m_dynamicBufferCount;
+        std::swap(m_dynamicBufferIndices, other.m_dynamicBufferIndices);
+        std::swap(m_dynamicBufferCount, other.m_dynamicBufferCount);
 
-        std::unique_ptr<DescriptorSetAllocator> m_setAllocator;*/
+
+        //std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
     }
 }

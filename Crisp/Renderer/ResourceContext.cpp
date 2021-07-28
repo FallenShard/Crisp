@@ -119,7 +119,7 @@ namespace crisp
             for (auto& [id, info] : m_pipelineInfos)
             {
                 auto pipeline = m_renderer->createPipelineFromLua(info.luaFilename, *info.renderPass, info.subpassIndex);
-                m_pipelines[id]->swap(*pipeline);
+                m_pipelines[id]->swapAll(*pipeline);
             }
         });
     }
