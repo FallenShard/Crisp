@@ -18,7 +18,7 @@ namespace crisp
 
         size_t tokenIdx = 0;
 
-        while (start < string.size() && end != std::string::npos && tokenIdx < TokenCount)
+        while (end != std::string::npos && tokenIdx < TokenCount)
         {
             end = string.find(delimiter, start);
 
