@@ -16,16 +16,6 @@ namespace crisp
             "vert", "frag", "tesc", "tese", "geom", "comp", "rgen", "rchit", "rmiss"
         };
 
-        void replaceAll(std::string& string, const std::string& key, const std::string& replacement)
-        {
-            std::size_t pos = 0;
-            while ((pos = string.find(key, pos)) != std::string::npos)
-            {
-                string.replace(pos, key.size(), replacement);
-                pos += replacement.size();
-            }
-        }
-
         auto logger = spdlog::stderr_color_mt("ShaderCompiler");
     }
 
@@ -34,7 +24,14 @@ namespace crisp
         logger->info("Processing and compiling shaders at path: {}", inputDir.string());
         logger->info("Spv Destination path: {}", outputDir.string());
 
-        std::filesystem::create_directories(outputDir);
+        if (!std::filesystem::exists(outputDir))
+        {
+            if (!std::filesystem::create_directories(outputDir))
+            {
+                logger->error("Failed to create output directory {}", outputDir.string());
+                return;
+            }
+        }
 
         std::array<char, 4096> lineBuffer;
         for (const auto& inputEntry : std::filesystem::directory_iterator(inputDir))
@@ -42,37 +39,35 @@ namespace crisp
             if (inputEntry.is_directory())
                 continue;
 
-            std::filesystem::path inputPath = inputEntry.path();
-
-            if (inputPath.extension().string() != ".glsl")
+            const std::filesystem::path inputPath = inputEntry.path();
+            if (inputPath.extension() != ".glsl")
             {
                 logger->warn("{} has no .glsl extension!\n", inputPath.string());
                 continue;
             }
 
             // shader-name.<stage>.glsl is the file name format
-            auto shaderType = inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
-            if (!shaderExtensions.count(shaderType))
+            // First getting the stem and then its "extension" will give us the stage name
+            const std::string shaderType = inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
+            if (!shaderExtensions.contains(shaderType))
             {
                 logger->warn("{} is not a valid glsl shader type!\n", shaderType);
                 continue;
             }
 
-            std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
+            const std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
 
-            std::filesystem::file_time_type inputModifiedTs = inputEntry.last_write_time();
-            std::filesystem::file_time_type outputModifiedTs;
-            if (std::filesystem::exists(outputPath))
-                outputModifiedTs = std::filesystem::last_write_time(outputPath);
+            const std::filesystem::file_time_type inputModifiedTs = inputEntry.last_write_time();
+            const std::filesystem::file_time_type outputModifiedTs = std::filesystem::exists(outputPath) ?
+                std::filesystem::last_write_time(outputPath) : std::filesystem::file_time_type{};
 
             if (inputModifiedTs > outputModifiedTs)
             {
-                if (std::filesystem::exists(outputPath))
-                    std::filesystem::remove(outputPath);
+                const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
 
                 logger->info("Compiling {}", inputPath.filename().string());
                 std::string command = "glslangValidator.exe -V -o ";
-                command += outputPath.string();
+                command += tempOutputPath.string();
                 command += " -S ";
                 command += shaderType;
                 command += " ";
@@ -82,6 +77,7 @@ namespace crisp
                 FILE* pipe = _popen(command.c_str(), "rt");
                 if (!pipe)
                 {
+                    logger->error("Failed to open the pipe for {}", command);
                     _pclose(pipe);
                     continue;
                 }
@@ -90,22 +86,29 @@ namespace crisp
                 lineBuffer.fill(0);
                 while (fgets(lineBuffer.data(), lineBuffer.size(), pipe))
                 {
-                    std::size_t len = std::strlen(lineBuffer.data());
-                    std::string_view view(lineBuffer.data(), len);
+                    const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
                     if (view.substr(0, 5) == "ERROR")
                         logger->error("{}", view);
                     else if (view.substr(0, 7) == "WARNING")
                         logger->warn("{}", view);
                 }
 
-                /* Close pipe and print return value of pPipe. */
+                // Close the pipe and overwrite the output spv on success
                 if (feof(pipe))
                 {
-                    int retVal = _pclose(pipe);
+                    const int retVal = _pclose(pipe);
                     if (retVal == 0)
-                        logger->info("Success");
+                    {
+                        // On success, we remove the older version of the compiled shader and rename the temp file appropriately
+                        if (std::filesystem::exists(outputPath))
+                            std::filesystem::remove(outputPath);
+
+                        std::filesystem::rename(tempOutputPath, outputPath);
+                    }
                     else
+                    {
                         logger->error("Pipe process returned : {}", retVal);
+                    }
                 }
                 else
                 {
