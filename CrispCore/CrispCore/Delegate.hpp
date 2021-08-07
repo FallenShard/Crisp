@@ -64,6 +64,8 @@ namespace crisp
         void*        m_receiverObject;
         CallbackType m_callbackFunction;
 
+        friend std::hash<Delegate>;
+
         explicit Delegate(void* receiverObject, CallbackType function)
             : m_receiverObject(receiverObject)
             , m_callbackFunction(function)
@@ -87,10 +89,10 @@ namespace crisp
     namespace detail
     {
         template <auto MemFn>
-        struct MemFnDeductionContext {};
+        struct FuncDeductionContext {};
 
         template <typename ReturnType, typename ClassType, typename... Args, auto (ClassType::* MemFn)(Args...)->ReturnType>
-        struct MemFnDeductionContext<MemFn>
+        struct FuncDeductionContext<MemFn>
         {
             static Delegate<ReturnType, Args...> fromMemberFunction(ClassType* obj)
             {
@@ -98,11 +100,8 @@ namespace crisp
             }
         };
 
-        template <auto FreeFn>
-        struct FreeFnDeductionContext {};
-
         template <typename ReturnType, typename... Args, auto (*FreeFn)(Args...)->ReturnType>
-        struct FreeFnDeductionContext<FreeFn>
+        struct FuncDeductionContext<FreeFn>
         {
             static Delegate<ReturnType, Args...> fromFreeFunction()
             {
@@ -118,11 +117,24 @@ namespace crisp
 
     template <auto MemFn, typename ReceiverType = detail::MemFnClassType<MemFn>>
     auto createDelegate(ReceiverType* obj) {
-        return detail::MemFnDeductionContext<MemFn>::template fromMemberFunction(obj);
+        return detail::FuncDeductionContext<MemFn>::template fromMemberFunction(obj);
     }
 
     template<auto FreeFn>
     auto createDelegate() {
-        return detail::FreeFnDeductionContext<FreeFn>::template fromFreeFunction();
+        return detail::FuncDeductionContext<FreeFn>::template fromFreeFunction();
     }
+}
+
+namespace std
+{
+    template<typename ReturnType, typename... ParamTypes>
+    struct hash<crisp::Delegate<ReturnType, ParamTypes...>>
+    {
+        std::size_t operator()(const crisp::Delegate<ReturnType, ParamTypes...>& delegate) const
+        {
+            return std::hash<decltype(delegate.m_receiverObject)>()(delegate.m_receiverObject)
+                ^ std::hash<decltype(delegate.m_callbackFunction)>()(delegate.m_callbackFunction);
+        }
+    };
 }

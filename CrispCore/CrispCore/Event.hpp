@@ -10,6 +10,8 @@
 #include "Delegate.hpp"
 #include "ConnectionHandler.hpp"
 
+#include "robin_hood/robin_hood.h"
+
 namespace crisp
 {
     using ConnectionToken = std::size_t;
@@ -62,7 +64,7 @@ namespace crisp
         }
 
         template <typename FuncType>
-        ConnectionHandler subscribe(FuncType&& func)
+        [[nodiscard]] ConnectionHandler subscribe(FuncType&& func)
         {
             ConnectionToken token = m_tokenCounter++;
             m_connections.emplace_back(token, std::forward<FuncType>(func));
@@ -161,8 +163,8 @@ namespace crisp
         }
 
     private:
-        std::set<Delegate<void, ParamTypes...>> m_delegates;
-        std::vector<Connection>                 m_connections;
+        robin_hood::unordered_flat_set<Delegate<void, ParamTypes...>> m_delegates;
+        std::vector<Connection> m_connections;
         ConnectionToken m_tokenCounter = 0;
     };
 }

@@ -16,7 +16,8 @@ namespace crisp
 
         inline ConnectionHandler(ConnectionHandler&& other) noexcept : disconnectCallback(std::move(other.disconnectCallback)) {}
 
-        inline ConnectionHandler& operator=(ConnectionHandler&& other) noexcept {
+        inline ConnectionHandler& operator=(ConnectionHandler&& other) noexcept
+        {
             if (this == &other)
                 return *this;
 
