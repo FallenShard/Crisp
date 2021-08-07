@@ -7,6 +7,7 @@
 namespace crisp
 {
     class VulkanDevice;
+    class VulkanPipelineLayout;
 
     class DescriptorSetAllocator
     {

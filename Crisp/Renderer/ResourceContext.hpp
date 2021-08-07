@@ -9,6 +9,7 @@
 #include "vulkan/VulkanImageView.hpp"
 
 #include "RenderNode.hpp"
+#include "DescriptorSetAllocator.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -16,6 +17,7 @@
 namespace crisp
 {
     class Renderer;
+    class DescriptorSetAllocator;
 
     class ResourceContext
     {
@@ -51,6 +53,10 @@ namespace crisp
 
         void recreatePipelines();
 
+        inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
+            return m_descriptorAllocators.at(pipelineLayout).get();
+        }
+
     private:
         Renderer* m_renderer;
 
@@ -71,5 +77,7 @@ namespace crisp
         std::unordered_map<std::string, std::unique_ptr<VulkanImage>>     m_images;
         std::unordered_map<std::string, std::unique_ptr<VulkanImageView>> m_imageViews;
         std::unordered_map<std::string, std::unique_ptr<VulkanSampler>>   m_samplers;
+
+        std::unordered_map<VulkanPipelineLayout*, std::unique_ptr<DescriptorSetAllocator>> m_descriptorAllocators;
     };
 }

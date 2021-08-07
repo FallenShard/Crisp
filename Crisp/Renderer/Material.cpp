@@ -4,9 +4,16 @@
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanRenderPass.hpp"
 
+#include "Renderer/DescriptorSetAllocator.hpp"
+
 namespace crisp
 {
     Material::Material(VulkanPipeline* pipeline)
+        : Material(pipeline, pipeline->getPipelineLayout()->getDescriptorSetAllocator())
+    {
+    }
+
+    Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator)
         : m_pipeline(pipeline)
     {
         std::size_t setCount = m_pipeline->getPipelineLayout()->getDescriptorSetLayoutCount();
@@ -19,13 +26,19 @@ namespace crisp
             if (m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(i))
             {
                 for (uint32_t j = 0; j < m_sets.size(); ++j)
-                    m_sets[j][i] = pipeline->allocateDescriptorSet(i).getHandle();
+                {
+                    const VkDescriptorSetLayout setLayout = m_pipeline->getPipelineLayout()->getDescriptorSetLayout(i);
+                    m_sets[j][i] = descriptorSetAllocator->allocate(setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(i));
+                }
             }
             else
             {
-                VkDescriptorSet set = pipeline->allocateDescriptorSet(i).getHandle();
+                const VkDescriptorSetLayout setLayout = m_pipeline->getPipelineLayout()->getDescriptorSetLayout(i);
+                VkDescriptorSet set = descriptorSetAllocator->allocate(setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(i));
                 for (uint32_t j = 0; j < m_sets.size(); ++j)
+                {
                     m_sets[j][i] = set;
+                }
             }
         }
 

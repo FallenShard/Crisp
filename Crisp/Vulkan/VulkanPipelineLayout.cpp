@@ -4,6 +4,7 @@
 #include "Renderer/PipelineLayoutBuilder.hpp"
 
 #include "Renderer/DescriptorSetAllocator.hpp"
+#include "Renderer/Renderer.hpp"
 
 namespace crisp
 {
@@ -85,5 +86,17 @@ namespace crisp
 
 
         //std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
+    }
+
+    std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
+    {
+        auto getNumCopiesPerSet = [this](uint32_t numCopies) {
+            std::vector<uint32_t> numCopiesPerSet;
+            for (uint32_t i = 0; i < m_descriptorSetBufferedStatus.size(); ++i)
+                numCopiesPerSet.push_back(m_descriptorSetBufferedStatus[i] ? numCopies * Renderer::NumVirtualFrames : numCopies);
+            return numCopiesPerSet;
+        };
+
+        return std::make_unique<DescriptorSetAllocator>(m_device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
     }
 }

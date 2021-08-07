@@ -22,11 +22,14 @@ namespace crisp
         m_pipelineInfos[id].luaFilename  = std::string(luaFilename);
         m_pipelineInfos[id].renderPass   = &renderPass;
         m_pipelineInfos[id].subpassIndex = subpassIndex;
-        auto pipeline = m_renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex);
-        m_pipelines[id] = std::move(pipeline);
+        m_pipelines[id] = m_renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex);
         m_pipelines[id]->setTag(id);
+
+        auto layout = m_pipelines[id]->getPipelineLayout();
+        m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator();
+
+
         return m_pipelines.at(id).get();
-        return nullptr;
     }
 
     Material* ResourceContext::createMaterial(std::string materialId, std::string pipelineId)
@@ -37,7 +40,8 @@ namespace crisp
 
     Material* ResourceContext::createMaterial(std::string materialId, VulkanPipeline* pipeline)
     {
-        m_materials[materialId] = std::make_unique<Material>(pipeline);
+        DescriptorSetAllocator* setAllocator = m_descriptorAllocators.at(pipeline->getPipelineLayout()).get();
+        m_materials[materialId] = std::make_unique<Material>(pipeline, setAllocator);
         return m_materials.at(materialId).get();
     }
 

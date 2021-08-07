@@ -15,11 +15,13 @@ namespace crisp
     class VulkanPipeline;
     class VulkanDevice;
     class UniformBuffer;
+    class DescriptorSetAllocator;
 
     class Material
     {
     public:
         Material(VulkanPipeline* pipeline);
+        Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator);
 
         void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo&& imageInfo);
         void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler);

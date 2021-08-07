@@ -36,6 +36,16 @@ namespace crisp
             return m_descriptorSetLayouts.size();
         }
 
+        inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index) const
+        {
+            return m_descriptorSetLayouts.at(index);
+        }
+
+        inline const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t index) const
+        {
+            return m_descriptorSetBindings.at(index);
+        }
+
         inline bool isDescriptorSetBuffered(uint32_t setIndex) const
         {
             return m_descriptorSetBufferedStatus[setIndex];
@@ -49,6 +59,13 @@ namespace crisp
         uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const;
 
         void swap(VulkanPipelineLayout& other);
+
+        inline DescriptorSetAllocator* getDescriptorSetAllocator()
+        {
+            return m_setAllocator.get();
+        }
+
+        std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
 
     private:
         std::vector<VkDescriptorSetLayout>                     m_descriptorSetLayouts;
