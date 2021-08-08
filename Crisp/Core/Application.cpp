@@ -1,7 +1,7 @@
 #include "Core/Application.hpp"
-#include "Renderer/Renderer.hpp"
 #include "Core/Window.hpp"
 #include "Core/SceneContainer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "GUI/RenderSystem.hpp"
 #include "GUI/Form.hpp"
 #include "GUI/StatusBar.hpp"
@@ -38,10 +38,10 @@ namespace crisp
         m_renderer = createRenderer();
         logger->info("Renderer created!");
 
-        //m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
-        //logger->info("SceneContainer created!");
+        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
+        logger->info("SceneContainer created!");
 
-        //m_window->resized.subscribe<&Application::onResize>(this);
+        m_window->resized.subscribe<&Application::onResize>(this);
 
         // Create and connect GUI with the mouse
         m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
@@ -52,25 +52,24 @@ namespace crisp
         m_window->mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
         m_window->mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
 
-        //auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
-        //comboBox->setId("sceneComboBox");
-        //comboBox->setPosition({ 0, 0 });
-        //comboBox->setItems(SceneContainer::getSceneNames());
-        //comboBox->setWidthHint(200.0f);
-        //auto cb = comboBox.get();
+        auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
+        comboBox->setId("sceneComboBox");
+        comboBox->setPosition({ 0, 0 });
+        comboBox->setItems(SceneContainer::getSceneNames());
+        comboBox->setWidthHint(200.0f);
 
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
         onFrameTimeUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
-        //statusBar->addControl(std::move(comboBox));
+        statusBar->addControl(std::move(comboBox));
         m_guiForm->add(std::move(statusBar));
 
         m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
-        //m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
         m_guiForm->processGuiUpdates();
         m_guiForm->printGuiTree();
 
-        /*cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-        cb->selectItem(SceneContainer::getDefaultSceneIndex());*/
+        auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
+        cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+        cb->selectItem(m_sceneContainer->getDefaultSceneIndex());
         logger->info("Initialized start-up scene");
     }
 
@@ -96,12 +95,12 @@ namespace crisp
 
             while (timeSinceLastUpdate > TimePerFrame)
             {
-                //m_sceneContainer->update(static_cast<float>(TimePerFrame));
+                m_sceneContainer->update(static_cast<float>(TimePerFrame));
                 m_guiForm->update(TimePerFrame);
                 timeSinceLastUpdate -= TimePerFrame;
             }
 
-            ////m_sceneContainer->render();
+            m_sceneContainer->render();
             m_guiForm->draw();
             m_renderer->drawFrame();
         }

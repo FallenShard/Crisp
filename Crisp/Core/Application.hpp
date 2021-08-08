@@ -1,9 +1,9 @@
 #pragma once
 
 #include "ApplicationEnvironment.hpp"
-#include "Core/FrameTimeLogger.hpp"
 
 #include <CrispCore/Timer.hpp>
+#include <CrispCore/Event.hpp>
 
 #include <memory>
 

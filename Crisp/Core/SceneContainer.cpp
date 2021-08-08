@@ -1,5 +1,6 @@
 #include "SceneContainer.hpp"
 
+#include "Core/Application.hpp"
 #include "Scenes/TestScene.hpp"
 #include "Scenes/FluidSimulationScene.hpp"
 #include "Scenes/ShadowMappingScene.hpp"
@@ -10,9 +11,6 @@
 #include "Scenes/NormalMappingScene.hpp"
 #include "Scenes/VulkanRayTracingScene.hpp"
 #include "Scenes/OceanScene.hpp"
-#include "Application.hpp"
-#include "GUI/Form.hpp"
-#include "GUI/ComboBox.hpp"
 
 #include <spdlog/spdlog.h>
 
