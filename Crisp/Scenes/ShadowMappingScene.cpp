@@ -41,8 +41,7 @@
 #include "Models/Grass.hpp"
 
 #include <CrispCore/Math/Constants.hpp>
-
-#include <Core/LuaConfig.hpp>
+#include <CrispCore/LuaConfig.hpp>
 
 #include "Geometry/VertexLayout.hpp"
 

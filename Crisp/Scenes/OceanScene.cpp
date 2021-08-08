@@ -17,7 +17,7 @@
 #include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Models/Skybox.hpp"
 #include "Lights/EnvironmentLighting.hpp"
-#include "Core/LuaConfig.hpp"
+#include "CrispCore/LuaConfig.hpp"
 
 #include "GUI/Panel.hpp"
 #include "GUI/Slider.hpp"

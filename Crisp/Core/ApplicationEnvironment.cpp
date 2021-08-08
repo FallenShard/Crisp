@@ -19,12 +19,11 @@ namespace crisp
         {
             logger->error("GLFW error code: {}. Message: {}", errorCode, message);
         }
-
-        CommandLineParser commandLineParser;
     }
 
     std::filesystem::path ApplicationEnvironment::ResourcesPath;
     std::filesystem::path ApplicationEnvironment::ShaderSourcesPath;
+    CommandLineParser ApplicationEnvironment::CommandLineParser;
 
     ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
     {
@@ -34,9 +33,9 @@ namespace crisp
 
         spdlog::set_pattern("[%T.%e][%n][%^%l%$][Tid: %t]: %v");
 
-        commandLineParser.addOption<std::string>("config", ".");
-        commandLineParser.addOption<uint32_t>("scene", 5);
-        commandLineParser.parse(commandLineArgs);
+        CommandLineParser.addOption<std::string>("config", ".");
+        CommandLineParser.addOption<uint32_t>("scene", 5);
+        CommandLineParser.parse(commandLineArgs);
 
 
         spdlog::set_level(spdlog::level::debug);
@@ -52,7 +51,7 @@ namespace crisp
         }
 
         LuaConfig lua;
-        lua.openFile(commandLineParser.get<std::string>("config"));
+        lua.openFile(CommandLineParser.get<std::string>("config"));
 
         ResourcesPath = lua.get<std::string>("resourcesPath").value();
         ShaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
