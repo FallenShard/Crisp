@@ -1,6 +1,6 @@
 #include "ClusteredLightingScene.hpp"
 
-#include "Core/LuaConfig.hpp"
+#include "CrispCore/LuaConfig.hpp"
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
 

@@ -1,13 +1,13 @@
-#include "VulkanContext.hpp"
+#include "Vulkan/VulkanContext.hpp"
 
 #include "Core/Application.hpp"
-#include "VulkanQueueConfiguration.hpp"
-
-#include <algorithm>
-#include <unordered_set>
+#include "Vulkan/VulkanQueueConfiguration.hpp"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+
+#include <algorithm>
+#include <unordered_set>
 
 namespace crisp
 {
@@ -282,9 +282,9 @@ namespace crisp
             VkPhysicalDeviceFeatures2 deviceFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
             vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
 
-            QueueFamilyIndices indices = findQueueFamilies(device, surface);
+            const QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
-            bool extensionsSupported = checkDeviceExtensionSupport(device);
+            const bool extensionsSupported = checkDeviceExtensionSupport(device);
 
             bool swapChainAdequate = false;
             if (extensionsSupported)
@@ -293,7 +293,7 @@ namespace crisp
                 swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
             }
 
-            bool isDiscreteGpu = deviceProps.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+            const bool isDiscreteGpu = deviceProps.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 
             return isDiscreteGpu && indices.isComplete() && extensionsSupported && swapChainAdequate;
         }

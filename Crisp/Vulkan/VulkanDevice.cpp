@@ -22,7 +22,7 @@ namespace crisp
         , m_virtualFrameCount(virtualFrameCount)
         , m_device(VK_NULL_HANDLE)
     {
-        VulkanQueueConfiguration config({
+        const VulkanQueueConfiguration config({
             QueueTypeFlags(QueueType::General | QueueType::Present),
             QueueTypeFlags(QueueType::Compute),
             QueueTypeFlags(QueueType::Transfer)

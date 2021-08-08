@@ -44,7 +44,7 @@ namespace crisp
         compiler.compileDir(ApplicationEnvironment::getShaderSourcesPath(), m_resourcesPath / "Shaders");
 
         // Create fundamental objects for the API
-        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::forward<std::vector<std::string>>(extensions));
+        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::move(extensions));
         m_device            = std::make_unique<VulkanDevice>(m_context.get(), NumVirtualFrames);
         m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), true);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);

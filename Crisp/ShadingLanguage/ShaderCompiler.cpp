@@ -42,7 +42,7 @@ namespace crisp
             const std::filesystem::path inputPath = inputEntry.path();
             if (inputPath.extension() != ".glsl")
             {
-                logger->warn("{} has no .glsl extension!\n", inputPath.string());
+                logger->warn("{} has no .glsl extension!", inputPath.string());
                 continue;
             }
 
@@ -51,7 +51,7 @@ namespace crisp
             const std::string shaderType = inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
             if (!shaderExtensions.contains(shaderType))
             {
-                logger->warn("{} is not a valid glsl shader type!\n", shaderType);
+                logger->warn("{} is not a valid glsl shader type!", shaderType);
                 continue;
             }
 
@@ -115,12 +115,6 @@ namespace crisp
                     logger->error("Failed to read the pipe to the end.");
                 }
             }
-            //else
-            //{
-            //    std::cout << "Skipping " << inputPath << " as it is newer.\n";
-            //    std::cout << inputModified.time_since_epoch().count() << '\n';
-            //    std::cout << outputModified.time_since_epoch().count() << '\n';
-            //}
         }
     }
 }

@@ -22,8 +22,8 @@ namespace crisp
         ~SceneContainer();
 
         static std::vector<std::string> getSceneNames();
-        static const std::string& getDefaultScene();
-        static std::size_t getDefaultSceneIndex();
+        const std::string& getDefaultScene() const;
+        std::size_t getDefaultSceneIndex() const;
 
         void resize(int width, int height);
         void update(float dt);
@@ -36,5 +36,7 @@ namespace crisp
 
         Renderer*    m_renderer;
         Application* m_application;
+
+        uint32_t m_defaultSceneIndex;
     };
 }

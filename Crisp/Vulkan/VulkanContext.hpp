@@ -1,10 +1,10 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 #include <vector>
 #include <functional>
 #include <optional>
-
-#include <vulkan/vulkan.h>
 
 namespace crisp
 {
@@ -19,7 +19,7 @@ namespace crisp
         int computeFamily  = -1;
         int transferFamily = -1;
 
-        bool isComplete()
+        bool isComplete() const
         {
             return graphicsFamily >= 0 && presentFamily >= 0 && computeFamily >= 0 && transferFamily >= 0;
         }

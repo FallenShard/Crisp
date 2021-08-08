@@ -12,8 +12,8 @@ namespace crisp
 {
     namespace
     {
-        static constexpr VkDeviceSize DeviceHeapSize = 512 << 20; // 256 MB
-        static constexpr VkDeviceSize StagingHeapSize = 512 << 20; // 256 MB
+        static constexpr VkDeviceSize DeviceHeapSize = 512 << 20; // 512 MB
+        static constexpr VkDeviceSize StagingHeapSize = 512 << 20; // 512 MB
 
         auto logger = spdlog::stdout_color_mt("VulkanMemoryAllocator");
     }

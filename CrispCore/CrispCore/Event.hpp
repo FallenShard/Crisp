@@ -50,7 +50,7 @@ namespace crisp
         }
 
         template<auto Fn>
-        void subscribeStatic()
+        void subscribe()
         {
             m_delegates.insert(createDelegate<Fn>());
         }
@@ -68,10 +68,7 @@ namespace crisp
         {
             ConnectionToken token = m_tokenCounter++;
             m_connections.emplace_back(token, std::forward<FuncType>(func));
-            return ConnectionHandler([this, token]
-            {
-                unsubscribe(token);
-            });
+            return ConnectionHandler([this, token] { unsubscribe(token); });
         }
 
         void operator+=(Connection connection)

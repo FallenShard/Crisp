@@ -107,14 +107,14 @@ TEST(EventTest, StaticFunctions)
     const auto freeDelegate = createDelegate<printStuff>();
     freeDelegate("Hello World!");
 
-    event.subscribeStatic<&printStuff>();
+    event.subscribe<printStuff>();
     EXPECT_EQ(event.getSubscriberCount(), 1);
 }
 
 TEST(EventTest, Autodisconnect)
 {
     Event<const std::string&> event;
-    event.subscribeStatic<&printStuff>();
+    event.subscribe<&printStuff>();
 
     {
         const auto handler = event.subscribe([](const std::string& a) { std::cout << a.size() << std::endl; });

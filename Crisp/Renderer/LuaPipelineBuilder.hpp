@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PipelineBuilder.hpp"
-#include "Core/LuaConfig.hpp"
+#include "CrispCore/LuaConfig.hpp"
 
 #include <unordered_map>
 

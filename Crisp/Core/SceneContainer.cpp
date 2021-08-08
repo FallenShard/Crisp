@@ -34,8 +34,6 @@ namespace crisp
             "Null"
         };
 
-        static constexpr std::size_t DefaultSceneIndex = 6;
-
         template <typename ...Args>
         std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... args)
         {
@@ -59,6 +57,7 @@ namespace crisp
         : m_renderer(renderer)
         , m_application(app)
     {
+        m_defaultSceneIndex = ApplicationEnvironment::getArgument<uint32_t>("scene");
     }
 
     SceneContainer::~SceneContainer()
@@ -70,14 +69,14 @@ namespace crisp
         return sceneNames;
     }
 
-    const std::string& SceneContainer::getDefaultScene()
+    const std::string& SceneContainer::getDefaultScene() const
     {
-        return sceneNames.at(DefaultSceneIndex);
+        return sceneNames.at(m_defaultSceneIndex);
     }
 
-    std::size_t SceneContainer::getDefaultSceneIndex()
+    std::size_t SceneContainer::getDefaultSceneIndex() const
     {
-        return DefaultSceneIndex;
+        return m_defaultSceneIndex;
     }
 
     void SceneContainer::update(float dt)
