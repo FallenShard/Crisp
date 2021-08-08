@@ -45,11 +45,12 @@ namespace crisp
         Window* getWindow() const;
         SceneContainer* getSceneContainer() const;
 
+        Event<double, double> onFrameTimeUpdated;
+
     private:
         std::unique_ptr<Window>   createWindow();
         std::unique_ptr<Renderer> createRenderer();
-
-        FrameTimeLogger<Timer<std::milli>> m_frameTimeLogger;
+        void updateFrameStatistics(double frameTime);
 
         std::unique_ptr<Window>    m_window;
         std::unique_ptr<Renderer>  m_renderer;
@@ -57,5 +58,9 @@ namespace crisp
         std::unique_ptr<gui::Form> m_guiForm;
 
         std::unique_ptr<SceneContainer> m_sceneContainer;
+
+        double m_accumulatedTime;
+        double m_accumulatedFrames;
+        double m_updatePeriod;
     };
 }

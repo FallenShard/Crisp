@@ -41,7 +41,7 @@ namespace crisp::gui
     void StatusBar::setFrameTimeAndFps(double frameTime, double fps)
     {
         std::ostringstream msLabelStream;
-        msLabelStream << std::fixed << std::setprecision(2) << std::setfill('0') << frameTime << " ms";
+        msLabelStream << std::fixed << std::setprecision(2) << std::setfill('0') << frameTime * 1000.0 << " ms";
         m_msLabel->setText(msLabelStream.str());
 
         std::ostringstream fpsLabelStream;

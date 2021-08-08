@@ -129,7 +129,7 @@ namespace crisp
             }), m_connections.end());
         }
 
-        void operator()(const ParamTypes&... args)
+        void operator()(const ParamTypes&... args) const
         {
             for (auto& delegate : m_delegates)
                 delegate(args...);

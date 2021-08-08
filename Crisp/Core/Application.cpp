@@ -26,7 +26,9 @@ namespace crisp
     }
 
     Application::Application(const ApplicationEnvironment&)
-        : m_frameTimeLogger(1000.0)
+        : m_accumulatedTime(0.0)
+        , m_accumulatedFrames(0.0)
+        , m_updatePeriod(1.0)
     {
         logger->info("Initializing...");
 
@@ -58,8 +60,8 @@ namespace crisp
         //auto cb = comboBox.get();
 
         auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
+        onFrameTimeUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
         //statusBar->addControl(std::move(comboBox));
-        m_frameTimeLogger.onLoggerUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
         m_guiForm->add(std::move(statusBar));
 
         m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
@@ -81,12 +83,12 @@ namespace crisp
         m_renderer->flushResourceUpdates(true);
 
         logger->info("Hello world from Crisp! The application is up and running!");
-        m_frameTimeLogger.restart();
-        Timer<std::milli> updateTimer;
+        Timer<std::chrono::duration<double>> updateTimer;
         double timeSinceLastUpdate = 0.0;
         while (!m_window->shouldClose())
         {
-            const double timeDelta = updateTimer.restart() / 1000.0;
+            const double timeDelta = updateTimer.restart();
+            updateFrameStatistics(timeDelta);
             timeSinceLastUpdate += timeDelta;
 
             Window::pollEvents();
@@ -102,8 +104,6 @@ namespace crisp
             ////m_sceneContainer->render();
             m_guiForm->draw();
             m_renderer->drawFrame();
-
-            m_frameTimeLogger.update();
         }
 
         m_renderer->finish();
@@ -157,5 +157,25 @@ namespace crisp
         };
 
         return std::make_unique<Renderer>(surfaceCreator, ApplicationEnvironment::getRequiredVulkanExtensions(), ApplicationEnvironment::getResourcesPath());
+    }
+
+    void Application::updateFrameStatistics(double frameTime)
+    {
+        m_accumulatedTime += frameTime;
+        m_accumulatedFrames++;
+
+        if (m_accumulatedTime >= m_updatePeriod)
+        {
+            const double spillOver = m_accumulatedTime - m_updatePeriod;
+            const double spillOverFrac = spillOver / frameTime;
+
+            const double avgTime = m_updatePeriod / (m_accumulatedFrames - spillOverFrac);
+            const double avgFrames = 1.0 / avgTime;
+
+            onFrameTimeUpdated(avgTime, avgFrames);
+
+            m_accumulatedTime = spillOver;
+            m_accumulatedFrames = spillOverFrac;
+        }
     }
 }
