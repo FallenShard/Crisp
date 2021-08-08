@@ -8,6 +8,7 @@
 namespace crisp
 {
     std::vector<std::string> tokenize(const std::string_view string, const std::string& delimiter);
+    std::vector<std::string_view> tokenizeIntoViews(const std::string_view string, const std::string_view delimiter);
 
     template <std::size_t TokenCount>
     std::array<std::string_view, TokenCount> fixedTokenize(const std::string_view string, const std::string_view delimiter, bool skipEmptyTokens = true)

@@ -20,11 +20,6 @@ namespace crisp
     namespace
     {
         static constexpr const char* LightCullingPass = "lightCullingPass";
-
-        std::vector<float> angles;
-        std::vector<float> velos;
-        std::vector<float> radii;
-        std::vector<glm::vec3> lightOrigins;
     }
 
     LightSystem::LightSystem(Renderer* renderer, uint32_t shadowMapSize)
@@ -68,29 +63,6 @@ namespace crisp
             lightDescriptors.reserve(m_pointLights.size());
             for (const auto& pl : m_pointLights)
                 lightDescriptors.push_back(pl.createDescriptorData());
-            //float w = 34 * 5.0f;
-            //float h = 15.0f * 5.0f;
-            //int r = 32;
-            //int c = 32;
-            //
-            //for (int i = 0; i < r; ++i)
-            //{
-            //    float normI = static_cast<float>(i) / static_cast<float>(r - 1);
-            //
-            //    for (int j = 0; j < c; ++j)
-            //    {
-            //        float normJ = static_cast<float>(j) / static_cast<float>(c - 1);
-            //        glm::vec3 position = glm::vec3((normJ - 0.5f) * w, 1.0f, (normI - 0.5f) * h);
-            //        int index = i * c + j;
-            //
-            //        glm::vec4 rotPos = glm::vec4(radii[index], 0.0f, 0.0f, 1.0f);
-            //        glm::mat4 rotation = glm::rotate(0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-            //        angles[index] += velos[index] * dt;
-            //
-            //        m_pointLights[index].setPosition(rotation * rotPos + glm::vec4(position, 1.0f));
-            //        lightDescriptors.push_back(m_pointLights[index].createDescriptorData());
-            //    }
-            //}
 
             m_pointLightBuffer->updateStagingBuffer(lightDescriptors.data(), lightDescriptors.size() * sizeof(LightDescriptor));
         }

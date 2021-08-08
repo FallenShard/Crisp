@@ -12,3 +12,8 @@ target_link_libraries(CrispCoreTest PRIVATE gtestMain)
 target_link_libraries(CrispCoreTest PRIVATE CrispCore)
 
 target_compile_features(CrispCoreTest PUBLIC cxx_std_20)
+
+add_custom_command(TARGET CrispCoreTest POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:lua> $<TARGET_FILE_DIR:CrispCoreTest>
+)

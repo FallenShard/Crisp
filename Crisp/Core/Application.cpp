@@ -31,49 +31,49 @@ namespace crisp
     Application::Application(const ApplicationEnvironment&)
         : m_frameTimeLogger(1000.0)
     {
-        logger->info("Initializing...");
+        //logger->info("Initializing...");
 
-        m_window   = createWindow();
-        logger->info("Window opened!");
+        //m_window   = createWindow();
+        //logger->info("Window opened!");
 
-        m_renderer = createRenderer();
-        logger->info("Renderer created!");
+        //m_renderer = createRenderer();
+        //logger->info("Renderer created!");
 
-        m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
-        logger->info("SceneContainer created!");
+        //m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
+        //logger->info("SceneContainer created!");
 
-        m_window->resized.subscribe<&Application::onResize>(this);
+        //m_window->resized.subscribe<&Application::onResize>(this);
 
-        // Create and connect GUI with the mouse
-        m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-        logger->info("GUI Created");
-        m_window->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
-        m_window->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
-        m_window->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
-        m_window->mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
-        m_window->mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
-        //m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
+        //// Create and connect GUI with the mouse
+        //m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
+        //logger->info("GUI Created");
+        //m_window->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
+        //m_window->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
+        //m_window->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
+        //m_window->mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
+        //m_window->mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
+        ////m_frameTimeLogger.onLoggerUpdated.subscribe<&logFpsToConsole>();
 
-        auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
-        comboBox->setId("sceneComboBox");
-        comboBox->setPosition({ 0, 0 });
-        comboBox->setItems(SceneContainer::getSceneNames());
-        comboBox->setWidthHint(200.0f);
-        auto cb = comboBox.get();
+        //auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
+        //comboBox->setId("sceneComboBox");
+        //comboBox->setPosition({ 0, 0 });
+        //comboBox->setItems(SceneContainer::getSceneNames());
+        //comboBox->setWidthHint(200.0f);
+        //auto cb = comboBox.get();
 
-        auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
-        statusBar->addControl(std::move(comboBox));
-        m_frameTimeLogger.onLoggerUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
-        m_guiForm->add(std::move(statusBar));
+        //auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
+        //statusBar->addControl(std::move(comboBox));
+        //m_frameTimeLogger.onLoggerUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
+        //m_guiForm->add(std::move(statusBar));
 
-        m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
-        //m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
-        m_guiForm->processGuiUpdates();
-        m_guiForm->printGuiTree();
+        //m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
+        ////m_guiForm->add(gui::createIntroPanel(m_guiForm.get(), this), false);
+        //m_guiForm->processGuiUpdates();
+        //m_guiForm->printGuiTree();
 
-        cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-        cb->selectItem(SceneContainer::getDefaultSceneIndex());
-        logger->info("Initialized start-up scene");
+        //cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+        //cb->selectItem(SceneContainer::getDefaultSceneIndex());
+        //logger->info("Initialized start-up scene");
     }
 
     Application::~Application()
@@ -82,7 +82,7 @@ namespace crisp
 
     void Application::run()
     {
-        logger->info("Hello world from Crisp! The application is up and running!");
+        /*logger->info("Hello world from Crisp! The application is up and running!");
         logger->info("Use WASD to move and hold down right click to rotate the camera.");
 
         m_renderer->flushResourceUpdates(true);
@@ -112,7 +112,7 @@ namespace crisp
             m_frameTimeLogger.update();
         }
 
-        m_renderer->finish();
+        m_renderer->finish();*/
     }
 
     void Application::close()

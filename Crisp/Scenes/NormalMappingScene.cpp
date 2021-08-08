@@ -257,7 +257,6 @@ namespace crisp
         Form* form = m_app->getForm();
 
         auto panel = std::make_unique<Panel>(form);
-
         panel->setSizeHint({ 200.0f, 200.0f });
         panel->setPosition({ -200.0f, 40.0f });
 
@@ -278,6 +277,5 @@ namespace crisp
         form->getAnimator()->clearObjectAnimations(panel.get());
 
         form->add(std::move(panel));
-
     }
 }

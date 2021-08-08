@@ -149,13 +149,14 @@ namespace crisp
         LuaConfig()
             : m_L(lua_open())
         {
+            // Loads the standard Lua Libs into the module
+            // Essentially allows use of Lua library in the loaded scripts
             luaL_openlibs(m_L);
         }
 
         LuaConfig(const std::filesystem::path& configPath)
-            : m_L(lua_open())
+            : LuaConfig()
         {
-            luaL_openlibs(m_L);
             openFile(configPath);
         }
 
@@ -168,9 +169,17 @@ namespace crisp
         void openFile(const std::filesystem::path& configPath)
         {
             m_scriptPath = configPath;
-            int code = luaL_dofile(m_L, m_scriptPath.string().c_str());
+            const int code = luaL_dofile(m_L, m_scriptPath.string().c_str());
             if (code != 0)
-                spdlog::error("Error: {}\n", lua_tostring(m_L, -1));
+                spdlog::error("Error loading the script from a file: {}\n", lua_tostring(m_L, -1));
+        }
+
+        void openScript(const std::string_view script)
+        {
+            const std::string str(script);
+            const int code = luaL_dostring(m_L, str.c_str());
+            if (code != 0)
+                spdlog::error("Error processing the script: {}\n", lua_tostring(m_L, -1));
         }
 
         template <typename T>
@@ -195,7 +204,11 @@ namespace crisp
         }
 
     private:
+        // The Lua state for the currently loaded script
         lua_State* m_L;
+
+        // The path to the current script, if any
+        // If the script is created from a string, the path will be empty
         std::filesystem::path m_scriptPath;
     };
 }

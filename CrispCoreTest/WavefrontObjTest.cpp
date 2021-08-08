@@ -10,12 +10,12 @@ namespace
 }
 
 
-TEST(WavefrontObjTest, LoadAjax)
-{
-    WavefrontObjReader reader(ResourceDir / "ajax.obj");
-    EXPECT_EQ(reader.getPositions().size(), 409'676);
-    EXPECT_EQ(reader.getTriangles().size(), 544'566);
-}
+//TEST(WavefrontObjTest, LoadAjax)
+//{
+//    WavefrontObjReader reader(ResourceDir / "ajax.obj");
+//    EXPECT_EQ(reader.getPositions().size(), 409'676);
+//    EXPECT_EQ(reader.getTriangles().size(), 544'566);
+//}
 
 TEST(WavefrontObjTest, LoadBuddha)
 {

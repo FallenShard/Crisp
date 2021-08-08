@@ -775,7 +775,7 @@ namespace crisp
         for (int i = 0; i < CubeMapFaceCount; i++)
             cubeMapPipelines[i] = m_renderer->createPipelineFromLua("EquirectToCube.lua", *cubeMapPass, i);
 
-        auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
+        Material* cubeMapMaterial = nullptr;// std::make_unique<Material>(cubeMapPipelines[0].get());
         cubeMapMaterial->writeDescriptor(0, 0, *equirectMapView, m_resourceContext->getSampler("linearRepeat"));
         m_renderer->getDevice()->flushDescriptorUpdates();
 

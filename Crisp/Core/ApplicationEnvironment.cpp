@@ -1,8 +1,8 @@
 #include "ApplicationEnvironment.hpp"
 
-#include "Core/LuaConfig.hpp"
-
+#include <CrispCore/LuaConfig.hpp>
 #include <CrispCore/ChromeProfiler.hpp>
+#include <CrispCore/CommandLineParser.hpp>
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
@@ -19,14 +19,26 @@ namespace crisp
         {
             logger->error("GLFW error code: {}. Message: {}", errorCode, message);
         }
+
+        CommandLineParser commandLineParser;
     }
 
     std::filesystem::path ApplicationEnvironment::ResourcesPath;
     std::filesystem::path ApplicationEnvironment::ShaderSourcesPath;
 
-    ApplicationEnvironment::ApplicationEnvironment(int /*argc*/, char** /*argv*/)
+    ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
     {
+        std::vector<std::string_view> commandLineArgs(argc);
+        for (uint32_t i = 0; i < argc; ++i)
+            commandLineArgs[i] = std::string_view(argv[i]);
+
         spdlog::set_pattern("[%T.%e][%n][%^%l%$][Tid: %t]: %v");
+
+        commandLineParser.addOption<std::string>("config", ".");
+        commandLineParser.addOption<uint32_t>("scene", 5);
+        commandLineParser.parse(commandLineArgs);
+
+
         spdlog::set_level(spdlog::level::debug);
 
         ChromeProfiler::setThreadName("Main Thread");
@@ -39,9 +51,11 @@ namespace crisp
             std::exit(-1);
         }
 
-        const LuaConfig config("../../Config.lua");
-        ResourcesPath = config.get<std::string>("resourcesPath").value();
-        ShaderSourcesPath = config.get<std::string>("shaderSourcesPath").value();
+        LuaConfig lua;
+        lua.openFile(commandLineParser.get<std::string>("config"));
+
+        ResourcesPath = lua.get<std::string>("resourcesPath").value();
+        ShaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
     }
 
     ApplicationEnvironment::~ApplicationEnvironment()

@@ -8,6 +8,7 @@
 
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_vector.h>
+#include <robin_hood/robin_hood.h>
 
 namespace crisp
 {
@@ -81,7 +82,7 @@ namespace crisp
         Renderer* m_renderer;
 
         std::vector<Node*> m_executionOrder;
-        std::unordered_map<std::string, std::unique_ptr<Node>> m_nodes;
+        robin_hood::unordered_map<std::string, std::unique_ptr<Node>> m_nodes;
 
 
         struct CmdBufferContext

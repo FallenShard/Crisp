@@ -12,6 +12,7 @@ target_link_libraries(CrispCore PUBLIC fmt)
 target_link_libraries(CrispCore PUBLIC spdlog)
 target_link_libraries(CrispCore PUBLIC tinyexr)
 target_link_libraries(CrispCore PUBLIC robin_hood)
+target_link_libraries(CrispCore PUBLIC lua)
 
 target_include_directories(CrispCore PUBLIC ".")
 

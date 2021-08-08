@@ -77,8 +77,8 @@ namespace crisp
         m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
         m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
 
-        m_renderGraph->addRenderPass("TransLUTPass", std::make_unique<TransmittanceLutPass>(m_renderer));
-        m_renderGraph->addRenderTargetLayoutTransition("TransLUTPass", MainPass, 0);
+       /* m_renderGraph->addRenderPass("TransLUTPass", std::make_unique<TransmittanceLutPass>(m_renderer));
+        m_renderGraph->addRenderTargetLayoutTransition("TransLUTPass", MainPass, 0);*/
 
         // Wrap-up render graph definition
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
