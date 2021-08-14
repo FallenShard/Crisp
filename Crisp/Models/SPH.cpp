@@ -2,7 +2,7 @@
 
 #include "Renderer/Renderer.hpp"
 
-#include "Renderer/Pipelines/ComputePipeline.hpp"
+#include "Renderer/ComputePipeline.hpp"
 #include "Renderer/RenderGraph.hpp"
 
 

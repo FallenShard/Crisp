@@ -4,8 +4,6 @@
 
 #include "Renderer/Renderer.hpp"
 #include "vulkan/VulkanDevice.hpp"
-#include "Renderer/Pipelines/GrassPipeline.hpp"
-#include "Renderer/Pipelines/ShadowMapPipelines.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "Geometry/Geometry.hpp"
@@ -13,6 +11,8 @@
 #include "vulkan/VulkanRenderPass.hpp"
 #include "vulkan/VulkanImageView.hpp"
 #include "vulkan/VulkanSampler.hpp"
+
+#include "Vulkan/VulkanPipeline.hpp"
 
 namespace crisp
 {

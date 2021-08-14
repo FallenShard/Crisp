@@ -32,13 +32,11 @@ namespace crisp
             commandLineArgs[i] = std::string_view(argv[i]);
 
         spdlog::set_pattern("[%T.%e][%n][%^%l%$][Tid: %t]: %v");
+        spdlog::set_level(spdlog::level::debug);
 
         CommandLineParser.addOption<std::string>("config", ".");
         CommandLineParser.addOption<uint32_t>("scene", 5);
         CommandLineParser.parse(commandLineArgs);
-
-
-        spdlog::set_level(spdlog::level::debug);
 
         ChromeProfiler::setThreadName("Main Thread");
 

@@ -40,7 +40,7 @@ namespace crisp
 
         void createPointLightBuffer(uint32_t pointLightCount);
         void createTileGridBuffers(const CameraParameters& cameraParams);
-        void clusterLights(RenderGraph& renderGraph, const UniformBuffer& cameraBuffer);
+        void addLightClusteringPass(RenderGraph& renderGraph, const UniformBuffer& cameraBuffer);
 
         UniformBuffer* getPointLightBuffer() const;
         UniformBuffer* getLightIndexBuffer() const;

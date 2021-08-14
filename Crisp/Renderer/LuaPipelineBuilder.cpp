@@ -238,6 +238,11 @@ namespace crisp
             else if (polygonMode == "fill")
                 m_builder.setPolygonMode(VK_POLYGON_MODE_FILL);
         }
+
+        if (auto lineWidth = rasterization.get<float>("lineWidth"))
+        {
+            m_builder.setLineWidth(lineWidth.value());
+        }
     }
 
     void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& renderPass)
@@ -263,7 +268,22 @@ namespace crisp
         if (auto enabled = blend.get<bool>("enabled"); enabled.has_value())
         {
             m_builder.setBlendState(0, enabled.value());
-            m_builder.setBlendFactors(0, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+
+            auto parseBlendFactor = [](const std::string& factorStr) {
+                if (factorStr == "one") {
+                    return VK_BLEND_FACTOR_ONE;
+                }
+                else if (factorStr == "oneMinusSrcAlpha") {
+                    return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                }
+                else {
+                    return VK_BLEND_FACTOR_MAX_ENUM;
+                }
+            };
+
+            const VkBlendFactor srcBlend = parseBlendFactor(blend.get<std::string>("src").value_or("one"));
+            const VkBlendFactor dstBlend = parseBlendFactor(blend.get<std::string>("dst").value_or("oneMinusSrcAlpha"));
+            m_builder.setBlendFactors(0, srcBlend, dstBlend);
         }
     }
 
@@ -285,6 +305,12 @@ namespace crisp
                 m_builder.setDepthWrite(VK_TRUE);
             else
                 m_builder.setDepthWrite(VK_FALSE);
+        }
+
+        if (auto depthTest = depthStencil.get<bool>("depthTest"); depthTest.has_value())
+        {
+            if (depthTest.value())
+                m_builder.setDepthTest(depthTest.value());
         }
     }
 

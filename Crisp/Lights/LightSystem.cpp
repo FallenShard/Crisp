@@ -11,7 +11,7 @@
 #include "Renderer/Renderer.hpp"
 #include "Renderer/RenderGraph.hpp"
 
-#include "Renderer/Pipelines/ComputePipeline.hpp"
+#include "Renderer/ComputePipeline.hpp"
 
 #include <random>
 
@@ -202,7 +202,7 @@ namespace crisp
         });
     }
 
-    void LightSystem::clusterLights(RenderGraph& renderGraph, const UniformBuffer& cameraBuffer)
+    void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const UniformBuffer& cameraBuffer)
     {
         auto& cullingPass = renderGraph.addComputePass(LightCullingPass);
         cullingPass.workGroupSize = glm::ivec3(m_tileSize, 1);

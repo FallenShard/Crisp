@@ -13,6 +13,9 @@ namespace crisp
     class Renderer;
     class CameraController;
     class RenderGraph;
+    class ResourceContext;
+
+    class TransformBuffer;
 
     class UniformBuffer;
     class Material;
@@ -49,21 +52,21 @@ namespace crisp
             float radius;
         };
 
-        Renderer*    m_renderer;
         Application* m_app;
+
+        Renderer*    m_renderer;
+        std::unique_ptr<ResourceContext> m_resourceContext;
+
 
         std::unique_ptr<CameraController> m_cameraController;
         std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::vector<std::unique_ptr<Material>> m_materials;
         std::vector<std::unique_ptr<Geometry>> m_geometries;
-        std::vector<std::unique_ptr<VulkanPipeline>> m_pipelines;
 
         std::vector<std::unique_ptr<VulkanImage>>     m_images;
         std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
 
-        std::vector<TransformPack> m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformBuffer;
+        std::unique_ptr<TransformBuffer> m_transformBuffer;
 
         std::unique_ptr<RenderGraph> m_renderGraph;
 

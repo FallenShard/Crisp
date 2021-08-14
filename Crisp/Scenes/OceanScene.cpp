@@ -7,35 +7,34 @@
 #include "Renderer/ResourceContext.hpp"
 #include "Renderer/RenderGraph.hpp"
 #include "Renderer/RenderPasses/ForwardLightingPass.hpp"
+#include "Renderer/VulkanImageUtils.hpp"
+#include "Renderer/PipelineBuilder.hpp"
+#include "Renderer/PipelineLayoutBuilder.hpp"
 
 #include "Geometry/Geometry.hpp"
 #include "Geometry/TriangleMesh.hpp"
 #include "Geometry/MeshGenerators.hpp"
-#include "Renderer/VulkanImageUtils.hpp"
 
-#include "Renderer/PipelineBuilder.hpp"
-#include "Renderer/PipelineLayoutBuilder.hpp"
 #include "Models/Skybox.hpp"
 #include "Lights/EnvironmentLighting.hpp"
-#include "CrispCore/LuaConfig.hpp"
 
 #include "GUI/Panel.hpp"
 #include "GUI/Slider.hpp"
 #include "GUI/Label.hpp"
 
-#include <random>
+#include "CrispCore/LuaConfig.hpp"
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace
-{
-    auto logger = spdlog::stdout_color_st("OceanScene");
-}
+#include <random>
 
 namespace crisp
 {
     namespace
     {
+        auto logger = spdlog::stdout_color_st("OceanScene");
+
         static constexpr const char* MainPass = "mainPass";
         static constexpr const char* OscillationPass = "oscillationPass";
 

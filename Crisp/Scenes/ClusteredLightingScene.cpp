@@ -1,14 +1,14 @@
 #include "ClusteredLightingScene.hpp"
 
-#include "CrispCore/LuaConfig.hpp"
+
 #include "Core/Application.hpp"
 #include "Core/Window.hpp"
 
 #include "Camera/CameraController.hpp"
 
 #include "Vulkan/VulkanImageView.hpp"
-#include "vulkan/VulkanImage.hpp"
-#include "vulkan/VulkanDevice.hpp"
+#include "Vulkan/VulkanImage.hpp"
+#include "Vulkan/VulkanDevice.hpp"
 #include "Vulkan/VulkanSampler.hpp"
 #include "Vulkan/VulkanPipeline.hpp"
 
@@ -41,6 +41,7 @@
 #include "GUI/Slider.hpp"
 
 #include <CrispCore/Math/Constants.hpp>
+#include <CrispCore/LuaConfig.hpp>
 #include <CrispCore/Profiler.hpp>
 
 namespace crisp
@@ -64,16 +65,11 @@ namespace crisp
         // Camera
         m_cameraController = std::make_unique<CameraController>(app->getWindow());
         m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-        //m_cameraController->getCamera().setPosition(glm::vec3(5.0f, 5.0f, 5.0f));
 
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
         // Main render pass
         m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_8_BIT));
-
-        // Shadow map pass
-        //m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
-        //m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
 
         // Wrap-up render graph definition
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);
@@ -85,7 +81,7 @@ namespace crisp
         m_lightSystem->enableCascadedShadowMapping(CascadeCount, ShadowMapSize);
         m_lightSystem->createPointLightBuffer(1024);
         m_lightSystem->createTileGridBuffers(*m_cameraController->getCameraParameters());
-        m_lightSystem->clusterLights(*m_renderGraph, *m_resourceContext->getUniformBuffer("camera"));
+        m_lightSystem->addLightClusteringPass(*m_renderGraph, *m_resourceContext->getUniformBuffer("camera"));
 
         m_renderGraph->sortRenderPasses();
 
@@ -233,43 +229,43 @@ namespace crisp
 
     void ClusteredLightingScene::createShaderball()
     {
-        std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
-        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
+        //std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
+        //std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
 
-        TriangleMesh mesh(m_renderer->getResourcesPath() / "Meshes/sponza_fixed.obj", pbrVertexFormat);
-        m_resourceContext->addGeometry("shaderBallPbr", std::make_unique<Geometry>(m_renderer, mesh, pbrVertexFormat));
-        m_resourceContext->addGeometry("shaderBallShadow", std::make_unique<Geometry>(m_renderer, mesh, shadowVertexFormat));
+        //TriangleMesh mesh(m_renderer->getResourcesPath() / "Meshes/sponza_fixed.obj", pbrVertexFormat);
+        //m_resourceContext->addGeometry("shaderBallPbr", std::make_unique<Geometry>(m_renderer, mesh, pbrVertexFormat));
+        //m_resourceContext->addGeometry("shaderBallShadow", std::make_unique<Geometry>(m_renderer, mesh, shadowVertexFormat));
 
 
 
-        auto pbrShaderBall = createRenderNode("pbrShaderBall", 3);
-        pbrShaderBall->transformPack->M = glm::scale(glm::vec3(5.f));
-        pbrShaderBall->geometry = m_resourceContext->getGeometry("shaderBallPbr");
-        pbrShaderBall->pass(MainPass).material = m_resourceContext->getMaterial("pbrUnif");
+        //auto pbrShaderBall = createRenderNode("pbrShaderBall", 3);
+        //pbrShaderBall->transformPack->M = glm::scale(glm::vec3(5.f));
+        //pbrShaderBall->geometry = m_resourceContext->getGeometry("shaderBallPbr");
+        //pbrShaderBall->pass(MainPass).material = m_resourceContext->getMaterial("pbrUnif");
 
-        //for (uint32_t i = 0; i < CascadeCount; ++i)
-        //{
-        //    auto& subpass = pbrShaderBall->subpass(CsmPass, i);
-        //    subpass.geometry = m_resourceContext->getGeometry("shaderBallShadow");
-        //    subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(i));
-        //}
+        ////for (uint32_t i = 0; i < CascadeCount; ++i)
+        ////{
+        ////    auto& subpass = pbrShaderBall->subpass(CsmPass, i);
+        ////    subpass.geometry = m_resourceContext->getGeometry("shaderBallShadow");
+        ////    subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(i));
+        ////}
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        //m_renderer->getDevice()->flushDescriptorUpdates();
     }
 
     void ClusteredLightingScene::createPlane()
     {
-        //std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent, VertexAttribute::Bitangent };
-        //
-        //m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
-        //
-        //auto floor = createRenderNode("floor", 0);
-        //floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
-        //floor->geometry = m_resourceContext->getGeometry("floor");
-        //floor->pass(MainPass).material = m_resourceContext->getMaterial("pbrUnif");
-        //floor->pass(MainPass).setPushConstants(glm::vec2(100.0f));
-        //
-        //m_renderer->getDevice()->flushDescriptorUpdates();
+        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
+
+        m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
+
+        auto floor = createRenderNode("floor", 0);
+        floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
+        floor->geometry = m_resourceContext->getGeometry("floor");
+        floor->pass(MainPass).material = m_resourceContext->getMaterial("pbrUnif");
+        floor->pass(MainPass).setPushConstants(glm::vec2(100.0f));
+
+        m_renderer->getDevice()->flushDescriptorUpdates();
     }
 
     void ClusteredLightingScene::setupInput()
