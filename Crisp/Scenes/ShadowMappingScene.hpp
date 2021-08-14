@@ -15,6 +15,12 @@
 
 namespace crisp
 {
+    namespace gui
+    {
+        class Form;
+        class Panel;
+    }
+
     struct GaussianBlur
     {
         glm::vec2 texelSize;
@@ -82,6 +88,8 @@ namespace crisp
         RenderNode* createRenderNode(std::string id, int transformIndex);
 
         void createCommonTextures();
+
+        std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowMappingScene* scene);
 
 
         Material* createPbrTexMaterial(const std::string& type);
