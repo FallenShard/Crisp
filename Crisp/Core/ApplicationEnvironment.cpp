@@ -35,7 +35,7 @@ namespace crisp
         spdlog::set_level(spdlog::level::debug);
 
         CommandLineParser.addOption<std::string>("config", ".");
-        CommandLineParser.addOption<uint32_t>("scene", 5);
+        CommandLineParser.addOption<uint32_t>("scene", 4);
         CommandLineParser.parse(commandLineArgs);
 
         ChromeProfiler::setThreadName("Main Thread");

@@ -68,9 +68,9 @@ namespace crisp
     VulkanImage::~VulkanImage()
     {
         m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-            vkDestroyImage(device, static_cast<VkImage>(handle), nullptr);
+            vkDestroyImage(device->getHandle(), static_cast<VkImage>(handle), nullptr);
         });
     }
 
@@ -99,11 +99,6 @@ namespace crisp
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, uint32_t baseLayer, uint32_t numLayers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
-        baseLayer = std::min(baseLayer, static_cast<uint32_t>(m_layouts.size()) - 1);
-        auto oldLayout = m_layouts[baseLayer][0];
-        if (oldLayout == newLayout)
-            return;
-
         VkImageSubresourceRange subresRange;
         subresRange.baseMipLevel   = 0;
         subresRange.levelCount     = m_mipLevels;
@@ -126,25 +121,35 @@ namespace crisp
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkImageSubresourceRange subresRange, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
-        auto oldLayout = m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel];
-        if (oldLayout == newLayout)
+        bool sameLayouts = true;
+        for (uint32_t i = subresRange.baseArrayLayer; i < subresRange.baseArrayLayer + subresRange.layerCount; ++i)
+            for (uint32_t j = subresRange.baseMipLevel; j < subresRange.baseMipLevel + subresRange.levelCount; ++j)
+            {
+                if (m_layouts[i][j] != newLayout)
+                {
+                    sameLayouts = false;
+                    break;
+                }
+
+            }
+
+        if (sameLayouts)
             return;
 
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        barrier.oldLayout           = oldLayout;
+        barrier.oldLayout           = m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel];
         barrier.newLayout           = newLayout;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.image               = m_handle;
         barrier.subresourceRange    = subresRange;
-        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(oldLayout, newLayout);
+        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel], newLayout);
 
         vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-        for (auto i = subresRange.baseArrayLayer; i < subresRange.baseArrayLayer + subresRange.layerCount; ++i) {
+        for (auto i = subresRange.baseArrayLayer; i < subresRange.baseArrayLayer + subresRange.layerCount; ++i)
             for (auto j = subresRange.baseMipLevel; j < subresRange.baseMipLevel + subresRange.levelCount; ++j)
                 m_layouts[i][j] = newLayout;
-        }
     }
 
     void VulkanImage::copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer)
@@ -200,11 +205,7 @@ namespace crisp
                 imageBlit.dstOffsets[1].y = std::max(int32_t(m_extent.height >> i), 1);
                 imageBlit.dstOffsets[1].z = 1;
 
-                subresRange.aspectMask     = m_aspect;
                 subresRange.baseMipLevel   = i;
-                subresRange.levelCount     = 1;
-                subresRange.baseArrayLayer = 0;
-                subresRange.layerCount     = m_numLayers;
 
                 transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                 vkCmdBlitImage(commandBuffer, m_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);

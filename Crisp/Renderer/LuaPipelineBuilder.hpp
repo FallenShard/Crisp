@@ -37,5 +37,6 @@ namespace crisp
 
         PipelineBuilder m_builder;
         LuaConfig       m_config;
+        std::string m_configName;
     };
 }

@@ -48,7 +48,7 @@ namespace crisp
 {
     namespace
     {
-        static constexpr uint32_t ShadowMapSize = 2048;
+        static constexpr uint32_t ShadowMapSize = 1024;
         static constexpr uint32_t CascadeCount  = 4;
 
         static constexpr const char* MainPass = "mainPass";

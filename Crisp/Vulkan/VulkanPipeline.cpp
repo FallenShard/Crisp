@@ -6,7 +6,6 @@ namespace crisp
 {
     namespace
     {
-        VulkanDevice* deviceA = nullptr;
     }
 
     VulkanPipeline::VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags)
@@ -16,15 +15,15 @@ namespace crisp
         , m_subpassIndex(0)
         , m_bindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
     {
-        deviceA = m_device;
     }
 
     VulkanPipeline::~VulkanPipeline()
     {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->addTag(m_handle, m_tag);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-            spdlog::debug("Destroying pipeline: {} at frame {}", handle, deviceA->getCurrentFrameIndex());
-            vkDestroyPipeline(device, static_cast<VkPipeline>(handle), nullptr);
+            spdlog::debug("Destroying pipeline {}: {} at frame {}", device->getTag(handle), handle, device->getCurrentFrameIndex());
+            vkDestroyPipeline(device->getHandle(), static_cast<VkPipeline>(handle), nullptr);
         });
     }
 

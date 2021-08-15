@@ -31,9 +31,9 @@ namespace crisp
 
     VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout()
     {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-            vkDestroyDescriptorSetLayout(device, static_cast<VkDescriptorSetLayout>(handle), nullptr);
+            vkDestroyDescriptorSetLayout(device->getHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
         });
     }
 

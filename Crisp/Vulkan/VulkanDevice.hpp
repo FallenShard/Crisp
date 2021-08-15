@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include <any>
+#include <unordered_map>
 
 #include <vulkan/vulkan.h>
 #include "VulkanMemoryAllocator.hpp"
@@ -17,7 +18,9 @@ namespace crisp
     class VulkanContext;
     class VulkanQueue;
 
-    using VulkanDestructorCallback = void(*)(void*, VkDevice);
+    class VulkanDevice;
+
+    using VulkanDestructorCallback = void(*)(void*, VulkanDevice*);
     struct StoredDestructor
     {
         uint64_t deferredFrameIndex;
@@ -67,6 +70,14 @@ namespace crisp
 
         inline uint64_t getCurrentFrameIndex() const { return m_currentFrameIndex; }
 
+
+        inline void addTag(void* handle, std::string tag)
+        {
+            m_handleTagMap[handle] = tag;
+        }
+
+        inline const std::string& getTag(void* handle) const { return m_handleTagMap.at(handle); }
+
     private:
         VulkanContext* m_context;
         int m_virtualFrameCount;
@@ -87,5 +98,7 @@ namespace crisp
 
         std::vector<StoredDestructor> m_deferredDestructors;
         std::vector<std::pair<uint32_t, VulkanMemoryChunk>> m_deferredMemoryChunks;
+
+        std::unordered_map<void*, std::string> m_handleTagMap;
     };
 }

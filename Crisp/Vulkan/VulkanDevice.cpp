@@ -39,7 +39,7 @@ namespace crisp
     VulkanDevice::~VulkanDevice()
     {
         for (auto& destructor : m_deferredDestructors)
-            destructor.destructorCallback(destructor.vulkanHandle, m_device);
+            destructor.destructorCallback(destructor.vulkanHandle, this);
 
         for (auto& memoryChunkPair : m_deferredMemoryChunks)
             memoryChunkPair.second.free();
@@ -109,7 +109,7 @@ namespace crisp
         {
             if (--destructor.framesRemaining < 0)
             {
-                destructor.destructorCallback(destructor.vulkanHandle, m_device);
+                destructor.destructorCallback(destructor.vulkanHandle, this);
             }
         }
 

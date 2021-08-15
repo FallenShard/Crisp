@@ -2,10 +2,6 @@
 
 namespace crisp
 {
-    class Renderer;
-    class InputDispatcher;
-    class Application;
-
     class AbstractScene
     {
     public:

@@ -20,15 +20,15 @@ namespace crisp
     {
         for (auto imageView : m_imageViews)
         {
-            m_device->deferDestruction(m_framesToLive, imageView, [](void* handle, VkDevice device)
+            m_device->deferDestruction(m_framesToLive, imageView, [](void* handle, VulkanDevice* device)
             {
-                vkDestroyImageView(device, static_cast<VkImageView>(handle), nullptr);
+                vkDestroyImageView(device->getHandle(), static_cast<VkImageView>(handle), nullptr);
             });
         }
 
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-            vkDestroySwapchainKHR(device, static_cast<VkSwapchainKHR>(handle), nullptr);
+            vkDestroySwapchainKHR(device->getHandle(), static_cast<VkSwapchainKHR>(handle), nullptr);
         });
     }
 

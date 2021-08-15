@@ -22,6 +22,7 @@ namespace crisp
 
     LuaPipelineBuilder::LuaPipelineBuilder(std::filesystem::path configPath)
         : m_config(configPath)
+        , m_configName(configPath.filename().string())
     {
     }
 
@@ -51,7 +52,9 @@ namespace crisp
         PipelineLayoutBuilder layoutBuilder(reflection);
         readDescriptorSetBufferedStatus(layoutBuilder);
         readDynamicBufferDescriptorIds(layoutBuilder);
-        return m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()), renderPass.getHandle(), subpassIndex);
+        auto pipeline = m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()), renderPass.getHandle(), subpassIndex);
+        pipeline->setTag(m_configName);
+        return std::move(pipeline);
     }
 
     std::unordered_map<VkShaderStageFlagBits, std::string> LuaPipelineBuilder::getShaderFileMap()

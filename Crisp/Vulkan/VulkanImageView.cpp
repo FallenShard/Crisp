@@ -31,9 +31,9 @@ namespace crisp
 
     VulkanImageView::~VulkanImageView()
     {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-            vkDestroyImageView(device, static_cast<VkImageView>(handle), nullptr);
+            vkDestroyImageView(device->getHandle(), static_cast<VkImageView>(handle), nullptr);
         });
     }
 

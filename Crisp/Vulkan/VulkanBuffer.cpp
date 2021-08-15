@@ -29,10 +29,12 @@ namespace crisp
 
     VulkanBuffer::~VulkanBuffer()
     {
+        m_device->addTag(m_handle, m_tag);
         m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* vulkanHandle, VkDevice device)
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* vulkanHandle, VulkanDevice* device)
         {
-            vkDestroyBuffer(device, static_cast<VkBuffer>(vulkanHandle), nullptr);
+            spdlog::info("Destroying buffer {}", device->getTag(vulkanHandle));
+            vkDestroyBuffer(device->getHandle(), static_cast<VkBuffer>(vulkanHandle), nullptr);
         });
     }
 

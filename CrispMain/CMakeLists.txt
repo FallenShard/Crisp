@@ -16,6 +16,7 @@ set_target_properties(CrispMain PROPERTIES
 set_target_properties(CrispMain PROPERTIES 
     COMPILE_PDB_NAME CrispMain
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
+    VS_DEBUGGER_COMMAND_ARGUMENTS "config=../../Config.lua scene=3"
 )
 
 target_link_libraries(CrispMain PUBLIC Crisp)

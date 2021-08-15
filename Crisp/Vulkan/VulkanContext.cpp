@@ -2,6 +2,7 @@
 
 #include "Core/Application.hpp"
 #include "Vulkan/VulkanQueueConfiguration.hpp"
+#include "Vulkan/VulkanDebugUtils.hpp"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -35,46 +36,6 @@ namespace crisp
             //VK_NV_RAY_TRACING_EXTENSION_NAME,
             VK_KHR_MAINTENANCE2_EXTENSION_NAME
         };
-
-        VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-            const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* messenger)
-        {
-            auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-            if (func != nullptr)
-                return func(instance, createInfo, allocator, messenger);
-            else
-                return VK_ERROR_EXTENSION_NOT_PRESENT;
-        }
-
-        void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator)
-        {
-            auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-            if (func != nullptr)
-                func(instance, messenger, pAllocator);
-        }
-
-        VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData)
-        {
-            const char* typeStr = "Unknown";
-            if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-                typeStr = "General";
-            if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-                typeStr = "Performance";
-            if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-                typeStr = "Validation";
-
-            if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-                logger->debug("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
-            else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-                logger->info("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
-            else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-                logger->warn("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
-            else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-                logger->error("{} {} {} {}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
-            else
-                logger->error("{} {} {} {}", "Unknown", callbackData->messageIdNumber, callbackData->pMessageIdName, callbackData->pMessage);
-            return VK_FALSE;
-        }
 
         void assertRequiredExtensionSupport(std::vector<const char*> requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
         {
@@ -168,21 +129,7 @@ namespace crisp
             return instance;
         }
 
-        VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
-        {
-            if (!EnableValidationLayers) return nullptr;
 
-            VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-            createInfo.flags = 0;
-            createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-            createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-            createInfo.pfnUserCallback = debugMessengerCallback;
-
-            VkDebugUtilsMessengerEXT callback;
-            CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
-            logger->info("Debug messenger created!");
-            return callback;
-        }
 
         VkSurfaceKHR createSurface(VkInstance instance, SurfaceCreator surfaceCreator)
         {
@@ -325,7 +272,7 @@ namespace crisp
 
     VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions)
         : m_instance(detail::createInstance(std::forward<std::vector<std::string>>(reqPlatformExtensions)))
-        , m_debugMessenger(detail::createDebugMessenger(m_instance))
+        , m_debugMessenger(detail::EnableValidationLayers ? createDebugMessenger(m_instance) : nullptr)
         , m_surface(detail::createSurface(m_instance, surfaceCreator))
         , m_physicalDevice(detail::pickPhysicalDevice(m_instance, m_surface))
         , m_physicalDeviceProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 })
@@ -342,7 +289,7 @@ namespace crisp
     VulkanContext::~VulkanContext()
     {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-        detail::DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+        DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
         vkDestroyInstance(m_instance, nullptr);
     }
 

@@ -50,17 +50,18 @@ namespace crisp
     {
         for (auto setLayout : m_descriptorSetLayouts)
         {
-            m_device->deferDestruction(m_framesToLive, setLayout, [](void* handle, VkDevice device)
+            m_device->deferDestruction(m_framesToLive, setLayout, [](void* handle, VulkanDevice* device)
             {
-                    spdlog::debug("Destroying set layout: {}", handle);
-                vkDestroyDescriptorSetLayout(device, static_cast<VkDescriptorSetLayout>(handle), nullptr);
+                spdlog::debug("Destroying set layout: {}", handle);
+                vkDestroyDescriptorSetLayout(device->getHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
             });
         }
 
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->addTag(m_handle, m_tag);
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-                spdlog::debug("Destroying pipeline layout: {}", handle);
-            vkDestroyPipelineLayout(device, static_cast<VkPipelineLayout>(handle), nullptr);
+            spdlog::debug("Destroying pipeline layout: {} {}", handle, device->getTag(handle));
+            vkDestroyPipelineLayout(device->getHandle(), static_cast<VkPipelineLayout>(handle), nullptr);
         });
     }
 

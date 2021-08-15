@@ -18,9 +18,9 @@ namespace crisp
 
     VulkanCommandPool::~VulkanCommandPool()
     {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VkDevice device)
+        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
         {
-            vkDestroyCommandPool(device, static_cast<VkCommandPool>(handle), nullptr);
+            vkDestroyCommandPool(device->getHandle(), static_cast<VkCommandPool>(handle), nullptr);
         });
     }
 

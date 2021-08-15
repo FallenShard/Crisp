@@ -64,7 +64,7 @@ namespace crisp
             cubeMapPass->end(cmdBuffer, 0);
 
 
-            cubeMapPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 6, 0, 1,
+            cubeMapPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 6, 0, 11,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
         });
