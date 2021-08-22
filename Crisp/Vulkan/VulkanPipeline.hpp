@@ -25,11 +25,10 @@ namespace crisp
     };
     DECLARE_BITFLAG(PipelineDynamicState);
 
-    class VulkanPipeline final : public VulkanResource<VkPipeline>
+    class VulkanPipeline final : public VulkanResource<VkPipeline, vkDestroyPipeline>
     {
     public:
         VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags);
-        virtual ~VulkanPipeline();
 
         inline VulkanPipelineLayout* getPipelineLayout() const { return m_pipelineLayout.get(); }
 

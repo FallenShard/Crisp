@@ -241,7 +241,7 @@ namespace crisp
 
     uint32_t RayTracingMaterial::getShaderGroupHandleSize() const
     {
-        return m_renderer->getContext()->getPhysicalDeviceRayTracingProperties().shaderGroupHandleSize;
+        return m_renderer->getContext()->getPhysicalDevice().getRayTracingProperties().shaderGroupHandleSize;
     }
 
     void RayTracingMaterial::resetFrameCounter()
@@ -328,7 +328,7 @@ namespace crisp
 
         GET_DEVICE_PROC_NV(vkGetRayTracingShaderGroupHandles, renderer->getDevice());
         uint32_t groupCount = groups.size();
-        uint32_t handleSize = renderer->getContext()->getPhysicalDeviceRayTracingProperties().shaderGroupHandleSize;
+        uint32_t handleSize = renderer->getContext()->getPhysicalDevice().getRayTracingProperties().shaderGroupHandleSize;
         VkDeviceSize shaderGroupBindingTableSize = groupCount * handleSize;
         std::vector<uint8_t> shaderHandleStorage(shaderGroupBindingTableSize);
 

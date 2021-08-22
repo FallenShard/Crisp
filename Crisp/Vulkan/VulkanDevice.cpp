@@ -86,7 +86,7 @@ namespace crisp
 
     void VulkanDevice::flushMappedRanges()
     {
-        auto atomSize = m_context->getPhysicalDeviceLimits().nonCoherentAtomSize;
+        const VkDeviceSize atomSize = m_context->getPhysicalDevice().getLimits().nonCoherentAtomSize;
         if (!m_unflushedRanges.empty())
         {
             for (auto& range : m_unflushedRanges)

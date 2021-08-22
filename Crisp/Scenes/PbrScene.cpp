@@ -198,7 +198,7 @@ namespace crisp
 
     void PbrScene::onMaterialSelected(const std::string& materialName)
     {
-        if (materialName == "Uniform")
+        /*if (materialName == "Uniform")
         {
             m_renderNodes["pbrShaderBall"]->pass(MainPass).material = m_resourceContext->getMaterial("pbrUnif");
             return;
@@ -207,8 +207,6 @@ namespace crisp
         {
             m_renderNodes["pbrShaderBall"]->pass(MainPass).material = m_resourceContext->getMaterial("pbrTexShaderBall");
         }
-
-        m_renderer->finish();
 
         auto material = m_resourceContext->getMaterial("pbrTexShaderBall");
 
@@ -232,7 +230,7 @@ namespace crisp
                 material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
             }
         }
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice()->flushDescriptorUpdates();*/
     }
 
     RenderNode* PbrScene::createRenderNode(std::string id, int transformIndex)
@@ -251,7 +249,6 @@ namespace crisp
         m_resourceContext->addSampler("linearMirrorRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, 16.0f, 11.0f));
 
         // For textured pbr
-        //m_resourceContext->addImageWithView("default-diffuse", createTexture(m_renderer, 1, 1, { 255, 0, 255, 255 }, VK_FORMAT_R8G8B8A8_SRGB));
         m_resourceContext->addImageWithView("default-diffuse", createTexture(m_renderer, "uv_pattern.jpg", VK_FORMAT_R8G8B8A8_SRGB));
         m_resourceContext->addImageWithView("default-metallic", createTexture(m_renderer, 1, 1, { 0, 0, 0, 255 }, VK_FORMAT_R8G8B8A8_UNORM));
         m_resourceContext->addImageWithView("default-roughness", createTexture(m_renderer, 1, 1, { 32, 32, 32, 255 }, VK_FORMAT_R8G8B8A8_UNORM));

@@ -16,14 +16,6 @@ namespace crisp
         vkCreateCommandPool(m_device->getHandle(), &poolInfo, nullptr, &m_handle);
     }
 
-    VulkanCommandPool::~VulkanCommandPool()
-    {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroyCommandPool(device->getHandle(), static_cast<VkCommandPool>(handle), nullptr);
-        });
-    }
-
     std::unique_ptr<VulkanCommandBuffer> VulkanCommandPool::allocateCommandBuffer(VkCommandBufferLevel level) const
     {
         return std::make_unique<VulkanCommandBuffer>(this, level);

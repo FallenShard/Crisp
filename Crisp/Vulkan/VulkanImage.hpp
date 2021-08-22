@@ -12,12 +12,12 @@ namespace crisp
     class VulkanBuffer;
     class VulkanImageView;
 
-    class VulkanImage : public VulkanResource<VkImage>
+    class VulkanImage : public VulkanResource<VkImage, vkDestroyImage>
     {
     public:
         VulkanImage(VulkanDevice* device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect);
         VulkanImage(VulkanDevice* device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags);
-        ~VulkanImage();
+        virtual ~VulkanImage();
 
         void setImageLayout(VkImageLayout newLayout, uint32_t baseLayer);
         void setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange subresourceRange);

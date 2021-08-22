@@ -138,114 +138,7 @@ namespace crisp
             return surface;
         }
 
-        std::vector<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice device)
-        {
-            uint32_t queueFamilyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-            return queueFamilies;
-        }
-
-        QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
-        {
-            QueueFamilyIndices indices;
-
-            auto queueFamilies = getQueueFamilyProperties(device);
-
-            int i = 0;
-            for (const auto& queueFamily : queueFamilies)
-            {
-                if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                    indices.graphicsFamily = i;
-
-                if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-                    indices.computeFamily = i;
-
-                if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
-                    indices.transferFamily = i;
-
-                VkBool32 presentSupport = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-                if (queueFamily.queueCount > 0 && presentSupport)
-                    indices.presentFamily = i;
-
-                if (indices.isComplete()) break;
-
-                i++;
-            }
-
-            return indices;
-        }
-
-        bool checkDeviceExtensionSupport(VkPhysicalDevice device)
-        {
-            uint32_t extensionCount;
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-            std::unordered_set<std::string> requiredExtensions(DeviceExtensions.begin(), DeviceExtensions.end());
-
-            for (const auto& ext : availableExtensions)
-                requiredExtensions.erase(ext.extensionName);
-
-            return requiredExtensions.empty();
-        }
-
-        VulkanSwapChainSupportDetails queryVulkanSwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
-        {
-            VulkanSwapChainSupportDetails details;
-
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-            uint32_t formatCount;
-            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-            if (formatCount > 0)
-            {
-                details.formats.resize(formatCount);
-                vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-            }
-
-            uint32_t presentModeCount;
-            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-            if (presentModeCount > 0)
-            {
-                details.presentModes.resize(presentModeCount);
-                vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-            }
-
-            return details;
-        }
-
-        bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface)
-        {
-            VkPhysicalDeviceProperties2 deviceProps = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
-            vkGetPhysicalDeviceProperties2(device, &deviceProps);
-
-            VkPhysicalDeviceFeatures2 deviceFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-            vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
-
-            const QueueFamilyIndices indices = findQueueFamilies(device, surface);
-
-            const bool extensionsSupported = checkDeviceExtensionSupport(device);
-
-            bool swapChainAdequate = false;
-            if (extensionsSupported)
-            {
-                VulkanSwapChainSupportDetails swapChainSupport = queryVulkanSwapChainSupport(device, surface);
-                swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-            }
-
-            const bool isDiscreteGpu = deviceProps.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-
-            return isDiscreteGpu && indices.isComplete() && extensionsSupported && swapChainAdequate;
-        }
-
-        VkPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
+        VulkanPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
         {
             uint32_t deviceCount = 0;
             vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -253,20 +146,15 @@ namespace crisp
             std::vector<VkPhysicalDevice> devices(deviceCount);
             vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-            VkPhysicalDevice preferredDevice = VK_NULL_HANDLE;
             for (const auto& device : devices)
             {
-                if (isDeviceSuitable(device, surface))
-                {
-                    preferredDevice = device;
-                    break;
-                }
+                VulkanPhysicalDevice physicalDevice(device);
+                if (physicalDevice.isSuitable(surface, DeviceExtensions))
+                    return physicalDevice;
             }
 
-            if (!preferredDevice)
-                logger->critical("Failed to find a suitable physical device!");
-
-            return preferredDevice;
+            logger->critical("Failed to find a suitable physical device!");
+            return VulkanPhysicalDevice(VK_NULL_HANDLE);
         }
     }
 
@@ -275,14 +163,7 @@ namespace crisp
         , m_debugMessenger(detail::EnableValidationLayers ? createDebugMessenger(m_instance) : nullptr)
         , m_surface(detail::createSurface(m_instance, surfaceCreator))
         , m_physicalDevice(detail::pickPhysicalDevice(m_instance, m_surface))
-        , m_physicalDeviceProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 })
-        , m_physicalDeviceRayTracingProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV })
     {
-        vkGetPhysicalDeviceFeatures(m_physicalDevice, &m_physicalDeviceFeatures);
-
-        m_physicalDeviceProperties.pNext = &m_physicalDeviceRayTracingProperties;
-        vkGetPhysicalDeviceProperties2(m_physicalDevice, &m_physicalDeviceProperties);
-
         logger->info("Constructed!");
     }
 
@@ -293,11 +174,6 @@ namespace crisp
         vkDestroyInstance(m_instance, nullptr);
     }
 
-    VkPhysicalDevice VulkanContext::getPhysicalDevice() const
-    {
-        return m_physicalDevice;
-    }
-
     VkSurfaceKHR VulkanContext::getSurface() const
     {
         return m_surface;
@@ -306,44 +182,37 @@ namespace crisp
     VkDevice VulkanContext::createLogicalDevice(const VulkanQueueConfiguration& config) const
     {
         VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-        createInfo.pEnabledFeatures        = &m_physicalDeviceFeatures;
+        createInfo.pEnabledFeatures        = &m_physicalDevice.getFeatures();
         createInfo.queueCreateInfoCount    = static_cast<uint32_t>(config.getQueueCreateInfos().size());
         createInfo.pQueueCreateInfos       = config.getQueueCreateInfos().data();
         createInfo.enabledExtensionCount   = static_cast<uint32_t>(detail::DeviceExtensions.size());
         createInfo.ppEnabledExtensionNames = detail::DeviceExtensions.data();
 
         VkDevice device(VK_NULL_HANDLE);
-        vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &device);
+        vkCreateDevice(m_physicalDevice.getHandle(), &createInfo, nullptr, &device);
         return device;
     }
 
     bool VulkanContext::getQueueFamilyPresentationSupport(uint32_t familyIndex) const
     {
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, familyIndex, m_surface, &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice.getHandle(), familyIndex, m_surface, &presentSupport);
         return static_cast<bool>(presentSupport);
     }
 
-    std::vector<VkQueueFamilyProperties> VulkanContext::getQueueFamilyProperties() const
+    QueueFamilyIndices VulkanContext::queryQueueFamilies() const
     {
-        return detail::getQueueFamilyProperties(m_physicalDevice);
+        return m_physicalDevice.queryQueueFamilyIndices(m_surface);
     }
 
-    QueueFamilyIndices VulkanContext::findQueueFamilies() const
+    SurfaceSupport VulkanContext::querySurfaceSupport() const
     {
-        return detail::findQueueFamilies(m_physicalDevice, m_surface);
-    }
-
-    VulkanSwapChainSupportDetails VulkanContext::queryVulkanSwapChainSupport() const
-    {
-        return detail::queryVulkanSwapChainSupport(m_physicalDevice, m_surface);
+        return m_physicalDevice.querySurfaceSupport(m_surface);
     }
 
     std::optional<uint32_t> VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
     {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
-
+        const VkPhysicalDeviceMemoryProperties& memProperties = m_physicalDevice.getMemoryProperties();
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
         {
             if ((typeFilter & (1 << i)) && ((memProperties.memoryTypes[i].propertyFlags & properties) == properties))
@@ -355,9 +224,7 @@ namespace crisp
 
     std::optional<uint32_t> VulkanContext::findMemoryType(VkMemoryPropertyFlags properties) const
     {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
-
+        const VkPhysicalDeviceMemoryProperties& memProperties = m_physicalDevice.getMemoryProperties();
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
         {
             if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties)
@@ -430,7 +297,7 @@ namespace crisp
         for (VkFormat format : candidates)
         {
             VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
+            vkGetPhysicalDeviceFormatProperties(m_physicalDevice.getHandle(), format, &props);
 
             if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
                 return format;
@@ -446,25 +313,5 @@ namespace crisp
     VkFormat VulkanContext::findSupportedDepthFormat() const
     {
         return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-    }
-
-    const VkPhysicalDeviceFeatures& VulkanContext::getPhysicalDeviceFeatures() const
-    {
-        return m_physicalDeviceFeatures;
-    }
-
-    const VkPhysicalDeviceLimits& VulkanContext::getPhysicalDeviceLimits() const
-    {
-        return m_physicalDeviceProperties.properties.limits;
-    }
-
-    const VkPhysicalDeviceRayTracingPropertiesNV& VulkanContext::getPhysicalDeviceRayTracingProperties() const
-    {
-        return m_physicalDeviceRayTracingProperties;
-    }
-
-    const VkPhysicalDeviceProperties& VulkanContext::getPhysicalDeviceProperties() const
-    {
-        return m_physicalDeviceProperties.properties;
     }
 }

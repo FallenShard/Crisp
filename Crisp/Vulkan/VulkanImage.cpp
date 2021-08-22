@@ -68,10 +68,6 @@ namespace crisp
     VulkanImage::~VulkanImage()
     {
         m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroyImage(device->getHandle(), static_cast<VkImage>(handle), nullptr);
-        });
     }
 
     void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)

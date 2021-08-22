@@ -8,11 +8,10 @@ namespace crisp
 {
     class VulkanDevice;
 
-    class VulkanDescriptorSetLayout : public VulkanResource<VkDescriptorSetLayout>
+    class VulkanDescriptorSetLayout : public VulkanResource<VkDescriptorSetLayout, vkDestroyDescriptorSetLayout>
     {
     public:
         VulkanDescriptorSetLayout(VulkanDevice* device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
-        ~VulkanDescriptorSetLayout();
 
         VkDescriptorType getDescriptorType(uint32_t bindingIndex) const;
 

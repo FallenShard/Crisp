@@ -7,7 +7,7 @@ namespace crisp
 {
     class VulkanDevice;
 
-    class VulkanQueue : public VulkanResource<VkQueue>
+    class VulkanQueue : public VulkanResource<VkQueue, nullptr>
     {
     public:
         VulkanQueue(VulkanDevice* device, uint32_t familyIndex, uint32_t queueIndex);

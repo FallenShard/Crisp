@@ -20,10 +20,6 @@ namespace crisp
     VulkanRenderPass::~VulkanRenderPass()
     {
         freeResources();
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroyRenderPass(device->getHandle(), static_cast<VkRenderPass>(handle), nullptr);
-        });
     }
 
     void VulkanRenderPass::recreate()

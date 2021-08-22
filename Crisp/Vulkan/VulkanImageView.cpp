@@ -29,14 +29,6 @@ namespace crisp
         vkCreateImageView(m_device->getHandle(), &viewInfo, nullptr, &m_handle);
     }
 
-    VulkanImageView::~VulkanImageView()
-    {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroyImageView(device->getHandle(), static_cast<VkImageView>(handle), nullptr);
-        });
-    }
-
     VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const
     {
         return { sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout };

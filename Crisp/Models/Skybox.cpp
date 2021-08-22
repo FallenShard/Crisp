@@ -4,7 +4,6 @@
 
 #include "Renderer/Renderer.hpp"
 #include "Renderer/UniformBuffer.hpp"
-#include "Renderer/Texture.hpp"
 #include "Vulkan/VulkanPipeline.hpp"
 #include "vulkan/VulkanDevice.hpp"
 #include "vulkan/VulkanSampler.hpp"

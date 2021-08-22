@@ -29,14 +29,6 @@ namespace crisp
         vkCreateDescriptorSetLayout(m_device->getHandle(), &layoutInfo, nullptr, &m_handle);
     }
 
-    VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout()
-    {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroyDescriptorSetLayout(device->getHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
-        });
-    }
-
     VkDescriptorType VulkanDescriptorSetLayout::getDescriptorType(uint32_t bindingIndex) const
     {
         return m_descriptors[bindingIndex].descriptorType;

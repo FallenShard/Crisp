@@ -12,7 +12,7 @@ namespace crisp
     class VulkanFramebuffer;
     class Renderer;
 
-    class VulkanRenderPass : public VulkanResource<VkRenderPass>
+    class VulkanRenderPass : public VulkanResource<VkRenderPass, vkDestroyRenderPass>
     {
     public:
         VulkanRenderPass(Renderer* renderer, bool isWindowSizeDependent, uint32_t numSubpasses);

@@ -11,7 +11,7 @@ namespace crisp::gui
     DynamicUniformBufferResource::DynamicUniformBufferResource(Renderer* renderer, const std::array<VkDescriptorSet, Renderer::NumVirtualFrames>& sets, uint32_t resourceSize, uint32_t descBinding)
         : m_renderer(renderer)
         , m_resourceSize(resourceSize)
-        , m_bufferGranularity(static_cast<uint32_t>(renderer->getContext()->getPhysicalDeviceLimits().minUniformBufferOffsetAlignment))
+        , m_bufferGranularity(static_cast<uint32_t>(renderer->getContext()->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment))
         , m_resourcesPerGranularity(m_bufferGranularity / m_resourceSize)
         , m_binding(descBinding)
         , m_sets(sets)

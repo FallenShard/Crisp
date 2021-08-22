@@ -25,11 +25,6 @@ namespace crisp
                 vkDestroyImageView(device->getHandle(), static_cast<VkImageView>(handle), nullptr);
             });
         }
-
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroySwapchainKHR(device->getHandle(), static_cast<VkSwapchainKHR>(handle), nullptr);
-        });
     }
 
     VkFormat VulkanSwapChain::getImageFormat() const
@@ -73,7 +68,7 @@ namespace crisp
     void VulkanSwapChain::createSwapChain()
     {
         VulkanContext* context = m_device->getContext();
-        VulkanSwapChainSupportDetails swapChainSupport = context->queryVulkanSwapChainSupport();
+        const SurfaceSupport swapChainSupport = context->querySurfaceSupport();
 
         VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes, m_tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR);
@@ -92,7 +87,7 @@ namespace crisp
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Render directly to swap chain image
 
-        QueueFamilyIndices indices = context->findQueueFamilies();
+        QueueFamilyIndices indices = context->queryQueueFamilies();
         std::array<uint32_t, 2> queueFamilyIndices =
         {
             static_cast<uint32_t>(indices.graphicsFamily),

@@ -17,16 +17,6 @@ namespace crisp
     {
     }
 
-    VulkanPipeline::~VulkanPipeline()
-    {
-        m_device->addTag(m_handle, m_tag);
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            spdlog::debug("Destroying pipeline {}: {} at frame {}", device->getTag(handle), handle, device->getCurrentFrameIndex());
-            vkDestroyPipeline(device->getHandle(), static_cast<VkPipeline>(handle), nullptr);
-        });
-    }
-
     void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const
     {
         vkCmdBindPipeline(cmdBuffer, m_bindPoint, m_handle);

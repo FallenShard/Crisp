@@ -9,7 +9,7 @@ namespace crisp
 {
     class VulkanDevice;
 
-    class VulkanBuffer : public VulkanResource<VkBuffer>
+    class VulkanBuffer : public VulkanResource<VkBuffer, vkDestroyBuffer>
     {
     public:
         VulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);

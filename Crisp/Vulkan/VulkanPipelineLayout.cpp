@@ -56,13 +56,6 @@ namespace crisp
                 vkDestroyDescriptorSetLayout(device->getHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
             });
         }
-
-        m_device->addTag(m_handle, m_tag);
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            spdlog::debug("Destroying pipeline layout: {} {}", handle, device->getTag(handle));
-            vkDestroyPipelineLayout(device->getHandle(), static_cast<VkPipelineLayout>(handle), nullptr);
-        });
     }
 
     VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const

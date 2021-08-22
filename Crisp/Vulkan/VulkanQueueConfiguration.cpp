@@ -1,5 +1,7 @@
 #include "VulkanQueueConfiguration.hpp"
 
+#include "Vulkan/VulkanPhysicalDevice.hpp"
+
 #include <stdexcept>
 
 namespace crisp
@@ -21,7 +23,7 @@ namespace crisp
         if (m_queueIdentifiers.size() != m_requestedQueues.size())
             throw std::runtime_error("Queue configuration is not compatible with selected physical device!");
 
-        auto queueFamilies = context->getQueueFamilyProperties();
+        const auto queueFamilies = context->getPhysicalDevice().queryQueueFamilyProperties();
 
         std::vector<uint32_t> familyQueueCounts(queueFamilies.size(), 0);
         for (auto& queueId : m_queueIdentifiers)
@@ -58,7 +60,7 @@ namespace crisp
     std::vector<QueueIdentifier> VulkanQueueConfiguration::findQueueIds(const VulkanContext* context) const
     {
         // Get the queue families that our current physical device has
-        auto exposedQueueFamilies = context->getQueueFamilyProperties();
+        auto exposedQueueFamilies = context->getPhysicalDevice().queryQueueFamilyProperties();
 
         // From each family, we can request up to a maximum queue number dependent on the family
         std::vector<uint32_t> usedFamilyCounts(exposedQueueFamilies.size(), 0);

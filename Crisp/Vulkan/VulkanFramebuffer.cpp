@@ -16,14 +16,6 @@ namespace crisp
         createInfo.pAttachments    = attachments.data();
         vkCreateFramebuffer(m_device->getHandle(), &createInfo, nullptr, &m_handle);
     }
-
-    VulkanFramebuffer::~VulkanFramebuffer()
-    {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroyFramebuffer(device->getHandle(), static_cast<VkFramebuffer>(handle), nullptr);
-        });
-    }
 }
 
 

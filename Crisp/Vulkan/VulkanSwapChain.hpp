@@ -8,7 +8,7 @@ namespace crisp
 {
     class VulkanDevice;
 
-    class VulkanSwapChain : public VulkanResource<VkSwapchainKHR>
+    class VulkanSwapChain : public VulkanResource<VkSwapchainKHR, vkDestroySwapchainKHR>
     {
     public:
         VulkanSwapChain(VulkanDevice* device, bool tripleBuffering);

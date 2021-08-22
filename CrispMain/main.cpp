@@ -1,8 +1,6 @@
 #include "Core/ApplicationEnvironment.hpp"
 #include "Core/Application.hpp"
 
-#include <iostream>
-
 int main(int argc, char** argv)
 {
     crisp::ApplicationEnvironment environment(argc, argv);

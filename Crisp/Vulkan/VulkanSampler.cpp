@@ -30,12 +30,4 @@ namespace crisp
         samplerInfo.maxLod                  = maxLod;
         vkCreateSampler(m_device->getHandle(), &samplerInfo, nullptr, &m_handle);
     }
-
-    VulkanSampler::~VulkanSampler()
-    {
-        m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-        {
-            vkDestroySampler(device->getHandle(), static_cast<VkSampler>(handle), nullptr);
-        });
-    }
 }

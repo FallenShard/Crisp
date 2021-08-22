@@ -10,7 +10,7 @@ namespace crisp
     class VulkanDevice;
     class DescriptorSetAllocator;
 
-    class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout>
+    class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout, vkDestroyPipelineLayout>
     {
     public:
         VulkanPipelineLayout(VulkanDevice* device, std::vector<VkDescriptorSetLayout>&& setLayouts,
