@@ -377,7 +377,7 @@ namespace crisp
 
                 triangleMesh.setTexCoords(std::move(m_texCoords));
             }
-            else if (attrib.type == VertexAttribute::Tangent || attrib.type == VertexAttribute::Bitangent)
+            else if (attrib.type == VertexAttribute::Tangent)
             {
                 computeTangentVectors = true;
             }

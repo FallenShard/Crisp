@@ -499,7 +499,7 @@ namespace crisp
     {
         std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
         std::vector<VertexAttributeDescriptor> shadowAlphaVertexFormat = { VertexAttribute::Position, VertexAttribute::TexCoord };
-        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent, VertexAttribute::Bitangent };
+        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
 
         TriangleMesh treeMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", pbrVertexFormat);
         m_resourceContext->addGeometry("tree", std::make_unique<Geometry>(m_renderer, treeMesh, pbrVertexFormat));
@@ -664,7 +664,7 @@ namespace crisp
         //
         //floor->pass(MainPass).material = material;
 
-        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent, VertexAttribute::Bitangent };
+        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
 
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
 

@@ -71,11 +71,8 @@ namespace crisp
     {
         m_parts.emplace_back("", 0, static_cast<uint32_t>(m_faces.size() * 3));
         for (const auto& attrib : vertexAttributes)
-            if (attrib.type == VertexAttribute::Tangent || attrib.type == VertexAttribute::Bitangent)
-            {
+            if (attrib.type == VertexAttribute::Tangent)
                 computeTangentVectors();
-                break;
-            }
 
         computeBoundingBox();
     }
@@ -130,11 +127,9 @@ namespace crisp
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_texCoords);
             else if (attrib.type == VertexAttribute::Tangent)
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_tangents);
-            else if (attrib.type == VertexAttribute::Bitangent)
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_bitangents);
             else if (attrib.type == VertexAttribute::Custom)
             {
-                auto& attribBuffer = m_customAttributes.at(attrib.name);
+                const auto& attribBuffer = m_customAttributes.at(attrib.name);
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, attribBuffer.buffer, attribBuffer.descriptor.size);
             }
 
@@ -163,11 +158,9 @@ namespace crisp
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_texCoords);
             else if (attrib.type == VertexAttribute::Tangent)
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_tangents);
-            else if (attrib.type == VertexAttribute::Bitangent)
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_bitangents);
             else if (attrib.type == VertexAttribute::Custom)
             {
-                auto& attribBuffer = m_customAttributes.at(attrib.name);
+                const auto& attribBuffer = m_customAttributes.at(attrib.name);
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, attribBuffer.buffer, attribBuffer.descriptor.size);
             }
 

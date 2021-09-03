@@ -11,7 +11,6 @@ namespace crisp
         Normal,
         TexCoord,
         Tangent,
-        Bitangent,
         Custom
     };
 
@@ -50,14 +49,6 @@ namespace crisp
         static constexpr std::size_t numComponents = 4;
     };
 
-    template <>
-    struct VertexAttributeTraits<VertexAttribute::Bitangent>
-    {
-        using Type = glm::vec3;
-        static constexpr std::size_t byteSize = sizeof(Type);
-        static constexpr std::size_t numComponents = 3;
-    };
-
     inline std::size_t getNumComponents(VertexAttribute attribute)
     {
         switch (attribute)
@@ -66,7 +57,6 @@ namespace crisp
             case VertexAttribute::Normal:    return VertexAttributeTraits<VertexAttribute::Normal>::numComponents;
             case VertexAttribute::TexCoord:  return VertexAttributeTraits<VertexAttribute::TexCoord>::numComponents;
             case VertexAttribute::Tangent:   return VertexAttributeTraits<VertexAttribute::Tangent>::numComponents;
-            case VertexAttribute::Bitangent: return VertexAttributeTraits<VertexAttribute::Bitangent>::numComponents;
             default: return 0;
         }
     }
@@ -79,7 +69,6 @@ namespace crisp
             case VertexAttribute::Normal:    return VertexAttributeTraits<VertexAttribute::Normal>::byteSize;
             case VertexAttribute::TexCoord:  return VertexAttributeTraits<VertexAttribute::TexCoord>::byteSize;
             case VertexAttribute::Tangent:   return VertexAttributeTraits<VertexAttribute::Tangent>::byteSize;
-            case VertexAttribute::Bitangent: return VertexAttributeTraits<VertexAttribute::Bitangent>::byteSize;
             default: return 0;
         }
     }
@@ -92,7 +81,6 @@ namespace crisp
             case VertexAttribute::Normal:    return VK_FORMAT_R32G32B32_SFLOAT;
             case VertexAttribute::TexCoord:  return VK_FORMAT_R32G32_SFLOAT;
             case VertexAttribute::Tangent:   return VK_FORMAT_R32G32B32A32_SFLOAT;
-            case VertexAttribute::Bitangent: return VK_FORMAT_R32G32B32_SFLOAT;
             default: return VkFormat();
         }
     }
@@ -105,7 +93,6 @@ namespace crisp
         case VertexAttribute::Normal:    return "normal";
         case VertexAttribute::TexCoord:  return "texCoord";
         case VertexAttribute::Tangent:   return "tangent";
-        case VertexAttribute::Bitangent: return "bitangent";
         default: return "";
         }
     }
