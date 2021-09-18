@@ -8,12 +8,12 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${CrispHeaders})
 target_compile_options(Crisp PRIVATE /Zi)
 
 # Tell linker to include symbol data
-set_target_properties(Crisp PROPERTIES 
+set_target_properties(Crisp PROPERTIES
     LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"
 )
 
 # Set file name & location
-set_target_properties(Crisp PROPERTIES 
+set_target_properties(Crisp PROPERTIES
     COMPILE_PDB_NAME Crisp
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
 )

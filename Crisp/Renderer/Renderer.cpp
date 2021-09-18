@@ -36,22 +36,22 @@ namespace crisp
         auto logger = spdlog::stdout_color_mt("Renderer");
     }
 
-    Renderer::Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath)
+    Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         : m_currentFrameIndex(0)
-        , m_resourcesPath(std::move(resourcesPath))
+        , m_resourcesPath(ApplicationEnvironment::getResourcesPath())
     {
         ShaderCompiler compiler;
         compiler.compileDir(ApplicationEnvironment::getShaderSourcesPath(), m_resourcesPath / "Shaders");
 
         // Create fundamental objects for the API
-        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, std::move(extensions));
+        m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, ApplicationEnvironment::getRequiredVulkanExtensions());
         m_device            = std::make_unique<VulkanDevice>(m_context.get(), NumVirtualFrames);
         m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), true);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
         logger->info("Created all base components");
 
-        m_defaultViewport = m_swapChain->createViewport();
-        m_defaultScissor = m_swapChain->createScissor();
+        m_defaultViewport = m_swapChain->getViewport();
+        m_defaultScissor = m_swapChain->getScissorRect();
 
         // Create frame resources, such as command buffer, fence and semaphores
         for (auto& frame : m_virtualFrames)

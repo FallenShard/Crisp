@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <list>
+#include <unordered_map>
 
 #include <vulkan/vulkan.h>
 
@@ -15,6 +16,7 @@ namespace crisp
             VkDeviceMemory memory;
             void* mappedPtr;
             std::map<uint64_t, uint64_t> freeChunks;
+            std::unordered_map<uint64_t, uint64_t> usedChunks;
 
             inline bool operator==(const VulkanAllocationBlock& other) const { return memory == other.memory; }
         };

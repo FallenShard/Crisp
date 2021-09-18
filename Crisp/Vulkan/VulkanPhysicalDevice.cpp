@@ -10,10 +10,20 @@ namespace crisp
         , m_properties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 })
         , m_rayTracingProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV })
         , m_memoryProperties({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 })
+        , m_features11({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES })
+        , m_features12({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES })
+        , m_properties11({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES })
+        , m_properties12({ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES })
     {
+        m_features.pNext = &m_features11;
+        m_features11.pNext = &m_features12;
         vkGetPhysicalDeviceFeatures2(m_handle, &m_features);
 
+        m_features11.pNext = nullptr;
+
         m_properties.pNext = &m_rayTracingProperties;
+        m_rayTracingProperties.pNext = &m_properties11;
+        m_properties11.pNext = &m_properties12;
         vkGetPhysicalDeviceProperties2(m_handle, &m_properties);
 
         vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_memoryProperties);

@@ -6,9 +6,6 @@
 
 namespace crisp::sl
 {
-    /// <summary>
-    /// Implements a Lexer for GLSL source code with Vulkan syntax extensions.
-    /// </summary>
     class Lexer
     {
     public:

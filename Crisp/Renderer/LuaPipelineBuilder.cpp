@@ -273,11 +273,17 @@ namespace crisp
             m_builder.setBlendState(0, enabled.value());
 
             auto parseBlendFactor = [](const std::string& factorStr) {
-                if (factorStr == "one") {
+                if (factorStr == "one")
+                {
                     return VK_BLEND_FACTOR_ONE;
                 }
-                else if (factorStr == "oneMinusSrcAlpha") {
+                else if (factorStr == "oneMinusSrcAlpha")
+                {
                     return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                }
+                else if (factorStr == "zero")
+                {
+                    return VK_BLEND_FACTOR_ZERO;
                 }
                 else {
                     return VK_BLEND_FACTOR_MAX_ENUM;

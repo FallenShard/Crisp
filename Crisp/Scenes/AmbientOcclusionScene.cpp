@@ -246,7 +246,6 @@ namespace crisp
         renderNode->geometry = m_renderer->getFullScreenGeometry();
         renderNode->pass(renderPassName).material = material;
         renderNode->pass(renderPassName).pipeline = pipeline;
-        renderNode->pass(renderPassName).setPushConstantView(m_ssaoParams);
         return renderNode;
     }
 
@@ -257,8 +256,7 @@ namespace crisp
         panel->setId("ambientOcclusionPanel");
         panel->setPadding({ 20, 20 });
         panel->setPosition({ 20, 40 });
-        panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
-        panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
+        panel->setSizingPolicy(SizingPolicy::WrapContent, SizingPolicy::WrapContent);
 
         int y = 0;
 

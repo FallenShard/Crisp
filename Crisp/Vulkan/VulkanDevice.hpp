@@ -49,7 +49,7 @@ namespace crisp
             m_deferredDestructors.push_back({ m_currentFrameIndex, framesToLive, handle, callback });
         }
 
-        void deferMemoryChunk(int32_t framesToLive, VulkanMemoryChunk chunk)
+        void deferMemoryDeallocation(int32_t framesToLive, VulkanMemoryChunk chunk)
         {
             m_deferredMemoryChunks.emplace_back(framesToLive, chunk);
         }
@@ -97,7 +97,7 @@ namespace crisp
         std::vector<VkWriteDescriptorSet> m_descriptorWrites;
 
         std::vector<StoredDestructor> m_deferredDestructors;
-        std::vector<std::pair<uint32_t, VulkanMemoryChunk>> m_deferredMemoryChunks;
+        std::vector<std::pair<int32_t, VulkanMemoryChunk>> m_deferredMemoryChunks;
 
         std::unordered_map<void*, std::string> m_handleTagMap;
     };

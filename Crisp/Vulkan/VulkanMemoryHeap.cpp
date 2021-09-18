@@ -20,8 +20,10 @@ namespace crisp
 
     void VulkanMemoryHeap::free(uint64_t offset, uint64_t size, internal::VulkanAllocationBlock& block)
     {
+        spdlog::info("[{}] Freeing a suballocation [{}, {}]", tag, offset, size);
         usedSize -= size;
         block.freeChunks[offset] = size;
+        block.usedChunks.erase(offset);
 
         if (block.freeChunks.size() > 1)
             coalesce(block);
@@ -118,6 +120,7 @@ namespace crisp
         if (foundChunkOffset + foundChunkSize > allocResult.offset + allocResult.size)
             freeChunks[allocResult.offset + allocResult.size] = foundChunkOffset + foundChunkSize - (allocResult.offset + allocResult.size);
 
+        foundMemoryBlock->usedChunks[alignedOffset] = size;
         return allocResult;
     }
 

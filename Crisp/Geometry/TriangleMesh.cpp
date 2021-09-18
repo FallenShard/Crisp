@@ -103,16 +103,16 @@ namespace crisp
 
     InterleavedVertexBuffer TriangleMesh::interleave() const
     {
-        return interleave(m_interleavedFormat);
+        return interleave(m_interleavedFormat, false);
     }
 
-    InterleavedVertexBuffer TriangleMesh::interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const
+    InterleavedVertexBuffer TriangleMesh::interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs, bool padToVec4) const
     {
         InterleavedVertexBuffer interleavedBuffer;
 
         interleavedBuffer.vertexSize = 0;
         for (const auto& attrib : vertexAttribs)
-            interleavedBuffer.vertexSize += attrib.size;
+            interleavedBuffer.vertexSize += padToVec4 ? sizeof(glm::vec4) : attrib.size;
 
         interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * getNumVertices());
 
@@ -133,38 +133,7 @@ namespace crisp
                 fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, attribBuffer.buffer, attribBuffer.descriptor.size);
             }
 
-            currOffset += attrib.size;
-        }
-
-        return interleavedBuffer;
-    }
-
-    InterleavedVertexBuffer TriangleMesh::interleavePadded(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const
-    {
-        InterleavedVertexBuffer interleavedBuffer;
-        interleavedBuffer.vertexSize = vertexAttribs.size() * sizeof(glm::vec4);
-
-        uint32_t numVertices = getNumVertices();
-        interleavedBuffer.buffer.resize(interleavedBuffer.vertexSize * numVertices);
-
-        uint32_t currOffset = 0;
-        for (const auto& attrib : vertexAttribs)
-        {
-            if (attrib.type == VertexAttribute::Position)
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_positions);
-            else if (attrib.type == VertexAttribute::Normal)
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_normals);
-            else if (attrib.type == VertexAttribute::TexCoord)
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_texCoords);
-            else if (attrib.type == VertexAttribute::Tangent)
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, m_tangents);
-            else if (attrib.type == VertexAttribute::Custom)
-            {
-                const auto& attribBuffer = m_customAttributes.at(attrib.name);
-                fillInterleaved(interleavedBuffer.buffer, interleavedBuffer.vertexSize, currOffset, attribBuffer.buffer, attribBuffer.descriptor.size);
-            }
-
-            currOffset += sizeof(glm::vec4);
+            currOffset += padToVec4 ? sizeof(glm::vec4) : attrib.size;
         }
 
         return interleavedBuffer;
@@ -205,15 +174,15 @@ namespace crisp
             const glm::vec2& w2 = m_texCoords[face[1]];
             const glm::vec2& w3 = m_texCoords[face[2]];
 
-            glm::vec3 e1 = v2 - v1;
-            glm::vec3 e2 = v3 - v1;
+            const glm::vec3 e1 = v2 - v1;
+            const glm::vec3 e2 = v3 - v1;
 
-            glm::vec2 s = w2 - w1;
-            glm::vec2 t = w3 - w1;
+            const glm::vec2 s = w2 - w1;
+            const glm::vec2 t = w3 - w1;
 
-            float r = 1.0f / (s.x * t.y - t.x * s.y);
-            glm::vec3 sDir = (e1 * t.y - e2 * s.y) * r;
-            glm::vec3 tDir = (e2 * s.x - e1 * t.x) * r;
+            const float r = 1.0f / (s.x * t.y - t.x * s.y);
+            const glm::vec3 sDir = (e1 * t.y - e2 * s.y) * r;
+            const glm::vec3 tDir = (e2 * s.x - e1 * t.x) * r;
 
             m_tangents[face[0]]   += glm::vec4(sDir, 0.0f);
             m_tangents[face[1]]   += glm::vec4(sDir, 0.0f);

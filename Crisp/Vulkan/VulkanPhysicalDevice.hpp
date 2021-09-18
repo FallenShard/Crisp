@@ -40,6 +40,7 @@ namespace crisp
 
         inline VkPhysicalDevice getHandle() const { return m_handle; }
         inline const VkPhysicalDeviceFeatures& getFeatures() const { return m_features.features; }
+        inline const VkPhysicalDeviceFeatures2& getFeatures2() const { return m_features; }
         inline const VkPhysicalDeviceProperties& getProperties() const { return m_properties.properties; }
         inline const VkPhysicalDeviceLimits& getLimits() const { return m_properties.properties.limits; }
         inline const VkPhysicalDeviceRayTracingPropertiesNV& getRayTracingProperties() const { return m_rayTracingProperties; }
@@ -58,6 +59,12 @@ namespace crisp
         VkPhysicalDeviceFeatures2   m_features;
         VkPhysicalDeviceProperties2 m_properties;
         VkPhysicalDeviceRayTracingPropertiesNV m_rayTracingProperties;
+
+        VkPhysicalDeviceVulkan11Features m_features11;
+        VkPhysicalDeviceVulkan12Features m_features12;
+
+        VkPhysicalDeviceVulkan11Properties m_properties11;
+        VkPhysicalDeviceVulkan12Properties m_properties12;
 
         VkPhysicalDeviceMemoryProperties2 m_memoryProperties;
     };

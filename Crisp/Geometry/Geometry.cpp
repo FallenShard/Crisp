@@ -21,13 +21,13 @@ namespace crisp
     }
 
     Geometry::Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat)
-        : Geometry(renderer, mesh.interleave(vertexFormat), mesh.getFaces(), mesh.getGeometryParts())
+        : Geometry(renderer, mesh.interleave(vertexFormat, false), mesh.getFaces(), mesh.getGeometryParts())
     {
     }
 
     Geometry::Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat, bool padToVec4, VkBufferUsageFlagBits usageFlags)
     {
-        auto interleavedBuffer = padToVec4 ? mesh.interleavePadded(vertexFormat) : mesh.interleave(vertexFormat);
+        auto interleavedBuffer = mesh.interleave(vertexFormat, padToVec4);
         m_vertexCount = static_cast<uint32_t>(interleavedBuffer.buffer.size() / interleavedBuffer.vertexSize);
         m_indexCount = (static_cast<uint32_t>(mesh.getFaces().size() * 3));
         m_parts = mesh.getGeometryParts();

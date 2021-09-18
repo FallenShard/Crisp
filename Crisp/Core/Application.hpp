@@ -22,8 +22,8 @@ namespace crisp
     {
     public:
         static constexpr const char* Title = "Crisp";
-        static constexpr int DefaultWindowWidth  = 1920;
-        static constexpr int DefaultWindowHeight = 1080;
+        static constexpr int DefaultWindowWidth  = 1280;
+        static constexpr int DefaultWindowHeight = 720;
 
         static constexpr uint32_t DesiredFramesPerSecond = 144;
         static constexpr double TimePerFrame = 1.0 / DesiredFramesPerSecond;

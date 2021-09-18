@@ -29,7 +29,7 @@ namespace crisp
 
     VulkanBuffer::~VulkanBuffer()
     {
-        m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
+        m_device->deferMemoryDeallocation(m_framesToLive, m_memoryChunk);
     }
 
     VkDeviceSize VulkanBuffer::getSize() const

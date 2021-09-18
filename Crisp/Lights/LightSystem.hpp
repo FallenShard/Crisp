@@ -22,21 +22,19 @@ namespace crisp
     public:
         LightSystem(Renderer* renderer, uint32_t shadowMapSize);
 
-        void enableCascadedShadowMapping(uint32_t cascadeCount, uint32_t shadowMapSize);
-
         void update(const AbstractCamera& camera, float dt);
 
         void setDirectionalLight(const DirectionalLight& dirLight);
+        inline const DirectionalLight& getDirectionalLight() const { return *m_directionalLight; }
+        void enableCascadedShadowMapping(uint32_t cascadeCount, uint32_t shadowMapSize);
+        std::array<glm::vec3, 8> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
         void setSplitLambda(float splitLambda);
+        float getCascadeSplitLo(uint32_t cascadeIndex) const;
+        float getCascadeSplitHi(uint32_t cascadeIndex) const;
 
         UniformBuffer* getDirectionalLightBuffer() const;
         UniformBuffer* getCascadedDirectionalLightBuffer() const;
         UniformBuffer* getCascadedDirectionalLightBuffer(uint32_t index) const;
-
-        std::array<glm::vec3, 8> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
-
-        float getCascadeSplitLo(uint32_t cascadeIndex) const;
-        float getCascadeSplitHi(uint32_t cascadeIndex) const;
 
         void createPointLightBuffer(uint32_t pointLightCount);
         void createTileGridBuffers(const CameraParameters& cameraParams);
@@ -51,6 +49,7 @@ namespace crisp
         void updateSplitIntervals(const AbstractCamera& camera);
 
         Renderer* m_renderer;
+
 
         std::unique_ptr<DirectionalLight> m_directionalLight;
         std::unique_ptr<UniformBuffer>    m_directionalLightBuffer;

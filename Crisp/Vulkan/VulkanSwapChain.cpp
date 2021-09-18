@@ -37,12 +37,12 @@ namespace crisp
         return m_extent;
     }
 
-    VkViewport VulkanSwapChain::createViewport(float minDepth, float maxDepth) const
+    VkViewport VulkanSwapChain::getViewport(float minDepth, float maxDepth) const
     {
         return { 0.0f, 0.0f, static_cast<float>(m_extent.width), static_cast<float>(m_extent.height), minDepth, maxDepth };
     }
 
-    VkRect2D VulkanSwapChain::createScissor() const
+    VkRect2D VulkanSwapChain::getScissorRect() const
     {
         return { { 0, 0 }, m_extent };
     }

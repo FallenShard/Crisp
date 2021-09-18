@@ -47,7 +47,6 @@ namespace crisp
         for (uint32_t i = 0; i < m_cascades.size(); ++i)
         {
             auto& cascade = m_cascades[i];
-            //cascade.light->fitProjectionToFrustum(camera.getFrustumPoints(cascade.begin, cascade.end));
 
             glm::vec4 centerRadius = camera.calculateBoundingSphere(cascade.begin, cascade.end);
             cascade.light->fitProjectionToFrustum(camera.getFrustumPoints(cascade.begin, cascade.end), centerRadius, centerRadius.w, m_shadowMapSize);

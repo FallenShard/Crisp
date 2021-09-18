@@ -22,6 +22,7 @@
 #include "Renderer/RenderPasses/ShadowPass.hpp"
 #include "Renderer/RenderPasses/ForwardLightingPass.hpp"
 #include "Renderer/RenderPasses/AtmosphericLutPass.hpp"
+#include "Renderer/RenderPasses/DepthPass.hpp"
 
 #include "Models/Skybox.hpp"
 #include "Geometry/TriangleMesh.hpp"
@@ -44,6 +45,9 @@
 #include <CrispCore/Math/Constants.hpp>
 #include <CrispCore/Profiler.hpp>
 
+#include "Renderer/PipelineBuilder.hpp"
+#include "Renderer/PipelineLayoutBuilder.hpp"
+
 namespace crisp
 {
     namespace
@@ -51,8 +55,62 @@ namespace crisp
         static constexpr uint32_t ShadowMapSize = 1024;
         static constexpr uint32_t CascadeCount  = 4;
 
+        static constexpr const char* DepthPrePass = "DepthPrePass";
         static constexpr const char* MainPass = "mainPass";
         static constexpr const char* CsmPass  = "csmPass";
+
+        static constexpr const char* const PbrScenePanel = "pbrScenePanel";
+
+        SkyAtmosphereConstantBufferStructure atmosphere{};
+
+        CommonConstantBufferStructure commonConstantData{};
+
+        std::unordered_map<VkPipeline, glm::uvec3> workGroupSizes;
+        std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
+        {
+            PipelineLayoutBuilder layoutBuilder;
+            layoutBuilder.defineDescriptorSet(0, false,
+                {
+                    { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT },
+                    { 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT },
+                })
+                .defineDescriptorSet(1, true,
+                {
+                    { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT },
+                    { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT },
+                });
+
+            VulkanDevice* device = renderer->getDevice();
+            auto layout = layoutBuilder.create(renderer->getDevice());
+
+            std::vector<VkSpecializationMapEntry> specEntries =
+            {
+                //   id,               offset,             size
+                    { 0, 0 * sizeof(uint32_t), sizeof(uint32_t) },
+                    { 1, 1 * sizeof(uint32_t), sizeof(uint32_t) },
+                    { 2, 2 * sizeof(uint32_t), sizeof(uint32_t) }
+            };
+
+            VkSpecializationInfo specInfo = {};
+            specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
+            specInfo.pMapEntries = specEntries.data();
+            specInfo.dataSize = sizeof(workGroupSize);
+            specInfo.pData = glm::value_ptr(workGroupSize);
+
+            VkComputePipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+            pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getShaderModule("multiple-scattering.comp"));
+            pipelineInfo.stage.pSpecializationInfo = &specInfo;
+            pipelineInfo.layout = layout->getHandle();
+            pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+            pipelineInfo.basePipelineIndex = -1;
+            VkPipeline pipeline;
+            vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+            workGroupSizes[pipeline] = workGroupSize;
+
+            auto uniqueHandle = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
+            uniqueHandle->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
+            return uniqueHandle;
+        }
     }
 
     PbrScene::PbrScene(Renderer* renderer, Application* app)
@@ -70,6 +128,9 @@ namespace crisp
 
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
+        m_renderGraph->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
+
+
         // Main render pass
         m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_1_BIT));
 
@@ -77,12 +138,9 @@ namespace crisp
         m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
         m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
 
-       /* m_renderGraph->addRenderPass("TransLUTPass", std::make_unique<TransmittanceLutPass>(m_renderer));
-        m_renderGraph->addRenderTargetLayoutTransition("TransLUTPass", MainPass, 0);*/
-
         // Wrap-up render graph definition
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
-        m_renderGraph->sortRenderPasses();
+
         m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
         m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
@@ -104,21 +162,171 @@ namespace crisp
         }
 
         createPlane();
-        createShaderballs();
+       // createShaderballs();
 
-        //auto transLutPipeline = m_resourceContext->createPipeline("transLut", "TransLut.lua", m_renderGraph->getRenderPass("TransLUTPass"), 0);
-        /*auto transLutMaterial = m_resourceContext->createMaterial("transLut", transLutPipeline);
-
-        auto transLutNode = std::make_unique<RenderNode>();
-        transLutNode->geometry = m_renderer->getFullScreenGeometry();
-        transLutNode->pass("TransLUTPass").material = transLutMaterial;*/
-        //transLutNode->pass("TransLUTPass").setPushConstantView(m_ssaoParams);
-        //m_renderNodes.emplace("transLutNode", std::move(transLutNode));
+        m_resourceContext->createUniformBuffer("atmosphere", sizeof(SkyAtmosphereConstantBufferStructure), BufferUpdatePolicy::PerFrame);
+        m_resourceContext->createUniformBuffer("atmosphereCommon", sizeof(CommonConstantBufferStructure), BufferUpdatePolicy::PerFrame);
 
 
-        m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
+        m_renderGraph->addRenderPass("TransLUTPass", std::make_unique<TransmittanceLutPass>(m_renderer));
+        auto transLutPipeline = m_resourceContext->createPipeline("transLut", "TransLut.lua", m_renderGraph->getRenderPass("TransLUTPass"), 0);
+        auto transLutMaterial = m_resourceContext->createMaterial("transLut", transLutPipeline);
+        transLutMaterial->writeDescriptor(0, 0, *m_resourceContext->getUniformBuffer("atmosphereCommon"));
+        transLutMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
+
+        m_transLutNode = std::make_unique<RenderNode>();
+        m_transLutNode->geometry = m_renderer->getFullScreenGeometry();
+        m_transLutNode->pass("TransLUTPass").material = transLutMaterial;
+        m_transLutNode->pass("TransLUTPass").pipeline = transLutPipeline;
+
+        // Multiscattering
+        VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        createInfo.flags = 0;
+        createInfo.imageType = VK_IMAGE_TYPE_2D;
+        createInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+        createInfo.extent = VkExtent3D{ 32u, 32u, 1u };
+        createInfo.mipLevels = 1;
+        createInfo.arrayLayers = 2;
+        createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        m_multiScatTex = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+        m_multiScatTexViews.resize(2);
+        m_multiScatTexViews[0] = m_multiScatTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
+        m_multiScatTexViews[1] = m_multiScatTex->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1);
+
+        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
+        {
+            m_multiScatTex->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        });
+
+        auto& multiScatPass = m_renderGraph->addComputePass("MultiScatPass");
+        m_renderGraph->addRenderTargetLayoutTransition("TransLUTPass", "MultiScatPass", 0);
+        multiScatPass.workGroupSize = glm::ivec3(1, 1, 64);
+        multiScatPass.numWorkGroups = glm::ivec3(32, 32, 1);
+        multiScatPass.pipeline = createMultiScatPipeline(m_renderer, multiScatPass.workGroupSize);
+        multiScatPass.material = std::make_unique<Material>(multiScatPass.pipeline.get());
+        multiScatPass.material->writeDescriptor(0, 0, *m_resourceContext->getUniformBuffer("atmosphereCommon"));
+        multiScatPass.material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
+        multiScatPass.material->writeDescriptor(1, 0, m_multiScatTexViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+        multiScatPass.material->writeDescriptor(1, 1, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
+        multiScatPass.material->setDynamicBufferView(0, *m_resourceContext->getUniformBuffer("atmosphereCommon"), 0);
+        multiScatPass.material->setDynamicBufferView(1, *m_resourceContext->getUniformBuffer("atmosphere"), 0);
+        multiScatPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        {
+            //// Before culling can start, zero out the light index count buffer
+            //glm::uvec4 zero(0);
+
+            //VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+            //barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            //barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            //barrier.buffer = m_lightIndexCountBuffer->get();
+            //barrier.offset = frameIndex * sizeof(zero);
+            //barrier.size = sizeof(zero);
+
+            //vkCmdUpdateBuffer(cmdBuffer, barrier.buffer, barrier.offset, barrier.size, &zero);
+            //vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            //    0, 0, nullptr, 1, &barrier, 0, nullptr);
+        };
+
+        //m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, LightCullingPass, 0);
+
+
+
+
+        m_renderGraph->addRenderPass("SkyViewLUTPass", std::make_unique<SkyViewLutPass>(m_renderer));
+        m_renderGraph->addRenderTargetLayoutTransition("TransLUTPass", "SkyViewLUTPass", 0);
+        m_renderGraph->addDependency("MultiScatPass", "SkyViewLUTPass", [this](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        {
+            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barrier.image = m_multiScatTex->getHandle();
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = frameIndex;
+            barrier.subresourceRange.layerCount = 1;
+
+            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0, 0, nullptr, 0, nullptr, 0, &barrier);
+        });
+        auto skyViewLutPipeline = m_resourceContext->createPipeline("skyViewLut", "SkyViewLut.lua", m_renderGraph->getRenderPass("SkyViewLUTPass"), 0);
+        auto skyViewLutMaterial = m_resourceContext->createMaterial("skyViewLut", skyViewLutPipeline);
+        skyViewLutMaterial->writeDescriptor(0, 0, *m_resourceContext->getUniformBuffer("atmosphereCommon"));
+        skyViewLutMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
+        skyViewLutMaterial->writeDescriptor(1, 0, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
+        skyViewLutMaterial->writeDescriptor(1, 1, m_multiScatTexViews, m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
+        m_skyViewLutNode = std::make_unique<RenderNode>();
+        m_skyViewLutNode->geometry = m_renderer->getFullScreenGeometry();
+        m_skyViewLutNode->pass("SkyViewLUTPass").material = skyViewLutMaterial;
+        m_skyViewLutNode->pass("SkyViewLUTPass").pipeline = skyViewLutPipeline;
+
+
+        auto camVolPass = std::make_unique<CameraVolumesPass>(m_renderer);
+        m_renderGraph->addRenderPass("CameraVolumesPass", std::move(camVolPass));
+        m_renderGraph->addRenderTargetLayoutTransition("SkyViewLUTPass", "CameraVolumesPass", 0);
+        auto cameraVolumesPipeline = m_resourceContext->createPipeline("skyCameraVolumes", "SkyCameraVolumes.lua", m_renderGraph->getRenderPass("CameraVolumesPass"), 0);
+        auto cameraVolumesMaterial = m_resourceContext->createMaterial("skyCameraVolumes", cameraVolumesPipeline);
+        cameraVolumesMaterial->writeDescriptor(0, 0, *m_resourceContext->getUniformBuffer("atmosphereCommon"));
+        cameraVolumesMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
+        cameraVolumesMaterial->writeDescriptor(1, 0, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
+        cameraVolumesMaterial->writeDescriptor(1, 1, m_multiScatTexViews, m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
+
+        m_skyCameraVolumesNode = std::make_unique<RenderNode>();
+
+        std::vector<glm::vec2> vertices = { { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f } };
+        std::vector<glm::uvec3> faces = { { 0, 2, 1 } };
+        m_resourceContext->addGeometry("fullScreenInstanced", std::make_unique<Geometry>(m_renderer, vertices, faces));
+        m_resourceContext->getGeometry("fullScreenInstanced")->setInstanceCount(32);
+        m_skyCameraVolumesNode->geometry = m_resourceContext->getGeometry("fullScreenInstanced");
+        m_skyCameraVolumesNode->pass("CameraVolumesPass").material = cameraVolumesMaterial;
+        m_skyCameraVolumesNode->pass("CameraVolumesPass").pipeline = cameraVolumesPipeline;
+
+
+        m_renderGraph->addRenderPass("RayMarchingPass", std::make_unique<RayMarchingPass>(m_renderer));
+        m_renderGraph->addRenderTargetLayoutTransition("CameraVolumesPass", "RayMarchingPass", 0);
+        m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, "RayMarchingPass", 0);
+        auto rayMarchingPipeline = m_resourceContext->createPipeline("rayMarching", "SkyRayMarching.lua", m_renderGraph->getRenderPass("RayMarchingPass"), 0);
+        auto rayMarchingMaterial = m_resourceContext->createMaterial("rayMarching", rayMarchingPipeline);
+        rayMarchingMaterial->writeDescriptor(0, 0, *m_resourceContext->getUniformBuffer("atmosphereCommon"));
+        rayMarchingMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
+        rayMarchingMaterial->writeDescriptor(1, 0, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
+        rayMarchingMaterial->writeDescriptor(1, 1, m_multiScatTexViews, m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
+        rayMarchingMaterial->writeDescriptor(1, 2, m_renderGraph->getRenderPass("SkyViewLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
+
+        const auto& camPass = dynamic_cast<const CameraVolumesPass&>(m_renderGraph->getRenderPass("CameraVolumesPass"));
+        rayMarchingMaterial->writeDescriptor(1, 3, camPass.getArrayViews(), m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        rayMarchingMaterial->writeDescriptor(1, 4, m_renderGraph->getRenderPass(DepthPrePass), 0, m_resourceContext->getSampler("nearestNeighbor"));
+
+        m_skyRayMarchingNode = std::make_unique<RenderNode>();
+
+        m_skyRayMarchingNode->geometry = m_renderer->getFullScreenGeometry();
+        m_skyRayMarchingNode->pass("RayMarchingPass").material = rayMarchingMaterial;
+        m_skyRayMarchingNode->pass("RayMarchingPass").pipeline = rayMarchingPipeline;
+
+
+
+
+        m_renderGraph->addRenderTargetLayoutTransition("RayMarchingPass", MainPass, 0);
+
+        m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
+
 
         m_renderer->getDevice()->flushDescriptorUpdates();
+
+
+        m_renderGraph->sortRenderPasses();
+
+
+
+       // m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
+
+       // m_renderer->getDevice()->flushDescriptorUpdates();
 
         createGui(m_app->getForm());
     }
@@ -126,7 +334,7 @@ namespace crisp
     PbrScene::~PbrScene()
     {
         m_renderer->setSceneImageView(nullptr, 0);
-        m_app->getForm()->remove("shadowMappingPanel");
+        m_app->getForm()->remove(PbrScenePanel);
     }
 
     void PbrScene::resize(int width, int height)
@@ -144,20 +352,41 @@ namespace crisp
         const auto& P = m_cameraController->getProjectionMatrix();
 
         m_transformBuffer->update(V, P);
-        m_skybox->updateTransforms(V, P);
+        //m_skybox->updateTransforms(V, P);
 
         m_lightSystem->update(m_cameraController->getCamera(), dt);
 
-        //m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_uniformMaterialParams);
+        ////m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_uniformMaterialParams);
+
+        auto svp = m_lightSystem->getDirectionalLight().getProjectionMatrix() * m_lightSystem->getDirectionalLight().getViewMatrix();
+        /*atmosphere.gShadowmapViewProjMat = svp;
+        atmosphere.gSkyViewProjMat = P * V;
+        atmosphere.gSkyInvViewProjMat = glm::inverse(P * V);
+        atmosphere.camera = m_cameraController->getCamera().getPosition();
+        atmosphere.view_ray = m_cameraController->getCamera().getLookDirection();
+        atmosphere.sun_direction = m_lightSystem->getDirectionalLight().getDirection();*/
 
         m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(m_cameraController->getCameraParameters(), sizeof(CameraParameters));
+
+        atmosphere.gSkyViewProjMat = P * V;
+        atmosphere.gSkyInvViewProjMat = glm::inverse(P * V);
+        atmosphere.camera = m_cameraController->getCamera().getPosition();
+        atmosphere.view_ray = m_cameraController->getCamera().getLookDirection();
+        m_resourceContext->getUniformBuffer("atmosphere")->updateStagingBuffer(atmosphere);
+
+        commonConstantData.gSkyViewProjMat = P * V;
+        m_resourceContext->getUniformBuffer("atmosphereCommon")->updateStagingBuffer(commonConstantData);
     }
 
     void PbrScene::render()
     {
         m_renderGraph->clearCommandLists();
         m_renderGraph->buildCommandLists(m_renderNodes);
-        m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
+        m_renderGraph->addToCommandLists(*m_transLutNode);
+        m_renderGraph->addToCommandLists(*m_skyViewLutNode);
+        m_renderGraph->addToCommandLists(*m_skyCameraVolumesNode);
+        m_renderGraph->addToCommandLists(*m_skyRayMarchingNode);
+        //m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
         m_renderGraph->executeCommandLists();
     }
 
@@ -311,7 +540,7 @@ namespace crisp
 
     void PbrScene::createShaderballs()
     {
-        const std::vector<std::string> materials =
+        /*const std::vector<std::string> materials =
         {
             "Floor",
             "Grass",
@@ -379,20 +608,27 @@ namespace crisp
             }
         }
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice()->flushDescriptorUpdates();*/
     }
 
     void PbrScene::createPlane()
     {
         std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
+        std::vector<VertexAttributeDescriptor> posVertexFormat = { VertexAttribute::Position };
 
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
+        m_resourceContext->addGeometry("floorPosOnly", std::make_unique<Geometry>(m_renderer, createPlaneMesh(posVertexFormat, 200.0f)));
 
         auto floor = createRenderNode("floor", 0);
         floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
         floor->geometry = m_resourceContext->getGeometry("floor");
         floor->pass(MainPass).material = createPbrTexMaterial("Hexstone", "floor");
         floor->pass(MainPass).setPushConstants(glm::vec2(100.0f));
+
+        floor->pass(DepthPrePass).pipeline = m_resourceContext->createPipeline("depthPrepass", "DepthPrepass.lua", m_renderGraph->getRenderPass(DepthPrePass), 0);
+        floor->pass(DepthPrePass).material = m_resourceContext->createMaterial("depthPrepass", floor->pass(DepthPrePass).pipeline);
+        floor->pass(DepthPrePass).material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+        floor->pass(DepthPrePass).geometry = m_resourceContext->getGeometry("floorPosOnly");
 
         m_renderer->getDevice()->flushDescriptorUpdates();
     }
@@ -421,7 +657,7 @@ namespace crisp
         using namespace gui;
         std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
 
-        panel->setId("shadowMappingPanel");
+        panel->setId(PbrScenePanel);
         panel->setPadding({ 20, 20 });
         panel->setPosition({ 20, 40 });
         panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
@@ -448,6 +684,10 @@ namespace crisp
 
             return sliderPtr;
         };
+
+        addLabeledSlider("Azimuth", 0.0, 0.0, glm::pi<double>() * 2.0);
+        addLabeledSlider("Altitude", 0.0, 0.0, glm::pi<double>() * 0.5);
+        /*
         addLabeledSlider("Roughness", m_uniformMaterialParams.roughness, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setRoughness>(this);
         addLabeledSlider("Metallic", m_uniformMaterialParams.metallic, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setMetallic>(this);
         addLabeledSlider("Red", m_uniformMaterialParams.albedo.r, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setRedAlbedo>(this);
@@ -474,7 +714,41 @@ namespace crisp
         floorCheckBox->setText("Show Floor");
         floorCheckBox->setPosition({ 0, y });
         panel->addControl(std::move(floorCheckBox));
-
+        */
         form->add(std::move(panel));
+
+        /*auto memoryUsageBg = std::make_unique<Panel>(form);
+        memoryUsageBg->setSizingPolicy(SizingPolicy::FillParent, SizingPolicy::Fixed);
+        memoryUsageBg->setSizeHint({ 0.0f, 20.0f });
+        memoryUsageBg->setPosition({ 0, 20 });
+        memoryUsageBg->setColor(glm::vec3(0.2f, 0.4f, 0.2f));
+
+        auto device = m_renderer->getDevice();
+        auto memAlloc = device->getMemoryAllocator();
+        auto heap = memAlloc->getDeviceImageHeap();
+
+        int i = 0;
+        for (const auto& block : heap->memoryBlocks)
+        {
+            for (const auto [off, size] : block.usedChunks)
+            {
+                auto alloc = std::make_unique<Panel>(form);
+                alloc->setAnchor(Anchor::CenterLeft);
+                alloc->setOrigin(Origin::CenterLeft);
+                alloc->setSizingPolicy(SizingPolicy::Fixed, SizingPolicy::Fixed);
+                float s = static_cast<double>(size) / (heap->memoryBlocks.size() * heap->blockSize) * 1920;
+                float x = static_cast<double>(off + i * heap->blockSize) / (heap->memoryBlocks.size() * heap->blockSize) * 1920;
+                alloc->setSizeHint({ s, 18.0f });
+                alloc->setPosition({ x, 0 });
+                alloc->setColor(glm::vec3(0.2f, 1.0f, 0.2f));
+                memoryUsageBg->addControl(std::move(alloc));
+
+                spdlog::info("Block {}: [{}, {}]", i, off, size);
+            }
+
+            ++i;
+        }
+
+        form->add(std::move(memoryUsageBg));*/
     }
 }

@@ -13,7 +13,7 @@ namespace crisp
         : VulkanRenderPass(renderer, true, 1)
     {
         m_clearValues.resize(RenderTarget::Count);
-        m_clearValues[0].depthStencil = { 1.0f, 0 };
+        m_clearValues[0].depthStencil = { 0.0f, 0 };
 
         m_handle = RenderPassBuilder()
             .addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)

@@ -1,13 +1,13 @@
-#include "Core/Application.hpp"
-#include "Core/Window.hpp"
-#include "Core/SceneContainer.hpp"
-#include "Renderer/Renderer.hpp"
-#include "GUI/RenderSystem.hpp"
-#include "GUI/Form.hpp"
-#include "GUI/StatusBar.hpp"
-#include "GUI/MemoryUsageBar.hpp"
-#include "GUI/ComboBox.hpp"
-#include "GUI/Label.hpp"
+#include <Core/Application.hpp>
+#include <Core/Window.hpp>
+#include <Core/SceneContainer.hpp>
+#include <Renderer/Renderer.hpp>
+#include <GUI/RenderSystem.hpp>
+#include <GUI/Form.hpp>
+#include <GUI/StatusBar.hpp>
+#include <GUI/MemoryUsageBar.hpp>
+#include <GUI/ComboBox.hpp>
+#include <GUI/Label.hpp>
 
 #include <CrispCore/ChromeProfiler.hpp>
 
@@ -19,7 +19,7 @@ namespace crisp
     namespace
     {
         auto logger = spdlog::stdout_color_mt("Application");
-        void logFpsToConsole(double frameTime, double fps)
+        void logFps(double frameTime, double fps)
         {
             logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
         }
@@ -155,7 +155,7 @@ namespace crisp
             return m_window->createRenderingSurface(instance, allocCallbacks, surface);
         };
 
-        return std::make_unique<Renderer>(surfaceCreator, ApplicationEnvironment::getRequiredVulkanExtensions(), ApplicationEnvironment::getResourcesPath());
+        return std::make_unique<Renderer>(surfaceCreator);
     }
 
     void Application::updateFrameStatistics(double frameTime)

@@ -54,7 +54,7 @@ namespace crisp
 
         void parse(const std::vector<std::string_view>& tokens)
         {
-            uint32_t i = 1;
+            std::size_t i = 1;
             while (i < tokens.size())
             {
                 // Found a case of variable=value

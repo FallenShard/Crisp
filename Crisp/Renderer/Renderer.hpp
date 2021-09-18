@@ -37,7 +37,7 @@ namespace crisp
     public:
         static constexpr unsigned int NumVirtualFrames = 2;
 
-        Renderer(SurfaceCreator surfCreatorCallback, std::vector<std::string>&& extensions, std::filesystem::path&& resourcesPath);
+        Renderer(SurfaceCreator surfCreatorCallback);
         ~Renderer();
 
         Renderer(const Renderer& other) = delete;

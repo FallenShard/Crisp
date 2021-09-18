@@ -35,7 +35,7 @@ namespace crisp
 
     VulkanImage::VulkanImage(VulkanDevice* device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
         : VulkanResource(device)
-        , m_type(VK_IMAGE_TYPE_2D)
+        , m_type(extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D)
         , m_format(format)
         , m_extent(extent)
         , m_numLayers(numLayers)
@@ -46,7 +46,7 @@ namespace crisp
         // Create an image handle
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.flags         = createFlags;
-        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+        imageInfo.imageType     = m_type;
         imageInfo.format        = format;
         imageInfo.extent        = extent;
         imageInfo.mipLevels     = numMipmaps;
@@ -67,7 +67,7 @@ namespace crisp
 
     VulkanImage::~VulkanImage()
     {
-        m_device->deferMemoryChunk(m_framesToLive, m_memoryChunk);
+        m_device->deferMemoryDeallocation(m_framesToLive, m_memoryChunk);
     }
 
     void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)
@@ -77,6 +77,12 @@ namespace crisp
 
     void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange subresourceRange)
     {
+        if (m_type == VK_IMAGE_TYPE_3D)
+        {
+            m_layouts[0][0] = newLayout;
+            return;
+        }
+
         for (uint32_t i = subresourceRange.baseArrayLayer; i < subresourceRange.baseArrayLayer + subresourceRange.layerCount; ++i)
             for (uint32_t j = subresourceRange.baseMipLevel; j < subresourceRange.baseMipLevel + subresourceRange.levelCount; ++j)
                 m_layouts[i][j] = newLayout;
@@ -117,6 +123,26 @@ namespace crisp
 
     void VulkanImage::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkImageSubresourceRange subresRange, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
     {
+        if (m_type == VK_IMAGE_TYPE_3D)
+        {
+            if (m_layouts[0][0] == newLayout)
+                return;
+
+            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            barrier.oldLayout = m_layouts[0][0];
+            barrier.newLayout = newLayout;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = m_handle;
+            barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+            std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(m_layouts[0][0], newLayout);
+
+            vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+            m_layouts[0][0] = newLayout;
+            return;
+        }
+
         bool sameLayouts = true;
         for (uint32_t i = subresRange.baseArrayLayer; i < subresRange.baseArrayLayer + subresRange.layerCount; ++i)
             for (uint32_t j = subresRange.baseMipLevel; j < subresRange.baseMipLevel + subresRange.levelCount; ++j)

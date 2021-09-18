@@ -20,8 +20,8 @@ namespace crisp
 
         VkFormat getImageFormat() const;
         VkExtent2D getExtent() const;
-        VkViewport createViewport(float minDepth = 0.0f, float maxDepth = 1.0f) const;
-        VkRect2D createScissor() const;
+        VkViewport getViewport(float minDepth = 0.0f, float maxDepth = 1.0f) const;
+        VkRect2D getScissorRect() const;
 
         VkImageView getImageView(size_t index) const;
         uint32_t getSwapChainImageCount() const;

@@ -47,8 +47,7 @@ namespace crisp
         uint32_t getNumVertices() const;
 
         InterleavedVertexBuffer interleave() const;
-        InterleavedVertexBuffer interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const;
-        InterleavedVertexBuffer interleavePadded(const std::vector<VertexAttributeDescriptor>& vertexAttribs) const;
+        InterleavedVertexBuffer interleave(const std::vector<VertexAttributeDescriptor>& vertexAttribs, bool padToVec4) const;
 
         static std::vector<glm::vec3> computeVertexNormals(const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces);
         void computeTangentVectors();

@@ -8,12 +8,12 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${CrispMainHeaders})
 target_compile_options(CrispMain PRIVATE /Zi)
 
 # Tell linker to include symbol data
-set_target_properties(CrispMain PROPERTIES 
+set_target_properties(CrispMain PROPERTIES
     LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"
 )
 
 # Set file name & location
-set_target_properties(CrispMain PROPERTIES 
+set_target_properties(CrispMain PROPERTIES
     COMPILE_PDB_NAME CrispMain
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
     VS_DEBUGGER_COMMAND_ARGUMENTS "config=../../Config.lua scene=3"

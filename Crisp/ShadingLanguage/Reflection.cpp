@@ -157,9 +157,13 @@ namespace crisp::sl
                         auto layoutQualifier = dynamic_cast<sl::LayoutQualifier*>(qualifier.get());
                         parseLayoutQualifier(*layoutQualifier);
 
-                        name = initList->vars[0]->name.lexeme;
+                        if (!initList->vars.empty())
+                            name = initList->vars[0]->name.lexeme;
                     }
                 }
+
+                if (!initList->fullType->specifier)
+                    continue;
 
                 auto typeLexeme = initList->fullType->specifier->type.lexeme;
                 if (typeLexeme == "sampler" || typeLexeme == "samplerShadow")

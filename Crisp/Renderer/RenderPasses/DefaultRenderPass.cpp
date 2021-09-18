@@ -33,14 +33,25 @@ namespace crisp
     void DefaultRenderPass::recreateFramebuffer(VkImageView swapChainImageView)
     {
         const uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
+        if (m_framebuffers[frameIdx] && m_framebuffers[frameIdx]->getAttachment(0) == swapChainImageView)
+            return;
 
-        const auto attachmentViews = { swapChainImageView };
-        m_framebuffers[frameIdx] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews);
+        if (!m_imageFramebuffers.contains(swapChainImageView))
+        {
+            const auto attachmentViews = { swapChainImageView };
+            m_imageFramebuffers.emplace(swapChainImageView, std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews));
+        }
+
+        if (m_framebuffers[frameIdx])
+            m_framebuffers[frameIdx].swap(m_imageFramebuffers.at(m_framebuffers[frameIdx]->getAttachment(0)));
+
+        m_framebuffers[frameIdx].swap(m_imageFramebuffers.at(swapChainImageView));
     }
 
     void DefaultRenderPass::createResources()
     {
         m_renderArea = m_renderer->getSwapChainExtent();
         m_framebuffers.resize(Renderer::NumVirtualFrames);
+        m_imageFramebuffers.clear();
     }
 }

@@ -3,16 +3,16 @@
 #include <IO/FileUtils.hpp>
 
 #include <charconv>
-#include <unordered_map>
+#include <robin_hood/robin_hood.h>
 
 #include <spdlog/spdlog.h>
 
 namespace
 {
-    std::unordered_map<std::string, crisp::sl::TokenType> createKeywordMap()
+    robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordMap()
     {
         using namespace crisp::sl;
-        std::unordered_map<std::string, crisp::sl::TokenType> map;
+        robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> map;
 
         // Execution Control
         map.emplace("break", TokenType::Break);
@@ -246,7 +246,7 @@ namespace
         return map;
     }
 
-    static std::unordered_map<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
+    static robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
 }
 
 namespace crisp::sl
@@ -285,7 +285,7 @@ namespace crisp::sl
 
         m_tokens.push_back(Token(TokenType::EndOfFile, "", nullptr, m_line));
 
-        return m_tokens;
+        return std::move(m_tokens);
     }
 
     bool Lexer::isAtEnd() const

@@ -205,6 +205,11 @@ namespace crisp
             uint32_t frameIndex = m_renderer->getCurrentVirtualFrameIndex();
             for (auto node : m_executionOrder)
             {
+                if (node->name == "TransLUTPass") {
+                    int x = 0;
+                    ++x;
+                }
+
                 if (node->isCompute)
                     executeComputePass(cmdBuffer, frameIndex, *node);
                 else

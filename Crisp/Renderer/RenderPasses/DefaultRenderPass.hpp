@@ -2,6 +2,8 @@
 
 #include "Vulkan/VulkanRenderPass.hpp"
 
+#include <robin_hood/robin_hood.h>
+
 namespace crisp
 {
     class DefaultRenderPass : public VulkanRenderPass
@@ -13,5 +15,7 @@ namespace crisp
 
     private:
         virtual void createResources() override;
+
+        robin_hood::unordered_flat_map<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_imageFramebuffers;
     };
 }

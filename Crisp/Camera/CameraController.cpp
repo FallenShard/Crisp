@@ -29,8 +29,8 @@ namespace crisp
         m_screenSize = m_window->getSize();
         const float aspectRatio = m_screenSize.x / m_screenSize.y;
         m_camera.setupProjection(45.0f, aspectRatio);
-        m_camera.setPosition(glm::vec3(15.0f, 12.0f, 20.0f));
-        m_camera.rotate(glm::pi<float>() * 0.25f, -glm::pi<float>() / 6.0f);
+        //m_camera.setPosition(glm::vec3(15.0f, 12.0f, 20.0f));
+        //m_camera.rotate(glm::pi<float>() * 0.25f, -glm::pi<float>() / 6.0f);
 
         m_prevMousePos = m_window->getCursorPosition();
 

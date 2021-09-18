@@ -25,6 +25,8 @@ namespace crisp
 
     class VulkanDevice;
 
+    class VulkanImage;
+    class VulkanImageView;
     class VulkanSampler;
     class BoxVisualizer;
     class Skybox;
@@ -79,6 +81,14 @@ namespace crisp
         std::unique_ptr<RenderGraph> m_renderGraph;
         std::unique_ptr<ResourceContext> m_resourceContext;
         std::unordered_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+
+        std::unique_ptr<RenderNode> m_transLutNode;
+        std::unique_ptr<RenderNode> m_skyViewLutNode;
+        std::unique_ptr<RenderNode> m_skyCameraVolumesNode;
+        std::unique_ptr<RenderNode> m_skyRayMarchingNode;
+
+        std::unique_ptr<VulkanImage> m_multiScatTex;
+        std::vector<std::unique_ptr<VulkanImageView>> m_multiScatTexViews;
 
         PbrUnifMaterialParams m_uniformMaterialParams;
         std::unique_ptr<Skybox> m_skybox;
