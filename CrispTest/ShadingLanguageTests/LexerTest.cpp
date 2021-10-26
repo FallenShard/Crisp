@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "ShadingLanguage/Lexer.hpp"
-#include "ShadingLanguage/Parser.hpp"
+#include <Crisp/ShadingLanguage/Lexer.hpp>
+#include <Crisp/ShadingLanguage/Parser.hpp>
 
 using namespace crisp::sl;
 

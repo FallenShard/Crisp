@@ -11,7 +11,6 @@ namespace crisp
         Timer()
             : m_prevTimePoint(std::chrono::steady_clock::now())
         {
-
         }
 
         ~Timer() = default;

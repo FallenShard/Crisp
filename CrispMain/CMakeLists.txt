@@ -23,7 +23,7 @@ target_link_libraries(CrispMain PUBLIC Crisp)
 
 target_include_directories(CrispMain PUBLIC ".")
 
-target_compile_features(CrispMain PUBLIC cxx_std_20)
+target_compile_features(CrispMain PUBLIC cxx_std_23)
 
 add_custom_command(TARGET CrispMain POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

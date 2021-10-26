@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CrispCore/StringUtils.hpp"
+#include <CrispCore/StringUtils.hpp>
 
 #include <robin_hood/robin_hood.h>
 
@@ -19,7 +19,6 @@ namespace crisp
             std::any value;
             std::function<std::any(const std::string_view)> parser;
         };
-
 
         template <typename T>
         void addOption(const std::string_view name, const T defaultValue)
@@ -46,44 +45,9 @@ namespace crisp
             }
         }
 
-        void parse(const std::string_view commandLine)
-        {
-            const std::vector<std::string_view> tokens = tokenizeIntoViews(commandLine, " ");
-            parse(tokens);
-        }
-
-        void parse(const std::vector<std::string_view>& tokens)
-        {
-            std::size_t i = 1;
-            while (i < tokens.size())
-            {
-                // Found a case of variable=value
-                if (const std::size_t pos = tokens[i].find('='); pos != std::string_view::npos)
-                {
-                    const std::string_view name = tokens[i].substr(0, pos);
-                    const auto iter = m_argMap.find(std::string(name));
-                    if (iter != m_argMap.end())
-                    {
-                        iter->second.value = iter->second.parser(tokens[i].substr(pos + 1));
-                    }
-
-                    ++i;
-                }
-                else // Apply the rule variable value
-                {
-                    if (i + 1 >= tokens.size())
-                        break;
-
-                    const auto iter = m_argMap.find(std::string(tokens[i]));
-                    if (iter != m_argMap.end())
-                    {
-                        iter->second.value = iter->second.parser(tokens[i + 1]);
-                    }
-
-                    i += 2;
-                }
-            }
-        }
+        void parse(int argc, char** argv);
+        void parse(const std::string_view commandLine);
+        void parse(const std::vector<std::string_view>& tokens);
 
         template <typename T>
         T get(const std::string_view name) const

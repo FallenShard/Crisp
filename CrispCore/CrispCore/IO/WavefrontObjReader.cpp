@@ -1,13 +1,9 @@
-#include "WavefrontObjReader.hpp"
+#include <CrispCore/IO/WavefrontObjReader.hpp>
 
-#include "CrispCore/StringUtils.hpp"
+#include <CrispCore/StringUtils.hpp>
+#include <CrispCore/RobinHood.hpp>
 
 #include <spdlog/spdlog.h>
-
-#pragma warning(push)
-#pragma warning(disable: 26819) // Fallthrough
-#include <robin_hood/robin_hood.h>
-#pragma warning(pop)
 
 #include <iostream>
 #include <sstream>
@@ -25,9 +21,10 @@ namespace crisp
     {
         struct ObjVertex
         {
-            int64_t p = -1;
-            std::optional<int64_t> n;
-            std::optional<int64_t> uv;
+            using IndexType = int32_t;
+            IndexType p = -1;
+            std::optional<IndexType> n;
+            std::optional<IndexType> uv;
 
             inline ObjVertex() {};
             inline ObjVertex(std::string_view stringView)
@@ -36,7 +33,7 @@ namespace crisp
 
                 auto parse = [](const std::string_view& line_view)
                 {
-                    int64_t val;
+                    IndexType val;
                     std::from_chars(line_view.data(), line_view.data() + line_view.size(), val);
                     return val < 0 ? val : val - 1; // return negative if it is a negative value, otherwise 0-based
                 };
@@ -63,24 +60,23 @@ namespace crisp
         {
             std::size_t operator()(const ObjVertex& v) const
             {
-                using IndexType = int64_t;
-                size_t hash = std::hash<IndexType>()(v.p);
+                size_t hash = std::hash<ObjVertex::IndexType>()(v.p);
 
                 if (v.uv)
-                    hash = hash * 37 + std::hash<IndexType>()(v.uv.value());
+                    hash = hash * 37 + std::hash<ObjVertex::IndexType>()(v.uv.value());
 
                 if (v.n)
-                    hash = hash * 37 + std::hash<IndexType>()(v.n.value());
+                    hash = hash * 37 + std::hash<ObjVertex::IndexType>()(v.n.value());
 
                 return hash;
             }
         };
 
-        std::unordered_map<std::string, WavefrontObjReader::Material> loadMaterials(const std::filesystem::path& path)
+        robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> loadMaterials(const std::filesystem::path& path)
         {
-            std::unordered_map<std::string, WavefrontObjReader::Material> materials;
+            robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> materials;
 
-            WavefrontObjReader::Material* currMat = nullptr;
+            WavefrontObjMaterial* currMat = nullptr;
             std::ifstream file(path);
             std::string line;
             while (std::getline(file, line))
@@ -160,33 +156,33 @@ namespace crisp
 
             return materials;
         }
+
+        template <typename GlmVecType>
+        GlmVecType parseAttribute(const std::string& line)
+        {
+            GlmVecType attrib;
+            const auto tokens = fixedTokenize<GlmVecType::length() + 1>(line, " ");
+            for (glm::length_t i = 0; i < GlmVecType::length(); ++i)
+                std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), attrib[i]);
+            return attrib;
+        };
     }
 
-    WavefrontObjReader::WavefrontObjReader(const std::filesystem::path& objFilePath)
+    WavefrontObjMesh WavefrontObjReader::read(const std::filesystem::path& objFilePath)
     {
-        read(objFilePath);
-    }
+        std::ifstream file(objFilePath);
 
-    WavefrontObjReader::~WavefrontObjReader()
-    {
-    }
-
-    bool WavefrontObjReader::read(const std::filesystem::path& objFilePath)
-    {
-        m_path = objFilePath;
-
-        std::ifstream file(m_path);
-
-        robin_hood::unordered_flat_map<ObjVertex, unsigned int, ObjVertexHasher> vertexMap;
+        robin_hood::unordered_flat_map<ObjVertex, uint32_t, ObjVertexHasher> vertexMap;
         std::vector<glm::vec3> positionList;
         std::vector<glm::vec3> normalList;
         std::vector<glm::vec2> texCoordList;
         std::vector<glm::vec3> paramList;
-        std::vector<MeshPart> materialList;
-        robin_hood::unordered_flat_map<std::string, Material> materials;
+        std::vector<glm::uvec3> triangles;
+        std::vector<TriangleMeshView> meshViews;
+        robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> materials;
 
         std::string line;
-        unsigned int uniqueVertexId = 0;
+        uint32_t uniqueVertexId = 0;
         while (std::getline(file, line))
         {
             const std::size_t prefixEnd = line.find(' ', 0);
@@ -195,78 +191,43 @@ namespace crisp
             if (prefix == "o")
             {
                 const auto tokens = fixedTokenize<2>(line, " ");
-                MeshPart meshPart;
-                meshPart.tag = tokens[1];
-                meshPart.offset = 3 * static_cast<uint32_t>(m_triangles.size());
-                meshPart.count = 0;
-                m_meshParts.push_back(meshPart);
+                meshViews.push_back(TriangleMeshView{ std::string(tokens[1]), static_cast<uint32_t>(3 * triangles.size()), 0 });
             }
             else if (prefix == "mtllib")
             {
                 const auto tokens = fixedTokenize<2>(line, " ");
-                std::string_view materialFilename = tokens[1];
-                std::filesystem::path materialFilePath = objFilePath.parent_path() / materialFilename;
+                const std::filesystem::path materialFilePath = objFilePath.parent_path() / tokens[1];
                 if (std::filesystem::exists(materialFilePath))
-                    m_materials = loadMaterials(materialFilePath);
+                    materials = loadMaterials(materialFilePath);
             }
             else if (prefix == "v")
             {
-                glm::vec3 pos;
-
-                const auto tokens = fixedTokenize<4>(line, " "); // v x y z, ignore w
-                for (int i = 0; i < decltype(pos)::length(); ++i)
-                    std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), pos[i]);
-
-                positionList.push_back(pos);
+                positionList.push_back(parseAttribute<glm::vec3>(line));
             }
             else if (prefix == "vt")
             {
-                glm::vec2 texCoord;
-
-                const auto tokens = fixedTokenize<3>(line, " ");
-                for (int i = 0; i < glm::vec2::length(); ++i)
-                    std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), texCoord[i]);
-
-                texCoordList.push_back(texCoord);
+                texCoordList.push_back(parseAttribute<glm::vec2>(line));
             }
             else if (prefix == "vn")
             {
-                glm::vec3 normal;
-
-                const auto tokens = fixedTokenize<4>(line, " ");
-                for (int i = 0; i < glm::vec3::length(); ++i)
-                    std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), normal[i]);
-
-                normalList.push_back(glm::normalize(normal));
+                normalList.push_back(glm::normalize(parseAttribute<glm::vec3>(line)));
             }
             else if (prefix == "vp")
             {
-                glm::vec3 param;
-
-                const auto tokens = fixedTokenize<4>(line, " ");
-                for (int i = 0; i < glm::vec3::length(); ++i)
-                    std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), param[i]);
-
-                paramList.push_back(param);
+                paramList.push_back(parseAttribute<glm::vec3>(line));
             }
             else if (prefix == "f")
             {
                 glm::uvec3 faceIndices;
-
                 const auto tokens = fixedTokenize<4>(line, " ");
-                std::array<ObjVertex, 3> vertices;
 
                 for (int i = 0; i < 3; i++)
                 {
-                    vertices[i] = ObjVertex(tokens[i + 1]);
-                }
-
-                for (int i = 0; i < 3; i++)
-                {
-                    const auto it = vertexMap.find(vertices[i]);
+                    const ObjVertex vertex(tokens[i + 1]);
+                    const auto it = vertexMap.find(vertex);
                     if (it == vertexMap.end())
                     {
-                        vertexMap[vertices[i]] = uniqueVertexId;
+                        vertexMap[vertex] = uniqueVertexId;
                         faceIndices[i] = uniqueVertexId;
                         uniqueVertexId++;
                     }
@@ -276,16 +237,12 @@ namespace crisp
                     }
                 }
 
-                m_triangles.push_back(faceIndices);
+                triangles.push_back(faceIndices);
             }
             else if (prefix == "usemtl")
             {
                 const auto tokens = fixedTokenize<2>(line, " ");
-                MeshPart meshPart;
-                meshPart.tag = tokens[1];
-                meshPart.offset = 3 * static_cast<uint32_t>(m_triangles.size());
-                meshPart.count = 0;
-                m_meshParts.push_back(meshPart);
+                meshViews.push_back(TriangleMeshView{ std::string(tokens[1]), static_cast<uint32_t>(3 * triangles.size()), 0 });
             }
             else if (prefix == "#")
             {
@@ -293,82 +250,58 @@ namespace crisp
             }
         }
 
-        m_triangles.shrink_to_fit();
+        triangles.shrink_to_fit();
 
-        m_positions.resize(positionList.empty() ? 0 : vertexMap.size());
-        m_normals.resize(normalList.empty() ? 0 : vertexMap.size());
-        m_texCoords.resize(texCoordList.empty() ? 0 : vertexMap.size());
+        WavefrontObjMesh mesh;
+        mesh.triangles = std::move(triangles);
+        mesh.positions.resize(positionList.empty() ? 0 : vertexMap.size());
+        mesh.normals.resize(normalList.empty() ? 0 : vertexMap.size());
+        mesh.texCoords.resize(texCoordList.empty() ? 0 : vertexMap.size());
 
-        for (const auto& item : vertexMap)
+        for (auto& [attribIndices, vertexIdx] : vertexMap)
         {
-            unsigned int vertexIdx = item.second;
-            ObjVertex attribIndices = item.first;
             if (attribIndices.p < 0)
                 attribIndices.p = positionList.size() + attribIndices.p;
 
-            m_positions[vertexIdx] = positionList[attribIndices.p];
+            mesh.positions[vertexIdx] = positionList[attribIndices.p];
 
             if (attribIndices.n)
             {
-                int64_t n = attribIndices.n.value();
+                ObjVertex::IndexType n = attribIndices.n.value();
                 if (n < 0)
                     n = normalList.size() + n;
-                m_normals[vertexIdx] = normalList[n];
+                mesh.normals[vertexIdx] = normalList[n];
             }
 
 
             if (attribIndices.uv)
             {
-                int64_t uv = attribIndices.uv.value();
+                ObjVertex::IndexType uv = attribIndices.uv.value();
                 if (uv < 0)
                     uv = texCoordList.size() + uv;
-                m_texCoords[vertexIdx] = texCoordList[uv];
+                mesh.texCoords[vertexIdx] = texCoordList[uv];
             }
         }
 
-        if (m_meshParts.size() >= 1)
+        if (meshViews.size() >= 1)
         {
-            for (std::size_t i = 0; i < m_meshParts.size() - 1; ++i)
-                m_meshParts[i].count = m_meshParts[i + 1].offset - m_meshParts[i].offset;
+            for (std::size_t i = 0; i < meshViews.size() - 1; ++i)
+                meshViews[i].count = meshViews[i + 1].first - meshViews[i].first;
 
-            m_meshParts.back().count = static_cast<uint32_t>(3 * m_triangles.size() - m_meshParts.back().offset);
+            meshViews.back().count = static_cast<uint32_t>(3 * mesh.triangles.size() - meshViews.back().first);
         }
 
-        m_meshParts.erase(std::remove_if(m_meshParts.begin(), m_meshParts.end(), [](const MeshPart& part) {
+        meshViews.erase(std::remove_if(meshViews.begin(), meshViews.end(), [](const TriangleMeshView& part) {
             return part.count == 0;
-            }), m_meshParts.end());
+            }), meshViews.end());
 
-        return true;
-    }
-
-    const std::filesystem::path& WavefrontObjReader::getPath() const
-    {
-        return m_path;
-    }
-
-    const std::vector<glm::vec3>& WavefrontObjReader::getPositions() const
-    {
-        return m_positions;
-    }
-
-    const std::vector<glm::vec3>& WavefrontObjReader::getNormals() const
-    {
-        return m_normals;
-    }
-
-    const std::vector<glm::vec2>& WavefrontObjReader::getTexCoords() const
-    {
-        return m_texCoords;
-    }
-
-    const std::vector<glm::uvec3>& WavefrontObjReader::getTriangles() const
-    {
-        return m_triangles;
+        mesh.views = std::move(meshViews);
+        mesh.materials = std::move(materials);
+        return mesh;
     }
 
     bool WavefrontObjReader::isWavefrontObjFile(const std::filesystem::path& path)
     {
-        const std::string ext = path.extension().string();
-        return ext == ".obj";
+        return path.extension().string() == ".obj";
     }
 }

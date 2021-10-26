@@ -42,7 +42,7 @@ namespace crisp
         };
 
         Shape();
-        ~Shape();
+        virtual ~Shape();
 
         virtual void fillIntersection(unsigned int triangleId, const Ray3& ray, Intersection& its) const = 0;
         virtual void sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const = 0;

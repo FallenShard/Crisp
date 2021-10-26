@@ -11,7 +11,7 @@ target_link_libraries(VesperTest PRIVATE gtest)
 target_link_libraries(VesperTest PRIVATE gtestMain)
 target_link_libraries(VesperTest PRIVATE Vesper)
 
-target_compile_features(VesperTest PUBLIC cxx_std_20)
+target_compile_features(VesperTest PUBLIC cxx_std_23)
 
 add_custom_command(TARGET VesperTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

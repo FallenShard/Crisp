@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
+#include <Vesper/Shapes/Shape.hpp>
 
 #include <CrispCore/Math/Distribution1D.hpp>
-#include "Shapes/Shape.hpp"
+#include <CrispCore/Mesh/TriangleMesh.hpp>
 
 namespace crisp
 {
@@ -11,7 +11,6 @@ namespace crisp
     {
     public:
         Mesh(const VariantMap& params = VariantMap());
-        virtual ~Mesh();
 
         virtual void fillIntersection(unsigned int triangleId, const Ray3& ray, Intersection& its) const override;
         virtual void sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const override;
@@ -31,11 +30,7 @@ namespace crisp
         glm::vec2 interpolateTexCoord(unsigned int triangleId, const glm::vec3& barycentric) const;
 
     protected:
-        std::vector<glm::vec3> m_positions;
-        std::vector<glm::vec3> m_normals;
-        std::vector<glm::vec2> m_texCoords;
-        std::vector<glm::uvec3> m_faces;
-
+        TriangleMesh m_mesh;
         Distribution1D m_pdf;
     };
 }

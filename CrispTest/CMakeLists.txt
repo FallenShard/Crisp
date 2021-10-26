@@ -9,7 +9,7 @@ target_link_libraries(CrispTest PRIVATE gtest)
 target_link_libraries(CrispTest PRIVATE gtestMain)
 target_link_libraries(CrispTest PRIVATE Crisp)
 
-target_compile_features(CrispTest PUBLIC cxx_std_20)
+target_compile_features(CrispTest PUBLIC cxx_std_23)
 
 add_custom_command(TARGET CrispTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

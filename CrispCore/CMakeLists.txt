@@ -16,4 +16,4 @@ target_link_libraries(CrispCore PUBLIC lua)
 
 target_include_directories(CrispCore PUBLIC ".")
 
-target_compile_features(CrispCore PUBLIC cxx_std_20)
+target_compile_features(CrispCore PUBLIC cxx_std_23)

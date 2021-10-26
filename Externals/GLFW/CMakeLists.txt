@@ -5,4 +5,6 @@ set_target_properties(glfw PROPERTIES IMPORTED_LOCATION_RELEASE
     ${PROJECT_SOURCE_DIR}/Externals/glfw/glfw3.lib)
 set_target_properties(glfw PROPERTIES IMPORTED_LOCATION_RELWITHDEBINFO
     ${PROJECT_SOURCE_DIR}/Externals/glfw/glfw3.lib)
+set_target_properties(glfw PROPERTIES IMPORTED_LOCATION_MINSIZEREL
+    ${PROJECT_SOURCE_DIR}/Externals/glfw/glfw3.lib)
 target_include_directories(glfw INTERFACE ".")

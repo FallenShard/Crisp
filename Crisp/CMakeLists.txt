@@ -29,10 +29,9 @@ target_link_libraries(Crisp PUBLIC zlib)
 target_link_libraries(Crisp PUBLIC CrispCore)
 target_link_libraries(Crisp PUBLIC Vesper)
 
-target_include_directories(Crisp PRIVATE "./Crisp")
 target_include_directories(Crisp PUBLIC ".")
 
-target_compile_features(Crisp PUBLIC cxx_std_20)
+target_compile_features(Crisp PUBLIC cxx_std_23)
 
 # add_custom_command(TARGET Crisp POST_BUILD
 #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
