@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.20)
 
 project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if(MSVC)
-  add_definitions(/MP /JMC)
+  add_compile_options(/MP /JMC /Zi /W4 /WX)
 endif()
 
 # List all used third-party libraries

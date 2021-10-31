@@ -92,7 +92,7 @@ namespace crisp
 
                 // Read the pipe, typically the subprocess stdout
                 lineBuffer.fill(0);
-                while (fgets(lineBuffer.data(), lineBuffer.size(), pipe))
+                while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe))
                 {
                     const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
                     if (view.substr(0, 5) == "ERROR")

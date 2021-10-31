@@ -19,7 +19,7 @@ namespace crisp
 {
     namespace
     {
-        void logEmbreeError(void* userPtr, RTCError code, const char* str)
+        void logEmbreeError(void*, RTCError code, const char* str)
         {
             logger->error("Error code {} - {}", code, str);
         }

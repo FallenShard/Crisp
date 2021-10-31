@@ -157,9 +157,9 @@ namespace crisp
             return sliderPtr;
         };
 
-        addLabeledSlider("Gravity X", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(val); };
-        addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityY(val); };
-        addLabeledSlider("Gravity Z", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityZ(val); };
+        addLabeledSlider("Gravity X", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityX(static_cast<float>(val)); };
+        addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityY(static_cast<float>(val)); };
+        addLabeledSlider("Gravity Z", 0.0,  -10.0, +10.0)->valueChanged += [this](double val) { m_fluidSimulation->setGravityZ(static_cast<float>(val)); };
 
         auto viscoLabel = std::make_unique<Label>(m_app->getForm(), "Viscosity");
         viscoLabel->setPosition({ 0, y });

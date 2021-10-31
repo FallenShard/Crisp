@@ -66,7 +66,7 @@ namespace crisp
         void drawFullScreenQuad(VkCommandBuffer cmdBuffer) const;
 
         uint32_t getCurrentVirtualFrameIndex() const;
-        uint32_t getCurrentFrameIndex() const;
+        uint64_t getCurrentFrameIndex() const;
 
         void resize(int width, int height);
 

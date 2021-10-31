@@ -80,7 +80,7 @@ namespace crisp
         }
 
         template<auto FreeFn>
-        static ReturnType freeFunctionCaller(void* receiverObject, ParamTypes... args)
+        static ReturnType freeFunctionCaller(void*, ParamTypes... args)
         {
             return (*FreeFn)(args...);
         }

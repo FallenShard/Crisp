@@ -73,10 +73,22 @@ namespace crisp
 
         inline void addTag(void* handle, std::string tag)
         {
-            m_handleTagMap[handle] = tag;
+            m_handleTagMap.emplace(handle, std::move(tag));
         }
 
-        inline const std::string& getTag(void* handle) const { return m_handleTagMap.at(handle); }
+        inline const std::string& getTag(void* handle) const
+        {
+            if (const auto iter = m_handleTagMap.find(handle); iter != m_handleTagMap.end())
+            {
+                return iter->second;
+            }
+            else
+            {
+                return m_handleTagMap.at(VK_NULL_HANDLE);
+            }
+        }
+
+        inline void removeTag(void* handle) { m_handleTagMap.erase(handle); }
 
     private:
         VulkanContext* m_context;

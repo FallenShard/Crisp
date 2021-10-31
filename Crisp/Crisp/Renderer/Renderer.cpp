@@ -180,7 +180,7 @@ namespace crisp
         return m_currentFrameIndex % NumVirtualFrames;
     }
 
-    uint32_t Renderer::getCurrentFrameIndex() const
+    uint64_t Renderer::getCurrentFrameIndex() const
     {
         return m_currentFrameIndex;
     }

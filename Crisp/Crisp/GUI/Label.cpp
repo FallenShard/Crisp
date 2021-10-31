@@ -79,7 +79,7 @@ namespace crisp::gui
         m_drawComponent.update(m_color);
     }
 
-    void Label::draw(const RenderSystem& renderSystem) const
+    void Label::draw(const RenderSystem& /*renderSystem*/) const
     {
         Rect<float> bounds = getAbsoluteBounds();
         bounds.y -= m_textExtent.y;

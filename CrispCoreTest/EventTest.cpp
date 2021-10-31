@@ -44,11 +44,11 @@ namespace
         void onEventData(const EventData& evData)
         {
             message = evData.message;
-            state = evData.x * evData.y;
+            state = static_cast<int>(evData.x * evData.y);
         }
     };
 
-    void printStuff(const std::string& message)
+    void printStuff(const std::string&)
     {
     }
 }
@@ -85,7 +85,7 @@ TEST(EventTest, Disconnects)
     const auto del = createDelegate<&DelegateTester::onEventData>(&tester);
 
     event += del;
-    event += {&tester, [](const EventData& data) {}};
+    event += {&tester, [](const EventData&) {}};
     EXPECT_EQ(event.getSubscriberCount(), 2);
     EXPECT_EQ(event.getDelegateCount(), 1);
     EXPECT_EQ(event.getFunctorCount(), 1);

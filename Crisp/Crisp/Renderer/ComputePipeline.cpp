@@ -14,7 +14,7 @@ namespace crisp
         return workGroupSizes.at(pipeline.getHandle());
     }
 
-    std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, std::string&& shaderName, uint32_t numDynamicStorageBuffers, uint32_t numDescriptorSets, std::size_t pushConstantSize, const glm::uvec3& workGroupSize)
+    std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, std::string&& shaderName, uint32_t numDynamicStorageBuffers, uint32_t /*numDescriptorSets*/, std::size_t pushConstantSize, const glm::uvec3& workGroupSize)
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings;
         for (uint32_t i = 0; i < numDynamicStorageBuffers; i++)

@@ -25,7 +25,7 @@ namespace crisp
     class VulkanImage;
     class VulkanImageView;
     class VulkanSampler;
-    class RenderNode;
+    struct RenderNode;
 
     class Skybox;
 

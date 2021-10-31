@@ -160,7 +160,7 @@ namespace crisp
         template <typename GlmVecType>
         GlmVecType parseAttribute(const std::string& line)
         {
-            GlmVecType attrib;
+            GlmVecType attrib{};
             const auto tokens = fixedTokenize<GlmVecType::length() + 1>(line, " ");
             for (glm::length_t i = 0; i < GlmVecType::length(); ++i)
                 std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), attrib[i]);
@@ -229,7 +229,7 @@ namespace crisp
                     {
                         vertexMap[vertex] = uniqueVertexId;
                         faceIndices[i] = uniqueVertexId;
-                        uniqueVertexId++;
+                        ++uniqueVertexId;
                     }
                     else
                     {
@@ -261,7 +261,7 @@ namespace crisp
         for (auto& [attribIndices, vertexIdx] : vertexMap)
         {
             if (attribIndices.p < 0)
-                attribIndices.p = positionList.size() + attribIndices.p;
+                attribIndices.p = static_cast<ObjVertex::IndexType>(positionList.size()) + attribIndices.p;
 
             mesh.positions[vertexIdx] = positionList[attribIndices.p];
 
@@ -269,7 +269,7 @@ namespace crisp
             {
                 ObjVertex::IndexType n = attribIndices.n.value();
                 if (n < 0)
-                    n = normalList.size() + n;
+                    n = static_cast<ObjVertex::IndexType>(normalList.size()) + n;
                 mesh.normals[vertexIdx] = normalList[n];
             }
 
@@ -278,7 +278,7 @@ namespace crisp
             {
                 ObjVertex::IndexType uv = attribIndices.uv.value();
                 if (uv < 0)
-                    uv = texCoordList.size() + uv;
+                    uv = static_cast<ObjVertex::IndexType>(texCoordList.size()) + uv;
                 mesh.texCoords[vertexIdx] = texCoordList[uv];
             }
         }

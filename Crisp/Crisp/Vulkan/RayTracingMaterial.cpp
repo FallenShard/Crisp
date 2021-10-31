@@ -153,7 +153,7 @@ namespace crisp
             writeCameraBinding.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
             writeCameraBinding.pBufferInfo     = &bufferInfo;
 
-            cameraParamSize = bufferInfo.range;
+            cameraParamSize = static_cast<uint32_t>(bufferInfo.range);
 
             VkWriteDescriptorSet writeSets[] = { writeAsBinding, writeImageBinding, writeCameraBinding };
             vkUpdateDescriptorSets(device, 3, writeSets, 0, nullptr);
@@ -327,7 +327,7 @@ namespace crisp
         vkCreateRayTracingPipelines(renderer->getDevice()->getHandle(), nullptr, 1, &raytracingCreateInfo, nullptr, &m_pipeline);
 
         GET_DEVICE_PROC_NV(vkGetRayTracingShaderGroupHandles, renderer->getDevice());
-        uint32_t groupCount = groups.size();
+        uint32_t groupCount = static_cast<uint32_t>(groups.size());
         uint32_t handleSize = renderer->getContext()->getPhysicalDevice().getRayTracingProperties().shaderGroupHandleSize;
         VkDeviceSize shaderGroupBindingTableSize = groupCount * handleSize;
         std::vector<uint8_t> shaderHandleStorage(shaderGroupBindingTableSize);

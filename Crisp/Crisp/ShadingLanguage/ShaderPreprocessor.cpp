@@ -67,9 +67,3 @@ std::string crisp::preprocess(const std::filesystem::path& resourceFolder, const
 
     return std::string();
 }
-
-VkShaderModule crisp::compile(const std::string& shaderSourceCode)
-{
-
-    return VkShaderModule();
-}

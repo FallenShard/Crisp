@@ -59,14 +59,14 @@ namespace crisp::gui
         m_guiUpdates.push_back(guiUpdateCallback);
     }
 
-    void Form::add(std::unique_ptr<Control> control, bool useFadeInAnimation)
+    void Form::add(std::unique_ptr<Control> control, bool /*useFadeInAnimation*/)
     {
         // TODO: Rethink animations for GUI tree manipulations
         //m_rootControlGroup->addControl(useFadeInAnimation ? fadeIn(std::move(control)) : std::move(control));
         m_rootControlGroup->addControl(std::move(control));
     }
 
-    void Form::remove(std::string controlId, float duration)
+    void Form::remove(std::string controlId, float /*duration*/)
     {
         auto control = m_rootControlGroup->getControlById(controlId);
         if (!control)

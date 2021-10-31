@@ -93,6 +93,8 @@ TEST(ParserTest, Input)
                     }
                 }
             }
+
+            return -1;
         };
 
         if (auto initDeclList = dynamic_cast<InitDeclaratorList*>(statements[i].get()))

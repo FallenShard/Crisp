@@ -29,6 +29,7 @@ namespace crisp
     {
         spdlog::set_pattern("[%T.%e][%n][%^%l%$][Tid: %t]: %v");
         spdlog::set_level(spdlog::level::debug);
+        spdlog::info("Current path: {}", std::filesystem::current_path().string());
 
         CommandLineParser.addOption<std::string>("config", ".");
         CommandLineParser.addOption<uint32_t>("scene", 4);

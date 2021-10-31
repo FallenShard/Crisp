@@ -86,7 +86,7 @@ namespace crisp::gui
         void setDiscreteValues(std::vector<T> discreteValues)
         {
             m_discreteValues = std::move(discreteValues);
-            setIndexValue(m_discreteValues.size() / 2);
+            setIndexValue(static_cast<int>(m_discreteValues.size()) / 2);
         }
 
         void updateIndexValue(double indicatorNormPos)
@@ -152,8 +152,8 @@ namespace crisp::gui
     private:
         void updateValueCount()
         {
-            T range = m_maxValue - m_minValue;
-            m_valueCount = range / m_increment + 1;
+            const T range = m_maxValue - m_minValue;
+            m_valueCount = static_cast<int>(range / m_increment) + 1;
             if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>)
             {
                 if (std::fmod(range, m_increment) > 1e-5)
@@ -240,8 +240,8 @@ namespace crisp::gui
             m_label->setPosition({ -10.0f, 0.0f });
             m_label->setParent(this);
 
-            glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-            m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, color, color, [this](const glm::vec4& t)
+            glm::vec4 finalColor = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
+            m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, finalColor, finalColor, [this](const glm::vec4& t)
                 {
                     setColor(t);
                     m_indicatorRect->setColor(t);
@@ -291,7 +291,7 @@ namespace crisp::gui
             m_model.setDiscreteValues(std::move(values));
         }
 
-        virtual void onMouseEntered(float x, float y) override
+        virtual void onMouseEntered(float /*x*/, float /*y*/) override
         {
             if (m_state != State::Idle)
                 return;
@@ -299,7 +299,7 @@ namespace crisp::gui
             setState(State::Hover);
         }
 
-        virtual void onMouseExited(float x, float y) override
+        virtual void onMouseExited(float /*x*/, float /*y*/) override
         {
             if (m_state != State::Hover)
                 return;
@@ -418,7 +418,7 @@ namespace crisp::gui
             valueChanged(value);
         }
 
-        float getIndicatorNormPos(float x, float y)
+        float getIndicatorNormPos(float x, float /*y*/)
         {
             Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
             float indicatorPos = std::max(0.0f, std::min(x - m_M[3][0], bounds.width));

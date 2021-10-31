@@ -43,13 +43,10 @@ class Decompressor
         // (8 to 15) + 32 to automatically detect gzip/zlib header
         constexpr int window_bits = 15 + 32; // auto with windowbits of 15
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
         if (inflateInit2(&inflate_s, window_bits) != Z_OK)
         {
             throw std::runtime_error("inflate init failed");
         }
-#pragma GCC diagnostic pop
         inflate_s.next_in = reinterpret_cast<z_const Bytef*>(data);
 
 #ifdef DEBUG

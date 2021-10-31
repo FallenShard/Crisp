@@ -38,7 +38,7 @@ namespace crisp
         m_dynamicBufferIndices.resize(m_descriptorSetBindings.size());
         for (std::size_t s = 0; s < m_descriptorSetBindings.size(); ++s)
         {
-            m_dynamicBufferIndices[s].resize(m_descriptorSetBindings[s].size(), -1);
+            m_dynamicBufferIndices[s].resize(m_descriptorSetBindings[s].size(), ~0u);
             for (std::size_t b = 0; b < m_descriptorSetBindings[s].size(); ++b)
                 if (m_descriptorSetBindings[s][b].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
                     m_descriptorSetBindings[s][b].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)

@@ -47,19 +47,19 @@ namespace crisp
             cmdBuffers.push_back({ cmdBuffer.getHandle() });
 
             VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-            submitInfo.waitSemaphoreCount   = waitSemaphores.back().size();
+            submitInfo.waitSemaphoreCount   = static_cast<uint32_t>(waitSemaphores.back().size());
             submitInfo.pWaitSemaphores      = waitSemaphores.back().data();
             submitInfo.pWaitDstStageMask    = waitStages.back().data();
-            submitInfo.commandBufferCount   = cmdBuffers.back().size();
+            submitInfo.commandBufferCount   = static_cast<uint32_t>(cmdBuffers.back().size());
             submitInfo.pCommandBuffers      = cmdBuffers.back().data();
-            submitInfo.signalSemaphoreCount = signalSemaphores.back().size();
+            submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.back().size());
             submitInfo.pSignalSemaphores    = signalSemaphores.back().data();
             submitInfos.push_back(submitInfo);
         }
 
         inline void submitToQueue(const VulkanQueue& queue)
         {
-            vkQueueSubmit(queue.getHandle(), submitInfos.size(), submitInfos.data(), completionFence);
+            vkQueueSubmit(queue.getHandle(), static_cast<uint32_t>(submitInfos.size()), submitInfos.data(), completionFence);
             submitInfos.clear();
             waitStages.clear();
             waitSemaphores.clear();

@@ -29,7 +29,7 @@ namespace crisp
     {
     }
 
-    void LightSystem::enableCascadedShadowMapping(uint32_t cascadeCount, uint32_t shadowMapSize)
+    void LightSystem::enableCascadedShadowMapping(uint32_t cascadeCount, uint32_t /*shadowMapSize*/)
     {
         m_cascadedDirectionalLightBuffer = std::make_unique<UniformBuffer>(m_renderer, cascadeCount * sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
         m_cascades.resize(cascadeCount);
@@ -40,7 +40,7 @@ namespace crisp
         }
     }
 
-    void LightSystem::update(const Camera& camera, float dt)
+    void LightSystem::update(const Camera& camera, float /*dt*/)
     {
         const auto [zNear, zFar] = camera.getViewDepthRange();
         updateSplitIntervals(zNear, zFar);
@@ -236,7 +236,7 @@ namespace crisp
         };
 
         //m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, LightCullingPass, 0);
-        renderGraph.addDependency(LightCullingPass, "MainPass", [this](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        renderGraph.addDependency(LightCullingPass, "MainPass", [this](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
         {
             VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;

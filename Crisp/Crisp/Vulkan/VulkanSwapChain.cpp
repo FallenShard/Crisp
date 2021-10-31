@@ -108,7 +108,7 @@ namespace crisp
 
         createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode    = VK_PRESENT_MODE_MAILBOX_KHR;
+        createInfo.presentMode    = presentMode;
         createInfo.clipped        = VK_TRUE;
         createInfo.oldSwapchain   = m_handle;
 

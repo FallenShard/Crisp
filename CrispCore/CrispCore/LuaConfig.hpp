@@ -81,7 +81,7 @@ namespace crisp
 
                     for (std::size_t i = 0; i < numElements; ++i)
                     {
-                        lua_pushnumber(m_L, i + 1);
+                        lua_pushnumber(m_L, static_cast<lua_Number>(i + 1));
                         lua_gettable(m_L, -2);
                         vec.push_back(convertTo<ElementType>().value_or(ElementType{}));
 

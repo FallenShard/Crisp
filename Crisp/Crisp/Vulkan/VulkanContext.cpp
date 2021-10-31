@@ -182,7 +182,7 @@ namespace crisp
     VkDevice VulkanContext::createLogicalDevice(const VulkanQueueConfiguration& config) const
     {
         VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-        auto* ptr = &m_physicalDevice.getFeatures2();
+        //auto* ptr = &m_physicalDevice.getFeatures2();
         createInfo.pNext = nullptr;//ptr;
         createInfo.pEnabledFeatures = &m_physicalDevice.getFeatures();
         createInfo.queueCreateInfoCount    = static_cast<uint32_t>(config.getQueueCreateInfos().size());

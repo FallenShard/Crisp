@@ -1,7 +1,22 @@
 #include "OpenEXRReader.hpp"
 
+#pragma warning(push)
+#pragma warning(disable: 4018)
+#pragma warning(disable: 4706)
+#pragma warning(disable: 4389)
+#pragma warning(disable: 4100)
+#pragma warning(disable: 6387)
+#pragma warning(disable: 6386)
+#pragma warning(disable: 6385)
+#pragma warning(disable: 6001)
+#pragma warning(disable: 6011)
+#pragma warning(disable: 26451)
+#pragma warning(disable: 26819)
+#pragma warning(disable: 26812)
+#pragma warning(disable: 26495)
 #define TINYEXR_IMPLEMENTATION
 #include <tinyexr/tinyexr.h>
+#pragma warning(pop)
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 

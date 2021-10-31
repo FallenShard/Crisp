@@ -166,7 +166,7 @@ namespace crisp
 
             RgbSpectrum Rs = (squareTerm + cosTheta2 - etaCosTheta) /
                              (squareTerm + cosTheta2 + etaCosTheta);
-                
+
             return (Rs + Rp) * 0.5f;
         }
 

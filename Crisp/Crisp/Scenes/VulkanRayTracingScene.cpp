@@ -104,11 +104,11 @@ namespace crisp
         m_resourceContext->addGeometry("light", std::make_unique<Geometry>(m_renderer, lightMesh, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
         TriangleMesh leftSphere(loadMesh(m_renderer->getResourcesPath() / "Meshes/sphere.obj", posFormat));
-        leftSphere.transform(glm::translate(glm::vec3(-0.421400, 0.332100, -0.280000)) * glm::scale(glm::vec3(0.3263)));
+        leftSphere.transform(glm::translate(glm::vec3(-0.421400f, 0.332100f, -0.280000f)) * glm::scale(glm::vec3(0.3263f)));
         m_resourceContext->addGeometry("leftSphere", std::make_unique<Geometry>(m_renderer, leftSphere, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
         TriangleMesh rightSphere(loadMesh(m_renderer->getResourcesPath() / "Meshes/Ocean3.obj", posFormat));
         //rightSphere.transform(glm::translate(glm::vec3(0.445800, 0.332100, 0.376700)) * glm::scale(glm::vec3(0.3263)));
-        rightSphere.transform(glm::translate(glm::vec3(0.000, 0.232100, 0.000)) * glm::scale(glm::vec3(0.5f)));// *glm::scale(glm::vec3(0.3263)));
+        rightSphere.transform(glm::translate(glm::vec3(0.000f, 0.232100f, 0.000f)) * glm::scale(glm::vec3(0.5f)));// *glm::scale(glm::vec3(0.3263)));
         m_resourceContext->addGeometry("rightSphere", std::make_unique<Geometry>(m_renderer, rightSphere, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
 
@@ -120,14 +120,14 @@ namespace crisp
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("leftSphere"), glm::mat4(1.0f));
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("rightSphere"), glm::mat4(1.0f));
 
-        std::default_random_engine eng;
+        /*std::default_random_engine eng;
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
         std::vector<float> randData;
         for (int i = 0; i < 65536 / sizeof(float); ++i)
         {
             randData.push_back(dist(eng));
         }
-        auto randBuffer = m_resourceContext->createUniformBuffer("random", randData, BufferUpdatePolicy::Constant);
+        auto randBuffer = m_resourceContext->createUniformBuffer("random", randData, BufferUpdatePolicy::Constant);*/
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
             {

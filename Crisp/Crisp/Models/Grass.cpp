@@ -21,7 +21,7 @@ namespace crisp
         static const int PC0 = 0;
     }
 
-    Grass::Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* shadowRenderPass, UniformBuffer* cameraBuffer, VulkanSampler* sampler)
+    Grass::Grass(Renderer* renderer, VulkanRenderPass* /*mainRenderPass*/, VulkanRenderPass* /*shadowRenderPass*/, UniformBuffer* /*cameraBuffer*/, VulkanSampler* /*sampler*/)
         : m_renderer(renderer)
     {
         //m_shadowPipelines.reserve(4);

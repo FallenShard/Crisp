@@ -92,7 +92,7 @@ namespace crisp
 
     PipelineBuilder& PipelineBuilder::addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats)
     {
-        const uint32_t locOffset = m_vertexInputAttributes.size();
+        const uint32_t locOffset = static_cast<uint32_t>(m_vertexInputAttributes.size());
         auto attribs = generateVertexInputAttributes(locOffset, binding, formats);
         m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
         m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());

@@ -2,7 +2,7 @@
 
 namespace crisp
 {
-    Geometry::Geometry(Renderer* renderer)
+    Geometry::Geometry(Renderer* /*renderer*/)
         : m_indexBuffer(nullptr)
         , m_indexCount(0)
         , m_vertexCount(0)

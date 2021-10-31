@@ -35,8 +35,8 @@ namespace crisp
                 Tile tile;
                 for (int k = 0; k < 4; ++k)
                 {
-                    float x = tileSize.x * (i + k % 2);
-                    float y = tileSize.y * (j + k / 2);
+                    float x = tileSize.x * static_cast<float>(i + k % 2);
+                    float y = tileSize.y * static_cast<float>(j + k / 2);
                     tile.screenSpacePoints[k] = glm::vec3(x, y, 1.0f);
 
                     glm::vec4 ndc = glm::vec4(tile.screenSpacePoints[k], 1.0f);

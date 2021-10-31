@@ -38,7 +38,7 @@ namespace crisp
         static constexpr const char* OscillationPass = "oscillationPass";
 
         constexpr int N = 2048;
-        const int logN = std::log2(N);
+        const int logN = static_cast<int>(std::log2(N));
         constexpr float Lx = 2.0f * N;
 
         struct MainPCData
@@ -63,9 +63,9 @@ namespace crisp
             return glm::vec2(x, z) / std::sqrt(x * x + z * z);
         }
 
-        constexpr float g = 9.81;
-        MainPCData values = { 0.0, N, N, Lx, Lx, 40.0, 40.0, getNormVector(40, 40)[0], getNormVector(40, 40)[1], std::sqrt(40 * 40.0 + 40 * 40.0),
-            std::sqrt(40 * 40.0 + 40 * 40.0) * std::sqrt(40 * 40.0 + 40 * 40.0)  / g, 1000.0, 1.0};
+        constexpr float g = 9.81f;
+        MainPCData values = { 0.0f, N, N, Lx, Lx, 40.0f, 40.0f, getNormVector(40, 40)[0], getNormVector(40, 40)[1], std::sqrt(40 * 40.0f + 40 * 40.0f),
+            std::sqrt(40 * 40.0f + 40 * 40.0f) * std::sqrt(40 * 40.0f + 40 * 40.0f)  / g, 1000.0f, 1.0f};
 
         std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize, const PipelineLayoutBuilder& layoutBuilder, const std::string& shaderName)
         {
@@ -169,7 +169,7 @@ namespace crisp
         , m_resourceContext(std::make_unique<ResourceContext>(renderer))
         , m_renderGraph(std::make_unique<RenderGraph>(renderer))
     {
-        m_app->getWindow()->keyPressed += [this](Key key, int modifiers) {
+        m_app->getWindow()->keyPressed += [this](Key key, int /*modifiers*/) {
             if (key == Key::Space)
                 paused = !paused;
             if (key == Key::F5)
@@ -241,7 +241,7 @@ namespace crisp
         oscillationPass.material->writeDescriptor(0, 4, m_resourceContext->getImageView("normalXView0")->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
         oscillationPass.material->writeDescriptor(0, 5, m_resourceContext->getImageView("normalZView0")->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-        oscillationPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        oscillationPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
         {
             auto& pass = m_renderGraph->getNode(OscillationPass);
 
@@ -267,7 +267,7 @@ namespace crisp
 
         m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer));
 
-        m_renderGraph->addDependency(OscillationPass, MainPass, [this](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        m_renderGraph->addDependency(OscillationPass, MainPass, [this](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
         {
             VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -414,11 +414,11 @@ namespace crisp
 
         auto calculatePhillipsSpectrum = [](const Wind& wind, const glm::vec2& k)
         {
-            const float kLen2 = glm::dot(k, k) + 0.000001;
+            const float kLen2 = glm::dot(k, k) + 0.000001f;
             const glm::vec2 kNorm = kLen2 == 0.0f ? glm::vec2(0.0f) : k / std::sqrtf(kLen2);
 
             const float A = 1000.0f;
-            const float midterm = std::exp(-1.0 / (kLen2 * wind.Lw * wind.Lw)) / std::powf(kLen2, 2);
+            const float midterm = std::exp(-1.0f / (kLen2 * wind.Lw * wind.Lw)) / std::powf(kLen2, 2);
             const float kDotW = glm::dot(kNorm, wind.speedNorm);
 
             const float smallWaves = 1.0f;
@@ -483,21 +483,21 @@ namespace crisp
             bitReversePass.material->writeDescriptor(0, 0, m_resourceContext->getImageView(imageViewRead)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
             bitReversePass.material->writeDescriptor(0, 1, m_resourceContext->getImageView(imageViewWrite)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-            bitReversePass.preDispatchCallback = [this, image](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            bitReversePass.preDispatchCallback = [this, image](VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
             {
                 auto& pass = m_renderGraph->getNode(image + "BitReversePass0");
 
                 struct PCData
                 {
                     uint32_t horizontal;
-                    uint32_t numN;
+                    int numN;
                     float time;
                 };
 
-                PCData values = { 1, logN, m_time };
-                pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, values);
+                PCData pcValues = { 1, logN, m_time };
+                pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, pcValues);
             };
-            m_renderGraph->addDependency(OscillationPass, image + "BitReversePass0", [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            m_renderGraph->addDependency(OscillationPass, image + "BitReversePass0", [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                 {
                     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -535,7 +535,7 @@ namespace crisp
             fftPass.material->writeDescriptor(0, 0, m_resourceContext->getImageView(imageViewRead)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
             fftPass.material->writeDescriptor(0, 1, m_resourceContext->getImageView(imageViewWrite)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-            fftPass.preDispatchCallback = [this, i, &fftPass](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            fftPass.preDispatchCallback = [this, i, &fftPass](VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
             {
                 struct PCData
                 {
@@ -544,15 +544,15 @@ namespace crisp
                     int32_t numN;
                 };
 
-                PCData values = { i + 1, m_time, N };
-                fftPass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, values);
+                PCData pcvalues = { i + 1, m_time, N };
+                fftPass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
             };
 
             logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
             if (i == 0)
             {
-                m_renderGraph->addDependency(image + "BitReversePass0", name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                m_renderGraph->addDependency(image + "BitReversePass0", name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                     {
                         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                         barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -574,7 +574,7 @@ namespace crisp
             if (i > 0)
             {
                 std::string prevName = image + "TrueFFTPass" + std::to_string(i - 1);
-                m_renderGraph->addDependency(prevName, name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                m_renderGraph->addDependency(prevName, name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                     {
                         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                         barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -607,24 +607,24 @@ namespace crisp
             bitReversePass2.material->writeDescriptor(0, 0, m_resourceContext->getImageView(imageViewRead)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
             bitReversePass2.material->writeDescriptor(0, 1, m_resourceContext->getImageView(imageViewWrite)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-            bitReversePass2.preDispatchCallback = [this, image](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            bitReversePass2.preDispatchCallback = [this, image](VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
             {
                 auto& pass = m_renderGraph->getNode(image + "BitReversePass1");
 
                 struct PCData
                 {
                     uint32_t horizontal;
-                    uint32_t numN;
+                    int numN;
                     float time;
                 };
 
-                PCData values = { 0, logN, m_time };
-                pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, values);
+                PCData pcvalues = { 0, logN, m_time };
+                pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
             };
 
             logger->info("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
 
-            m_renderGraph->addDependency(image + "TrueFFTPass" + std::to_string(logN - 1), image + "BitReversePass1", [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            m_renderGraph->addDependency(image + "TrueFFTPass" + std::to_string(logN - 1), image + "BitReversePass1", [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                 {
                     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -663,7 +663,7 @@ namespace crisp
 
             logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
-            fftPass.preDispatchCallback = [this, i, &fftPass](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+            fftPass.preDispatchCallback = [this, i, &fftPass](VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
             {
                 struct PCData
                 {
@@ -672,14 +672,14 @@ namespace crisp
                     int32_t numN;
                 };
 
-                PCData values = { i + 1, m_time, N };
-                fftPass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, values);
+                PCData pcvalues = { i + 1, m_time, N };
+                fftPass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
             };
 
             if (i == logN - 1)
             {
                 finalImageView = imageViewWrite;
-                m_renderGraph->addDependency(name, MainPass, [this, image, imageLayerWrite](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                m_renderGraph->addDependency(name, MainPass, [this, image, imageLayerWrite](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                     {
                         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                         barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -699,7 +699,7 @@ namespace crisp
             }
             else if (i == 0)
             {
-                m_renderGraph->addDependency(image + "BitReversePass1", name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                m_renderGraph->addDependency(image + "BitReversePass1", name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                     {
                         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                         barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -721,7 +721,7 @@ namespace crisp
             if (i > 0)
             {
                 std::string prevName = image + "TrueFFTPassVert" + std::to_string(i - 1);
-                m_renderGraph->addDependency(prevName, name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                m_renderGraph->addDependency(prevName, name, [this, image, imageLayerRead](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
                     {
                         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                         barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -779,7 +779,7 @@ namespace crisp
             return sliderPtr;
         };
         addLabeledSlider("Wind Speed X", values.windSpeedX, 0.0, 100.0, 1.0)->valueChanged += [](double val) {
-            values.windSpeedX = val;
+            values.windSpeedX = static_cast<float>(val);
 
             glm::vec2 speed = { values.windSpeedX, values.windSpeedZ };
             values.magnitude = std::sqrt(glm::dot(speed, speed));
@@ -787,7 +787,7 @@ namespace crisp
             values.windSpeedNormZ = values.windSpeedZ / values.magnitude;
         };
         addLabeledSlider("Wind Speed Z", values.windSpeedZ, 0.0, 100.0, 1.0)->valueChanged += [](double val) {
-            values.windSpeedZ = val;
+            values.windSpeedZ = static_cast<float>(val);
 
             glm::vec2 speed = { values.windSpeedX, values.windSpeedZ };
             values.magnitude = std::sqrt(glm::dot(speed, speed));
@@ -796,11 +796,11 @@ namespace crisp
 
         };
         addLabeledSlider("Amplitude", values.A, 0.0, 1000.0, 5.0)->valueChanged += [](double val) {
-            values.A = val;
+            values.A = static_cast<float>(val);
 
         };
         addLabeledSlider("smallWaves", values.smallWaves, 0.0, 10.0)->valueChanged += [](double val) {
-            values.smallWaves = val;
+            values.smallWaves = static_cast<float>(val);
         };
 
         form->add(std::move(panel));

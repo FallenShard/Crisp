@@ -111,13 +111,12 @@ namespace crisp
                 std::cout << "\nEnd offset: " << endOffset << '\n';
                 std::cout << "Properties: " << propertyCount << " Length: " << propertyListLength << "\n";
 
-                for (int i = 0; i < propertyCount; ++i)
+                for (uint32_t i = 0; i < propertyCount; ++i)
                 {
                     parseProperty(name);
                 }
 
-                uint32_t listLen = endOffset - position;
-                if (listLen > 0)
+                if (endOffset > position)
                 {
                     while (true)
                     {
@@ -194,7 +193,7 @@ namespace crisp
                 }
                 else
                 {
-                    uint32_t byteSize = 1;
+                    //uint32_t byteSize = 1;
                     switch (typeCode)
                     {
                     case 'F':
@@ -298,7 +297,7 @@ namespace crisp
         return filePath.extension().string() == ".fbx";
     }
 
-    void FbxImporter::moveDataToTriangleMesh(TriangleMesh& triangleMesh, std::vector<VertexAttributeDescriptor> vertexAttribs)
+    void FbxImporter::moveDataToTriangleMesh(TriangleMesh& /*triangleMesh*/, std::vector<VertexAttributeDescriptor> /*vertexAttribs*/)
     {
         /*triangleMesh.setMeshName(m_path.filename().stem().string());
         triangleMesh.setFaces(std::move(m_triangles));

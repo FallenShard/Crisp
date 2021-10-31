@@ -34,6 +34,8 @@ namespace crisp
         m_transferQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(2));
 
         m_memoryAllocator = std::make_unique<VulkanMemoryAllocator>(*m_context, m_device);
+
+        m_handleTagMap.emplace(VK_NULL_HANDLE, "Unknown");
     }
 
     VulkanDevice::~VulkanDevice()

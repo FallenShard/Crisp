@@ -68,7 +68,7 @@ namespace crisp
             //auto t2 = m_projection * glm::vec4(orthoMax.x, orthoMax.y, -orthoMax.z, 1.0f); // should give [ 1,  1, 1]
         }
 
-        glm::mat4 fitSphereOrthoAroundFrustum(glm::mat4& view, const std::array<glm::vec3, 8>& worldFrustumPoints, const glm::vec3& direction)
+        glm::mat4 fitSphereOrthoAroundFrustum(glm::mat4& /*view*/, const std::array<glm::vec3, 8>& worldFrustumPoints, const glm::vec3& /*direction*/)
         {
             static int C = 0;
 
@@ -151,7 +151,7 @@ namespace crisp
         m_projection = fitSphereOrthoAroundFrustum(m_view, worldFrustumPoints, m_direction);
     }
 
-    void DirectionalLight::fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints, const glm::vec3& center, float radius, uint32_t shadowMapSize)
+    void DirectionalLight::fitProjectionToFrustum(const std::array<glm::vec3, 8>& /*worldFrustumPoints*/, const glm::vec3& center, float radius, uint32_t shadowMapSize)
     {
         static const glm::vec3 YAxis(0.0f, 1.0f, 0.0f);
         const glm::vec3 right = glm::normalize(glm::cross(m_direction, YAxis));

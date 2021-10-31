@@ -104,7 +104,7 @@ namespace crisp
         RTCRayN* rays = RTCRayHitN_RayN(args->rayhit, args->N);
         RTCHitN* hits = RTCRayHitN_HitN(args->rayhit, args->N);
 
-        for (int i = 0; i < args->N; ++i)
+        for (unsigned int i = 0; i < args->N; ++i)
         {
             RTCRay ray = rtcGetRayFromRayN(rays, args->N, i);
             float t;
@@ -121,7 +121,7 @@ namespace crisp
     {
         const Sphere* sphere = reinterpret_cast<const Sphere*>(args->geometryUserPtr);
 
-        for (int i = 0; i < args->N; ++i)
+        for (unsigned int i = 0; i < args->N; ++i)
         {
             RTCRay ray = rtcGetRayFromRayN(args->ray, args->N, i);
 

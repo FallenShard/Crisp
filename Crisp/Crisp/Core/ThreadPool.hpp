@@ -77,7 +77,7 @@ namespace crisp
 
 
         template <typename F>
-        void parallelFor(unsigned int iterationCount, F&& iterationCallback)
+        void parallelFor(std::size_t iterationCount, F&& iterationCallback)
         {
             std::size_t jobsToSchedule = m_workers.size();
             std::size_t iterationsPerJob = iterationCount / jobsToSchedule;
@@ -110,7 +110,7 @@ namespace crisp
         }
 
         template <typename F>
-        void parallelJob(unsigned int iterationCount, F&& jobCallback)
+        void parallelJob(std::size_t iterationCount, F&& jobCallback)
         {
             std::size_t jobsToSchedule = m_workers.size();
             std::size_t iterationsPerJob = iterationCount / jobsToSchedule;
@@ -145,7 +145,7 @@ namespace crisp
         std::vector<std::thread> m_workers;
         ConcurrentQueue<std::function<void()>> m_taskQueue;
 
-        unsigned int m_jobCount;
+        std::size_t m_jobCount;
         std::mutex m_jobMutex;
         std::condition_variable m_jobCondVar;
     };

@@ -17,5 +17,6 @@ target_link_libraries(Vesper PUBLIC CrispCore)
 target_include_directories(Vesper PRIVATE "./Vesper")
 target_include_directories(Vesper PUBLIC ".")
 
-target_compile_features(Vesper PUBLIC cxx_std_23)
+set_target_properties(Vesper PROPERTIES
+    CXX_STANDARD 23)
 target_compile_definitions(Vesper PUBLIC __TBB_NO_IMPLICIT_LINKAGE)

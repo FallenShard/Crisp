@@ -181,7 +181,7 @@ namespace crisp
         m_app->getForm()->remove("shadowMappingPanel");
     }
 
-    void ShadowMappingScene::resize(int width, int height)
+    void ShadowMappingScene::resize(int, int)
     {
        /* m_cameraController->resize(width, height);
 
@@ -189,7 +189,7 @@ namespace crisp
         m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);*/
     }
 
-    void ShadowMappingScene::update(float dt)
+    void ShadowMappingScene::update(float /*dt*/)
     {
         ////static float t = 0;
         ////

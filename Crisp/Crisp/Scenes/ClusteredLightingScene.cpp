@@ -278,7 +278,7 @@ namespace crisp
         };
     }
 
-    void ClusteredLightingScene::createGui(gui::Form* form)
+    void ClusteredLightingScene::createGui(gui::Form* /*form*/)
     {
     }
 }

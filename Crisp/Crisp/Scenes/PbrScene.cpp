@@ -66,7 +66,6 @@ namespace crisp
 
         CommonConstantBufferStructure commonConstantData{};
 
-        std::unordered_map<VkPipeline, glm::uvec3> workGroupSizes;
         std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
         {
             PipelineLayoutBuilder layoutBuilder;
@@ -106,7 +105,6 @@ namespace crisp
             pipelineInfo.basePipelineIndex = -1;
             VkPipeline pipeline;
             vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-            workGroupSizes[pipeline] = workGroupSize;
 
             auto uniqueHandle = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
             uniqueHandle->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
@@ -132,7 +130,6 @@ namespace crisp
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
         m_renderGraph->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
-
 
         // Main render pass
         m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_1_BIT));
@@ -177,10 +174,10 @@ namespace crisp
         transLutMaterial->writeDescriptor(0, 0, *m_resourceContext->getUniformBuffer("atmosphereCommon"));
         transLutMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
 
-        m_transLutNode = std::make_unique<RenderNode>();
-        m_transLutNode->geometry = m_renderer->getFullScreenGeometry();
-        m_transLutNode->pass("TransLUTPass").material = transLutMaterial;
-        m_transLutNode->pass("TransLUTPass").pipeline = transLutPipeline;
+        auto transLutNode = createRenderNode("transLutNode", std::nullopt);
+        transLutNode->geometry = m_renderer->getFullScreenGeometry();
+        transLutNode->pass("TransLUTPass").material = transLutMaterial;
+        transLutNode->pass("TransLUTPass").pipeline = transLutPipeline;
 
         // Multiscattering
         VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -217,7 +214,7 @@ namespace crisp
         multiScatPass.material->writeDescriptor(1, 1, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
         multiScatPass.material->setDynamicBufferView(0, *m_resourceContext->getUniformBuffer("atmosphereCommon"), 0);
         multiScatPass.material->setDynamicBufferView(1, *m_resourceContext->getUniformBuffer("atmosphere"), 0);
-        multiScatPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+        multiScatPass.preDispatchCallback = [this](VkCommandBuffer /*cmdBuffer*/, uint32_t /*frameIndex*/)
         {
         };
 
@@ -246,10 +243,10 @@ namespace crisp
         skyViewLutMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("atmosphere"));
         skyViewLutMaterial->writeDescriptor(1, 0, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
         skyViewLutMaterial->writeDescriptor(1, 1, m_multiScatTexViews, m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
-        m_skyViewLutNode = std::make_unique<RenderNode>();
-        m_skyViewLutNode->geometry = m_renderer->getFullScreenGeometry();
-        m_skyViewLutNode->pass("SkyViewLUTPass").material = skyViewLutMaterial;
-        m_skyViewLutNode->pass("SkyViewLUTPass").pipeline = skyViewLutPipeline;
+        auto skyViewLutNode = createRenderNode("skyViewLutNode", std::nullopt);
+        skyViewLutNode->geometry = m_renderer->getFullScreenGeometry();
+        skyViewLutNode->pass("SkyViewLUTPass").material = skyViewLutMaterial;
+        skyViewLutNode->pass("SkyViewLUTPass").pipeline = skyViewLutPipeline;
 
 
         auto camVolPass = std::make_unique<CameraVolumesPass>(m_renderer);
@@ -262,15 +259,14 @@ namespace crisp
         cameraVolumesMaterial->writeDescriptor(1, 0, m_renderGraph->getRenderPass("TransLUTPass"), 0, m_resourceContext->getSampler("linearClamp"));
         cameraVolumesMaterial->writeDescriptor(1, 1, m_multiScatTexViews, m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
 
-        m_skyCameraVolumesNode = std::make_unique<RenderNode>();
-
         std::vector<glm::vec2> vertices = { { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f } };
         std::vector<glm::uvec3> faces = { { 0, 2, 1 } };
         m_resourceContext->addGeometry("fullScreenInstanced", std::make_unique<Geometry>(m_renderer, vertices, faces));
         m_resourceContext->getGeometry("fullScreenInstanced")->setInstanceCount(32);
-        m_skyCameraVolumesNode->geometry = m_resourceContext->getGeometry("fullScreenInstanced");
-        m_skyCameraVolumesNode->pass("CameraVolumesPass").material = cameraVolumesMaterial;
-        m_skyCameraVolumesNode->pass("CameraVolumesPass").pipeline = cameraVolumesPipeline;
+        auto skyCameraVolumesNode = createRenderNode("skyCameraVolumesNode", std::nullopt);
+        skyCameraVolumesNode->geometry = m_resourceContext->getGeometry("fullScreenInstanced");
+        skyCameraVolumesNode->pass("CameraVolumesPass").material = cameraVolumesMaterial;
+        skyCameraVolumesNode->pass("CameraVolumesPass").pipeline = cameraVolumesPipeline;
 
 
         m_renderGraph->addRenderPass("RayMarchingPass", std::make_unique<RayMarchingPass>(m_renderer));
@@ -290,24 +286,18 @@ namespace crisp
         rayMarchingMaterial->writeDescriptor(1, 3, camPass.getArrayViews(), m_resourceContext->getSampler("linearClamp"), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         rayMarchingMaterial->writeDescriptor(1, 4, m_renderGraph->getRenderPass(DepthPrePass), 0, m_resourceContext->getSampler("nearestNeighbor"));
 
-        m_skyRayMarchingNode = std::make_unique<RenderNode>();
-
-        m_skyRayMarchingNode->geometry = m_renderer->getFullScreenGeometry();
-        m_skyRayMarchingNode->pass("RayMarchingPass").material = rayMarchingMaterial;
-        m_skyRayMarchingNode->pass("RayMarchingPass").pipeline = rayMarchingPipeline;
-        m_renderer->getDevice()->flushDescriptorUpdates();
-
-
+        auto skyRayMarchingNode = createRenderNode("skyRayMarchingNode", std::nullopt);
+        skyRayMarchingNode->geometry = m_renderer->getFullScreenGeometry();
+        skyRayMarchingNode->pass("RayMarchingPass").material = rayMarchingMaterial;
+        skyRayMarchingNode->pass("RayMarchingPass").pipeline = rayMarchingPipeline;
 
         m_renderGraph->addRenderTargetLayoutTransition("RayMarchingPass", MainPass, 0);
 
-        //m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
-
-
-
+        m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
 
 
         m_renderGraph->sortRenderPasses();
+        m_renderGraph->printExecutionOrder();
 
 
 
@@ -343,7 +333,6 @@ namespace crisp
         m_transformBuffer->update(V, P);
         //m_skybox->updateTransforms(V, P);
 
-        // TODO FIX
         m_lightSystem->update(m_cameraController->getCamera(), dt);
 
         ////m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_uniformMaterialParams);
@@ -379,10 +368,6 @@ namespace crisp
     {
         m_renderGraph->clearCommandLists();
         m_renderGraph->buildCommandLists(m_renderNodes);
-        m_renderGraph->addToCommandLists(*m_transLutNode);
-        m_renderGraph->addToCommandLists(*m_skyViewLutNode);
-        m_renderGraph->addToCommandLists(*m_skyCameraVolumesNode);
-        m_renderGraph->addToCommandLists(*m_skyRayMarchingNode);
         //m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
         m_renderGraph->executeCommandLists();
     }
@@ -422,7 +407,7 @@ namespace crisp
         m_shaderBallUVScale.t = static_cast<float>(vScale);
     }
 
-    void PbrScene::onMaterialSelected(const std::string& materialName)
+    void PbrScene::onMaterialSelected(const std::string& /*materialName*/)
     {
         /*if (materialName == "Uniform")
         {
@@ -459,11 +444,16 @@ namespace crisp
         m_renderer->getDevice()->flushDescriptorUpdates();*/
     }
 
-    RenderNode* PbrScene::createRenderNode(std::string id, int transformIndex)
+    RenderNode* PbrScene::createRenderNode(std::string id, std::optional<int> transformIndex)
     {
-        auto node = std::make_unique<RenderNode>(*m_transformBuffer, transformIndex);
-        auto iterSuccessPair = m_renderNodes.emplace(id, std::move(node));
-        return iterSuccessPair.first->second.get();
+        if (!transformIndex)
+        {
+            return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
+        }
+        else
+        {
+            return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex.value())).first->second.get();
+        }
     }
 
     void PbrScene::createCommonTextures()
@@ -640,12 +630,6 @@ namespace crisp
                 break;
             }
         }));
-
-        m_connectionHandlers.emplace_back(m_app->getWindow()->mouseWheelScrolled.subscribe([this](double delta)
-        {
-            /*const float fovY = std::max(5.0f, std::min(90.0f, m_cameraController->getCamera().getFovY() + std::copysignf(5.0f, -delta)));
-            m_cameraController->getCamera().setFovY(fovY);*/
-        }));
     }
 
     void PbrScene::createGui(gui::Form* form)
@@ -682,13 +666,13 @@ namespace crisp
         };
 
         addLabeledSlider("Azimuth", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v) {
-            azimuth = v;
+            azimuth = static_cast<float>(v);
             atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
             atmosphere.sun_direction.y = std::sin(altitude);
             atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);
         };
         addLabeledSlider("Altitude", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v) {
-            altitude = v;
+            altitude = static_cast<float>(v);
             atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
             atmosphere.sun_direction.y = std::sin(altitude);
             atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);

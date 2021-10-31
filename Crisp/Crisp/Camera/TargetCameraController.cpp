@@ -62,7 +62,7 @@ namespace crisp
         return m_camera;
     }
 
-    void TargetCameraController::update(const float dt)
+    void TargetCameraController::update(const float /*dt*/)
     {
     }
 

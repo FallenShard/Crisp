@@ -61,6 +61,7 @@ namespace crisp
         void resize(int width, int height);
 
         void sortRenderPasses();
+        void printExecutionOrder();
 
         void clearCommandLists();
         void addToCommandLists(const RenderNode& renderNode);

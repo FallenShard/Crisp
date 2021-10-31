@@ -91,7 +91,7 @@ namespace crisp
         // Output
         clearHashGrid.material->writeDescriptor(0, 0, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
 
-        renderGraph->addDependency("clear-hash-grid", "compute-cell-count", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("clear-hash-grid", "compute-cell-count", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
             {
@@ -104,7 +104,7 @@ namespace crisp
             barriers[0].buffer = m_cellCountBuffer->getHandle();
 
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
 
@@ -124,7 +124,7 @@ namespace crisp
         computeCellCount.material->writeDescriptor(0, 1, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
         computeCellCount.material->writeDescriptor(0, 2, { m_cellIdBuffer->getHandle(),    0, m_numParticles * sizeof(uint32_t) });
 
-        renderGraph->addDependency("compute-cell-count", "scan", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("compute-cell-count", "scan", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
             {
@@ -141,7 +141,7 @@ namespace crisp
             barriers[1].buffer = m_cellIdBuffer->getHandle();
 
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
 
@@ -157,7 +157,7 @@ namespace crisp
         scan.material->writeDescriptor(0, 0, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
         scan.material->writeDescriptor(0, 1, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
 
-        renderGraph->addDependency("scan", "scan-block", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("scan", "scan-block", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
             {
@@ -170,7 +170,7 @@ namespace crisp
             barriers[0].buffer = m_blockSumBuffer->getHandle();
 
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
         // Scan for the block sums
@@ -185,7 +185,7 @@ namespace crisp
         scanBlock.material->writeDescriptor(0, 0, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
         scanBlock.material->writeDescriptor(0, 1, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
 
-        renderGraph->addDependency("scan-block", "scan-combine", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("scan-block", "scan-combine", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
             {
@@ -198,7 +198,7 @@ namespace crisp
             barriers[0].buffer = m_blockSumBuffer->getHandle();
 
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
         // Add block prefix sum to intra-block prefix sums
@@ -213,7 +213,7 @@ namespace crisp
         scanCombine.material->writeDescriptor(0, 0, { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
         scanCombine.material->writeDescriptor(0, 1, { m_blockSumBuffer->getHandle(),  0, m_blockSumRegionSize });
 
-        renderGraph->addDependency("scan-combine", "reindex", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("scan-combine", "reindex", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
             {
@@ -229,7 +229,7 @@ namespace crisp
             barriers[1].offset = m_currentSection * m_blockSumRegionSize;
             barriers[1].buffer = m_blockSumBuffer->getHandle();
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
 
@@ -249,7 +249,7 @@ namespace crisp
         reindex.material->writeDescriptor(0, 3, { m_indexBuffer->getHandle(),   0, m_numParticles * sizeof(uint32_t) });
         reindex.material->writeDescriptor(0, 4, { m_reorderedPositionBuffer->getHandle(),  0, vertexBufferSize });
 
-        renderGraph->addDependency("reindex", "compute-density-and-pressure", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("reindex", "compute-density-and-pressure", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
             {
@@ -264,7 +264,7 @@ namespace crisp
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
             barriers[1].buffer = m_reorderedPositionBuffer->getHandle();
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
         auto& computePressure = renderGraph->addComputePass("compute-density-and-pressure");
@@ -283,7 +283,7 @@ namespace crisp
         computePressure.material->writeDescriptor(0, 3, { m_densityBuffer->getHandle(),   0, m_numParticles * sizeof(float) });
         computePressure.material->writeDescriptor(0, 4, { m_pressureBuffer->getHandle(),  0, m_numParticles * sizeof(float) });
 
-        renderGraph->addDependency("compute-density-and-pressure", "compute-forces", [this](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("compute-density-and-pressure", "compute-forces", [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
             {
@@ -296,7 +296,7 @@ namespace crisp
             barriers[0].buffer = m_densityBuffer->getHandle();
             barriers[1].buffer = m_pressureBuffer->getHandle();
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
         auto& computeForces = renderGraph->addComputePass("compute-forces");
@@ -317,7 +317,7 @@ namespace crisp
         // Output
         computeForces.material->writeDescriptor(0, 6, { m_forcesBuffer->getHandle(),    0, vertexBufferSize });
 
-        renderGraph->addDependency("compute-forces", "integrate", [this, vertexBufferSize](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("compute-forces", "integrate", [this, vertexBufferSize](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
             {
@@ -329,7 +329,7 @@ namespace crisp
             }
             barriers[0].buffer = m_forcesBuffer->getHandle();
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
 
         auto& integrateNode = renderGraph->addComputePass("integrate");
@@ -348,7 +348,7 @@ namespace crisp
         integrateNode.material->writeDescriptor(0, 3, { m_vertexBuffer->getHandle(),    0, vertexBufferSize });
         integrateNode.material->writeDescriptor(0, 4, { m_velocityBuffer->getHandle(),  0, vertexBufferSize });
         integrateNode.material->writeDescriptor(0, 5, { m_colorBuffer->getHandle(),     0, vertexBufferSize });
-        renderGraph->addDependency("integrate", "mainPass", [this, vertexBufferSize](const VulkanRenderPass& src, VkCommandBuffer cmdBuffer, uint32_t frameIndex) {
+        renderGraph->addDependency("integrate", "mainPass", [this, vertexBufferSize](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
             {
@@ -361,7 +361,7 @@ namespace crisp
             barriers[0].buffer = m_vertexBuffer->getHandle();
             barriers[1].buffer = m_colorBuffer->getHandle();
             vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
         });
     }
 
@@ -513,7 +513,7 @@ namespace crisp
         };
     }
 
-    void SPH::dispatchCompute(VkCommandBuffer cmdBuffer, uint32_t currentFrameIdx) const
+    void SPH::dispatchCompute(VkCommandBuffer /*cmdBuffer*/, uint32_t /*currentFrameIdx*/) const
     {
     }
 

@@ -10,12 +10,12 @@ namespace
 }
 
 
-//TEST(WavefrontObjTest, LoadAjax)
-//{
-//    const auto mesh = WavefrontObjReader().read(ResourceDir / "ajax.obj");
-//    EXPECT_EQ(mesh.positions.size(), 409'676);
-//    EXPECT_EQ(mesh.triangles.size(), 544'566);
-//}
+TEST(WavefrontObjTest, LoadAjax)
+{
+    const auto mesh = WavefrontObjReader().read(ResourceDir / "ajax.obj");
+    EXPECT_EQ(mesh.positions.size(), 409'676);
+    EXPECT_EQ(mesh.triangles.size(), 544'566);
+}
 
 TEST(WavefrontObjTest, LoadBuddha)
 {

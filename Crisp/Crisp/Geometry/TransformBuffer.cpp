@@ -32,7 +32,7 @@ namespace crisp
     {
         if (m_transforms.size() > 500)
         {
-            m_threadPool.parallelFor(m_transforms.size(), [this, &V, &P](int i, int jobIdx) {
+            m_threadPool.parallelFor(m_transforms.size(), [this, &V, &P](std::size_t i, std::size_t /*jobIdx*/) {
                     auto& trans = m_transforms[i];
                     trans.MV = V * trans.M;
                     trans.MVP = P * trans.MV;

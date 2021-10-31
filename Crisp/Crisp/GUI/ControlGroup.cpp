@@ -174,7 +174,7 @@ namespace crisp::gui
         return false;
     }
 
-    bool ControlGroup::onMouseReleased(float x, float y)
+    bool ControlGroup::onMouseReleased(float /*x*/, float /*y*/)
     {
         //for (auto& child : m_children)
         //{

@@ -23,7 +23,7 @@ namespace crisp
         m_pipelineInfos[id].renderPass   = &renderPass;
         m_pipelineInfos[id].subpassIndex = subpassIndex;
         m_pipelines[id] = m_renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex);
-        m_pipelines[id]->setTag(id);
+        m_renderer->getDevice()->addTag(m_pipelines.at(id)->getHandle(), id);
 
         auto layout = m_pipelines[id]->getPipelineLayout();
         m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator();
@@ -118,7 +118,7 @@ namespace crisp
         compiler.compileDir(ApplicationEnvironment::getShaderSourcesPath(),
             ApplicationEnvironment::getResourcesPath() / "Shaders");
 
-        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer buffer)
+        m_renderer->enqueueResourceUpdate([this](VkCommandBuffer)
         {
             for (auto& [id, info] : m_pipelineInfos)
             {

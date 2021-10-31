@@ -8,8 +8,7 @@
 
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
+#include <CrispCore/Logger.hpp>
 
 #include <stack>
 #include <string_view>
@@ -21,7 +20,7 @@ namespace crisp
 {
     namespace
     {
-        auto logger = spdlog::stdout_color_mt("RenderGraph");
+        auto logger = createLoggerMt("RenderGraph");
     }
 
     RenderGraph::RenderGraph(Renderer* renderer)
@@ -144,6 +143,14 @@ namespace crisp
             throw std::runtime_error("Render graph contains a cycle!");
     }
 
+    void RenderGraph::printExecutionOrder()
+    {
+        for (uint32_t i = 0; i < m_executionOrder.size(); ++i)
+        {
+            logger->info("{}. {}", i, m_executionOrder[i]->name);
+        }
+    }
+
     void RenderGraph::clearCommandLists()
     {
         for (auto& node : m_nodes)
@@ -178,7 +185,7 @@ namespace crisp
 
     void RenderGraph::buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes)
     {
-        m_threadPool.parallelJob(renderNodes.size(), [this, &renderNodes](int start, int end, int jobIdx) {
+        m_threadPool.parallelJob(renderNodes.size(), [this, &renderNodes](size_t start, size_t end, size_t /*jobIdx*/) {
             uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
 
             std::unordered_map<std::string, std::vector<std::vector<DrawCommand>>> commands;
@@ -277,7 +284,7 @@ namespace crisp
 
             if (useSecondaries)
             {
-                m_threadPool.parallelJob(node.commands[subpassIndex].size(), [this, &node, subpassIndex](int start, int end, int jobIdx) {
+                m_threadPool.parallelJob(node.commands[subpassIndex].size(), [this, &node, subpassIndex](size_t start, size_t end, size_t jobIdx) {
                     uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
                     auto& cmdCtx = m_secondaryCommandBuffers[frameIdx][jobIdx];
 
@@ -297,7 +304,7 @@ namespace crisp
                 for (auto& cmdCtx : m_secondaryCommandBuffers[virtualFrameIndex])
                     secondaryBuffers.push_back(cmdCtx.cmdBuffer->getHandle());
 
-                vkCmdExecuteCommands(cmdBuffer, secondaryBuffers.size(), secondaryBuffers.data());
+                vkCmdExecuteCommands(cmdBuffer, static_cast<uint32_t>(secondaryBuffers.size()), secondaryBuffers.data());
             }
             else
             {

@@ -25,24 +25,21 @@ namespace crisp
 
         VulkanResource(const VulkanResource& other) = delete;
         VulkanResource(VulkanResource&& other) noexcept
-            : m_device(std::move(other.m_device))
-            , m_handle(std::move(other.m_handle))
-            , m_framesToLive(std::move(other.m_framesToLive))
+            : m_device(std::exchange(other.m_device, nullptr))
+            , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
+            , m_framesToLive(std::exchange(other.m_framesToLive, 0))
         {
-            other.m_device = nullptr;
-            other.m_handle = VK_NULL_HANDLE;
-            other.m_framesToLive = true;
         }
 
         virtual ~VulkanResource()
         {
             if constexpr (destroyFunc != nullptr)
             {
-                m_device->addTag(m_handle, m_tag);
                 m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
                 {
                     spdlog::debug("Destroying object {}: {} at frame {}", device->getTag(handle), typeid(T).name(), device->getCurrentFrameIndex());
                     destroyFunc(device->getHandle(), static_cast<T>(handle), nullptr);
+                    device->removeTag(handle);
                 });
             }
         }
@@ -52,12 +49,9 @@ namespace crisp
         {
             if (this != &other)
             {
-                m_device = std::move(other.m_device);
-                m_handle = std::move(other.m_handle);
-                m_framesToLive = std::move(other.m_framesToLive);
-                other.m_device = nullptr;
-                other.m_handle = VK_NULL_HANDLE;
-                other.m_framesToLive = 0;
+                m_device = std::exchange(other.m_device, nullptr);
+                m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
+                m_framesToLive = std::exchange(other.m_framesToLive, 0);
             }
 
             return *this;
@@ -71,18 +65,15 @@ namespace crisp
             std::swap(m_device, rhs.m_device);
             std::swap(m_handle, rhs.m_handle);
             std::swap(m_framesToLive, rhs.m_framesToLive);
-            std::swap(m_tag, rhs.m_tag);
         }
 
         inline void setDeferredDestruction(bool isEnabled) { m_framesToLive = isEnabled ? RendererConfig::VirtualFrameCount : 1; }
 
-        inline void setTag(const std::string& tag) { m_tag = tag; }
+        inline void setTag(std::string tag) const { m_device->addTag(m_handle, std::move(tag)); }
 
     protected:
         VulkanDevice* m_device;
         T             m_handle;
         int32_t m_framesToLive = RendererConfig::VirtualFrameCount;
-
-        std::string m_tag;
     };
 }

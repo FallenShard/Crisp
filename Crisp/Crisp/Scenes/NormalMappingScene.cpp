@@ -202,14 +202,14 @@ namespace crisp
             m_resourceContext->addImageWithView(diffuseMapKey, createTexture(m_renderer, "nanosuit/" + diffuseMapFilename, VK_FORMAT_R8G8B8A8_SRGB, true));
             m_resourceContext->addImageWithView(specularMapKey, createTexture(m_renderer, "nanosuit/" + specularMapFilename, VK_FORMAT_R8G8B8A8_SRGB, true));
 
-            Material* material = m_resourceContext->createMaterial("normalMapPart" + std::to_string(i), pipeline);
-            material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-            material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
-            material->writeDescriptor(1, 0, *m_resourceContext->getImageView(normalMapKey), m_resourceContext->getSampler("linearRepeat"));
-            material->writeDescriptor(1, 1, *m_resourceContext->getImageView(diffuseMapKey), m_resourceContext->getSampler("linearRepeat"));
-            material->writeDescriptor(1, 2, *m_resourceContext->getImageView(specularMapKey), m_resourceContext->getSampler("linearRepeat"));
+            Material* partMaterial = m_resourceContext->createMaterial("normalMapPart" + std::to_string(i), pipeline);
+            partMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+            partMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
+            partMaterial->writeDescriptor(1, 0, *m_resourceContext->getImageView(normalMapKey), m_resourceContext->getSampler("linearRepeat"));
+            partMaterial->writeDescriptor(1, 1, *m_resourceContext->getImageView(diffuseMapKey), m_resourceContext->getSampler("linearRepeat"));
+            partMaterial->writeDescriptor(1, 2, *m_resourceContext->getImageView(specularMapKey), m_resourceContext->getSampler("linearRepeat"));
 
-            nanosuit->pass(i, MainPass).material = material;
+            nanosuit->pass(i, MainPass).material = partMaterial;
         }
 
         nanosuit->pass(0, MainPass).material = m_resourceContext->getMaterial("normalMapPart3");

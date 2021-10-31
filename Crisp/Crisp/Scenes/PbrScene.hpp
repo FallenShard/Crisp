@@ -59,7 +59,7 @@ namespace crisp
             float roughness;
         };
 
-        RenderNode* createRenderNode(std::string id, int transformIndex);
+        RenderNode* createRenderNode(std::string id, std::optional<int> transformIndex);
 
         void createCommonTextures();
 
@@ -82,11 +82,6 @@ namespace crisp
         std::unique_ptr<RenderGraph> m_renderGraph;
         std::unique_ptr<ResourceContext> m_resourceContext;
         std::unordered_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
-
-        std::unique_ptr<RenderNode> m_transLutNode;
-        std::unique_ptr<RenderNode> m_skyViewLutNode;
-        std::unique_ptr<RenderNode> m_skyCameraVolumesNode;
-        std::unique_ptr<RenderNode> m_skyRayMarchingNode;
 
         std::unique_ptr<VulkanImage> m_multiScatTex;
         std::vector<std::unique_ptr<VulkanImageView>> m_multiScatTexViews;

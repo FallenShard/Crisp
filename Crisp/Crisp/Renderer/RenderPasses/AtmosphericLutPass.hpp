@@ -17,22 +17,22 @@ namespace crisp
         float sun_angular_radius = 0.004675f;
 
         glm::vec3 absorption_extinction = glm::vec3(0.000650f, 0.001881f, 0.000085f);
-        float mu_s_min = -0.5;
+        float mu_s_min = -0.5f;
 
         glm::vec3 rayleigh_scattering{ 0.005802f, 0.013558f, 0.033100f };
         float mie_phase_function_g = 0.80f;
 
         glm::vec3 mie_scattering = glm::vec3(0.003996f);
-        float bottom_radius = 6360.0;
+        float bottom_radius = 6360.0f;
 
         glm::vec3 mie_extinction = glm::vec3(0.004440f);
-        float top_radius = 6460.0;
+        float top_radius = 6460.0f;
 
         glm::vec3 mie_absorption = glm::vec3(0.00044f);
-        float pad00 = -0.00142;
+        float pad00 = -0.00142f;
 
         glm::vec3 ground_albedo = glm::vec3(0.0f);
-        float pad0 = -0.00142;
+        float pad0 = -0.00142f;
 
         float rayleigh_density[12] = {
             0.0f, 0.0f, 0.0f, 0.0f,
@@ -167,8 +167,8 @@ namespace crisp
         int gScatteringMaxPathDepth = 4;
 
         glm::uvec2 gResolution = { 1280, 720 };
-        float gFrameTimeSec{ 15.265 };
-        float gTimeSec{ 10.0 };
+        float gFrameTimeSec{ 15.265f };
+        float gTimeSec{ 10.0f };
 
         glm::vec2 RayMarchMinMaxSPP = { 4.0f, 14.0f };
         glm::vec2 pad = {};
