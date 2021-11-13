@@ -1,8 +1,8 @@
 #include <Crisp/ShadingLanguage/Lexer.hpp>
-
 #include <Crisp/IO/FileUtils.hpp>
 
-#include <robin_hood/robin_hood.h>
+#include <CrispCore/RobinHood.hpp>
+
 #include <spdlog/spdlog.h>
 
 #include <charconv>

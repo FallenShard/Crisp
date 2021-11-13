@@ -37,7 +37,7 @@
 
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Models/Grass.hpp>
 
 #include <CrispCore/Math/Constants.hpp>
@@ -53,7 +53,7 @@
 #include <Crisp/vulkan/VulkanRayTracer.hpp>
 
 #include <CrispCore/Profiler.hpp>
-#include <CrispCore/IO/MeshReader.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 
 #include <spdlog/spdlog.h>
@@ -306,7 +306,7 @@ namespace crisp
             if (std::filesystem::exists(path))
             {
                 std::string key = materialName + "-" + texNames[i];
-                m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], true));
+                m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
                 material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
             }
             else
@@ -335,16 +335,16 @@ namespace crisp
         m_resourceContext->addSampler("linearMirrorRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, 16.0f, 11.0f));
 
         // For textured pbr
-        m_resourceContext->addImageWithView("default-diffuse", createTexture(m_renderer, 1, 1, { 255, 0, 255, 255 }, VK_FORMAT_R8G8B8A8_SRGB));
-        m_resourceContext->addImageWithView("default-metallic", createTexture(m_renderer, 1, 1, { 0, 0, 0, 255 }, VK_FORMAT_R8G8B8A8_UNORM));
-        m_resourceContext->addImageWithView("default-roughness", createTexture(m_renderer, 1, 1, { 32, 32, 32, 255 }, VK_FORMAT_R8G8B8A8_UNORM));
-        m_resourceContext->addImageWithView("default-normal", createTexture(m_renderer, 1, 1, { 127, 127, 255, 255 }, VK_FORMAT_R8G8B8A8_UNORM));
-        m_resourceContext->addImageWithView("default-ao", createTexture(m_renderer, 1, 1, { 255, 255, 255, 255 }, VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("default-diffuse", createTexture(m_renderer, Image::createDefaultAlbedoMap(), VK_FORMAT_R8G8B8A8_SRGB));
+        m_resourceContext->addImageWithView("default-metallic", createTexture(m_renderer, Image::createDefaultMetallicMap(), VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("default-roughness", createTexture(m_renderer, Image::createDefaultRoughnessMap(), VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("default-normal", createTexture(m_renderer, Image::createDefaultNormalMap(), VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("default-ao", createTexture(m_renderer, Image::createDefaultAmbientOcclusionMap(), VK_FORMAT_R8G8B8A8_UNORM));
 
         // Environment map
         LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
         auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
-        auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, true);
+        auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
         std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
 
         auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(envRefMapView, 1024);
@@ -375,7 +375,7 @@ namespace crisp
             if (std::filesystem::exists(path))
             {
                 std::string key = type + "-" + texNames[i];
-                m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], true));
+                m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
                 material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
             }
             else
@@ -508,12 +508,12 @@ namespace crisp
         auto alphaMaterial = m_resourceContext->createMaterial("alphaMask", alphaPipeline);
         alphaMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-        std::unique_ptr<ImageFileBuffer> image = std::make_unique<ImageFileBuffer>(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, true);
-        m_resourceContext->addImageWithView("leaves", createTexture(m_renderer, *image, VK_FORMAT_R8G8B8A8_SRGB));
+        const Image image(loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipOnLoad::Y));
+        m_resourceContext->addImageWithView("leaves", createTexture(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
         alphaMaterial->writeDescriptor(1, 0, *m_resourceContext->getImageView("leaves"), m_resourceContext->getSampler("linearClamp"));
 
-        image = std::make_unique<ImageFileBuffer>(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, true);
-        m_resourceContext->addImageWithView("leavesNormalMap", createTexture(m_renderer, *image, VK_FORMAT_R8G8B8A8_UNORM));
+        const Image normalMap(loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipOnLoad::Y));
+        m_resourceContext->addImageWithView("leavesNormalMap", createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
         alphaMaterial->writeDescriptor(1, 1, *m_resourceContext->getImageView("leavesNormalMap"), m_resourceContext->getSampler("linearClamp"));
 
         alphaMaterial->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
@@ -526,19 +526,19 @@ namespace crisp
 
         auto trunkPipeline = m_resourceContext->createPipeline("treeTrunk", "TreeTrunk.lua", m_renderGraph->getRenderPass(MainPass), 0);
 
-        auto createOpaqueMaterial = [this, trunkPipeline](std::string materialKey, std::string diffuseTex, std::string normalMap)
+        auto createOpaqueMaterial = [this, trunkPipeline](std::string materialKey, std::string diffuseMapFilename, std::string normalMapFilename)
         {
             auto material = m_resourceContext->createMaterial(materialKey, trunkPipeline);
 
             material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-            auto image = std::make_unique<ImageFileBuffer>(m_renderer->getResourcesPath() / diffuseTex, 4, true);
-            m_resourceContext->addImageWithView(diffuseTex, createTexture(m_renderer, *image, VK_FORMAT_R8G8B8A8_SRGB));
-            material->writeDescriptor(1, 0, *m_resourceContext->getImageView(diffuseTex), m_resourceContext->getSampler("linearRepeat"));
+            const Image ambientMap = loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipOnLoad::Y);
+            m_resourceContext->addImageWithView(diffuseMapFilename, createTexture(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
+            material->writeDescriptor(1, 0, *m_resourceContext->getImageView(diffuseMapFilename), m_resourceContext->getSampler("linearRepeat"));
 
-            image = std::make_unique<ImageFileBuffer>(m_renderer->getResourcesPath() / normalMap, 4, true);
-            m_resourceContext->addImageWithView(normalMap, createTexture(m_renderer, *image, VK_FORMAT_R8G8B8A8_UNORM));
-            material->writeDescriptor(1, 1, *m_resourceContext->getImageView(normalMap), m_resourceContext->getSampler("linearRepeat"));
+            const Image normalMap = loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipOnLoad::Y);
+            m_resourceContext->addImageWithView(normalMapFilename, createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+            material->writeDescriptor(1, 1, *m_resourceContext->getImageView(normalMapFilename), m_resourceContext->getSampler("linearRepeat"));
 
             material->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
             material->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));

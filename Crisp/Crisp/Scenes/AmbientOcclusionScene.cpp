@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/IO/ImageFileBuffer.hpp>
+#include <CrispCore/IO/ImageLoader.hpp>
 #include <Crisp/Camera/FreeCameraController.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
@@ -16,7 +16,7 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 
 #include <Crisp/vulkan/VulkanSampler.hpp>
 #include <Crisp/vulkan/VulkanImage.hpp>
@@ -30,7 +30,7 @@
 #include <Crisp/GUI/Slider.hpp>
 
 #include <CrispCore/Math/Warp.hpp>
-#include <CrispCore/IO/MeshReader.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 
 #include <random>
 

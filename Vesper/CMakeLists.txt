@@ -18,5 +18,5 @@ target_include_directories(Vesper PRIVATE "./Vesper")
 target_include_directories(Vesper PUBLIC ".")
 
 set_target_properties(Vesper PROPERTIES
-    CXX_STANDARD 23)
+    CXX_STANDARD 20)
 target_compile_definitions(Vesper PUBLIC __TBB_NO_IMPLICIT_LINKAGE)

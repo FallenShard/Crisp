@@ -23,7 +23,7 @@
 
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
 
 #include <Crisp/Lights/LightSystem.hpp>
@@ -190,7 +190,7 @@ namespace crisp
         // Environment map
         LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
         auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
-        auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, true);
+        auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
         std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
 
         auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);

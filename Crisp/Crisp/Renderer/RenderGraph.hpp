@@ -8,7 +8,7 @@
 
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_vector.h>
-#include <robin_hood/robin_hood.h>
+#include <CrispCore/RobinHood.hpp>
 
 namespace crisp
 {
@@ -65,7 +65,7 @@ namespace crisp
 
         void clearCommandLists();
         void addToCommandLists(const RenderNode& renderNode);
-        void buildCommandLists(const std::unordered_map<std::string, std::unique_ptr<RenderNode>>& renderNodes);
+        void buildCommandLists(const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& renderNodes);
         void buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes);
         void executeCommandLists() const;
 

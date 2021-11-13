@@ -306,4 +306,44 @@ namespace crisp
     {
         return m_boundingBox;
     }
+
+    float TriangleMesh::calculateFaceArea(uint32_t triangleId) const
+    {
+        const glm::vec3& p0 = m_positions[m_faces[triangleId][0]];
+        const glm::vec3& p1 = m_positions[m_faces[triangleId][1]];
+        const glm::vec3& p2 = m_positions[m_faces[triangleId][2]];
+        return 0.5f * glm::length(glm::cross(p1 - p0, p2 - p0));
+    }
+
+    glm::vec3 TriangleMesh::calculateFaceNormal(uint32_t triangleId) const
+    {
+        const glm::vec3& p0 = m_positions[m_faces[triangleId][0]];
+        const glm::vec3& p1 = m_positions[m_faces[triangleId][1]];
+        const glm::vec3& p2 = m_positions[m_faces[triangleId][2]];
+        return glm::normalize(glm::cross(p1 - p0, p2 - p0));
+    }
+
+    glm::vec3 TriangleMesh::interpolatePosition(const uint32_t triangleId, const glm::vec3& barycentric) const
+    {
+        const glm::vec3& p0 = m_positions[m_faces[triangleId][0]];
+        const glm::vec3& p1 = m_positions[m_faces[triangleId][1]];
+        const glm::vec3& p2 = m_positions[m_faces[triangleId][2]];
+        return barycentric.x * p0 + barycentric.y * p1 + barycentric.z * p2;
+    }
+
+    glm::vec3 TriangleMesh::interpolateNormal(const uint32_t triangleId, const glm::vec3& barycentric) const
+    {
+        const glm::vec3& n0 = m_normals[m_faces[triangleId][0]];
+        const glm::vec3& n1 = m_normals[m_faces[triangleId][1]];
+        const glm::vec3& n2 = m_normals[m_faces[triangleId][2]];
+        return glm::normalize(barycentric.x * n0 + barycentric.y * n1 + barycentric.z * n2);
+    }
+
+    glm::vec2 TriangleMesh::interpolateTexCoord(const uint32_t triangleId, const glm::vec3& barycentric) const
+    {
+        const glm::vec2& tc0 = m_texCoords[m_faces[triangleId][0]];
+        const glm::vec2& tc1 = m_texCoords[m_faces[triangleId][1]];
+        const glm::vec2& tc2 = m_texCoords[m_faces[triangleId][2]];
+        return barycentric.x * tc0 + barycentric.y * tc1 + barycentric.z * tc2;
+    }
 }

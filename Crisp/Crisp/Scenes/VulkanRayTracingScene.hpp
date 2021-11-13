@@ -4,6 +4,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 
 #include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/RobinHood.hpp>
 
 namespace crisp
 {
@@ -54,7 +55,7 @@ namespace crisp
 
         std::unique_ptr<RenderGraph>     m_renderGraph;
         std::unique_ptr<ResourceContext> m_resourceContext;
-        std::unordered_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
         std::unique_ptr<VulkanRayTracer> m_rayTracer;
         std::unique_ptr<RayTracingMaterial> m_rayTracingMaterial;

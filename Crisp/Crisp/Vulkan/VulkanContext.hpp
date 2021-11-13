@@ -17,11 +17,11 @@ namespace crisp
     class VulkanContext
     {
     public:
-        VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions);
+        VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions, bool enableValidationLayers);
         ~VulkanContext();
 
-        VkSurfaceKHR     getSurface() const;
-        VkDevice         createLogicalDevice(const VulkanQueueConfiguration& config) const;
+        VkSurfaceKHR getSurface() const;
+        VkDevice     createLogicalDevice(const VulkanQueueConfiguration& config) const;
 
         bool getQueueFamilyPresentationSupport(uint32_t familyIndex) const;
         QueueFamilyIndices queryQueueFamilies() const;
@@ -36,7 +36,6 @@ namespace crisp
         VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat findSupportedDepthFormat() const;
 
-        inline const VkInstance& getInstance() const { return m_instance; }
         inline const VulkanPhysicalDevice& getPhysicalDevice() const { return m_physicalDevice; }
 
     private:

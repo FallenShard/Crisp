@@ -5,6 +5,7 @@
 
 #include <CrispCore/Math/Headers.hpp>
 #include <CrispCore/ConnectionHandler.hpp>
+#include <CrispCore/RobinHood.hpp>
 
 namespace crisp
 {
@@ -81,7 +82,7 @@ namespace crisp
 
         std::unique_ptr<RenderGraph> m_renderGraph;
         std::unique_ptr<ResourceContext> m_resourceContext;
-        std::unordered_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
         std::unique_ptr<VulkanImage> m_multiScatTex;
         std::vector<std::unique_ptr<VulkanImageView>> m_multiScatTexViews;

@@ -718,24 +718,17 @@ void SkyViewLutParamsToUv(AtmosphereParameters Atmosphere, in bool IntersectGrou
 
 void main()
 {
-	vec2 pixPos = gl_FragCoord.xy;
+	const vec2 pixPos = gl_FragCoord.xy;
 	AtmosphereParameters Atmosphere = GetAtmosphereParameters();
 
-	vec3 ClipSpace = vec3((pixPos / vec2(gResolution))*vec2(2.0, -2.0) - vec2(1.0, -1.0), 1.0);
-	vec4 HPos = gSkyInvViewProjMat * vec4(ClipSpace, 1.0);
+	const vec2 ndcPos = pixPos / vec2(gResolution) * 2.0f - 1.0f;
+	vec3 ClipSpace = vec3(ndcPos, 1.0);
+	const vec4 HPos = gSkyInvViewProjMat * vec4(ClipSpace, 1.0);
 
 	vec3 WorldDir = normalize(HPos.xyz / HPos.w - camera);
 	vec3 WorldPos = camera + vec3(0, Atmosphere.BottomRadius, 0);
 
 	float DepthBufferValue = -1.0;
-
-
-	//if (pixPos.x < 512 && pixPos.y < 512)
-	//{
-	//	output.Luminance = float4(MultiScatTexture.SampleLevel(samplerLinearClamp, pixPos / float2(512, 512), 0).rgb, 1.0);
-	//	return output;
-	//}
-
 
 	float viewHeight = length(WorldPos);
 	vec3 L = vec3(0.0f);
@@ -768,6 +761,7 @@ void main()
 // #else
 	if (DepthBufferValue == 1.0f)
 		L += GetSunLuminance(WorldPos, WorldDir, Atmosphere.BottomRadius);
+
 // #endif
 
 //#if FASTAERIALPERSPECTIVE_ENABLED
@@ -776,7 +770,7 @@ void main()
 //#error The FASTAERIALPERSPECTIVE_ENABLED path does not support COLORED_TRANSMITTANCE_ENABLED.
 //#else
 
-	ClipSpace = vec3((pixPos / vec2(gResolution))*vec2(2.0, -2.0) - vec2(1.0, -1.0), DepthBufferValue);
+	ClipSpace = vec3((pixPos / vec2(gResolution))*vec2(2.0, 2.0) - vec2(1.0, 1.0), DepthBufferValue);
 	vec4 DepthBufferWorldPos =  gSkyInvViewProjMat * vec4(ClipSpace, 1.0);
 	DepthBufferWorldPos /= DepthBufferWorldPos.w;
 	float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, -Atmosphere.BottomRadius, 0.0)));
@@ -822,7 +816,7 @@ void main()
 // 	output.Luminance = float4(L, 1.0f);
 // 	output.Transmittance = float4(throughput, 1.0f);
 // #else
-	const float Transmittance = dot(throughput, vec3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
+	const float Transmittance = dot(throughput, vec3(1.0f / 3.0f));
 	finalColor = vec4(L, 1.0 - Transmittance);
 	// finalColor.rgb = pow(finalColor.rgb, vec3(2.2f));
 	// finalColor.a = 1.0f;

@@ -166,7 +166,6 @@ namespace crisp
 
     VkPresentModeKHR VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode) const
     {
-        return VK_PRESENT_MODE_IMMEDIATE_KHR;
         for (const auto& availablePresentMode : availablePresentModes)
             if (availablePresentMode == requestedPresentMode)
                 return availablePresentMode;

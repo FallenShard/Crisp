@@ -12,7 +12,7 @@
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Lights/EnvironmentLighting.hpp>
@@ -180,7 +180,7 @@ namespace crisp
         m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
         std::vector<VertexAttributeDescriptor> vertexFormat = { VertexAttribute::Position };
-        TriangleMesh mesh = createPlaneMesh(vertexFormat, 50.0, N - 1);
+        TriangleMesh mesh = createGridMesh(vertexFormat, 50.0, N - 1);
         m_resourceContext->addGeometry("ocean", std::make_unique<Geometry>(m_renderer, mesh, vertexFormat, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
 
@@ -293,7 +293,7 @@ namespace crisp
         // Environment map
         LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
         auto hdrName = "satara_night_4k.hdr";// config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
-        auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, true);
+        auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
         std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
 
         auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);

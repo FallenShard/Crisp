@@ -24,7 +24,7 @@
 
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
 
 #include <Crisp/Lights/LightSystem.hpp>
@@ -41,7 +41,7 @@
 
 #include <CrispCore/Math/Constants.hpp>
 #include <CrispCore/Profiler.hpp>
-#include <CrispCore/IO/MeshReader.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 
 #include <thread>
 
@@ -151,9 +151,9 @@ namespace crisp
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 10.0f)));
 
         m_resourceContext->addSampler("linearRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "PbrMaterials/Hexstone/normal.png", VK_FORMAT_R8G8B8A8_UNORM, false));
-        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "PbrMaterials/Hexstone/diffuse.png", VK_FORMAT_R8G8B8A8_SRGB, false));
-        m_resourceContext->addImageWithView("specularMap", createTexture(m_renderer, "PbrMaterials/Hexstone/metallic.png", VK_FORMAT_R8G8B8A8_UNORM, false));
+        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "PbrMaterials/Hexstone/normal.png", VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "PbrMaterials/Hexstone/diffuse.png", VK_FORMAT_R8G8B8A8_SRGB));
+        m_resourceContext->addImageWithView("specularMap", createTexture(m_renderer, "PbrMaterials/Hexstone/metallic.png", VK_FORMAT_R8G8B8A8_UNORM));
 
         VulkanPipeline* pipeline = m_resourceContext->createPipeline("normalMap", "NormalMap.lua", m_renderGraph->getRenderPass(MainPass), 0);
         Material* material = m_resourceContext->createMaterial("normalMap", pipeline);
@@ -198,9 +198,9 @@ namespace crisp
             std::string diffuseMapFilename = parts[i - 1] + "_dif.png";
             std::string specularMapFilename = parts[i - 1] + "_showroom_spec.png";
 
-            m_resourceContext->addImageWithView(normalMapKey, createTexture(m_renderer, "nanosuit/" + normalMapFilename,  VK_FORMAT_R8G8B8A8_SRGB, true));
-            m_resourceContext->addImageWithView(diffuseMapKey, createTexture(m_renderer, "nanosuit/" + diffuseMapFilename, VK_FORMAT_R8G8B8A8_SRGB, true));
-            m_resourceContext->addImageWithView(specularMapKey, createTexture(m_renderer, "nanosuit/" + specularMapFilename, VK_FORMAT_R8G8B8A8_SRGB, true));
+            m_resourceContext->addImageWithView(normalMapKey, createTexture(m_renderer, "nanosuit/" + normalMapFilename,  VK_FORMAT_R8G8B8A8_SRGB, FlipOnLoad::Y));
+            m_resourceContext->addImageWithView(diffuseMapKey, createTexture(m_renderer, "nanosuit/" + diffuseMapFilename, VK_FORMAT_R8G8B8A8_SRGB, FlipOnLoad::Y));
+            m_resourceContext->addImageWithView(specularMapKey, createTexture(m_renderer, "nanosuit/" + specularMapFilename, VK_FORMAT_R8G8B8A8_SRGB, FlipOnLoad::Y));
 
             Material* partMaterial = m_resourceContext->createMaterial("normalMapPart" + std::to_string(i), pipeline);
             partMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());

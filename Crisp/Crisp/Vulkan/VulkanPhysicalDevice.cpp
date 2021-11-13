@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
-#include <robin_hood/robin_hood.h>
+#include <CrispCore/RobinHood.hpp>
 
 namespace crisp
 {
@@ -27,10 +27,6 @@ namespace crisp
         vkGetPhysicalDeviceProperties2(m_handle, &m_properties);
 
         vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_memoryProperties);
-    }
-
-    VulkanPhysicalDevice::~VulkanPhysicalDevice()
-    {
     }
 
     bool VulkanPhysicalDevice::isSuitable(VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const

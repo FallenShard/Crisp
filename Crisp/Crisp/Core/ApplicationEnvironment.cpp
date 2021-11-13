@@ -47,7 +47,6 @@ namespace crisp
 
         LuaConfig lua;
         lua.openFile(CommandLineParser.get<std::string>("config"));
-
         ResourcesPath = lua.get<std::string>("resourcesPath").value();
         ShaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
     }

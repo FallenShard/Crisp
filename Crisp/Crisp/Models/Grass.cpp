@@ -7,7 +7,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/vulkan/VulkanRenderPass.hpp>
 #include <Crisp/vulkan/VulkanImageView.hpp>
 #include <Crisp/vulkan/VulkanSampler.hpp>

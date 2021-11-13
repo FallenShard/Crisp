@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-#include <robin_hood/robin_hood.h>
+#include <CrispCore/RobinHood.hpp>
 
 namespace crisp
 {

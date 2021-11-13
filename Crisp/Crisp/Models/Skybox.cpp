@@ -1,7 +1,7 @@
 #include "Skybox.hpp"
 
-#include <Crisp/IO/ImageFileBuffer.hpp>
-#include <CrispCore/IO/MeshReader.hpp>
+#include <CrispCore/IO/ImageLoader.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
@@ -15,29 +15,30 @@
 
 namespace crisp
 {
-    static constexpr std::size_t NumCubeMapFaces = 6;
-    static const std::array<const std::string, NumCubeMapFaces> filenames = { "left", "right", "top", "bottom", "back", "front" };
+    constexpr std::size_t NumCubeMapFaces = 6;
+    const std::array<const std::string, NumCubeMapFaces> SideFilenames = { "left", "right", "top", "bottom", "back", "front" };
+    const std::vector<VertexAttributeDescriptor> VertexAttribs = { VertexAttribute::Position };
 
     Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder)
     {
-        std::vector<VertexAttributeDescriptor> vertexAttribs = { VertexAttribute::Position };
-        m_cubeGeometry = std::make_unique<Geometry>(renderer, loadMesh(renderer->getResourcesPath() / "Meshes/cube.obj", vertexAttribs), vertexAttribs);
+        m_cubeGeometry = std::make_unique<Geometry>(renderer, loadMesh(renderer->getResourcesPath() / "Meshes/cube.obj", VertexAttribs), VertexAttribs);
         m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
         const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
 
-        std::array<std::unique_ptr<ImageFileBuffer>, NumCubeMapFaces> cubeMapImages;
+        std::vector<Image> cubeMapImages;
+        cubeMapImages.reserve(NumCubeMapFaces);
         for (std::size_t i = 0; i < NumCubeMapFaces; ++i)
-            cubeMapImages[i] = std::make_unique<ImageFileBuffer>(cubeMapDir / (filenames[i] + ".jpg"));
+            cubeMapImages.push_back(loadImage(cubeMapDir / (SideFilenames[i] + ".jpg")));
 
-        uint32_t width  = cubeMapImages[0]->getWidth();
-        uint32_t height = cubeMapImages[0]->getHeight();
+        const uint32_t width  = cubeMapImages[0].getWidth();
+        const uint32_t height = cubeMapImages[0].getHeight();
 
         m_cubeMap = std::make_unique<VulkanImage>(renderer->getDevice(), VkExtent3D{ width, height, 1u }, static_cast<uint32_t>(NumCubeMapFaces), 1,
             VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
         for (uint32_t i = 0; i < NumCubeMapFaces; ++i)
-            fillLayer(*m_cubeMap, renderer, cubeMapImages[i]->getData(), width * height * 4, i);
+            fillLayer(*m_cubeMap, renderer, cubeMapImages[i].getData(), width * height * 4, i);
 
         m_cubeMapView = m_cubeMap->createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
         m_sampler = std::make_unique<VulkanSampler>(renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -50,8 +51,7 @@ namespace crisp
 
     Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const VulkanImageView& cubeMapView, const VulkanSampler& sampler)
     {
-        std::vector<VertexAttributeDescriptor> vertexAttribs = { VertexAttribute::Position };
-        m_cubeGeometry = std::make_unique<Geometry>(renderer, loadMesh(renderer->getResourcesPath() / "Meshes/cube.obj", vertexAttribs), vertexAttribs);
+        m_cubeGeometry = std::make_unique<Geometry>(renderer, loadMesh(renderer->getResourcesPath() / "Meshes/cube.obj", VertexAttribs), VertexAttribs);
         m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
         m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);

@@ -24,7 +24,7 @@
 
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
 
 #include <Crisp/Lights/LightSystem.hpp>
@@ -44,7 +44,7 @@
 #include <Crisp/Vulkan/VulkanRayTracer.hpp>
 #include <Crisp/Vulkan/RayTracingMaterial.hpp>
 
-#include <CrispCore/IO/MeshReader.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 
 #include <random>
 
@@ -206,8 +206,8 @@ namespace crisp
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 10.0f)));
 
         m_resourceContext->addSampler("linearRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "hex-stones1-normal-dx.png", VK_FORMAT_R8G8B8A8_UNORM, false));
-        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "hex-stones1-albedo.png", VK_FORMAT_R8G8B8A8_SRGB, false));
+        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "hex-stones1-normal-dx.png", VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "hex-stones1-albedo.png", VK_FORMAT_R8G8B8A8_SRGB));
 
         VulkanPipeline* pipeline = m_resourceContext->createPipeline("normalMap", "NormalMap.lua", m_renderGraph->getRenderPass(MainPass), 0);
         Material* material = m_resourceContext->createMaterial("normalMap", pipeline);

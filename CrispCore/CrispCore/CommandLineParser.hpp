@@ -1,12 +1,11 @@
 #pragma once
 
 #include <CrispCore/StringUtils.hpp>
-
-#include <robin_hood/robin_hood.h>
+#include <CrispCore/RobinHood.hpp>
 
 #include <any>
-#include <functional>
 #include <charconv>
+#include <functional>
 
 namespace crisp
 {
@@ -56,7 +55,7 @@ namespace crisp
         }
 
     private:
-        robin_hood::unordered_map<std::string, Argument> m_argMap;
+        robin_hood::unordered_map<std::string, Argument> m_argMap{};
 
     };
-}
+} // namespace crisp

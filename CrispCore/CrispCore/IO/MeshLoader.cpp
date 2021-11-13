@@ -1,4 +1,4 @@
-#include <CrispCore/IO/MeshReader.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 #include <CrispCore/IO/WavefrontObjReader.hpp>
 #include <CrispCore/Logger.hpp>
 

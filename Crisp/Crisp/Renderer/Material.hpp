@@ -28,6 +28,7 @@ namespace crisp
 
         void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanRenderPass& renderPass, uint32_t renderTargetIndex, const VulkanSampler* sampler);
         void writeDescriptor(uint32_t setIndex, uint32_t binding, const std::vector<std::unique_ptr<VulkanImageView>>& imageViews, const VulkanSampler* sampler, VkImageLayout imageLayout);
+        void writeDescriptor(uint32_t setIndex, uint32_t binding, const std::vector<VulkanImageView*>& imageViews, const VulkanSampler* sampler, VkImageLayout imageLayout);
         void writeDescriptor(uint32_t setIndex, uint32_t binding, uint32_t frameIdx, const VulkanImageView& imageView, const VulkanSampler* sampler);
 
         void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo);

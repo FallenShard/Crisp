@@ -19,12 +19,6 @@ namespace crisp
 
     namespace detail
     {
-#ifndef _DEBUG
-        constexpr bool EnableValidationLayers = false;
-#else
-        constexpr bool EnableValidationLayers = true;
-#endif
-
         const std::vector<const char*> ValidationLayers =
         {
             "VK_LAYER_KHRONOS_validation"
@@ -70,9 +64,9 @@ namespace crisp
             }
         }
 
-        void assertValidationLayerSupport()
+        void assertValidationLayerSupport(bool validationLayersEnabled)
         {
-            if (!EnableValidationLayers)
+            if (!validationLayersEnabled)
                 return;
 
             uint32_t layerCount;
@@ -92,7 +86,7 @@ namespace crisp
             logger->info("Validation layers are supported!");
         }
 
-        VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions)
+        VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, bool enableValidationLayers)
         {
             VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
             appInfo.pApplicationName   = Application::Title;
@@ -101,7 +95,7 @@ namespace crisp
             appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
             appInfo.apiVersion         = VK_API_VERSION_1_2;
 
-            if (EnableValidationLayers)
+            if (enableValidationLayers)
                 reqPlatformExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
             std::vector<const char*> enabledExtensions;
@@ -111,8 +105,8 @@ namespace crisp
             createInfo.pApplicationInfo        = &appInfo;
             createInfo.enabledExtensionCount   = static_cast<uint32_t>(enabledExtensions.size());
             createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-            createInfo.enabledLayerCount       = EnableValidationLayers ? static_cast<uint32_t>(ValidationLayers.size()) : 0;
-            createInfo.ppEnabledLayerNames     = EnableValidationLayers ? ValidationLayers.data() : nullptr;
+            createInfo.enabledLayerCount       = enableValidationLayers ? static_cast<uint32_t>(ValidationLayers.size()) : 0;
+            createInfo.ppEnabledLayerNames     = enableValidationLayers ? ValidationLayers.data() : nullptr;
 
             VkInstance instance;
             vkCreateInstance(&createInfo, nullptr, &instance);
@@ -124,12 +118,10 @@ namespace crisp
             vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data());
 
             assertRequiredExtensionSupport(enabledExtensions, extensionProps);
-            assertValidationLayerSupport();
+            assertValidationLayerSupport(enableValidationLayers);
 
             return instance;
         }
-
-
 
         VkSurfaceKHR createSurface(VkInstance instance, SurfaceCreator surfaceCreator)
         {
@@ -146,6 +138,11 @@ namespace crisp
             std::vector<VkPhysicalDevice> devices(deviceCount);
             vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
+            if (surface == VK_NULL_HANDLE)
+            {
+                return VulkanPhysicalDevice(devices.front());
+            }
+
             for (const auto& device : devices)
             {
                 VulkanPhysicalDevice physicalDevice(device);
@@ -158,13 +155,12 @@ namespace crisp
         }
     }
 
-    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions)
-        : m_instance(detail::createInstance(std::forward<std::vector<std::string>>(reqPlatformExtensions)))
-        , m_debugMessenger(detail::EnableValidationLayers ? createDebugMessenger(m_instance) : nullptr)
-        , m_surface(detail::createSurface(m_instance, surfaceCreator))
+    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions, bool enableValidationLayers)
+        : m_instance(detail::createInstance(std::move(reqPlatformExtensions), enableValidationLayers))
+        , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
+        , m_surface(surfaceCreator ? detail::createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE)
         , m_physicalDevice(detail::pickPhysicalDevice(m_instance, m_surface))
     {
-        logger->info("Constructed!");
     }
 
     VulkanContext::~VulkanContext()
@@ -182,8 +178,6 @@ namespace crisp
     VkDevice VulkanContext::createLogicalDevice(const VulkanQueueConfiguration& config) const
     {
         VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-        //auto* ptr = &m_physicalDevice.getFeatures2();
-        createInfo.pNext = nullptr;//ptr;
         createInfo.pEnabledFeatures = &m_physicalDevice.getFeatures();
         createInfo.queueCreateInfoCount    = static_cast<uint32_t>(config.getQueueCreateInfos().size());
         createInfo.pQueueCreateInfos       = config.getQueueCreateInfos().data();

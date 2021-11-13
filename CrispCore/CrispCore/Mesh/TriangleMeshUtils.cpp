@@ -1,10 +1,10 @@
-#include <Crisp/Geometry/MeshGenerators.hpp>
+#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 
 #include <CrispCore/Math/Constants.hpp>
 
 namespace crisp
 {
-    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size)
+    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, const float size)
     {
         std::vector<glm::vec3> positions =
         {
@@ -36,10 +36,10 @@ namespace crisp
             glm::uvec3(0, 2, 3)
         };
 
-        return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
+        return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
     }
 
-    TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size, int tessellation)
+    TriangleMesh createGridMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, const float size, const int tessellation)
     {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
@@ -51,18 +51,18 @@ namespace crisp
         {
             for (int j = 0; j <= tessellation; ++j)
             {
-                float z = -i * scale + size / 2;
-                float x = j * scale - size / 2;
+                const float z = -i * scale + size / 2;
+                const float x = j * scale - size / 2;
                 positions.emplace_back(x, 0.0f, z);
                 normals.emplace_back(0.0f, 1.0f, 0.0f);
                 texCoords.emplace_back(x, z);
 
                 if (i < tessellation && j < tessellation)
                 {
-                    uint32_t curr   = i * (tessellation + 1) + j;
-                    uint32_t nextX  = curr + 1;
-                    uint32_t nextZ  = curr + tessellation + 1;
-                    uint32_t nextXZ = curr + tessellation + 2;
+                    const uint32_t curr   = i * (tessellation + 1) + j;
+                    const uint32_t nextX  = curr + 1;
+                    const uint32_t nextZ  = curr + tessellation + 1;
+                    const uint32_t nextXZ = curr + tessellation + 2;
 
                     faces.emplace_back(curr, nextX, nextXZ);
                     faces.emplace_back(curr, nextXZ, nextZ);
@@ -70,7 +70,7 @@ namespace crisp
             }
         }
 
-        return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
+        return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
     }
 
     TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
@@ -113,7 +113,7 @@ namespace crisp
             glm::uvec3(2, 5, 4)
         };
 
-        return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
+        return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
     }
 
     TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
@@ -121,36 +121,34 @@ namespace crisp
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
         std::vector<glm::vec2> texCoords;
-        std::vector<glm::vec3> tangents;
-        std::vector<glm::vec3> bitangents;
         std::vector<glm::uvec3> faces;
 
-        int numRings  = 64;
-        int numSlices = 64;
+        constexpr int numRings  = 64;
+        constexpr int numSlices = 64;
 
         for (int j = 0; j <= numRings; j++)
         {
-            float v = j / static_cast<float>(numRings);
-            float phi  = glm::radians(90.0f - v * 180.0f);
-            float pSin = std::sinf(phi);
-            float pCos = std::cosf(phi);
+            const float v = j / static_cast<float>(numRings);
+            const float phi  = glm::radians(90.0f - v * 180.0f);
+            const float pSin = std::sinf(phi);
+            const float pCos = std::cosf(phi);
 
             for (int i = 0; i <= numSlices; i++)
             {
-                float u = i / static_cast<float>(numSlices);
-                float theta = glm::radians(u * 360.0f);
-                float tSin = std::sinf(theta);
-                float tCos = std::cosf(theta);
+                const float u = i / static_cast<float>(numSlices);
+                const float theta = glm::radians(u * 360.0f);
+                const float tSin = std::sinf(theta);
+                const float tCos = std::cosf(theta);
                 positions.emplace_back(tCos * pCos, pSin, tSin * pCos);
                 normals.push_back(glm::normalize(positions.back()));
                 texCoords.emplace_back(1.0f - u, 1.0f - v);
 
                 if (j > 0 && i < numSlices)
                 {
-                    int prevCurr = (j - 1) * (numSlices + 1) + i;
-                    int prevNext = (j - 1) * (numSlices + 1) + i + 1;
-                    int curr = j * (numSlices + 1) + i;
-                    int next = j * (numSlices + 1) + i + 1;
+                    const int prevCurr = (j - 1) * (numSlices + 1) + i;
+                    const int prevNext = (j - 1) * (numSlices + 1) + i + 1;
+                    const int curr = j * (numSlices + 1) + i;
+                    const int next = j * (numSlices + 1) + i + 1;
 
                     faces.emplace_back(prevCurr, next, curr);
                     faces.emplace_back(prevCurr, prevNext, next);
@@ -158,12 +156,12 @@ namespace crisp
             }
         }
 
-        return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
+        return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
     }
 
     TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     {
-        static std::vector<glm::vec3> positions =
+        std::vector<glm::vec3> positions =
         {
             // Front
             glm::vec3(-0.5f, -0.5f, +0.5f),
@@ -202,7 +200,7 @@ namespace crisp
             glm::vec3(-0.5f, -0.5f, +0.5f)
         };
 
-        static std::vector<glm::vec3> normals =
+        std::vector<glm::vec3> normals =
         {
             glm::vec3(0.0f, 0.0f, 1.0f),
             glm::vec3(0.0f, 0.0f, 1.0f),
@@ -235,7 +233,7 @@ namespace crisp
             glm::vec3(0.0f, -1.0f, 0.0f)
         };
 
-        static std::vector<glm::vec2> texCoords =
+        std::vector<glm::vec2> texCoords =
         {
             glm::vec2(0.0f, 0.0f),
             glm::vec2(0.0f, 1.0f),
@@ -268,7 +266,7 @@ namespace crisp
             glm::vec2(1.0f, 0.0f),
         };
 
-        static std::vector<glm::uvec3> faces =
+        std::vector<glm::uvec3> faces =
         {
             glm::uvec3(0, 1, 2),
             glm::uvec3(0, 2, 3),
@@ -289,6 +287,6 @@ namespace crisp
             glm::uvec3(20, 22, 23),
         };
 
-        return TriangleMesh(positions, normals, texCoords, faces, vertexAttributes);
+        return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
     }
 }

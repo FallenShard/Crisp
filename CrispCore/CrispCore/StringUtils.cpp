@@ -20,6 +20,7 @@ namespace crisp
 
         return result;
     }
+
     std::vector<std::string_view> tokenizeIntoViews(const std::string_view string, const std::string_view delimiter)
     {
         std::vector<std::string_view> result;

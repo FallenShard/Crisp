@@ -12,7 +12,7 @@ target_link_libraries(VesperTest PRIVATE gtestMain)
 target_link_libraries(VesperTest PRIVATE Vesper)
 
 set_target_properties(VesperTest PROPERTIES
-    CXX_STANDARD 23)
+    CXX_STANDARD 20)
 
 add_custom_command(TARGET VesperTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

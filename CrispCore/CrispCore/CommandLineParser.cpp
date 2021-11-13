@@ -4,9 +4,10 @@ namespace crisp
 {
     void CommandLineParser::parse(int argc, char** argv)
     {
-        std::vector<std::string_view> commandLineArgs(argc);
+        std::vector<std::string_view> commandLineArgs;
+        commandLineArgs.reserve(argc);
         for (uint32_t i = 0; i < static_cast<uint32_t>(argc); ++i)
-            commandLineArgs[i] = std::string_view(argv[i]);
+            commandLineArgs.emplace_back(argv[i]);
 
         parse(commandLineArgs);
     }

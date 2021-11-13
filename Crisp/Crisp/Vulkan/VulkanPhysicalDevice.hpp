@@ -30,8 +30,7 @@ namespace crisp
     class VulkanPhysicalDevice
     {
     public:
-        VulkanPhysicalDevice(VkPhysicalDevice handle);
-        ~VulkanPhysicalDevice();
+        explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
 
         VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
         VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept = default;

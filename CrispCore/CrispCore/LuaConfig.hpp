@@ -63,11 +63,15 @@ namespace crisp
                         return static_cast<T>(lua_tonumber(m_L, -1));
                     else if (lua_type(m_L, -1) == LUA_TBOOLEAN)
                         return static_cast<T>(lua_toboolean(m_L, -1));
+                    else
+                        return {};
                 }
                 else if constexpr (std::is_convertible_v<T, std::string>)
                 {
                     if (lua_type(m_L, -1) == LUA_TSTRING)
                         return std::string(lua_tostring(m_L, -1));
+                    else
+                        return {};
                 }
                 else if constexpr (is_vector_v<T>)
                 {
@@ -91,9 +95,9 @@ namespace crisp
                     return vec;
                 }
                 else
+                {
                     return {};
-
-                return {};
+                }
             }
 
         protected:

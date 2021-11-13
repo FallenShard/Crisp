@@ -6,7 +6,7 @@
 #include <Crisp/vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/vulkan/VulkanFramebuffer.hpp>
-#include <Crisp/IO/ImageFileBuffer.hpp>
+#include <CrispCore/Image/Image.hpp>
 
 namespace crisp
 {
@@ -56,7 +56,7 @@ namespace crisp
         m_renderTargets.resize(1);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
         auto numLayers = 6;
-        auto mipmapCount = !m_allocateMipmaps ? 1 : ImageFileBuffer::getMipLevels(extent.width, extent.height);
+        auto mipmapCount = !m_allocateMipmaps ? 1 : Image::getMipLevels(extent.width, extent.height);
         auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
 
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, mipmapCount, VK_FORMAT_R16G16B16A16_SFLOAT,

@@ -8,6 +8,9 @@
 #include <iomanip>
 #include <chrono>
 
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
+
 namespace crisp
 {
     class ChromeProfiler

@@ -56,6 +56,13 @@ namespace crisp
 
         const BoundingBox3& getBoundingBox() const;
 
+        glm::vec3 interpolatePosition(uint32_t triangleId, const glm::vec3& barycentric) const;
+        glm::vec3 interpolateNormal(uint32_t triangleId, const glm::vec3& barycentric) const;
+        glm::vec2 interpolateTexCoord(uint32_t triangleId, const glm::vec3& barycentric) const;
+
+        glm::vec3 calculateFaceNormal(uint32_t triangleId) const;
+        float calculateFaceArea(uint32_t triangleId) const;
+
     private:
         std::vector<glm::vec3> m_positions;
         std::vector<glm::vec3> m_normals;

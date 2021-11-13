@@ -8,10 +8,10 @@ const float PI = 3.14159265358979323846f;
 
 struct AtmosphereParameters
 {
-	// Radius of the planet (center to ground)
+	// Radius of the planet (center to ground) in km.
 	float bottomRadius;
 
-	// Maximum considered atmosphere height (center to atmosphere top)
+	// Maximum considered atmosphere height (center to atmosphere top) in km.
 	float topRadius;
 
 	// Rayleigh scattering exponential distribution scale in the atmosphere
@@ -91,11 +91,9 @@ layout(set = 0, binding = 1) uniform SamplesBuffer
 	vec4 mie_density[3];
 	vec4 absorption_density[3];
 
-	//
-	// Add generated static header constant
-	//
-	int TRANSMITTANCE_TEXTURE_WIDTH;
-	int TRANSMITTANCE_TEXTURE_HEIGHT;
+	// Texture dimensions.
+	int transmittanceTextureWidth;
+	int transmittanceTextureHeight;
 	int IRRADIANCE_TEXTURE_WIDTH;
 	int IRRADIANCE_TEXTURE_HEIGHT;
 
@@ -211,12 +209,13 @@ float getAlbedo(float scattering, float extinction)
 {
 	return scattering / max(0.001, extinction);
 }
+
 vec3 getAlbedo3(vec3 scattering, vec3 extinction)
 {
 	return scattering / max(vec3(0.001), extinction);
 }
 
-struct MediumSampleRGB
+struct MediumSample
 {
 	vec3 scattering;
 	vec3 absorption;
@@ -237,7 +236,7 @@ struct MediumSampleRGB
 	vec3 albedo;
 };
 
-MediumSampleRGB sampleMediumRGB(in vec3 WorldPos, in AtmosphereParameters Atmosphere)
+MediumSample sampleMedium(in vec3 WorldPos, in AtmosphereParameters Atmosphere)
 {
 	const float viewHeight = length(WorldPos) - Atmosphere.bottomRadius;
 
@@ -247,7 +246,7 @@ MediumSampleRGB sampleMediumRGB(in vec3 WorldPos, in AtmosphereParameters Atmosp
 		Atmosphere.AbsorptionDensity0LinearTerm * viewHeight + Atmosphere.AbsorptionDensity0ConstantTerm :
 		Atmosphere.AbsorptionDensity1LinearTerm * viewHeight + Atmosphere.AbsorptionDensity1ConstantTerm, 0, 1);
 
-	MediumSampleRGB s;
+	MediumSample s;
 
 	s.scatteringMie = densityMie * Atmosphere.MieScattering;
 	s.absorptionMie = densityMie * Atmosphere.MieAbsorption;
@@ -351,10 +350,10 @@ vec3 IntegrateOpticalDepth(
 		}
 
 		const vec3 P = WorldPos + t * WorldDir;
-		MediumSampleRGB medium = sampleMediumRGB(P, atmosphere);
+		MediumSample mediumSample = sampleMedium(P, atmosphere);
 
 		// Accumulate optical depth along the ray
-		opticalDepth += medium.extinction * dt;
+		opticalDepth += mediumSample.extinction * dt;
 	}
 
 	return opticalDepth;
@@ -362,18 +361,17 @@ vec3 IntegrateOpticalDepth(
 
 void main()
 {
-	vec2 pixPos = vec2(gl_FragCoord.xy);
-	AtmosphereParameters atmosphere = getAtmosphereParameters();
+	const vec2 pixPos = vec2(gl_FragCoord.xy);
+	const AtmosphereParameters atmosphere = getAtmosphereParameters();
 
-	// Compute camera position from LUT coords
-	vec2 uv = (pixPos) / vec2(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
+	const vec2 uv = (pixPos) / vec2(transmittanceTextureWidth, transmittanceTextureHeight);
 	float viewHeight;
 	float viewZenithCosAngle;
 	uvToLutTransmittanceParams(atmosphere, uv, viewHeight, viewZenithCosAngle);
 
-	//  A few extra needed constants
-	vec3 worldPos = vec3(0.0f, viewHeight, 0.0f);
-	vec3 worldDir = vec3(0.0f, viewZenithCosAngle, -sqrt(1.0 - viewZenithCosAngle * viewZenithCosAngle));
+	// Compute camera position from LUT coords.
+	const vec3 worldPos = vec3(0.0f, viewHeight, 0.0f);
+	const vec3 worldDir = vec3(0.0f, viewZenithCosAngle, -sqrt(1.0 - viewZenithCosAngle * viewZenithCosAngle));
 
 	const float SampleCountIni = 40.0f;
 	const bool VariableSampleCount = false;

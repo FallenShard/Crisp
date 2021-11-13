@@ -16,8 +16,9 @@ namespace crisp
         ~Timer() = default;
 
         Timer(const Timer& other) = default;
+        Timer(Timer &&other) noexcept = default;
         Timer& operator=(const Timer& other) = default;
-        Timer& operator=(Timer&& other) = default;
+        Timer &operator=(Timer &&other) noexcept = default;
 
         inline double getElapsedTime() const
         {
@@ -36,4 +37,4 @@ namespace crisp
     private:
         std::chrono::time_point<std::chrono::steady_clock> m_prevTimePoint;
     };
-}
+} // namespace crisp

@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <Crisp/IO/FontLoader.hpp>
-#include <Crisp/IO/ImageFileBuffer.hpp>
+#include <CrispCore/IO/ImageLoader.hpp>
 
 #include <Crisp/vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
@@ -399,11 +399,10 @@ namespace crisp::gui
 
     void RenderSystem::loadTextureAtlas()
     {
-        auto imageBuffer = std::make_shared<ImageFileBuffer>(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png");
-        auto byteSize = imageBuffer->getWidth() * imageBuffer->getHeight() * 4;
-        m_guiAtlas     = std::make_unique<Texture>(m_renderer, VkExtent3D{ imageBuffer->getWidth(), imageBuffer->getHeight(), 1u }, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+        const auto image = loadImage(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png");
+        m_guiAtlas     = std::make_unique<Texture>(m_renderer, VkExtent3D{ image.getWidth(), image.getHeight(), 1u }, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
         m_guiAtlasView = m_guiAtlas->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
-        m_guiAtlas->fill(imageBuffer->getData(), byteSize);
+        m_guiAtlas->fill(image.getData(), image.getByteSize());
     }
 
     void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const

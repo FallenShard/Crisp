@@ -169,7 +169,7 @@ namespace crisp
         }
     }
 
-    void RenderGraph::buildCommandLists(const std::unordered_map<std::string, std::unique_ptr<RenderNode>>& renderNodes)
+    void RenderGraph::buildCommandLists(const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& renderNodes)
     {
         const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
         for (const auto& [id, renderNode] : renderNodes)
