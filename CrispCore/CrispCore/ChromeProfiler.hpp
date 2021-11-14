@@ -35,27 +35,19 @@ namespace crisp
 
         static void begin(const char* message)
         {
-            std::ostream& stream = getThreadStream();
-            stream << "{\"pid\":" << 1 << ",\"tid\":\"" << getThreadName() << "\",\"ts\":" << getCurrentTime()
-                << ",\"ph\":\"B\",\"name\":\"" << message << "\"},\n";
+            getThreadStream() << fmt::format("{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"B\",\"name\":\"{}\"},\n", 1, getThreadName(), getCurrentTime(), message);
         }
 
         static void end()
         {
-            std::ostream& stream = getThreadStream();
-            stream << "{\"pid\":" << 1 << ",\"tid\":\"" << getThreadName() << "\",\"ts\":" << getCurrentTime()
-                << ",\"ph\":\"E\"},\n";
+            getThreadStream() << fmt::format("{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"E\"},\n", 1, getThreadName(), getCurrentTime());
         }
 
-        static void finalize() {
+        static void finalize()
+        {
             std::ofstream& stream = getFileStream();
-            stream << "{" <<
-                std::quoted("pid") << ":" << 1 << "," << std::quoted("tid") << ":\"" << getThreadName() << "\"," <<
-                std::quoted("ts") << ":" << getCurrentTime() << "," << std::quoted("dur") << ":" << 10 << "," <<
-                std::quoted("ph") << ":" << std::quoted("X") << "," << std::quoted("name") << ":" << std::quoted("RandomEvent")
-                << "}\n],\n";
-            stream << "\"meta_user\": \"FallenShard\"" << ","
-                << "\"meta_cpu_count\": \"12\"" << "}";
+            stream << "],\n";
+            stream << "\"meta_user\":\"FallenShard\",\"meta_cpu_count\":\"12\"}";
             stream.close();
         }
 
@@ -73,16 +65,14 @@ namespace crisp
     private:
         static std::ofstream createFileStream()
         {
-            std::ofstream fileStream("profile.json");
-            fileStream << "{";
-            fileStream << std::quoted("traceEvents") << ":";
-            fileStream << "[\n";
-            return fileStream;
+            std::ofstream stream("profile.json");
+            stream << "{\"traceEvents\":[\n";
+            return stream;
         }
 
         static std::ofstream& getFileStream()
         {
-            static std::ofstream fileStream = createFileStream();
+            static std::ofstream fileStream(createFileStream());
             return fileStream;
         }
 
