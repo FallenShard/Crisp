@@ -1,18 +1,19 @@
 #pragma once
 
-#include "Material.hpp"
-#include "UniformBuffer.hpp"
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/vulkan/VulkanPipeline.hpp>
 #include <Crisp/vulkan/VulkanSampler.hpp>
 #include <Crisp/vulkan/VulkanImage.hpp>
 #include <Crisp/vulkan/VulkanImageView.hpp>
 
-#include "RenderNode.hpp"
-#include "DescriptorSetAllocator.hpp"
+#include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Renderer/UniformBuffer.hpp>
+#include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/DescriptorSetAllocator.hpp>
+
+#include <CrispCore/RobinHood.hpp>
 
 #include <memory>
-#include <unordered_map>
 
 namespace crisp
 {
@@ -44,6 +45,8 @@ namespace crisp
         void addImage(std::string id, std::unique_ptr<VulkanImage> image);
         void addImageView(std::string id, std::unique_ptr<VulkanImageView> imageView);
 
+        RenderNode* createPostProcessingEffectNode(std::string renderNodeId, std::string pipelineLuaFilename, const VulkanRenderPass& renderPass, const std::string& renderPassName);
+
         Geometry*        getGeometry(std::string id);
         Material*        getMaterial(std::string id);
         UniformBuffer*   getUniformBuffer(std::string id);
@@ -53,15 +56,21 @@ namespace crisp
 
         void recreatePipelines();
 
-        inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
+        inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout)
+        {
             return m_descriptorAllocators.at(pipelineLayout).get();
+        }
+
+        inline const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& getRenderNodes() const
+        {
+            return m_renderNodes;
         }
 
     private:
         Renderer* m_renderer;
 
-        std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
-        std::unordered_map<std::string, std::unique_ptr<Geometry>> m_geometries;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<Material>> m_materials;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<Geometry>> m_geometries;
 
         struct PipelineInfo
         {
@@ -69,15 +78,17 @@ namespace crisp
             const VulkanRenderPass* renderPass;
             int subpassIndex;
         };
-        std::unordered_map<std::string, PipelineInfo> m_pipelineInfos;
-        std::unordered_map<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
+        robin_hood::unordered_flat_map<std::string, PipelineInfo> m_pipelineInfos;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
 
-        std::unordered_map<std::string, std::unique_ptr<UniformBuffer>>  m_uniformBuffers;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<UniformBuffer>>  m_uniformBuffers;
 
-        std::unordered_map<std::string, std::unique_ptr<VulkanImage>>     m_images;
-        std::unordered_map<std::string, std::unique_ptr<VulkanImageView>> m_imageViews;
-        std::unordered_map<std::string, std::unique_ptr<VulkanSampler>>   m_samplers;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<VulkanImage>>     m_images;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<VulkanImageView>> m_imageViews;
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<VulkanSampler>>   m_samplers;
 
-        std::unordered_map<VulkanPipelineLayout*, std::unique_ptr<DescriptorSetAllocator>> m_descriptorAllocators;
+        robin_hood::unordered_flat_map<VulkanPipelineLayout*, std::unique_ptr<DescriptorSetAllocator>> m_descriptorAllocators;
+
+        robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
     };
 }

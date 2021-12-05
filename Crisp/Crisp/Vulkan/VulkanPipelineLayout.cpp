@@ -87,7 +87,7 @@ namespace crisp
         auto getNumCopiesPerSet = [this](uint32_t numCopies) {
             std::vector<uint32_t> numCopiesPerSet;
             for (uint32_t i = 0; i < m_descriptorSetBufferedStatus.size(); ++i)
-                numCopiesPerSet.push_back(m_descriptorSetBufferedStatus[i] ? numCopies * Renderer::NumVirtualFrames : numCopies);
+                numCopiesPerSet.push_back(m_descriptorSetBufferedStatus[i] ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
             return numCopiesPerSet;
         };
 

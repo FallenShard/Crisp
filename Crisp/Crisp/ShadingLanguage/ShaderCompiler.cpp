@@ -1,17 +1,20 @@
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
+#include <CrispCore/RobinHood.hpp>
+#include <CrispCore/IO/FileUtils.hpp>
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <array>
-#include <unordered_set>
 #include <fstream>
 
 namespace crisp
 {
     namespace
     {
-        static const std::unordered_set<std::string> shaderExtensions =
+        const std::filesystem::path GlslExtension = ".glsl";
+        const robin_hood::unordered_set<std::string> ShaderExtensions =
         {
             "vert", "frag", "tesc", "tese", "geom", "comp", "rgen", "rchit", "rmiss"
         };
@@ -19,7 +22,7 @@ namespace crisp
         auto logger = spdlog::stderr_color_mt("ShaderCompiler");
     }
 
-    void ShaderCompiler::compileDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir)
+    void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir)
     {
         if (!std::filesystem::exists(inputDir))
         {
@@ -27,10 +30,8 @@ namespace crisp
             return;
         }
 
-        logger->info("Processing and compiling shaders at path: {}", inputDir.string());
-
-
-        logger->info("Spv Destination path: {}", outputDir.string());
+        logger->info("Processing and compiling shaders from: {}", inputDir.string());
+        logger->info("Saving .spv modules in: {}", outputDir.string());
 
         if (!std::filesystem::exists(outputDir))
         {
@@ -48,7 +49,7 @@ namespace crisp
                 continue;
 
             const std::filesystem::path inputPath = inputEntry.path();
-            if (inputPath.extension() != ".glsl")
+            if (inputPath.extension() != GlslExtension)
             {
                 logger->warn("{} has no .glsl extension!", inputPath.string());
                 continue;
@@ -57,12 +58,13 @@ namespace crisp
             // shader-name.<stage>.glsl is the file name format
             // First getting the stem and then its "extension" will give us the stage name
             const std::string shaderType = inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
-            if (!shaderExtensions.contains(shaderType))
+            if (!ShaderExtensions.contains(shaderType))
             {
                 logger->warn("{} is not a valid glsl shader type!", shaderType);
                 continue;
             }
 
+            // Output file is shader-name.<stage>.spv
             const std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
 
             const std::filesystem::file_time_type inputModifiedTs = inputEntry.last_write_time();
@@ -72,14 +74,18 @@ namespace crisp
             if (inputModifiedTs > outputModifiedTs)
             {
                 const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
+                const std::filesystem::path tempInputPath = inputDir / "temp.glsl";
 
                 logger->info("Compiling {}", inputPath.filename().string());
-                std::string command = "glslangValidator.exe -V -o ";
-                command += tempOutputPath.string();
-                command += " -S ";
-                command += shaderType;
-                command += " ";
-                command += inputPath.string();
+                auto preprocessedShaderSource = preprocessGlslSource(inputPath);
+                if (!preprocessedShaderSource.hasValue())
+                {
+                    logger->error(preprocessedShaderSource.getError());
+                    continue;
+                }
+
+                stringToFile(tempInputPath, preprocessedShaderSource.unwrap()).unwrap();
+                const std::string command = fmt::format("glslangValidator.exe -V -o {} -S {} {}", tempOutputPath.string(), shaderType, tempInputPath.string());
 
                 // Open a subprocess to compile this shader
                 FILE* pipe = _popen(command.c_str(), "rt");
@@ -115,14 +121,48 @@ namespace crisp
                     }
                     else
                     {
-                        logger->error("Pipe process returned : {}", retVal);
+                        logger->error("Pipe process returned: {}", retVal);
                     }
                 }
                 else
                 {
                     logger->error("Failed to read the pipe to the end.");
                 }
+
+                std::filesystem::remove(tempInputPath);
             }
         }
+    }
+
+    Result<std::string> preprocessGlslSource(const std::filesystem::path& inputPath)
+    {
+        constexpr std::string_view includeDirective("#include");
+
+        std::stringstream preprocessed;
+
+        std::size_t lineIdx = 0;
+        std::string line;
+        std::ifstream inputFile(inputPath);
+        while (std::getline(inputFile, line))
+        {
+            if (line.starts_with(includeDirective))
+            {
+                constexpr std::size_t trimLeft = 2; // space + \"
+                constexpr std::size_t trimRight = 1; // \"
+                const std::string relativeIncludePath = line.substr(includeDirective.size() + trimLeft);
+                const std::filesystem::path includeFilePath = inputPath.parent_path() / relativeIncludePath.substr(0, relativeIncludePath.size() - trimRight);
+                if (!std::filesystem::exists(includeFilePath))
+                    return resultError("Invalid include path {} at line {} of {}!", relativeIncludePath, lineIdx, inputPath.string());
+                
+                preprocessed << fileToString(includeFilePath).unwrap() << '\n';
+            }
+            else
+            {
+                preprocessed << line << '\n';
+            }
+            ++lineIdx;
+        }
+
+        return preprocessed.str();
     }
 }

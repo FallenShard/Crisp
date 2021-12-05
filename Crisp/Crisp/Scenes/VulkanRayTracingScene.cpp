@@ -79,7 +79,7 @@ namespace crisp
 
         // Wrap-up render graph definition
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
         m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
         m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
@@ -93,20 +93,20 @@ namespace crisp
 
         std::vector<VertexAttributeDescriptor> posFormat = { VertexAttribute::Position, VertexAttribute::Normal };
         m_resourceContext->addGeometry("floorPos", std::make_unique<Geometry>(m_renderer, createPlaneMesh(posFormat, 10.0f)));
-        m_resourceContext->addGeometry("walls", std::make_unique<Geometry>(m_renderer, loadMesh(m_renderer->getResourcesPath() / "Meshes/walls.obj", posFormat), posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
-        m_resourceContext->addGeometry("leftwall", std::make_unique<Geometry>(m_renderer, loadMesh(m_renderer->getResourcesPath() / "Meshes/leftwall.obj", posFormat), posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
-        m_resourceContext->addGeometry("rightwall", std::make_unique<Geometry>(m_renderer, loadMesh(m_renderer->getResourcesPath() / "Meshes/rightwall.obj", posFormat), posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+        m_resourceContext->addGeometry("walls", std::make_unique<Geometry>(m_renderer, loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/walls.obj", posFormat), posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+        m_resourceContext->addGeometry("leftwall", std::make_unique<Geometry>(m_renderer, loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/leftwall.obj", posFormat), posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+        m_resourceContext->addGeometry("rightwall", std::make_unique<Geometry>(m_renderer, loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/rightwall.obj", posFormat), posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
-        TriangleMesh lightMesh(loadMesh(m_renderer->getResourcesPath() / "Meshes/light.obj", posFormat));
+        TriangleMesh lightMesh(loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/light.obj", posFormat));
         //lightMesh.transform(glm::translate(glm::vec3(0.0f, -0.2f, 0.0f)));
         //TriangleMesh lightMesh(m_renderer->getResourcesPath() / "Meshes/sphere.obj", posFormat);
         //lightMesh.transform(glm::translate(glm::vec3(0.0f, +0.8f, 0.0f)) * glm::scale(glm::vec3(0.1f)));
         m_resourceContext->addGeometry("light", std::make_unique<Geometry>(m_renderer, lightMesh, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
-        TriangleMesh leftSphere(loadMesh(m_renderer->getResourcesPath() / "Meshes/sphere.obj", posFormat));
+        TriangleMesh leftSphere(loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/sphere.obj", posFormat));
         leftSphere.transform(glm::translate(glm::vec3(-0.421400f, 0.332100f, -0.280000f)) * glm::scale(glm::vec3(0.3263f)));
         m_resourceContext->addGeometry("leftSphere", std::make_unique<Geometry>(m_renderer, leftSphere, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
-        TriangleMesh rightSphere(loadMesh(m_renderer->getResourcesPath() / "Meshes/Ocean3.obj", posFormat));
+        TriangleMesh rightSphere(loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Ocean3.obj", posFormat));
         //rightSphere.transform(glm::translate(glm::vec3(0.445800, 0.332100, 0.376700)) * glm::scale(glm::vec3(0.3263)));
         rightSphere.transform(glm::translate(glm::vec3(0.000f, 0.232100f, 0.000f)) * glm::scale(glm::vec3(0.5f)));// *glm::scale(glm::vec3(0.3263)));
         m_resourceContext->addGeometry("rightSphere", std::make_unique<Geometry>(m_renderer, rightSphere, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
@@ -134,7 +134,7 @@ namespace crisp
                 m_rayTracer->build(cmdBuffer);
             });
         m_renderer->flushResourceUpdates(true);
-        m_rayTracer->createImage(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height, Renderer::NumVirtualFrames);
+        m_rayTracer->createImage(m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height, RendererConfig::VirtualFrameCount);
 
         m_rayTracingMaterial = std::make_unique<RayTracingMaterial>(m_renderer, m_rayTracer->getTopLevelAccelerationStructure(),
             m_rayTracer->getImageViewHandles(), *m_resourceContext->getUniformBuffer("camera"));

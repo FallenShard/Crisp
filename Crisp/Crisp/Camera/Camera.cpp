@@ -2,7 +2,7 @@
 
 namespace
 {
-    static const glm::mat4 invertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
+    const glm::mat4 InvertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
 
     glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar)
     {
@@ -16,8 +16,8 @@ namespace
 
         const auto b = glm::infinitePerspective(fovY, aspectRatio, zNear);
 
-        // Infinite projection
-            const auto c = glm::mat4(
+        // Infinite projection with z value projected into [0, 1].
+        const auto c = glm::mat4(
             f / aspectRatio, 0.0f, 0.0f, 0.0f,
             0.0f, f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f, -1.0f,
@@ -26,23 +26,27 @@ namespace
     }
 
     template <typename ScalarType>
-    static const glm::vec<3, ScalarType> axisX = { ScalarType(1.0), ScalarType(0.0), ScalarType(0.0) };
+    constexpr glm::vec<3, ScalarType> AxisX = { ScalarType(1.0), ScalarType(0.0), ScalarType(0.0) };
     template <typename ScalarType>
-    static const glm::vec<3, ScalarType> axisY = { ScalarType(0.0), ScalarType(1.0), ScalarType(0.0) };
+    constexpr glm::vec<3, ScalarType> AxisY = { ScalarType(0.0), ScalarType(1.0), ScalarType(0.0) };
     template <typename ScalarType>
-    static const glm::vec<3, ScalarType> axisZ = { ScalarType(0.0), ScalarType(0.0), ScalarType(1.0) };
+    constexpr glm::vec<3, ScalarType> AxisZ = { ScalarType(0.0), ScalarType(0.0), ScalarType(1.0) };
 }
 
 namespace crisp
 {
     Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight)
+        : Camera(viewportWidth, viewportHeight, 0.1f, 1000.0f)
+    {
+    }
+
+    Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight, const float zNear, const float zFar)
         : m_verticalFov(glm::radians(45.0f))
         , m_aspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight))
-        , m_zNear(0.1f)
-        , m_zFar(1000.0f)
+        , m_zNear(zNear)
+        , m_zFar(zFar)
         , m_position(0.0f, 0.0f, 10.0f)
-        , m_orientation(glm::angleAxis(glm::radians(0.0), axisY<double>))
-
+        , m_orientation(glm::angleAxis(glm::radians(0.0), AxisY<double>))
     {
         updateProjectionMatrix();
         updateViewMatrix();
@@ -110,17 +114,17 @@ namespace crisp
 
     glm::vec3 Camera::getRightDir() const
     {
-        return m_invV * glm::vec4(axisX<float>, 0.0f);
+        return m_invV * glm::vec4(AxisX<float>, 0.0f);
     }
 
     glm::vec3 Camera::getLookDir() const
     {
-        return m_invV * glm::vec4(-axisZ<float>, 0.0f);
+        return m_invV * glm::vec4(-AxisZ<float>, 0.0f);
     }
 
     glm::vec3 Camera::getUpDir() const
     {
-        return m_invV * glm::vec4(axisY<float>, 0.0f);
+        return m_invV * glm::vec4(AxisY<float>, 0.0f);
     }
 
     glm::vec2 Camera::getViewDepthRange() const
@@ -181,7 +185,7 @@ namespace crisp
 
     void Camera::updateProjectionMatrix()
     {
-        m_P = invertProjectionY * reverseZPerspective(m_verticalFov, m_aspectRatio, m_zNear, m_zFar);
+        m_P = InvertProjectionY * reverseZPerspective(m_verticalFov, m_aspectRatio, m_zNear, m_zFar);
     }
 
     void Camera::updateViewMatrix()

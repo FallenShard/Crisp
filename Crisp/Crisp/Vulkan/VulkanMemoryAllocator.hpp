@@ -1,14 +1,13 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+
 #include <cstdint>
 #include <memory>
 
-#include "VulkanMemoryHeap.hpp"
-
-
 namespace crisp
 {
-    class VulkanContext;
+    class VulkanPhysicalDevice;
 
     struct DeviceMemoryMetrics
     {
@@ -23,18 +22,17 @@ namespace crisp
     class VulkanMemoryAllocator
     {
     public:
-        VulkanMemoryAllocator(const VulkanContext& context, VkDevice deviceHandle);
+        VulkanMemoryAllocator(const VulkanPhysicalDevice& physicalDevice, VkDevice deviceHandle);
 
         VulkanMemoryHeap* getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
         VulkanMemoryHeap* getDeviceBufferHeap() const;
         VulkanMemoryHeap* getDeviceImageHeap() const;
         VulkanMemoryHeap* getStagingBufferHeap() const;
 
-        void printMemoryStatus();
-        DeviceMemoryMetrics getDeviceMemoryUsage();
+        DeviceMemoryMetrics getDeviceMemoryUsage() const;
 
     private:
-        const VulkanContext& m_context;
+        const VulkanPhysicalDevice* m_physicalDevice;
 
         std::unique_ptr<VulkanMemoryHeap> m_deviceBufferHeap;
         std::unique_ptr<VulkanMemoryHeap> m_deviceImageHeap;

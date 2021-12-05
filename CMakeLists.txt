@@ -28,14 +28,14 @@ add_subdirectory(Externals/spdlog)
 add_subdirectory(Externals/robin_hood)
 
 add_subdirectory(CrispCore)
-add_subdirectory(CrispCoreTest)
+add_subdirectory(CrispCore/Test)
 
 add_subdirectory(Vesper)
-add_subdirectory(VesperTest)
+add_subdirectory(Vesper/Test)
 
 add_subdirectory(Crisp)
-add_subdirectory(CrispTest)
-add_subdirectory(CrispMain)
+add_subdirectory(Crisp/Test)
+add_subdirectory(Crisp/Main)
 
 # Set the start-up project to be the main executable CrispMain
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT CrispMain)

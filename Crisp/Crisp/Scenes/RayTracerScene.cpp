@@ -6,7 +6,7 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/IO/FileUtils.hpp>
+#include <CrispCore/IO/FileUtils.hpp>
 #include <CrispCore/IO/OpenEXRWriter.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
 #include <Crisp/GUI/Form.hpp>
@@ -94,7 +94,7 @@ namespace crisp
 
     void RayTracerScene::openSceneFileFromDialog()
     {
-        auto openedFile = fileutils::openFileDialog();
+        auto openedFile = openFileDialog();
         if (openedFile == "")
             return;
 
@@ -113,25 +113,28 @@ namespace crisp
 
     void RayTracerScene::writeImageToExr()
     {
-        std::string outputDirectory = "Output";
-        fileutils::createDirectory(outputDirectory);
+        const std::string outputDirectory = "Output";
+        std::filesystem::create_directories(outputDirectory);
+
         OpenEXRWriter writer;
-        glm::ivec2 imageSize = m_rayTracer->getImageSize();
-        std::cout << "Writing EXR image..." << std::endl;
+        const glm::ivec2 imageSize = m_rayTracer->getImageSize();
 
-        std::string fileName = outputDirectory + "/" + m_projectName + ".exr";
+        
+        std::filesystem::path filepath = fmt::format("{}/{}.exr", outputDirectory, m_projectName);
 
+        // Avoid overwriting by providing a new filepath with an index
         int i = 0;
-        while (fileutils::fileExists(fileName))
-            fileName = outputDirectory + "/" + m_projectName + "_" + std::to_string(++i) + ".exr";
+        while (std::filesystem::exists(filepath))
+            filepath = fmt::format("{}/{}_{}.exr", outputDirectory, ++i, m_projectName);
 
-        writer.write(fileName, m_imageData.data(), imageSize.x, imageSize.y, true);
+        std::cout << "Writing EXR image..." << std::endl;
+        writer.write(filepath.string(), m_imageData.data(), imageSize.x, imageSize.y, true);
     }
 
     void RayTracerScene::openSceneFile(const std::string& filename)
     {
         m_renderer->finish();
-        m_projectName = fileutils::getFileNameFromPath(filename);
+        m_projectName = std::filesystem::path(filename).stem().string();
         m_rayTracer->initializeScene(filename);
 
         glm::ivec2 imageSize = m_rayTracer->getImageSize();

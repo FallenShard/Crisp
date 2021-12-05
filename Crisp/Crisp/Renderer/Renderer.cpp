@@ -1,4 +1,6 @@
-#include "Renderer.hpp"
+#include <Crisp/Renderer/Renderer.hpp>
+
+#include <Crisp/Core/ApplicationEnvironment.hpp>
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
@@ -11,23 +13,18 @@
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 
 #include <Crisp/Renderer/RenderPasses/DefaultRenderPass.hpp>
-
+#include <Crisp/Renderer/LuaPipelineBuilder.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
-#include <Crisp/IO/FileUtils.hpp>
+#include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/IO/FileUtils.hpp>
+#include <CrispCore/ChromeProfiler.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <CrispCore/Math/Headers.hpp>
-
-#include <Crisp/Renderer/LuaPipelineBuilder.hpp>
-
-#include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
-
-#include <Crisp/Core/ApplicationEnvironment.hpp>
-#include "CrispCore/ChromeProfiler.hpp"
 
 namespace crisp
 {
@@ -40,13 +37,13 @@ namespace crisp
         : m_currentFrameIndex(0)
         , m_resourcesPath(ApplicationEnvironment::getResourcesPath())
     {
-        ShaderCompiler compiler;
-        compiler.compileDir(ApplicationEnvironment::getShaderSourcesPath(), m_resourcesPath / "Shaders");
+        recompileShaderDir(ApplicationEnvironment::getShaderSourcesPath(), m_resourcesPath / "Shaders");
 
         // Create fundamental objects for the API
         m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, ApplicationEnvironment::getRequiredVulkanExtensions(), true);
-        m_device            = std::make_unique<VulkanDevice>(m_context.get(), NumVirtualFrames);
-        m_swapChain         = std::make_unique<VulkanSwapChain>(m_device.get(), true);
+        m_physicalDevice    = std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap());
+        m_device            = std::make_unique<VulkanDevice>(*m_physicalDevice, createDefaultQueueConfiguration(*m_context, *m_physicalDevice), RendererConfig::VirtualFrameCount);
+        m_swapChain         = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
         logger->info("Created all base components");
 
@@ -106,6 +103,11 @@ namespace crisp
     VulkanContext* Renderer::getContext() const
     {
         return m_context.get();
+    }
+
+    const VulkanPhysicalDevice& Renderer::getPhysicalDevice() const
+    {
+        return *m_physicalDevice;
     }
 
     VulkanDevice* Renderer::getDevice() const
@@ -265,7 +267,7 @@ namespace crisp
         m_device->updateDeferredDestructions();
 
         // Flush all noncoherent updates
-        m_device->flushMappedRanges();
+        m_device->flushMappedRanges(m_physicalDevice->getLimits().nonCoherentAtomSize);
 
         std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
         if (!swapImageIndex.has_value())
@@ -317,7 +319,7 @@ namespace crisp
         if (renderPass)
         {
             m_sceneImageViews = renderPass->getRenderTargetViews(renderTargetIndex);
-            for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+            for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
                 m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
 
             m_device->flushDescriptorUpdates();
@@ -331,7 +333,7 @@ namespace crisp
     void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews)
     {
         m_sceneImageViews.clear();
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             m_sceneImageViews.push_back(imageViews[i].get());
 
         m_sceneMaterial->writeDescriptor(0, 0, imageViews, m_linearClampSampler.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -361,7 +363,7 @@ namespace crisp
 
     void Renderer::loadShaders(const std::filesystem::path& directoryPath)
     {
-        auto files = fileutils::enumerateFiles(directoryPath, "spv");
+        auto files = enumerateFiles(directoryPath, "spv");
         for (auto& file : files)
             loadSpirvShaderModule(directoryPath / file);
 
@@ -388,7 +390,7 @@ namespace crisp
             }
         }
 
-        auto shaderCode = fileutils::readBinaryFile(shaderModulePath);
+        const auto shaderCode = readBinaryFile(shaderModulePath).unwrap();
 
         VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         createInfo.codeSize = shaderCode.size();

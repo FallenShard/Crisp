@@ -1,27 +1,26 @@
 #pragma once
 
-#include <map>
-#include <set>
-#include <memory>
-#include <vector>
-#include <functional>
-#include <any>
-#include <unordered_map>
+#include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
+
+#include <CrispCore/RobinHood.hpp>
 
 #include <vulkan/vulkan.h>
-#include "VulkanMemoryAllocator.hpp"
-
 #include <spdlog/spdlog.h>
+
+#include <memory>
+#include <vector>
+#include <any>
 
 namespace crisp
 {
-    class VulkanContext;
+    class VulkanPhysicalDevice;
+    struct VulkanQueueConfiguration;
     class VulkanQueue;
 
     class VulkanDevice;
 
     using VulkanDestructorCallback = void(*)(void*, VulkanDevice*);
-    struct StoredDestructor
+    struct DeferredDestructor
     {
         uint64_t deferredFrameIndex;
         int32_t framesRemaining;
@@ -32,16 +31,21 @@ namespace crisp
     class VulkanDevice
     {
     public:
-        VulkanDevice(VulkanContext* vulkanContext, int virtualFrameCount);
+        VulkanDevice(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount);
         ~VulkanDevice();
 
+        VulkanDevice(const VulkanDevice&) = delete;
+        VulkanDevice(VulkanDevice&&) noexcept;
+        VulkanDevice& operator=(const VulkanDevice&) = delete;
+        VulkanDevice& operator=(VulkanDevice&&) noexcept;
+
         VkDevice getHandle() const;
+        const VulkanPhysicalDevice& getPhysicalDevice() const;
         const VulkanQueue* getGeneralQueue() const;
         const VulkanQueue* getTransferQueue() const;
-        VulkanContext* getContext() const;
 
         void invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
-        void flushMappedRanges();
+        void flushMappedRanges(VkDeviceSize nonCoherentAtomSize);
 
         template <typename VkHandleType>
         void deferDestruction(int32_t framesToLive, VkHandleType handle, VulkanDestructorCallback callback)
@@ -51,7 +55,7 @@ namespace crisp
 
         void deferMemoryDeallocation(int32_t framesToLive, VulkanMemoryChunk chunk)
         {
-            m_deferredMemoryChunks.emplace_back(framesToLive, chunk);
+            m_deferredDeallocations.emplace_back(framesToLive, chunk);
         }
 
         void updateDeferredDestructions();
@@ -91,26 +95,26 @@ namespace crisp
         inline void removeTag(void* handle) { m_handleTagMap.erase(handle); }
 
     private:
-        VulkanContext* m_context;
-        int m_virtualFrameCount;
-        uint64_t m_currentFrameIndex;
-
+        const VulkanPhysicalDevice* m_physicalDevice;
         VkDevice m_device;
+        
         std::unique_ptr<VulkanQueue> m_generalQueue;
         std::unique_ptr<VulkanQueue> m_computeQueue;
         std::unique_ptr<VulkanQueue> m_transferQueue;
 
         std::unique_ptr<VulkanMemoryAllocator> m_memoryAllocator;
-
         std::vector<VkMappedMemoryRange> m_unflushedRanges;
 
         std::list<std::vector<VkDescriptorBufferInfo>> m_bufferInfos;
         std::list<VkDescriptorImageInfo>  m_imageInfos;
         std::vector<VkWriteDescriptorSet> m_descriptorWrites;
 
-        std::vector<StoredDestructor> m_deferredDestructors;
-        std::vector<std::pair<int32_t, VulkanMemoryChunk>> m_deferredMemoryChunks;
+        std::vector<DeferredDestructor> m_deferredDestructors;
+        std::vector<std::pair<int32_t, VulkanMemoryChunk>> m_deferredDeallocations;
 
-        std::unordered_map<void*, std::string> m_handleTagMap;
+        robin_hood::unordered_flat_map<void*, std::string> m_handleTagMap;
+
+        uint64_t m_currentFrameIndex;
+        int32_t m_virtualFrameCount;
     };
 }

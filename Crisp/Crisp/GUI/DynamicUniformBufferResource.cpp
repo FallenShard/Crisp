@@ -8,10 +8,10 @@
 
 namespace crisp::gui
 {
-    DynamicUniformBufferResource::DynamicUniformBufferResource(Renderer* renderer, const std::array<VkDescriptorSet, Renderer::NumVirtualFrames>& sets, uint32_t resourceSize, uint32_t descBinding)
+    DynamicUniformBufferResource::DynamicUniformBufferResource(Renderer* renderer, const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets, uint32_t resourceSize, uint32_t descBinding)
         : m_renderer(renderer)
         , m_resourceSize(resourceSize)
-        , m_bufferGranularity(static_cast<uint32_t>(renderer->getContext()->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment))
+        , m_bufferGranularity(static_cast<uint32_t>(renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment))
         , m_resourcesPerGranularity(m_bufferGranularity / m_resourceSize)
         , m_binding(descBinding)
         , m_sets(sets)
@@ -29,7 +29,7 @@ namespace crisp::gui
         // Per-frame buffers and descriptor sets, because each command buffer in flight may hold onto its own version of data/desc set
         m_buffer = std::make_unique<UniformMultiBuffer>(renderer, m_bufferGranularity * multiplier, m_bufferGranularity);
 
-        for (unsigned int i = 0; i < Renderer::NumVirtualFrames; i++)
+        for (unsigned int i = 0; i < RendererConfig::VirtualFrameCount; i++)
         {
             updateSet(i);
         }

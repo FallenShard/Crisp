@@ -8,6 +8,12 @@ namespace crisp::sl
     {
     }
 
+    Parser::Parser(std::vector<Token>&& tokens)
+        : m_tokens(std::move(tokens))
+        , m_current(0)
+    {
+    }
+
     std::vector<std::unique_ptr<Statement>> Parser::parse()
     {
         std::vector<std::unique_ptr<Statement>> statements;

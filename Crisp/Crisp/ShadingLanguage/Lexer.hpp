@@ -9,7 +9,6 @@ namespace crisp::sl
     class Lexer
     {
     public:
-        Lexer(const std::filesystem::path& sourcePath);
         Lexer(const std::string& source);
         Lexer(std::string&& source);
 

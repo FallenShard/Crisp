@@ -41,7 +41,12 @@ namespace crisp
 
         const VulkanFramebuffer* getFramebuffer(uint32_t frameIdx) const { return m_framebuffers.at(frameIdx).get(); }
 
+        inline const std::string& getName() const { return m_name; }
+        inline void setName(std::string name) { m_name = std::move(name); }
+
     protected:
+        VkExtent3D getRenderAreaExtent() const;
+
         virtual void createResources() = 0;
         void freeResources();
 
@@ -54,9 +59,11 @@ namespace crisp
 
         std::vector<VkImageLayout> m_finalLayouts;
         std::vector<std::unique_ptr<VulkanImage>> m_renderTargets;
-        std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_renderTargetViews;
+        std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_renderTargetViews; // numTargets x numFrames
         std::vector<VkClearValue> m_clearValues;
 
         std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
+
+        std::string m_name;
     };
 }

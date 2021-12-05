@@ -51,7 +51,7 @@ namespace crisp
     void DefaultRenderPass::createResources()
     {
         m_renderArea = m_renderer->getSwapChainExtent();
-        m_framebuffers.resize(Renderer::NumVirtualFrames);
+        m_framebuffers.resize(RendererConfig::VirtualFrameCount);
         m_imageFramebuffers.clear();
     }
 }

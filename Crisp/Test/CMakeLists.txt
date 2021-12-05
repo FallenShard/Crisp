@@ -2,10 +2,18 @@ add_executable(CrispTest
     "CameraTests/CameraTest.cpp"
     "CameraTests/FreeCameraControllerTest.cpp"
     "ShadingLanguageTests/LexerTest.cpp"
-    "VulkanTests/VulkanContextTest.cpp")
+    "VulkanTests/VulkanContextTest.cpp"
+    "VulkanTests/VulkanDeviceTest.cpp"
+    "VulkanTests/VulkanMemoryAllocatorTest.cpp"
+    "VulkanTests/VulkanPhysicalDeviceTest.cpp"
+    "VulkanTests/VulkanSwapChainTest.cpp"
+    "VulkanTests/VulkanTest.hpp"
+)
 
 set_target_properties(CrispTest PROPERTIES
     CXX_STANDARD 20)
+
+target_include_directories(CrispTest PUBLIC ".")
 
 target_link_libraries(CrispTest PRIVATE gtest)
 target_link_libraries(CrispTest PRIVATE gtestMain)
@@ -21,3 +29,5 @@ function(copy_shared_libs targetNames)
 endfunction()
 
 copy_shared_libs(vulkan lua freetype zlib tbb tbbMalloc embree)
+
+

@@ -1,21 +1,27 @@
 #pragma once
 
+#include <CrispCore/Result.hpp>
+
 #include <vulkan/vulkan.h>
 
 #include <vector>
+#include <optional>
+#include <string>
 
 namespace crisp
 {
+    struct VulkanQueueConfiguration;
+
     struct QueueFamilyIndices
     {
-        int graphicsFamily = -1;
-        int presentFamily = -1;
-        int computeFamily = -1;
-        int transferFamily = -1;
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
+        std::optional<uint32_t> computeFamily;
+        std::optional<uint32_t> transferFamily;
 
         bool isComplete() const
         {
-            return graphicsFamily >= 0 && presentFamily >= 0 && computeFamily >= 0 && transferFamily >= 0;
+            return graphicsFamily.has_value() && presentFamily.has_value() && computeFamily.has_value() && transferFamily.has_value();
         }
     };
 
@@ -31,11 +37,12 @@ namespace crisp
     {
     public:
         explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
+        ~VulkanPhysicalDevice();
 
         VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
-        VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept = default;
+        VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept;
         VulkanPhysicalDevice& operator=(const VulkanPhysicalDevice& other) = delete;
-        VulkanPhysicalDevice& operator=(VulkanPhysicalDevice&& other) noexcept = default;
+        VulkanPhysicalDevice& operator=(VulkanPhysicalDevice&& other) noexcept;
 
         inline VkPhysicalDevice getHandle() const { return m_handle; }
         inline const VkPhysicalDeviceFeatures& getFeatures() const { return m_features.features; }
@@ -47,11 +54,26 @@ namespace crisp
 
         bool isSuitable(VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const;
 
+        bool supportsPresentation(uint32_t queueFamilyIndex, VkSurfaceKHR surface) const;
         QueueFamilyIndices queryQueueFamilyIndices(VkSurfaceKHR surface) const;
         SurfaceSupport querySurfaceSupport(VkSurfaceKHR surface) const;
         std::vector<VkQueueFamilyProperties> queryQueueFamilyProperties() const;
 
+        void setDeviceExtensions(std::vector<std::string>&& deviceExtensions);
+        VkDevice createLogicalDevice(const VulkanQueueConfiguration& config) const;
+
+        Result<uint32_t> findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+        Result<uint32_t> findMemoryType(VkMemoryPropertyFlags properties) const;
+        Result<uint32_t> findDeviceImageMemoryType(VkDevice device) const;
+        Result<uint32_t> findDeviceBufferMemoryType(VkDevice device) const;
+        Result<uint32_t> findStagingBufferMemoryType(VkDevice device) const;
+
+        Result<VkFormat> findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+        Result<VkFormat> findSupportedDepthFormat() const;
+        
     private:
+        void initFeaturesAndProperties();
+
         bool supportsDeviceExtensions(const std::vector<const char*>& deviceExtensions) const;
 
         VkPhysicalDevice            m_handle; // Implicitly cleaned up with VkInstance
@@ -66,5 +88,9 @@ namespace crisp
         VkPhysicalDeviceVulkan12Properties m_properties12;
 
         VkPhysicalDeviceMemoryProperties2 m_memoryProperties;
+
+        std::vector<std::string> m_deviceExtensions;
     };
+
+    std::vector<std::string> createDefaultDeviceExtensions();
 }

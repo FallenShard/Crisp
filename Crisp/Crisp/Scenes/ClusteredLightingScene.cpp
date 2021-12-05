@@ -80,7 +80,7 @@ namespace crisp
         m_lightSystem->createTileGridBuffers(m_cameraController->getCameraParameters());
         m_lightSystem->addLightClusteringPass(*m_renderGraph, *m_resourceContext->getUniformBuffer("camera"));
 
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
 
         // Object transforms
         m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);

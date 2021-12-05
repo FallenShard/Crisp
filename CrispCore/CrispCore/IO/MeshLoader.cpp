@@ -22,7 +22,7 @@ namespace crisp
         }
     }
 
-    TriangleMesh loadMesh(const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
+    TriangleMesh loadTriangleMesh(const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     {
         if (WavefrontObjReader::isWavefrontObjFile(path))
         {

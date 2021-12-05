@@ -329,9 +329,9 @@ namespace crisp::sl
 
         template<typename T>
         Token(TokenType type, std::string lexeme, T literal, int line)
-            : lexeme(lexeme)
+            : lexeme(std::move(lexeme))
             , type(type)
-            , literal(literal)
+            , literal(std::move(literal))
             , line(line)
         {}
 

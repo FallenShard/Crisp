@@ -18,3 +18,9 @@ TEST(CameraTest, Basic)
     EXPECT_NEAR(glm::l2Norm(cam.getRightDir() - glm::vec3(0.0f, 0.0f, -1.0f)), 0.0f, 1e-6);
     EXPECT_NEAR(glm::l2Norm(cam.getUpDir() - glm::vec3(0.0f, 1.0f, 0.0f)), 0.0f, 1e-6);
 }
+
+TEST(CameraTest, DepthRange)
+{
+    crisp::Camera cam(512, 512, 1.0f, 10000.0f);
+    EXPECT_EQ(cam.getViewDepthRange(), glm::vec2(1.0f, 10000.0f));
+}

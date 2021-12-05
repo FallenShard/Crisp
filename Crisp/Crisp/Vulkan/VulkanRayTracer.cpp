@@ -68,7 +68,7 @@ namespace crisp
         //m_renderer->getDevice()->flushDescriptorUpdates();
 
         //auto screenSize = m_renderer->getSwapChainExtent();
-        //m_rayTracer->createImage(screenSize.width, screenSize.height, Renderer::NumVirtualFrames);
+        //m_rayTracer->createImage(screenSize.width, screenSize.height, RendererConfig::VirtualFrameCount);
         //m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
         //{
         //    m_rayTracer->getImage()->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL,

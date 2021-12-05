@@ -2,7 +2,9 @@
 
 #include <Crisp/ShadingLanguage/Lexer.hpp>
 #include <Crisp/ShadingLanguage/Parser.hpp>
-#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/ShadingLanguage/ShaderType.hpp>
+
+#include <CrispCore/IO/FileUtils.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -83,67 +85,40 @@ namespace crisp::sl
         }
     }
 
-    Reflection::Reflection()
+    Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::filesystem::path& sourcePath)
     {
-    }
+        const auto stageFlags = getShaderStageFromFilePath(sourcePath).unwrap();
+        auto tokens = sl::Lexer(fileToString(sourcePath).unwrap()).scanTokens();
+        const auto statements = sl::Parser(std::move(tokens)).parse();
 
-    void Reflection::parseDescriptorSets(const std::filesystem::path& sourcePath)
-    {
-        auto shaderType = sourcePath.stem().extension().string().substr(1);
-
-        VkShaderStageFlags stageFlags = 0;
-        if (shaderType == "vert")
-            stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        else if (shaderType == "frag")
-            stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        else if (shaderType == "tesc")
-            stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-        else if (shaderType == "tese")
-            stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-        else if (shaderType == "geom")
-            stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
-        else if (shaderType == "comp")
-            stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-        else
-            std::terminate();
-
-        auto tokens = sl::Lexer(sourcePath).scanTokens();
-        auto statements = sl::Parser(tokens).parse();
-
+        ShaderUniformInputMetadata metadata{};
         for (const auto& statement : statements)
         {
             std::optional<uint32_t> setId;
-            VkDescriptorSetLayoutBinding binding = {};
+            VkDescriptorSetLayoutBinding binding{};
             binding.descriptorCount = 1;
             binding.stageFlags = stageFlags;
-            bool isDynamic = false;
-            bool isBuffered = false;
-            std::string name;
 
-            auto parseLayoutQualifier = [&](const sl::LayoutQualifier& layoutQualifier)
+            auto parseLayoutQualifier = [&metadata, &binding, &statement, &setId](const sl::LayoutQualifier& layoutQualifier)
             {
-                for (auto& id : layoutQualifier.ids)
+                for (const auto& id : layoutQualifier.ids)
                 {
-                    if (auto bin = dynamic_cast<sl::BinaryExpr*>(id.get()))
+                    if (const auto bin = dynamic_cast<sl::BinaryExpr*>(id.get()))
                     {
-                        auto* left = dynamic_cast<sl::Variable*>(bin->left.get());
-                        auto* right = dynamic_cast<sl::Literal*>(bin->right.get());
+                        const auto* left = dynamic_cast<sl::Variable*>(bin->left.get());
+                        const auto* right = dynamic_cast<sl::Literal*>(bin->right.get());
                         if (left && right)
                         {
                             if (left->name.lexeme == "set")
-                                setId = std::any_cast<int>(right->value);
+                                setId = std::any_cast<int32_t>(right->value);
                             else if (left->name.lexeme == "binding")
-                                binding.binding = std::any_cast<int>(right->value);
+                                binding.binding = std::any_cast<int32_t>(right->value);
                         }
                     }
-                    else if (auto identifier = dynamic_cast<sl::Variable*>(id.get()))
+                    else if (const auto identifier = dynamic_cast<sl::Variable*>(id.get()))
                     {
-                        if (identifier->name.lexeme == "dynamic")
-                            isDynamic = true;
-                        else if (identifier->name.lexeme == "buffered")
-                            isBuffered = true;
-                        else if (identifier->name.lexeme == "push_constant")
-                            m_pushConstants.push_back(parsePushConstant(statement.get(), stageFlags));
+                        if (identifier->name.lexeme == "push_constant")
+                            metadata.pushConstants.push_back(parsePushConstant(statement.get(), binding.stageFlags));
                     }
                 }
             };
@@ -153,13 +128,7 @@ namespace crisp::sl
                 for (auto& qualifier : initList->fullType->qualifiers)
                 {
                     if (qualifier->qualifier.type == sl::TokenType::Layout)
-                    {
-                        auto layoutQualifier = dynamic_cast<sl::LayoutQualifier*>(qualifier.get());
-                        parseLayoutQualifier(*layoutQualifier);
-
-                        if (!initList->vars.empty())
-                            name = initList->vars[0]->name.lexeme;
-                    }
+                        parseLayoutQualifier(*dynamic_cast<sl::LayoutQualifier*>(qualifier.get()));
                 }
 
                 if (!initList->fullType->specifier)
@@ -183,7 +152,6 @@ namespace crisp::sl
             }
             else if (auto block = dynamic_cast<sl::BlockDeclaration*>(statement.get()))
             {
-                name = block->name.lexeme;
                 for (uint32_t i = 0; i < block->qualifiers.size(); ++i)
                 {
                     const auto& qualifier = block->qualifiers[i];
@@ -198,58 +166,41 @@ namespace crisp::sl
                     else if (qualifier->qualifier.type == sl::TokenType::Buffer)
                         binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 }
-
-                if (isDynamic)
-                    if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                        binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-                    else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-                        binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
             }
 
             if (setId)
             {
-                addSetLayoutBinding(setId.value(), binding, isBuffered);
-                //std::cout << "Name: " << name << " (" << setId.value() << ", " << binding.binding << ")\n";
+                const size_t index = setId.value();
+                if (metadata.descriptorSetLayoutBindings.size() <= index)
+                    metadata.descriptorSetLayoutBindings.resize(index + 1, {});
+
+                if (metadata.descriptorSetLayoutBindings.at(index).size() <= binding.binding)
+                    metadata.descriptorSetLayoutBindings.at(index).resize(binding.binding + 1, {});
+
+                metadata.descriptorSetLayoutBindings[index][binding.binding] = binding;
             }
-
         }
+
+        return metadata;
     }
 
-    uint32_t Reflection::getDescriptorSetCount() const
+    void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs)
     {
-        return static_cast<uint32_t>(m_setLayoutBindings.size());
-    }
+        if (rhs.descriptorSetLayoutBindings.size() > descriptorSetLayoutBindings.size())
+            descriptorSetLayoutBindings.resize(rhs.descriptorSetLayoutBindings.size());
 
-    std::vector<VkDescriptorSetLayoutBinding> Reflection::getDescriptorSetLayouts(uint32_t index) const
-    {
-        return m_setLayoutBindings.at(index);
-    }
+        for (uint32_t i = 0; i < rhs.descriptorSetLayoutBindings.size(); ++i)
+        {
+            if (rhs.descriptorSetLayoutBindings[i].size() > descriptorSetLayoutBindings[i].size())
+                descriptorSetLayoutBindings[i].resize(rhs.descriptorSetLayoutBindings[i].size());
 
-    bool Reflection::isSetBuffered(uint32_t index) const
-    {
-        return m_isSetBuffered.at(index);
-    }
+            for (uint32_t j = 0; j < rhs.descriptorSetLayoutBindings[i].size(); ++j)
+            {
+                if (rhs.descriptorSetLayoutBindings[i][j].descriptorCount > 0)
+                    descriptorSetLayoutBindings[i][j] = rhs.descriptorSetLayoutBindings[i][j];
+            }
+        }
 
-    std::vector<VkPushConstantRange> Reflection::getPushConstants() const
-    {
-        return m_pushConstants;
-    }
-
-    void Reflection::addSetLayoutBinding(uint32_t setId, const VkDescriptorSetLayoutBinding& binding, bool isBuffered)
-    {
-        if (m_setLayoutBindings.size() <= setId)
-            m_setLayoutBindings.resize(setId + 1);
-
-        if (m_setLayoutBindings[setId].size() <= binding.binding)
-            m_setLayoutBindings[setId].resize(binding.binding + 1);
-
-        auto prevFlags = m_setLayoutBindings[setId][binding.binding].stageFlags;
-        m_setLayoutBindings[setId][binding.binding] = binding;
-        m_setLayoutBindings[setId][binding.binding].stageFlags |= prevFlags;
-
-        if (m_isSetBuffered.size() <= setId)
-            m_isSetBuffered.resize(setId + 1);
-
-        m_isSetBuffered[setId] = m_isSetBuffered[setId] | isBuffered;
+        pushConstants.insert(pushConstants.end(), rhs.pushConstants.begin(), rhs.pushConstants.end());
     }
 }

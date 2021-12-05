@@ -42,7 +42,8 @@ namespace crisp
 
     void LightSystem::update(const Camera& camera, float /*dt*/)
     {
-        const auto [zNear, zFar] = camera.getViewDepthRange();
+        //const auto [zNear, zFar] = camera.getViewDepthRange();
+        const auto [zNear, zFar] = glm::vec2(1.0f, 100.0f);
         updateSplitIntervals(zNear, zFar);
         for (uint32_t i = 0; i < m_cascades.size(); ++i)
         {
@@ -111,7 +112,7 @@ namespace crisp
             glm::vec3(-1.0f, +1.0f, 1.0f)
         };
 
-        auto lightToWorld = glm::inverse(m_cascades.at(cascadeIndex).light->createDescriptor().VP);
+        const auto lightToWorld = glm::inverse(m_cascades.at(cascadeIndex).light->createDescriptor().VP);
         for (auto& p : frustumPoints)
             p = glm::vec3(lightToWorld * glm::vec4(p, 1.0f));
 
@@ -185,13 +186,13 @@ namespace crisp
         createInfo.format        = VK_FORMAT_R32G32_UINT;
         createInfo.extent        = VkExtent3D{ (uint32_t)m_tileGridDimensions.x, (uint32_t)m_tileGridDimensions.y, 1u };
         createInfo.mipLevels     = 1;
-        createInfo.arrayLayers   = Renderer::NumVirtualFrames;
+        createInfo.arrayLayers   = RendererConfig::VirtualFrameCount;
         createInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
         createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         createInfo.usage         = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         m_lightGrid = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             m_lightGridViews.emplace_back(m_lightGrid->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)

@@ -7,7 +7,7 @@
 namespace crisp
 {
     Mesh::Mesh(const VariantMap& params)
-        : m_mesh(loadMesh(params.get<std::string>("filename")))
+        : m_mesh(loadTriangleMesh(params.get<std::string>("filename")))
     {
         m_toWorld = params.get<Transform>("toWorld");
 

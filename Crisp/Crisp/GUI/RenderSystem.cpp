@@ -61,8 +61,8 @@ namespace crisp::gui
 
         // Initialize resources to support dynamic addition of MVP transform resources
 
-        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> transformAndColorSets;
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; i++)
+        std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets;
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
             transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
         m_transforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
@@ -70,8 +70,8 @@ namespace crisp::gui
         m_colors = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
         // Initialize resources to support dynamic addition of textured controls
-        std::array<VkDescriptorSet, Renderer::NumVirtualFrames> tcSets;
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; i++)
+        std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets;
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
             tcSets[i] = m_texQuadPipeline->allocateDescriptorSet(1).getHandle();
 
         for (auto& set : tcSets)
@@ -241,7 +241,7 @@ namespace crisp::gui
                 auto textRes = textResource.get();
                 if (!textRes->isUpdatedOnDevice)
                 {
-                    textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % Renderer::NumVirtualFrames;
+                    textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % RendererConfig::VirtualFrameCount;
                     textRes->offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
                     textRes->indexBufferOffset = textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
                     textRes->vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
@@ -399,7 +399,7 @@ namespace crisp::gui
 
     void RenderSystem::loadTextureAtlas()
     {
-        const auto image = loadImage(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png");
+        const auto image = loadImage(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png").unwrap();
         m_guiAtlas     = std::make_unique<Texture>(m_renderer, VkExtent3D{ image.getWidth(), image.getHeight(), 1u }, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
         m_guiAtlasView = m_guiAtlas->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
         m_guiAtlas->fill(image.getData(), image.getByteSize());

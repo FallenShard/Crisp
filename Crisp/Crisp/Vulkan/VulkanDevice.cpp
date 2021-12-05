@@ -1,40 +1,31 @@
-#include "VulkanDevice.hpp"
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 #include <iostream>
 
-#include "VulkanContext.hpp"
-#include "VulkanQueueConfiguration.hpp"
-#include "VulkanQueue.hpp"
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
+#include <Crisp/Vulkan/VulkanQueue.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace
-{
-    auto logger = spdlog::stderr_color_st("VulkanDevice");
-}
-
 namespace crisp
 {
-    VulkanDevice::VulkanDevice(VulkanContext* vulkanContext, int virtualFrameCount)
-        : m_context(vulkanContext)
+    namespace
+    {
+        auto logger = spdlog::stderr_color_st("VulkanDevice");
+    }
+
+    VulkanDevice::VulkanDevice(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
+        : m_physicalDevice(&physicalDevice)
+        , m_device(m_physicalDevice->createLogicalDevice(queueConfig))
+        , m_generalQueue(std::make_unique<VulkanQueue>(this, queueConfig.queueIdentifiers.at(0)))
+        , m_computeQueue(std::make_unique<VulkanQueue>(this, queueConfig.queueIdentifiers.at(1)))
+        , m_transferQueue(std::make_unique<VulkanQueue>(this, queueConfig.queueIdentifiers.at(2)))
+        , m_memoryAllocator(std::make_unique<VulkanMemoryAllocator>(physicalDevice, m_device))
         , m_currentFrameIndex(0)
         , m_virtualFrameCount(virtualFrameCount)
-        , m_device(VK_NULL_HANDLE)
     {
-        const VulkanQueueConfiguration config({
-            QueueTypeFlags(QueueType::General | QueueType::Present),
-            QueueTypeFlags(QueueType::Compute),
-            QueueTypeFlags(QueueType::Transfer)
-        }, m_context);
-        m_device = m_context->createLogicalDevice(config);
-
-        m_generalQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(0));
-        m_computeQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(1));
-        m_transferQueue = std::make_unique<VulkanQueue>(this, config.getQueueIdentifier(2));
-
-        m_memoryAllocator = std::make_unique<VulkanMemoryAllocator>(*m_context, m_device);
-
         m_handleTagMap.emplace(VK_NULL_HANDLE, "Unknown");
     }
 
@@ -43,16 +34,60 @@ namespace crisp
         for (auto& destructor : m_deferredDestructors)
             destructor.destructorCallback(destructor.vulkanHandle, this);
 
-        for (auto& memoryChunkPair : m_deferredMemoryChunks)
+        for (auto& memoryChunkPair : m_deferredDeallocations)
             memoryChunkPair.second.free();
 
         m_memoryAllocator.reset();
         vkDestroyDevice(m_device, nullptr);
     }
 
+    VulkanDevice::VulkanDevice(VulkanDevice&& other) noexcept
+        : m_physicalDevice(std::exchange(other.m_physicalDevice, nullptr))
+        , m_device(std::exchange(other.m_device, VK_NULL_HANDLE))
+        , m_generalQueue(std::move(other.m_generalQueue))
+        , m_computeQueue(std::move(other.m_computeQueue))
+        , m_transferQueue(std::move(other.m_transferQueue))
+        , m_memoryAllocator(std::move(other.m_memoryAllocator))
+        , m_unflushedRanges(std::move(other.m_unflushedRanges))
+        , m_bufferInfos(std::move(other.m_bufferInfos))
+        , m_imageInfos(std::move(other.m_imageInfos))
+        , m_descriptorWrites(std::move(other.m_descriptorWrites))
+        , m_deferredDestructors(std::move(other.m_deferredDestructors))
+        , m_deferredDeallocations(std::move(other.m_deferredDeallocations))
+        , m_handleTagMap(std::move(other.m_handleTagMap))
+        , m_virtualFrameCount(other.m_virtualFrameCount)
+        , m_currentFrameIndex(other.m_currentFrameIndex)
+    {
+    }
+
+    VulkanDevice& VulkanDevice::operator=(VulkanDevice&& other) noexcept
+    {
+        m_physicalDevice        = std::exchange(other.m_physicalDevice, nullptr);
+        m_device                = std::exchange(other.m_device, VK_NULL_HANDLE);
+        m_generalQueue          = std::move(other.m_generalQueue);
+        m_computeQueue          = std::move(other.m_computeQueue);
+        m_transferQueue         = std::move(other.m_transferQueue);
+        m_memoryAllocator       = std::move(other.m_memoryAllocator);
+        m_unflushedRanges       = std::move(other.m_unflushedRanges);
+        m_bufferInfos           = std::move(other.m_bufferInfos);
+        m_imageInfos            = std::move(other.m_imageInfos);
+        m_descriptorWrites      = std::move(other.m_descriptorWrites);
+        m_deferredDestructors   = std::move(other.m_deferredDestructors);
+        m_deferredDeallocations = std::move(other.m_deferredDeallocations);
+        m_handleTagMap          = std::move(other.m_handleTagMap);
+        m_virtualFrameCount     = other.m_virtualFrameCount;
+        m_currentFrameIndex     = other.m_currentFrameIndex;
+        return *this;
+    }
+
     VkDevice VulkanDevice::getHandle() const
     {
         return m_device;
+    }
+
+    const VulkanPhysicalDevice& VulkanDevice::getPhysicalDevice() const
+    {
+        return *m_physicalDevice;
     }
 
     const VulkanQueue* VulkanDevice::getGeneralQueue() const
@@ -63,11 +98,6 @@ namespace crisp
     const VulkanQueue* VulkanDevice::getTransferQueue() const
     {
         return m_transferQueue.get();
-    }
-
-    VulkanContext* VulkanDevice::getContext() const
-    {
-        return m_context;
     }
 
     void VulkanDevice::invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size)
@@ -86,17 +116,16 @@ namespace crisp
         m_unflushedRanges.emplace_back(memRange);
     }
 
-    void VulkanDevice::flushMappedRanges()
+    void VulkanDevice::flushMappedRanges(VkDeviceSize nonCoherentAtomSize)
     {
-        const VkDeviceSize atomSize = m_context->getPhysicalDevice().getLimits().nonCoherentAtomSize;
         if (!m_unflushedRanges.empty())
         {
             for (auto& range : m_unflushedRanges)
             {
                 if (range.size != VK_WHOLE_SIZE)
-                    range.size = ((range.size - 1) / atomSize + 1) * atomSize;
+                    range.size = ((range.size - 1) / nonCoherentAtomSize + 1) * nonCoherentAtomSize;
 
-                range.offset = (range.offset / atomSize) * atomSize;
+                range.offset = (range.offset / nonCoherentAtomSize) * nonCoherentAtomSize;
             }
 
             vkFlushMappedMemoryRanges(m_device, static_cast<uint32_t>(m_unflushedRanges.size()), m_unflushedRanges.data());
@@ -121,19 +150,18 @@ namespace crisp
                 return a.framesRemaining < 0;
             }), m_deferredDestructors.end());
 
-
         // Free the memory chunks
-        for (auto& memoryChunkPair : m_deferredMemoryChunks)
+        for (auto& memoryChunkPair : m_deferredDeallocations)
         {
             if (--memoryChunkPair.first < 0)
                 memoryChunkPair.second.free();
         }
 
-        m_deferredMemoryChunks.erase(std::remove_if(
-            m_deferredMemoryChunks.begin(),
-            m_deferredMemoryChunks.end(), [](const auto& a) {
+        m_deferredDeallocations.erase(std::remove_if(
+            m_deferredDeallocations.begin(),
+            m_deferredDeallocations.end(), [](const auto& a) {
                 return a.first < 0;
-            }), m_deferredMemoryChunks.end());
+            }), m_deferredDeallocations.end());
     }
 
     VkSemaphore VulkanDevice::createSemaphore() const

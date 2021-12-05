@@ -11,37 +11,32 @@
 
 namespace crisp
 {
-    PipelineLayoutBuilder::PipelineLayoutBuilder(const sl::Reflection& shaderReflection)
+    PipelineLayoutBuilder::PipelineLayoutBuilder(sl::ShaderUniformInputMetadata&& metadata)
+        : m_setLayoutBindings(std::move(metadata.descriptorSetLayoutBindings))
+        , m_setBuffered(m_setLayoutBindings.size(), false)
+        , m_createFlags(m_setLayoutBindings.size(), 0)
+        , m_pushConstantRanges(std::move(metadata.pushConstants))
     {
-        for (uint32_t setId = 0; setId < shaderReflection.getDescriptorSetCount(); ++setId)
-            defineDescriptorSet(setId, shaderReflection.isSetBuffered(setId),
-                shaderReflection.getDescriptorSetLayouts(setId));
-
-        for (const auto& pc : shaderReflection.getPushConstants())
-            addPushConstant(pc.stageFlags, pc.offset, pc.size);
     }
 
     PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t setIndex, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
     {
-        return defineDescriptorSet(setIndex, false, std::forward<std::vector<VkDescriptorSetLayoutBinding>>(bindings), flags);
+        return defineDescriptorSet(setIndex, false, std::move(bindings), flags);
     }
 
     PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(uint32_t setIndex, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
     {
         if (m_setLayoutBindings.size() <= setIndex)
         {
-            std::size_t newSize = static_cast<std::size_t>(setIndex) + 1;
+            const std::size_t newSize = static_cast<std::size_t>(setIndex) + 1;
             m_setLayoutBindings.resize(newSize);
-            m_setLayoutCreateInfos.resize(newSize);
+            m_createFlags.resize(newSize);
             m_setBuffered.resize(newSize);
         }
 
         m_setLayoutBindings[setIndex] = std::move(bindings);
-        m_setLayoutCreateInfos[setIndex] = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        m_setLayoutCreateInfos[setIndex].bindingCount = static_cast<uint32_t>(m_setLayoutBindings[setIndex].size());
-        m_setLayoutCreateInfos[setIndex].pBindings    = m_setLayoutBindings[setIndex].data();
-        m_setLayoutCreateInfos[setIndex].flags        = flags;
         m_setBuffered[setIndex] = isBuffered;
+        m_createFlags[setIndex] = flags;
         return *this;
     }
 
@@ -53,9 +48,15 @@ namespace crisp
 
     std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayouts(VkDevice device) const
     {
-        std::vector<VkDescriptorSetLayout> setLayouts(m_setLayoutCreateInfos.size(), VK_NULL_HANDLE);
+        std::vector<VkDescriptorSetLayout> setLayouts(m_setLayoutBindings.size(), VK_NULL_HANDLE);
         for (uint32_t i = 0; i < setLayouts.size(); i++)
-            vkCreateDescriptorSetLayout(device, &m_setLayoutCreateInfos[i], nullptr, &setLayouts[i]);
+        {
+            VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+            createInfo.bindingCount = static_cast<uint32_t>(m_setLayoutBindings[i].size());
+            createInfo.pBindings = m_setLayoutBindings[i].data();
+            createInfo.flags = m_createFlags[i];
+            vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &setLayouts[i]);
+        }
 
         return setLayouts;
     }
@@ -133,7 +134,7 @@ namespace crisp
     {
         std::vector<uint32_t> numCopiesPerSet;
         for (uint32_t i = 0; i < m_setBuffered.size(); ++i)
-            numCopiesPerSet.push_back(m_setBuffered[i] ? numCopies * Renderer::NumVirtualFrames : numCopies);
+            numCopiesPerSet.push_back(m_setBuffered[i] ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
         return numCopiesPerSet;
     }
 }

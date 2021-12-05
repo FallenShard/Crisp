@@ -1,15 +1,17 @@
-#include "VulkanSwapChain.hpp"
+#include <Crisp/Vulkan/VulkanSwapChain.hpp>
+
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/VulkanContext.hpp>
 
 #include <algorithm>
 #include <array>
 
-#include "VulkanDevice.hpp"
-#include "VulkanContext.hpp"
-
 namespace crisp
 {
-    VulkanSwapChain::VulkanSwapChain(VulkanDevice* device, bool tripleBuffering)
-        : VulkanResource(device)
+    VulkanSwapChain::VulkanSwapChain(VulkanDevice& device, const VulkanContext& context, bool tripleBuffering)
+        : VulkanResource(&device)
+        , m_context(&context)
         , m_tripleBuffering(tripleBuffering)
     {
         createSwapChain();
@@ -25,6 +27,29 @@ namespace crisp
                 vkDestroyImageView(device->getHandle(), static_cast<VkImageView>(handle), nullptr);
             });
         }
+    }
+
+    VulkanSwapChain::VulkanSwapChain(VulkanSwapChain&& other) noexcept
+        : VulkanResource(std::move(other))
+        , m_context(std::exchange(other.m_context, nullptr))
+        , m_images(std::move(other.m_images))
+        , m_imageViews(std::move(other.m_imageViews))
+        , m_imageFormat(std::move(other.m_imageFormat))
+        , m_extent(std::move(other.m_extent))
+        , m_tripleBuffering(std::move(other.m_tripleBuffering))
+    {
+    }
+
+    VulkanSwapChain& VulkanSwapChain::operator=(VulkanSwapChain&& other) noexcept
+    {
+        VulkanResource::operator=(std::move(other));
+        m_context = std::exchange(other.m_context, nullptr);
+        m_images = std::move(other.m_images);
+        m_imageViews = std::move(other.m_imageViews);
+        m_imageFormat = std::move(other.m_imageFormat);
+        m_extent = std::move(other.m_extent);
+        m_tripleBuffering = std::move(other.m_tripleBuffering);
+        return *this;
     }
 
     VkFormat VulkanSwapChain::getImageFormat() const
@@ -67,19 +92,17 @@ namespace crisp
 
     void VulkanSwapChain::createSwapChain()
     {
-        VulkanContext* context = m_device->getContext();
-        const SurfaceSupport swapChainSupport = context->querySurfaceSupport();
-
-        VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats);
-        VkPresentModeKHR presentMode     = choosePresentMode(swapChainSupport.presentModes, m_tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR);
-        VkExtent2D extent                = chooseExtent(swapChainSupport.capabilities);
+        const SurfaceSupport swapChainSupport = m_device->getPhysicalDevice().querySurfaceSupport(m_context->getSurface());
+        const VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats, {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }).unwrap();
+        const VkPresentModeKHR presentMode = choosePresentMode(swapChainSupport.presentModes, m_tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR).unwrap();
+        const VkExtent2D extent = chooseExtent(swapChainSupport.capabilities);
 
         uint32_t imageCount = m_tripleBuffering ? 3 : 2;
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
             imageCount = swapChainSupport.capabilities.maxImageCount;
 
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
-        createInfo.surface          = context->getSurface();
+        createInfo.surface          = m_context->getSurface();
         createInfo.minImageCount    = imageCount;
         createInfo.imageFormat      = surfaceFormat.format;
         createInfo.imageColorSpace  = surfaceFormat.colorSpace;
@@ -87,11 +110,11 @@ namespace crisp
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Render directly to swap chain image
 
-        QueueFamilyIndices indices = context->queryQueueFamilies();
+        QueueFamilyIndices indices = m_device->getPhysicalDevice().queryQueueFamilyIndices(m_context->getSurface());
         std::array<uint32_t, 2> queueFamilyIndices =
         {
-            static_cast<uint32_t>(indices.graphicsFamily),
-            static_cast<uint32_t>(indices.presentFamily)
+            *indices.graphicsFamily,
+            *indices.presentFamily
         };
         if (indices.graphicsFamily != indices.presentFamily)
         {
@@ -123,7 +146,7 @@ namespace crisp
         vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data());
 
         m_imageFormat = surfaceFormat.format;
-        m_extent      = extent;
+        m_extent = extent;
     }
 
     void VulkanSwapChain::createSwapChainImageViews()
@@ -150,27 +173,30 @@ namespace crisp
         }
     }
 
-    VkSurfaceFormatKHR VulkanSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const
+    Result<VkSurfaceFormatKHR> VulkanSwapChain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat) const
     {
+        if (availableFormats.empty())
+            return resultError("No surface formats available for this swap chain!");
+
         if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED)
-            return{ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+            return VkSurfaceFormatKHR{ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 
         for (const auto& format : availableFormats)
         {
-            if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            if (format.format == surfaceFormat.format && format.colorSpace == surfaceFormat.colorSpace)
                 return format;
         }
 
-        return availableFormats[0];
+        return resultError("Requested surface format was not found!");
     }
 
-    VkPresentModeKHR VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode) const
+    Result<VkPresentModeKHR> VulkanSwapChain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode) const
     {
         for (const auto& availablePresentMode : availablePresentModes)
             if (availablePresentMode == requestedPresentMode)
                 return availablePresentMode;
 
-        return VK_PRESENT_MODE_FIFO_KHR; // V-Sync is FIFO
+        return resultError("Unavailable present mode requested!");
     }
 
     VkExtent2D VulkanSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const
@@ -182,10 +208,8 @@ namespace crisp
         else
         {
             VkExtent2D actualExtent = { 960, 540 };
-
             actualExtent.width  = std::max(capabilities.minImageExtent.width,  std::min(capabilities.maxImageExtent.width,  actualExtent.width));
             actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
-
             return actualExtent;
         }
     }

@@ -35,25 +35,26 @@ namespace crisp
         {
             if constexpr (destroyFunc != nullptr)
             {
-                m_device->deferDestruction(m_framesToLive, m_handle, [](void* handle, VulkanDevice* device)
-                {
-                    spdlog::debug("Destroying object {}: {} at frame {}", device->getTag(handle), typeid(T).name(), device->getCurrentFrameIndex());
-                    destroyFunc(device->getHandle(), static_cast<T>(handle), nullptr);
-                    device->removeTag(handle);
-                });
+                if (!m_handle || !m_device)
+                    return;
+
+                m_device->deferDestruction(m_framesToLive, m_handle, destroyDeferred);
             }
+        }
+
+        static void destroyDeferred(void* handle, VulkanDevice* device)
+        {
+            spdlog::debug("Destroying object {}: {} at frame {}", device->getTag(handle), typeid(T).name(), device->getCurrentFrameIndex());
+            destroyFunc(device->getHandle(), static_cast<T>(handle), nullptr);
+            device->removeTag(handle);
         }
 
         VulkanResource& operator=(const VulkanResource& other) = delete;
         VulkanResource& operator=(VulkanResource&& other) noexcept
         {
-            if (this != &other)
-            {
-                m_device = std::exchange(other.m_device, nullptr);
-                m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
-                m_framesToLive = std::exchange(other.m_framesToLive, 0);
-            }
-
+            m_device = std::exchange(other.m_device, nullptr);
+            m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
+            m_framesToLive = std::exchange(other.m_framesToLive, 0);
             return *this;
         }
 

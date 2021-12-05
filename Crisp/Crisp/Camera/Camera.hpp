@@ -21,6 +21,7 @@ namespace crisp
         static constexpr uint32_t FrustumPointCount = 8;
 
         Camera(int32_t viewportWidth, int32_t viewportHeight);
+        Camera(int32_t viewportWidth, int32_t viewportHeight, float zNear, float zFar);
 
         void setVerticalFov(float verticalFov);
         float getVerticalFov() const;

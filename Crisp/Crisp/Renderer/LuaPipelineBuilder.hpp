@@ -1,9 +1,8 @@
 #pragma once
 
-#include "PipelineBuilder.hpp"
-#include "CrispCore/LuaConfig.hpp"
+#include <CrispCore/LuaConfig.hpp>
 
-#include <unordered_map>
+#include <Crisp/Renderer/PipelineBuilder.hpp>
 
 namespace crisp
 {
@@ -32,8 +31,8 @@ namespace crisp
         void readBlendState();
         void readDepthStencilState();
 
-        void readDescriptorSetBufferedStatus(PipelineLayoutBuilder& layoutBuilder);
-        void readDynamicBufferDescriptorIds(PipelineLayoutBuilder& layoutBuilder);
+        std::vector<bool> readDescriptorSetBufferedStatus();
+        std::vector<std::pair<uint32_t, uint32_t>> readDynamicBufferDescriptorIds();
 
         PipelineBuilder m_builder;
         LuaConfig       m_config;

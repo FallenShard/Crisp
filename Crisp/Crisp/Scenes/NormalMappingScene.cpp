@@ -78,7 +78,7 @@ namespace crisp
 
         // Wrap-up render graph definition
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
         m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
         m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
@@ -176,7 +176,7 @@ namespace crisp
         //sphere->geometry = m_resourceContext->getGeometry("sphere");
 
         // NANOSUIT
-        TriangleMesh mesh(loadMesh(m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj", pbrVertexFormat));
+        TriangleMesh mesh(loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj", pbrVertexFormat));
         mesh.normalizeToUnitBox();
         mesh.transform(glm::translate(glm::vec3(0.0f, 0.5f, 0.0f)));
         m_resourceContext->addGeometry("nanosuit", std::make_unique<Geometry>(m_renderer, mesh));

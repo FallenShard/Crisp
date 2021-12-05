@@ -7,7 +7,7 @@ namespace crisp
     UniformMultiBuffer::UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize /*resSize*/, const void* /*data*/)
         : m_renderer(renderer)
         , m_singleRegionSize(initialSize)
-        , m_buffers(Renderer::NumVirtualFrames)
+        , m_buffers(RendererConfig::VirtualFrameCount)
     {
         auto device = m_renderer->getDevice();
 

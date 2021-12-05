@@ -68,7 +68,7 @@ namespace crisp
             m_renderArea = m_renderer->getSwapChainExtent();
             m_renderTargets.resize(2);
             VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-            auto numLayers = Renderer::NumVirtualFrames;
+            auto numLayers = RendererConfig::VirtualFrameCount;
 
             m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
@@ -106,7 +106,7 @@ namespace crisp
             m_renderArea = m_renderer->getSwapChainExtent();
             m_renderTargets.resize(3);
             VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-            auto numLayers = Renderer::NumVirtualFrames;
+            auto numLayers = RendererConfig::VirtualFrameCount;
 
             VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
             createInfo.flags = 0;

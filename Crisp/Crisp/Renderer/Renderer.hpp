@@ -1,6 +1,8 @@
 #pragma once
 
-#include "VirtualFrame.hpp"
+#include <Crisp/Renderer/VulkanWorker.hpp>
+#include <Crisp/Renderer/VirtualFrame.hpp>
+#include <Crisp/Renderer/RendererConfig.hpp>
 
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
@@ -11,8 +13,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <filesystem>
-
-#include <Crisp/Renderer/VulkanWorker.hpp>
 
 namespace crisp
 {
@@ -35,7 +35,7 @@ namespace crisp
     class Renderer
     {
     public:
-        static constexpr unsigned int NumVirtualFrames = 2;
+        static constexpr unsigned int NumVirtualFrames = RendererConfig::VirtualFrameCount;
 
         Renderer(SurfaceCreator surfCreatorCallback);
         ~Renderer();
@@ -49,6 +49,7 @@ namespace crisp
         std::filesystem::path getShaderSourcePath(const std::string& shaderName) const;
 
         VulkanContext*    getContext() const;
+        const VulkanPhysicalDevice& getPhysicalDevice() const;
         VulkanDevice*     getDevice() const;
         VulkanSwapChain*  getSwapChain() const;
         VkExtent2D        getSwapChainExtent() const;
@@ -116,10 +117,11 @@ namespace crisp
         uint64_t m_currentFrameIndex;
         std::filesystem::path m_resourcesPath;
 
-        std::unique_ptr<VulkanContext>     m_context;
-        std::unique_ptr<VulkanDevice>      m_device;
-        std::unique_ptr<VulkanSwapChain>   m_swapChain;
-        std::unique_ptr<DefaultRenderPass> m_defaultRenderPass;
+        std::unique_ptr<VulkanContext>        m_context;
+        std::unique_ptr<VulkanPhysicalDevice> m_physicalDevice;
+        std::unique_ptr<VulkanDevice>         m_device;
+        std::unique_ptr<VulkanSwapChain>      m_swapChain;
+        std::unique_ptr<DefaultRenderPass>    m_defaultRenderPass;
 
         VkViewport m_defaultViewport;
         VkRect2D   m_defaultScissor;

@@ -41,9 +41,10 @@
 #include <Crisp/GUI/Slider.hpp>
 
 #include <CrispCore/Math/Constants.hpp>
+#include <CrispCore/IO/MeshLoader.hpp>
 #include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <CrispCore/Profiler.hpp>
-
+#include <CrispCore/IO/OpenEXRReader.hpp>
 
 
 namespace crisp
@@ -118,23 +119,22 @@ namespace crisp
         }
 
         createPlane();
-       // createShaderballs();
+        createShaderballs();
 
         auto nodes = addAtmosphereRenderPasses(*m_renderGraph, *m_renderer, *m_resourceContext, MainPass);
         for (auto& [key, value] : nodes)
             m_renderNodes.emplace(std::move(key), std::move(value));
         
-        m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
+        //m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
+        m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
 
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
         m_renderGraph->printExecutionOrder();
 
 
 
        // m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
-
-       // m_renderer->getDevice()->flushDescriptorUpdates();
 
         m_renderer->getDevice()->flushDescriptorUpdates();
 
@@ -158,41 +158,40 @@ namespace crisp
     void PbrScene::update(float dt)
     {
         m_cameraController->update(dt);
-        const auto& V = m_cameraController->getCamera().getViewMatrix();
-        const auto& P = m_cameraController->getCamera().getProjectionMatrix();
-
-        m_transformBuffer->update(V, P);
-        //m_skybox->updateTransforms(V, P);
+        const auto camParams = m_cameraController->getCameraParameters();
+        m_transformBuffer->update(camParams.V, camParams.P);
 
         m_lightSystem->update(m_cameraController->getCamera(), dt);
 
-        ////m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_uniformMaterialParams);
+        ////m_skybox->updateTransforms(V, P);
 
-        auto svp = m_lightSystem->getDirectionalLight().getProjectionMatrix() * m_lightSystem->getDirectionalLight().getViewMatrix();
-        /*atmosphere.gShadowmapViewProjMat = svp;
-        atmosphere.gSkyViewProjMat = P * V;
-        atmosphere.gSkyInvViewProjMat = glm::inverse(P * V);
-        atmosphere.camera = m_cameraController->getCamera().getPosition();
-        atmosphere.view_ray = m_cameraController->getCamera().getLookDirection();
-        atmosphere.sun_direction = m_lightSystem->getDirectionalLight().getDirection();*/
+        m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer(m_uniformMaterialParams);
 
-        const auto camParams = m_cameraController->getCameraParameters();
-        m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(&camParams, sizeof(CameraParameters));
+        //auto svp = m_lightSystem->getDirectionalLight().getProjectionMatrix() * m_lightSystem->getDirectionalLight().getViewMatrix();
+        ///*atmosphere.gShadowmapViewProjMat = svp;
+        //atmosphere.gSkyViewProjMat = P * V;
+        //atmosphere.gSkyInvViewProjMat = glm::inverse(P * V);
+        //atmosphere.camera = m_cameraController->getCamera().getPosition();
+        //atmosphere.view_ray = m_cameraController->getCamera().getLookDirection();
+        //atmosphere.sun_direction = m_lightSystem->getDirectionalLight().getDirection();*/
 
-        const glm::mat4 myP = glm::perspective(66.6f * glm::pi<float>() / 180.0f, 1280.0f / 720.0f, 0.1f, 20000.0f);
-        const glm::mat4 myV = glm::lookAt(glm::vec3(0.0f, 0.5f, 1.0f), glm::vec3(0.0f, 0.5f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        
+        m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(camParams);
 
-        const glm::mat4 VP = myP * myV;
+        //const glm::mat4 myP = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) * glm::perspective(66.6f * glm::pi<float>() / 180.0f, 1280.0f / 720.0f, 0.1f, 20000.0f);
+        //const glm::mat4 myV = glm::lookAt(glm::vec3(0.0f, 0.5f, 1.0f), glm::vec3(0.0f, 0.5f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //const glm::mat4 VP = myP * myV;
+        //atmosphere.gSkyViewProjMat = VP;
 
-        atmosphere.gSkyViewProjMat = VP;
-        atmosphere.gSkyViewProjMat = P * V;
-        atmosphere.camera = m_cameraController->getCamera().getPosition();
-        atmosphere.view_ray = m_cameraController->getCamera().getLookDir();
-        atmosphere.gSkyInvViewProjMat = glm::inverse(atmosphere.gSkyViewProjMat);
-        m_resourceContext->getUniformBuffer("atmosphere")->updateStagingBuffer(atmosphere);
+        //
+        //atmosphere.gSkyViewProjMat = P * V;
+        //atmosphere.camera = m_cameraController->getCamera().getPosition();
+        //atmosphere.view_ray = m_cameraController->getCamera().getLookDir();
+        //atmosphere.gSkyInvViewProjMat = glm::inverse(atmosphere.gSkyViewProjMat);
+        //m_resourceContext->getUniformBuffer("atmosphere")->updateStagingBuffer(atmosphere);
 
-        commonConstantData.gSkyViewProjMat = atmosphere.gSkyViewProjMat;
-        m_resourceContext->getUniformBuffer("atmosphereCommon")->updateStagingBuffer(commonConstantData);
+        //commonConstantData.gSkyViewProjMat = atmosphere.gSkyViewProjMat;
+        //m_resourceContext->getUniformBuffer("atmosphereCommon")->updateStagingBuffer(commonConstantData);
     }
 
     void PbrScene::render()
@@ -318,6 +317,26 @@ namespace crisp
 
         m_resourceContext->addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
         m_resourceContext->addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
+
+        OpenEXRReader reader;
+        std::vector<float> buffer;
+        uint32_t w, h;
+        reader.read(m_renderer->getResourcesPath() / "Textures/Sheen_E.exr", buffer, w, h);
+        VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        createInfo.flags = 0;
+        createInfo.imageType = VK_IMAGE_TYPE_2D;
+        createInfo.format = VK_FORMAT_R32_SFLOAT;
+        createInfo.extent = { w, h, 1u };
+        createInfo.mipLevels = 1;
+        createInfo.arrayLayers = 1;
+        createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        createInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        auto sheenLut = createTexture(m_renderer, 4 * w * h, buffer.data(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT); 
+        m_resourceContext->addImageWithView("sheenLut", std::move(sheenLut));
     }
 
     Material* PbrScene::createPbrTexMaterial(const std::string& type, const std::string& tag)
@@ -327,7 +346,7 @@ namespace crisp
         material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
 
         material->writeDescriptor(1, 0, *m_lightSystem->getCascadedDirectionalLightBuffer());
-        material->writeDescriptor(1, 1, *m_renderGraph->getNode(CsmPass).renderPass, 0, m_resourceContext->getSampler("nearestNeighbor"));
+        material->writeDescriptor(1, 1, m_renderGraph->getRenderPass(CsmPass), 0, m_resourceContext->getSampler("nearestNeighbor"));
 
         VulkanSampler* linearRepeatSampler = m_resourceContext->getSampler("linearRepeat");
         const std::vector<std::string> texNames = { "diffuse", "metallic", "roughness", "normal", "ao" };
@@ -358,7 +377,7 @@ namespace crisp
 
     void PbrScene::createShaderballs()
     {
-        /*const std::vector<std::string> materials =
+        const std::vector<std::string> materials =
         {
             "Floor",
             "Grass",
@@ -390,17 +409,29 @@ namespace crisp
         pbrMaterial->writeDescriptor(2, 0, *m_resourceContext->getImageView("envIrrMap"), m_resourceContext->getSampler("linearClamp"));
         pbrMaterial->writeDescriptor(2, 1, *m_resourceContext->getImageView("filteredMap"), m_resourceContext->getSampler("linearMipmap"));
         pbrMaterial->writeDescriptor(2, 2, *m_resourceContext->getImageView("brdfLut"), m_resourceContext->getSampler("linearClamp"));
+        pbrMaterial->writeDescriptor(2, 3, *m_resourceContext->getImageView("sheenLut"), m_resourceContext->getSampler("linearClamp"));
 
 
-        std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
-        std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
+       /* auto floor = createRenderNode("floor", 0);
+        floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
+        floor->geometry = m_resourceContext->getGeometry("floor");
+        floor->pass(MainPass).material = createPbrTexMaterial("Hexstone", "floor");
+        floor->pass(MainPass).setPushConstants(glm::vec2(100.0f));
 
-        const TriangleMesh mesh(m_renderer->getResourcesPath() / "Meshes/ShaderBall_FWVN_PosX.obj", pbrVertexFormat);
-        m_resourceContext->addGeometry("shaderBallPbr", std::make_unique<Geometry>(m_renderer, mesh, pbrVertexFormat));
-        m_resourceContext->addGeometry("shaderBallShadow", std::make_unique<Geometry>(m_renderer, mesh, shadowVertexFormat));
+        floor->pass(DepthPrePass).pipeline = m_resourceContext->createPipeline("depthPrepass", "DepthPrepass.lua", m_renderGraph->getRenderPass(DepthPrePass), 0);
+        floor->pass(DepthPrePass).material = m_resourceContext->createMaterial("depthPrepass", floor->pass(DepthPrePass).pipeline);
+        floor->pass(DepthPrePass).material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+        floor->pass(DepthPrePass).geometry = m_resourceContext->getGeometry("floorPosOnly");
 
-        const int32_t columnCount = 4;
-        const int32_t rowCount = 3;
+        m_renderer->getDevice()->flushDescriptorUpdates();*/
+
+
+        const TriangleMesh mesh(loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/ShaderBall_FWVN_PosX.obj", PbrVertexFormat));
+        m_resourceContext->addGeometry("shaderBall", std::make_unique<Geometry>(m_renderer, mesh, PbrVertexFormat));
+        m_resourceContext->addGeometry("shaderBallPosOnly", std::make_unique<Geometry>(m_renderer, mesh, PosVertexFormat));
+
+        const int32_t columnCount = 1;
+        const int32_t rowCount = 1;
         for (int32_t i = 0; i < rowCount; ++i)
         {
             for (int32_t j = 0; j < columnCount; ++j)
@@ -411,28 +442,26 @@ namespace crisp
 
                 const glm::mat4 translation = glm::translate(glm::vec3(5.0f * j, 0.0f, 5.0f * i));
                 pbrShaderBall->transformPack->M = translation * glm::scale(glm::vec3(0.025f));
-                pbrShaderBall->geometry = m_resourceContext->getGeometry("shaderBallPbr");
+                pbrShaderBall->geometry = m_resourceContext->getGeometry("shaderBall");
 
                 const std::string materialName = materials[linearIdx % materials.size()];
-                pbrShaderBall->pass(MainPass).material = createPbrTexMaterial(materialName, "ShaderBall" + std::to_string(linearIdx));
+                pbrShaderBall->pass(MainPass).material = pbrMaterial;// createPbrTexMaterial(materialName, "ShaderBall" + std::to_string(linearIdx));
                 pbrShaderBall->pass(MainPass).setPushConstantView(m_shaderBallUVScale);
 
-                for (uint32_t i = 0; i < CascadeCount; ++i)
+                for (uint32_t c = 0; c < CascadeCount; ++c)
                 {
-                    auto& subpass = pbrShaderBall->subpass(CsmPass, i);
-                    subpass.geometry = m_resourceContext->getGeometry("shaderBallShadow");
-                    subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(i));
+                    auto& subpass = pbrShaderBall->subpass(CsmPass, c);
+                    subpass.geometry = m_resourceContext->getGeometry("shaderBallPosOnly");
+                    subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
                 }
             }
         }
 
-        m_renderer->getDevice()->flushDescriptorUpdates();*/
+        m_renderer->getDevice()->flushDescriptorUpdates();
     }
 
     void PbrScene::createPlane()
     {
-
-
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(PbrVertexFormat, 200.0f)));
         m_resourceContext->addGeometry("floorPosOnly", std::make_unique<Geometry>(m_renderer, createPlaneMesh(PosVertexFormat, 200.0f)));
 
@@ -498,17 +527,17 @@ namespace crisp
 
         addLabeledSlider("Azimuth", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v) {
             azimuth = static_cast<float>(v);
-            atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
+            /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
             atmosphere.sun_direction.y = std::sin(altitude);
-            atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);
+            atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
         };
         addLabeledSlider("Altitude", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v) {
             altitude = static_cast<float>(v);
-            atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
+            /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
             atmosphere.sun_direction.y = std::sin(altitude);
-            atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);
+            atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
         };
-        /*
+        
         addLabeledSlider("Roughness", m_uniformMaterialParams.roughness, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setRoughness>(this);
         addLabeledSlider("Metallic", m_uniformMaterialParams.metallic, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setMetallic>(this);
         addLabeledSlider("Red", m_uniformMaterialParams.albedo.r, 0.0, 1.0)->valueChanged.subscribe<&PbrScene::setRedAlbedo>(this);
@@ -535,7 +564,7 @@ namespace crisp
         floorCheckBox->setText("Show Floor");
         floorCheckBox->setPosition({ 0, y });
         panel->addControl(std::move(floorCheckBox));
-        */
+        
         form->add(std::move(panel));
 
         /*auto memoryUsageBg = std::make_unique<Panel>(form);

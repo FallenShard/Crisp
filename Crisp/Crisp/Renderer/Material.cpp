@@ -50,7 +50,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo&& imageInfo)
     {
-        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -70,7 +70,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setId, uint32_t binding, const VulkanRenderPass& renderPass, uint32_t renderTargetIndex, const VulkanSampler* sampler)
     {
-        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? Renderer::NumVirtualFrames : 1;
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -85,7 +85,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const std::vector<std::unique_ptr<VulkanImageView>>& imageViews, const VulkanSampler* sampler, VkImageLayout imageLayout)
     {
-        const uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        const uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -100,7 +100,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const std::vector<VulkanImageView*>& imageViews, const VulkanSampler* sampler, VkImageLayout imageLayout)
     {
-        const uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        const uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
@@ -126,7 +126,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo)
     {
-        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -141,7 +141,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setId, uint32_t binding, const UniformBuffer& uniformBuffer)
     {
-        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? Renderer::NumVirtualFrames : 1;
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -159,7 +159,7 @@ namespace crisp
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer, int elementSize, int elementCount)
     {
-        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? Renderer::NumVirtualFrames : 1;
+        uint32_t setsToUpdate = m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
         for (uint32_t i = 0; i < setsToUpdate; ++i)
         {
             VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -203,7 +203,7 @@ namespace crisp
     {
         m_dynamicBufferViews.at(index) = { &dynamicUniformBuffer, offset };
 
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             m_dynamicOffsets.at(i).at(index) = dynamicUniformBuffer.getDynamicOffset(i);
     }
 }

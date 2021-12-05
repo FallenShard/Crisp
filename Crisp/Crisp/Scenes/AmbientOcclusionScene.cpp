@@ -95,13 +95,11 @@ namespace crisp
         noiseTexInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         noiseTexInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
         noiseTexInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        auto noiseTex = createTexture(m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo, VK_IMAGE_ASPECT_COLOR_BIT);
-        noiseTex->setTag("noiseTex");
-        auto noiseTexView = noiseTex->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
+        m_resourceContext->addImageWithView("noise", createTexture(m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo, VK_IMAGE_ASPECT_COLOR_BIT));
 
-        m_noiseSampler       = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR,  VK_FILTER_LINEAR,  VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        m_nearestSampler     = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        m_linearClampSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR,  VK_FILTER_LINEAR,  VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_resourceContext->addSampler("linearRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT));
+        m_resourceContext->addSampler("nearestClamp", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
+        m_resourceContext->addSampler("linearClamp", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
 
         m_sampleBuffer = std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
 
@@ -121,23 +119,13 @@ namespace crisp
         Material* normalMaterial = m_resourceContext->createMaterial("normal", normalPipeline);
         normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-
-
-
-
         std::vector<VertexAttributeDescriptor> shadowFormat = { VertexAttribute::Position };
-        auto planeGeometry = std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowFormat));
+        m_resourceContext->addGeometry("floorPos", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowFormat)));
 
         std::vector<VertexAttributeDescriptor> vertexFormat = { VertexAttribute::Position, VertexAttribute::Normal };
-        auto sponzaGeometry = std::make_unique<Geometry>(m_renderer, loadMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", vertexFormat));
+        m_resourceContext->addGeometry("sponza", std::make_unique<Geometry>(m_renderer, loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", vertexFormat)));
 
         m_skybox = std::make_unique<Skybox>(m_renderer, *mainPass, "Creek");
-
-        m_images.push_back(std::move(noiseTex));
-        m_imageViews.push_back(std::move(noiseTexView));
-
-        m_geometries.push_back(std::move(planeGeometry));
-        m_geometries.push_back(std::move(sponzaGeometry));
 
         m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
         m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
@@ -148,40 +136,40 @@ namespace crisp
         m_renderGraph->addRenderTargetLayoutTransition("ssaoPass", "blurHPass", 0);
         m_renderGraph->addRenderTargetLayoutTransition("blurHPass", "blurVPass", 0);
         m_renderGraph->addRenderTargetLayoutTransition("blurVPass", "SCREEN", 0);
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
 
         m_renderer->setSceneImageView(m_renderGraph->getNode("blurVPass").renderPass.get(), 0);
 
         m_floorNode = std::make_unique<RenderNode>(*m_transformBuffer, 0);
         m_floorNode->transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
-        m_floorNode->geometry = m_geometries[0].get();
+        m_floorNode->geometry = m_resourceContext->getGeometry("floorPos");
         m_floorNode->pass("mainPass").material = colorMaterial;
         m_floorNode->pass("mainPass").pipeline = colorPipeline;
         m_floorNode->pass("mainPass").setPushConstantView(pc);
 
         m_sponzaNode = std::make_unique<RenderNode>(*m_transformBuffer, 1);
         m_sponzaNode->transformPack->M = glm::mat4(1.0f);
-        m_sponzaNode->geometry = m_geometries[1].get();
+        m_sponzaNode->geometry = m_resourceContext->getGeometry("sponza");
         m_sponzaNode->pass("mainPass").material = normalMaterial;
         m_sponzaNode->pass("mainPass").pipeline = normalPipeline;
         m_sponzaNode->pass("mainPass").setPushConstantView(pc);
 
         //mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
 
-        m_ssaoNode = createPostProcessingEffect("ssaoPass", "Ssao.lua");
-        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 0, *m_renderGraph->getNode("mainPass").renderPass, 0, m_nearestSampler.get());
-        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 1, *m_cameraBuffer);
-        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 2, *m_sampleBuffer);
-        m_ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 3, *m_imageViews.back(), m_noiseSampler.get());
-        m_ssaoNode->pass("ssaoPass").setPushConstantView(m_ssaoParams);
+        auto ssaoNode = m_resourceContext->createPostProcessingEffectNode("ssao", "Ssao.lua", m_renderGraph->getRenderPass("ssaoPass"), "ssaoPass");
+        ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("mainPass"), 0, m_resourceContext->getSampler("nearestClamp"));
+        ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 1, *m_cameraBuffer);
+        ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 2, *m_sampleBuffer);
+        ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 3, *m_resourceContext->getImageView("noise"), m_resourceContext->getSampler("linearRepeat"));
+        ssaoNode->pass("ssaoPass").setPushConstantView(m_ssaoParams);
 
-        m_blurHNode = createPostProcessingEffect("blurHPass", "GaussianBlur.lua");
-        m_blurHNode->pass("blurHPass").material->writeDescriptor(0, 0, *m_renderGraph->getNode("ssaoPass").renderPass,  0, m_linearClampSampler.get());
-        m_blurHNode->pass("blurHPass").setPushConstantView(blurH);
+        auto blurHNode = m_resourceContext->createPostProcessingEffectNode("blurH", "GaussianBlur.lua", m_renderGraph->getRenderPass("blurHPass"), "blurHPass");
+        blurHNode->pass("blurHPass").material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("ssaoPass"),  0, m_resourceContext->getSampler("linearClamp"));
+        blurHNode->pass("blurHPass").setPushConstantView(blurH);
 
-        m_blurVNode = createPostProcessingEffect("blurVPass", "GaussianBlur.lua");
-        m_blurVNode->pass("blurVPass").material->writeDescriptor(0, 0, *m_renderGraph->getNode("blurHPass").renderPass, 0, m_linearClampSampler.get());
-        m_blurVNode->pass("blurVPass").setPushConstantView(blurV);
+        auto blurVNode = m_resourceContext->createPostProcessingEffectNode("blurV", "GaussianBlur.lua", m_renderGraph->getRenderPass("blurVPass"), "blurVPass");
+        blurVNode->pass("blurVPass").material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("blurHPass"), 0, m_resourceContext->getSampler("linearClamp"));
+        blurVNode->pass("blurVPass").setPushConstantView(blurV);
 
         m_renderer->getDevice()->flushDescriptorUpdates();
 
@@ -198,10 +186,10 @@ namespace crisp
         m_cameraController->onViewportResized(width, height);
 
         m_renderGraph->resize(width, height);
-        m_renderer->setSceneImageView(m_renderGraph->getNode("ssaoPass").renderPass.get(), 0);
+        m_renderer->setSceneImageView(m_renderGraph->getNode("blurVPass").renderPass.get(), 0);
 
         auto* mainPass = m_renderGraph->getNode("mainPass").renderPass.get();
-        m_resourceContext->getMaterial("Ssao.lua")->writeDescriptor(0, 0, *mainPass, 0, m_nearestSampler.get());
+        m_resourceContext->getMaterial("Ssao.lua")->writeDescriptor(0, 0, *mainPass, 0, m_resourceContext->getSampler("nearestClamp"));
     }
 
     void AmbientOcclusionScene::update(float dt)
@@ -218,11 +206,9 @@ namespace crisp
     void AmbientOcclusionScene::render()
     {
         m_renderGraph->clearCommandLists();
+        m_renderGraph->buildCommandLists(m_resourceContext->getRenderNodes());
         m_renderGraph->addToCommandLists(*m_floorNode);
         m_renderGraph->addToCommandLists(*m_sponzaNode);
-        m_renderGraph->addToCommandLists(*m_ssaoNode);
-        m_renderGraph->addToCommandLists(*m_blurHNode);
-        m_renderGraph->addToCommandLists(*m_blurVNode);
         m_renderGraph->executeCommandLists();
     }
 
@@ -234,18 +220,6 @@ namespace crisp
     void AmbientOcclusionScene::setRadius(double radius)
     {
         m_ssaoParams.radius = static_cast<float>(radius);
-    }
-
-    std::unique_ptr<RenderNode> AmbientOcclusionScene::createPostProcessingEffect(std::string renderPassName, std::string pipelineLuaFile)
-    {
-        auto pipeline = m_resourceContext->createPipeline(renderPassName, pipelineLuaFile, *m_renderGraph->getNode(renderPassName).renderPass, 0);
-        auto material = m_resourceContext->createMaterial(renderPassName, pipeline);
-
-        auto renderNode = std::make_unique<RenderNode>();
-        renderNode->geometry = m_renderer->getFullScreenGeometry();
-        renderNode->pass(renderPassName).material = material;
-        renderNode->pass(renderPassName).pipeline = pipeline;
-        return renderNode;
     }
 
     void AmbientOcclusionScene::createGui()

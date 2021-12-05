@@ -25,6 +25,8 @@
 #include "BSSRDFs/BSSRDFFactory.hpp"
 #include "Textures/TextureFactory.hpp"
 
+#include <CrispCore/IO/FileUtils.hpp>
+
 namespace crisp
 {
     using namespace rapidxml;
@@ -41,25 +43,6 @@ namespace crisp
             }
 
             return str;
-        }
-
-        std::string fileToString(const std::string& fileName)
-        {
-            std::ifstream inputFile(fileName);
-            std::string source;
-
-            if (inputFile.is_open())
-            {
-                std::string line;
-                while (std::getline(inputFile, line))
-                    source += line + '\n';
-
-                inputFile.close();
-            }
-            else
-                std::cerr << "Could not open file " << fileName << std::endl;
-
-            return source;
         }
 
         template<typename T>

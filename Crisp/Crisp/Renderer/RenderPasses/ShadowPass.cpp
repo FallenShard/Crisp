@@ -42,7 +42,7 @@ namespace crisp
     void ShadowPass::createResources()
     {
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        auto numLayers = Renderer::NumVirtualFrames;
+        auto numLayers = RendererConfig::VirtualFrameCount;
 
         m_renderTargets.resize(1);
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, m_numCascades * numLayers, 1, VK_FORMAT_D32_SFLOAT,

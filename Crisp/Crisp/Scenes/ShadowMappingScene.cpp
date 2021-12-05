@@ -498,7 +498,7 @@ namespace crisp
         std::vector<VertexAttributeDescriptor> shadowAlphaVertexFormat = { VertexAttribute::Position, VertexAttribute::TexCoord };
         std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent };
 
-        TriangleMesh treeMesh(loadMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", pbrVertexFormat));
+        TriangleMesh treeMesh(loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", pbrVertexFormat));
         m_resourceContext->addGeometry("tree", std::make_unique<Geometry>(m_renderer, treeMesh, pbrVertexFormat));
         m_resourceContext->addGeometry("treeShadow", std::make_unique<Geometry>(m_renderer, treeMesh, shadowVertexFormat));
         m_resourceContext->addGeometry("treeShadowAlpha", std::make_unique<Geometry>(m_renderer, treeMesh, shadowAlphaVertexFormat));
@@ -508,11 +508,11 @@ namespace crisp
         auto alphaMaterial = m_resourceContext->createMaterial("alphaMask", alphaPipeline);
         alphaMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-        const Image image(loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipOnLoad::Y));
+        const Image image(loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipOnLoad::Y).unwrap());
         m_resourceContext->addImageWithView("leaves", createTexture(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
         alphaMaterial->writeDescriptor(1, 0, *m_resourceContext->getImageView("leaves"), m_resourceContext->getSampler("linearClamp"));
 
-        const Image normalMap(loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipOnLoad::Y));
+        const Image normalMap(loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipOnLoad::Y).unwrap());
         m_resourceContext->addImageWithView("leavesNormalMap", createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
         alphaMaterial->writeDescriptor(1, 1, *m_resourceContext->getImageView("leavesNormalMap"), m_resourceContext->getSampler("linearClamp"));
 
@@ -532,11 +532,11 @@ namespace crisp
 
             material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-            const Image ambientMap = loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipOnLoad::Y);
+            const Image ambientMap = loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipOnLoad::Y).unwrap();
             m_resourceContext->addImageWithView(diffuseMapFilename, createTexture(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
             material->writeDescriptor(1, 0, *m_resourceContext->getImageView(diffuseMapFilename), m_resourceContext->getSampler("linearRepeat"));
 
-            const Image normalMap = loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipOnLoad::Y);
+            const Image normalMap = loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipOnLoad::Y).unwrap();
             m_resourceContext->addImageWithView(normalMapFilename, createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
             material->writeDescriptor(1, 1, *m_resourceContext->getImageView(normalMapFilename), m_resourceContext->getSampler("linearRepeat"));
 

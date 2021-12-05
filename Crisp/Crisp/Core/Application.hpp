@@ -49,7 +49,6 @@ namespace crisp
 
     private:
         std::unique_ptr<Window>   createWindow();
-        std::unique_ptr<Renderer> createRenderer();
         void updateFrameStatistics(double frameTime);
 
         std::unique_ptr<Window>    m_window;

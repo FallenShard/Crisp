@@ -8,8 +8,7 @@
 #include <iomanip>
 #include <chrono>
 
-#define FMT_HEADER_ONLY
-#include <fmt/format.h>
+#include <CrispCore/Format.hpp>
 
 namespace crisp
 {

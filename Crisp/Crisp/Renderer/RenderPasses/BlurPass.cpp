@@ -35,7 +35,7 @@ namespace crisp
     {
         m_renderTargets.resize(1);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        auto numLayers = Renderer::NumVirtualFrames;
+        auto numLayers = RendererConfig::VirtualFrameCount;
 
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, m_colorFormat,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);

@@ -6,7 +6,7 @@
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/DrawCommand.hpp>
 
-#include <unordered_map>
+#include <CrispCore/RobinHood.hpp>
 
 namespace crisp
 {
@@ -100,7 +100,7 @@ namespace crisp
             return matData;
         }
 
-        std::unordered_map<SubpassKey, std::unordered_map<int, MaterialData>, SubpassKeyHasher> materials;
+        robin_hood::unordered_map<SubpassKey, robin_hood::unordered_map<int, MaterialData>, SubpassKeyHasher> materials;
 
         RenderNode();
         RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, int transformIndex);

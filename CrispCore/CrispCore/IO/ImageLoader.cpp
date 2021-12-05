@@ -1,5 +1,7 @@
 #include <CrispCore/IO/ImageLoader.hpp>
 
+
+
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)
 #pragma warning(disable: 4244) // conversion warnings
@@ -26,7 +28,7 @@ namespace crisp
         }
     }
 
-    Image loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipOnLoad flip)
+    Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipOnLoad flip)
     {
         stbi_set_flip_vertically_on_load(flip == FlipOnLoad::Y);
 
@@ -49,17 +51,27 @@ namespace crisp
 
         if (!dataPtr)
         {
-            throw std::runtime_error(fmt::format("Failed to load image {}.", filePathString));
+            return resultError("Failed to load image from{}. STB error: ", filePathString, stbi_failure_reason());
         }
 
         const uint32_t imageWidth = static_cast<uint32_t>(width);
         const uint32_t imageHeight = static_cast<uint32_t>(height);
 
 
-        std::vector<uint8_t> pixelData(imageWidth * imageHeight * channelCount * elementSize);
+        std::vector<uint8_t> pixelData(imageWidth * imageHeight * requestedChannels * elementSize);
         memcpy(pixelData.data(), dataPtr, pixelData.size());
         stbi_image_free(dataPtr);
 
-        return Image(std::move(pixelData), imageWidth, imageHeight, channelCount, channelCount * elementSize);
+        /*if (imageWidth == 16)
+        for (uint32_t i = 0; i < imageWidth; ++i) {
+            for (uint32_t j = 0; j < imageHeight; ++j) {
+                float x;
+                memcpy(&x, &pixelData[(j * imageWidth + i) * 4], sizeof(float));
+                fmt::print("{} ", x);
+            }
+            fmt::print("\n");
+        }*/
+
+        return Image(std::move(pixelData), imageWidth, imageHeight, requestedChannels, requestedChannels * elementSize);
     }
 }

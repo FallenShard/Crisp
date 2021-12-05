@@ -1,22 +1,26 @@
 #pragma once
 
-#include "VulkanResource.hpp"
+#include <Crisp/Vulkan/VulkanResource.hpp>
+
+#include <CrispCore/Result.hpp>
 
 #include <vector>
 
 namespace crisp
 {
     class VulkanDevice;
+    class VulkanContext;
 
     class VulkanSwapChain : public VulkanResource<VkSwapchainKHR, vkDestroySwapchainKHR>
     {
     public:
-        VulkanSwapChain(VulkanDevice* device, bool tripleBuffering);
+        VulkanSwapChain(VulkanDevice& device, const VulkanContext& context, bool tripleBuffering);
         ~VulkanSwapChain();
 
         VulkanSwapChain(const VulkanSwapChain& other) = delete;
+        VulkanSwapChain(VulkanSwapChain&& other) noexcept;
         VulkanSwapChain& operator=(const VulkanSwapChain& other) = delete;
-        VulkanSwapChain& operator=(VulkanSwapChain&& other) = delete;
+        VulkanSwapChain& operator=(VulkanSwapChain&& other) noexcept;
 
         VkFormat getImageFormat() const;
         VkExtent2D getExtent() const;
@@ -32,14 +36,15 @@ namespace crisp
         void createSwapChain();
         void createSwapChainImageViews();
 
-        VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
-        VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;
+        Result<VkSurfaceFormatKHR> chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat) const;
+        Result<VkPresentModeKHR> choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;
         VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
-        bool       m_tripleBuffering;
-        VkFormat   m_imageFormat;
-        VkExtent2D m_extent;
-        std::vector<VkImage>     m_images;
+        const VulkanContext* m_context;
+        std::vector<VkImage> m_images;
         std::vector<VkImageView> m_imageViews;
+        VkFormat m_imageFormat;
+        VkExtent2D m_extent;
+        bool m_tripleBuffering;
     };
 }

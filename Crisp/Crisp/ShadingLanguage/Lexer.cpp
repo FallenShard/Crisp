@@ -1,6 +1,6 @@
 #include <Crisp/ShadingLanguage/Lexer.hpp>
-#include <Crisp/IO/FileUtils.hpp>
 
+#include <CrispCore/IO/FileUtils.hpp>
 #include <CrispCore/RobinHood.hpp>
 
 #include <spdlog/spdlog.h>
@@ -251,14 +251,6 @@ namespace
 
 namespace crisp::sl
 {
-    Lexer::Lexer(const std::filesystem::path& sourcePath)
-        : m_start(0)
-        , m_current(0)
-        , m_line(1)
-        , m_source(fileutils::fileToString(sourcePath))
-    {
-    }
-
     Lexer::Lexer(const std::string& source)
         : m_start(0)
         , m_current(0)

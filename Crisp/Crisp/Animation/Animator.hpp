@@ -2,10 +2,10 @@
 
 #include <Crisp/Animation/Animation.hpp>
 
+#include <CrispCore/RobinHood.hpp>
+
 #include <memory>
 #include <vector>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace crisp
 {
@@ -38,10 +38,10 @@ namespace crisp
         std::vector<std::shared_ptr<Animation>> m_pendingAnimations;
 
         // The set of animations slated to be removed from active animations list
-        std::unordered_set<std::shared_ptr<Animation>> m_removedAnimations;
+        robin_hood::unordered_set<std::shared_ptr<Animation>> m_removedAnimations;
 
         // Ties the lifetime of a group of animations to a particular object pointer
-        std::unordered_map<void*, std::vector<std::shared_ptr<Animation>>> m_animationLifetimes;
+        robin_hood::unordered_map<void*, std::vector<std::shared_ptr<Animation>>> m_animationLifetimes;
 
         bool m_clearAllAnimations;
     };

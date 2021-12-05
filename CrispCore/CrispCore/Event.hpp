@@ -40,8 +40,9 @@ namespace crisp
         ~Event() = default;
 
         Event(const Event& other) = delete;
+        Event(Event&& other) noexcept = default;
         Event& operator=(const Event& other) = delete;
-        Event& operator=(Event&& other) = delete;
+        Event& operator=(Event&& other) noexcept = default;
 
         template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
         void subscribe(ReceiverType* obj)

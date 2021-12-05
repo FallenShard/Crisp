@@ -26,7 +26,7 @@ namespace crisp
     RenderGraph::RenderGraph(Renderer* renderer)
         : m_renderer(renderer)
     {
-        m_secondaryCommandBuffers.resize(Renderer::NumVirtualFrames);
+        m_secondaryCommandBuffers.resize(RendererConfig::VirtualFrameCount);
         for (auto& perFrameCtx : m_secondaryCommandBuffers)
         {
             perFrameCtx.resize(std::thread::hardware_concurrency());
@@ -65,7 +65,10 @@ namespace crisp
     void RenderGraph::resize(int /*width*/, int /*height*/)
     {
         for (auto& [key, node] : m_nodes)
-            node->renderPass->recreate();
+        {
+            if (!node->isCompute)
+                node->renderPass->recreate();
+        }
     }
 
     void RenderGraph::addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback)
@@ -107,9 +110,9 @@ namespace crisp
         }
     }
 
-    void RenderGraph::sortRenderPasses()
+    Result<> RenderGraph::sortRenderPasses()
     {
-        std::unordered_map<std::string, int> fanIn;
+        robin_hood::unordered_map<std::string, int32_t> fanIn;
         for (auto& [srcPass, node] : m_nodes)
         {
             if (fanIn.count(srcPass) == 0)
@@ -140,7 +143,9 @@ namespace crisp
         }
 
         if (m_executionOrder.size() != m_nodes.size())
-            throw std::runtime_error("Render graph contains a cycle!");
+            return resultError("Render graph contains a cycle!");
+
+        return {};
     }
 
     void RenderGraph::printExecutionOrder()
@@ -160,48 +165,26 @@ namespace crisp
 
     void RenderGraph::addToCommandLists(const RenderNode& renderNode)
     {
+        if (!renderNode.isVisible)
+            return;
+
         const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
-        if (renderNode.isVisible)
-        {
-            for (const auto& [key, materialMap] : renderNode.materials)
-                for (const auto& [part, material] : materialMap)
-                    m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(virtualFrameIndex, renderNode), key.subpassIndex);
-        }
+        for (const auto& [key, materialMap] : renderNode.materials)
+            for (const auto& [part, material] : materialMap)
+                m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(virtualFrameIndex, renderNode), key.subpassIndex);
     }
 
     void RenderGraph::buildCommandLists(const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& renderNodes)
     {
-        const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
         for (const auto& [id, renderNode] : renderNodes)
-        {
-            if (renderNode->isVisible)
-            {
-                for (const auto& [key, materialMap] : renderNode->materials)
-                    for (const auto& [part, material] : materialMap)
-                        m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(virtualFrameIndex, *renderNode), key.subpassIndex);
-            }
-        }
+            addToCommandLists(*renderNode);
     }
 
     void RenderGraph::buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes)
     {
         m_threadPool.parallelJob(renderNodes.size(), [this, &renderNodes](size_t start, size_t end, size_t /*jobIdx*/) {
-            uint32_t frameIdx = m_renderer->getCurrentVirtualFrameIndex();
-
-            std::unordered_map<std::string, std::vector<std::vector<DrawCommand>>> commands;
-
             for (std::size_t k = start; k < end; ++k)
-            {
-                const auto& renderNode = renderNodes[k];
-                if (renderNode->isVisible)
-                {
-                    for (const auto& [key, materialMap] : renderNode->materials)
-                        for (const auto& [part, material] : materialMap)
-                        {
-                            m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(frameIdx, *renderNode), key.subpassIndex);
-                        }
-                }
-            }
+                addToCommandLists(*renderNodes.at(k));
         });
     }
 
@@ -212,11 +195,6 @@ namespace crisp
             uint32_t frameIndex = m_renderer->getCurrentVirtualFrameIndex();
             for (auto node : m_executionOrder)
             {
-                if (node->name == "TransLUTPass") {
-                    int x = 0;
-                    ++x;
-                }
-
                 if (node->isCompute)
                     executeComputePass(cmdBuffer, frameIndex, *node);
                 else
@@ -243,7 +221,7 @@ namespace crisp
     void RenderGraph::executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer, int virtualFrameIndex)
     {
         command.pipeline->bind(cmdBuffer);
-        auto dynamicState = command.pipeline->getDynamicStateFlags();
+        const auto dynamicState = command.pipeline->getDynamicStateFlags();
         if (dynamicState & PipelineDynamicState::Viewport)
         {
             if (command.viewport.width != 0.0f)

@@ -52,7 +52,7 @@ namespace crisp
     Geometry::Geometry(Renderer* renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces)
         : m_vertexCount(vertexCount)
     {
-        auto vertexBuffer = createVertexBuffer(renderer->getDevice(), Renderer::NumVirtualFrames * vertexCount * sizeof(glm::vec3));
+        auto vertexBuffer = createVertexBuffer(renderer->getDevice(), RendererConfig::VirtualFrameCount * vertexCount * sizeof(glm::vec3));
         m_vertexBuffers.push_back(std::move(vertexBuffer));
 
         for (const auto& buffer : m_vertexBuffers)

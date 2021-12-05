@@ -33,7 +33,7 @@ namespace crisp
         m_window = createWindow();
         logger->info("Window opened!");
 
-        m_renderer = createRenderer();
+        m_renderer = std::make_unique<Renderer>(m_window->createSurfaceCallback());
         logger->info("Renderer created!");
 
         m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
@@ -144,16 +144,6 @@ namespace crisp
         constexpr glm::ivec2 size(DefaultWindowWidth, DefaultWindowHeight);
 
         return std::make_unique<Window>((desktopRes - size) / 2, size, Title);
-    }
-
-    std::unique_ptr<Renderer> Application::createRenderer()
-    {
-        auto surfaceCreator = [this](VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface)
-        {
-            return m_window->createRenderingSurface(instance, allocCallbacks, surface);
-        };
-
-        return std::make_unique<Renderer>(surfaceCreator);
     }
 
     void Application::updateFrameStatistics(double frameTime)

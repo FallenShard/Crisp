@@ -31,9 +31,9 @@ namespace crisp
         m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         m_stagingBuffer->updateFromHost(data.data(), byteSize, 0);
 
-        m_image = std::make_unique<VulkanImage>(m_device, m_extent, Renderer::NumVirtualFrames, 1, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
+        m_image = std::make_unique<VulkanImage>(m_device, m_extent, RendererConfig::VirtualFrameCount, 1, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
         {
             m_renderer->enqueueResourceUpdate([this, i, size = byteSize, stagingBuffer = m_stagingBuffer.get()](VkCommandBuffer cmdBuffer)
             {
@@ -49,7 +49,7 @@ namespace crisp
 
         m_pipeline = m_renderer->createPipelineFromLua("Tonemapping.lua", *m_renderer->getDefaultRenderPass(), 0);
         m_material = std::make_unique<Material>(m_pipeline.get());
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler.get());
         m_device->flushDescriptorUpdates();
     }
@@ -61,7 +61,7 @@ namespace crisp
     void RayTracedImage::postTextureUpdate(RayTracerUpdate update)
     {
         // Add an update that stretches over three frames
-        m_textureUpdates.emplace_back(std::make_pair(Renderer::NumVirtualFrames, update));
+        m_textureUpdates.emplace_back(std::make_pair(RendererConfig::VirtualFrameCount, update));
 
         uint32_t rowSize = update.width * m_numChannels * sizeof(float);
         for (int i = 0; i < update.height; i++)

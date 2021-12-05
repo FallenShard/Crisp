@@ -34,8 +34,8 @@ namespace crisp
     {
         auto logger = spdlog::stdout_color_st("OceanScene");
 
-        static constexpr const char* MainPass = "mainPass";
-        static constexpr const char* OscillationPass = "oscillationPass";
+        constexpr const char* MainPass = "mainPass";
+        constexpr const char* OscillationPass = "oscillationPass";
 
         constexpr int N = 2048;
         const int logN = static_cast<int>(std::log2(N));
@@ -281,7 +281,7 @@ namespace crisp
         });
 
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
         m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
         m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 200);

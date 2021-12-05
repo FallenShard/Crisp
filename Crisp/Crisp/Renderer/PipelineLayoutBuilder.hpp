@@ -1,9 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <memory>
+#include <Crisp/ShadingLanguage/Reflection.hpp>
 
 #include <vulkan/vulkan.h>
+
+#include <vector>
+#include <memory>
 
 namespace crisp
 {
@@ -11,16 +13,11 @@ namespace crisp
     class VulkanPipelineLayout;
     class DescriptorSetAllocator;
 
-    namespace sl
-    {
-        class Reflection;
-    }
-
     class PipelineLayoutBuilder
     {
     public:
         PipelineLayoutBuilder() {}
-        PipelineLayoutBuilder(const sl::Reflection& shaderReflection);
+        PipelineLayoutBuilder(sl::ShaderUniformInputMetadata&& metadata);
 
         PipelineLayoutBuilder& defineDescriptorSet(uint32_t set, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
         PipelineLayoutBuilder& defineDescriptorSet(uint32_t set, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
@@ -44,10 +41,10 @@ namespace crisp
     private:
         std::vector<uint32_t> getNumCopiesPerSet(uint32_t numCopies) const;
 
-        std::vector<VkDescriptorSetLayoutCreateInfo> m_setLayoutCreateInfos;
-
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_setLayoutBindings;
-        std::vector<bool>                                      m_setBuffered;
-        std::vector<VkPushConstantRange>                       m_pushConstantRanges;
+        std::vector<VkDescriptorSetLayoutCreateFlags> m_createFlags;
+        std::vector<bool> m_setBuffered;
+
+        std::vector<VkPushConstantRange> m_pushConstantRanges;
     };
 }

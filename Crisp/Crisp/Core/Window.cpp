@@ -6,13 +6,16 @@
 
 namespace crisp
 {
-    Window::Window(const glm::ivec2& position, const glm::ivec2& size, std::string title)
-        : Window(position.x, position.y, size.x, size.y, title)
+    Window::Window(const glm::ivec2& position, const glm::ivec2& size, std::string title, bool hidden)
+        : Window(position.x, position.y, size.x, size.y, title, hidden)
     {
     }
 
-    Window::Window(int x, int y, int width, int height, std::string title)
+    Window::Window(int x, int y, int width, int height, std::string title, bool hidden)
     {
+        if (hidden)
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
         glfwSetWindowPos(m_window, x, y);
@@ -32,7 +35,46 @@ namespace crisp
 
     Window::~Window()
     {
-        glfwDestroyWindow(m_window);
+        if (m_window)
+            glfwDestroyWindow(m_window);
+    }
+
+    Window::Window(Window&& other) noexcept
+        : resized(std::move(other.resized))
+        , keyPressed(std::move(other.keyPressed))
+        , mouseMoved(std::move(other.mouseMoved))
+        , mouseButtonPressed(std::move(other.mouseButtonPressed))
+        , mouseButtonReleased(std::move(other.mouseButtonReleased))
+        , mouseWheelScrolled(std::move(other.mouseWheelScrolled))
+        , mouseEntered(std::move(other.mouseEntered))
+        , mouseExited(std::move(other.mouseExited))
+        , closed(std::move(other.closed))
+        , focusGained(std::move(other.focusGained))
+        , focusLost(std::move(other.focusLost))
+        , m_window(std::exchange(other.m_window, nullptr))
+    {
+    }
+
+    Window& Window::operator=(Window&& other) noexcept
+    {
+        resized             = std::move(other.resized);
+        keyPressed          = std::move(other.keyPressed);
+        mouseMoved          = std::move(other.mouseMoved);
+        mouseButtonPressed  = std::move(other.mouseButtonPressed);
+        mouseButtonReleased = std::move(other.mouseButtonReleased);
+        mouseWheelScrolled  = std::move(other.mouseWheelScrolled);
+        mouseEntered        = std::move(other.mouseEntered);
+        mouseExited         = std::move(other.mouseExited);
+        closed              = std::move(other.closed);
+        focusGained         = std::move(other.focusGained);
+        focusLost           = std::move(other.focusLost);
+        m_window            = std::exchange(other.m_window, nullptr);
+        return *this;
+    }
+
+    std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)> Window::createSurfaceCallback() const
+    {
+        return [this](VkInstance instance, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface) { return glfwCreateWindowSurface(instance, m_window, allocator, surface); };
     }
 
     glm::ivec2 Window::getDesktopResolution()
@@ -84,11 +126,6 @@ namespace crisp
         double x, y;
         glfwGetCursorPos(m_window, &x, &y);
         return { static_cast<float>(x), static_cast<float>(y) };
-    }
-
-    VkResult Window::createRenderingSurface(VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) const
-    {
-        return glfwCreateWindowSurface(instance, m_window, allocCallbacks, surface);
     }
 
     bool Window::isKeyDown(Key key) const

@@ -82,6 +82,16 @@ namespace crisp
         m_imageViews[id] = std::move(imageView);
     }
 
+    RenderNode* ResourceContext::createPostProcessingEffectNode(std::string renderNodeId, std::string pipelineLuaFilename, const VulkanRenderPass& renderPass, const std::string& renderPassName)
+    {
+        auto renderNode = m_renderNodes.emplace(renderNodeId, std::make_unique<RenderNode>()).first->second.get();
+        renderNode->geometry = m_renderer->getFullScreenGeometry();
+        auto pipeline = createPipeline(renderNodeId, pipelineLuaFilename, renderPass, 0);
+        renderNode->pass(renderPassName).pipeline = pipeline;
+        renderNode->pass(renderPassName).material = createMaterial(renderNodeId, pipeline);
+        return renderNode;
+    }
+
     Geometry* ResourceContext::getGeometry(std::string id)
     {
         return m_geometries.at(id).get();
@@ -114,9 +124,7 @@ namespace crisp
 
     void ResourceContext::recreatePipelines()
     {
-        ShaderCompiler compiler;
-        compiler.compileDir(ApplicationEnvironment::getShaderSourcesPath(),
-            ApplicationEnvironment::getResourcesPath() / "Shaders");
+        recompileShaderDir(ApplicationEnvironment::getShaderSourcesPath(), ApplicationEnvironment::getResourcesPath() / "Shaders");
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer)
         {

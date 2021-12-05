@@ -58,7 +58,7 @@ namespace crisp
 
     std::unique_ptr<VulkanImage> createTexture(Renderer* renderer, const std::string& filename, const VkFormat format, const FlipOnLoad flipOnLoad)
     {
-        return createTexture(renderer, loadImage(renderer->getResourcesPath() / "Textures" / filename, 4, flipOnLoad), format);
+        return createTexture(renderer, loadImage(renderer->getResourcesPath() / "Textures" / filename, 4, flipOnLoad).unwrap(), format);
     }
 
     std::unique_ptr<VulkanImage> createTexture(Renderer* renderer, VkDeviceSize size, const void* data, VkImageCreateInfo imageCreateInfo, VkImageAspectFlags imageAspect)
@@ -86,7 +86,7 @@ namespace crisp
 
     std::unique_ptr<VulkanImage> createEnvironmentMap(Renderer* renderer, const std::string& filename, const VkFormat format, const FlipOnLoad flipOnLoad)
     {
-        return createTexture(renderer, loadImage(renderer->getResourcesPath() / "Textures/EnvironmentMaps" / filename, 4, flipOnLoad), format);
+        return createTexture(renderer, loadImage(renderer->getResourcesPath() / "Textures/EnvironmentMaps" / filename, 4, flipOnLoad).unwrap(), format);
     }
 
     std::unique_ptr<VulkanImage> createMipmapCubeMap(Renderer* renderer, const uint32_t width, const uint32_t height, const uint32_t mipLevels)

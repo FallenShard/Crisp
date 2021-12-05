@@ -732,32 +732,32 @@ void main()
 
 	float viewHeight = length(WorldPos);
 	vec3 L = vec3(0.0f);
-	DepthBufferValue = 1.0f;//texture(ViewDepthTexture, pixPos).r;//1.0f;//ViewDepthTexture[pixPos].r;
-// #if FASTSKY_ENABLED
-	if (viewHeight < Atmosphere.TopRadius && DepthBufferValue == 1.0f)
-	{
-		vec2 uv;
-		vec3 UpVector = normalize(WorldPos);
-		float viewZenithCosAngle = dot(WorldDir, UpVector);
+    DepthBufferValue = 0.0f;  // 1.0f - texture(ViewDepthTexture, pixPos).r;  // 1.0f;//ViewDepthTexture[pixPos].r;
 
-		vec3 sideVector = normalize(cross(UpVector, WorldDir));		// assumes non parallel vectors
-		vec3 forwardVector = normalize(cross(sideVector, UpVector));	// aligns toward the sun light but perpendicular to up vector
-		vec2 lightOnPlane = vec2(dot(sun_direction, forwardVector), dot(sun_direction, sideVector));
-		lightOnPlane = normalize(lightOnPlane);
-		float lightViewCosAngle = lightOnPlane.x;
+    // #if FASTSKY_ENABLED
+    if (viewHeight < Atmosphere.TopRadius && DepthBufferValue == 1.0f)
+    {
+        vec2 uv;
+        vec3 UpVector = normalize(WorldPos);
+        float viewZenithCosAngle = dot(WorldDir, UpVector);
 
-		bool IntersectGround = raySphereIntersectNearest(WorldPos, WorldDir, vec3(0, 0, 0), Atmosphere.BottomRadius) >= 0.0f;
+        vec3 sideVector = normalize(cross(UpVector, WorldDir));       // assumes non parallel vectors
+        vec3 forwardVector = normalize(cross(sideVector, UpVector));  // aligns toward the sun light but perpendicular to up vector
+        vec2 lightOnPlane = vec2(dot(sun_direction, forwardVector), dot(sun_direction, sideVector));
+        lightOnPlane = normalize(lightOnPlane);
+        float lightViewCosAngle = lightOnPlane.x;
 
-		SkyViewLutParamsToUv(Atmosphere, IntersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
+        bool IntersectGround = raySphereIntersectNearest(WorldPos, WorldDir, vec3(0, 0, 0), Atmosphere.BottomRadius) >= 0.0f;
 
+        SkyViewLutParamsToUv(Atmosphere, IntersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
 
-		//output.Luminance = float4(SkyViewLutTexture.SampleLevel(samplerLinearClamp, pixPos / float2(gResolution), 0).rgb + GetSunLuminance(WorldPos, WorldDir, Atmosphere.BottomRadius), 1.0);
+        //output.Luminance = float4(SkyViewLutTexture.SampleLevel(samplerLinearClamp, pixPos / float2(gResolution), 0).rgb + GetSunLuminance(WorldPos, WorldDir, Atmosphere.BottomRadius), 1.0);
 		finalColor = vec4(textureLod(SkyViewLutTexture, uv, 0).rgb + GetSunLuminance(WorldPos, WorldDir, Atmosphere.BottomRadius), 1.0);
 		vec3 whitepoint = vec3(1.08241, 0.96756, 0.95003);
 		float exposure = 10.0;
 		finalColor.rgb = vec3(1.0f) - exp(-finalColor.rgb / whitepoint * exposure);
 		return;
-	}
+    }
 // #else
 	if (DepthBufferValue == 1.0f)
 		L += GetSunLuminance(WorldPos, WorldDir, Atmosphere.BottomRadius);
@@ -774,22 +774,22 @@ void main()
 	vec4 DepthBufferWorldPos =  gSkyInvViewProjMat * vec4(ClipSpace, 1.0);
 	DepthBufferWorldPos /= DepthBufferWorldPos.w;
 	float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, -Atmosphere.BottomRadius, 0.0)));
-	float Slice = AerialPerspectiveDepthToSlice(tDepth);
-	float Weight = 1.0;
-	if (Slice < 0.5)
-	{
-		// We multiply by weight to fade to 0 at depth 0. That works for luminance and opacity.
-		Weight = clamp(Slice * 2.0, 0, 1);
-		Slice = 0.5;
-	}
-	float w = sqrt(Slice / AP_SLICE_COUNT);	// squared distribution
+    float Slice = AerialPerspectiveDepthToSlice(tDepth);
+    float Weight = 1.0;
+    if (Slice < 0.5)
+    {
+        // We multiply by weight to fade to 0 at depth 0. That works for luminance and opacity.
+        Weight = clamp(Slice * 2.0, 0, 1);
+        Slice = 0.5;
+    }
+    float w = sqrt(Slice / AP_SLICE_COUNT);  // squared distribution
 
-	const vec4 AP = Weight * textureLod(AtmosphereCameraScatteringVolume, vec3(pixPos / vec2(gResolution), w), 0);
-	L.rgb += AP.rgb;
-	float Opacity = AP.a;
+    const vec4 AP = Weight * textureLod(AtmosphereCameraScatteringVolume, vec3(pixPos / vec2(gResolution), w), 0);
+    L.rgb += AP.rgb;
+    float Opacity = AP.a;
 
-	finalColor = vec4(L, Opacity);
-	//output.Luminance *= frac(clamp(w*AP_SLICE_COUNT, 0, AP_SLICE_COUNT));
+    finalColor = vec4(L, Opacity);
+    //output.Luminance *= frac(clamp(w*AP_SLICE_COUNT, 0, AP_SLICE_COUNT));
 //#endif
 
 //#else // FASTAERIALPERSPECTIVE_ENABLED

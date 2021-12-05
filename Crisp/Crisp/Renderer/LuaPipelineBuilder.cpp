@@ -29,11 +29,11 @@ namespace crisp
     std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(Renderer* renderer, const VulkanRenderPass& renderPass, uint32_t subpassIndex)
     {
         const auto shaderFileMap = getShaderFileMap();
-        sl::Reflection reflection;
+        sl::ShaderUniformInputMetadata metadata{};
         for (const auto& [stageFlag, fileStem] : shaderFileMap)
         {
             renderer->loadShaderModule(fileStem);
-            reflection.parseDescriptorSets(renderer->getShaderSourcePath(fileStem));
+            metadata.merge(sl::parseShaderUniformInputMetadata(renderer->getShaderSourcePath(fileStem)).unwrap());
             m_builder.addShaderStage(createShaderStageInfo(stageFlag, renderer->getShaderModule(fileStem)));
         }
 
@@ -49,9 +49,15 @@ namespace crisp
         readBlendState();
         readDepthStencilState();
 
-        PipelineLayoutBuilder layoutBuilder(reflection);
-        readDescriptorSetBufferedStatus(layoutBuilder);
-        readDynamicBufferDescriptorIds(layoutBuilder);
+        PipelineLayoutBuilder layoutBuilder(std::move(metadata));
+        const auto buffered = readDescriptorSetBufferedStatus();
+        for (uint32_t i = 0; i < buffered.size(); ++i)
+            layoutBuilder.setDescriptorSetBuffering(i, buffered[i]);
+
+        const auto dynamicDescriptors = readDynamicBufferDescriptorIds();
+        for (const auto& [setId, descId] : dynamicDescriptors)
+            layoutBuilder.setDescriptorDynamic(setId, descId, true);
+
         auto pipeline = m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()), renderPass.getHandle(), subpassIndex);
         pipeline->setTag(m_configName);
         return std::move(pipeline);
@@ -323,33 +329,28 @@ namespace crisp
         }
     }
 
-    void LuaPipelineBuilder::readDescriptorSetBufferedStatus(PipelineLayoutBuilder& layoutBuilder)
+    std::vector<bool> LuaPipelineBuilder::readDescriptorSetBufferedStatus()
     {
-        if (m_config.hasVariable("setBuffering"))
-        {
-            auto setBufferingFlags = m_config.get<std::vector<bool>>("setBuffering");
-            if (setBufferingFlags)
-            {
-                if (setBufferingFlags.value().size() != layoutBuilder.getDescriptorSetLayoutCount())
-                    logger->warn("Mismatch in descriptor set count.");
+        if (!m_config.hasVariable("setBuffering"))
+            return {};
 
-                for (uint32_t i = 0; i < setBufferingFlags.value().size(); ++i)
-                    layoutBuilder.setDescriptorSetBuffering(i, setBufferingFlags.value()[i]);
-            }
-        }
+        return m_config.get<std::vector<bool>>("setBuffering").value();
     }
 
-    void LuaPipelineBuilder::readDynamicBufferDescriptorIds(PipelineLayoutBuilder& layoutBuilder)
+    std::vector<std::pair<uint32_t, uint32_t>> LuaPipelineBuilder::readDynamicBufferDescriptorIds()
     {
-        if (m_config.hasVariable("dynamicBuffers"))
-        {
+        if (!m_config.hasVariable("dynamicBuffers"))
+            return {};
+
+        std::vector<std::pair<uint32_t, uint32_t>> result;
             std::size_t numDescriptorSets = m_config["dynamicBuffers"].getLength();
             for (uint32_t i = 0; i < numDescriptorSets; ++i)
             {
                 auto bindings = m_config["dynamicBuffers"][i].convertTo<std::vector<uint32_t>>().value();
-                for (uint32_t binding : bindings)
-                    layoutBuilder.setDescriptorDynamic(i, binding, true);
+                for (const uint32_t binding : bindings)
+                    result.emplace_back(i, binding);
             }
-        }
+
+        return result;
     }
 }

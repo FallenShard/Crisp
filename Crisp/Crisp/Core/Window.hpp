@@ -27,9 +27,17 @@ namespace crisp
     class Window
     {
     public:
-        Window(const glm::ivec2& position, const glm::ivec2& size, std::string title);
-        Window(int x, int y, int width, int height, std::string title);
+        Window(const glm::ivec2& position, const glm::ivec2& size, std::string title, bool hidden = false);
+        Window(int x, int y, int width, int height, std::string title, bool hidden = false);
         ~Window();
+
+        Window(const Window& other) = delete;
+        Window(Window&& other) noexcept;
+
+        Window& operator=(const Window& other) = delete;
+        Window& operator=(Window&& other) noexcept;
+
+        std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)> createSurfaceCallback() const;
 
         static glm::ivec2 getDesktopResolution();
         static void pollEvents();
@@ -44,8 +52,6 @@ namespace crisp
         glm::ivec2 getSize() const;
         glm::vec2 getCursorPosition() const;
         inline GLFWwindow* getHandle() const { return m_window; }
-
-        VkResult createRenderingSurface(VkInstance instance, const VkAllocationCallbacks* allocCallbacks, VkSurfaceKHR* surface) const;
 
         bool isKeyDown(Key key) const;
 

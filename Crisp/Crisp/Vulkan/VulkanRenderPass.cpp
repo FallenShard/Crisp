@@ -118,7 +118,7 @@ namespace crisp
     std::vector<VulkanImageView*> VulkanRenderPass::getRenderTargetViews(unsigned int renderTargetIndex) const
     {
         std::vector<VulkanImageView*> imageViews;
-        for (uint32_t i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             imageViews.push_back(m_renderTargetViews.at(renderTargetIndex).at(i).get());
         return imageViews;
     }
@@ -136,6 +136,11 @@ namespace crisp
     VkSampleCountFlagBits VulkanRenderPass::getDefaultSampleCount() const
     {
         return m_defaultSampleCount;
+    }
+
+    VkExtent3D VulkanRenderPass::getRenderAreaExtent() const
+    {
+        return { m_renderArea.width, m_renderArea.height, 1u };
     }
 
     void VulkanRenderPass::freeResources()

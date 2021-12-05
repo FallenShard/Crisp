@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
-#include "DrawCommand.hpp"
-#include "RenderNode.hpp"
-
 #include <Crisp/Core/ThreadPool.hpp>
+#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Renderer/DrawCommand.hpp>
+#include <Crisp/Renderer/RenderNode.hpp>
 
-#include <tbb/concurrent_hash_map.h>
-#include <tbb/concurrent_vector.h>
 #include <CrispCore/RobinHood.hpp>
+#include <CrispCore/Result.hpp>
+
+#include <tbb/concurrent_vector.h>
 
 namespace crisp
 {
@@ -27,8 +27,6 @@ namespace crisp
             std::unique_ptr<VulkanRenderPass> renderPass;
 
             // Rendered nodes can be culled/filtered down into commands
-            //std::vector<std::vector<DrawCommand>> commands;
-
             tbb::concurrent_vector<tbb::concurrent_vector<DrawCommand>> commands;
 
 
@@ -60,7 +58,7 @@ namespace crisp
 
         void resize(int width, int height);
 
-        void sortRenderPasses();
+        [[nodiscard]] Result<> sortRenderPasses();
         void printExecutionOrder();
 
         void clearCommandLists();

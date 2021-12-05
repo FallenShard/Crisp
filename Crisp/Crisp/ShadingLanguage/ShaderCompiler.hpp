@@ -1,14 +1,13 @@
 #pragma once
 
+#include <CrispCore/Result.hpp>
+
 #include <filesystem>
+#include <string>
 
 namespace crisp
 {
-    class ShaderCompiler
-    {
-    public:
-        void compileDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir);
+    void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir);
 
-    private:
-    };
+    Result<std::string> preprocessGlslSource(const std::filesystem::path& inputPath);
 }

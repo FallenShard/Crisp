@@ -99,14 +99,24 @@ public:
         return m_mask != mask;
     }
 
-    inline bool operator&(const EnumBits bits) const
+    inline bool operator!() const
     {
-        return m_mask & static_cast<MaskType>(bits);
+        return m_mask == 0;
     }
 
-    inline bool operator&(const BitFlags& rhs) const
+    inline BitFlags operator&(const EnumBits bits) const
     {
-        return m_mask & rhs.m_mask;
+        return BitFlags(m_mask & static_cast<MaskType>(bits));
+    }
+
+    inline BitFlags operator&(const BitFlags& rhs) const
+    {
+        return BitFlags(m_mask & rhs.m_mask);
+    }
+
+    inline operator bool() const
+    {
+        return m_mask != 0;
     }
 
     void print()

@@ -15,23 +15,13 @@ namespace crisp
     namespace
     {
         auto logger = spdlog::stderr_color_mt("VulkanContext");
-    }
-
-    namespace detail
-    {
+    
         const std::vector<const char*> ValidationLayers =
         {
             "VK_LAYER_KHRONOS_validation"
         };
 
-        const std::vector<const char*> DeviceExtensions =
-        {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            //VK_NV_RAY_TRACING_EXTENSION_NAME,
-            VK_KHR_MAINTENANCE2_EXTENSION_NAME
-        };
-
-        void assertRequiredExtensionSupport(std::vector<const char*> requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
+        [[nodiscard]] Result<> assertRequiredExtensionSupport(const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
         {
             std::unordered_set<std::string> pendingExtensions;
 
@@ -59,15 +49,16 @@ namespace crisp
                 for (const auto& ext : pendingExtensions)
                     logger->error("{}", ext);
 
-                logger->critical("Aborting the application.");
-                std::exit(-1);
+                return resultError("Failed to support required extensions. Aborting the application.");
             }
+
+            return {};
         }
 
-        void assertValidationLayerSupport(bool validationLayersEnabled)
+        [[nodiscard]] Result<> assertValidationLayerSupport(const bool validationLayersEnabled)
         {
             if (!validationLayersEnabled)
-                return;
+                return {};
 
             uint32_t layerCount;
             vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -81,12 +72,13 @@ namespace crisp
 
             for (const auto& validationLayer : ValidationLayers)
                 if (availableLayersSet.find(validationLayer) == availableLayersSet.end())
-                    logger->critical("Validation layer {} is not requested, but not supported!", validationLayer);
+                    return resultError("Validation layer {} is requested, but not supported!", validationLayer);
 
             logger->info("Validation layers are supported!");
+            return {};
         }
 
-        VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, bool enableValidationLayers)
+        VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers)
         {
             VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
             appInfo.pApplicationName   = Application::Title;
@@ -117,197 +109,88 @@ namespace crisp
             std::vector<VkExtensionProperties> extensionProps(extensionCount);
             vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data());
 
-            assertRequiredExtensionSupport(enabledExtensions, extensionProps);
-            assertValidationLayerSupport(enableValidationLayers);
+            assertRequiredExtensionSupport(enabledExtensions, extensionProps).unwrap();
+            assertValidationLayerSupport(enableValidationLayers).unwrap();
 
             return instance;
         }
 
-        VkSurfaceKHR createSurface(VkInstance instance, SurfaceCreator surfaceCreator)
+        VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator surfaceCreator)
         {
             VkSurfaceKHR surface;
             surfaceCreator(instance, nullptr, &surface);
             return surface;
         }
-
-        VulkanPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
-        {
-            uint32_t deviceCount = 0;
-            vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-
-            std::vector<VkPhysicalDevice> devices(deviceCount);
-            vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-
-            if (surface == VK_NULL_HANDLE)
-            {
-                return VulkanPhysicalDevice(devices.front());
-            }
-
-            for (const auto& device : devices)
-            {
-                VulkanPhysicalDevice physicalDevice(device);
-                if (physicalDevice.isSuitable(surface, DeviceExtensions))
-                    return physicalDevice;
-            }
-
-            logger->critical("Failed to find a suitable physical device!");
-            return VulkanPhysicalDevice(VK_NULL_HANDLE);
-        }
     }
 
-    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& reqPlatformExtensions, bool enableValidationLayers)
-        : m_instance(detail::createInstance(std::move(reqPlatformExtensions), enableValidationLayers))
+    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers)
+        : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
         , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
-        , m_surface(surfaceCreator ? detail::createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE)
-        , m_physicalDevice(detail::pickPhysicalDevice(m_instance, m_surface))
+        , m_surface(surfaceCreator ? createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE)
     {
     }
 
     VulkanContext::~VulkanContext()
     {
+        if (m_instance == VK_NULL_HANDLE)
+            return;
+
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
         vkDestroyInstance(m_instance, nullptr);
     }
 
+    VulkanContext::VulkanContext(VulkanContext&& other) noexcept
+        : m_instance(std::exchange(other.m_instance, VK_NULL_HANDLE))
+        , m_debugMessenger(std::exchange(other.m_debugMessenger, VK_NULL_HANDLE))
+        , m_surface(std::exchange(other.m_surface, VK_NULL_HANDLE))
+    {
+    }
+
+    VulkanContext& VulkanContext::operator=(VulkanContext&& other) noexcept
+    {
+        m_instance = std::exchange(other.m_instance, VK_NULL_HANDLE);
+        m_debugMessenger = std::exchange(other.m_debugMessenger, VK_NULL_HANDLE);
+        m_surface = std::exchange(other.m_surface, VK_NULL_HANDLE);
+        return *this;
+    }
+
+    Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const
+    {
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+        if (deviceCount == 0)
+            return resultError("Vulkan found no physical devices. Device count: {}", deviceCount);
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
+
+        if (m_surface == VK_NULL_HANDLE)
+        {
+            return VulkanPhysicalDevice(devices.front());
+        }
+
+        std::vector<const char*> requestedDeviceExtensions;
+        std::transform(deviceExtensions.begin(), deviceExtensions.end(), std::back_inserter(requestedDeviceExtensions), [](const std::string& ext)
+        {
+            return ext.c_str();
+        });
+
+        for (const auto& device : devices)
+        {
+            VulkanPhysicalDevice physicalDevice(device);
+            if (physicalDevice.isSuitable(m_surface, requestedDeviceExtensions))
+            {
+                physicalDevice.setDeviceExtensions(std::move(deviceExtensions));
+                return physicalDevice;
+            }
+        }
+
+        return resultError("Failed to find a suitable physical device!");
+    }
+
     VkSurfaceKHR VulkanContext::getSurface() const
     {
         return m_surface;
-    }
-
-    VkDevice VulkanContext::createLogicalDevice(const VulkanQueueConfiguration& config) const
-    {
-        VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-        createInfo.pEnabledFeatures = &m_physicalDevice.getFeatures();
-        createInfo.queueCreateInfoCount    = static_cast<uint32_t>(config.getQueueCreateInfos().size());
-        createInfo.pQueueCreateInfos       = config.getQueueCreateInfos().data();
-        createInfo.enabledExtensionCount   = static_cast<uint32_t>(detail::DeviceExtensions.size());
-        createInfo.ppEnabledExtensionNames = detail::DeviceExtensions.data();
-
-        VkDevice device(VK_NULL_HANDLE);
-        vkCreateDevice(m_physicalDevice.getHandle(), &createInfo, nullptr, &device);
-        return device;
-    }
-
-    bool VulkanContext::getQueueFamilyPresentationSupport(uint32_t familyIndex) const
-    {
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice.getHandle(), familyIndex, m_surface, &presentSupport);
-        return static_cast<bool>(presentSupport);
-    }
-
-    QueueFamilyIndices VulkanContext::queryQueueFamilies() const
-    {
-        return m_physicalDevice.queryQueueFamilyIndices(m_surface);
-    }
-
-    SurfaceSupport VulkanContext::querySurfaceSupport() const
-    {
-        return m_physicalDevice.querySurfaceSupport(m_surface);
-    }
-
-    std::optional<uint32_t> VulkanContext::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
-    {
-        const VkPhysicalDeviceMemoryProperties& memProperties = m_physicalDevice.getMemoryProperties();
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-        {
-            if ((typeFilter & (1 << i)) && ((memProperties.memoryTypes[i].propertyFlags & properties) == properties))
-                return i;
-        }
-
-        return {};
-    }
-
-    std::optional<uint32_t> VulkanContext::findMemoryType(VkMemoryPropertyFlags properties) const
-    {
-        const VkPhysicalDeviceMemoryProperties& memProperties = m_physicalDevice.getMemoryProperties();
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-        {
-            if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-                return i;
-        }
-
-        return {};
-    }
-
-    std::optional<uint32_t> VulkanContext::findDeviceImageMemoryType(VkDevice device) const
-    {
-        VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width  = 1;
-        imageInfo.extent.height = 1;
-        imageInfo.extent.depth  = 1;
-        imageInfo.mipLevels     = 1;
-        imageInfo.arrayLayers   = 1;
-        imageInfo.format        = VK_FORMAT_R8G8B8A8_UNORM;
-        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-        imageInfo.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
-        imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags         = 0;
-
-        VkImage dummyImage(VK_NULL_HANDLE);
-        vkCreateImage(device, &imageInfo, nullptr, &dummyImage);
-        VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(device, dummyImage, &memRequirements);
-        vkDestroyImage(device, dummyImage, nullptr);
-
-        return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    }
-
-    std::optional<uint32_t> VulkanContext::findDeviceBufferMemoryType(VkDevice device) const
-    {
-        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        bufferInfo.size        = 1;
-        bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        VkBuffer dummyBuffer(VK_NULL_HANDLE);
-        vkCreateBuffer(device, &bufferInfo, nullptr, &dummyBuffer);
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, dummyBuffer, &memRequirements);
-        vkDestroyBuffer(device, dummyBuffer, nullptr);
-
-        return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    }
-
-    std::optional<uint32_t> VulkanContext::findStagingBufferMemoryType(VkDevice device) const
-    {
-        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        bufferInfo.size        = 1;
-        bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        VkBuffer dummyBuffer(VK_NULL_HANDLE);
-        vkCreateBuffer(device, &bufferInfo, nullptr, &dummyBuffer);
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, dummyBuffer, &memRequirements);
-        vkDestroyBuffer(device, dummyBuffer, nullptr);
-
-        return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    }
-
-    VkFormat VulkanContext::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
-    {
-        for (VkFormat format : candidates)
-        {
-            VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(m_physicalDevice.getHandle(), format, &props);
-
-            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
-                return format;
-
-            if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
-                return format;
-        }
-
-        logger->critical("Could not find a supported format");
-        return VkFormat();
-    }
-
-    VkFormat VulkanContext::findSupportedDepthFormat() const
-    {
-        return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT }, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
     }
 }

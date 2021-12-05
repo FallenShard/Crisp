@@ -79,14 +79,14 @@ namespace crisp
 
         VkDescriptorPoolSize poolSizes[] =
         {
-            { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV, Renderer::NumVirtualFrames },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, Renderer::NumVirtualFrames },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Renderer::NumVirtualFrames },
+            { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV, RendererConfig::VirtualFrameCount },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, RendererConfig::VirtualFrameCount },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, RendererConfig::VirtualFrameCount },
             { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
         };
 
         VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        poolInfo.maxSets       = Renderer::NumVirtualFrames + 1;
+        poolInfo.maxSets       = RendererConfig::VirtualFrameCount + 1;
         poolInfo.poolSizeCount = 4;
         poolInfo.pPoolSizes    = poolSizes;
         vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_pool);
@@ -102,7 +102,7 @@ namespace crisp
         layoutInfo.pBindings    = secondSetBindings;
         vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_setLayouts[1]);
 
-        m_descSets.resize(Renderer::NumVirtualFrames * 2);
+        m_descSets.resize(RendererConfig::VirtualFrameCount * 2);
         VkDescriptorSetAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
         allocInfo.descriptorPool     = m_pool;
         allocInfo.descriptorSetCount = 1;
@@ -122,7 +122,7 @@ namespace crisp
         vkAllocateDescriptorSets(device, &allocInfo, &m_descSets[1]);
         m_descSets[3] = m_descSets[1];
 
-        for (int i = 0; i < Renderer::NumVirtualFrames; ++i)
+        for (int i = 0; i < RendererConfig::VirtualFrameCount; ++i)
         {
             VkWriteDescriptorSetAccelerationStructureNV writeSetAS = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
             writeSetAS.accelerationStructureCount = 1;
@@ -241,7 +241,7 @@ namespace crisp
 
     uint32_t RayTracingMaterial::getShaderGroupHandleSize() const
     {
-        return m_renderer->getContext()->getPhysicalDevice().getRayTracingProperties().shaderGroupHandleSize;
+        return m_renderer->getPhysicalDevice().getRayTracingProperties().shaderGroupHandleSize;
     }
 
     void RayTracingMaterial::resetFrameCounter()
@@ -328,7 +328,7 @@ namespace crisp
 
         GET_DEVICE_PROC_NV(vkGetRayTracingShaderGroupHandles, renderer->getDevice());
         uint32_t groupCount = static_cast<uint32_t>(groups.size());
-        uint32_t handleSize = renderer->getContext()->getPhysicalDevice().getRayTracingProperties().shaderGroupHandleSize;
+        uint32_t handleSize = getShaderGroupHandleSize();
         VkDeviceSize shaderGroupBindingTableSize = groupCount * handleSize;
         std::vector<uint8_t> shaderHandleStorage(shaderGroupBindingTableSize);
 

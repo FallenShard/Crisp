@@ -1,7 +1,6 @@
 #pragma once
 
-#define FMT_HEADER_ONLY
-#include <fmt/format.h>
+#include <CrispCore/Format.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>

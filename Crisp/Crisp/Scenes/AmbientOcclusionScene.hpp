@@ -43,7 +43,6 @@ namespace crisp
         void setRadius(double radius);
 
     private:
-        std::unique_ptr<RenderNode> createPostProcessingEffect(std::string renderPassName, std::string pipelineLuaFile);
         void createGui();
 
         struct SsaoParams
@@ -61,18 +60,9 @@ namespace crisp
         std::unique_ptr<FreeCameraController> m_cameraController;
         std::unique_ptr<UniformBuffer>    m_cameraBuffer;
 
-        std::vector<std::unique_ptr<Geometry>> m_geometries;
-
-        std::vector<std::unique_ptr<VulkanImage>>     m_images;
-        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
-
         std::unique_ptr<TransformBuffer> m_transformBuffer;
 
         std::unique_ptr<RenderGraph> m_renderGraph;
-
-        std::unique_ptr<VulkanSampler> m_linearClampSampler;
-        std::unique_ptr<VulkanSampler> m_nearestSampler;
-        std::unique_ptr<VulkanSampler> m_noiseSampler;
 
         std::unique_ptr<Skybox> m_skybox;
 
@@ -81,8 +71,5 @@ namespace crisp
 
         std::unique_ptr<RenderNode> m_floorNode;
         std::unique_ptr<RenderNode> m_sponzaNode;
-        std::unique_ptr<RenderNode> m_ssaoNode;
-        std::unique_ptr<RenderNode> m_blurHNode;
-        std::unique_ptr<RenderNode> m_blurVNode;
     };
 }

@@ -142,6 +142,7 @@ namespace crisp
 
         // Camera volumes
         auto camVolPass = std::make_unique<CameraVolumesPass>(&renderer);
+        auto& camPass = *camVolPass;
         renderGraph.addRenderPass("CameraVolumesPass", std::move(camVolPass));
         renderGraph.addRenderTargetLayoutTransition("SkyViewLUTPass", "CameraVolumesPass", 0);
         auto cameraVolumesPipeline = resourceContext.createPipeline("skyCameraVolumes", "SkyCameraVolumes.lua", renderGraph.getRenderPass("CameraVolumesPass"), 0);
@@ -172,10 +173,6 @@ namespace crisp
         rayMarchingMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0, resourceContext.getSampler("linearClamp"));
         rayMarchingMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
         rayMarchingMaterial->writeDescriptor(1, 2, renderGraph.getRenderPass("SkyViewLUTPass"), 0, resourceContext.getSampler("linearClamp"));
-
-        renderer.getDevice()->flushDescriptorUpdates();
-
-        const auto& camPass = dynamic_cast<const CameraVolumesPass&>(renderGraph.getRenderPass("CameraVolumesPass"));
         rayMarchingMaterial->writeDescriptor(1, 3, camPass.getArrayViews(), resourceContext.getSampler("linearClamp"), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         rayMarchingMaterial->writeDescriptor(1, 4, renderGraph.getRenderPass("DepthPrePass"), 0, resourceContext.getSampler("nearestNeighbor"));
 

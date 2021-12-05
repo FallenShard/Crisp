@@ -88,16 +88,17 @@ namespace crisp
 
         width = static_cast<uint32_t>(image.width);
         height = static_cast<uint32_t>(image.height);
-        rgb.reserve(width * height * 3);
+        rgb.reserve(width * height * image.num_channels);
         for (int i = 0; i < image.height; i++)
         {
             for (int j = 0; j < image.width; j++)
             {
                 const uint32_t pixelIdx = static_cast<uint32_t>(image.width * i + j);
 
-                rgb.push_back(std::max(0.0f, reinterpret_cast<float**>(image.images)[0][pixelIdx]));
-                rgb.push_back(std::max(0.0f, reinterpret_cast<float**>(image.images)[1][pixelIdx]));
-                rgb.push_back(std::max(0.0f, reinterpret_cast<float**>(image.images)[2][pixelIdx]));
+                for (int k = 0; k < image.num_channels; ++k)
+                {
+                    rgb.push_back(std::max(0.0f, reinterpret_cast<float**>(image.images)[k][pixelIdx]));
+                }
             }
         }
 

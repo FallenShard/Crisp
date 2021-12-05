@@ -47,7 +47,7 @@ namespace crisp
 
         auto& mainPassNode = m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer));
         m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
-        m_renderGraph->sortRenderPasses();
+        m_renderGraph->sortRenderPasses().unwrap();
         m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
 
 

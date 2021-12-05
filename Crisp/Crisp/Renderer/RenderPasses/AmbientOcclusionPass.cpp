@@ -12,6 +12,8 @@ namespace crisp
     AmbientOcclusionPass::AmbientOcclusionPass(Renderer* renderer)
         : VulkanRenderPass(renderer, true, 1)
     {
+        setName("ssaoPass");
+
         m_clearValues.resize(1);
         m_clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -34,7 +36,7 @@ namespace crisp
         m_renderArea = m_renderer->getSwapChainExtent();
         m_renderTargets.resize(1);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
-        constexpr auto numLayers = Renderer::NumVirtualFrames;
+        constexpr auto numLayers = RendererConfig::VirtualFrameCount;
 
         m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);

@@ -13,6 +13,7 @@ namespace crisp::sl
     {
     public:
         Parser(const std::vector<Token>& tokens);
+        Parser(std::vector<Token>&& tokens);
 
         std::vector<std::unique_ptr<Statement>> parse();
 
