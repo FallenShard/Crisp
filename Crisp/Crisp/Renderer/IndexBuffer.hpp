@@ -53,7 +53,7 @@ namespace crisp
         BufferUpdatePolicy m_updatePolicy;
         VkDeviceSize m_singleRegionSize;
         std::unique_ptr<VulkanBuffer> m_buffer;
-        std::unique_ptr<VulkanBuffer> m_stagingBuffer;
+        std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
 
         VkIndexType m_indexType;
     };

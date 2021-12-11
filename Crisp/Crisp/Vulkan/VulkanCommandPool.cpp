@@ -1,23 +1,23 @@
-#include "VulkanCommandPool.hpp"
+#include <Crisp/Vulkan/VulkanCommandPool.hpp>
 
-#include "VulkanQueue.hpp"
-#include "VulkanDevice.hpp"
-#include "VulkanCommandBuffer.hpp"
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp
 {
-    VulkanCommandPool::VulkanCommandPool(const VulkanQueue& vulkanQueue, VkCommandPoolCreateFlags flags)
-        : VulkanResource(vulkanQueue.getDevice())
+    VulkanCommandPool::VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator)
+        : VulkanResource(handle, deallocator)
     {
-        VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-        poolInfo.queueFamilyIndex = vulkanQueue.getFamilyIndex();
-        poolInfo.flags            = flags;
-
-        vkCreateCommandPool(m_device->getHandle(), &poolInfo, nullptr, &m_handle);
     }
 
-    std::unique_ptr<VulkanCommandBuffer> VulkanCommandPool::allocateCommandBuffer(VkCommandBufferLevel level) const
+    VkCommandBuffer VulkanCommandPool::allocateCommandBuffer(const VulkanDevice* device, const VkCommandBufferLevel cmdBufferLevel) const
     {
-        return std::make_unique<VulkanCommandBuffer>(this, level);
+        VkCommandBufferAllocateInfo cmdBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        cmdBufferAllocInfo.commandPool = m_handle;
+        cmdBufferAllocInfo.level = cmdBufferLevel;
+        cmdBufferAllocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer bufferHandle;
+        vkAllocateCommandBuffers(device->getHandle(), &cmdBufferAllocInfo, &bufferHandle);
+        return bufferHandle;
     }
 }

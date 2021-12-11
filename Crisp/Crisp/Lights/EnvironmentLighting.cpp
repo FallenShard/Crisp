@@ -9,6 +9,7 @@
 #include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 

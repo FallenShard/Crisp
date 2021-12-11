@@ -60,7 +60,7 @@ namespace crisp
 
         m_workers.resize(1);
         for (auto& w : m_workers)
-            w = std::make_unique<VulkanWorker>(*m_device->getGeneralQueue(), NumVirtualFrames);
+            w = std::make_unique<VulkanWorker>(m_device.get(), m_device->getGeneralQueue(), NumVirtualFrames);
 
         // Creates a map of all shaders
         loadShaders(m_resourcesPath / "Shaders");
@@ -218,8 +218,8 @@ namespace crisp
         if (m_resourceUpdates.empty())
             return;
 
-        auto generalQueue = m_device->getGeneralQueue();
-        auto cmdPool = generalQueue->createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        const VulkanQueue& generalQueue = m_device->getGeneralQueue();
+        auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
         VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandPool        = cmdPool;
@@ -239,8 +239,8 @@ namespace crisp
         vkEndCommandBuffer(commandBuffer);
 
         VkFence tempFence = m_device->createFence(0);
-        generalQueue->submit(commandBuffer, tempFence);
-        generalQueue->wait(tempFence);
+        generalQueue.submit(commandBuffer, tempFence);
+        generalQueue.wait(tempFence);
 
         if (waitOnAllQueues)
             finish();
@@ -261,13 +261,11 @@ namespace crisp
         auto& frame = m_virtualFrames[virtualFrameIndex];
         frame.waitCompletion(m_device->getHandle());
 
-        m_device->setCurrentFrameIndex(m_currentFrameIndex);
-
         // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
-        m_device->updateDeferredDestructions();
+        m_device->getResourceDeallocator().incrementFrameCount();
 
         // Flush all noncoherent updates
-        m_device->flushMappedRanges(m_physicalDevice->getLimits().nonCoherentAtomSize);
+        m_device->flushMappedRanges();
 
         std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
         if (!swapImageIndex.has_value())
@@ -287,7 +285,7 @@ namespace crisp
             frame.addSubmission(*cmdBuffer);
         //}
 
-        frame.submitToQueue(*m_device->getGeneralQueue());
+        frame.submitToQueue(m_device->getGeneralQueue());
 
         present(frame, swapImageIndex.value());
 
@@ -306,7 +304,7 @@ namespace crisp
 
     void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
-        auto stagingBuffer = std::make_shared<VulkanBuffer>(m_device.get(), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(m_device.get(), size);
         stagingBuffer->updateFromHost(data);
         m_resourceUpdates.emplace_back([this, stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
         {
@@ -452,7 +450,7 @@ namespace crisp
 
     void Renderer::present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex)
     {
-        VkResult result = m_device->getGeneralQueue()->present(virtualFrame.renderFinishedSemaphore,
+        const VkResult result = m_device->getGeneralQueue().present(virtualFrame.renderFinishedSemaphore,
             m_swapChain->getHandle(), swapChainImageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)

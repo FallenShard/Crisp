@@ -69,6 +69,8 @@ namespace crisp
 
         void swapAll(VulkanPipeline& other);
 
+        VulkanDevice* getDevice() const { return m_device; }
+
     protected:
         template <typename T, typename ...Ts>
         inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
@@ -87,6 +89,8 @@ namespace crisp
         const uint32_t m_subpassIndex;
 
         VkPipelineBindPoint m_bindPoint;
+
+        VulkanDevice* m_device;
 
     };
 }

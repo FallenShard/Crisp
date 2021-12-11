@@ -6,11 +6,14 @@
 namespace crisp
 {
     VulkanQueue::VulkanQueue(VulkanDevice* device, uint32_t familyIndex, uint32_t queueIndex)
-        : VulkanResource(device)
+        : m_device(device)
         , m_familyIndex(familyIndex)
         , m_index(queueIndex)
     {
-        vkGetDeviceQueue(m_device->getHandle(), m_familyIndex, m_index, &m_handle);
+        VkDeviceQueueInfo2 info = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2 };
+        info.queueFamilyIndex = m_familyIndex;
+        info.queueIndex = m_index;
+        vkGetDeviceQueue2(m_device->getHandle(), &info, &m_handle);
     }
 
     VulkanQueue::VulkanQueue(VulkanDevice* device, QueueIdentifier queueId)
@@ -18,13 +21,9 @@ namespace crisp
     {
     }
 
-    VulkanQueue::~VulkanQueue()
-    {
-    }
-
     VkResult VulkanQueue::submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer, VkFence fence) const
     {
-        VkPipelineStageFlags waitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        const VkPipelineStageFlags waitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount   = 1;
@@ -81,5 +80,11 @@ namespace crisp
     uint32_t VulkanQueue::getFamilyIndex() const
     {
         return m_familyIndex;
+    }
+
+    bool VulkanQueue::supportsOperations(VkQueueFlags queueFlags) const
+    {
+        const auto properties = m_device->getPhysicalDevice().queryQueueFamilyProperties();
+        return properties.at(m_familyIndex).queueFlags & queueFlags;
     }
 }

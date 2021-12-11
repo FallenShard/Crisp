@@ -33,58 +33,58 @@ namespace crisp
         m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize, stagingBufferHeapIndex, deviceHandle, "Staging Buffer Heap");
     }
 
-    VulkanMemoryHeap* VulkanMemoryAllocator::getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
+    Result<VulkanMemoryHeap*> VulkanMemoryAllocator::getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const
     {
         const uint32_t supportedHeapIndex = m_physicalDevice->findMemoryType(memoryTypeBits, flags).unwrap();
 
-        VulkanMemoryHeap* heap = nullptr;
-        if (supportedHeapIndex == m_deviceBufferHeap->memoryTypeIndex)
+        if (m_deviceImageHeap->isFromHeapIndex(supportedHeapIndex, flags))
         {
-            heap = m_deviceBufferHeap.get();
-        }
-        else if (supportedHeapIndex == m_stagingBufferHeap->memoryTypeIndex)
-        {
-            heap = m_stagingBufferHeap.get();
-        }
-        else
-        {
-            logger->critical("Wrong heap type specified when allocating memory!");
-            return nullptr;
+            return m_deviceImageHeap.get();
         }
 
-        if (heap->properties != flags)
+        if (m_deviceBufferHeap->isFromHeapIndex(supportedHeapIndex, flags))
         {
-            logger->critical("Wrong heap type specified when allocating memory!");
-            return nullptr;
+            return m_deviceBufferHeap.get();
         }
 
-        return heap;
+        if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, flags))
+        {
+            return m_stagingBufferHeap.get();
+        }
+
+        return resultError("Failed to get a heap from specified properties!");
     }
 
-    VulkanMemoryHeap* VulkanMemoryAllocator::getDeviceBufferHeap() const
+    VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceBufferHeap() const
     {
-        return m_deviceBufferHeap.get();
+        return *m_deviceBufferHeap;
     }
 
-    VulkanMemoryHeap* VulkanMemoryAllocator::getDeviceImageHeap() const
+    VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceImageHeap() const
     {
-        return m_deviceImageHeap.get();
+        return *m_deviceImageHeap;
     }
 
-    VulkanMemoryHeap* VulkanMemoryAllocator::getStagingBufferHeap() const
+    VulkanMemoryHeap& VulkanMemoryAllocator::getStagingBufferHeap() const
     {
-        return m_stagingBufferHeap.get();
+        return *m_stagingBufferHeap;
     }
 
     DeviceMemoryMetrics VulkanMemoryAllocator::getDeviceMemoryUsage() const
     {
         DeviceMemoryMetrics memoryMetrics = {};
-        memoryMetrics.bufferMemorySize  = m_deviceBufferHeap->getTotalAllocatedSize();
-        memoryMetrics.bufferMemoryUsed  = m_deviceBufferHeap->usedSize;
-        memoryMetrics.imageMemorySize   = m_deviceImageHeap->getTotalAllocatedSize();
-        memoryMetrics.imageMemoryUsed   = m_deviceImageHeap->usedSize;
-        memoryMetrics.stagingMemorySize = m_stagingBufferHeap->getTotalAllocatedSize();
-        memoryMetrics.stagingMemoryUsed = m_stagingBufferHeap->usedSize;
+        memoryMetrics.bufferMemorySize  = m_deviceBufferHeap->getAllocatedSize();
+        memoryMetrics.bufferMemoryUsed  = m_deviceBufferHeap->getUsedSize();
+        memoryMetrics.imageMemorySize   = m_deviceImageHeap->getAllocatedSize();
+        memoryMetrics.imageMemoryUsed   = m_deviceImageHeap->getUsedSize();
+        memoryMetrics.stagingMemorySize = m_stagingBufferHeap->getAllocatedSize();
+        memoryMetrics.stagingMemoryUsed = m_stagingBufferHeap->getUsedSize();
         return memoryMetrics;
+    }
+
+    Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocate(VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements)
+    {
+        auto heap = getHeapFromMemProps(memoryProperties, memoryRequirements.memoryTypeBits).unwrap();
+        return heap->allocate(memoryRequirements.size, memoryRequirements.alignment);
     }
 }

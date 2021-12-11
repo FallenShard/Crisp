@@ -28,7 +28,7 @@ namespace crisp
         auto byteSize = m_extent.width * m_extent.height * m_numChannels * sizeof(float);
 
         std::vector<float> data(m_extent.width * m_extent.height * m_numChannels, 0.01f);
-        m_stagingBuffer = std::make_unique<VulkanBuffer>(m_device, byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(m_device, byteSize);
         m_stagingBuffer->updateFromHost(data.data(), byteSize, 0);
 
         m_image = std::make_unique<VulkanImage>(m_device, m_extent, RendererConfig::VirtualFrameCount, 1, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);

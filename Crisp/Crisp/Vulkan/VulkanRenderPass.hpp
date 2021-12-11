@@ -7,6 +7,7 @@
 
 namespace crisp
 {
+    class VulkanDevice;
     class VulkanImage;
     class VulkanImageView;
     class VulkanFramebuffer;
@@ -51,6 +52,7 @@ namespace crisp
         void freeResources();
 
         Renderer* m_renderer;
+        VulkanDevice* m_device;
 
         uint32_t m_numSubpasses;
         bool m_isWindowSizeDependent;

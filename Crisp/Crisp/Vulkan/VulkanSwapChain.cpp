@@ -3,6 +3,7 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
+#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
 #include <algorithm>
 #include <array>
@@ -10,9 +11,10 @@
 namespace crisp
 {
     VulkanSwapChain::VulkanSwapChain(VulkanDevice& device, const VulkanContext& context, bool tripleBuffering)
-        : VulkanResource(&device)
+        : VulkanResource(device.getResourceDeallocator())
         , m_context(&context)
-        , m_tripleBuffering(tripleBuffering)
+        , m_device(&device)
+        , m_presentationMode(tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR)
     {
         createSwapChain();
         createSwapChainImageViews();
@@ -22,9 +24,9 @@ namespace crisp
     {
         for (auto imageView : m_imageViews)
         {
-            m_device->deferDestruction(m_framesToLive, imageView, [](void* handle, VulkanDevice* device)
+            m_deallocator->deferDestruction(m_framesToLive, imageView, [](void* handle, VulkanResourceDeallocator* deallocator)
             {
-                vkDestroyImageView(device->getHandle(), static_cast<VkImageView>(handle), nullptr);
+                vkDestroyImageView(deallocator->getDeviceHandle(), static_cast<VkImageView>(handle), nullptr);
             });
         }
     }
@@ -32,11 +34,12 @@ namespace crisp
     VulkanSwapChain::VulkanSwapChain(VulkanSwapChain&& other) noexcept
         : VulkanResource(std::move(other))
         , m_context(std::exchange(other.m_context, nullptr))
+        , m_device(std::exchange(other.m_device, nullptr))
         , m_images(std::move(other.m_images))
         , m_imageViews(std::move(other.m_imageViews))
         , m_imageFormat(std::move(other.m_imageFormat))
         , m_extent(std::move(other.m_extent))
-        , m_tripleBuffering(std::move(other.m_tripleBuffering))
+        , m_presentationMode(std::move(other.m_presentationMode))
     {
     }
 
@@ -44,11 +47,12 @@ namespace crisp
     {
         VulkanResource::operator=(std::move(other));
         m_context = std::exchange(other.m_context, nullptr);
+        m_device = std::exchange(other.m_device, nullptr);
         m_images = std::move(other.m_images);
         m_imageViews = std::move(other.m_imageViews);
         m_imageFormat = std::move(other.m_imageFormat);
         m_extent = std::move(other.m_extent);
-        m_tripleBuffering = std::move(other.m_tripleBuffering);
+        m_presentationMode = std::move(other.m_presentationMode);
         return *this;
     }
 
@@ -94,10 +98,10 @@ namespace crisp
     {
         const SurfaceSupport swapChainSupport = m_device->getPhysicalDevice().querySurfaceSupport(m_context->getSurface());
         const VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapChainSupport.formats, {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }).unwrap();
-        const VkPresentModeKHR presentMode = choosePresentMode(swapChainSupport.presentModes, m_tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR).unwrap();
+        const VkPresentModeKHR presentMode = choosePresentMode(swapChainSupport.presentModes, m_presentationMode).unwrap();
         const VkExtent2D extent = chooseExtent(swapChainSupport.capabilities);
 
-        uint32_t imageCount = m_tripleBuffering ? 3 : 2;
+        uint32_t imageCount = m_presentationMode == VK_PRESENT_MODE_MAILBOX_KHR ? 3 : 2;
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
             imageCount = swapChainSupport.capabilities.maxImageCount;
 

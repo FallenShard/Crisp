@@ -41,10 +41,11 @@ namespace crisp
         VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
         const VulkanContext* m_context;
+        VulkanDevice* m_device;
         std::vector<VkImage> m_images;
         std::vector<VkImageView> m_imageViews;
         VkFormat m_imageFormat;
         VkExtent2D m_extent;
-        bool m_tripleBuffering;
+        VkPresentModeKHR m_presentationMode;
     };
 }

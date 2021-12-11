@@ -83,7 +83,7 @@ TEST_F(VulkanSwapChainTest, SwapImages)
 
 TEST_F(VulkanSwapChainTest, Recreate)
 {
-    auto [deps, swapChain] = createSwapChain<200, 300>(false);
+    auto [deps, swapChain] = createSwapChain<100, 300>(false);
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     for (uint32_t i = 0; i < 5; ++i)

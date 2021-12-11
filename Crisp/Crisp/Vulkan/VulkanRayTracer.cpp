@@ -132,16 +132,16 @@ namespace crisp
             VkMemoryRequirements2 memReq2 = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
             vkGetAccelerationStructureMemoryRequirements(m_device->getHandle(), &memReqInfo, &memReq2);
 
-            auto* memHeap = m_device->getMemoryAllocator()->getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq2.memoryRequirements.memoryTypeBits);
-            accelStruct.memoryChunk = memHeap->allocate(memReq2.memoryRequirements.size, memReq2.memoryRequirements.alignment);
+            auto* memHeap = m_device->getMemoryAllocator().getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq2.memoryRequirements.memoryTypeBits).unwrap();
+            accelStruct.allocation = memHeap->allocate(memReq2.memoryRequirements.size, memReq2.memoryRequirements.alignment).unwrap();
 
             // Bind the object and memory
             VkBindAccelerationStructureMemoryInfoNV bindInfo = { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
             bindInfo.accelerationStructure = accelStruct.handle;
             bindInfo.deviceIndexCount      = 0;
             bindInfo.pDeviceIndices        = nullptr;
-            bindInfo.memory                = accelStruct.memoryChunk.allocationBlock->memory;
-            bindInfo.memoryOffset          = accelStruct.memoryChunk.offset;
+            bindInfo.memory                = accelStruct.allocation.allocationBlock->memory;
+            bindInfo.memoryOffset          = accelStruct.allocation.offset;
             vkBindAccelerationStructureMemory(m_device->getHandle(), 1, &bindInfo);
 
             // Get its raw address handle
@@ -187,16 +187,16 @@ namespace crisp
         VkMemoryRequirements2 memReq = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
         vkGetAccelerationStructureMemoryRequirements(m_device->getHandle(), &memReqInfo, &memReq);
 
-        auto* memHeap = m_device->getMemoryAllocator()->getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq.memoryRequirements.memoryTypeBits);
-        m_tlas.memoryChunk = memHeap->allocate(memReq.memoryRequirements.size, memReq.memoryRequirements.alignment);
+        auto* memHeap = m_device->getMemoryAllocator().getHeapFromMemProps(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memReq.memoryRequirements.memoryTypeBits).unwrap();
+        m_tlas.allocation = memHeap->allocate(memReq.memoryRequirements.size, memReq.memoryRequirements.alignment).unwrap();
 
         // Bind
         VkBindAccelerationStructureMemoryInfoNV tlasBindInfo = { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
         tlasBindInfo.accelerationStructure = m_tlas.handle;
         tlasBindInfo.deviceIndexCount      = 0;
         tlasBindInfo.pDeviceIndices        = nullptr;
-        tlasBindInfo.memory                = m_tlas.memoryChunk.allocationBlock->memory;
-        tlasBindInfo.memoryOffset          = m_tlas.memoryChunk.offset;
+        tlasBindInfo.memory                = m_tlas.allocation.allocationBlock->memory;
+        tlasBindInfo.memoryOffset          = m_tlas.allocation.offset;
         vkBindAccelerationStructureMemory(m_device->getHandle(), 1, &tlasBindInfo);
 
         // Get its raw address handle

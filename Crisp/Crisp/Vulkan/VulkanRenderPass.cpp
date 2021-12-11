@@ -9,8 +9,9 @@
 namespace crisp
 {
     VulkanRenderPass::VulkanRenderPass(Renderer* renderer, bool isWindowSizeDependent, uint32_t numSubpasses)
-        : VulkanResource(renderer->getDevice())
+        : VulkanResource(renderer->getDevice()->getResourceDeallocator())
         , m_renderer(renderer)
+        , m_device(renderer->getDevice())
         , m_isWindowSizeDependent(isWindowSizeDependent)
         , m_numSubpasses(numSubpasses)
         , m_defaultSampleCount(VK_SAMPLE_COUNT_1_BIT)

@@ -1,53 +1,145 @@
-#include "VulkanMemoryHeap.hpp"
-
-#include <iostream>
-#include <algorithm>
+#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
 #include <spdlog/spdlog.h>
 
 namespace crisp
 {
     VulkanMemoryHeap::VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memTypeIdx, VkDevice device, std::string tag)
-        : device(device)
-        , properties(memProps)
-        , blockSize(blockSize)
-        , usedSize(0)
-        , memoryTypeIndex(memTypeIdx)
-        , tag(tag)
+        : m_device(device)
+        , m_properties(memProps)
+        , m_memoryTypeIndex(memTypeIdx)
+        , m_usedSize(0)
+        , m_blockSize(blockSize)
+        , m_tag(tag)
     {
-        allocateVulkanMemoryBlock(blockSize);
     }
 
-    void VulkanMemoryHeap::free(uint64_t offset, uint64_t size, internal::VulkanAllocationBlock& block)
+    VulkanMemoryHeap::~VulkanMemoryHeap()
     {
-        spdlog::info("[{}] Freeing a suballocation [{}, {}]", tag, offset, size);
-        usedSize -= size;
-        block.freeChunks[offset] = size;
-        block.usedChunks.erase(offset);
+        for (const auto& block : m_allocationBlocks)
+            freeBlock(block);
+    }
+
+    Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, uint64_t alignment)
+    {
+        if (size > m_blockSize)
+        {
+            return resultError("Requested allocation size is greater than the block size: {} MB > {} MB!", size >> 20, m_blockSize >> 20);
+        }
+
+        Allocation allocation{ nullptr, 0, 0 };
+        AllocationBlock* allocationBlock = nullptr;
+        uint64_t foundChunkOffset = 0;
+        uint64_t foundChunkSize   = 0;
+        for (auto& block : m_allocationBlocks)
+        {
+            std::tie(foundChunkOffset, foundChunkSize) = block.findFreeChunk(size, alignment);
+            if (foundChunkSize != 0)
+            {
+                allocationBlock = &block;
+                break;
+            }
+        }
+
+        if (!allocationBlock)
+        {
+            spdlog::info("[{}] Allocating a block of size: {} MB.", m_tag, (m_blockSize >> 20));
+            m_allocationBlocks.push_back(allocateBlock(m_blockSize));
+            std::tie(foundChunkOffset, foundChunkSize) = m_allocationBlocks.back().findFreeChunk(size, alignment);
+            if (foundChunkSize == 0)
+            {
+                return resultError("Failed to find the requested size in a newly allocated block! {} MB > {} MB.", size >> 20, m_blockSize >> 20);
+            }
+
+            allocationBlock = &m_allocationBlocks.back();
+        }
+
+        const uint64_t alignedOffset = foundChunkOffset + ((alignment - (foundChunkOffset & (alignment - 1))) & (alignment - 1));
+
+        allocation = { allocationBlock, alignedOffset, size };
+
+        m_usedSize += allocation.size;
+
+        auto& freeChunks = allocationBlock->freeChunks;
+
+        // Erase the modified chunk
+        freeChunks.erase(foundChunkOffset);
+
+        // Possibly add the left chunk
+        if (allocation.offset > foundChunkOffset)
+            freeChunks[foundChunkOffset] = allocation.offset - foundChunkOffset;
+
+        // Possibly add the right chunk
+        if (foundChunkOffset + foundChunkSize > allocation.offset + allocation.size)
+            freeChunks[allocation.offset + allocation.size] = foundChunkOffset + foundChunkSize - (allocation.offset + allocation.size);
+
+        allocationBlock->usedChunks[alignedOffset] = size;
+        return allocation;
+    }
+
+    void VulkanMemoryHeap::free(const Allocation& allocation)
+    {
+        AllocationBlock& block = *allocation.allocationBlock;
+        spdlog::info("[{}] Freeing a suballocation [{}, {}]", m_tag, allocation.offset, allocation.size);
+        m_usedSize -= allocation.size;
+        block.freeChunks[allocation.offset] = allocation.size;
+        block.usedChunks.erase(allocation.offset);
 
         if (block.freeChunks.size() > 1)
-            coalesce(block);
-
+        {
+            block.coalesce();
+        }
+        
         if (block.freeChunks.size() > 10)
         {
-            spdlog::warn("[{}] Possible memory fragmentation - free chunks: {}", tag, block.freeChunks.size());
+            spdlog::warn("[{}] Possible memory fragmentation - free chunks: {}", m_tag, block.freeChunks.size());
         }
-        else if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == blockSize)
+
+        if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == m_blockSize)
         {
-            if (block.mappedPtr)
-                vkUnmapMemory(device, block.memory);
+            freeBlock(block);
+            m_allocationBlocks.remove(block);
 
-            vkFreeMemory(device, block.memory, nullptr);
-
-            memoryBlocks.remove(block);
-
-            spdlog::info("[{}] Freeing a memory block.", tag);
+            spdlog::info("[{}] Freed a memory block.", m_tag);
         }
     }
 
-    void VulkanMemoryHeap::coalesce(internal::VulkanAllocationBlock& block)
+    bool VulkanMemoryHeap::isFromHeapIndex(uint32_t heapIndex, VkMemoryPropertyFlags memoryProperties) const
     {
-        auto& freeChunks = block.freeChunks;
+        return m_memoryTypeIndex == heapIndex && m_properties == memoryProperties;
+    }
+
+    VulkanMemoryHeap::AllocationBlock VulkanMemoryHeap::allocateBlock(uint64_t size)
+    {
+        VkMemoryAllocateInfo devAllocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        devAllocInfo.allocationSize = size;
+        devAllocInfo.memoryTypeIndex = m_memoryTypeIndex;
+
+        VkDeviceMemory memory;
+        vkAllocateMemory(m_device, &devAllocInfo, nullptr, &memory);
+
+        AllocationBlock block{};
+        block.heap = this;
+        block.memory = memory;
+        block.freeChunks.emplace(0, size);
+        if (m_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+        {
+            vkMapMemory(m_device, memory, 0, size, 0, &block.mappedPtr);
+        }
+        return block;
+    }
+
+    void VulkanMemoryHeap::freeBlock(const AllocationBlock& allocationBlock)
+    {
+        if (allocationBlock.mappedPtr)
+        {
+            vkUnmapMemory(m_device, allocationBlock.memory);
+        }
+        vkFreeMemory(m_device, allocationBlock.memory, nullptr);
+    }
+
+    void VulkanMemoryHeap::AllocationBlock::coalesce()
+    {
         auto current = freeChunks.begin();
         auto next = std::next(freeChunks.begin());
         while (next != freeChunks.end())
@@ -66,90 +158,15 @@ namespace crisp
         }
     }
 
-    VulkanMemoryChunk VulkanMemoryHeap::allocate(uint64_t size, uint64_t alignment)
+    std::pair<uint64_t, uint64_t> VulkanMemoryHeap::AllocationBlock::findFreeChunk(uint64_t size, uint64_t alignment) const
     {
-        VulkanMemoryChunk allocResult = { nullptr, nullptr, 0, 0 };
-        internal::VulkanAllocationBlock* foundMemoryBlock = nullptr;
-        uint64_t foundChunkOffset = 0;
-        uint64_t foundChunkSize   = 0;
-        for (auto& block : memoryBlocks)
+        for (const auto& freeChunk : freeChunks)
         {
-            std::tie(foundChunkOffset, foundChunkSize) = findFreeChunkInBlock(block, size, alignment);
+            const uint64_t chunkOffset = freeChunk.first;
+            const uint64_t chunkSize   = freeChunk.second;
 
-            if (foundChunkSize != 0)
-            {
-                foundMemoryBlock = &block;
-                break;
-            }
-        }
-
-        if (!foundMemoryBlock)
-        {
-            spdlog::info("[{}] Failed to find a free chunk.", tag);
-            spdlog::info("[{}] Allocating another memory block of size: {} MB.", tag, (blockSize >> 20));
-            auto* blockPtr = allocateVulkanMemoryBlock(blockSize);
-            std::tie(foundChunkOffset, foundChunkSize) = findFreeChunkInBlock(*blockPtr, size, alignment);
-            if (foundChunkSize != 0)
-            {
-                foundMemoryBlock = blockPtr;
-            }
-            else
-            {
-                spdlog::error("[{}] CRITICAL ERROR: Allocation failed: {} MB", tag, (blockSize >> 20));
-                spdlog::error("[{}] Requested size: {} bytes, but heap supports max {} MB allocations.", tag, size, (blockSize >> 20));
-                return allocResult;
-            }
-        }
-
-        uint64_t alignedOffset = foundChunkOffset + ((alignment - (foundChunkOffset & (alignment - 1))) & (alignment - 1));
-
-        allocResult = { this, foundMemoryBlock, alignedOffset, size };
-
-        usedSize += allocResult.size;
-
-        auto& freeChunks = foundMemoryBlock->freeChunks;
-
-        // Erase the modified chunk
-        freeChunks.erase(foundChunkOffset);
-
-        // Possibly add the left chunk
-        if (allocResult.offset > foundChunkOffset)
-            freeChunks[foundChunkOffset] = allocResult.offset - foundChunkOffset;
-
-        // Possibly add the right chunk
-        if (foundChunkOffset + foundChunkSize > allocResult.offset + allocResult.size)
-            freeChunks[allocResult.offset + allocResult.size] = foundChunkOffset + foundChunkSize - (allocResult.offset + allocResult.size);
-
-        foundMemoryBlock->usedChunks[alignedOffset] = size;
-        return allocResult;
-    }
-
-    internal::VulkanAllocationBlock* VulkanMemoryHeap::allocateVulkanMemoryBlock(uint64_t size)
-    {
-        VkMemoryAllocateInfo devAllocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-        devAllocInfo.allocationSize  = blockSize;
-        devAllocInfo.memoryTypeIndex = memoryTypeIndex;
-
-        VkDeviceMemory memory;
-        vkAllocateMemory(device, &devAllocInfo, nullptr, &memory);
-
-        memoryBlocks.push_back(internal::VulkanAllocationBlock());
-        auto& block = memoryBlocks.back();
-        block.memory = memory;
-        block.freeChunks.emplace(0, size);
-        block.mappedPtr = (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? mapMemoryBlock(block) : nullptr;
-        return &block;
-    }
-
-    std::pair<uint64_t, uint64_t> VulkanMemoryHeap::findFreeChunkInBlock(internal::VulkanAllocationBlock& block, uint64_t size, uint64_t alignment)
-    {
-        for (auto& freeChunk : block.freeChunks)
-        {
-            uint64_t chunkOffset = freeChunk.first;
-            uint64_t chunkSize   = freeChunk.second;
-
-            uint64_t alignedOffset = chunkOffset + ((alignment - (chunkOffset & (alignment - 1))) & (alignment - 1));
-            uint64_t usableSize    = chunkSize - (alignedOffset - chunkOffset);
+            const uint64_t alignedOffset = chunkOffset + ((alignment - (chunkOffset & (alignment - 1))) & (alignment - 1));
+            const uint64_t usableSize    = chunkSize - (alignedOffset - chunkOffset);
 
             if (size <= usableSize)
             {
@@ -157,38 +174,5 @@ namespace crisp
             }
         }
         return { 0, 0 };
-    }
-
-    void VulkanMemoryHeap::printFreeChunks()
-    {
-        std::cout << tag << "\n";
-        int i = 0;
-        for (auto& block : memoryBlocks)
-        {
-            std::cout << "Memory Block " << i++ << ":\n";
-            for (auto& chunk : block.freeChunks)
-                std::cout << "    " << chunk.first << " - " << chunk.second << "\n";
-        }
-    }
-
-    void VulkanMemoryHeap::freeVulkanMemoryBlocks()
-    {
-        for (auto& block : memoryBlocks)
-        {
-            if (block.mappedPtr)
-                vkUnmapMemory(device, block.memory);
-
-            vkFreeMemory(device, block.memory, nullptr);
-        }
-    }
-
-    void* VulkanMemoryHeap::mapMemoryBlock(internal::VulkanAllocationBlock& block) const
-    {
-        if (!(properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
-            spdlog::critical("[{}] Attempted invalid MapMemory!", tag);
-
-        void* mappedPtr;
-        vkMapMemory(device, block.memory, 0, blockSize, 0, &mappedPtr);
-        return mappedPtr;
     }
 }

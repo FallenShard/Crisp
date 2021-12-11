@@ -15,6 +15,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 #include <Crisp/GUI/Form.hpp>
 #include <Crisp/GUI/Label.hpp>

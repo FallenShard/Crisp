@@ -4,6 +4,8 @@
 
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+
 namespace crisp
 {
     ResourceContext::ResourceContext(Renderer* renderer)
@@ -23,10 +25,10 @@ namespace crisp
         m_pipelineInfos[id].renderPass   = &renderPass;
         m_pipelineInfos[id].subpassIndex = subpassIndex;
         m_pipelines[id] = m_renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex);
-        m_renderer->getDevice()->addTag(m_pipelines.at(id)->getHandle(), id);
+        m_pipelines[id]->setTag(id);
 
         auto layout = m_pipelines[id]->getPipelineLayout();
-        m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator();
+        m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator(m_renderer->getDevice());
 
 
         return m_pipelines.at(id).get();

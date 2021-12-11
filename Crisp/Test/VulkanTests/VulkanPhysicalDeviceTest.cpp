@@ -18,10 +18,10 @@ struct VulkanSetupData
     std::unique_ptr<VulkanContext> context;
 };
 
-std::pair<VulkanPhysicalDevice, VulkanContext> createPhysicalDevice()
+auto createPhysicalDevice()
 {
-    VulkanContext context(nullptr, {}, false);
-    VulkanPhysicalDevice physicalDevice(context.selectPhysicalDevice({}).unwrap());
+    std::unique_ptr<VulkanContext> context(std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false));
+    VulkanPhysicalDevice physicalDevice(context->selectPhysicalDevice({}).unwrap());
     return std::make_pair(std::move(physicalDevice), std::move(context));
 }
 
@@ -29,10 +29,10 @@ auto createPhysicalDeviceWithSurface()
 {
     struct {
         Window window{ 0, 0, 200, 200, "unit_test", true };
-        VulkanContext context{ window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanExtensions(), false };
+        std::unique_ptr<VulkanContext> context{ std::make_unique<VulkanContext>(window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanExtensions(), false) };
     } vulkanInit;
 
-    VulkanPhysicalDevice physicalDevice(vulkanInit.context.selectPhysicalDevice({}).unwrap());
+    VulkanPhysicalDevice physicalDevice(vulkanInit.context->selectPhysicalDevice({}).unwrap());
     return std::make_pair(std::move(physicalDevice), std::move(vulkanInit));
 }
 
@@ -52,13 +52,13 @@ TEST_F(VulkanPhysicalDeviceTest, Features)
 TEST_F(VulkanPhysicalDeviceTest, SurfaceCaps)
 {
     const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(deps.context.getSurface());
+    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(deps.context->getSurface());
     ASSERT_TRUE(queueFamilies.presentFamily.has_value());
     ASSERT_TRUE(queueFamilies.graphicsFamily.has_value());
     ASSERT_TRUE(queueFamilies.computeFamily.has_value());
     ASSERT_TRUE(queueFamilies.transferFamily.has_value());
 
-    const auto surfaceSupport = physicalDevice.querySurfaceSupport(deps.context.getSurface());
+    const auto surfaceSupport = physicalDevice.querySurfaceSupport(deps.context->getSurface());
     ASSERT_FALSE(surfaceSupport.formats.empty());
     ASSERT_EQ(surfaceSupport.presentModes.size(), 4);
 }
@@ -66,7 +66,7 @@ TEST_F(VulkanPhysicalDeviceTest, SurfaceCaps)
 TEST_F(VulkanPhysicalDeviceTest, CreateLogicalDevice)
 {
     const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto queueConfig = createDefaultQueueConfiguration(deps.context, physicalDevice);
+    const auto queueConfig = createDefaultQueueConfiguration(*deps.context, physicalDevice);
     EXPECT_EQ(queueConfig.createInfos.size(), 3);
 
     const VkDevice device = physicalDevice.createLogicalDevice(queueConfig);
@@ -83,7 +83,7 @@ TEST_F(VulkanPhysicalDeviceTest, FindDepthFormat)
 TEST_F(VulkanPhysicalDeviceTest, MemoryTypes)
 {
     const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto queueConfig = createDefaultQueueConfiguration(deps.context, physicalDevice);
+    const auto queueConfig = createDefaultQueueConfiguration(*deps.context, physicalDevice);
     const VkDevice device = physicalDevice.createLogicalDevice(queueConfig);
 
     ASSERT_TRUE(physicalDevice.findStagingBufferMemoryType(device).hasValue());

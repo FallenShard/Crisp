@@ -7,6 +7,8 @@
 
 #include <Crisp/Geometry/Geometry.hpp>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+
 #define GET_DEVICE_PROC_NV(procVar, device) getDeviceProc(procVar, device, #procVar "NV")
 
 namespace crisp

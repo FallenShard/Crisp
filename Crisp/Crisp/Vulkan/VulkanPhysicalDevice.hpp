@@ -37,7 +37,6 @@ namespace crisp
     {
     public:
         explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
-        ~VulkanPhysicalDevice();
 
         VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
         VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept;
@@ -62,7 +61,7 @@ namespace crisp
         void setDeviceExtensions(std::vector<std::string>&& deviceExtensions);
         VkDevice createLogicalDevice(const VulkanQueueConfiguration& config) const;
 
-        Result<uint32_t> findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+        Result<uint32_t> findMemoryType(uint32_t memoryTypeMask, VkMemoryPropertyFlags properties) const;
         Result<uint32_t> findMemoryType(VkMemoryPropertyFlags properties) const;
         Result<uint32_t> findDeviceImageMemoryType(VkDevice device) const;
         Result<uint32_t> findDeviceBufferMemoryType(VkDevice device) const;
@@ -70,7 +69,7 @@ namespace crisp
 
         Result<VkFormat> findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         Result<VkFormat> findSupportedDepthFormat() const;
-        
+
     private:
         void initFeaturesAndProperties();
 

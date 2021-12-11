@@ -20,5 +20,7 @@ namespace crisp
 
     private:
         std::vector<VkDescriptorSetLayoutBinding> m_descriptors;
+
+        VulkanDevice* m_device;
     };
 }

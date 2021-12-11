@@ -30,7 +30,7 @@ namespace crisp
             .setDepthAttachmentRef(0, 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-            .create(m_device->getHandle());
+            .create(m_renderer->getDevice()->getHandle());
 
         m_finalLayouts = { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
@@ -43,9 +43,9 @@ namespace crisp
         auto numLayers = RendererConfig::VirtualFrameCount;
 
         m_renderTargets.resize(2);
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32_SFLOAT,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(m_renderer->getDevice(), extent, numLayers, 1, VK_FORMAT_R32G32_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
-        m_renderTargets[1] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_D32_SFLOAT,
+        m_renderTargets[1] = std::make_unique<VulkanImage>(m_renderer->getDevice(), extent, numLayers, 1, VK_FORMAT_D32_SFLOAT,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, 0);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -70,7 +70,7 @@ namespace crisp
                 attachmentViews.push_back(m_renderTargetViews[j][i]->getHandle());
             }
 
-            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews);
+            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_renderer->getDevice(), m_handle, m_renderArea, attachmentViews);
         }
     }
 }

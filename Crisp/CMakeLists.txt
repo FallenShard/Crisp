@@ -249,10 +249,12 @@ add_library(Crisp
     "Crisp/Vulkan/VulkanRenderPass.cpp"
     "Crisp/Vulkan/VulkanRenderPass.hpp"
     "Crisp/Vulkan/VulkanResource.hpp"
+    "Crisp/Vulkan/VulkanResourceDeallocator.hpp"
+    "Crisp/Vulkan/VulkanResourceDeallocator.cpp"
     "Crisp/Vulkan/VulkanSampler.cpp"
     "Crisp/Vulkan/VulkanSampler.hpp"
     "Crisp/Vulkan/VulkanSwapChain.cpp"
-    "Crisp/Vulkan/VulkanSwapChain.hpp"
+    "Crisp/Vulkan/VulkanSwapChain.hpp"   
 )
 
 set_target_properties(Crisp PROPERTIES

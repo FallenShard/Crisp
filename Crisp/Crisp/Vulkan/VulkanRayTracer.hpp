@@ -48,7 +48,7 @@ namespace crisp
             VkAccelerationStructureNV handle;
             uint64_t rawHandle;
 
-            VulkanMemoryChunk memoryChunk;
+            VulkanMemoryHeap::Allocation allocation;
             VkAccelerationStructureInfoNV info;
         };
 

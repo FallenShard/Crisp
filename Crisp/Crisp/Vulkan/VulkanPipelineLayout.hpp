@@ -65,7 +65,7 @@ namespace crisp
             return m_setAllocator.get();
         }
 
-        std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
+        std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
 
     private:
         std::vector<VkDescriptorSetLayout>                     m_descriptorSetLayouts;

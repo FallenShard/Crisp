@@ -36,7 +36,7 @@ namespace crisp
                 VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
             .addDependency(0, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
-            .create(m_device->getHandle());
+            .create(m_renderer->getDevice()->getHandle());
         m_finalLayouts = { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
         createResources();
@@ -49,11 +49,11 @@ namespace crisp
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
         auto numLayers = RendererConfig::VirtualFrameCount;
 
-        m_renderTargets[GBuffer]    = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
+        m_renderTargets[GBuffer] = std::make_unique<VulkanImage>(m_renderer->getDevice(), extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
             VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
-        m_renderTargets[Depth]      = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_D32_SFLOAT,
+        m_renderTargets[Depth] = std::make_unique<VulkanImage>(m_renderer->getDevice(), extent, numLayers, 1, VK_FORMAT_D32_SFLOAT,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, 0);
-        m_renderTargets[LiquidMask] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
+        m_renderTargets[LiquidMask] = std::make_unique<VulkanImage>(m_renderer->getDevice(), extent, numLayers, 1, VK_FORMAT_R32G32B32A32_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -83,7 +83,7 @@ namespace crisp
                 m_renderTargetViews[Depth][i]->getHandle(),
                 m_renderTargetViews[LiquidMask][i]->getHandle()
             };
-            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews);
+            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_renderer->getDevice(), m_handle, m_renderArea, attachmentViews);
         }
     }
 }

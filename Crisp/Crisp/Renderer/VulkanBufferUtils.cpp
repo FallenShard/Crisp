@@ -4,7 +4,7 @@ namespace crisp
 {
     std::unique_ptr<VulkanBuffer> createStagingBuffer(VulkanDevice* device, VkDeviceSize size, const void* data)
     {
-        auto stagingBuffer = std::make_unique<VulkanBuffer>(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        auto stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, size);
         if (data)
             stagingBuffer->updateFromHost(data, size, 0);
         return stagingBuffer;

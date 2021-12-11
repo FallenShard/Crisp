@@ -1,9 +1,7 @@
 #pragma once
 
-#include <vector>
-
-#include "VulkanMemoryHeap.hpp"
-#include "VulkanResource.hpp"
+#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+#include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp
 {
@@ -17,20 +15,31 @@ namespace crisp
 
         VkDeviceSize getSize() const;
 
-        void updateFromHost(const void* srcData, VkDeviceSize size, VkDeviceSize offset);
-        void updateFromHost(const void* srcData);
+       
+        void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
+
+    protected:
+        VulkanMemoryHeap::Allocation m_allocation;
+        VkDeviceSize m_size;
+       
+    };
+
+    class StagingVulkanBuffer final : public VulkanBuffer
+    {
+    public:
+        StagingVulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        void updateFromHost(const void* hostMemoryData, VkDeviceSize size, VkDeviceSize offset);
+        void updateFromHost(const void* hostMemoryData);
 
         template <typename T>
-        void updateFromHost(const std::vector<T>& buffer)
+        inline void updateFromHost(const std::vector<T>& buffer)
         {
             updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
         }
 
-        void updateFromStaging(const VulkanBuffer& srcBuffer);
-        void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
+        void updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer);
 
     private:
-        VulkanMemoryChunk m_memoryChunk;
-        VkDeviceSize      m_size;
+        VulkanDevice* m_device;
     };
 }

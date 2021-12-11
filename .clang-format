@@ -12,3 +12,4 @@ ColumnLimit: 0
 PointerAlignment: Left
 NamespaceIndentation: All
 FixNamespaceComments: true
+

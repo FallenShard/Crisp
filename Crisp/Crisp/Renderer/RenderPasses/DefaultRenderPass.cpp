@@ -24,7 +24,7 @@ namespace crisp
             .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(m_device->getHandle());
+                       .create(m_renderer->getDevice()->getHandle());
         m_finalLayouts = { VK_IMAGE_LAYOUT_PRESENT_SRC_KHR };
 
         createResources();
@@ -39,7 +39,7 @@ namespace crisp
         if (!m_imageFramebuffers.contains(swapChainImageView))
         {
             const auto attachmentViews = { swapChainImageView };
-            m_imageFramebuffers.emplace(swapChainImageView, std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, attachmentViews));
+            m_imageFramebuffers.emplace(swapChainImageView, std::make_unique<VulkanFramebuffer>(m_renderer->getDevice(), m_handle, m_renderArea, attachmentViews));
         }
 
         if (m_framebuffers[frameIdx])

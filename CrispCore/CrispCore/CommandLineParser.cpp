@@ -1,13 +1,18 @@
 #include <CrispCore/CommandLineParser.hpp>
+#include <span>
 
 namespace crisp
 {
     void CommandLineParser::parse(int argc, char** argv)
     {
+        const std::span<char*> args(argv, static_cast<size_t>(argc));
+
         std::vector<std::string_view> commandLineArgs;
         commandLineArgs.reserve(argc);
-        for (uint32_t i = 0; i < static_cast<uint32_t>(argc); ++i)
-            commandLineArgs.emplace_back(argv[i]);
+        for (const auto& arg : args)
+        {
+            commandLineArgs.emplace_back(arg);
+        }
 
         parse(commandLineArgs);
     }
@@ -35,10 +40,12 @@ namespace crisp
 
                 ++i;
             }
-            else // Else apply the rule 'variable value'
+            else  // Else apply the rule 'variable value'
             {
                 if (i + 1 >= tokens.size())
+                {
                     break;
+                }
 
                 const auto iter = m_argMap.find(std::string(tokens[i]));
                 if (iter != m_argMap.end())
@@ -50,4 +57,4 @@ namespace crisp
             }
         }
     }
-}
+}  // namespace crisp

@@ -6,12 +6,12 @@
 
 namespace crisp
 {
+    class VulkanDevice;
     class VulkanCommandPool;
 
     class VulkanCommandBuffer
     {
     public:
-        VulkanCommandBuffer(const VulkanCommandPool* commandPool, VkCommandBufferLevel level);
         VulkanCommandBuffer(VkCommandBuffer commandBuffer);
         ~VulkanCommandBuffer();
 

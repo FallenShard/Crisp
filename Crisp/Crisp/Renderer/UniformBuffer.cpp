@@ -27,7 +27,7 @@ namespace crisp
         {
             m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment);
             m_buffer = std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            m_stagingBuffer = std::make_unique<VulkanBuffer>(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, size);
 
             if (data)
                 updateStagingBuffer(data, size);
@@ -83,7 +83,7 @@ namespace crisp
         {
             m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment);
             m_buffer = std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            m_stagingBuffer = std::make_unique<VulkanBuffer>(device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, size);
 
             //if (data)
             //    updateStagingBuffer(data, size);

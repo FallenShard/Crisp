@@ -43,7 +43,9 @@ namespace crisp
     private:
         std::pair<VkAccessFlags, VkAccessFlags> determineAccessMasks(VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
-        VulkanMemoryChunk m_memoryChunk;
+        VulkanMemoryHeap::Allocation m_allocation;
+
+        VulkanDevice* m_device;
 
         VkImageType m_type;
         VkFormat   m_format;

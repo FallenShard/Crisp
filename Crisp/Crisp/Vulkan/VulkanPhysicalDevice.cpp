@@ -5,14 +5,10 @@
 
 namespace crisp
 {
-    VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice handle)
+    VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle)
         : m_handle(handle)
     {
         initFeaturesAndProperties();
-    }
-
-    VulkanPhysicalDevice::~VulkanPhysicalDevice()
-    {
     }
 
     VulkanPhysicalDevice::VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept
@@ -30,7 +26,7 @@ namespace crisp
         return *this;
     }
 
-    bool VulkanPhysicalDevice::isSuitable(VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const
+    bool VulkanPhysicalDevice::isSuitable(const VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const
     {
         if (!queryQueueFamilyIndices(surface).isComplete())
             return false;
@@ -48,19 +44,18 @@ namespace crisp
         return true;
     }
 
-    bool VulkanPhysicalDevice::supportsPresentation(uint32_t queueFamilyIndex, VkSurfaceKHR surface) const
+    bool VulkanPhysicalDevice::supportsPresentation(const uint32_t queueFamilyIndex, const VkSurfaceKHR surface) const
     {
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(m_handle, queueFamilyIndex, surface, &presentSupport);
         return static_cast<bool>(presentSupport);
     }
 
-    QueueFamilyIndices VulkanPhysicalDevice::queryQueueFamilyIndices(VkSurfaceKHR surface) const
+    QueueFamilyIndices VulkanPhysicalDevice::queryQueueFamilyIndices(const VkSurfaceKHR surface) const
     {
         QueueFamilyIndices indices;
 
         const auto queueFamilies = queryQueueFamilyProperties();
-
         for (uint32_t i = 0; i < queueFamilies.size(); ++i)
         {
             const auto& queueFamily = queueFamilies[i];
@@ -84,12 +79,12 @@ namespace crisp
         return indices;
     }
 
-    SurfaceSupport VulkanPhysicalDevice::querySurfaceSupport(VkSurfaceKHR surface) const
+    SurfaceSupport VulkanPhysicalDevice::querySurfaceSupport(const VkSurfaceKHR surface) const
     {
-        SurfaceSupport surfaceSupport{ surface };
+        SurfaceSupport surfaceSupport = { surface };
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_handle, surface, &surfaceSupport.capabilities);
 
-        uint32_t formatCount;
+        uint32_t formatCount = 0;
         vkGetPhysicalDeviceSurfaceFormatsKHR(m_handle, surface, &formatCount, nullptr);
         if (formatCount > 0)
         {
@@ -97,7 +92,7 @@ namespace crisp
             vkGetPhysicalDeviceSurfaceFormatsKHR(m_handle, surface, &formatCount, surfaceSupport.formats.data());
         }
 
-        uint32_t presentModeCount;
+        uint32_t presentModeCount = 0;
         vkGetPhysicalDeviceSurfacePresentModesKHR(m_handle, surface, &presentModeCount, nullptr);
         if (presentModeCount > 0)
         {
@@ -119,19 +114,19 @@ namespace crisp
         return queueFamilies;
     }
 
-    Result<uint32_t> VulkanPhysicalDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
+    Result<uint32_t> VulkanPhysicalDevice::findMemoryType(const uint32_t memoryTypeMask, const VkMemoryPropertyFlags properties) const
     {
         const VkPhysicalDeviceMemoryProperties& memProperties = getMemoryProperties();
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
         {
-            if ((typeFilter & (1 << i)) && ((memProperties.memoryTypes[i].propertyFlags & properties) == properties))
+            if ((memoryTypeMask & (1 << i)) && ((memProperties.memoryTypes[i].propertyFlags & properties) == properties))
                 return i;
         }
 
-        return resultError("Unable to find memory type with filter {} and props {}!", typeFilter, properties);
+        return resultError("Unable to find memory type with filter {} and props {}!", memoryTypeMask, properties);
     }
 
-    Result<uint32_t> VulkanPhysicalDevice::findMemoryType(VkMemoryPropertyFlags properties) const
+    Result<uint32_t> VulkanPhysicalDevice::findMemoryType(const VkMemoryPropertyFlags properties) const
     {
         const VkPhysicalDeviceMemoryProperties& memProperties = getMemoryProperties();
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
@@ -143,7 +138,7 @@ namespace crisp
         return resultError("Unable to find memory type with props {}!", properties);
     }
 
-    Result<uint32_t> VulkanPhysicalDevice::findDeviceImageMemoryType(VkDevice device) const
+    Result<uint32_t> VulkanPhysicalDevice::findDeviceImageMemoryType(const VkDevice device) const
     {
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -169,7 +164,7 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(VkDevice device) const
+    Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(const VkDevice device) const
     {
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size        = 1;
@@ -185,7 +180,7 @@ namespace crisp
         return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(VkDevice device) const
+    Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevice device) const
     {
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size        = 1;
@@ -203,14 +198,13 @@ namespace crisp
 
     bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<const char*>& deviceExtensions) const
     {
-        uint32_t extensionCount;
+        uint32_t extensionCount = 0;
         vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, nullptr);
 
         std::vector<VkExtensionProperties> availableExtensions(extensionCount);
         vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, availableExtensions.data());
 
         robin_hood::unordered_set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
         for (const auto& ext : availableExtensions)
             requiredExtensions.erase(ext.extensionName);
 
@@ -242,7 +236,7 @@ namespace crisp
         return device;
     }
 
-    Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkFormat>& candidates, const VkImageTiling tiling, const VkFormatFeatureFlags features) const
     {
         for (const auto& format : candidates)
         {

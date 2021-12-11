@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CrispCore/RobinHood.hpp>
+#include <CrispCore/Result.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -10,78 +11,66 @@
 
 namespace crisp
 {
-    namespace internal
+    class VulkanMemoryHeap
     {
-        struct VulkanAllocationBlock
+    public:
+        struct AllocationBlock
         {
+            VulkanMemoryHeap* heap;
             VkDeviceMemory memory;
             void* mappedPtr;
             std::map<uint64_t, uint64_t> freeChunks;
-            robin_hood::unordered_map<uint64_t, uint64_t> usedChunks;
+            robin_hood::unordered_flat_map<uint64_t, uint64_t> usedChunks;
 
-            inline bool operator==(const VulkanAllocationBlock& other) const { return memory == other.memory; }
+            inline bool operator==(const AllocationBlock& other) const { return memory == other.memory; }
+
+            void free(uint64_t offset, uint64_t size);
+            void coalesce();
+            std::pair<uint64_t, uint64_t> findFreeChunk(uint64_t size, uint64_t alignment) const;
         };
-    }
 
-    struct VulkanMemoryHeap;
-    struct VulkanMemoryChunk
-    {
-        VulkanMemoryHeap* memoryHeap;
-        internal::VulkanAllocationBlock* allocationBlock;
-        uint64_t offset;
-        uint64_t size;
+        struct Allocation
+        {
+            AllocationBlock* allocationBlock;
+            uint64_t offset;
+            uint64_t size;
 
-        inline void free();
-        inline VkDeviceMemory getMemory() const;
-        inline void* getBlockMappedPtr() const;
-        inline char* getMappedPtr() const;
-    };
+            inline void free() const { allocationBlock->heap->free(*this); }
+            inline void* getBlockMappedPtr() const { return allocationBlock->mappedPtr; }
+            inline char* getMappedPtr() const
+            {
+                return static_cast<char*>(allocationBlock->mappedPtr) + offset;
+            }
 
-    struct VulkanMemoryHeap
-    {
-        VkDevice device;
-        VkMemoryPropertyFlags properties;
-        uint32_t              memoryTypeIndex;
-
-        VkDeviceSize usedSize;
-        VkDeviceSize blockSize;
-        std::list<internal::VulkanAllocationBlock> memoryBlocks;
-
-        std::string tag;
+            inline VkDeviceMemory getMemory() const
+            {
+                return allocationBlock->memory;
+            }
+        };
 
         VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memoryTypeIndex, VkDevice device, std::string tag);
+        ~VulkanMemoryHeap();
+        
+        Result<Allocation> allocate(uint64_t size, uint64_t alignment);
+        void free(const Allocation& allocation);
 
-        void coalesce(internal::VulkanAllocationBlock& block);
-        void free(uint64_t offset, uint64_t size, internal::VulkanAllocationBlock& block);
-        VulkanMemoryChunk allocate(uint64_t size, uint64_t alignment);
-        internal::VulkanAllocationBlock* allocateVulkanMemoryBlock(uint64_t size);
-        std::pair<uint64_t, uint64_t> findFreeChunkInBlock(internal::VulkanAllocationBlock& block, uint64_t size, uint64_t alignment);
-        void printFreeChunks();
+        bool isFromHeapIndex(uint32_t heapIndex, VkMemoryPropertyFlags memoryProperties) const;
 
-        void freeVulkanMemoryBlocks();
+        inline VkDeviceSize getUsedSize() const { return m_usedSize; }
+        inline VkDeviceSize getAllocatedSize() const { return m_allocationBlocks.size() * m_blockSize; }
 
-        void* mapMemoryBlock(internal::VulkanAllocationBlock& blockIndex) const;
+    private:
+        AllocationBlock allocateBlock(uint64_t size);
+        void freeBlock(const AllocationBlock& allocationBlock);
+        
+        VkDevice m_device;
+        VkMemoryPropertyFlags m_properties;
+        uint32_t m_memoryTypeIndex;
 
-        inline VkDeviceSize getTotalAllocatedSize() const { return memoryBlocks.size() * blockSize; }
+        VkDeviceSize m_usedSize;
+        VkDeviceSize m_blockSize;
+        std::list<AllocationBlock> m_allocationBlocks;
+
+        std::string m_tag;
     };
-
-    inline void VulkanMemoryChunk::free()
-    {
-        memoryHeap->free(offset, size, *allocationBlock);
-    }
-
-    inline VkDeviceMemory VulkanMemoryChunk::getMemory() const
-    {
-        return allocationBlock->memory;
-    }
-
-    inline void* VulkanMemoryChunk::getBlockMappedPtr() const
-    {
-        return allocationBlock->mappedPtr;
-    }
-
-    inline char* VulkanMemoryChunk::getMappedPtr() const
-    {
-        return static_cast<char*>(allocationBlock->mappedPtr) + offset;
-    }
 }

@@ -8,10 +8,10 @@ using namespace crisp;
 
 class VulkanContextTest : public VulkanTest {};
 
-std::pair<VulkanContext, Window> createContextWithSurface()
+std::pair<std::unique_ptr<VulkanContext>, Window> createContextWithSurface()
 {
     Window window = Window({ 0, 0 }, { 200, 200 }, "unit_test", true);
-    return { VulkanContext(window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanExtensions(), false), std::move(window) };
+    return { std::make_unique<VulkanContext>(window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanExtensions(), false), std::move(window) };
 }
 
 TEST_F(VulkanContextTest, WithoutSurface)
@@ -23,7 +23,7 @@ TEST_F(VulkanContextTest, WithoutSurface)
 TEST_F(VulkanContextTest, WithSurface)
 {
     auto [context, window] = createContextWithSurface();
-    ASSERT_NE(context.getSurface(), VK_NULL_HANDLE);
+    ASSERT_NE(context->getSurface(), VK_NULL_HANDLE);
 }
 
 TEST_F(VulkanContextTest, DeviceSelection)

@@ -31,7 +31,7 @@ namespace crisp
         Renderer* m_renderer;
 
         std::vector<std::unique_ptr<VulkanBuffer>> m_buffers;
-        std::unique_ptr<VulkanBuffer>              m_stagingBuffer;
+        std::unique_ptr<StagingVulkanBuffer>       m_stagingBuffer;
 
         VkDeviceSize m_singleRegionSize;
     };

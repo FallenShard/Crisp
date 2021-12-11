@@ -6,6 +6,8 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+
 namespace crisp
 {
     std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, const glm::uvec3& workGroupSize)

@@ -4,8 +4,7 @@
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
+#include <CrispCore/Logger.hpp>
 
 #include <algorithm>
 #include <unordered_set>
@@ -14,7 +13,7 @@ namespace crisp
 {
     namespace
     {
-        auto logger = spdlog::stderr_color_mt("VulkanContext");
+        auto logger = createLoggerMt("VulkanContext");
     
         const std::vector<const char*> ValidationLayers =
         {
@@ -123,7 +122,7 @@ namespace crisp
         }
     }
 
-    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers)
+    VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, const bool enableValidationLayers)
         : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
         , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
         , m_surface(surfaceCreator ? createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE)
@@ -138,21 +137,6 @@ namespace crisp
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
         vkDestroyInstance(m_instance, nullptr);
-    }
-
-    VulkanContext::VulkanContext(VulkanContext&& other) noexcept
-        : m_instance(std::exchange(other.m_instance, VK_NULL_HANDLE))
-        , m_debugMessenger(std::exchange(other.m_debugMessenger, VK_NULL_HANDLE))
-        , m_surface(std::exchange(other.m_surface, VK_NULL_HANDLE))
-    {
-    }
-
-    VulkanContext& VulkanContext::operator=(VulkanContext&& other) noexcept
-    {
-        m_instance = std::exchange(other.m_instance, VK_NULL_HANDLE);
-        m_debugMessenger = std::exchange(other.m_debugMessenger, VK_NULL_HANDLE);
-        m_surface = std::exchange(other.m_surface, VK_NULL_HANDLE);
-        return *this;
     }
 
     Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const

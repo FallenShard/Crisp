@@ -8,9 +8,9 @@ namespace crisp
 {
     namespace
     {
-        BitFlags<QueueType> getFamilyType(const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice, uint32_t familyIndex, VkQueueFlags queueFlags)
+        QueueTypeFlags getFamilyType(const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice, uint32_t familyIndex, VkQueueFlags queueFlags)
         {
-            BitFlags<QueueType> familyType;
+            QueueTypeFlags familyType;
 
             if (physicalDevice.supportsPresentation(familyIndex, context.getSurface()))
                 familyType |= QueueType::Present;
@@ -27,7 +27,7 @@ namespace crisp
             return familyType;
         }
 
-        Result<uint32_t> findQueueFamilyIndex(BitFlags<QueueType> queueType, const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice, const std::vector<VkQueueFamilyProperties>& exposedQueueFamilies, std::vector<uint32_t>& usedQueueFamilyCounts)
+        Result<uint32_t> findQueueFamilyIndex(QueueTypeFlags queueType, const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice, const std::vector<VkQueueFamilyProperties>& exposedQueueFamilies, std::vector<uint32_t>& usedQueueFamilyCounts)
         {
             // Check if we are requesting an async-compute queue
             if (queueType == QueueType::AsyncCompute)

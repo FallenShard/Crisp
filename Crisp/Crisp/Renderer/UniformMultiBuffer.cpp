@@ -16,7 +16,7 @@ namespace crisp
             buffer = std::make_unique<VulkanBuffer>(device, initialSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         }
 
-        m_stagingBuffer = std::make_unique<VulkanBuffer>(device, initialSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, initialSize);
     }
 
     UniformMultiBuffer::~UniformMultiBuffer()
@@ -40,10 +40,10 @@ namespace crisp
 
     void UniformMultiBuffer::resize(VkDeviceSize newSize)
     {
-        auto newBuffer = std::make_unique<VulkanBuffer>(m_renderer->getDevice(), newSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        newBuffer->updateFromStaging(*m_stagingBuffer);
+        auto newStagingBuffer = std::make_unique<StagingVulkanBuffer>(m_renderer->getDevice(), newSize);
+        newStagingBuffer->updateFromStaging(*m_stagingBuffer);
 
-        m_stagingBuffer = std::move(newBuffer);
+        m_stagingBuffer = std::move(newStagingBuffer);
 
         m_singleRegionSize = newSize;
     }

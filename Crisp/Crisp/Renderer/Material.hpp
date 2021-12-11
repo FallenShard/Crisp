@@ -50,6 +50,7 @@ namespace crisp
         std::array<std::vector<uint32_t>,        RendererConfig::VirtualFrameCount> m_dynamicOffsets;
         std::vector<DynamicBufferView> m_dynamicBufferViews;
 
+        VulkanDevice* m_device;
         VulkanPipeline* m_pipeline;
     };
 }

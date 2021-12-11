@@ -1,20 +1,17 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include "VulkanResource.hpp"
-
-#include <memory>
+#include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp
 {
+    class VulkanDevice;
     class VulkanQueue;
-    class VulkanCommandBuffer;
 
-    class VulkanCommandPool : public VulkanResource<VkCommandPool, vkDestroyCommandPool>
+    class VulkanCommandPool final : public VulkanResource<VkCommandPool, vkDestroyCommandPool>
     {
     public:
-        VulkanCommandPool(const VulkanQueue& vulkanQueue, VkCommandPoolCreateFlags flags);
+        VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator);
 
-        std::unique_ptr<VulkanCommandBuffer> allocateCommandBuffer(VkCommandBufferLevel level) const;
+        VkCommandBuffer allocateCommandBuffer(const VulkanDevice* device, VkCommandBufferLevel cmdBufferLevel) const;
     };
 }

@@ -19,9 +19,9 @@ namespace crisp
         ~VulkanContext();
 
         VulkanContext(const VulkanContext& other) = delete;
-        VulkanContext(VulkanContext&& other) noexcept;
+        VulkanContext(VulkanContext&& other) = delete;
         VulkanContext& operator=(const VulkanContext& other) = delete;
-        VulkanContext& operator=(VulkanContext&& other) noexcept;
+        VulkanContext& operator=(VulkanContext&& other) = delete;
 
         Result<VulkanPhysicalDevice> selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const;
 

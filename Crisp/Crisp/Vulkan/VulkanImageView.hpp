@@ -6,6 +6,7 @@
 
 namespace crisp
 {
+    class VulkanDevice;
     class VulkanImage;
     class VulkanSampler;
 

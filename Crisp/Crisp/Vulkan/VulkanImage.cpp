@@ -15,8 +15,9 @@ namespace crisp
     }
 
     VulkanImage::VulkanImage(VulkanDevice* device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
-        : VulkanResource(device)
+        : VulkanResource(device->getResourceDeallocator())
         , m_type(createInfo.imageType)
+        , m_device(device)
         , m_format(createInfo.format)
         , m_extent(createInfo.extent)
         , m_mipLevels(createInfo.mipLevels)
@@ -24,18 +25,19 @@ namespace crisp
         , m_aspect(aspect)
         , m_layouts(m_numLayers, std::vector<VkImageLayout>(m_mipLevels, VK_IMAGE_LAYOUT_UNDEFINED))
     {
-        vkCreateImage(m_device->getHandle(), &createInfo, nullptr, &m_handle);
+        vkCreateImage(device->getHandle(), &createInfo, nullptr, &m_handle);
 
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
-        m_memoryChunk = m_device->getMemoryAllocator()->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
-        vkBindImageMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
+        vkGetImageMemoryRequirements(device->getHandle(), m_handle, &memRequirements);
+        m_allocation = device->getMemoryAllocator().getDeviceImageHeap().allocate(memRequirements.size, memRequirements.alignment).unwrap();
+        vkBindImageMemory(device->getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
     }
 
     VulkanImage::VulkanImage(VulkanDevice* device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
-        : VulkanResource(device)
+        : VulkanResource(device->getResourceDeallocator())
         , m_type(extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D)
+        , m_device(device)
         , m_format(format)
         , m_extent(extent)
         , m_numLayers(numLayers)
@@ -56,18 +58,18 @@ namespace crisp
         imageInfo.usage         = usage;
         imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        vkCreateImage(m_device->getHandle(), &imageInfo, nullptr, &m_handle);
+        vkCreateImage(device->getHandle(), &imageInfo, nullptr, &m_handle);
 
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
-        m_memoryChunk = m_device->getMemoryAllocator()->getDeviceImageHeap()->allocate(memRequirements.size, memRequirements.alignment);
-        vkBindImageMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
+        vkGetImageMemoryRequirements(device->getHandle(), m_handle, &memRequirements);
+        m_allocation = device->getMemoryAllocator().getDeviceImageHeap().allocate(memRequirements.size, memRequirements.alignment).unwrap();
+        vkBindImageMemory(device->getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
     }
 
     VulkanImage::~VulkanImage()
     {
-        m_device->deferMemoryDeallocation(m_framesToLive, m_memoryChunk);
+        m_deallocator->deferMemoryDeallocation(m_framesToLive, m_allocation);
     }
 
     void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)

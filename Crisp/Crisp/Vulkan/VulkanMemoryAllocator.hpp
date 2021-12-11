@@ -2,6 +2,8 @@
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
+#include <CrispCore/Result.hpp>
+
 #include <cstdint>
 #include <memory>
 
@@ -24,12 +26,14 @@ namespace crisp
     public:
         VulkanMemoryAllocator(const VulkanPhysicalDevice& physicalDevice, VkDevice deviceHandle);
 
-        VulkanMemoryHeap* getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
-        VulkanMemoryHeap* getDeviceBufferHeap() const;
-        VulkanMemoryHeap* getDeviceImageHeap() const;
-        VulkanMemoryHeap* getStagingBufferHeap() const;
+        Result<VulkanMemoryHeap*> getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
+        VulkanMemoryHeap& getDeviceBufferHeap() const;
+        VulkanMemoryHeap& getDeviceImageHeap() const;
+        VulkanMemoryHeap& getStagingBufferHeap() const;
 
         DeviceMemoryMetrics getDeviceMemoryUsage() const;
+
+        Result<VulkanMemoryHeap::Allocation> allocate(VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements);
 
     private:
         const VulkanPhysicalDevice* m_physicalDevice;

@@ -4,6 +4,7 @@
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
 #include <Crisp/Renderer/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp
@@ -27,7 +28,7 @@ namespace crisp
     VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, std::vector<VkDescriptorSetLayout>&& setLayouts,
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants,
         std::vector<bool> descriptorSetBufferedStatus, std::unique_ptr<DescriptorSetAllocator> setAllocator)
-        : VulkanResource(device, createHandle(device->getHandle(), setLayouts, pushConstants))
+        : VulkanResource(createHandle(device->getHandle(), setLayouts, pushConstants), device->getResourceDeallocator())
         , m_descriptorSetLayouts(std::move(setLayouts))
         , m_descriptorSetBindings(std::move(setBindings))
         , m_pushConstants(std::move(pushConstants))
@@ -50,10 +51,10 @@ namespace crisp
     {
         for (auto setLayout : m_descriptorSetLayouts)
         {
-            m_device->deferDestruction(m_framesToLive, setLayout, [](void* handle, VulkanDevice* device)
+            m_deallocator->deferDestruction(m_framesToLive, setLayout, [](void* handle, VulkanResourceDeallocator* deallocator)
             {
                 spdlog::debug("Destroying set layout: {}", handle);
-                vkDestroyDescriptorSetLayout(device->getHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
+                vkDestroyDescriptorSetLayout(deallocator->getDeviceHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
             });
         }
     }
@@ -82,7 +83,7 @@ namespace crisp
         //std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
     }
 
-    std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
+    std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
     {
         auto getNumCopiesPerSet = [this](uint32_t numCopies) {
             std::vector<uint32_t> numCopiesPerSet;
@@ -91,6 +92,6 @@ namespace crisp
             return numCopiesPerSet;
         };
 
-        return std::make_unique<DescriptorSetAllocator>(m_device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
+        return std::make_unique<DescriptorSetAllocator>(device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
     }
 }

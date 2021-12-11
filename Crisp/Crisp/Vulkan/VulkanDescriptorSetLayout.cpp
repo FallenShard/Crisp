@@ -5,7 +5,8 @@
 namespace crisp
 {
     VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanDevice* device, const std::vector<VkDescriptorSetLayoutBinding>& descriptors, VkDescriptorSetLayoutCreateFlags flags)
-        : VulkanResource(device)
+        : VulkanResource(device->getResourceDeallocator())
+        , m_device(device)
     {
         uint32_t highestIndex = 0;
         for (auto& descriptor : descriptors)

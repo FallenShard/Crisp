@@ -26,6 +26,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+
 #include <random>
 
 namespace crisp

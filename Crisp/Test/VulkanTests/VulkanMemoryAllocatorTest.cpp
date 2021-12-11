@@ -12,41 +12,18 @@
 using namespace crisp;
 
 class VulkanMemoryAllocatorTest : public VulkanTest {};
-
-template <typename T, auto deleter>
-struct UniqueHandleWrapper
-{
-    inline UniqueHandleWrapper(VkDevice handle) : handle(handle) {}
-    ~UniqueHandleWrapper() { deleter(handle); }
-
-    UniqueHandleWrapper(const UniqueHandleWrapper&) = delete;
-    inline UniqueHandleWrapper(UniqueHandleWrapper&& rhs) : handle(std::exchange(rhs.handle, nullptr)) {}
-    UniqueHandleWrapper& operator=(const UniqueHandleWrapper&) = delete;
-    inline UniqueHandleWrapper& operator=(UniqueHandleWrapper&& rhs) { handle = std::exchange(rhs.handle, nullptr); }
-
-    T handle;
-};
-
 using UniqueDeviceWrapper = UniqueHandleWrapper<VkDevice, [](VkDevice device) { vkDestroyDevice(device, nullptr); }>;
 
 auto createMemoryAllocator()
 {
     struct {
-        VulkanContext context{ nullptr, {}, false };
-        VulkanPhysicalDevice physicalDevice{ context.selectPhysicalDevice({}).unwrap() };
-        UniqueDeviceWrapper device{physicalDevice.createLogicalDevice(createDefaultQueueConfiguration(context, physicalDevice)) };
+        std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false) };
+        VulkanPhysicalDevice physicalDevice{ context->selectPhysicalDevice({}).unwrap() };
+        UniqueDeviceWrapper device{physicalDevice.createLogicalDevice(createDefaultQueueConfiguration(*context, physicalDevice)) };
     } dependencies;
 
-    VulkanMemoryAllocator physicalDevice(dependencies.physicalDevice, dependencies.device.handle);
-    return std::make_pair(std::move(physicalDevice), std::move(dependencies));
-}
-
-TEST_F(VulkanMemoryAllocatorTest, HeapsPresent)
-{
-    const auto& [allocator, deps] = createMemoryAllocator();
-    ASSERT_NE(allocator.getDeviceBufferHeap(), nullptr);
-    ASSERT_NE(allocator.getDeviceImageHeap(), nullptr);
-    ASSERT_NE(allocator.getStagingBufferHeap(), nullptr);
+    VulkanMemoryAllocator memoryAllocator(dependencies.physicalDevice, dependencies.device);
+    return std::make_pair(std::move(memoryAllocator), std::move(dependencies));
 }
 
 TEST_F(VulkanMemoryAllocatorTest, EmptyMemoryUsage)

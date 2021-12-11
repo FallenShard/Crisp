@@ -1,13 +1,10 @@
-#include "VulkanBuffer.hpp"
-
-#include <iostream>
-
-#include "VulkanDevice.hpp"
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp
 {
-    VulkanBuffer::VulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps)
-        : VulkanResource(device)
+    VulkanBuffer::VulkanBuffer(VulkanDevice* device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
+        : VulkanResource(device->getResourceDeallocator())
         , m_size(size)
     {
         // Create a buffer handle
@@ -15,21 +12,18 @@ namespace crisp
         bufferInfo.size        = size;
         bufferInfo.usage       = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vkCreateBuffer(m_device->getHandle(), &bufferInfo, nullptr, &m_handle);
+        m_handle = device->createBuffer(bufferInfo);
 
-        // Assign the buffer to a suitable memory heap by giving it a free chunk
+        // Allocate the required memory
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(m_device->getHandle(), m_handle, &memRequirements);
-
-        auto heap = m_device->getMemoryAllocator()->getHeapFromMemProps(memProps, memRequirements.memoryTypeBits);
-        m_memoryChunk = heap->allocate(memRequirements.size, memRequirements.alignment);
-
-        vkBindBufferMemory(m_device->getHandle(), m_handle, m_memoryChunk.getMemory(), m_memoryChunk.offset);
+        vkGetBufferMemoryRequirements(device->getHandle(), m_handle, &memRequirements);
+        m_allocation = device->getMemoryAllocator().allocate(memProps, memRequirements).unwrap();
+        vkBindBufferMemory(device->getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
     }
 
     VulkanBuffer::~VulkanBuffer()
     {
-        m_device->deferMemoryDeallocation(m_framesToLive, m_memoryChunk);
+        m_deallocator->deferMemoryDeallocation(m_framesToLive, m_allocation);
     }
 
     VkDeviceSize VulkanBuffer::getSize() const
@@ -37,30 +31,36 @@ namespace crisp
         return m_size;
     }
 
-    void VulkanBuffer::updateFromHost(const void* srcData, VkDeviceSize size, VkDeviceSize offset)
-    {
-        memcpy(m_memoryChunk.getMappedPtr() + offset, srcData, static_cast<size_t>(size));
-        m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset + offset, size);
-    }
-
-    void VulkanBuffer::updateFromHost(const void* srcData)
-    {
-        memcpy(m_memoryChunk.getMappedPtr(), srcData, m_size);
-        m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset, VK_WHOLE_SIZE);
-    }
-
-    void VulkanBuffer::updateFromStaging(const VulkanBuffer& srcBuffer)
-    {
-        memcpy(m_memoryChunk.getMappedPtr(), srcBuffer.m_memoryChunk.getMappedPtr(), srcBuffer.m_memoryChunk.size);
-        m_device->invalidateMappedRange(m_memoryChunk.getMemory(), m_memoryChunk.offset, m_memoryChunk.size);
-    }
-
-    void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size)
+    void VulkanBuffer::copyFrom(const VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, const VkDeviceSize srcOffset, const VkDeviceSize dstOffset, const VkDeviceSize size)
     {
         VkBufferCopy copyRegion = {};
         copyRegion.srcOffset = srcOffset;
         copyRegion.dstOffset = dstOffset;
         copyRegion.size      = size;
         vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
+    }
+
+    StagingVulkanBuffer::StagingVulkanBuffer(VulkanDevice* device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
+        : VulkanBuffer(device, size, usageFlags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memProps | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+        , m_device(device)
+    {
+    }
+
+    void StagingVulkanBuffer::updateFromHost(const void* srcData, const VkDeviceSize size, const VkDeviceSize offset)
+    {
+        memcpy(m_allocation.getMappedPtr() + offset, srcData, static_cast<size_t>(size));
+        m_device->invalidateMappedRange(m_allocation.getMemory(), m_allocation.offset + offset, size);
+    }
+
+    void StagingVulkanBuffer::updateFromHost(const void* srcData)
+    {
+        memcpy(m_allocation.getMappedPtr(), srcData, m_size);
+        m_device->invalidateMappedRange(m_allocation.getMemory(), m_allocation.offset, VK_WHOLE_SIZE);
+    }
+
+    void StagingVulkanBuffer::updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer)
+    {
+        memcpy(m_allocation.getMappedPtr(), stagingVulkanBuffer.m_allocation.getMappedPtr(), stagingVulkanBuffer.m_allocation.size);
+        m_device->invalidateMappedRange(m_allocation.getMemory(), m_allocation.offset, m_allocation.size);
     }
 }
