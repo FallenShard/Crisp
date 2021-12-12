@@ -1,11 +1,10 @@
-#include "VulkanPipelineLayout.hpp"
+#include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
-#include "VulkanDevice.hpp"
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-
 #include <Crisp/Renderer/DescriptorSetAllocator.hpp>
-#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp
 {
@@ -25,10 +24,10 @@ namespace crisp
         }
     }
 
-    VulkanPipelineLayout::VulkanPipelineLayout(VulkanDevice* device, std::vector<VkDescriptorSetLayout>&& setLayouts,
+    VulkanPipelineLayout::VulkanPipelineLayout(const VulkanDevice& device, std::vector<VkDescriptorSetLayout>&& setLayouts,
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants,
         std::vector<bool> descriptorSetBufferedStatus, std::unique_ptr<DescriptorSetAllocator> setAllocator)
-        : VulkanResource(createHandle(device->getHandle(), setLayouts, pushConstants), device->getResourceDeallocator())
+        : VulkanResource(createHandle(device.getHandle(), setLayouts, pushConstants), device.getResourceDeallocator())
         , m_descriptorSetLayouts(std::move(setLayouts))
         , m_descriptorSetBindings(std::move(setBindings))
         , m_pushConstants(std::move(pushConstants))
@@ -92,6 +91,6 @@ namespace crisp
             return numCopiesPerSet;
         };
 
-        return std::make_unique<DescriptorSetAllocator>(&device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
+        return std::make_unique<DescriptorSetAllocator>(device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
     }
 }

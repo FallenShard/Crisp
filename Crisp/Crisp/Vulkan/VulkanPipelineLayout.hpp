@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanResource.hpp>
+
 #include <vector>
 #include <memory>
-
-#include "VulkanResource.hpp"
 
 namespace crisp
 {
@@ -13,7 +13,7 @@ namespace crisp
     class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout, vkDestroyPipelineLayout>
     {
     public:
-        VulkanPipelineLayout(VulkanDevice* device, std::vector<VkDescriptorSetLayout>&& setLayouts,
+        VulkanPipelineLayout(const VulkanDevice& device, std::vector<VkDescriptorSetLayout>&& setLayouts,
             std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants,
             std::vector<bool> descriptorSetBufferedStatus, std::unique_ptr<DescriptorSetAllocator> setAllocator);
         virtual ~VulkanPipelineLayout();
@@ -48,7 +48,7 @@ namespace crisp
 
         inline bool isDescriptorSetBuffered(uint32_t setIndex) const
         {
-            return m_descriptorSetBufferedStatus[setIndex];
+            return m_descriptorSetBufferedStatus.at(setIndex);
         }
 
         inline std::size_t getDynamicBufferCount() const
@@ -78,8 +78,4 @@ namespace crisp
 
         std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
     };
-
-    //class PipelineLayoutBuilder;
-    //std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, VkDescriptorPool descriptorPool);
-    //std::unique_ptr<VulkanPipelineLayout> createPipelineLayout(VulkanDevice* device, PipelineLayoutBuilder& builder, std::vector<bool> setBuffered, VkDescriptorPool descriptorPool);
 }

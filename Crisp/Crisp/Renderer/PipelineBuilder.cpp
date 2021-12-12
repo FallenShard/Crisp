@@ -239,7 +239,7 @@ namespace crisp
         return *this;
     }
 
-    std::unique_ptr<VulkanPipeline> PipelineBuilder::create(VulkanDevice* device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex)
+    std::unique_ptr<VulkanPipeline> PipelineBuilder::create(const VulkanDevice& device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex)
     {
         VkGraphicsPipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         pipelineInfo.stageCount          = static_cast<uint32_t>(m_shaderStages.size());
@@ -260,7 +260,7 @@ namespace crisp
         pipelineInfo.basePipelineIndex   = -1;
 
         VkPipeline pipeline;
-        vkCreateGraphicsPipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+        vkCreateGraphicsPipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
         return std::make_unique<VulkanPipeline>(device, pipeline, std::move(pipelineLayout), createDynamicStateFlags());
     }
 

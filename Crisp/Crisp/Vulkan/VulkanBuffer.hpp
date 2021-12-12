@@ -2,6 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
+#include <Crisp/Vulkan/VulkanBufferView.hpp>
 
 namespace crisp
 {
@@ -15,13 +16,14 @@ namespace crisp
 
         VkDeviceSize getSize() const;
 
-       
+        void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer);
         void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size);
+
+        VulkanBufferView createView() const;
 
     protected:
         VulkanMemoryHeap::Allocation m_allocation;
         VkDeviceSize m_size;
-       
     };
 
     class StagingVulkanBuffer final : public VulkanBuffer
@@ -38,6 +40,12 @@ namespace crisp
         }
 
         void updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer);
+
+        template <typename T>
+        inline const T* getHostVisibleData() const
+        {
+            return reinterpret_cast<const T*>(m_allocation.getMappedPtr());
+        }
 
     private:
         VulkanDevice* m_device;

@@ -7,7 +7,6 @@
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
 #include <CrispCore/BitFlags.hpp>
-#include <CrispCore/Math/Headers.hpp>
 
 #include <filesystem>
 
@@ -28,7 +27,7 @@ namespace crisp
     class VulkanPipeline final : public VulkanResource<VkPipeline, vkDestroyPipeline>
     {
     public:
-        VulkanPipeline(VulkanDevice* device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags);
+        VulkanPipeline(const VulkanDevice& device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags);
 
         inline VulkanPipelineLayout* getPipelineLayout() const { return m_pipelineLayout.get(); }
 
@@ -69,8 +68,6 @@ namespace crisp
 
         void swapAll(VulkanPipeline& other);
 
-        VulkanDevice* getDevice() const { return m_device; }
-
     protected:
         template <typename T, typename ...Ts>
         inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
@@ -89,8 +86,5 @@ namespace crisp
         const uint32_t m_subpassIndex;
 
         VkPipelineBindPoint m_bindPoint;
-
-        VulkanDevice* m_device;
-
     };
 }

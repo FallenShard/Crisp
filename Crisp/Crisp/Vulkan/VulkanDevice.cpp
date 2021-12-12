@@ -16,9 +16,9 @@ namespace crisp
     VulkanDevice::VulkanDevice(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
         : m_handle(physicalDevice.createLogicalDevice(queueConfig))
         , m_physicalDevice(&physicalDevice)
-        , m_generalQueue(std::make_unique<VulkanQueue>(this, queueConfig.queueIdentifiers.at(0)))
-        , m_computeQueue(std::make_unique<VulkanQueue>(this, queueConfig.queueIdentifiers.at(1)))
-        , m_transferQueue(std::make_unique<VulkanQueue>(this, queueConfig.queueIdentifiers.at(2)))
+        , m_generalQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(0)))
+        , m_computeQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(1)))
+        , m_transferQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(2)))
         , m_memoryAllocator(std::make_unique<VulkanMemoryAllocator>(physicalDevice, m_handle))
         , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, virtualFrameCount))
     {

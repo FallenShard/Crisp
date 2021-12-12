@@ -1,17 +1,16 @@
-#include "VulkanImage.hpp"
+#include <Crisp/Vulkan/VulkanImage.hpp>
 
-#include <iostream>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
 
-#include "VulkanDevice.hpp"
-#include "VulkanBuffer.hpp"
-#include "VulkanImageView.hpp"
-
-#include <spdlog/spdlog.h>
+#include <CrispCore/Logger.hpp>
 
 namespace crisp
 {
-    namespace {
-        uint32_t id = 0;
+    namespace
+    {
+        auto logger = createLoggerMt("VulkanImage");
     }
 
     VulkanImage::VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
@@ -368,7 +367,7 @@ namespace crisp
             }
         }
 
-        spdlog::error("Unsupported layout transition: {} to {}!", oldLayout, newLayout);
+        logger->error("Unsupported layout transition: {} to {}!", oldLayout, newLayout);
         return { 0, 0 };
     }
 }

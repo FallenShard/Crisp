@@ -209,6 +209,7 @@ add_library(Crisp
     "Crisp/Vulkan/RayTracingMaterial.hpp"
     "Crisp/Vulkan/VulkanBuffer.cpp"
     "Crisp/Vulkan/VulkanBuffer.hpp"
+    "Crisp/Vulkan/VulkanBufferView.hpp"
     "Crisp/Vulkan/VulkanCommandBuffer.cpp"
     "Crisp/Vulkan/VulkanCommandBuffer.hpp"
     "Crisp/Vulkan/VulkanCommandPool.cpp"
@@ -255,7 +256,7 @@ add_library(Crisp
     "Crisp/Vulkan/VulkanSampler.hpp"
     "Crisp/Vulkan/VulkanSwapChain.cpp"
     "Crisp/Vulkan/VulkanSwapChain.hpp"   
-)
+ "Crisp/Vulkan/VulkanAccelerationStructure.cpp" "Crisp/Vulkan/VulkanAccelerationStructure.hpp")
 
 set_target_properties(Crisp PROPERTIES
     LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"

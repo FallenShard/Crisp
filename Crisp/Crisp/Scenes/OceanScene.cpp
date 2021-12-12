@@ -71,7 +71,7 @@ namespace crisp
 
         std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize, const PipelineLayoutBuilder& layoutBuilder, const std::string& shaderName)
         {
-            VulkanDevice* device = &renderer->getDevice();
+            VulkanDevice& device = renderer->getDevice();
             auto layout = layoutBuilder.create(device);
 
             std::vector<VkSpecializationMapEntry> specEntries =
@@ -95,7 +95,7 @@ namespace crisp
             pipelineInfo.basePipelineHandle        = VK_NULL_HANDLE;
             pipelineInfo.basePipelineIndex         = -1;
             VkPipeline pipeline;
-            vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+            vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
             auto uniqueHandle = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
             uniqueHandle->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);

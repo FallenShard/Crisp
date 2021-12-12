@@ -6,16 +6,21 @@ TEST(CommandLineParserTest, Basic)
 {
     const char* argLine = "Program123 width 443 path some_directive height=23";
 
+    int32_t width = 0;
+    int16_t height = 0;
+    std::string path = "";
+    std::string findAllEnemies = "not";
+
     crisp::CommandLineParser clp;
-    clp.addOption<int32_t>("width", 0);
-    clp.addOption<std::string>("path", "");
-    clp.addOption<int16_t>("height", 0);
-    clp.addOption<std::string>("find_all_enemies", "not");
+    clp.addOption("width", width);
+    clp.addOption("path", path);
+    clp.addOption("height", height);
+    clp.addOption("find_all_enemies", findAllEnemies);
 
-    clp.parse(argLine);
+    clp.parse(argLine).unwrap();
 
-    ASSERT_EQ(clp.get<int32_t>("width"), 443);
-    ASSERT_EQ(clp.get<int16_t>("height"), 23);
-    ASSERT_EQ(clp.get<std::string>("path"), "some_directive");
-    ASSERT_EQ(clp.get<std::string>("find_all_enemies"), "not");
+    ASSERT_EQ(width, 443);
+    ASSERT_EQ(height, 23);
+    ASSERT_EQ(path, "some_directive");
+    ASSERT_EQ(findAllEnemies, "not");
 }

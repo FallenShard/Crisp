@@ -1,13 +1,12 @@
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
+#include <CrispCore/Logger.hpp>
 
 namespace crisp
 {
     namespace
     {
-        auto logger = spdlog::stderr_color_mt("VulkanDebug");
+        auto logger = createLoggerMt("VulkanDebug");
 
         VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type, const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* /*userData*/)
         {

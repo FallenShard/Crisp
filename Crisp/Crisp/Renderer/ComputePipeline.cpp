@@ -25,7 +25,7 @@ namespace crisp
         if (pushConstantSize > 0)
             layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, static_cast<uint32_t>(pushConstantSize));
 
-        VulkanDevice* device = &renderer->getDevice();
+        VulkanDevice& device = renderer->getDevice();
 
         auto layout   = layoutBuilder.create(device);
 
@@ -50,7 +50,7 @@ namespace crisp
         pipelineInfo.basePipelineHandle        = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex         = -1;
         VkPipeline pipelineHandle;
-        vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineHandle);
+        vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineHandle);
         workGroupSizes[pipelineHandle] = workGroupSize;
 
         auto pipeline = std::make_unique<VulkanPipeline>(device, pipelineHandle, std::move(layout), PipelineDynamicStateFlags());
@@ -74,7 +74,7 @@ namespace crisp
                 { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT },
             });
 
-        VulkanDevice* device = &renderer->getDevice();
+        VulkanDevice& device = renderer->getDevice();
         auto layout = layoutBuilder.create(device);
 
         std::vector<VkSpecializationMapEntry> specEntries =
@@ -98,7 +98,7 @@ namespace crisp
         pipelineInfo.basePipelineHandle        = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex         = -1;
         VkPipeline pipeline;
-        vkCreateComputePipelines(device->getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+        vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
         workGroupSizes[pipeline] = workGroupSize;
 
         auto uniqueHandle = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());

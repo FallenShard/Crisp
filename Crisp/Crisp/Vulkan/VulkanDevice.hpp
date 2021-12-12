@@ -44,6 +44,20 @@ namespace crisp
 
         VulkanResourceDeallocator& getResourceDeallocator() const { return *m_resourceDeallocator; }
 
+        inline void wait(const VkFence fence) const
+        {
+            vkWaitForFences(m_handle, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+        }
+
+        template <size_t N>
+        void wait(const std::array<VkFence, N>& fences) const
+        {
+            if constexpr (N == 0)
+                return;
+
+            vkWaitForFences(m_handle, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, std::numeric_limits<uint64_t>::max());
+        }
+
     private:
         VkDevice m_handle;
         const VulkanPhysicalDevice* m_physicalDevice;

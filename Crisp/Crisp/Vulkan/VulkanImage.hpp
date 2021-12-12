@@ -1,10 +1,10 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #include <Crisp/Vulkan/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+
+#include <memory>
+#include <vector>
 
 namespace crisp
 {

@@ -1,4 +1,4 @@
-#include "VulkanImageView.hpp"
+#include <Crisp/vulkan/VulkanImageView.hpp>
 
 #include <Crisp/vulkan/VulkanImage.hpp>
 #include <Crisp/vulkan/VulkanDevice.hpp>
@@ -6,7 +6,7 @@
 
 namespace crisp
 {
-    VulkanImageView::VulkanImageView(VulkanDevice& device, const VulkanImage& image, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
+    VulkanImageView::VulkanImageView(const VulkanDevice& device, const VulkanImage& image, VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
         : VulkanResource(device.getResourceDeallocator())
         , m_image(image)
     {

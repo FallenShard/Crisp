@@ -1,10 +1,10 @@
-#include "VulkanFramebuffer.hpp"
+#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 
-#include "VulkanDevice.hpp"
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp
 {
-    VulkanFramebuffer::VulkanFramebuffer(VulkanDevice& device, VkRenderPass renderPass, VkExtent2D extent, const std::vector<VkImageView>& attachments, uint32_t layers, VkFramebufferCreateFlags flags)
+    VulkanFramebuffer::VulkanFramebuffer(const VulkanDevice& device, VkRenderPass renderPass, VkExtent2D extent, const std::vector<VkImageView>& attachments, uint32_t layers, VkFramebufferCreateFlags flags)
         : VulkanResource(device.getResourceDeallocator())
         , m_attachments(attachments)
     {
@@ -19,5 +19,3 @@ namespace crisp
         vkCreateFramebuffer(device.getHandle(), &createInfo, nullptr, &m_handle);
     }
 }
-
-

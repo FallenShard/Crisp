@@ -3,7 +3,7 @@
 
 namespace crisp
 {
-    void CommandLineParser::parse(int argc, char** argv)
+    Result<> CommandLineParser::parse(int argc, char** argv)
     {
         const std::span<char*> args(argv, static_cast<size_t>(argc));
 
@@ -14,16 +14,15 @@ namespace crisp
             commandLineArgs.emplace_back(arg);
         }
 
-        parse(commandLineArgs);
+        return parse(commandLineArgs);
     }
 
-    void CommandLineParser::parse(const std::string_view commandLine)
+    Result<> CommandLineParser::parse(const std::string_view commandLine)
     {
-        const std::vector<std::string_view> tokens = tokenizeIntoViews(commandLine, " ");
-        parse(tokens);
+        return parse(tokenizeIntoViews(commandLine, " "));
     }
 
-    void CommandLineParser::parse(const std::vector<std::string_view>& tokens)
+    Result<> CommandLineParser::parse(const std::vector<std::string_view>& tokens)
     {
         std::size_t i = 1;
         while (i < tokens.size())
@@ -35,8 +34,10 @@ namespace crisp
                 const auto iter = m_argMap.find(std::string(name));
                 if (iter != m_argMap.end())
                 {
-                    iter->second.value = iter->second.parser(tokens[i].substr(pos + 1));
+                    iter->second.parser(tokens[i].substr(pos + 1));
+                    iter->second.parsed = true;
                 }
+                    
 
                 ++i;
             }
@@ -50,11 +51,18 @@ namespace crisp
                 const auto iter = m_argMap.find(std::string(tokens[i]));
                 if (iter != m_argMap.end())
                 {
-                    iter->second.value = iter->second.parser(tokens[i + 1]);
+                    iter->second.parser(tokens[i + 1]);
+                    iter->second.parsed = true;
                 }
 
                 i += 2;
             }
         }
+
+        for (const auto& arg : m_argMap)
+            if (arg.second.required && !arg.second.parsed)
+                return resultError("Missing argument: {}", arg.second.name);
+
+        return {};
     }
 }  // namespace crisp

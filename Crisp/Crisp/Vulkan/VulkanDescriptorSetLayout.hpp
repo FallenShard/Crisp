@@ -1,8 +1,6 @@
 #pragma once
 
-#include <vector>
-
-#include "VulkanResource.hpp"
+#include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp
 {
@@ -11,7 +9,7 @@ namespace crisp
     class VulkanDescriptorSetLayout : public VulkanResource<VkDescriptorSetLayout, vkDestroyDescriptorSetLayout>
     {
     public:
-        VulkanDescriptorSetLayout(VulkanDevice* device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
+        VulkanDescriptorSetLayout(const VulkanDevice& device, const std::vector<VkDescriptorSetLayoutBinding>& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
 
         VkDescriptorType getDescriptorType(uint32_t bindingIndex) const;
 
@@ -21,6 +19,6 @@ namespace crisp
     private:
         std::vector<VkDescriptorSetLayoutBinding> m_descriptors;
 
-        VulkanDevice* m_device;
+        VkDevice m_deviceHandle;
     };
 }

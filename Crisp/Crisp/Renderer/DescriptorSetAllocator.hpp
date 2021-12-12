@@ -12,10 +12,12 @@ namespace crisp
     class DescriptorSetAllocator
     {
     public:
-        DescriptorSetAllocator(VulkanDevice* device, const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags = 0);
+        DescriptorSetAllocator(VulkanDevice& device, const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags = 0);
         ~DescriptorSetAllocator();
 
         VkDescriptorSet allocate(VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+
+        VulkanDevice& getDevice() const;
 
     private:
         struct DescriptorPool

@@ -23,10 +23,10 @@ namespace crisp
         PipelineLayoutBuilder& defineDescriptorSet(uint32_t set, bool isBuffered, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags = 0);
         PipelineLayoutBuilder& addPushConstant(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
 
-        std::vector<VkDescriptorSetLayout> createDescriptorSetLayouts(VkDevice device) const;
+        std::vector<VkDescriptorSetLayout> createDescriptorSetLayoutHandles(VkDevice device) const;
         VkPipelineLayout createHandle(VkDevice device, VkDescriptorSetLayout* setLayouts, uint32_t setLayoutCount);
-        std::unique_ptr<VulkanPipelineLayout> create(VulkanDevice* device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
-        std::unique_ptr<DescriptorSetAllocator> createMinimalDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
+        std::unique_ptr<VulkanPipelineLayout> create(VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
+        std::unique_ptr<DescriptorSetAllocator> createMinimalDescriptorSetAllocator(VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
 
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> getDescriptorSetLayoutBindings() const;
         std::vector<bool> getDescriptorSetBufferedStatuses() const;

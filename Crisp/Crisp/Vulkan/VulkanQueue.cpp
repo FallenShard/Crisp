@@ -5,34 +5,43 @@
 
 namespace crisp
 {
-    VulkanQueue::VulkanQueue(VulkanDevice* device, uint32_t familyIndex, uint32_t queueIndex)
-        : m_device(device)
+    VulkanQueue::VulkanQueue(const VulkanDevice& device, uint32_t familyIndex, uint32_t queueIndex)
+        : m_deviceHandle(device.getHandle())
         , m_familyIndex(familyIndex)
         , m_index(queueIndex)
+        , m_familyProperties(device.getPhysicalDevice().queryQueueFamilyProperties().at(familyIndex))
     {
         VkDeviceQueueInfo2 info = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2 };
         info.queueFamilyIndex = m_familyIndex;
         info.queueIndex = m_index;
-        vkGetDeviceQueue2(m_device->getHandle(), &info, &m_handle);
+        vkGetDeviceQueue2(m_deviceHandle, &info, &m_handle);
     }
 
-    VulkanQueue::VulkanQueue(VulkanDevice* device, QueueIdentifier queueId)
+    VulkanQueue::VulkanQueue(const VulkanDevice& device, QueueIdentifier queueId)
         : VulkanQueue(device, queueId.familyIndex, queueId.index)
     {
     }
 
-    VkResult VulkanQueue::submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer, VkFence fence) const
+    VkResult VulkanQueue::submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer, VkFence fence, VkPipelineStageFlags waitPipelineStage) const
     {
-        const VkPipelineStageFlags waitStage[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        const VkPipelineStageFlags waitStage[] = { waitPipelineStage };
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.waitSemaphoreCount   = 1;
-        submitInfo.pWaitSemaphores      = &waitSemaphore;
-        submitInfo.pWaitDstStageMask    = waitStage;
+        if (waitSemaphore != VK_NULL_HANDLE)
+        {
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = &waitSemaphore;
+            submitInfo.pWaitDstStageMask = waitStage;
+        }
+        if (signalSemaphore != VK_NULL_HANDLE)
+        {
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &signalSemaphore;
+        }
+            
         submitInfo.commandBufferCount   = 1;
         submitInfo.pCommandBuffers      = &commandBuffer;
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores    = &signalSemaphore;
+        
         return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
     }
 
@@ -56,11 +65,6 @@ namespace crisp
         return vkQueuePresentKHR(m_handle, &presentInfo);
     }
 
-    void VulkanQueue::wait(VkFence fence) const
-    {
-        vkWaitForFences(m_device->getHandle(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-    }
-
     void VulkanQueue::waitIdle() const
     {
         vkQueueWaitIdle(m_handle);
@@ -73,7 +77,7 @@ namespace crisp
         poolInfo.flags            = flags;
 
         VkCommandPool pool;
-        vkCreateCommandPool(m_device->getHandle(), &poolInfo, nullptr, &pool);
+        vkCreateCommandPool(m_deviceHandle, &poolInfo, nullptr, &pool);
         return pool;
     }
 
@@ -84,7 +88,6 @@ namespace crisp
 
     bool VulkanQueue::supportsOperations(VkQueueFlags queueFlags) const
     {
-        const auto properties = m_device->getPhysicalDevice().queryQueueFamilyProperties();
-        return properties.at(m_familyIndex).queueFlags & queueFlags;
+        return m_familyProperties.queueFlags & queueFlags;
     }
 }

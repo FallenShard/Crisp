@@ -120,14 +120,14 @@ namespace crisp
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("leftSphere"), glm::mat4(1.0f));
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("rightSphere"), glm::mat4(1.0f));
 
-        /*std::default_random_engine eng;
+        std::default_random_engine eng;
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
         std::vector<float> randData;
         for (int i = 0; i < 65536 / sizeof(float); ++i)
         {
             randData.push_back(dist(eng));
         }
-        auto randBuffer = m_resourceContext->createUniformBuffer("random", randData, BufferUpdatePolicy::Constant);*/
+        auto randBuffer = m_resourceContext->createUniformBuffer("random", randData, BufferUpdatePolicy::Constant);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
             {
@@ -144,7 +144,7 @@ namespace crisp
         m_rayTracingMaterial->updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("light"), 3);
         m_rayTracingMaterial->updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("leftSphere"), 4);
         m_rayTracingMaterial->updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("rightSphere"), 5);
-        m_rayTracingMaterial->setRandomBuffer(*m_resourceContext->getUniformBuffer("random"));
+        m_rayTracingMaterial->setRandomBuffer(*randBuffer);
 
         m_renderer->getDevice().flushDescriptorUpdates();
 
@@ -206,8 +206,8 @@ namespace crisp
         m_resourceContext->addGeometry("floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 10.0f)));
 
         m_resourceContext->addSampler("linearRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "hex-stones1-normal-dx.png", VK_FORMAT_R8G8B8A8_UNORM));
-        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "hex-stones1-albedo.png", VK_FORMAT_R8G8B8A8_SRGB));
+        m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "path.jpg", VK_FORMAT_R8G8B8A8_UNORM));
+        m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "uv_rainbow.jpg", VK_FORMAT_R8G8B8A8_SRGB));
 
         VulkanPipeline* pipeline = m_resourceContext->createPipeline("normalMap", "NormalMap.lua", m_renderGraph->getRenderPass(MainPass), 0);
         Material* material = m_resourceContext->createMaterial("normalMap", pipeline);

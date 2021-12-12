@@ -115,7 +115,7 @@ namespace crisp
 
         PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
 
-        std::unique_ptr<VulkanPipeline> create(VulkanDevice* device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
+        std::unique_ptr<VulkanPipeline> create(const VulkanDevice& device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
         PipelineDynamicStateFlags createDynamicStateFlags() const;
 
     private:

@@ -55,7 +55,7 @@ namespace crisp
         : m_renderer(renderer)
         , m_application(app)
     {
-        m_defaultSceneIndex = ApplicationEnvironment::getArgument<uint32_t>("scene");
+        m_defaultSceneIndex = ApplicationEnvironment::getDefaultSceneIdx();
     }
 
     SceneContainer::~SceneContainer()

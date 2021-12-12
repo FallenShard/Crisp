@@ -31,6 +31,15 @@ namespace crisp
         return m_size;
     }
 
+    void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer)
+    {
+        VkBufferCopy copyRegion = {};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = m_size;
+        vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
+    }
+
     void VulkanBuffer::copyFrom(const VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, const VkDeviceSize srcOffset, const VkDeviceSize dstOffset, const VkDeviceSize size)
     {
         VkBufferCopy copyRegion = {};
@@ -38,6 +47,11 @@ namespace crisp
         copyRegion.dstOffset = dstOffset;
         copyRegion.size      = size;
         vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
+    }
+
+    VulkanBufferView VulkanBuffer::createView() const
+    {
+        return { m_handle, 0, m_size };
     }
 
     StagingVulkanBuffer::StagingVulkanBuffer(VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)

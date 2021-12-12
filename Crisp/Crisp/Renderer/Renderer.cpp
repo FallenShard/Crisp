@@ -40,8 +40,10 @@ namespace crisp
         recompileShaderDir(ApplicationEnvironment::getShaderSourcesPath(), m_resourcesPath / "Shaders");
 
         // Create fundamental objects for the API
+        std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
+        deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
         m_context           = std::make_unique<VulkanContext>(surfCreatorCallback, ApplicationEnvironment::getRequiredVulkanExtensions(), true);
-        m_physicalDevice    = std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap());
+        m_physicalDevice    = std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());
         m_device            = std::make_unique<VulkanDevice>(*m_physicalDevice, createDefaultQueueConfiguration(*m_context, *m_physicalDevice), RendererConfig::VirtualFrameCount);
         m_swapChain         = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
         m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
@@ -240,7 +242,7 @@ namespace crisp
 
         VkFence tempFence = m_device->createFence(0);
         generalQueue.submit(commandBuffer, tempFence);
-        generalQueue.wait(tempFence);
+        m_device->wait(tempFence);
 
         if (waitOnAllQueues)
             finish();

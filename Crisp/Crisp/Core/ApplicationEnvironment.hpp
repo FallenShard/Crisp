@@ -22,17 +22,13 @@ namespace crisp
         // Returns the names of the extensions that are required to successfully open a Vulkan window on this platform
         static std::vector<std::string> getRequiredVulkanExtensions();
 
-        // Returns the command line argument with the given name
-        template <typename T>
-        static T getArgument(const std::string_view name)
-        {
-            return CommandLineParser.get<T>(name);
-        }
+
+        static uint32_t getDefaultSceneIdx();
 
     private:
         static std::filesystem::path ResourcesPath;
         static std::filesystem::path ShaderSourcesPath;
 
-        static CommandLineParser CommandLineParser;
+        static uint32_t DefaultSceneIdx;
     };
 }

@@ -2,10 +2,12 @@
 
 #include <CrispCore/StringUtils.hpp>
 #include <CrispCore/RobinHood.hpp>
+#include <CrispCore/Result.hpp>
 
 #include <any>
 #include <charconv>
 #include <functional>
+#include <filesystem>
 
 namespace crisp
 {
@@ -15,27 +17,26 @@ namespace crisp
         struct Argument
         {
             std::string name;
-            std::any value;
-            std::function<std::any(const std::string_view)> parser;
+            std::function<void(const std::string_view)> parser;
+            bool required;
+            bool parsed;
         };
 
         template <typename T>
-        void addOption(const std::string_view name, const T defaultValue)
+        void addOption(const std::string_view name, T& variable, bool isRequired = false)
         {
             const std::string nameStr(name);
-            m_argMap.emplace(nameStr, Argument{ nameStr, defaultValue });
+            m_argMap.emplace(nameStr, Argument{ nameStr, nullptr, isRequired });
             if constexpr (std::is_arithmetic_v<T>)
             {
-                m_argMap.at(nameStr).parser = [](const std::string_view input) {
-                    T v;
-                    std::from_chars(input.data(), input.data() + input.size(), v);
-                    return v;
+                m_argMap.at(nameStr).parser = [&variable](const std::string_view input) {
+                    std::from_chars(input.data(), input.data() + input.size(), variable);
                 };
             }
-            else if constexpr (std::is_same_v<T, std::string>)
+            else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::filesystem::path>)
             {
-                m_argMap.at(nameStr).parser = [](const std::string_view input) {
-                    return std::string(input);
+                m_argMap.at(nameStr).parser = [&variable](const std::string_view input) {
+                    variable = T(input);
                 };
             }
             else
@@ -44,18 +45,11 @@ namespace crisp
             }
         }
 
-        void parse(int argc, char** argv);
-        void parse(const std::string_view commandLine);
-        void parse(const std::vector<std::string_view>& tokens);
-
-        template <typename T>
-        T get(const std::string_view name) const
-        {
-            return std::any_cast<T>(m_argMap.at(std::string(name)).value);
-        }
+        [[nodiscard]] Result<> parse(int argc, char** argv);
+        [[nodiscard]] Result<> parse(const std::string_view commandLine);
+        [[nodiscard]] Result<> parse(const std::vector<std::string_view>& tokens);
 
     private:
-        robin_hood::unordered_map<std::string, Argument> m_argMap{};
-
+        robin_hood::unordered_flat_map<std::string, Argument> m_argMap{};
     };
 } // namespace crisp

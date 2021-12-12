@@ -1,15 +1,15 @@
-#include "VulkanSampler.hpp"
+#include <Crisp/Vulkan/VulkanSampler.hpp>
 
-#include "VulkanDevice.hpp"
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp
 {
-    VulkanSampler::VulkanSampler(VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
+    VulkanSampler::VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
         : VulkanSampler(device, minFilter, magFilter, addressMode, 1.0f, 0.0f)
     {
     }
 
-    VulkanSampler::VulkanSampler(VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod)
+    VulkanSampler::VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod)
         : VulkanResource(device.getResourceDeallocator())
     {
         VkSamplerCreateInfo samplerInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };

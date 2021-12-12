@@ -42,8 +42,8 @@ namespace crisp
     }
 
 
-    DescriptorSetAllocator::DescriptorSetAllocator(VulkanDevice* device, const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags)
-        : m_device(device)
+    DescriptorSetAllocator::DescriptorSetAllocator(VulkanDevice& device, const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags)
+        : m_device(&device)
     {
         auto pool = std::make_unique<DescriptorPool>();
         pool->currentAllocations = 0;
@@ -93,6 +93,11 @@ namespace crisp
         m_descriptorPools.push_back(std::move(pool));
 
         return m_descriptorPools.back()->allocate(m_device->getHandle(), setLayout, setBindings);
+    }
+
+    VulkanDevice& DescriptorSetAllocator::getDevice() const
+    {
+        return *m_device;
     }
 
     bool DescriptorSetAllocator::DescriptorPool::canAllocateSet(const std::vector<VkDescriptorSetLayoutBinding>& setBindings) const

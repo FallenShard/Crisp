@@ -23,7 +23,7 @@ namespace crisp
 
     std::filesystem::path ApplicationEnvironment::ResourcesPath;
     std::filesystem::path ApplicationEnvironment::ShaderSourcesPath;
-    CommandLineParser ApplicationEnvironment::CommandLineParser;
+    uint32_t ApplicationEnvironment::DefaultSceneIdx{ 4 };
 
     ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
     {
@@ -31,9 +31,11 @@ namespace crisp
         spdlog::set_level(spdlog::level::debug);
         spdlog::info("Current path: {}", std::filesystem::current_path().string());
 
-        CommandLineParser.addOption<std::string>("config", ".");
-        CommandLineParser.addOption<uint32_t>("scene", 4);
-        CommandLineParser.parse(argc, argv);
+        std::filesystem::path configPath{};
+        CommandLineParser cmdLineParser{};
+        cmdLineParser.addOption("config", configPath, true);
+        cmdLineParser.addOption("scene", DefaultSceneIdx);
+        cmdLineParser.parse(argc, argv).unwrap();
 
         ChromeProfiler::setThreadName("Main Thread");
 
@@ -46,7 +48,7 @@ namespace crisp
         }
 
         LuaConfig lua;
-        lua.openFile(CommandLineParser.get<std::string>("config"));
+        lua.openFile(configPath);
         ResourcesPath = lua.get<std::string>("resourcesPath").value();
         ShaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
     }
@@ -78,5 +80,10 @@ namespace crisp
             extensions.push_back(glfwExtensions[i]);
 
         return extensions;
+    }
+
+    uint32_t ApplicationEnvironment::getDefaultSceneIdx()
+    {
+        return DefaultSceneIdx;
     }
 }

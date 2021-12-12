@@ -46,7 +46,7 @@ namespace crisp
         return *this;
     }
 
-    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayouts(VkDevice device) const
+    std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayoutHandles(VkDevice device) const
     {
         std::vector<VkDescriptorSetLayout> setLayouts(m_setLayoutBindings.size(), VK_NULL_HANDLE);
         for (uint32_t i = 0; i < setLayouts.size(); i++)
@@ -74,14 +74,14 @@ namespace crisp
         return layout;
     }
 
-    std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
+    std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
     {
-        return std::make_unique<VulkanPipelineLayout>(device, createDescriptorSetLayouts(device->getHandle()),
+        return std::make_unique<VulkanPipelineLayout>(device, createDescriptorSetLayoutHandles(device.getHandle()),
             getDescriptorSetLayoutBindings(), getPushConstantRanges(), getDescriptorSetBufferedStatuses(),
             createMinimalDescriptorSetAllocator(device, numCopies, flags));
     }
 
-    std::unique_ptr<DescriptorSetAllocator> PipelineLayoutBuilder::createMinimalDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
+    std::unique_ptr<DescriptorSetAllocator> PipelineLayoutBuilder::createMinimalDescriptorSetAllocator(VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
     {
         return std::make_unique<DescriptorSetAllocator>(device, m_setLayoutBindings, getNumCopiesPerSet(numCopies), flags);
     }

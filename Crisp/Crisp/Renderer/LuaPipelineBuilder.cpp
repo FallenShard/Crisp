@@ -58,7 +58,7 @@ namespace crisp
         for (const auto& [setId, descId] : dynamicDescriptors)
             layoutBuilder.setDescriptorDynamic(setId, descId, true);
 
-        auto pipeline = m_builder.create(&renderer->getDevice(), layoutBuilder.create(&renderer->getDevice()), renderPass.getHandle(), subpassIndex);
+        auto pipeline = m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()), renderPass.getHandle(), subpassIndex);
         pipeline->setTag(m_configName);
         return std::move(pipeline);
     }

@@ -107,7 +107,7 @@ namespace crisp
 	template <typename ...Args>
 	detail::Unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args)
 	{
-		spdlog::critical("File: {}\n[Function: {}][{}, {}]", formatString.loc.file_name(), formatString.loc.function_name(), formatString.loc.line(), formatString.loc.column());
+		spdlog::critical("File: {}\n[Function: {}][Line {}, Column {}]", formatString.loc.file_name(), formatString.loc.function_name(), formatString.loc.line(), formatString.loc.column());
 		return detail::Unexpected<std::string>(fmt::format(formatString.str, std::forward<Args>(args)...));
 	}
 }

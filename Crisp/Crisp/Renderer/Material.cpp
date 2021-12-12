@@ -15,6 +15,7 @@ namespace crisp
 
     Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator)
         : m_pipeline(pipeline)
+        , m_device(&descriptorSetAllocator->getDevice())
     {
         std::size_t setCount = m_pipeline->getPipelineLayout()->getDescriptorSetLayoutCount();
 
@@ -59,7 +60,7 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageInfo);
+            m_device->postDescriptorWrite(std::move(write), imageInfo);
         }
     }
 
@@ -79,7 +80,7 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType  = m_pipeline->getDescriptorType(setId, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), renderPass.getRenderTargetView(renderTargetIndex, i).getDescriptorInfo(sampler));
+            m_device->postDescriptorWrite(std::move(write), renderPass.getRenderTargetView(renderTargetIndex, i).getDescriptorInfo(sampler));
         }
     }
 
@@ -94,7 +95,7 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
+            m_device->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
         }
     }
 
@@ -109,7 +110,7 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
+            m_device->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
         }
     }
 
@@ -121,7 +122,7 @@ namespace crisp
         write.dstArrayElement = 0;
         write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
         write.descriptorCount = 1;
-        m_pipeline->getDevice()->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
+        m_device->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
     }
 
     void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo)
@@ -135,7 +136,7 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType  = m_pipeline->getDescriptorType(setIndex, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), bufferInfo);
+            m_device->postDescriptorWrite(std::move(write), bufferInfo);
         }
     }
 
@@ -150,7 +151,7 @@ namespace crisp
             write.dstArrayElement = 0;
             write.descriptorType  = m_pipeline->getDescriptorType(setId, binding);
             write.descriptorCount = 1;
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), uniformBuffer.getDescriptorInfo());
+            m_device->postDescriptorWrite(std::move(write), uniformBuffer.getDescriptorInfo());
         }
 
         if (auto bufferIndex = m_pipeline->getPipelineLayout()->getDynamicBufferIndex(setId, binding); bufferIndex != -1)
@@ -174,7 +175,7 @@ namespace crisp
             for (int j = 0; j < elementCount; ++j)
                 infos.emplace_back(uniformBuffer.getDescriptorInfo(elementSize * j, elementSize));
 
-            m_pipeline->getDevice()->postDescriptorWrite(std::move(write), std::move(infos));
+            m_device->postDescriptorWrite(std::move(write), std::move(infos));
         }
     }
 

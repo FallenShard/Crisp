@@ -253,9 +253,9 @@ namespace crisp
 
     void RayTracingMaterial::createPipeline(Renderer* renderer)
     {
-        VkShaderModule raygenSM = renderer->loadShaderModule("raytrace-rgen");
-        VkShaderModule missSM   = renderer->loadShaderModule("raytrace-rmiss");
-        VkShaderModule rchitSM  = renderer->loadShaderModule("raytrace-rchit");
+        VkShaderModule raygenSM = renderer->loadShaderModule("raytrace.rgen");
+        VkShaderModule missSM   = renderer->loadShaderModule("raytrace.rmiss");
+        VkShaderModule rchitSM  = renderer->loadShaderModule("raytrace.rchit");
 
         std::vector<VkPipelineShaderStageCreateInfo>     stages;
         std::vector<VkRayTracingShaderGroupCreateInfoNV> groups;

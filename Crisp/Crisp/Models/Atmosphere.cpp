@@ -25,7 +25,7 @@ namespace crisp
                                  });
 
         VulkanDevice& device = renderer.getDevice();
-        auto layout = layoutBuilder.create(&device);
+        auto layout = layoutBuilder.create(device);
 
         std::vector<VkSpecializationMapEntry> specEntries =
             {
@@ -49,7 +49,7 @@ namespace crisp
         VkPipeline pipeline;
         vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
-        auto uniqueHandle = std::make_unique<VulkanPipeline>(&device, pipeline, std::move(layout), PipelineDynamicStateFlags());
+        auto uniqueHandle = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
         uniqueHandle->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
         return uniqueHandle;
     }

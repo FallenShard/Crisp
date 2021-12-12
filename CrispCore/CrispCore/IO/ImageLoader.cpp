@@ -51,7 +51,7 @@ namespace crisp
 
         if (!dataPtr)
         {
-            return resultError("Failed to load image from{}. STB error: ", filePathString, stbi_failure_reason());
+            return resultError("Failed to load image from {}. STB error: ", filePathString, stbi_failure_reason());
         }
 
         const uint32_t imageWidth = static_cast<uint32_t>(width);
