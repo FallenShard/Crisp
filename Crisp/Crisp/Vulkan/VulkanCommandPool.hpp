@@ -12,6 +12,6 @@ namespace crisp
     public:
         VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator);
 
-        VkCommandBuffer allocateCommandBuffer(const VulkanDevice* device, VkCommandBufferLevel cmdBufferLevel) const;
+        VkCommandBuffer allocateCommandBuffer(const VulkanDevice& device, VkCommandBufferLevel cmdBufferLevel) const;
     };
 }

@@ -10,11 +10,10 @@ namespace crisp
     {
         // Buffer will be used as a vertex source and transferred to from staging memory
         auto usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        auto device     = m_renderer->getDevice();
 
         if (m_updatePolicy == BufferUpdatePolicy::Constant)
         {
-            m_buffer = std::make_unique<VulkanBuffer>(device, size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            m_buffer = std::make_unique<VulkanBuffer>(m_renderer->getDevice(), size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
             if (data != nullptr)
             {
@@ -23,8 +22,8 @@ namespace crisp
         }
         else if (m_updatePolicy == BufferUpdatePolicy::PerFrame)
         {
-            m_buffer = std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, size);
+            m_buffer = std::make_unique<VulkanBuffer>(m_renderer->getDevice(), RendererConfig::VirtualFrameCount * size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(m_renderer->getDevice(), size);
         }
 
         m_singleRegionSize = size;

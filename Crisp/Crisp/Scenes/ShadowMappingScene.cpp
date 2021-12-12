@@ -316,7 +316,7 @@ namespace crisp
                 material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
             }
         }
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     RenderNode* ShadowMappingScene::createRenderNode(std::string id, int transformIndex)
@@ -671,7 +671,7 @@ namespace crisp
         floor->pass(MainPass).material = createPbrTexMaterial("MixedMoss");
         floor->pass(MainPass).setPushConstants(glm::vec2(100.0f));
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     void ShadowMappingScene::createBox()
@@ -764,7 +764,7 @@ namespace crisp
 
         Material* cubeMapMaterial = nullptr;// std::make_unique<Material>(cubeMapPipelines[0].get());
         cubeMapMaterial->writeDescriptor(0, 0, *equirectMapView, m_resourceContext->getSampler("linearRepeat"));
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         m_renderer->enqueueResourceUpdate([this, &cubeMapPipelines, &cubeMapPass, &cubeMapMaterial, viewportSize, cubeMapSize](VkCommandBuffer cmdBuffer)
         {
@@ -829,7 +829,7 @@ namespace crisp
 
         auto convMaterial = std::make_unique<Material>(convPipelines[0].get());
         convMaterial->writeDescriptor(0, 0, cubeMapView, m_resourceContext->getSampler("linearRepeat"));
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         m_renderer->enqueueResourceUpdate([this, &convPipelines, &convPass, &convMaterial](VkCommandBuffer cmdBuffer)
         {
@@ -892,7 +892,7 @@ namespace crisp
 
             std::shared_ptr filterMat = std::make_unique<Material>(filterPipelines[0].get());
             filterMat->writeDescriptor(0, 0, cubeMapView, m_resourceContext->getSampler("linearMipmap"));
-            m_renderer->getDevice()->flushDescriptorUpdates();
+            m_renderer->getDevice().flushDescriptorUpdates();
 
             m_renderer->enqueueResourceUpdate([this, &filterPipelines, prefilterPass, filterMat, i, w, h, roughness](VkCommandBuffer cmdBuffer)
             {

@@ -136,7 +136,7 @@ namespace crisp
 
        // m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass), *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         createGui(m_app->getForm());
     }
@@ -457,7 +457,7 @@ namespace crisp
             }
         }
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     void PbrScene::createPlane()
@@ -476,7 +476,7 @@ namespace crisp
         floor->pass(DepthPrePass).material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
         floor->pass(DepthPrePass).geometry = m_resourceContext->getGeometry("floorPosOnly");
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     void PbrScene::setupInput()

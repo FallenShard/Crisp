@@ -46,7 +46,7 @@ namespace crisp
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
         auto numLayers = 1;
 
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, 1, m_textureFormat,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(*m_device, extent, numLayers, 1, m_textureFormat,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -65,6 +65,6 @@ namespace crisp
         }
 
         m_framebuffers.resize(1);
-        m_framebuffers[0] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, renderTargetViewHandles);
+        m_framebuffers[0] = std::make_unique<VulkanFramebuffer>(*m_device, m_handle, m_renderArea, renderTargetViewHandles);
     }
 }

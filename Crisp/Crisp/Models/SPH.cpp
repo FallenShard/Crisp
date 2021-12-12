@@ -24,7 +24,7 @@ namespace crisp
 
     SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         : m_renderer(renderer)
-        , m_device(renderer->getDevice())
+        , m_device(&renderer->getDevice())
         , m_particleRadius(0.01f)
         , m_currentSection(0)
         , m_prevSection(0)
@@ -37,17 +37,17 @@ namespace crisp
         std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
 
         const VkDeviceSize vertexBufferSize = m_numParticles * sizeof(glm::vec4);
-        m_vertexBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
+        m_vertexBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, 0);
         m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, vertexBufferSize);
 
         auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
-        m_colorBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
+        m_colorBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_renderer->fillDeviceBuffer(m_colorBuffer.get(), colors.data(), vertexBufferSize, 0);
 
-        m_reorderedPositionBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
+        m_reorderedPositionBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         m_fluidSpaceMin = glm::vec3(0.0f);
@@ -58,26 +58,26 @@ namespace crisp
         m_gridParams.dim = glm::ivec3(glm::ceil((m_fluidSpaceMax - m_fluidSpaceMin) / m_gridParams.cellSize));
         m_gridParams.numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
 
-        m_cellCountBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_gridParams.numCells * sizeof(uint32_t),
+        m_cellCountBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_gridParams.numCells * sizeof(uint32_t),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_cellIdBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
+        m_cellIdBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_indexBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
+        m_indexBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         m_blockSumRegionSize = static_cast<uint32_t>(std::max(m_gridParams.numCells / ScanElementsPerBlock * sizeof(uint32_t), 32ull));
-        m_blockSumBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_blockSumRegionSize,
+        m_blockSumBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_blockSumRegionSize,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        m_densityBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
+        m_densityBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_pressureBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
+        m_pressureBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_velocityBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
+        m_velocityBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
         m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 0);
-        m_forcesBuffer = std::make_unique<VulkanBuffer>(m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
+        m_forcesBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         // Clear Hash Grid

@@ -171,7 +171,7 @@ namespace crisp
         blurVNode->pass("blurVPass").material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("blurHPass"), 0, m_resourceContext->getSampler("linearClamp"));
         blurVNode->pass("blurVPass").setPushConstantView(blurV);
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         createGui();
     }

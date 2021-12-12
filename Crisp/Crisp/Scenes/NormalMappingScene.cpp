@@ -90,7 +90,7 @@ namespace crisp
         createPlane();
 
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         createGui();
     }
@@ -227,7 +227,7 @@ namespace crisp
             }
         }
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     void NormalMappingScene::setupInput()

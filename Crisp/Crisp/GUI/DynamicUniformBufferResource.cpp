@@ -116,7 +116,7 @@ namespace crisp::gui
         descWrite.descriptorCount = 1;
         descWrite.pBufferInfo     = &transBufferInfo;
 
-        vkUpdateDescriptorSets(m_renderer->getDevice()->getHandle(), 1, &descWrite, 0, nullptr);
+        vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), 1, &descWrite, 0, nullptr);
         m_isSetUpdated[index] = true;
     }
 }

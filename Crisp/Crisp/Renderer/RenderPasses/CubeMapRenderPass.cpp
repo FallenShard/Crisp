@@ -37,7 +37,7 @@ namespace crisp
             .addColorAttachmentRef(5, 5, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(m_renderer->getDevice()->getHandle());
+            .create(m_renderer->getDevice().getHandle());
 
         m_finalLayouts.resize(6, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -59,7 +59,7 @@ namespace crisp
         auto mipmapCount = !m_allocateMipmaps ? 1 : Image::getMipLevels(extent.width, extent.height);
         auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
 
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, numLayers, mipmapCount, VK_FORMAT_R16G16B16A16_SFLOAT,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(*m_device, extent, numLayers, mipmapCount, VK_FORMAT_R16G16B16A16_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | additionalFlags, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)

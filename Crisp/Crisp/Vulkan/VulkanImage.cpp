@@ -14,10 +14,10 @@ namespace crisp
         uint32_t id = 0;
     }
 
-    VulkanImage::VulkanImage(VulkanDevice* device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
-        : VulkanResource(device->getResourceDeallocator())
+    VulkanImage::VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
+        : VulkanResource(device.getResourceDeallocator())
         , m_type(createInfo.imageType)
-        , m_device(device)
+        , m_device(&device)
         , m_format(createInfo.format)
         , m_extent(createInfo.extent)
         , m_mipLevels(createInfo.mipLevels)
@@ -25,19 +25,19 @@ namespace crisp
         , m_aspect(aspect)
         , m_layouts(m_numLayers, std::vector<VkImageLayout>(m_mipLevels, VK_IMAGE_LAYOUT_UNDEFINED))
     {
-        vkCreateImage(device->getHandle(), &createInfo, nullptr, &m_handle);
+        vkCreateImage(device.getHandle(), &createInfo, nullptr, &m_handle);
 
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(device->getHandle(), m_handle, &memRequirements);
-        m_allocation = device->getMemoryAllocator().getDeviceImageHeap().allocate(memRequirements.size, memRequirements.alignment).unwrap();
-        vkBindImageMemory(device->getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
+        vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
+        m_allocation = device.getMemoryAllocator().getDeviceImageHeap().allocate(memRequirements.size, memRequirements.alignment).unwrap();
+        vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
     }
 
-    VulkanImage::VulkanImage(VulkanDevice* device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
-        : VulkanResource(device->getResourceDeallocator())
+    VulkanImage::VulkanImage(VulkanDevice& device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
+        : VulkanResource(device.getResourceDeallocator())
         , m_type(extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D)
-        , m_device(device)
+        , m_device(&device)
         , m_format(format)
         , m_extent(extent)
         , m_numLayers(numLayers)
@@ -58,13 +58,13 @@ namespace crisp
         imageInfo.usage         = usage;
         imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        vkCreateImage(device->getHandle(), &imageInfo, nullptr, &m_handle);
+        vkCreateImage(device.getHandle(), &imageInfo, nullptr, &m_handle);
 
         // Assign the image to the proper memory heap
         VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(device->getHandle(), m_handle, &memRequirements);
-        m_allocation = device->getMemoryAllocator().getDeviceImageHeap().allocate(memRequirements.size, memRequirements.alignment).unwrap();
-        vkBindImageMemory(device->getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
+        vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
+        m_allocation = device.getMemoryAllocator().getDeviceImageHeap().allocate(memRequirements.size, memRequirements.alignment).unwrap();
+        vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
     }
 
     VulkanImage::~VulkanImage()
@@ -271,12 +271,12 @@ namespace crisp
 
     std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type) const
     {
-        return std::make_unique<VulkanImageView>(m_device, *this, type, 0, m_numLayers, 0, m_mipLevels);
+        return std::make_unique<VulkanImageView>(*m_device, *this, type, 0, m_numLayers, 0, m_mipLevels);
     }
 
     std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels) const
     {
-        return std::make_unique<VulkanImageView>(m_device, *this, type, baseLayer, numLayers, baseMipLevel, mipLevels);
+        return std::make_unique<VulkanImageView>(*m_device, *this, type, baseLayer, numLayers, baseMipLevel, mipLevels);
     }
 
     uint32_t VulkanImage::getMipLevels() const

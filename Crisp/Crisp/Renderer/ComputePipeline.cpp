@@ -25,9 +25,9 @@ namespace crisp
         if (pushConstantSize > 0)
             layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, static_cast<uint32_t>(pushConstantSize));
 
-        VulkanDevice* device = renderer->getDevice();
+        VulkanDevice* device = &renderer->getDevice();
 
-        auto layout   = layoutBuilder.create(renderer->getDevice());
+        auto layout   = layoutBuilder.create(device);
 
         std::vector<VkSpecializationMapEntry> specEntries =
         {
@@ -74,8 +74,8 @@ namespace crisp
                 { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT },
             });
 
-        VulkanDevice* device = renderer->getDevice();
-        auto layout = layoutBuilder.create(renderer->getDevice());
+        VulkanDevice* device = &renderer->getDevice();
+        auto layout = layoutBuilder.create(device);
 
         std::vector<VkSpecializationMapEntry> specEntries =
         {

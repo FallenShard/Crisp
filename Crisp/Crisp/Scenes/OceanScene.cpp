@@ -71,7 +71,7 @@ namespace crisp
 
         std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize, const PipelineLayoutBuilder& layoutBuilder, const std::string& shaderName)
         {
-            VulkanDevice* device = renderer->getDevice();
+            VulkanDevice* device = &renderer->getDevice();
             auto layout = layoutBuilder.create(device);
 
             std::vector<VkSpecializationMapEntry> specEntries =
@@ -145,7 +145,7 @@ namespace crisp
             return createComputePipeline(renderer, workGroupSize, layoutBuilder, shaderName);
         }
 
-        std::unique_ptr<VulkanImage> createStorageImage(VulkanDevice* device, uint32_t layerCount, uint32_t width, uint32_t height, VkFormat format)
+        std::unique_ptr<VulkanImage> createStorageImage(VulkanDevice& device, uint32_t layerCount, uint32_t width, uint32_t height, VkFormat format)
         {
             VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
             createInfo.flags         = 0;
@@ -356,7 +356,7 @@ namespace crisp
             }
         }
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         createGui(m_app->getForm());
     }

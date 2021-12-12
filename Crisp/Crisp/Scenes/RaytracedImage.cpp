@@ -16,7 +16,7 @@ namespace crisp
 {
     RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, VkFormat format, Renderer* renderer)
         : m_renderer(renderer)
-        , m_device(renderer->getDevice())
+        , m_device(&renderer->getDevice())
         , m_extent({ width, height, 1u })
         , m_numChannels(getNumChannels(format))
     {
@@ -28,10 +28,10 @@ namespace crisp
         auto byteSize = m_extent.width * m_extent.height * m_numChannels * sizeof(float);
 
         std::vector<float> data(m_extent.width * m_extent.height * m_numChannels, 0.01f);
-        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(m_device, byteSize);
+        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(*m_device, byteSize);
         m_stagingBuffer->updateFromHost(data.data(), byteSize, 0);
 
-        m_image = std::make_unique<VulkanImage>(m_device, m_extent, RendererConfig::VirtualFrameCount, 1, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
+        m_image = std::make_unique<VulkanImage>(*m_device, m_extent, RendererConfig::VirtualFrameCount, 1, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
         for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
         {
@@ -45,9 +45,9 @@ namespace crisp
         }
 
         // create sampler
-        m_sampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_sampler = std::make_unique<VulkanSampler>(*m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
-        m_pipeline = m_renderer->createPipelineFromLua("Tonemapping.lua", *m_renderer->getDefaultRenderPass(), 0);
+        m_pipeline = m_renderer->createPipelineFromLua("Tonemapping.lua", m_renderer->getDefaultRenderPass(), 0);
         m_material = std::make_unique<Material>(m_pipeline.get());
         for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler.get());

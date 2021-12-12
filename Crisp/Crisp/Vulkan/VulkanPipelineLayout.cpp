@@ -83,7 +83,7 @@ namespace crisp
         //std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
     }
 
-    std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(VulkanDevice* device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
+    std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags)
     {
         auto getNumCopiesPerSet = [this](uint32_t numCopies) {
             std::vector<uint32_t> numCopiesPerSet;
@@ -92,6 +92,6 @@ namespace crisp
             return numCopiesPerSet;
         };
 
-        return std::make_unique<DescriptorSetAllocator>(device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
+        return std::make_unique<DescriptorSetAllocator>(&device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies), flags);
     }
 }

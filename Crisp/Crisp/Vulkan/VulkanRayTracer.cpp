@@ -162,7 +162,7 @@ namespace crisp
         VkMemoryRequirements2 scratchBufferMemReq = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
         vkGetAccelerationStructureMemoryRequirements(m_device->getHandle(), &memReqInfo, &scratchBufferMemReq);
 
-        auto scratchBuffer = std::make_unique<VulkanBuffer>(m_device, scratchBufferMemReq.memoryRequirements.size, VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto scratchBuffer = std::make_unique<VulkanBuffer>(*m_device, scratchBufferMemReq.memoryRequirements.size, VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         vkCmdBuildAccelerationStructure(cmdBuffer, &blas.info, nullptr, 0, VK_FALSE, blas.handle, nullptr, scratchBuffer->getHandle(), 0);
     }
 
@@ -223,7 +223,7 @@ namespace crisp
         VkMemoryRequirements2 scratchBufferMemReq = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
         vkGetAccelerationStructureMemoryRequirements(m_device->getHandle(), &memReqInfo, &scratchBufferMemReq);
 
-        auto scratchBuffer = std::make_unique<VulkanBuffer>(m_device, scratchBufferMemReq.memoryRequirements.size, VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto scratchBuffer = std::make_unique<VulkanBuffer>(*m_device, scratchBufferMemReq.memoryRequirements.size, VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         std::vector<VkGeometryInstanceNV> instances;
         instances.reserve(m_blasList.size());
@@ -239,7 +239,7 @@ namespace crisp
             instances.push_back(instance);
         }
 
-        auto instanceBuffer = std::make_unique<VulkanBuffer>(m_device, sizeof(VkGeometryInstanceNV), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto instanceBuffer = std::make_unique<VulkanBuffer>(*m_device, sizeof(VkGeometryInstanceNV), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         vkCmdUpdateBuffer(cmdBuffer, instanceBuffer->getHandle(), 0, instances.size() * sizeof(VkGeometryInstanceNV), instances.data());
         vkDeviceWaitIdle(m_device->getHandle());
 
@@ -264,7 +264,7 @@ namespace crisp
         createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         createInfo.usage         = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        m_image = std::make_unique<VulkanImage>(m_device, createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+        m_image = std::make_unique<VulkanImage>(*m_device, createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
 
         for (uint32_t i = 0; i < layerCount; ++i)
             m_imageViews.emplace_back(m_image->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));

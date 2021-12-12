@@ -34,7 +34,7 @@ namespace crisp
 
         m_finalLayouts.push_back(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-        m_handle = builder.create(m_renderer->getDevice()->getHandle());
+        m_handle = builder.create(m_renderer->getDevice().getHandle());
 
         createResources();
     }

@@ -112,7 +112,7 @@ namespace crisp
         m_resourceContext->addGeometry("rightSphere", std::make_unique<Geometry>(m_renderer, rightSphere, posFormat, true, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
 
-        m_rayTracer = std::make_unique<VulkanRayTracer>(m_renderer->getDevice());
+        m_rayTracer = std::make_unique<VulkanRayTracer>(&m_renderer->getDevice());
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("walls"), glm::mat4(1.0f));
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("leftwall"), glm::mat4(1.0f));
         m_rayTracer->addTriangleGeometry(*m_resourceContext->getGeometry("rightwall"), glm::mat4(1.0f));
@@ -146,7 +146,7 @@ namespace crisp
         m_rayTracingMaterial->updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("rightSphere"), 5);
         m_rayTracingMaterial->setRandomBuffer(*m_resourceContext->getUniformBuffer("random"));
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         m_renderer->setSceneImageViews(m_rayTracer->getImageViews());
 
@@ -223,7 +223,7 @@ namespace crisp
 
 
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     void VulkanRayTracingScene::setupInput()

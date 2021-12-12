@@ -60,18 +60,18 @@ namespace crisp
 
         m_workers.resize(1);
         for (auto& w : m_workers)
-            w = std::make_unique<VulkanWorker>(m_device.get(), m_device->getGeneralQueue(), NumVirtualFrames);
+            w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
 
         // Creates a map of all shaders
         loadShaders(m_resourcesPath / "Shaders");
 
         // create vertex buffer
-        std::vector<glm::vec2> vertices = { { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f } };
-        std::vector<glm::uvec3> faces = { { 0, 2, 1 } };
+        const std::vector<glm::vec2> vertices = { { -1.0f, -1.0f }, { +3.0f, -1.0f }, { -1.0f, +3.0f } };
+        const std::vector<glm::uvec3> faces = { { 0, 2, 1 } };
         m_fullScreenGeometry = std::make_unique<Geometry>(this, vertices, faces);
 
-        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device.get(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-        m_scenePipeline = createPipelineFromLua("Tonemapping.lua", *getDefaultRenderPass(), 0);
+        m_linearClampSampler = std::make_unique<VulkanSampler>(*m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_scenePipeline = createPipelineFromLua("Tonemapping.lua", getDefaultRenderPass(), 0);
         m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
     }
 
@@ -100,9 +100,9 @@ namespace crisp
         return ApplicationEnvironment::getShaderSourcesPath() / (shaderName + ".glsl");
     }
 
-    VulkanContext* Renderer::getContext() const
+    VulkanContext& Renderer::getContext() const
     {
-        return m_context.get();
+        return *m_context;
     }
 
     const VulkanPhysicalDevice& Renderer::getPhysicalDevice() const
@@ -110,14 +110,14 @@ namespace crisp
         return *m_physicalDevice;
     }
 
-    VulkanDevice* Renderer::getDevice() const
+    VulkanDevice& Renderer::getDevice() const
     {
-        return m_device.get();
+        return *m_device;
     }
 
-    VulkanSwapChain* Renderer::getSwapChain() const
+    VulkanSwapChain& Renderer::getSwapChain() const
     {
-        return m_swapChain.get();
+        return *m_swapChain;
     }
 
     VkExtent2D Renderer::getSwapChainExtent() const
@@ -125,9 +125,9 @@ namespace crisp
         return m_swapChain->getExtent();
     }
 
-    DefaultRenderPass* Renderer::getDefaultRenderPass() const
+    DefaultRenderPass& Renderer::getDefaultRenderPass() const
     {
-        return m_defaultRenderPass.get();
+        return *m_defaultRenderPass;
     }
 
     VkViewport Renderer::getDefaultViewport() const
@@ -304,7 +304,7 @@ namespace crisp
 
     void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
     {
-        auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(m_device.get(), size);
+        auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(*m_device, size);
         stagingBuffer->updateFromHost(data);
         m_resourceUpdates.emplace_back([this, stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
         {

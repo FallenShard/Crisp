@@ -45,7 +45,7 @@ namespace crisp
         m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);
         updateRenderNode(*m_sampler, *m_cubeMapView);
 
-        renderer->getDevice()->flushDescriptorUpdates();
+        renderer->getDevice().flushDescriptorUpdates();
 
     }
 
@@ -57,7 +57,7 @@ namespace crisp
         m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);
         updateRenderNode(sampler, cubeMapView);
 
-        renderer->getDevice()->flushDescriptorUpdates();
+        renderer->getDevice().flushDescriptorUpdates();
     }
 
     Skybox::~Skybox()

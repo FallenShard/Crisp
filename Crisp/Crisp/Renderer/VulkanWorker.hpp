@@ -14,7 +14,7 @@ namespace crisp
     class VulkanWorker
     {
     public:
-        VulkanWorker(VulkanDevice* device, const VulkanQueue& queue, uint32_t virtualFrameCount);
+        VulkanWorker(VulkanDevice& device, const VulkanQueue& queue, uint32_t virtualFrameCount);
         ~VulkanWorker();
 
         inline VulkanCommandBuffer* getCmdBuffer(uint32_t virtualFrameIndex) const { return m_cmdBuffers[virtualFrameIndex].get(); }

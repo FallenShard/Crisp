@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include <Crisp/Vulkan/VulkanResource.hpp>
-
 namespace crisp
 {
     class VulkanDevice;

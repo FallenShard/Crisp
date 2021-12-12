@@ -12,7 +12,7 @@ namespace crisp
         , m_buffer(nullptr)
     {
         auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        auto device = m_renderer->getDevice();
+        auto& device = m_renderer->getDevice();
 
         if (m_updatePolicy == BufferUpdatePolicy::Constant)
         {
@@ -44,7 +44,7 @@ namespace crisp
         , m_buffer(nullptr)
     {
         auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        auto device = m_renderer->getDevice();
+        auto& device = m_renderer->getDevice();
 
         if (isShaderStorageBuffer)
         {
@@ -68,7 +68,7 @@ namespace crisp
         if (isShaderStorageBuffer)
             usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-        auto device = m_renderer->getDevice();
+        auto& device = m_renderer->getDevice();
 
         if (m_updatePolicy == BufferUpdatePolicy::Constant)
         {

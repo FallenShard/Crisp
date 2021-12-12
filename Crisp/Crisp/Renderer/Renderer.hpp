@@ -48,13 +48,13 @@ namespace crisp
         const std::filesystem::path& getResourcesPath() const;
         std::filesystem::path getShaderSourcePath(const std::string& shaderName) const;
 
-        VulkanContext*    getContext() const;
+        VulkanContext&    getContext() const;
         const VulkanPhysicalDevice& getPhysicalDevice() const;
-        VulkanDevice*     getDevice() const;
-        VulkanSwapChain*  getSwapChain() const;
+        VulkanDevice&     getDevice() const;
+        VulkanSwapChain&  getSwapChain() const;
         VkExtent2D        getSwapChainExtent() const;
 
-        DefaultRenderPass* getDefaultRenderPass() const;
+        DefaultRenderPass& getDefaultRenderPass() const;
         VkViewport         getDefaultViewport() const;
         VkRect2D           getDefaultScissor() const;
 

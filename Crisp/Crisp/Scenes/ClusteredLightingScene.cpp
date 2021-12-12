@@ -106,7 +106,7 @@ namespace crisp
         createPlane();
         createShaderball();
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         createGui(m_app->getForm());
     }
@@ -262,7 +262,7 @@ namespace crisp
         floor->pass(MainPass).material = m_resourceContext->getMaterial("pbrUnif");
         floor->pass(MainPass).setPushConstants(glm::vec2(100.0f));
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
     }
 
     void ClusteredLightingScene::setupInput()

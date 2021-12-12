@@ -3,8 +3,8 @@
 
 namespace crisp
 {
-    VulkanBuffer::VulkanBuffer(VulkanDevice* device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
-        : VulkanResource(device->getResourceDeallocator())
+    VulkanBuffer::VulkanBuffer(VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
+        : VulkanResource(device.getResourceDeallocator())
         , m_size(size)
     {
         // Create a buffer handle
@@ -12,13 +12,13 @@ namespace crisp
         bufferInfo.size        = size;
         bufferInfo.usage       = usageFlags;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        m_handle = device->createBuffer(bufferInfo);
+        m_handle = device.createBuffer(bufferInfo);
 
         // Allocate the required memory
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device->getHandle(), m_handle, &memRequirements);
-        m_allocation = device->getMemoryAllocator().allocate(memProps, memRequirements).unwrap();
-        vkBindBufferMemory(device->getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
+        vkGetBufferMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
+        m_allocation = device.getMemoryAllocator().allocate(memProps, memRequirements).unwrap();
+        vkBindBufferMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
     }
 
     VulkanBuffer::~VulkanBuffer()
@@ -40,9 +40,9 @@ namespace crisp
         vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
     }
 
-    StagingVulkanBuffer::StagingVulkanBuffer(VulkanDevice* device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
+    StagingVulkanBuffer::StagingVulkanBuffer(VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
         : VulkanBuffer(device, size, usageFlags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memProps | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-        , m_device(device)
+        , m_device(&device)
     {
     }
 

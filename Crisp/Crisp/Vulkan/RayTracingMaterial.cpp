@@ -26,9 +26,9 @@ namespace crisp
         uint32_t cameraParamSize = 0;
 
         template <typename T>
-        void getDeviceProc(T& procRef, VulkanDevice* device, const char* procName)
+        void getDeviceProc(T& procRef, VulkanDevice& device, const char* procName)
         {
-            procRef = reinterpret_cast<T>(vkGetDeviceProcAddr(device->getHandle(), procName));
+            procRef = reinterpret_cast<T>(vkGetDeviceProcAddr(device.getHandle(), procName));
         }
 
         PFN_vkCreateRayTracingPipelinesNV       vkCreateRayTracingPipelines;
@@ -38,7 +38,7 @@ namespace crisp
     RayTracingMaterial::RayTracingMaterial(Renderer* renderer, VkAccelerationStructureNV tlas, std::array<VkImageView, 2> writeImageViews, const UniformBuffer& cameraBuffer)
         : m_renderer(renderer)
     {
-        auto device = renderer->getDevice()->getHandle();
+        auto device = renderer->getDevice().getHandle();
 
         VkDescriptorSetLayoutBinding accelStructBinding = {};
         accelStructBinding.binding         = 0;
@@ -210,7 +210,7 @@ namespace crisp
         writeIndexBuffer.pBufferInfo     = &idxBufferInfo;
 
         VkWriteDescriptorSet writeSets[] = { writeVertexBuffer, writeIndexBuffer };
-        vkUpdateDescriptorSets(m_renderer->getDevice()->getHandle(), 2, writeSets, 0, nullptr);
+        vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), 2, writeSets, 0, nullptr);
     }
 
     void RayTracingMaterial::setRandomBuffer(const UniformBuffer& randBuffer)
@@ -228,7 +228,7 @@ namespace crisp
         writeIndexBuffer.pBufferInfo = &idxBufferInfo;
 
         VkWriteDescriptorSet writeSets[] = { writeIndexBuffer };
-        vkUpdateDescriptorSets(m_renderer->getDevice()->getHandle(), 1, writeSets, 0, nullptr);
+        vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), 1, writeSets, 0, nullptr);
     }
 
     VkExtent2D RayTracingMaterial::getExtent() const
@@ -308,6 +308,8 @@ namespace crisp
         // Pipeline Layout creation
         VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
+        VkDevice deviceHandle = renderer->getDevice().getHandle();
+
         VkPushConstantRange pcRange;
         pcRange.offset = 0;
         pcRange.size = sizeof(uint32_t);
@@ -316,7 +318,7 @@ namespace crisp
         pipelineLayoutCreateInfo.pPushConstantRanges = &pcRange;
         pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(m_setLayouts.size());
         pipelineLayoutCreateInfo.pSetLayouts    = m_setLayouts.data();
-        vkCreatePipelineLayout(renderer->getDevice()->getHandle(), &pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
+        vkCreatePipelineLayout(deviceHandle, &pipelineLayoutCreateInfo, nullptr, &m_pipelineLayout);
 
         GET_DEVICE_PROC_NV(vkCreateRayTracingPipelines, renderer->getDevice());
         VkRayTracingPipelineCreateInfoNV raytracingCreateInfo = { VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV };
@@ -326,7 +328,7 @@ namespace crisp
         raytracingCreateInfo.pGroups           = groups.data();
         raytracingCreateInfo.maxRecursionDepth = 1;
         raytracingCreateInfo.layout            = m_pipelineLayout;
-        vkCreateRayTracingPipelines(renderer->getDevice()->getHandle(), nullptr, 1, &raytracingCreateInfo, nullptr, &m_pipeline);
+        vkCreateRayTracingPipelines(deviceHandle, nullptr, 1, &raytracingCreateInfo, nullptr, &m_pipeline);
 
         GET_DEVICE_PROC_NV(vkGetRayTracingShaderGroupHandles, renderer->getDevice());
         uint32_t groupCount = static_cast<uint32_t>(groups.size());
@@ -334,15 +336,15 @@ namespace crisp
         VkDeviceSize shaderGroupBindingTableSize = groupCount * handleSize;
         std::vector<uint8_t> shaderHandleStorage(shaderGroupBindingTableSize);
 
-        vkGetRayTracingShaderGroupHandles(renderer->getDevice()->getHandle(), m_pipeline, 0, groupCount,
+        vkGetRayTracingShaderGroupHandles(deviceHandle, m_pipeline, 0, groupCount,
             shaderGroupBindingTableSize, shaderHandleStorage.data());
 
         m_sbtBuffer = std::make_unique<VulkanBuffer>(renderer->getDevice(), shaderGroupBindingTableSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        renderer->enqueueResourceUpdate([&, this](VkCommandBuffer cmdBuffer)
+        renderer->enqueueResourceUpdate([&, this, deviceHandle](VkCommandBuffer cmdBuffer)
         {
             vkCmdUpdateBuffer(cmdBuffer, m_sbtBuffer->getHandle(), 0, shaderHandleStorage.size(), shaderHandleStorage.data());
-            vkDeviceWaitIdle(renderer->getDevice()->getHandle());
+            vkDeviceWaitIdle(deviceHandle);
         });
         renderer->flushResourceUpdates(true);
     }

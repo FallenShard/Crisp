@@ -35,7 +35,7 @@ namespace crisp::gui
 {
     RenderSystem::RenderSystem(Renderer* renderer)
         : m_renderer(renderer)
-        , m_device(renderer->getDevice())
+        , m_device(&renderer->getDevice())
     {
         float width  = static_cast<float>(m_renderer->getSwapChainExtent().width);
         float height = static_cast<float>(m_renderer->getSwapChainExtent().height);
@@ -50,7 +50,7 @@ namespace crisp::gui
 
         // Gui texture atlas
         loadTextureAtlas();
-        m_linearClampSampler = std::make_unique<VulkanSampler>(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        m_linearClampSampler = std::make_unique<VulkanSampler>(*m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         logger->info("Texture initialized");
 
         // Initialize gui render target rendering resources
@@ -372,7 +372,7 @@ namespace crisp::gui
         m_textPipeline      = m_renderer->createPipelineFromLua("GuiText.lua", *m_guiPass.get(), 0);
         m_texQuadPipeline   = m_renderer->createPipelineFromLua("GuiTexture.lua", *m_guiPass.get(), 0);
         m_debugRectPipeline = m_renderer->createPipelineFromLua("GuiDebug.lua", *m_guiPass.get(), 0);
-        m_fsQuadPipeline    = m_renderer->createPipelineFromLua("Fullscreen.lua", *m_renderer->getDefaultRenderPass(), 0);
+        m_fsQuadPipeline    = m_renderer->createPipelineFromLua("Fullscreen.lua", m_renderer->getDefaultRenderPass(), 0);
     }
 
     void RenderSystem::initGeometryBuffers()

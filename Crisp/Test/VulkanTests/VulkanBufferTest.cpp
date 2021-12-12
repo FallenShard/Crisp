@@ -39,7 +39,7 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer)
     const auto& [deps, device] = createDevice();
 
     const VkDeviceSize size = 100;
-    StagingVulkanBuffer stagingBuffer(device.get(), size);
+    StagingVulkanBuffer stagingBuffer(*device, size);
     ASSERT_TRUE(stagingBuffer.getHandle() != VK_NULL_HANDLE);
     ASSERT_EQ(stagingBuffer.getSize(), size);
 }

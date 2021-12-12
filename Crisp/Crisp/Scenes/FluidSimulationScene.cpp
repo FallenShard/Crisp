@@ -64,7 +64,7 @@ namespace crisp
         m_pointSpriteMaterial->writeDescriptor(0, 0, *m_transformsBuffer);
         m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
         m_fluidGeometry = std::make_unique<Geometry>(m_renderer);
         m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("position"));
@@ -72,7 +72,7 @@ namespace crisp
         m_fluidGeometry->setVertexCount(m_fluidSimulation->getParticleCount());
         m_fluidGeometry->setInstanceCount(1);
 
-        m_renderer->getDevice()->flushDescriptorUpdates();
+        m_renderer->getDevice().flushDescriptorUpdates();
 
 
         m_fluidRenderNode.transformBuffer = m_transformsBuffer.get();

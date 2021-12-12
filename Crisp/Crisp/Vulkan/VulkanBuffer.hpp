@@ -10,7 +10,7 @@ namespace crisp
     class VulkanBuffer : public VulkanResource<VkBuffer, vkDestroyBuffer>
     {
     public:
-        VulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
+        VulkanBuffer(VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
         ~VulkanBuffer();
 
         VkDeviceSize getSize() const;
@@ -27,7 +27,7 @@ namespace crisp
     class StagingVulkanBuffer final : public VulkanBuffer
     {
     public:
-        StagingVulkanBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        StagingVulkanBuffer(VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         void updateFromHost(const void* hostMemoryData, VkDeviceSize size, VkDeviceSize offset);
         void updateFromHost(const void* hostMemoryData);
 

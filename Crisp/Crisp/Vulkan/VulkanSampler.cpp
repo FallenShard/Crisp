@@ -4,13 +4,13 @@
 
 namespace crisp
 {
-    VulkanSampler::VulkanSampler(VulkanDevice* device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
+    VulkanSampler::VulkanSampler(VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
         : VulkanSampler(device, minFilter, magFilter, addressMode, 1.0f, 0.0f)
     {
     }
 
-    VulkanSampler::VulkanSampler(VulkanDevice* device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod)
-        : VulkanResource(device->getResourceDeallocator())
+    VulkanSampler::VulkanSampler(VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod)
+        : VulkanResource(device.getResourceDeallocator())
     {
         VkSamplerCreateInfo samplerInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         samplerInfo.magFilter               = magFilter;
@@ -28,6 +28,6 @@ namespace crisp
         samplerInfo.mipLodBias              = 0.0f;
         samplerInfo.minLod                  = 0.0f;
         samplerInfo.maxLod                  = maxLod;
-        vkCreateSampler(device->getHandle(), &samplerInfo, nullptr, &m_handle);
+        vkCreateSampler(device.getHandle(), &samplerInfo, nullptr, &m_handle);
     }
 }

@@ -35,7 +35,7 @@ namespace crisp
     void TransmittanceLutPass::createResources()
     {
         m_renderTargets.resize(1);
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, getRenderAreaExtent(), RendererConfig::VirtualFrameCount, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(*m_device, getRenderAreaExtent(), RendererConfig::VirtualFrameCount, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -58,7 +58,7 @@ namespace crisp
             {
                 m_renderTargetViews[0][i]->getHandle()
             };
-            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, renderTargetViews);
+            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_renderer->getDevice(), m_handle, m_renderArea, renderTargetViews);
         }
     }
 
@@ -88,7 +88,7 @@ namespace crisp
     void SkyViewLutPass::createResources()
     {
         m_renderTargets.resize(1);
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, getRenderAreaExtent(), RendererConfig::VirtualFrameCount, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(*m_device, getRenderAreaExtent(), RendererConfig::VirtualFrameCount, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -111,7 +111,7 @@ namespace crisp
             {
                 m_renderTargetViews[0][i]->getHandle()
             };
-            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, renderTargetViews);
+            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(*m_device, m_handle, m_renderArea, renderTargetViews);
         }
     }
 
@@ -143,7 +143,7 @@ namespace crisp
         m_renderTargets.resize(1);
         VkExtent3D extent{ m_renderArea.width, m_renderArea.height, 32u };
 
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, 1, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(*m_device, extent, 1, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -169,7 +169,7 @@ namespace crisp
             {
                 m_renderTargetViews[0][i]->getHandle()
             };
-            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, renderTargetViews, 32);
+            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(*m_device, m_handle, m_renderArea, renderTargetViews, 32);
         }
     }
 
@@ -201,7 +201,7 @@ namespace crisp
         m_renderTargets.resize(1);
         VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
 
-        m_renderTargets[0] = std::make_unique<VulkanImage>(m_device, extent, RendererConfig::VirtualFrameCount, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
+        m_renderTargets[0] = std::make_unique<VulkanImage>(*m_device, extent, RendererConfig::VirtualFrameCount, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 0);
 
         m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer)
@@ -224,7 +224,7 @@ namespace crisp
             {
                 m_renderTargetViews[0][i]->getHandle()
             };
-            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(m_device, m_handle, m_renderArea, renderTargetViews);
+            m_framebuffers[i] = std::make_unique<VulkanFramebuffer>(*m_device, m_handle, m_renderArea, renderTargetViews);
         }
     }
 }
