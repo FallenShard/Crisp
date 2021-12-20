@@ -5,31 +5,32 @@
 
 #include <vulkan/vulkan.h>
 
-#include <vector>
 #include <functional>
+#include <vector>
 
 namespace crisp
 {
-    using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)>;
+using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)>;
 
-    class VulkanContext
-    {
-    public:
-        VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers);
-        ~VulkanContext();
+class VulkanContext
+{
+public:
+    VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions,
+        bool enableValidationLayers);
+    ~VulkanContext();
 
-        VulkanContext(const VulkanContext& other) = delete;
-        VulkanContext(VulkanContext&& other) = delete;
-        VulkanContext& operator=(const VulkanContext& other) = delete;
-        VulkanContext& operator=(VulkanContext&& other) = delete;
+    VulkanContext(const VulkanContext& other) = delete;
+    VulkanContext(VulkanContext&& other) = delete;
+    VulkanContext& operator=(const VulkanContext& other) = delete;
+    VulkanContext& operator=(VulkanContext&& other) = delete;
 
-        Result<VulkanPhysicalDevice> selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const;
+    Result<VulkanPhysicalDevice> selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const;
 
-        VkSurfaceKHR getSurface() const;
+    VkSurfaceKHR getSurface() const;
 
-    private:
-        VkInstance               m_instance;
-        VkDebugUtilsMessengerEXT m_debugMessenger;
-        VkSurfaceKHR             m_surface;
-    };
-}
+private:
+    VkInstance m_instance;
+    VkDebugUtilsMessengerEXT m_debugMessenger;
+    VkSurfaceKHR m_surface;
+};
+} // namespace crisp

@@ -1,7 +1,7 @@
 #include <VulkanTests/VulkanTest.hpp>
 
-#include <Crisp/Core/Window.hpp>
 #include <Crisp/Core/ApplicationEnvironment.hpp>
+#include <Crisp/Core/Window.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 #include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
@@ -11,15 +11,21 @@
 
 using namespace crisp;
 
-class VulkanMemoryAllocatorTest : public VulkanTest {};
+class VulkanMemoryAllocatorTest : public VulkanTest
+{
+};
 using UniqueDeviceWrapper = UniqueHandleWrapper<VkDevice, [](VkDevice device) { vkDestroyDevice(device, nullptr); }>;
 
 auto createMemoryAllocator()
 {
-    struct {
-        std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false) };
+    struct
+    {
+        std::unique_ptr<VulkanContext> context{
+            std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false)
+        };
         VulkanPhysicalDevice physicalDevice{ context->selectPhysicalDevice({}).unwrap() };
-        UniqueDeviceWrapper device{physicalDevice.createLogicalDevice(createDefaultQueueConfiguration(*context, physicalDevice)) };
+        UniqueDeviceWrapper device{ physicalDevice.createLogicalDevice(
+            createDefaultQueueConfiguration(*context, physicalDevice)) };
     } dependencies;
 
     VulkanMemoryAllocator memoryAllocator(dependencies.physicalDevice, dependencies.device);

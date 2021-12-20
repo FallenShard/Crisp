@@ -205,8 +205,9 @@ add_library(Crisp
     "Crisp/ShadingLanguage/Statements.hpp"
     "Crisp/ShadingLanguage/Token.hpp"
     "Crisp/ShadingLanguage/Visitor.hpp"
-    "Crisp/Vulkan/RayTracingMaterial.cpp"
-    "Crisp/Vulkan/RayTracingMaterial.hpp"
+    "Crisp/Vulkan/VulkanAccelerationStructure.cpp"
+    "Crisp/Vulkan/VulkanAccelerationStructure.hpp"
+    "Crisp/Vulkan/VulkanGetDeviceProc.hpp"
     "Crisp/Vulkan/VulkanBuffer.cpp"
     "Crisp/Vulkan/VulkanBuffer.hpp"
     "Crisp/Vulkan/VulkanBufferView.hpp"
@@ -245,8 +246,6 @@ add_library(Crisp
     "Crisp/Vulkan/VulkanQueue.hpp"
     "Crisp/Vulkan/VulkanQueueConfiguration.cpp"
     "Crisp/Vulkan/VulkanQueueConfiguration.hpp"
-    "Crisp/Vulkan/VulkanRayTracer.cpp"
-    "Crisp/Vulkan/VulkanRayTracer.hpp"
     "Crisp/Vulkan/VulkanRenderPass.cpp"
     "Crisp/Vulkan/VulkanRenderPass.hpp"
     "Crisp/Vulkan/VulkanResource.hpp"
@@ -256,7 +255,7 @@ add_library(Crisp
     "Crisp/Vulkan/VulkanSampler.hpp"
     "Crisp/Vulkan/VulkanSwapChain.cpp"
     "Crisp/Vulkan/VulkanSwapChain.hpp"   
- "Crisp/Vulkan/VulkanAccelerationStructure.cpp" "Crisp/Vulkan/VulkanAccelerationStructure.hpp")
+)
 
 set_target_properties(Crisp PROPERTIES
     LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"

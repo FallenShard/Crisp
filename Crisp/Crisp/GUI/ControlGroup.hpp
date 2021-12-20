@@ -8,37 +8,37 @@
 
 namespace crisp::gui
 {
-    class ControlGroup : public Control
-    {
-    public:
-        ControlGroup(Form* parentForm);
-        virtual ~ControlGroup();
+class ControlGroup : public Control
+{
+public:
+    ControlGroup(Form* parentForm);
+    virtual ~ControlGroup();
 
-        void addControl(std::unique_ptr<Control> control);
-        void addControlDirect(std::unique_ptr<Control> control);
-        void removeControl(const std::string& id);
-        void clearControls();
+    void addControl(std::unique_ptr<Control> control);
+    void addControlDirect(std::unique_ptr<Control> control);
+    void removeControl(const std::string& id);
+    void clearControls();
 
-        virtual float getWidth() const;
-        virtual float getHeight() const;
+    virtual float getWidth() const;
+    virtual float getHeight() const;
 
-        virtual Rect<float> getInteractionBounds() const;
-        virtual void onMouseMoved(float x, float y);
-        virtual void onMouseEntered(float x, float y);
-        virtual void onMouseExited(float x, float y);
-        virtual bool onMousePressed(float x, float y);
-        virtual bool onMouseReleased(float x, float y);
+    virtual Rect<float> getInteractionBounds() const;
+    virtual void onMouseMoved(float x, float y);
+    virtual void onMouseEntered(float x, float y);
+    virtual void onMouseExited(float x, float y);
+    virtual bool onMousePressed(float x, float y);
+    virtual bool onMouseReleased(float x, float y);
 
-        virtual void validate() override;
+    virtual void validate() override;
 
-        virtual void draw(const RenderSystem& renderSystem) const override;
+    virtual void draw(const RenderSystem& renderSystem) const override;
 
-        virtual void printDebugId() const override;
-        virtual Control* getControlById(const std::string& id);
-        virtual void visit(std::function<void(Control*)> func) override;
+    virtual void printDebugId() const override;
+    virtual Control* getControlById(const std::string& id);
+    virtual void visit(std::function<void(Control*)> func) override;
 
-    protected:
-        glm::vec2 m_prevMousePos;
-        std::vector<std::unique_ptr<Control>> m_children;
-    };
-}
+protected:
+    glm::vec2 m_prevMousePos;
+    std::vector<std::unique_ptr<Control>> m_children;
+};
+} // namespace crisp::gui

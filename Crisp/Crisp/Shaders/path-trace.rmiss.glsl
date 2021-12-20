@@ -1,5 +1,5 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : enable
 
 struct hitPayload
 {
@@ -14,7 +14,7 @@ struct hitPayload
     vec4 debugValue;
 };
 
-layout(location = 0) rayPayloadInNV hitPayload prd;
+layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 void main()
 {

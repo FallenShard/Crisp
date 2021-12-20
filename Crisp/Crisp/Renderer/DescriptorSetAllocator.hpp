@@ -1,41 +1,45 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
 #include <memory>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 namespace crisp
 {
-    class VulkanDevice;
-    class VulkanPipelineLayout;
+class VulkanDevice;
+class VulkanPipelineLayout;
 
-    class DescriptorSetAllocator
+class DescriptorSetAllocator
+{
+public:
+    DescriptorSetAllocator(VulkanDevice& device,
+        const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings,
+        const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags = 0);
+    ~DescriptorSetAllocator();
+
+    VkDescriptorSet allocate(VkDescriptorSetLayout setLayout,
+        const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+
+    VulkanDevice& getDevice() const;
+
+private:
+    struct DescriptorPool
     {
-    public:
-        DescriptorSetAllocator(VulkanDevice& device, const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags = 0);
-        ~DescriptorSetAllocator();
+        VkDescriptorPool handle;
 
-        VkDescriptorSet allocate(VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+        uint32_t currentAllocations;
+        uint32_t maxAllocations;
 
-        VulkanDevice& getDevice() const;
+        std::vector<VkDescriptorPoolSize> freeSizes;
 
-    private:
-        struct DescriptorPool
-        {
-            VkDescriptorPool handle;
+        bool canAllocateSet(const std::vector<VkDescriptorSetLayoutBinding>& setBindings) const;
+        void deductPoolSizes(const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
 
-            uint32_t currentAllocations;
-            uint32_t maxAllocations;
-
-            std::vector<VkDescriptorPoolSize> freeSizes;
-
-            bool canAllocateSet(const std::vector<VkDescriptorSetLayoutBinding>& setBindings) const;
-            void deductPoolSizes(const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
-
-            VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
-        };
-
-        VulkanDevice* m_device;
-        std::vector<std::unique_ptr<DescriptorPool>> m_descriptorPools;
+        VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout setLayout,
+            const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
     };
-}
+
+    VulkanDevice* m_device;
+    std::vector<std::unique_ptr<DescriptorPool>> m_descriptorPools;
+};
+} // namespace crisp

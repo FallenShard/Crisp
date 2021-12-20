@@ -4,37 +4,37 @@
 
 #include <vulkan/vulkan.h>
 
-#include <vector>
-#include <memory>
 #include <functional>
+#include <memory>
+#include <vector>
 
 namespace crisp
 {
-    class AbstractCamera;
+class AbstractCamera;
 
-    class Renderer;
-    class UniformBuffer;
+class Renderer;
+class UniformBuffer;
 
-    class ShadowPass;
-    class VulkanPipeline;
+class ShadowPass;
+class VulkanPipeline;
 
-    class ShadowMapper
-    {
-    public:
-        ShadowMapper(Renderer* renderer, uint32_t numLights);
-        ~ShadowMapper();
+class ShadowMapper
+{
+public:
+    ShadowMapper(Renderer* renderer, uint32_t numLights);
+    ~ShadowMapper();
 
-        void setLightTransform(uint32_t lightIndex, const glm::mat4& transform);
-        void setLightFullTransform(uint32_t lightIndex, const glm::mat4& view, const glm::mat4& projection);
+    void setLightTransform(uint32_t lightIndex, const glm::mat4& transform);
+    void setLightFullTransform(uint32_t lightIndex, const glm::mat4& view, const glm::mat4& projection);
 
-        UniformBuffer* getLightTransformBuffer() const;
-        UniformBuffer* getLightFullTransformBuffer() const;
+    UniformBuffer* getLightTransformBuffer() const;
+    UniformBuffer* getLightFullTransformBuffer() const;
 
-    private:
-        std::vector<glm::mat4>         m_lightTransforms;
-        std::unique_ptr<UniformBuffer> m_lightTransformBuffer;
+private:
+    std::vector<glm::mat4> m_lightTransforms;
+    std::unique_ptr<UniformBuffer> m_lightTransformBuffer;
 
-        std::vector<glm::mat4>         m_lightFullTransforms;
-        std::unique_ptr<UniformBuffer> m_lightFullTransformBuffer;
-    };
-}
+    std::vector<glm::mat4> m_lightFullTransforms;
+    std::unique_ptr<UniformBuffer> m_lightFullTransformBuffer;
+};
+} // namespace crisp

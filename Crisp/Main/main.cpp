@@ -1,5 +1,5 @@
-#include <Crisp/Core/ApplicationEnvironment.hpp>
 #include <Crisp/Core/Application.hpp>
+#include <Crisp/Core/ApplicationEnvironment.hpp>
 
 int main(int argc, char** argv)
 {

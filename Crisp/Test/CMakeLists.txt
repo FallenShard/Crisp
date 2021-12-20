@@ -1,7 +1,9 @@
 add_executable(CrispTest
     "CameraTests/CameraTest.cpp"
     "CameraTests/FreeCameraControllerTest.cpp"
+    "RendererTests/PipelineLayoutBuilderTest.cpp"
     "ShadingLanguageTests/LexerTest.cpp"
+    "VulkanTests/ScopeCommandBufferExecutor.hpp"
     "VulkanTests/VulkanBufferTest.cpp"
     "VulkanTests/VulkanContextTest.cpp"
     "VulkanTests/VulkanDeviceTest.cpp"
@@ -10,7 +12,7 @@ add_executable(CrispTest
     "VulkanTests/VulkanPhysicalDeviceTest.cpp"
     "VulkanTests/VulkanSwapChainTest.cpp"
     "VulkanTests/VulkanTest.hpp"
-)
+ "VulkanTests/VulkanResourceDeallocatorTest.cpp")
 
 set_target_properties(CrispTest PROPERTIES
     CXX_STANDARD 20)
@@ -31,5 +33,3 @@ function(copy_shared_libs targetNames)
 endfunction()
 
 copy_shared_libs(vulkan lua freetype zlib tbb tbbMalloc embree)
-
-

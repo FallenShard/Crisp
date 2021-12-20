@@ -2,9 +2,9 @@
 
 namespace crisp
 {
-    enum class BufferUpdatePolicy
-    {
-        Constant,
-        PerFrame
-    };
-}
+enum class BufferUpdatePolicy
+{
+    Constant,
+    PerFrame
+};
+} // namespace crisp

@@ -1,5 +1,5 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
 
@@ -16,17 +16,17 @@ struct hitPayload
     vec4 debugValue;
 };
 
-layout(location = 0) rayPayloadInNV hitPayload prd;
-hitAttributeNV vec2 attribs;
+layout(location = 0) rayPayloadInEXT hitPayload prd;
+hitAttributeEXT vec2 attribs;
 
 layout(binding = 0, set = 1, scalar) buffer Vertices
 {
     float v[];
-} vertices[6];
+} vertices[4];
 layout(binding = 1, set = 1, scalar) buffer Indices
 {
     uint i[];
-} indices[6];
+} indices[4];
 
 layout(binding = 2, set = 1, scalar) buffer RandomBuffer
 {
@@ -65,16 +65,16 @@ uint lcg(inout uint prev)
 
 uint RandomInt(inout uint seed)
 {
-	// LCG values from Numerical Recipes
+    // LCG values from Numerical Recipes
     return (seed = 1664525 * seed + 1013904223);
 }
 
 float RandomFloat(inout uint seed)
 {
-	// Float version using bitmask from Numerical Recipes
-	const uint one = 0x3f800000;
-	const uint msk = 0x007fffff;
-	return uintBitsToFloat(one | (msk & (RandomInt(seed) >> 9))) - 1;
+    // Float version using bitmask from Numerical Recipes
+    const uint one = 0x3f800000;
+    const uint msk = 0x007fffff;
+    return uintBitsToFloat(one | (msk & (RandomInt(seed) >> 9))) - 1;
 }
 
 // Generate a random float in [0, 1) given the previous RNG state
@@ -125,38 +125,38 @@ vec3 squareToUniformSphere(const vec2 randomSample)
 
 vec3 RandomInUnitSphere(inout uint seed, vec3 normal)
 {
-	for (;;)
-	{
+    for (;;)
+    {
         float eps1 = RandomFloat(seed);
         float eps2 = RandomFloat(seed);
         //const vec3 p = squareToCosineHemisphere(vec2(eps1, eps2));
-		const vec3 p = 2 * vec3(eps1, eps2, RandomFloat(seed)) - 1;
-		if (dot(p, p) <= 1 && dot(p, normal) >= 0)
-		{
-			return normalize(p);
-		}
-	}
+        const vec3 p = 2 * vec3(eps1, eps2, RandomFloat(seed)) - 1;
+        if (dot(p, p) <= 1 && dot(p, normal) >= 0)
+        {
+            return normalize(p);
+        }
+    }
 }
 
 vec3 MyRandomHemisphere(inout uint seed, vec3 normal)
 {
     for (;;)
-	{
+    {
         float eps1 = RandomFloat(seed);
         float eps2 = RandomFloat(seed);
         const vec3 p = squareToUniformSphere(vec2(eps1, eps2));
-		if (dot(p, normal) >= 0.0f)
-		{
-			return p;
-		}
-	}
+        if (dot(p, normal) >= 0.0f)
+        {
+            return p;
+        }
+    }
 }
 
 
 
 vec3 evalAreaLight(vec3 p, vec3 n)
 {
-    vec3 ref = gl_WorldRayOriginNV;
+    vec3 ref = gl_WorldRayOriginEXT;
     vec3 wi = p - ref;
     float cosTheta = dot(n, normalize(-wi));
 
@@ -201,17 +201,33 @@ layout(push_constant) uniform PushConstant
 
 vec3 getNormal(uint objectId, ivec3 ind, vec3 bary)
 {
-    vec3 n0 = vec3(vertices[objectId].v[8 * ind.x + 4], vertices[objectId].v[8 * ind.x + 5], vertices[objectId].v[8 * ind.x + 6]);
-    vec3 n1 = vec3(vertices[objectId].v[8 * ind.y + 4], vertices[objectId].v[8 * ind.y + 5], vertices[objectId].v[8 * ind.y + 6]);
-    vec3 n2 = vec3(vertices[objectId].v[8 * ind.z + 4], vertices[objectId].v[8 * ind.z + 5], vertices[objectId].v[8 * ind.z + 6]);
+    const int normalOffset = 3;
+    const int vertexComponents = 6;
+    vec3 n0 = vec3(vertices[objectId].v[vertexComponents * ind.x + normalOffset],
+        vertices[objectId].v[vertexComponents * ind.x + normalOffset + 1],
+        vertices[objectId].v[vertexComponents * ind.x + normalOffset + 2]);
+    vec3 n1 = vec3(vertices[objectId].v[vertexComponents * ind.y + normalOffset],
+        vertices[objectId].v[vertexComponents * ind.y + normalOffset + 1],
+        vertices[objectId].v[vertexComponents * ind.y + normalOffset + 2]);
+    vec3 n2 = vec3(vertices[objectId].v[vertexComponents * ind.z + normalOffset],
+        vertices[objectId].v[vertexComponents * ind.z + normalOffset + 1],
+        vertices[objectId].v[vertexComponents * ind.z + normalOffset + 2]);
     return normalize(n0 * bary.x + n1 * bary.y + n2 * bary.z);
 }
 
 vec3 getPosition(uint objectId, ivec3 ind, vec3 bary)
 {
-    vec3 p0 = vec3(vertices[objectId].v[8 * ind.x + 0], vertices[objectId].v[8 * ind.x + 1], vertices[objectId].v[8 * ind.x + 2]);
-    vec3 p1 = vec3(vertices[objectId].v[8 * ind.y + 0], vertices[objectId].v[8 * ind.y + 1], vertices[objectId].v[8 * ind.y + 2]);
-    vec3 p2 = vec3(vertices[objectId].v[8 * ind.z + 0], vertices[objectId].v[8 * ind.z + 1], vertices[objectId].v[8 * ind.z + 2]);
+    const int positionOffset = 0;
+    const int vertexComponents = 6;
+    vec3 p0 = vec3(vertices[objectId].v[vertexComponents * ind.x + positionOffset],
+        vertices[objectId].v[vertexComponents * ind.x + positionOffset + 1],
+        vertices[objectId].v[vertexComponents * ind.x + positionOffset + 2]);
+    vec3 p1 = vec3(vertices[objectId].v[vertexComponents * ind.y + positionOffset],
+        vertices[objectId].v[vertexComponents * ind.y + positionOffset + 1],
+        vertices[objectId].v[vertexComponents * ind.y + positionOffset + 2]);
+    vec3 p2 = vec3(vertices[objectId].v[vertexComponents * ind.z + positionOffset],
+        vertices[objectId].v[vertexComponents * ind.z + positionOffset + 1],
+        vertices[objectId].v[vertexComponents * ind.z + positionOffset + 2]);
     return p0 * bary.x + p1 * bary.y + p2 * bary.z;
 }
 
@@ -248,15 +264,15 @@ float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float
 
 float Schlick(const float cosine, const float refractionIndex)
 {
-	float r0 = (1 - refractionIndex) / (1 + refractionIndex);
-	r0 *= r0;
-	return r0 + (1 - r0) * pow(1 - cosine, 5);
+    float r0 = (1 - refractionIndex) / (1 + refractionIndex);
+    r0 *= r0;
+    return r0 + (1 - r0) * pow(1 - cosine, 5);
 }
 
 void main()
 {
     // Object of this instance
-    uint objId = gl_InstanceCustomIndexNV;//scnDesc.i[gl_InstanceID].objId;
+    uint objId = gl_InstanceCustomIndexEXT;//scnDesc.i[gl_InstanceID].objId;
 
     // Indices of the triangle
     ivec3 ind = ivec3(indices[objId].i[3 * gl_PrimitiveID + 0],   //
@@ -286,9 +302,9 @@ void main()
         albedo = vec3(0.5f);
 
     prd.hitPos = position;
-    prd.tHit = gl_HitTNV;
+    prd.tHit = gl_HitTEXT;
 
-    uint seed = tea(gl_LaunchIDNV.y * gl_LaunchSizeNV.x + gl_LaunchIDNV.x, 1024 * pushConst.frameIdx + prd.bounceCount);
+    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, 1024 * pushConst.frameIdx + prd.bounceCount);
     
     if (objId <= 3)
     {
@@ -307,14 +323,14 @@ void main()
     }
     else if (objId == 4)
     {
-        prd.sampleDir = reflect(gl_WorldRayDirectionNV, normal);
+        prd.sampleDir = reflect(gl_WorldRayDirectionEXT, normal);
         prd.bsdf = vec3(1.0f);
         prd.pdf = 0.0f;
     }
     else if (objId == 5)
     {
         const float etaRatio = 1.33157 / 1.00029;
-        const float cosThetaI = dot(normal, -gl_WorldRayDirectionNV);
+        const float cosThetaI = dot(normal, -gl_WorldRayDirectionEXT);
         const vec3 localNormal = cosThetaI < 0.0f ? -normal : normal;
         const float eta        = cosThetaI < 0.0f ? etaRatio : 1.0f / etaRatio;
         const float cosine     = cosThetaI < 0.0f ? etaRatio * cosThetaI : -cosThetaI;
@@ -324,13 +340,13 @@ void main()
         float k = RandomFloat(seed);
         if (k <= fresnel)
         {
-            prd.sampleDir = reflect(gl_WorldRayDirectionNV, localNormal);
+            prd.sampleDir = reflect(gl_WorldRayDirectionEXT, localNormal);
             prd.bsdf = vec3(1.0f);
             prd.pdf = fresnel;
         }
         else
         {
-            prd.sampleDir = refract(gl_WorldRayDirectionNV, localNormal, eta);
+            prd.sampleDir = refract(gl_WorldRayDirectionEXT, localNormal, eta);
             prd.bsdf = vec3(eta * eta);
             prd.pdf = 1.0f - fresnel;
         }

@@ -2,14 +2,11 @@
 
 namespace crisp::gui
 {
-    class SliderModel
-    {
-    public:
-        virtual ~SliderModel() {}
+class SliderModel
+{
+public:
+    virtual ~SliderModel() {}
 
-
-
-
-    private:
-    };
-}
+private:
+};
+} // namespace crisp::gui

@@ -1,158 +1,165 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include "CrispCore/BitFlags.hpp"
 
-#include <vulkan/vulkan.h>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <vulkan/vulkan.h>
 
 namespace crisp
 {
-    class VulkanDevice;
+class VulkanDevice;
 
-    namespace internal
+namespace internal
+{
+template <uint32_t loc, uint32_t binding, int offset, VkFormat format, VkFormat... formats>
+void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs)
+{
+    vertexAttribs.emplace_back(VkVertexInputAttributeDescription{ loc, binding, format, offset });
+
+    if constexpr (sizeof...(formats) > 0)
+        fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
+}
+
+template <uint32_t loc, uint32_t binding, VkFormat... formats>
+std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes()
+{
+    std::vector<VkVertexInputAttributeDescription> vertexAttribs;
+    fillVertexAttribs<loc, binding, 0, formats...>(vertexAttribs);
+    return vertexAttribs;
+}
+
+} // namespace internal
+
+enum class PipelineState
+{
+    VertexInput = 0x001,
+    InputAssembly = 0x002,
+    Tessellation = 0x004,
+    Viewport = 0x008,
+    Rasterization = 0x010,
+    Multisample = 0x020,
+    ColorBlend = 0x040,
+    DepthStencil = 0x080,
+    Dynamic = 0x100,
+
+    Default = VertexInput | InputAssembly | Viewport | Rasterization | Multisample | ColorBlend | DepthStencil
+};
+DECLARE_BITFLAG(PipelineState);
+
+class PipelineBuilder
+{
+public:
+    PipelineBuilder();
+
+    PipelineBuilder& addShaderStage(VkPipelineShaderStageCreateInfo&& shaderStage);
+    PipelineBuilder& setShaderStages(std::initializer_list<VkPipelineShaderStageCreateInfo> shaderStages);
+    PipelineBuilder& setShaderStages(std::vector<VkPipelineShaderStageCreateInfo>&& shaderStages);
+
+    template <uint32_t binding, VkVertexInputRate inputRate, VkFormat... formats>
+    PipelineBuilder& addVertexInputBinding()
     {
-        template <uint32_t loc, uint32_t binding, int offset, VkFormat format, VkFormat... formats>
-        void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs) {
-            vertexAttribs.emplace_back(VkVertexInputAttributeDescription{ loc, binding, format, offset });
-
-            if constexpr (sizeof...(formats) > 0)
-                fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
-        }
-
-        template <uint32_t loc, uint32_t binding, VkFormat... formats>
-        std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes()
-        {
-            std::vector<VkVertexInputAttributeDescription> vertexAttribs;
-            fillVertexAttribs<loc, binding, 0, formats...>(vertexAttribs);
-            return vertexAttribs;
-        }
-
-
+        m_vertexInputBindings.emplace_back(
+            VkVertexInputBindingDescription{ binding, FormatSizeof<formats...>::value, inputRate });
+        m_vertexInputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertexInputBindings.size());
+        m_vertexInputState.pVertexBindingDescriptions = m_vertexInputBindings.data();
+        return *this;
     }
 
-    enum class PipelineState
+    template <VkFormat... formats>
+    PipelineBuilder& setVertexAttributes()
     {
-        VertexInput   = 0x001,
-        InputAssembly = 0x002,
-        Tessellation  = 0x004,
-        Viewport      = 0x008,
-        Rasterization = 0x010,
-        Multisample   = 0x020,
-        ColorBlend    = 0x040,
-        DepthStencil  = 0x080,
-        Dynamic       = 0x100,
+        m_vertexInputAttributes = internal::generateVertexInputAttributes<0, 0, formats...>();
+        m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
+        m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
+        return *this;
+    }
 
-        Default = VertexInput | InputAssembly | Viewport | Rasterization | Multisample | ColorBlend | DepthStencil
-    };
-    DECLARE_BITFLAG(PipelineState);
-
-    class PipelineBuilder
+    template <uint32_t startLoc, uint32_t binding, VkFormat... formats>
+    PipelineBuilder& addVertexAttributes()
     {
-    public:
-        PipelineBuilder();
+        auto attribs = internal::generateVertexInputAttributes<startLoc, binding, formats...>();
+        m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
+        m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
+        m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
+        return *this;
+    }
 
-        PipelineBuilder& addShaderStage(VkPipelineShaderStageCreateInfo&& shaderStage);
-        PipelineBuilder& setShaderStages(std::initializer_list<VkPipelineShaderStageCreateInfo> shaderStages);
-        PipelineBuilder& setShaderStages(std::vector<VkPipelineShaderStageCreateInfo>&& shaderStages);
+    PipelineBuilder& addVertexInputBinding(uint32_t binding, VkVertexInputRate inputRate,
+        const std::vector<VkFormat>& formats);
+    PipelineBuilder& addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats);
 
-        template <uint32_t binding, VkVertexInputRate inputRate, VkFormat... formats>
-        PipelineBuilder& addVertexInputBinding() {
-            m_vertexInputBindings.emplace_back(VkVertexInputBindingDescription{ binding, FormatSizeof<formats...>::value, inputRate });
-            m_vertexInputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertexInputBindings.size());
-            m_vertexInputState.pVertexBindingDescriptions    = m_vertexInputBindings.data();
-            return *this;
-        }
+    PipelineBuilder& setFullScreenVertexLayout();
 
-        template <VkFormat... formats>
-        PipelineBuilder& setVertexAttributes() {
-            m_vertexInputAttributes = internal::generateVertexInputAttributes<0, 0, formats...>();
-            m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
-            m_vertexInputState.pVertexAttributeDescriptions    = m_vertexInputAttributes.data();
-            return *this;
-        }
+    PipelineBuilder& setInputAssemblyState(VkPrimitiveTopology topology, VkBool32 primitiveRestartEnable = VK_FALSE);
+    PipelineBuilder& setTessellationControlPoints(uint32_t numControlPoints);
 
-        template <uint32_t startLoc, uint32_t binding, VkFormat... formats>
-        PipelineBuilder& addVertexAttributes() {
-            auto attribs = internal::generateVertexInputAttributes<startLoc, binding, formats...>();
-            m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
-            m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
-            m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
-            return *this;
-        }
+    PipelineBuilder& setPolygonMode(VkPolygonMode polygonMode);
+    PipelineBuilder& setFrontFace(VkFrontFace frontFace);
+    PipelineBuilder& setCullMode(VkCullModeFlags cullMode);
+    PipelineBuilder& setLineWidth(float lineWidth);
 
-        PipelineBuilder& addVertexInputBinding(uint32_t binding, VkVertexInputRate inputRate, const std::vector<VkFormat>& formats);
-        PipelineBuilder& addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats);
+    PipelineBuilder& setSampleCount(VkSampleCountFlagBits sampleCount);
+    PipelineBuilder& setAlphaToCoverage(VkBool32 alphaToCoverageEnabled);
 
-        PipelineBuilder& setFullScreenVertexLayout();
+    PipelineBuilder& setViewport(VkViewport&& viewport);
+    PipelineBuilder& setScissor(VkRect2D&& scissor);
 
-        PipelineBuilder& setInputAssemblyState(VkPrimitiveTopology topology, VkBool32 primitiveRestartEnable = VK_FALSE);
-        PipelineBuilder& setTessellationControlPoints(uint32_t numControlPoints);
+    PipelineBuilder& setBlendState(uint32_t index, VkBool32 enabled);
+    PipelineBuilder& setBlendFactors(uint32_t index, VkBlendFactor srcFactor, VkBlendFactor dstFactor);
 
-        PipelineBuilder& setPolygonMode(VkPolygonMode polygonMode);
-        PipelineBuilder& setFrontFace(VkFrontFace frontFace);
-        PipelineBuilder& setCullMode(VkCullModeFlags cullMode);
-        PipelineBuilder& setLineWidth(float lineWidth);
+    PipelineBuilder& setDepthTest(VkBool32 enabled);
+    PipelineBuilder& setDepthTestOperation(VkCompareOp testOperation);
+    PipelineBuilder& setDepthWrite(VkBool32 enabled);
 
-        PipelineBuilder& setSampleCount(VkSampleCountFlagBits sampleCount);
-        PipelineBuilder& setAlphaToCoverage(VkBool32 alphaToCoverageEnabled);
+    PipelineBuilder& enableState(PipelineState pipelineState);
+    PipelineBuilder& disableState(PipelineState pipelineState);
 
-        PipelineBuilder& setViewport(VkViewport&& viewport);
-        PipelineBuilder& setScissor(VkRect2D&& scissor);
+    PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
 
-        PipelineBuilder& setBlendState(uint32_t index, VkBool32 enabled);
-        PipelineBuilder& setBlendFactors(uint32_t index, VkBlendFactor srcFactor, VkBlendFactor dstFactor);
+    std::unique_ptr<VulkanPipeline> create(const VulkanDevice& device,
+        std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
+    PipelineDynamicStateFlags createDynamicStateFlags() const;
 
-        PipelineBuilder& setDepthTest(VkBool32 enabled);
-        PipelineBuilder& setDepthTestOperation(VkCompareOp testOperation);
-        PipelineBuilder& setDepthWrite(VkBool32 enabled);
+private:
+    VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();
+    VkPipelineMultisampleStateCreateInfo createDefaultMultisampleState();
+    VkPipelineColorBlendAttachmentState createDefaultColorBlendAttachmentState();
+    VkPipelineColorBlendStateCreateInfo createDefaultColorBlendState();
+    VkPipelineDepthStencilStateCreateInfo createDefaultDepthStencilState();
 
-        PipelineBuilder& enableState(PipelineState pipelineState);
-        PipelineBuilder& disableState(PipelineState pipelineState);
+    std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
-        PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
+    std::vector<VkVertexInputBindingDescription> m_vertexInputBindings;
+    std::vector<VkVertexInputAttributeDescription> m_vertexInputAttributes;
+    VkPipelineVertexInputStateCreateInfo m_vertexInputState;
 
-        std::unique_ptr<VulkanPipeline> create(const VulkanDevice& device, std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
-        PipelineDynamicStateFlags createDynamicStateFlags() const;
+    VkPipelineInputAssemblyStateCreateInfo m_inputAssemblyState;
 
-    private:
-        VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();
-        VkPipelineMultisampleStateCreateInfo   createDefaultMultisampleState();
-        VkPipelineColorBlendAttachmentState    createDefaultColorBlendAttachmentState();
-        VkPipelineColorBlendStateCreateInfo    createDefaultColorBlendState();
-        VkPipelineDepthStencilStateCreateInfo  createDefaultDepthStencilState();
+    VkPipelineTessellationStateCreateInfo m_tessellationState;
 
-        std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
+    std::vector<VkViewport> m_viewports;
+    std::vector<VkRect2D> m_scissors;
+    VkPipelineViewportStateCreateInfo m_viewportState;
 
-        std::vector<VkVertexInputBindingDescription>   m_vertexInputBindings;
-        std::vector<VkVertexInputAttributeDescription> m_vertexInputAttributes;
-        VkPipelineVertexInputStateCreateInfo           m_vertexInputState;
+    VkPipelineRasterizationStateCreateInfo m_rasterizationState;
 
-        VkPipelineInputAssemblyStateCreateInfo m_inputAssemblyState;
+    VkPipelineMultisampleStateCreateInfo m_multisampleState;
 
-        VkPipelineTessellationStateCreateInfo m_tessellationState;
+    std::vector<VkPipelineColorBlendAttachmentState> m_colorBlendAttachmentStates;
+    VkPipelineColorBlendStateCreateInfo m_colorBlendState;
 
-        std::vector<VkViewport>           m_viewports;
-        std::vector<VkRect2D>             m_scissors;
-        VkPipelineViewportStateCreateInfo m_viewportState;
+    VkPipelineDepthStencilStateCreateInfo m_depthStencilState;
 
-        VkPipelineRasterizationStateCreateInfo m_rasterizationState;
+    std::vector<VkDynamicState> m_dynamicStates;
+    VkPipelineDynamicStateCreateInfo m_dynamicState;
 
-        VkPipelineMultisampleStateCreateInfo m_multisampleState;
+    PipelineStateFlags m_pipelineStateFlags;
+};
 
-        std::vector<VkPipelineColorBlendAttachmentState> m_colorBlendAttachmentStates;
-        VkPipelineColorBlendStateCreateInfo              m_colorBlendState;
-
-        VkPipelineDepthStencilStateCreateInfo m_depthStencilState;
-
-        std::vector<VkDynamicState>      m_dynamicStates;
-        VkPipelineDynamicStateCreateInfo m_dynamicState;
-
-        PipelineStateFlags m_pipelineStateFlags;
-    };
-
-    VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint = "main");
-}
+VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule,
+    const char* entryPoint = "main");
+} // namespace crisp

@@ -4,26 +4,30 @@
 
 namespace crisp::gui
 {
-    class StopWatch
+class StopWatch
+{
+public:
+    StopWatch(double triggerPeriod)
+        : m_time(0.0)
+        , m_triggerPeriod(triggerPeriod)
     {
-    public:
-        StopWatch(double triggerPeriod) : m_time(0.0), m_triggerPeriod(triggerPeriod) {}
-        ~StopWatch() {}
+    }
+    ~StopWatch() {}
 
-        void accumulate(double dt)
+    void accumulate(double dt)
+    {
+        m_time += dt;
+        if (m_time >= m_triggerPeriod)
         {
-            m_time += dt;
-            if (m_time >= m_triggerPeriod)
-            {
-                m_time -= m_triggerPeriod;
-                triggered();
-            }
+            m_time -= m_triggerPeriod;
+            triggered();
         }
+    }
 
-        Event<> triggered;
+    Event<> triggered;
 
-    private:
-        double m_time;
-        double m_triggerPeriod;
-    };
-}
+private:
+    double m_time;
+    double m_triggerPeriod;
+};
+} // namespace crisp::gui

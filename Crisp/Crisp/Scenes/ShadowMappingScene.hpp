@@ -61,7 +61,6 @@ namespace crisp
 
     class Grass;
     class RayTracingMaterial;
-    class VulkanRayTracer;
 
     class ResourceContext;
 
@@ -138,9 +137,6 @@ namespace crisp
 
         std::unique_ptr<BoxVisualizer> m_boxVisualizer;
         std::unique_ptr<Skybox>        m_skybox;
-
-        std::unique_ptr<VulkanRayTracer> m_rayTracer;
-        std::unique_ptr<RayTracingMaterial> m_rayTracingMaterial;
 
         //std::unique_ptr<Grass> m_grass;
 

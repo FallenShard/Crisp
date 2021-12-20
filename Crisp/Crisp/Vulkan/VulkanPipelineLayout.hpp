@@ -2,80 +2,83 @@
 
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace crisp
 {
-    class VulkanDevice;
-    class DescriptorSetAllocator;
+class VulkanDevice;
+class DescriptorSetAllocator;
 
-    class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout, vkDestroyPipelineLayout>
+class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout, vkDestroyPipelineLayout>
+{
+public:
+    VulkanPipelineLayout(const VulkanDevice& device, std::vector<VkDescriptorSetLayout>&& setLayouts,
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
+        std::vector<VkPushConstantRange>&& pushConstants, std::vector<bool> descriptorSetBufferedStatus,
+        std::unique_ptr<DescriptorSetAllocator> setAllocator);
+    virtual ~VulkanPipelineLayout();
+
+    inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
     {
-    public:
-        VulkanPipelineLayout(const VulkanDevice& device, std::vector<VkDescriptorSetLayout>&& setLayouts,
-            std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, std::vector<VkPushConstantRange>&& pushConstants,
-            std::vector<bool> descriptorSetBufferedStatus, std::unique_ptr<DescriptorSetAllocator> setAllocator);
-        virtual ~VulkanPipelineLayout();
+        return m_descriptorSetBindings[setIndex][binding].descriptorType;
+    }
 
-        inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
-        {
-            return m_descriptorSetBindings[setIndex][binding].descriptorType;
-        }
+    VkDescriptorSet allocateSet(uint32_t setIndex) const;
 
-        VkDescriptorSet allocateSet(uint32_t setIndex) const;
+    inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const
+    {
+        for (const auto& pushConstant : m_pushConstants)
+            vkCmdPushConstants(cmdBuffer, m_handle, pushConstant.stageFlags, pushConstant.offset, pushConstant.size,
+                data + pushConstant.offset);
+    }
 
-        inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const
-        {
-            for (const auto& pushConstant : m_pushConstants)
-                vkCmdPushConstants(cmdBuffer, m_handle, pushConstant.stageFlags, pushConstant.offset, pushConstant.size, data + pushConstant.offset);
-        }
+    inline std::size_t getDescriptorSetLayoutCount() const
+    {
+        return m_descriptorSetLayouts.size();
+    }
 
-        inline std::size_t getDescriptorSetLayoutCount() const
-        {
-            return m_descriptorSetLayouts.size();
-        }
+    inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index) const
+    {
+        return m_descriptorSetLayouts.at(index);
+    }
 
-        inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index) const
-        {
-            return m_descriptorSetLayouts.at(index);
-        }
+    inline const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t index) const
+    {
+        return m_descriptorSetBindings.at(index);
+    }
 
-        inline const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t index) const
-        {
-            return m_descriptorSetBindings.at(index);
-        }
+    inline bool isDescriptorSetBuffered(uint32_t setIndex) const
+    {
+        return m_descriptorSetBufferedStatus.at(setIndex);
+    }
 
-        inline bool isDescriptorSetBuffered(uint32_t setIndex) const
-        {
-            return m_descriptorSetBufferedStatus.at(setIndex);
-        }
+    inline std::size_t getDynamicBufferCount() const
+    {
+        return m_dynamicBufferCount;
+    }
 
-        inline std::size_t getDynamicBufferCount() const
-        {
-            return m_dynamicBufferCount;
-        }
+    uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const;
 
-        uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const;
+    void swap(VulkanPipelineLayout& other);
 
-        void swap(VulkanPipelineLayout& other);
+    inline DescriptorSetAllocator* getDescriptorSetAllocator()
+    {
+        return m_setAllocator.get();
+    }
 
-        inline DescriptorSetAllocator* getDescriptorSetAllocator()
-        {
-            return m_setAllocator.get();
-        }
+    std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(VulkanDevice& device, uint32_t numCopies = 1,
+        VkDescriptorPoolCreateFlags flags = 0);
 
-        std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
+private:
+    std::vector<VkDescriptorSetLayout> m_descriptorSetLayouts;
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_descriptorSetBindings;
+    std::vector<VkPushConstantRange> m_pushConstants;
+    std::vector<bool> m_descriptorSetBufferedStatus;
 
-    private:
-        std::vector<VkDescriptorSetLayout>                     m_descriptorSetLayouts;
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_descriptorSetBindings;
-        std::vector<VkPushConstantRange>                       m_pushConstants;
-        std::vector<bool> m_descriptorSetBufferedStatus;
+    std::vector<std::vector<uint32_t>> m_dynamicBufferIndices;
+    uint32_t m_dynamicBufferCount;
 
-        std::vector<std::vector<uint32_t>> m_dynamicBufferIndices;
-        uint32_t m_dynamicBufferCount;
-
-        std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
-    };
-}
+    std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
+};
+} // namespace crisp

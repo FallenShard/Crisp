@@ -2,75 +2,78 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
-#include <CrispCore/Math/Headers.hpp>
 #include <Crisp/Animation/Animator.hpp>
-#include <Crisp/GUI/ControlGroup.hpp>
 #include <Crisp/Core/Mouse.hpp>
+#include <Crisp/GUI/ControlGroup.hpp>
+#include <CrispCore/Math/Headers.hpp>
 
 namespace crisp::gui
 {
-    class RenderSystem;
-    class StopWatch;
-    class ControlGroup;
+class RenderSystem;
+class StopWatch;
+class ControlGroup;
 
-    class Form
+class Form
+{
+public:
+    Form(std::unique_ptr<RenderSystem> renderSystem);
+    ~Form();
+
+    Form(const Form& other) = delete;
+    Form& operator=(const Form& other) = delete;
+
+    RenderSystem* getRenderSystem();
+    Animator* getAnimator();
+
+    void addStopWatch(StopWatch* stopWatch);
+    void removeStopWatch(StopWatch* stopWatch);
+
+    void postGuiUpdate(std::function<void()> guiUpdateCallback);
+    void add(std::unique_ptr<Control> control, bool useFadeInAnimation = true);
+    void remove(std::string controlId, float duration = 1.0f);
+
+    template <typename T>
+    T* getControlById(std::string id)
     {
-    public:
-        Form(std::unique_ptr<RenderSystem> renderSystem);
-        ~Form();
+        return m_rootControlGroup->getTypedControlById<T>(id);
+    }
 
-        Form(const Form& other) = delete;
-        Form& operator=(const Form& other) = delete;
+    void resize(int width, int height);
 
-        RenderSystem* getRenderSystem();
-        Animator*     getAnimator();
+    void setFocusedControl(Control* control);
+    void onMouseEntered(double mouseX, double mouseY);
+    void onMouseExited(double mouseX, double mouseY);
+    void onMouseMoved(double mouseX, double mouseY);
+    void onMousePressed(const MouseEventArgs& mouseEventArgs);
+    void onMouseReleased(const MouseEventArgs& mouseEventArgs);
 
-        void addStopWatch(StopWatch* stopWatch);
-        void removeStopWatch(StopWatch* stopWatch);
+    void processGuiUpdates();
+    void update(double dt);
+    void draw();
 
-        void postGuiUpdate(std::function<void()> guiUpdateCallback);
-        void add(std::unique_ptr<Control> control, bool useFadeInAnimation = true);
-        void remove(std::string controlId, float duration = 1.0f);
+    void printGuiTree();
+    void visit(std::function<void(Control*)> func);
 
-        template <typename T>
-        T* getControlById(std::string id) { return m_rootControlGroup->getTypedControlById<T>(id); }
+    void addToValidationList(Control* control);
+    void removeFromValidationList(Control* control);
 
-        void resize(int width, int height);
+private:
+    void validateControls();
 
-        void setFocusedControl(Control* control);
-        void onMouseEntered(double mouseX, double mouseY);
-        void onMouseExited(double mouseX, double mouseY);
-        void onMouseMoved(double mouseX, double mouseY);
-        void onMousePressed(const MouseEventArgs& mouseEventArgs);
-        void onMouseReleased(const MouseEventArgs& mouseEventArgs);
+    std::unique_ptr<Control> fadeIn(std::unique_ptr<Control> controlGroup, float duration = 1.0f);
 
-        void processGuiUpdates();
-        void update(double dt);
-        void draw();
+    std::unique_ptr<RenderSystem> m_renderSystem;
+    std::unique_ptr<Animator> m_animator;
+    std::unordered_set<Control*> m_validationSet;
 
-        void printGuiTree();
-        void visit(std::function<void(Control*)> func);
+    std::vector<std::function<void()>> m_guiUpdates;
+    std::unordered_set<StopWatch*> m_stopWatches;
 
-        void addToValidationList(Control* control);
-        void removeFromValidationList(Control* control);
+    std::unique_ptr<ControlGroup> m_rootControlGroup;
 
-    private:
-        void validateControls();
-
-        std::unique_ptr<Control> fadeIn(std::unique_ptr<Control> controlGroup, float duration = 1.0f);
-
-        std::unique_ptr<RenderSystem>      m_renderSystem;
-        std::unique_ptr<Animator>          m_animator;
-        std::unordered_set<Control*>       m_validationSet;
-
-        std::vector<std::function<void()>> m_guiUpdates;
-        std::unordered_set<StopWatch*>     m_stopWatches;
-
-        std::unique_ptr<ControlGroup>      m_rootControlGroup;
-
-        Control* m_focusedControl;
-    };
-}
+    Control* m_focusedControl;
+};
+} // namespace crisp::gui

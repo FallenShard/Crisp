@@ -1,5 +1,5 @@
-#version 460
-#extension GL_NV_ray_tracing : require
+#version 460 core
+#extension GL_EXT_ray_tracing : enable
 
 struct hitPayload
 {
@@ -7,10 +7,10 @@ struct hitPayload
     float tHit;
 };
 
-layout(location = 0) rayPayloadInNV hitPayload prd;
+layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 void main()
 {
-    prd.hitValue = vec3(0.0, 0.1, 0.3);
+    prd.hitValue = vec3(0.0, 0.1, 1.3);
     prd.tHit = -1;
 }

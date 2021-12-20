@@ -1,17 +1,22 @@
 #include <VulkanTests/VulkanTest.hpp>
 
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Core/Window.hpp>
 #include <Crisp/Core/ApplicationEnvironment.hpp>
+#include <Crisp/Core/Window.hpp>
+#include <Crisp/Vulkan/VulkanContext.hpp>
 
 using namespace crisp;
 
-class VulkanContextTest : public VulkanTest {};
+class VulkanContextTest : public VulkanTest
+{
+};
 
 std::pair<std::unique_ptr<VulkanContext>, Window> createContextWithSurface()
 {
     Window window = Window({ 0, 0 }, { 200, 200 }, "unit_test", true);
-    return { std::make_unique<VulkanContext>(window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanExtensions(), false), std::move(window) };
+    return { std::make_unique<VulkanContext>(window.createSurfaceCallback(),
+                                             ApplicationEnvironment::getRequiredVulkanExtensions(),
+                                             false),
+             std::move(window) };
 }
 
 TEST_F(VulkanContextTest, WithoutSurface)
@@ -30,7 +35,5 @@ TEST_F(VulkanContextTest, DeviceSelection)
 {
     VulkanContext context(nullptr, {}, false);
     ASSERT_EQ(context.getSurface(), VK_NULL_HANDLE);
-
-    const auto device = context.selectPhysicalDevice({});
-    EXPECT_TRUE(device.hasValue());
+    EXPECT_TRUE(context.selectPhysicalDevice({}).hasValue());
 }

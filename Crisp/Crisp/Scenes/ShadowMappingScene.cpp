@@ -49,8 +49,6 @@
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
 
-#include <Crisp/vulkan/RayTracingMaterial.hpp>
-#include <Crisp/vulkan/VulkanRayTracer.hpp>
 
 #include <CrispCore/Profiler.hpp>
 #include <CrispCore/IO/MeshLoader.hpp>

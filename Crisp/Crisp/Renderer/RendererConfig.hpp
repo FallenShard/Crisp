@@ -4,8 +4,8 @@
 
 namespace crisp
 {
-    struct RendererConfig
-    {
-        static constexpr uint32_t VirtualFrameCount = 2;
-    };
-}
+struct RendererConfig
+{
+    static constexpr uint32_t VirtualFrameCount = 2;
+};
+} // namespace crisp

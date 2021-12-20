@@ -1,7 +1,7 @@
 #include <VulkanTests/VulkanTest.hpp>
 
-#include <Crisp/Core/Window.hpp>
 #include <Crisp/Core/ApplicationEnvironment.hpp>
+#include <Crisp/Core/Window.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
@@ -10,7 +10,9 @@
 
 using namespace crisp;
 
-class VulkanPhysicalDeviceTest : public VulkanTest {};
+class VulkanPhysicalDeviceTest : public VulkanTest
+{
+};
 
 struct VulkanSetupData
 {
@@ -27,9 +29,11 @@ auto createPhysicalDevice()
 
 auto createPhysicalDeviceWithSurface()
 {
-    struct {
+    struct
+    {
         Window window{ 0, 0, 200, 200, "unit_test", true };
-        std::unique_ptr<VulkanContext> context{ std::make_unique<VulkanContext>(window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanExtensions(), false) };
+        std::unique_ptr<VulkanContext> context{ std::make_unique<VulkanContext>(window.createSurfaceCallback(),
+            ApplicationEnvironment::getRequiredVulkanExtensions(), false) };
     } vulkanInit;
 
     VulkanPhysicalDevice physicalDevice(vulkanInit.context->selectPhysicalDevice({}).unwrap());

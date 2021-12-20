@@ -4,12 +4,13 @@
 
 namespace crisp
 {
-    class VulkanDevice;
+class VulkanDevice;
 
-    class VulkanSampler final : public VulkanResource<VkSampler, vkDestroySampler>
-    {
-    public:
-        VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode);
-        VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode, float anisotropy, float maxLod);
-    };
-}
+class VulkanSampler final : public VulkanResource<VkSampler, vkDestroySampler>
+{
+public:
+    VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode);
+    VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode,
+        float anisotropy, float maxLod);
+};
+} // namespace crisp

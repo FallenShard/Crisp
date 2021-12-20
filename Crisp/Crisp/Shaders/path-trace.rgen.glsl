@@ -1,5 +1,5 @@
 #version 460
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : enable
 
 struct hitPayload
 {
@@ -14,10 +14,11 @@ struct hitPayload
     vec4 debugValue;
 };
 
-layout(location = 0) rayPayloadNV hitPayload prd;
+layout(location = 0) rayPayloadEXT hitPayload prd;
 
-layout(set = 0, binding = 0) uniform accelerationStructureNV topLevelAS;
+layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+
 layout(set = 0, binding = 2) uniform Camera
 {
     mat4 V;
@@ -137,16 +138,16 @@ float rnd(inout uint prev)
 
 uint RandomInt(inout uint seed)
 {
-	// LCG values from Numerical Recipes
+    // LCG values from Numerical Recipes
     return (seed = 1664525 * seed + 1013904223);
 }
 
 float RandomFloat(inout uint seed)
 {
-	// Float version using bitmask from Numerical Recipes
-	const uint one = 0x3f800000;
-	const uint msk = 0x007fffff;
-	return uintBitsToFloat(one | (msk & (RandomInt(seed) >> 9))) - 1;
+    // Float version using bitmask from Numerical Recipes
+    const uint one = 0x3f800000;
+    const uint msk = 0x007fffff;
+    return uintBitsToFloat(one | (msk & (RandomInt(seed) >> 9))) - 1;
 }
 
 vec3 cosineToHemisphere(vec2 randomSample)
@@ -166,8 +167,8 @@ layout(push_constant) uniform PushConstant
 
 void main() 
 {
-    const vec2 pixelCenter = vec2(ivec2(gl_LaunchIDNV.xy)) + vec2(0.5f);
-    const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeNV.xy);
+    const vec2 pixelCenter = vec2(ivec2(gl_LaunchIDEXT.xy)) + vec2(0.5f);
+    const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
     vec2 d = inUV * 2.0 - 1.0;
     mat4 invV = inverse(camera.V);
     mat4 invP = inverse(camera.P);
@@ -176,7 +177,7 @@ void main()
     vec4 direction = invV * vec4(normalize(target.xyz), 0.0f);
 
 
-    uint rayFlags = gl_RayFlagsOpaqueNV;
+    uint rayFlags = gl_RayFlagsOpaqueEXT;
     float tMin = 0.001;
     float tMax = 10000.0;
 
@@ -186,14 +187,14 @@ void main()
     // Throughput of the current path
     vec3 throughput = vec3(1.0f);
 
-    uint seed = tea(gl_LaunchIDNV.y * gl_LaunchSizeNV.x + gl_LaunchIDNV.x, pushConst.frameIdx);
+    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, pushConst.frameIdx);
     vec3 debugColor = vec3(0.0f);
     int maxBounces = 1024;
     int bounceCount = 0;
     while (bounceCount < maxBounces)
     {
         prd.bounceCount = bounceCount;
-        traceNV(topLevelAS, rayFlags, 0xFF, 0, 0, 0, origin.xyz, tMin, direction.xyz, tMax, 0);
+        traceRayEXT(topLevelAS, rayFlags, 0xFF, 0, 0, 0, origin.xyz, tMin, direction.xyz, tMax, 0);
         if (prd.tHit >= tMin)
         {
             // Accumulate if we hit the light
@@ -235,13 +236,23 @@ void main()
     if (pushConst.frameIdx > 0)
     {
        float t = 1.0f / (pushConst.frameIdx + 1);
-       vec3 oldVal = imageLoad(image, ivec2(gl_LaunchIDNV.xy)).xyz;
-       imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(mix(oldVal, L, t), 1.0));
+       vec3 oldVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+       imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(oldVal, L, t), 1.0));
     }
     else
     {
-       imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(L, 1.0));
+       imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(L, 1.0));
     }
+
+//    if (prd.tHit > 0)
+//    {
+//        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(prd.Le, 1.0));
+//    }
+//    else
+//    {
+//        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(1, 0, 0, 1.0));
+//    }
+//    
 
     //imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(debugColor, 1.0));
 }

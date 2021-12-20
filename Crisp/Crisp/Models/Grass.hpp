@@ -7,37 +7,37 @@
 
 namespace crisp
 {
-    class Renderer;
-    class VulkanPipeline;
-    class Material;
-    class Geometry;
-    class VulkanRenderPass;
-    class UniformBuffer;
+class Renderer;
+class VulkanPipeline;
+class Material;
+class Geometry;
+class VulkanRenderPass;
+class UniformBuffer;
 
-    class VulkanSampler;
+class VulkanSampler;
 
-    class Grass
-    {
-    public:
-        Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* renderPass, UniformBuffer* cameraBuffer, VulkanSampler* sampler);
-        ~Grass();
+class Grass
+{
+public:
+    Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* renderPass,
+        UniformBuffer* cameraBuffer, VulkanSampler* sampler);
+    ~Grass();
 
-        DrawCommand createDrawCommand();
-        DrawCommand createShadowCommand(uint32_t subpassIndex);
+    DrawCommand createDrawCommand();
+    DrawCommand createShadowCommand(uint32_t subpassIndex);
 
-    private:
-        Renderer* m_renderer;
+private:
+    Renderer* m_renderer;
 
-        std::unique_ptr<Geometry> m_bladeGeometry;
+    std::unique_ptr<Geometry> m_bladeGeometry;
 
+    std::unique_ptr<VulkanPipeline> m_pipeline;
+    std::unique_ptr<Material> m_material;
 
-        std::unique_ptr<VulkanPipeline> m_pipeline;
-        std::unique_ptr<Material>       m_material;
+    std::vector<std::unique_ptr<VulkanPipeline>> m_shadowPipelines;
+    std::unique_ptr<Material> m_shadowMaterial;
 
-        std::vector<std::unique_ptr<VulkanPipeline>> m_shadowPipelines;
-        std::unique_ptr<Material> m_shadowMaterial;
-
-        DrawCommand m_drawCommand;
-        DrawCommand m_shadowDrawCommand;
-    };
-}
+    DrawCommand m_drawCommand;
+    DrawCommand m_shadowDrawCommand;
+};
+} // namespace crisp

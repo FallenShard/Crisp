@@ -1,7 +1,7 @@
 #include <VulkanTests/VulkanTest.hpp>
 
-#include <Crisp/Core/Window.hpp>
 #include <Crisp/Core/ApplicationEnvironment.hpp>
+#include <Crisp/Core/Window.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 #include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
@@ -11,22 +11,31 @@
 
 using namespace crisp;
 
-class VulkanMemoryHeapTest : public VulkanTest {};
-using UniqueDeviceWrapper = UniqueHandleWrapper < VkDevice, [](VkDevice device) { vkDestroyDevice(device, nullptr); } > ;
+class VulkanMemoryHeapTest : public VulkanTest
+{
+};
+using UniqueDeviceWrapper = UniqueHandleWrapper<VkDevice, [](VkDevice device)
+    {
+        vkDestroyDevice(device, nullptr);
+    }>;
 
 auto createMemoryHeapDeps()
 {
-    struct {
-        std::unique_ptr<VulkanContext> context{ std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false) };
+    struct
+    {
+        std::unique_ptr<VulkanContext> context{ std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{},
+            false) };
         VulkanPhysicalDevice physicalDevice{ context->selectPhysicalDevice({}).unwrap() };
-        UniqueDeviceWrapper device{ physicalDevice.createLogicalDevice(createDefaultQueueConfiguration(*context, physicalDevice)) };
+        UniqueDeviceWrapper device{ physicalDevice.createLogicalDevice(
+            createDefaultQueueConfiguration(*context, physicalDevice)) };
     } dependencies;
 
     return dependencies;
 }
 
 template <typename T>
-std::unique_ptr<VulkanMemoryHeap> createHeap(const T& deps, const VkMemoryPropertyFlags memProps, const VkDeviceSize blockSize)
+std::unique_ptr<VulkanMemoryHeap> createHeap(const T& deps, const VkMemoryPropertyFlags memProps,
+    const VkDeviceSize blockSize)
 {
     const uint32_t heapIndex = deps.physicalDevice.findMemoryType(memProps).unwrap();
     return std::make_unique<VulkanMemoryHeap>(memProps, blockSize, heapIndex, deps.device, "");

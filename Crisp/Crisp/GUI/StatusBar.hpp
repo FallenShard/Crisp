@@ -4,20 +4,19 @@
 
 namespace crisp::gui
 {
-    class Form;
-    class Label;
+class Form;
+class Label;
 
-    class StatusBar : public Panel
-    {
-    public:
-        StatusBar(Form* parentForm);
-        virtual ~StatusBar();
+class StatusBar : public Panel
+{
+public:
+    StatusBar(Form* parentForm);
+    virtual ~StatusBar();
 
-        void setFrameTimeAndFps(double frameTimeInMs, double fps);
+    void setFrameTimeAndFps(double frameTimeInMs, double fps);
 
-    private:
-        Label* m_fpsLabel;
-        Label* m_msLabel;
-
-    };
-}
+private:
+    Label* m_fpsLabel;
+    Label* m_msLabel;
+};
+} // namespace crisp::gui
