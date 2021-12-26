@@ -6,6 +6,8 @@
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
+#include <CrispCore/Enumerate.hpp>
+
 namespace crisp
 {
 namespace
@@ -30,21 +32,28 @@ VulkanPipelineLayout::VulkanPipelineLayout(const VulkanDevice& device, std::vect
     std::vector<VkPushConstantRange>&& pushConstants, std::vector<bool> descriptorSetBufferedStatus,
     std::unique_ptr<DescriptorSetAllocator> setAllocator)
     : VulkanResource(createHandle(device.getHandle(), setLayouts, pushConstants), device.getResourceDeallocator())
-    , m_descriptorSetLayouts(std::move(setLayouts))
-    , m_descriptorSetBindings(std::move(setBindings))
+    , m_descriptorSetLayouts(setLayouts.size())
     , m_pushConstants(std::move(pushConstants))
-    , m_descriptorSetBufferedStatus(descriptorSetBufferedStatus)
     , m_dynamicBufferCount(0)
     , m_setAllocator(std::move(setAllocator))
 {
-    m_dynamicBufferIndices.resize(m_descriptorSetBindings.size());
-    for (std::size_t s = 0; s < m_descriptorSetBindings.size(); ++s)
+    for (std::size_t s = 0; s < m_descriptorSetLayouts.size(); ++s)
     {
-        m_dynamicBufferIndices[s].resize(m_descriptorSetBindings[s].size(), ~0u);
-        for (std::size_t b = 0; b < m_descriptorSetBindings[s].size(); ++b)
-            if (m_descriptorSetBindings[s][b].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-                m_descriptorSetBindings[s][b].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
-                m_dynamicBufferIndices[s][b] = m_dynamicBufferCount++;
+        const size_t bindingCount = setBindings[s].size();
+        m_descriptorSetLayouts[s].handle = setLayouts[s];
+        m_descriptorSetLayouts[s].bindings = std::move(setBindings[s]);
+        m_descriptorSetLayouts[s].dynamicBufferIndices.resize(bindingCount, ~0u);
+        m_descriptorSetLayouts[s].isBuffered = descriptorSetBufferedStatus[s];
+
+        for (std::size_t b = 0; b < m_descriptorSetLayouts[s].bindings.size(); ++b)
+        {
+            const auto& binding = m_descriptorSetLayouts[s].bindings[b];
+            if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+                binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+            {
+                m_descriptorSetLayouts[s].dynamicBufferIndices[b] = m_dynamicBufferCount++;
+            }
+        }
     }
 }
 
@@ -52,7 +61,7 @@ VulkanPipelineLayout::~VulkanPipelineLayout()
 {
     for (auto setLayout : m_descriptorSetLayouts)
     {
-        m_deallocator->deferDestruction(m_framesToLive, setLayout,
+        m_deallocator->deferDestruction(m_framesToLive, setLayout.handle,
             [](void* handle, VulkanResourceDeallocator* deallocator)
             {
                 spdlog::debug("Destroying set layout: {}", handle);
@@ -64,25 +73,15 @@ VulkanPipelineLayout::~VulkanPipelineLayout()
 
 VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const
 {
-    return m_setAllocator->allocate(m_descriptorSetLayouts.at(setIndex), m_descriptorSetBindings.at(setIndex));
-}
-
-uint32_t VulkanPipelineLayout::getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const
-{
-    return m_dynamicBufferIndices.at(setIndex).at(binding);
+    return m_setAllocator->allocate(m_descriptorSetLayouts.at(setIndex).handle,
+        m_descriptorSetLayouts.at(setIndex).bindings);
 }
 
 void VulkanPipelineLayout::swap(VulkanPipelineLayout& other)
 {
     std::swap(m_descriptorSetLayouts, other.m_descriptorSetLayouts);
-    std::swap(m_descriptorSetBindings, other.m_descriptorSetBindings);
     std::swap(m_pushConstants, other.m_pushConstants);
-    std::swap(m_descriptorSetBufferedStatus, other.m_descriptorSetBufferedStatus);
-
-    std::swap(m_dynamicBufferIndices, other.m_dynamicBufferIndices);
     std::swap(m_dynamicBufferCount, other.m_dynamicBufferCount);
-
-    // std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
 }
 
 std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(VulkanDevice& device,
@@ -91,13 +90,19 @@ std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSe
     auto getNumCopiesPerSet = [this](uint32_t numCopies)
     {
         std::vector<uint32_t> numCopiesPerSet;
-        for (uint32_t i = 0; i < m_descriptorSetBufferedStatus.size(); ++i)
-            numCopiesPerSet.push_back(
-                m_descriptorSetBufferedStatus[i] ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
+        for (const auto& layout : m_descriptorSetLayouts)
+        {
+            numCopiesPerSet.push_back(layout.isBuffered ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
+        }
         return numCopiesPerSet;
     };
 
-    return std::make_unique<DescriptorSetAllocator>(device, m_descriptorSetBindings, getNumCopiesPerSet(numCopies),
-        flags);
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> bindings(m_descriptorSetLayouts.size());
+    for (uint32_t i = 0; i < bindings.size(); ++i)
+    {
+        bindings[i] = m_descriptorSetLayouts[i].bindings;
+    }
+
+    return std::make_unique<DescriptorSetAllocator>(device, bindings, getNumCopiesPerSet(numCopies), flags);
 }
 } // namespace crisp

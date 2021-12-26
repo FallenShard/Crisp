@@ -54,7 +54,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     m_device = std::make_unique<VulkanDevice>(*m_physicalDevice,
         createDefaultQueueConfiguration(*m_context, *m_physicalDevice), RendererConfig::VirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
-    m_defaultRenderPass = std::make_unique<DefaultRenderPass>(this);
+    m_defaultRenderPass = std::make_unique<DefaultRenderPass>(*this);
     logger->info("Created all base components");
 
     m_defaultViewport = m_swapChain->getViewport();
@@ -296,7 +296,7 @@ void Renderer::drawFrame()
         return;
     }
 
-    m_defaultRenderPass->recreateFramebuffer(m_swapChain->getImageView(swapImageIndex.value()));
+    m_defaultRenderPass->recreateFramebuffer(*this, m_swapChain->getImageView(swapImageIndex.value()));
 
     /*for (const auto& worker : m_workers)
     {*/
@@ -457,7 +457,7 @@ void Renderer::record(VkCommandBuffer commandBuffer)
     for (const auto& drawCommand : m_drawCommands)
         drawCommand(commandBuffer);
 
-    m_defaultRenderPass->begin(commandBuffer);
+    m_defaultRenderPass->begin(commandBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
     if (!m_sceneImageViews.empty())
     {
         m_scenePipeline->bind(commandBuffer);
@@ -492,6 +492,6 @@ void Renderer::recreateSwapChain()
     vkDeviceWaitIdle(m_device->getHandle());
 
     m_swapChain->recreate(*m_device, *m_context);
-    m_defaultRenderPass->recreate();
+    m_defaultRenderPass->recreate(*this);
 }
 } // namespace crisp

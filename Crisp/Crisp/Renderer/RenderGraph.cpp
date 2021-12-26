@@ -68,7 +68,7 @@ void RenderGraph::resize(int /*width*/, int /*height*/)
     for (auto& [key, node] : m_nodes)
     {
         if (!node->isCompute)
-            node->renderPass->recreate();
+            node->renderPass->recreate(*m_renderer);
     }
 }
 
@@ -89,7 +89,7 @@ void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass,
 {
     RenderGraph::Node* sourceNode = m_nodes.at(sourcePass).get();
     VkImageAspectFlags attachmentAspect =
-        sourceNode->renderPass->getRenderTarget(sourceRenderTargetIndex)->getAspectMask();
+        sourceNode->renderPass->getRenderTarget(sourceRenderTargetIndex).getAspectMask();
     RenderGraph::Node* dstNode = nullptr;
     if (m_nodes.count(destinationPass))
         dstNode = m_nodes.at(destinationPass).get();
@@ -102,8 +102,8 @@ void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass,
             [sourceRenderTargetIndex, layerMultiplier, dstStageFlags](const VulkanRenderPass& sourcePass,
                 VkCommandBuffer cmdBuffer, uint32_t frameIndex)
         {
-            auto renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-            renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
+            renderTarget.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 frameIndex * layerMultiplier, layerMultiplier, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 dstStageFlags);
         };
@@ -114,8 +114,8 @@ void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass,
             [sourceRenderTargetIndex, layerMultiplier, dstStageFlags](const VulkanRenderPass& sourcePass,
                 VkCommandBuffer cmdBuffer, uint32_t frameIndex)
         {
-            auto renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-            renderTarget->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
+            renderTarget.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 frameIndex * layerMultiplier, layerMultiplier, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 dstStageFlags);
         };
@@ -270,7 +270,7 @@ void RenderGraph::executeRenderPass(VkCommandBuffer cmdBuffer, uint32_t virtualF
 {
     bool useSecondaries = node.commands[0].size() > 100;
 
-    node.renderPass->begin(cmdBuffer,
+    node.renderPass->begin(cmdBuffer, virtualFrameIndex,
         useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
     for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getNumSubpasses(); subpassIndex++)
     {

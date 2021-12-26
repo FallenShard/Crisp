@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Renderer/RenderNode.hpp>
-#include <Crisp/Renderer/RenderPasses/AtmosphericLutPass.hpp>
+#include <Crisp/Renderer/RenderPasses/AtmospherePasses.hpp>
 
 #include <CrispCore/RobinHood.hpp>
 

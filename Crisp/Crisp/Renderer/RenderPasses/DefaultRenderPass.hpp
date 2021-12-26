@@ -6,16 +6,16 @@
 
 namespace crisp
 {
-    class DefaultRenderPass : public VulkanRenderPass
-    {
-    public:
-        DefaultRenderPass(Renderer* renderer);
+class DefaultRenderPass : public VulkanRenderPass
+{
+public:
+    DefaultRenderPass(Renderer& renderer);
 
-        void recreateFramebuffer(VkImageView VulkanSwapChainImageView);
+    void recreateFramebuffer(Renderer& renderer, VkImageView VulkanSwapChainImageView);
 
-    private:
-        virtual void createResources() override;
+private:
+    virtual void createResources(Renderer& renderer) override;
 
-        robin_hood::unordered_flat_map<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_imageFramebuffers;
-    };
-}
+    robin_hood::unordered_flat_map<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_imageFramebuffers;
+};
+} // namespace crisp

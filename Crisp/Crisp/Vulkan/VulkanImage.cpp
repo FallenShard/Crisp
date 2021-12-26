@@ -14,7 +14,7 @@ auto logger = createLoggerMt("VulkanImage");
 }
 
 VulkanImage::VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
-    : VulkanResource(device.getResourceDeallocator())
+    : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
     , m_type(createInfo.imageType)
     , m_device(&device)
     , m_format(createInfo.format)
@@ -24,15 +24,10 @@ VulkanImage::VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createIn
     , m_aspect(aspect)
     , m_layouts(m_numLayers, std::vector<VkImageLayout>(m_mipLevels, VK_IMAGE_LAYOUT_UNDEFINED))
 {
-    vkCreateImage(device.getHandle(), &createInfo, nullptr, &m_handle);
-
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation = device.getMemoryAllocator()
-                       .getDeviceImageHeap()
-                       .allocate(memRequirements.size, memRequirements.alignment)
-                       .unwrap();
+    m_allocation = device.getMemoryAllocator().allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
     vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
 }
 
@@ -61,15 +56,12 @@ VulkanImage::VulkanImage(VulkanDevice& device, VkExtent3D extent, uint32_t numLa
     imageInfo.usage = usage;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    vkCreateImage(device.getHandle(), &imageInfo, nullptr, &m_handle);
+    m_handle = device.createImage(imageInfo);
 
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation = device.getMemoryAllocator()
-                       .getDeviceImageHeap()
-                       .allocate(memRequirements.size, memRequirements.alignment)
-                       .unwrap();
+    m_allocation = device.getMemoryAllocator().allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
     vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
 }
 
@@ -290,13 +282,13 @@ void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, 
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
-std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type) const
+std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type)
 {
     return std::make_unique<VulkanImageView>(*m_device, *this, type, 0, m_numLayers, 0, m_mipLevels);
 }
 
 std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers,
-    uint32_t baseMipLevel, uint32_t mipLevels) const
+    uint32_t baseMipLevel, uint32_t mipLevels)
 {
     return std::make_unique<VulkanImageView>(*m_device, *this, type, baseLayer, numLayers, baseMipLevel, mipLevels);
 }
@@ -412,5 +404,20 @@ std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(VkImag
 
     logger->error("Unsupported layout transition: {} to {}!", oldLayout, newLayout);
     return { 0, 0 };
+}
+
+VkImageAspectFlags determineImageAspect(VkFormat format)
+{
+    if (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D16_UNORM)
+    {
+        return VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    if (format == VK_FORMAT_D16_UNORM_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
+        format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+    {
+        return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+
+    return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 } // namespace crisp

@@ -58,7 +58,7 @@ add_library(CrispCore STATIC
     "CrispCore/StringUtils.cpp"
     "CrispCore/StringUtils.hpp"
     "CrispCore/Timer.hpp"
-)
+ "CrispCore/Enumerate.hpp" "CrispCore/ZipIterator.hpp")
 
 target_include_directories(CrispCore PUBLIC ".")
 

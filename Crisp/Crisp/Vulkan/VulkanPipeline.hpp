@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
-#include <Crisp/Vulkan/VulkanDescriptorSetLayout.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>

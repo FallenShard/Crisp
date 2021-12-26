@@ -265,6 +265,13 @@ Result<VkFormat> VulkanPhysicalDevice::findSupportedDepthFormat() const
         VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
+VkFormatProperties VulkanPhysicalDevice::getFormatProperties(VkFormat format) const
+{
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(m_handle, format, &props);
+    return props;
+}
+
 void VulkanPhysicalDevice::initFeaturesAndProperties()
 {
     m_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };

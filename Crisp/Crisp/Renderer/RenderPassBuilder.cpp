@@ -106,7 +106,7 @@ RenderPassBuilder& RenderPassBuilder::addDependency(uint32_t srcSubpass, uint32_
     return *this;
 }
 
-VkRenderPass RenderPassBuilder::create(VkDevice device)
+std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder::create(VkDevice device)
 {
     VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
     renderPassInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
@@ -118,15 +118,6 @@ VkRenderPass RenderPassBuilder::create(VkDevice device)
 
     VkRenderPass renderPass;
     vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
-    return renderPass;
-}
-
-std::vector<VkImageLayout> RenderPassBuilder::getFinalLayouts() const
-{
-    std::vector<VkImageLayout> result(m_attachments.size());
-    for (uint32_t i = 0; i < result.size(); i++)
-        result[i] = m_attachments[i].finalLayout;
-
-    return result;
+    return std::make_pair(renderPass, m_attachments);
 }
 } // namespace crisp

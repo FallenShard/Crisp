@@ -14,8 +14,8 @@
 #include <Crisp/vulkan/VulkanImage.hpp>
 #include <Crisp/vulkan/VulkanImageView.hpp>
 
+#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/DefaultRenderPass.hpp>
-#include <Crisp/Renderer/RenderPasses/GuiRenderPass.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/Texture.hpp>
 
@@ -29,6 +29,37 @@ namespace
 static constexpr float DepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
+
+std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(crisp::Renderer& renderer)
+{
+    auto [handle, attachmentDescriptions] =
+        crisp::RenderPassBuilder()
+            .addAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT)
+            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            .addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
+            .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+            .setAttachmentLayouts(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+            .setNumSubpasses(1)
+            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            .setDepthAttachmentRef(0, 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+            .create(renderer.getDevice().getHandle());
+
+    crisp::RenderPassDescription description{};
+    description.isSwapChainDependent = true;
+    description.attachmentDescriptions = std::move(attachmentDescriptions);
+    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
+    description.renderTargetInfos[0].configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT);
+    description.renderTargetInfos[1].configureDepthRenderTarget(0, { 1.0f, 0 });
+    description.subpassCount = 1;
+
+    return std::make_unique<crisp::VulkanRenderPass>(renderer, handle, std::move(description));
+}
+
 } // namespace
 
 namespace crisp::gui
@@ -42,7 +73,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
     m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + DepthLayers);
 
     // Create the render pass where all GUI controls will be drawn
-    m_guiPass = std::make_unique<GuiRenderPass>(m_renderer);
+    m_guiPass = createGuiRenderPass(*m_renderer);
 
     // Create pipelines for different types of drawable objects
     createPipelines();
@@ -272,7 +303,7 @@ void RenderSystem::submitDrawCommands()
 
             auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
-            m_guiPass->begin(commandBuffer);
+            m_guiPass->begin(commandBuffer, currentFrame, VK_SUBPASS_CONTENTS_INLINE);
             for (auto& cmd : m_drawCommands)
             {
                 (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
@@ -292,7 +323,7 @@ void RenderSystem::submitDrawCommands()
             m_debugRects.clear();
             m_rectColors.clear();
 
-            m_guiPass->getRenderTarget(0)->transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            m_guiPass->getRenderTarget(0).transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 currentFrame, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
@@ -314,7 +345,7 @@ void RenderSystem::resize(int /*width*/, int /*height*/)
     m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f,
         static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
-    m_guiPass->recreate();
+    m_guiPass->recreate(*m_renderer);
     updateFullScreenMaterial();
 }
 

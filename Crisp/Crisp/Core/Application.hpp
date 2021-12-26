@@ -50,6 +50,8 @@ public:
 private:
     std::unique_ptr<Window> createWindow();
     void updateFrameStatistics(double frameTime);
+    void onMinimize();
+    void onRestore();
 
     std::unique_ptr<Window> m_window;
     std::unique_ptr<Renderer> m_renderer;
@@ -61,5 +63,7 @@ private:
     double m_accumulatedTime;
     double m_accumulatedFrames;
     double m_updatePeriod;
+
+    bool m_isMinimized{ false };
 };
 } // namespace crisp

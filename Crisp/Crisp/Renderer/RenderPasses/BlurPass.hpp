@@ -4,14 +4,6 @@
 
 namespace crisp
 {
-    class BlurPass : public VulkanRenderPass
-    {
-    public:
-        BlurPass(Renderer* renderer, VkFormat format, VkExtent2D renderArea);
-
-    protected:
-        virtual void createResources() override;
-
-        VkFormat m_colorFormat;
-    };
-}
+std::unique_ptr<VulkanRenderPass> createBlurPass(Renderer& renderer, VkFormat format,
+    std::optional<VkExtent2D> renderArea = {});
+} // namespace crisp

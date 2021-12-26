@@ -4,21 +4,18 @@
 
 namespace crisp
 {
-    class LiquidRenderPass : public VulkanRenderPass
+class LiquidRenderPass : public VulkanRenderPass
+{
+public:
+    enum RenderTarget
     {
-    public:
-        enum RenderTarget
-        {
-            GBuffer,
-            Depth,
-            LiquidMask,
+        GBuffer,
+        Depth,
+        LiquidMask,
 
-            Count
-        };
-
-        LiquidRenderPass(Renderer* renderer);
-
-    protected:
-        virtual void createResources() override;
+        Count
     };
-}
+
+    LiquidRenderPass(Renderer& renderer);
+};
+} // namespace crisp

@@ -99,3 +99,11 @@ TEST_F(VulkanPhysicalDeviceTest, MemoryTypes)
 
     vkDestroyDevice(device, nullptr);
 }
+
+TEST_F(VulkanPhysicalDeviceTest, FormatProperties)
+{
+    const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
+    const auto props = physicalDevice.getFormatProperties(VK_FORMAT_D32_SFLOAT);
+    ASSERT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+    ASSERT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}

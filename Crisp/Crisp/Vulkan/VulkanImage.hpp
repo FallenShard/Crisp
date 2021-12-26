@@ -36,9 +36,9 @@ public:
     void buildMipmaps(VkCommandBuffer commandBuffer);
     void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t layer);
 
-    std::unique_ptr<VulkanImageView> createView(VkImageViewType type) const;
+    std::unique_ptr<VulkanImageView> createView(VkImageViewType type);
     std::unique_ptr<VulkanImageView> createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers,
-        uint32_t baseMipLevel = 0, uint32_t mipLevels = 1) const;
+        uint32_t baseMipLevel = 0, uint32_t mipLevels = 1);
 
     uint32_t getMipLevels() const;
     uint32_t getWidth() const;
@@ -63,4 +63,7 @@ private:
 
     std::vector<std::vector<VkImageLayout>> m_layouts;
 };
+
+VkImageAspectFlags determineImageAspect(VkFormat format);
+
 } // namespace crisp

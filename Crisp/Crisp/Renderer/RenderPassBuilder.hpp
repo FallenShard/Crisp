@@ -32,9 +32,7 @@ public:
         VkPipelineStageFlags dstStageMask, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
         VkDependencyFlags flags = 0);
 
-    VkRenderPass create(VkDevice device);
-
-    std::vector<VkImageLayout> getFinalLayouts() const;
+    std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> create(VkDevice device);
 
 private:
     std::vector<VkAttachmentDescription> m_attachments;

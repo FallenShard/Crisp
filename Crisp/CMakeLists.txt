@@ -17,8 +17,8 @@ add_library(Crisp
     "Crisp/Core/InputTranslator.hpp"
     "Crisp/Core/Keyboard.hpp"
     "Crisp/Core/Mouse.hpp"
-    "Crisp/Core/SceneContainer.cpp"
-    "Crisp/Core/SceneContainer.hpp"
+    "Crisp/Scenes/SceneContainer.cpp"
+    "Crisp/Scenes/SceneContainer.hpp"
     "Crisp/Core/ThreadPool.hpp"
     "Crisp/Core/Window.cpp"
     "Crisp/Core/Window.hpp"
@@ -97,10 +97,10 @@ add_library(Crisp
     "Crisp/Models/Skybox.hpp"
     "Crisp/Models/SPH.cpp"
     "Crisp/Models/SPH.hpp"
-    "Crisp/Renderer/RenderPasses/AmbientOcclusionPass.cpp"
-    "Crisp/Renderer/RenderPasses/AmbientOcclusionPass.hpp"
-    "Crisp/Renderer/RenderPasses/AtmosphericLutPass.cpp"
-    "Crisp/Renderer/RenderPasses/AtmosphericLutPass.hpp"
+    
+    
+    "Crisp/Renderer/RenderPasses/AtmospherePasses.cpp"
+    "Crisp/Renderer/RenderPasses/AtmospherePasses.hpp"
     "Crisp/Renderer/RenderPasses/BlurPass.cpp"
     "Crisp/Renderer/RenderPasses/BlurPass.hpp"
     "Crisp/Renderer/RenderPasses/CubeMapRenderPass.cpp"
@@ -111,8 +111,8 @@ add_library(Crisp
     "Crisp/Renderer/RenderPasses/DepthPass.hpp"
     "Crisp/Renderer/RenderPasses/ForwardLightingPass.cpp"
     "Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp"
-    "Crisp/Renderer/RenderPasses/GuiRenderPass.cpp"
-    "Crisp/Renderer/RenderPasses/GuiRenderPass.hpp"
+    
+    
     "Crisp/Renderer/RenderPasses/LightShaftPass.cpp"
     "Crisp/Renderer/RenderPasses/LightShaftPass.hpp"
     "Crisp/Renderer/RenderPasses/LiquidRenderPass.cpp"
@@ -221,8 +221,8 @@ add_library(Crisp
     "Crisp/Vulkan/VulkanDebugUtils.hpp"
     "Crisp/Vulkan/VulkanDescriptorSet.cpp"
     "Crisp/Vulkan/VulkanDescriptorSet.hpp"
-    "Crisp/Vulkan/VulkanDescriptorSetLayout.cpp"
-    "Crisp/Vulkan/VulkanDescriptorSetLayout.hpp"
+    
+    
     "Crisp/Vulkan/VulkanDevice.cpp"
     "Crisp/Vulkan/VulkanDevice.hpp"
     "Crisp/Vulkan/VulkanFormatTraits.hpp"

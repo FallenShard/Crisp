@@ -21,7 +21,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     static constexpr uint32_t CubeMapFaceCount = 6;
 
     float viewportSize = static_cast<float>(cubeMapSize);
-    auto cubeMapPass = std::make_unique<CubeMapRenderPass>(renderer, VkExtent2D{ cubeMapSize, cubeMapSize }, true);
+    auto cubeMapPass = std::make_unique<CubeMapRenderPass>(*renderer, VkExtent2D{ cubeMapSize, cubeMapSize }, true);
     std::vector<std::unique_ptr<VulkanPipeline>> cubeMapPipelines(CubeMapFaceCount);
     for (int i = 0; i < CubeMapFaceCount; i++)
         cubeMapPipelines[i] = renderer->createPipelineFromLua("EquirectToCube.lua", *cubeMapPass, i);
@@ -46,7 +46,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)) };
 
-            cubeMapPass->begin(cmdBuffer, 0);
+            cubeMapPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
             for (int i = 0; i < CubeMapFaceCount; i++)
             {
@@ -66,8 +66,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
 
             cubeMapPass->end(cmdBuffer, 0);
 
-            cubeMapPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 6, 0,
-                11, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            cubeMapPass->getRenderTarget(0).transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 6, 0,
+                1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         });
     renderer->flushResourceUpdates(true);
 
@@ -90,7 +90,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 {
     static constexpr uint32_t CubeMapFaceCount = 6;
 
-    auto convPass = std::make_shared<CubeMapRenderPass>(renderer, VkExtent2D{ cubeMapSize, cubeMapSize });
+    auto convPass = std::make_shared<CubeMapRenderPass>(*renderer, VkExtent2D{ cubeMapSize, cubeMapSize });
     std::vector<std::unique_ptr<VulkanPipeline>> convPipelines(CubeMapFaceCount);
     for (int i = 0; i < CubeMapFaceCount; i++)
         convPipelines[i] = renderer->createPipelineFromLua("ConvolveDiffuse.lua", *convPass, i);
@@ -114,7 +114,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)) };
 
-            convPass->begin(cmdBuffer, 0);
+            convPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
             for (int i = 0; i < CubeMapFaceCount; i++)
             {
@@ -133,13 +133,13 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
             }
 
             convPass->end(cmdBuffer, 0);
-            convPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            convPass->getRenderTarget(0).transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
     renderer->flushResourceUpdates(true);
 
     const std::string key = "envIrrMap";
-    auto imageView = convPass->getRenderTarget(0)->createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, CubeMapFaceCount);
+    auto imageView = convPass->getRenderTarget(0).createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, CubeMapFaceCount);
     return std::make_pair(convPass->extractRenderTarget(0), std::move(imageView));
 }
 
@@ -161,7 +161,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
         unsigned int w = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
         unsigned int h = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
         std::shared_ptr<CubeMapRenderPass> prefilterPass =
-            std::make_unique<CubeMapRenderPass>(renderer, VkExtent2D{ w, h });
+            std::make_unique<CubeMapRenderPass>(*renderer, VkExtent2D{ w, h });
 
         std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(CubeMapFaceCount);
         for (int j = 0; j < CubeMapFaceCount; j++)
@@ -187,7 +187,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                     glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
                 };
 
-                prefilterPass->begin(cmdBuffer, 0);
+                prefilterPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
                 for (int j = 0; j < 6; j++)
                 {
@@ -207,9 +207,9 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                 }
 
                 prefilterPass->end(cmdBuffer, 0);
-                prefilterPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                prefilterPass->getRenderTarget(0).transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-                prefilterPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                prefilterPass->getRenderTarget(0).transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                 renderer->finish();
             });
@@ -230,19 +230,20 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
 
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer)
 {
-    auto texPass = std::make_shared<TexturePass>(renderer, VkExtent2D{ 512, 512 });
+    std::shared_ptr<VulkanRenderPass> texPass =
+        createTexturePass(*renderer, VkExtent2D{ 512, 512 }, VK_FORMAT_R16G16_SFLOAT, false);
     std::shared_ptr<VulkanPipeline> pipeline = renderer->createPipelineFromLua("BrdfLut.lua", *texPass, 0);
 
     renderer->enqueueResourceUpdate(
         [renderer, pipeline, texPass](VkCommandBuffer cmdBuffer)
         {
-            texPass->begin(cmdBuffer, 0);
+            texPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
             pipeline->bind(cmdBuffer);
             renderer->drawFullScreenQuad(cmdBuffer);
 
             texPass->end(cmdBuffer, 0);
-            texPass->getRenderTarget(0)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            texPass->getRenderTarget(0).transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
     renderer->flushResourceUpdates(true);

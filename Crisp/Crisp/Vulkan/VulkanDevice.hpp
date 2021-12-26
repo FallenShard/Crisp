@@ -35,6 +35,7 @@ public:
     VkSemaphore createSemaphore() const;
     VkFence createFence(VkFenceCreateFlags flags) const;
     VkBuffer createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const;
+    VkImage createImage(const VkImageCreateInfo& imageCreateInfo) const;
 
     VulkanMemoryAllocator& getMemoryAllocator() const
     {

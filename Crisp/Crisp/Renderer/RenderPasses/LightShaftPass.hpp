@@ -4,12 +4,9 @@
 
 namespace crisp
 {
-    class LightShaftPass : public VulkanRenderPass
-    {
-    public:
-        LightShaftPass(Renderer* renderer);
-
-    protected:
-        virtual void createResources() override;
-    };
-}
+class LightShaftPass : public VulkanRenderPass
+{
+public:
+    LightShaftPass(Renderer& renderer);
+};
+} // namespace crisp

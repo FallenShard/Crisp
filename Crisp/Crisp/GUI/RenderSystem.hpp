@@ -27,7 +27,7 @@ class IndexBuffer;
 class VulkanSampler;
 class Texture;
 
-class GuiRenderPass;
+class VulkanRenderPass;
 
 struct Font;
 
@@ -93,7 +93,7 @@ private:
 
     glm::mat4 m_P;
 
-    std::unique_ptr<GuiRenderPass> m_guiPass;
+    std::unique_ptr<VulkanRenderPass> m_guiPass;
     std::unique_ptr<VulkanPipeline> m_colorQuadPipeline;
     std::unique_ptr<VulkanPipeline> m_textPipeline;
     std::unique_ptr<VulkanPipeline> m_texQuadPipeline;

@@ -67,7 +67,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         BufferUpdatePolicy::PerFrame);
 
     // Transmittance lookup
-    renderGraph.addRenderPass("TransLUTPass", std::make_unique<TransmittanceLutPass>(&renderer));
+    renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer));
     auto transLutPipeline =
         resourceContext.createPipeline("transLut", "SkyTransLut.lua", renderGraph.getRenderPass("TransLUTPass"), 0);
     auto transLutMaterial = resourceContext.createMaterial("transLut", transLutPipeline);
@@ -125,7 +125,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     {
     };
 
-    renderGraph.addRenderPass("SkyViewLUTPass", std::make_unique<SkyViewLutPass>(&renderer));
+    renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer));
     renderGraph.addRenderTargetLayoutTransition("TransLUTPass", "SkyViewLUTPass", 0);
     renderGraph.addDependency("MultiScatPass", "SkyViewLUTPass",
         [tex = resourceContext.getImage("multiScatTex")](const VulkanRenderPass&, VkCommandBuffer cmdBuffer,
@@ -163,7 +163,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     skyViewLutNode->pass("SkyViewLUTPass").pipeline = skyViewLutPipeline;
 
     // Camera volumes
-    auto camVolPass = std::make_unique<CameraVolumesPass>(&renderer);
+    auto camVolPass = std::make_unique<CameraVolumesPass>(renderer);
     auto& camPass = *camVolPass;
     renderGraph.addRenderPass("CameraVolumesPass", std::move(camVolPass));
     renderGraph.addRenderTargetLayoutTransition("SkyViewLUTPass", "CameraVolumesPass", 0);
@@ -195,7 +195,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     skyCameraVolumesNode->pass("CameraVolumesPass").pipeline = cameraVolumesPipeline;
 
     // Ray marching - final step
-    renderGraph.addRenderPass("RayMarchingPass", std::make_unique<RayMarchingPass>(&renderer));
+    renderGraph.addRenderPass("RayMarchingPass", createRayMarchingPass(renderer));
     renderGraph.addRenderTargetLayoutTransition("CameraVolumesPass", "RayMarchingPass", 0);
     renderGraph.addRenderTargetLayoutTransition("DepthPrePass", "RayMarchingPass", 0);
     auto rayMarchingPipeline = resourceContext.createPipeline("rayMarching", "SkyRayMarching.lua",

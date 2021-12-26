@@ -93,6 +93,8 @@ public:
         VkFormatFeatureFlags features) const;
     Result<VkFormat> findSupportedDepthFormat() const;
 
+    VkFormatProperties getFormatProperties(VkFormat format) const;
+
 private:
     void initFeaturesAndProperties();
 

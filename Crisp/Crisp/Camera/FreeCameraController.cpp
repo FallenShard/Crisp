@@ -71,31 +71,32 @@ const Camera& FreeCameraController::getCamera() const
 
 bool FreeCameraController::update(const float dt)
 {
+    bool hasMoved = false;
     if (m_window->isKeyDown(Key::A))
     {
         m_camera.translate(-m_camera.getRightDir() * m_speed * dt);
-        return true;
+        hasMoved = true;
     }
 
     if (m_window->isKeyDown(Key::D))
     {
         m_camera.translate(+m_camera.getRightDir() * m_speed * dt);
-        return true;
+        hasMoved = true;
     }
 
     if (m_window->isKeyDown(Key::S))
     {
         m_camera.translate(-m_camera.getLookDir() * m_speed * dt);
-        return true;
+        hasMoved = true;
     }
 
     if (m_window->isKeyDown(Key::W))
     {
         m_camera.translate(+m_camera.getLookDir() * m_speed * dt);
-        return true;
+        hasMoved = true;
     }
 
-    return false;
+    return hasMoved;
 }
 
 void FreeCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs)

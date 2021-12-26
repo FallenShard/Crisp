@@ -112,9 +112,16 @@ VkFence VulkanDevice::createFence(VkFenceCreateFlags flags) const
 
 VkBuffer VulkanDevice::createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const
 {
-    VkBuffer bufferHandle;
-    vkCreateBuffer(m_handle, &bufferCreateInfo, nullptr, &bufferHandle);
-    return bufferHandle;
+    VkBuffer buffer;
+    vkCreateBuffer(m_handle, &bufferCreateInfo, nullptr, &buffer);
+    return buffer;
+}
+
+VkImage VulkanDevice::createImage(const VkImageCreateInfo& imageCreateInfo) const
+{
+    VkImage image;
+    vkCreateImage(m_handle, &imageCreateInfo, nullptr, &image);
+    return image;
 }
 
 void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo)

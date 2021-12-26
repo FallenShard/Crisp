@@ -238,4 +238,16 @@ void Window::focusCallback(GLFWwindow* window, int isFocused)
             dispatcher->focusLost();
     }
 }
+
+void Window::iconifyCallback(GLFWwindow* window, int isIconified)
+{
+    auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    if (dispatcher)
+    {
+        if (isIconified)
+            dispatcher->minimized();
+        else
+            dispatcher->restored();
+    }
+}
 } // namespace crisp

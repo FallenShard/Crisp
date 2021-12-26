@@ -1,5 +1,4 @@
 #include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/SceneContainer.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/GUI/ComboBox.hpp>
 #include <Crisp/GUI/Form.hpp>
@@ -8,6 +7,7 @@
 #include <Crisp/GUI/RenderSystem.hpp>
 #include <Crisp/GUI/StatusBar.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/SceneContainer.hpp>
 
 #include <CrispCore/ChromeProfiler.hpp>
 #include <CrispCore/Logger.hpp>
@@ -40,6 +40,8 @@ Application::Application(const ApplicationEnvironment&)
     logger->info("SceneContainer created!");
 
     m_window->resized.subscribe<&Application::onResize>(this);
+    m_window->minimized.subscribe<&Application::onMinimize>(this);
+    m_window->restored.subscribe<&Application::onRestore>(this);
 
     // Create and connect GUI with the mouse
     m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
@@ -87,6 +89,9 @@ void Application::run()
         timeSinceLastUpdate += timeDelta;
 
         Window::pollEvents();
+        if (m_isMinimized)
+            continue;
+
         m_guiForm->processGuiUpdates();
 
         while (timeSinceLastUpdate > TimePerFrame)
@@ -162,5 +167,13 @@ void Application::updateFrameStatistics(double frameTime)
         m_accumulatedTime = spillOver;
         m_accumulatedFrames = spillOverFrac;
     }
+}
+void Application::onMinimize()
+{
+    m_isMinimized = true;
+}
+void Application::onRestore()
+{
+    m_isMinimized = false;
 }
 } // namespace crisp

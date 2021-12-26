@@ -71,6 +71,8 @@ public:
     Event<> closed;
     Event<> focusGained;
     Event<> focusLost;
+    Event<> minimized;
+    Event<> restored;
 
 private:
     static void resizeCallback(GLFWwindow* window, int width, int height);
@@ -81,6 +83,7 @@ private:
     static void mouseEnterCallback(GLFWwindow* window, int entered);
     static void closeCallback(GLFWwindow* window);
     static void focusCallback(GLFWwindow* window, int isFocused);
+    static void iconifyCallback(GLFWwindow* window, int isIconified);
     GLFWwindow* m_window;
 };
 } // namespace crisp

@@ -6,7 +6,7 @@
 
 namespace crisp
 {
-VulkanImageView::VulkanImageView(const VulkanDevice& device, const VulkanImage& image, VkImageViewType type,
+VulkanImageView::VulkanImageView(const VulkanDevice& device, VulkanImage& image, VkImageViewType type,
     uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
     : VulkanResource(device.getResourceDeallocator())
     , m_image(image)

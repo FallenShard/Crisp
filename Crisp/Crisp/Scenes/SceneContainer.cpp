@@ -1,4 +1,4 @@
-#include <Crisp/Core/SceneContainer.hpp>
+#include <Crisp/Scenes/SceneContainer.hpp>
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
