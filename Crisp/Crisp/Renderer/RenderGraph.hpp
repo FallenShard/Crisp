@@ -3,6 +3,7 @@
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/DrawCommand.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
 #include <CrispCore/Result.hpp>
@@ -17,7 +18,7 @@ class Renderer;
 class RenderGraph
 {
 public:
-    using DependencyCallback = std::function<void(const VulkanRenderPass&, VkCommandBuffer, uint32_t)>;
+    using DependencyCallback = std::function<void(const VulkanRenderPass&, VulkanCommandBuffer&, uint32_t)>;
 
     struct Node
     {
@@ -42,7 +43,7 @@ public:
         glm::ivec3 workGroupSize;
         glm::ivec3 numWorkGroups;
 
-        std::function<void(VkCommandBuffer, uint32_t)> preDispatchCallback;
+        std::function<void(VulkanCommandBuffer&, uint32_t)> preDispatchCallback;
         bool isEnabled = true;
     };
 
@@ -73,12 +74,12 @@ public:
 
     const VulkanRenderPass& getRenderPass(std::string name);
 
-    static void executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer,
-        int virtualFrameIndex);
+    static void executeDrawCommand(const DrawCommand& command, Renderer& renderer, VulkanCommandBuffer& cmdBuffer,
+        uint32_t virtualFrameIndex);
 
 private:
-    void executeRenderPass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
-    void executeComputePass(VkCommandBuffer buffer, uint32_t virtualFrameIndex, const Node& node) const;
+    void executeRenderPass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;
+    void executeComputePass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;
 
     Renderer* m_renderer;
 

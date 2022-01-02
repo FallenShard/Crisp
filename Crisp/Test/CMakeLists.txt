@@ -12,7 +12,7 @@ add_executable(CrispTest
     "VulkanTests/VulkanPhysicalDeviceTest.cpp"
     "VulkanTests/VulkanSwapChainTest.cpp"
     "VulkanTests/VulkanTest.hpp"
- "VulkanTests/VulkanResourceDeallocatorTest.cpp")
+ "VulkanTests/VulkanResourceDeallocatorTest.cpp" "VulkanTests/VulkanComputeTest.cpp")
 
 set_target_properties(CrispTest PROPERTIES
     CXX_STANDARD 20)

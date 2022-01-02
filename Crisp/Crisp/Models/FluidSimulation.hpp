@@ -15,8 +15,6 @@ public:
 
     virtual void update(float dt) = 0;
 
-    virtual void dispatchCompute(VkCommandBuffer cmdBuffer, uint32_t currentFrameIdx) const = 0;
-
     virtual void onKeyPressed(Key key, int modifier) = 0;
     virtual void setGravityX(float value) = 0;
     virtual void setGravityY(float value) = 0;

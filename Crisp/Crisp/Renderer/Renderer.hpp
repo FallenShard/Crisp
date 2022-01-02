@@ -7,10 +7,10 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
 #include <array>
+#include <coroutine>
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -77,6 +77,7 @@ public:
     void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 
     void flushResourceUpdates(bool waitOnAllQueues);
+    void flushCoroutines();
 
     void drawFrame();
 
@@ -105,6 +106,31 @@ public:
     std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args)
     {
         return std::make_unique<UniformBuffer>(this, std::forward<Args>(args)...);
+    }
+
+    auto getNextCommandBuffer()
+    {
+        struct Awaitable
+        {
+            Renderer* renderer{ nullptr };
+
+            bool await_ready() const noexcept
+            {
+                return false;
+            }
+
+            void await_suspend(std::coroutine_handle<> h) noexcept
+            {
+                renderer->m_cmdBufferCoroutines.push_back(h);
+            }
+
+            VkCommandBuffer await_resume() const noexcept
+            {
+                return renderer->m_coroCmdBuffer;
+            }
+        };
+
+        return Awaitable{ this };
     }
 
 private:
@@ -154,5 +180,8 @@ private:
     std::vector<VulkanImageView*> m_sceneImageViews;
 
     std::vector<std::unique_ptr<VulkanWorker>> m_workers;
+
+    std::list<std::coroutine_handle<>> m_cmdBufferCoroutines;
+    VkCommandBuffer m_coroCmdBuffer;
 };
 } // namespace crisp

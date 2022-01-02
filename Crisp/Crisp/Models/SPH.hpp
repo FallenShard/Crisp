@@ -26,8 +26,6 @@ public:
 
     virtual void update(float dt) override;
 
-    virtual void dispatchCompute(VkCommandBuffer cmdBuffer, uint32_t currentFrameIdx) const override;
-
     virtual void onKeyPressed(Key key, int modifier) override;
     virtual void setGravityX(float value) override;
     virtual void setGravityY(float value) override;
@@ -43,14 +41,12 @@ public:
     virtual VulkanBuffer* getVertexBuffer(std::string_view key) const override;
 
     virtual uint32_t getParticleCount() const override;
-
     virtual uint32_t getCurrentSection() const override;
 
 private:
     std::vector<glm::vec4> createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const;
 
     Renderer* m_renderer;
-    VulkanDevice* m_device;
     std::unique_ptr<VulkanBuffer> m_vertexBuffer;
     std::unique_ptr<VulkanBuffer> m_colorBuffer;
     std::unique_ptr<VulkanBuffer> m_indexBuffer;

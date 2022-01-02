@@ -220,7 +220,7 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
     cullingPass.material->setDynamicBufferView(1, *m_pointLightBuffer, 0);
     cullingPass.material->setDynamicBufferView(2, cameraBuffer, 0);
     cullingPass.material->setDynamicBufferView(3, *m_lightIndexListBuffer, 0);
-    cullingPass.preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+    cullingPass.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
     {
         // Before culling can start, zero out the light index count buffer
         glm::uvec4 zero(0);
@@ -232,14 +232,14 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
         barrier.offset = frameIndex * sizeof(zero);
         barrier.size = sizeof(zero);
 
-        vkCmdUpdateBuffer(cmdBuffer, barrier.buffer, barrier.offset, barrier.size, &zero);
-        vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0,
-            nullptr, 1, &barrier, 0, nullptr);
+        vkCmdUpdateBuffer(cmdBuffer.getHandle(), barrier.buffer, barrier.offset, barrier.size, &zero);
+        cmdBuffer.insertBufferMemoryBarrier(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     };
 
     // m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, LightCullingPass, 0);
     renderGraph.addDependency(LightCullingPass, "MainPass",
-        [this](const VulkanRenderPass&, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -249,8 +249,8 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
             barrier.offset = info.offset;
             barrier.size = info.range;
 
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 1, &barrier, 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarrier(barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
     // TODO: Unsorted

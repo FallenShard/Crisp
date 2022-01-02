@@ -4,7 +4,7 @@
 
 namespace crisp
 {
-struct VulkanBufferView
+struct VulkanBufferSpan
 {
     VkBuffer handle;
     VkDeviceSize offset;

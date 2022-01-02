@@ -34,23 +34,16 @@ static constexpr const char* MainPass = "mainPass";
 FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     : m_renderer(renderer)
     , m_app(app)
+    , m_renderGraph(std::make_unique<RenderGraph>(m_renderer))
 {
     m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
     m_uniformBuffers.emplace("camera",
         std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
 
-    m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
-
-    m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
-
     auto& mainPassNode = m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(*m_renderer));
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
-    m_renderGraph->sortRenderPasses().unwrap();
+
     m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
-
-    m_app->getWindow()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
-
-    createGui();
 
     m_transformsBuffer =
         std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
@@ -62,7 +55,8 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_pointSpriteMaterial->writeDescriptor(0, 0, *m_transformsBuffer);
     m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
 
-    m_renderer->getDevice().flushDescriptorUpdates();
+    m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
+    m_app->getWindow()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
     m_fluidGeometry = std::make_unique<Geometry>(m_renderer);
     m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("position"));
@@ -70,13 +64,15 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_fluidGeometry->setVertexCount(m_fluidSimulation->getParticleCount());
     m_fluidGeometry->setInstanceCount(1);
 
-    m_renderer->getDevice().flushDescriptorUpdates();
-
-    m_fluidRenderNode.transformBuffer = m_transformsBuffer.get();
-    m_fluidRenderNode.transformIndex = 0;
-    m_fluidRenderNode.transformPack = &m_transforms;
+    m_fluidRenderNode = RenderNode(m_transformsBuffer.get(), &m_transforms, 0);
     m_fluidRenderNode.geometry = m_fluidGeometry.get();
     m_fluidRenderNode.pass(MainPass).material = m_pointSpriteMaterial.get();
+
+    m_renderer->getDevice().flushDescriptorUpdates();
+
+    // createGui();
+    m_renderGraph->sortRenderPasses().unwrap();
+    m_renderGraph->printExecutionOrder();
 }
 
 FluidSimulationScene::~FluidSimulationScene()
@@ -98,17 +94,19 @@ void FluidSimulationScene::update(float dt)
     m_cameraController->update(dt);
     m_uniformBuffers["camera"]->updateStagingBuffer(m_cameraController->getCameraParameters());
 
-    m_transforms.M = glm::scale(glm::vec3(10.0f));
+    const float scale = 10.0f;
+    m_transforms.M = glm::scale(glm::vec3(scale));
     m_transforms.MV = m_cameraController->getCamera().getViewMatrix() * m_transforms.M;
     m_transforms.MVP = m_cameraController->getCamera().getProjectionMatrix() * m_transforms.MV;
     m_transformsBuffer->updateStagingBuffer(m_transforms);
 
-    m_particleParams.radius = m_fluidSimulation->getParticleRadius() * 10.0f;
+    m_fluidSimulation->update(dt);
+
+    m_particleParams.radius = m_fluidSimulation->getParticleRadius() * scale;
     m_particleParams.screenSpaceScale =
         m_renderer->getSwapChainExtent().width * m_cameraController->getCamera().getProjectionMatrix()[0][0];
     m_uniformBuffers["params"]->updateStagingBuffer(m_particleParams);
 
-    m_fluidSimulation->update(dt);
     const uint32_t vertexByteOffset =
         m_fluidSimulation->getCurrentSection() * m_fluidSimulation->getParticleCount() * sizeof(glm::vec4);
     m_fluidGeometry->setVertexBufferOffset(0, vertexByteOffset);

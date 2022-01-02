@@ -24,17 +24,19 @@ void glfwErrorHandler(int errorCode, const char* message)
 std::filesystem::path ApplicationEnvironment::ResourcesPath;
 std::filesystem::path ApplicationEnvironment::ShaderSourcesPath;
 uint32_t ApplicationEnvironment::DefaultSceneIdx{ 4 };
+bool ApplicationEnvironment::EnableRayTracingExtension{ false };
 
 ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
 {
     spdlog::set_pattern("%^[%T.%e][%n][%l][Tid: %t]:%$ %v");
-    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::warn);
     spdlog::info("Current path: {}", std::filesystem::current_path().string());
 
     std::filesystem::path configPath{};
     CommandLineParser cmdLineParser{};
     cmdLineParser.addOption("config", configPath, true);
     cmdLineParser.addOption("scene", DefaultSceneIdx);
+    cmdLineParser.addOption("enable_ray_tracing", EnableRayTracingExtension);
     cmdLineParser.parse(argc, argv).unwrap();
 
     ChromeProfiler::setThreadName("Main Thread");
@@ -85,5 +87,10 @@ std::vector<std::string> ApplicationEnvironment::getRequiredVulkanExtensions()
 uint32_t ApplicationEnvironment::getDefaultSceneIdx()
 {
     return DefaultSceneIdx;
+}
+
+bool ApplicationEnvironment::enableRayTracingExtension()
+{
+    return EnableRayTracingExtension;
 }
 } // namespace crisp

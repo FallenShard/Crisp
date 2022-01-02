@@ -89,8 +89,9 @@ CameraVolumesPass::CameraVolumesPass(Renderer& renderer)
 
 void CameraVolumesPass::createResources(Renderer& renderer)
 {
+    const uint32_t depthSlices = 32;
     m_renderTargets.resize(1);
-    VkExtent3D extent{ m_renderArea.width, m_renderArea.height, 64u };
+    VkExtent3D extent{ m_renderArea.width, m_renderArea.height, depthSlices };
 
     m_renderTargets[0] =
         std::make_unique<VulkanImage>(renderer.getDevice(), extent, 1, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -105,8 +106,8 @@ void CameraVolumesPass::createResources(Renderer& renderer)
         });
 
     m_arrayViews.resize(2);
-    m_arrayViews[0] = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, 32);
-    m_arrayViews[1] = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 32, 32);
+    m_arrayViews[0] = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0 * 32, depthSlices);
+    m_arrayViews[1] = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0 * 32, depthSlices);
 
     const uint32_t layerCount = RendererConfig::VirtualFrameCount;
     m_renderTargetViews.resize(layerCount);
@@ -117,12 +118,11 @@ void CameraVolumesPass::createResources(Renderer& renderer)
         std::vector<VkImageView> viewHandles(1);
         for (uint32_t j = 0; j < 1; ++j)
         {
-            renderTargetViews.at(j) =
-                m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, static_cast<uint32_t>(i) * 32, 32);
+            renderTargetViews.at(j) = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0 * 32, depthSlices);
             viewHandles.at(j) = renderTargetViews.at(j)->getHandle();
         }
         m_framebuffers.at(i) =
-            std::make_unique<VulkanFramebuffer>(renderer.getDevice(), m_handle, m_renderArea, viewHandles, 32);
+            std::make_unique<VulkanFramebuffer>(renderer.getDevice(), m_handle, m_renderArea, viewHandles, depthSlices);
     }
 }
 

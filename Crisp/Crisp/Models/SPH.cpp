@@ -19,82 +19,83 @@ inline glm::uvec3 getNumWorkGroups(const glm::uvec3& dataDims, const VulkanPipel
 {
     return (dataDims - glm::uvec3(1)) / getWorkGroupSize(pipeline) + glm::uvec3(1);
 }
+
+inline std::unique_ptr<VulkanBuffer> createParticleBuffer(const VulkanDevice& device, VkDeviceSize size)
+{
+    return std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * size,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+}
+
 } // namespace
 
 SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     : m_renderer(renderer)
-    , m_device(&renderer->getDevice())
     , m_particleRadius(0.01f)
     , m_currentSection(0)
     , m_prevSection(0)
     , m_timeDelta(0.0f)
     , m_renderGraph(renderGraph)
+    , m_runSimulation{ true }
 {
     m_fluidDim = glm::uvec3(32, 64, 32);
     m_numParticles = m_fluidDim.x * m_fluidDim.y * m_fluidDim.z;
-
-    std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
+    const VulkanDevice& device = renderer->getDevice();
 
     const VkDeviceSize vertexBufferSize = m_numParticles * sizeof(glm::vec4);
-    m_vertexBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_vertexBuffer = createParticleBuffer(device, vertexBufferSize);
+    m_colorBuffer = createParticleBuffer(device, vertexBufferSize);
+    m_reorderedPositionBuffer = createParticleBuffer(device, vertexBufferSize);
+
+    const std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
     m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, 0);
     m_renderer->fillDeviceBuffer(m_vertexBuffer.get(), positions.data(), vertexBufferSize, vertexBufferSize);
 
-    auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
-    m_colorBuffer = std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    const auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
     m_renderer->fillDeviceBuffer(m_colorBuffer.get(), colors.data(), vertexBufferSize, 0);
-
-    m_reorderedPositionBuffer =
-        std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * vertexBufferSize,
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_renderer->fillDeviceBuffer(m_colorBuffer.get(), colors.data(), vertexBufferSize, vertexBufferSize);
 
     m_fluidSpaceMin = glm::vec3(0.0f);
-    // m_fluidSpaceMax = glm::vec3(m_fluidDim) * 2.0f * 2.0f * m_particleRadius;
+    //// m_fluidSpaceMax = glm::vec3(m_fluidDim) * 2.0f * 2.0f * m_particleRadius;
     m_fluidSpaceMax = glm::vec3(m_fluidDim.x, m_fluidDim.y / 2, m_fluidDim.z / 2) * 4.0f * m_particleRadius;
     m_gridParams.cellSize = 4 * m_particleRadius;
     m_gridParams.spaceSize = m_fluidSpaceMax - m_fluidSpaceMin;
     m_gridParams.dim = glm::ivec3(glm::ceil((m_fluidSpaceMax - m_fluidSpaceMin) / m_gridParams.cellSize));
     m_gridParams.numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
 
-    m_cellCountBuffer = std::make_unique<VulkanBuffer>(*m_device,
+    m_cellCountBuffer = std::make_unique<VulkanBuffer>(device,
         RendererConfig::VirtualFrameCount * m_gridParams.numCells * sizeof(uint32_t),
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     m_cellIdBuffer =
-        std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
+        std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     m_indexBuffer =
-        std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
+        std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(uint32_t),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     m_blockSumRegionSize =
         static_cast<uint32_t>(std::max(m_gridParams.numCells / ScanElementsPerBlock * sizeof(uint32_t), 32ull));
-    m_blockSumBuffer =
-        std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_blockSumRegionSize,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_blockSumBuffer = std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_blockSumRegionSize,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     m_densityBuffer =
-        std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
+        std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     m_pressureBuffer =
-        std::make_unique<VulkanBuffer>(*m_device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
+        std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(float),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    m_velocityBuffer = std::make_unique<VulkanBuffer>(*m_device,
-        RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_velocityBuffer =
+        std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
     m_renderer->fillDeviceBuffer(m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 0);
-    m_forcesBuffer = std::make_unique<VulkanBuffer>(*m_device,
-        RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_forcesBuffer =
+        std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_numParticles * sizeof(glm::vec4),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     // Clear Hash Grid
     auto& clearHashGrid = renderGraph->addComputePass("clear-hash-grid");
-    clearHashGrid.isEnabled = false;
+    clearHashGrid.isEnabled = true;
     clearHashGrid.workGroupSize = glm::ivec3(256, 1, 1);
     clearHashGrid.numWorkGroups = (glm::ivec3(m_gridParams.numCells, 1, 1) - 1) / clearHashGrid.workGroupSize + 1;
     clearHashGrid.pipeline =
@@ -105,22 +106,21 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     clearHashGrid.material->writeDescriptor(0, 0,
         { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
 
-    renderGraph->addDependency("clear-hash-grid", "compute-cell-count",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
-        {
-            std::array<VkBufferMemoryBarrier, 1> barriers;
-            for (auto& barrier : barriers)
-            {
-                barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                barrier.size = m_gridParams.numCells * sizeof(uint32_t);
-                barrier.offset = m_currentSection * m_gridParams.numCells * sizeof(uint32_t);
-            }
-            barriers[0].buffer = m_cellCountBuffer->getHandle();
+    clearHashGrid.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("clear-hash-grid");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
+        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.isEnabled = false;
+    };
 
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+    renderGraph->addDependency("clear-hash-grid", "compute-cell-count",
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+        {
+            const VkDeviceSize size = m_gridParams.numCells * sizeof(uint32_t);
+            const VulkanBufferSpan span = { m_cellCountBuffer->getHandle(), m_currentSection * size, size };
+            cmdBuffer.insertBufferMemoryBarrier(span, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
         });
 
     // Compute particle count per cell
@@ -141,8 +141,21 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     computeCellCount.material->writeDescriptor(0, 2,
         { m_cellIdBuffer->getHandle(), 0, m_numParticles * sizeof(uint32_t) });
 
+    computeCellCount.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("compute-cell-count");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.dim,
+            m_gridParams.cellSize, m_numParticles);
+
+        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
+
+        pass.isEnabled = false;
+    };
+
     renderGraph->addDependency("compute-cell-count", "scan",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
@@ -158,9 +171,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_numParticles * sizeof(uint32_t);
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(uint32_t);
             barriers[1].buffer = m_cellIdBuffer->getHandle();
-
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     // Scan for individual blocks
@@ -172,13 +184,24 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         createComputePipeline(m_renderer, "scan.comp", 2, 1, sizeof(int32_t) + sizeof(uint32_t), scan.workGroupSize);
     scan.material = std::make_unique<Material>(scan.pipeline.get());
 
+    scan.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("scan");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 1, m_gridParams.numCells);
+
+        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_blockSumRegionSize);
+
+        pass.isEnabled = false;
+    };
+
     // Input/Output
     scan.material->writeDescriptor(0, 0,
         { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
     scan.material->writeDescriptor(0, 1, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
 
     renderGraph->addDependency("scan", "scan-block",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
@@ -190,9 +213,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
                 barrier.offset = m_currentSection * m_blockSumRegionSize;
             }
             barriers[0].buffer = m_blockSumBuffer->getHandle();
-
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     // Scan for the block sums
@@ -210,9 +232,19 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     // Input/Output
     scanBlock.material->writeDescriptor(0, 0, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
     scanBlock.material->writeDescriptor(0, 1, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
+    scanBlock.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("scan-block");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
+            m_gridParams.numCells / ScanElementsPerBlock);
 
+        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_blockSumRegionSize);
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_blockSumRegionSize);
+
+        pass.isEnabled = false;
+    };
     renderGraph->addDependency("scan-block", "scan-combine",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
@@ -225,8 +257,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             }
             barriers[0].buffer = m_blockSumBuffer->getHandle();
 
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     // Add block prefix sum to intra-block prefix sums
@@ -242,9 +274,19 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     scanCombine.material->writeDescriptor(0, 0,
         { m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t) });
     scanCombine.material->writeDescriptor(0, 1, { m_blockSumBuffer->getHandle(), 0, m_blockSumRegionSize });
+    scanCombine.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("scan-combine");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
 
-    renderGraph->addDependency("scan-combine", "reindex",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_blockSumRegionSize);
+
+        pass.isEnabled = false;
+    };
+
+    renderGraph->addDependency("scan-combine", "reindex", //"reindex",
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
@@ -260,8 +302,9 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_blockSumRegionSize;
             barriers[1].offset = m_currentSection * m_blockSumRegionSize;
             barriers[1].buffer = m_blockSumBuffer->getHandle();
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     auto& reindex = renderGraph->addComputePass("reindex");
@@ -282,8 +325,23 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     reindex.material->writeDescriptor(0, 3, { m_indexBuffer->getHandle(), 0, m_numParticles * sizeof(uint32_t) });
     reindex.material->writeDescriptor(0, 4, { m_reorderedPositionBuffer->getHandle(), 0, vertexBufferSize });
 
+    reindex.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("reindex");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams,
+            m_numParticles);
+
+        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(glm::vec4));
+
+        pass.isEnabled = false;
+    };
     renderGraph->addDependency("reindex", "compute-density-and-pressure",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
@@ -298,8 +356,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_numParticles * sizeof(glm::vec4);
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
             barriers[1].buffer = m_reorderedPositionBuffer->getHandle();
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     auto& computePressure = renderGraph->addComputePass("compute-density-and-pressure");
@@ -321,9 +379,24 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         { m_densityBuffer->getHandle(), 0, m_numParticles * sizeof(float) });
     computePressure.material->writeDescriptor(0, 4,
         { m_pressureBuffer->getHandle(), 0, m_numParticles * sizeof(float) });
+    computePressure.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("compute-density-and-pressure");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams,
+            m_numParticles);
+
+        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(glm::vec4));
+        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(float));
+        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(float));
+
+        pass.isEnabled = false;
+    };
 
     renderGraph->addDependency("compute-density-and-pressure", "compute-forces",
-        [this](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
@@ -336,8 +409,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             }
             barriers[0].buffer = m_densityBuffer->getHandle();
             barriers[1].buffer = m_pressureBuffer->getHandle();
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     auto& computeForces = renderGraph->addComputePass("compute-forces");
@@ -359,9 +432,27 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
 
     // Output
     computeForces.material->writeDescriptor(0, 6, { m_forcesBuffer->getHandle(), 0, vertexBufferSize });
+    computeForces.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& pass = m_renderGraph->getNode("compute-forces");
+        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_gravity,
+            m_numParticles, m_viscosityFactor, m_kappa);
+
+        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
+        pass.material->setDynamicOffset(frameIdx, 5, m_prevSection * m_numParticles * sizeof(glm::vec4));
+
+        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
+        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(float));
+        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(float));
+        pass.material->setDynamicOffset(frameIdx, 6, m_currentSection * m_numParticles * sizeof(glm::vec4));
+
+        pass.isEnabled = false;
+    };
 
     renderGraph->addDependency("compute-forces", "integrate",
-        [this, vertexBufferSize](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this, vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer,
+            uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 1> barriers;
             for (auto& barrier : barriers)
@@ -373,8 +464,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
                 barrier.offset = m_currentSection * vertexBufferSize;
             }
             barriers[0].buffer = m_forcesBuffer->getHandle();
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
     auto& integrateNode = renderGraph->addComputePass("integrate");
@@ -394,8 +485,24 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     integrateNode.material->writeDescriptor(0, 3, { m_vertexBuffer->getHandle(), 0, vertexBufferSize });
     integrateNode.material->writeDescriptor(0, 4, { m_velocityBuffer->getHandle(), 0, vertexBufferSize });
     integrateNode.material->writeDescriptor(0, 5, { m_colorBuffer->getHandle(), 0, vertexBufferSize });
+    integrateNode.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx)
+    {
+        auto& node = m_renderGraph->getNode("integrate");
+        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams,
+            m_timeDelta / 2.0f, m_numParticles);
+
+        for (uint32_t i = 0; i <= 1; ++i)
+            node.material->setDynamicOffset(frameIdx, i, m_prevSection * m_numParticles * sizeof(glm::vec4));
+
+        for (uint32_t i = 2; i <= 5; ++i)
+            node.material->setDynamicOffset(frameIdx, i, m_currentSection * m_numParticles * sizeof(glm::vec4));
+
+        node.isEnabled = false;
+    };
+
     renderGraph->addDependency("integrate", "mainPass",
-        [this, vertexBufferSize](const VulkanRenderPass& /*src*/, VkCommandBuffer cmdBuffer, uint32_t /*frameIndex*/)
+        [this, vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer,
+            uint32_t /*frameIndex*/)
         {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers)
@@ -408,8 +515,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             }
             barriers[0].buffer = m_vertexBuffer->getHandle();
             barriers[1].buffer = m_colorBuffer->getHandle();
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0,
-                0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
+            cmdBuffer.insertBufferMemoryBarriers(barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
         });
 }
 
@@ -426,156 +533,15 @@ void SPH::update(float dt)
     m_currentSection = (m_currentSection + 1) % RendererConfig::VirtualFrameCount;
 
     m_renderGraph->getNode("clear-hash-grid").isEnabled = true;
-    m_renderGraph->getNode("clear-hash-grid").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("clear-hash-grid");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("compute-cell-count").isEnabled = true;
-    m_renderGraph->getNode("compute-cell-count").preDispatchCallback =
-        [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("compute-cell-count");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.dim, m_gridParams.cellSize,
-            m_numParticles);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("scan").isEnabled = true;
-    m_renderGraph->getNode("scan").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("scan");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 1, m_gridParams.numCells);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_blockSumRegionSize);
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("scan-block").isEnabled = true;
-    m_renderGraph->getNode("scan-block").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("scan-block");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-            m_gridParams.numCells / ScanElementsPerBlock);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_blockSumRegionSize);
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_blockSumRegionSize);
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("scan-combine").isEnabled = true;
-    m_renderGraph->getNode("scan-combine").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("scan-combine");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_blockSumRegionSize);
-
-        pass.isEnabled = false;
-    };
-
-    m_renderGraph->getNode("compute-density-and-pressure").isEnabled = true;
-    m_renderGraph->getNode("compute-density-and-pressure").preDispatchCallback =
-        [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("compute-density-and-pressure");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_numParticles);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(glm::vec4));
-        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(float));
-        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(float));
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("reindex").isEnabled = true;
-    m_renderGraph->getNode("reindex").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("reindex");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_numParticles);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("compute-density-and-pressure").isEnabled = true;
-    m_renderGraph->getNode("compute-density-and-pressure").preDispatchCallback =
-        [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("compute-density-and-pressure");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_numParticles);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(glm::vec4));
-        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(float));
-        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(float));
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("compute-forces").isEnabled = true;
-    m_renderGraph->getNode("compute-forces").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& pass = m_renderGraph->getNode("compute-forces");
-        pass.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_gravity, m_numParticles,
-            m_viscosityFactor, m_kappa);
-
-        pass.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-        pass.material->setDynamicOffset(frameIdx, 5, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
-        pass.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(float));
-        pass.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(float));
-        pass.material->setDynamicOffset(frameIdx, 6, m_currentSection * m_numParticles * sizeof(glm::vec4));
-
-        pass.isEnabled = false;
-    };
-
     m_renderGraph->getNode("integrate").isEnabled = true;
-    m_renderGraph->getNode("integrate").preDispatchCallback = [this](VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-    {
-        auto& node = m_renderGraph->getNode("integrate");
-        node.pipeline->setPushConstants(cmdBuffer, VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_timeDelta / 2.0f,
-            m_numParticles);
-
-        for (uint32_t i = 0; i <= 1; ++i)
-            node.material->setDynamicOffset(frameIdx, i, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        for (uint32_t i = 2; i <= 5; ++i)
-            node.material->setDynamicOffset(frameIdx, i, m_currentSection * m_numParticles * sizeof(glm::vec4));
-
-        node.isEnabled = false;
-    };
 }
-
-void SPH::dispatchCompute(VkCommandBuffer /*cmdBuffer*/, uint32_t /*currentFrameIdx*/) const {}
 
 void SPH::onKeyPressed(Key key, int)
 {

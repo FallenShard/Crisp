@@ -121,14 +121,14 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         resourceContext.getSampler("linearClamp"));
     multiScatPass.material->setDynamicBufferView(0, *resourceContext.getUniformBuffer("atmosphereCommon"), 0);
     multiScatPass.material->setDynamicBufferView(1, *resourceContext.getUniformBuffer("atmosphere"), 0);
-    multiScatPass.preDispatchCallback = [](VkCommandBuffer /*cmdBuffer*/, uint32_t /*frameIndex*/)
+    multiScatPass.preDispatchCallback = [](VulkanCommandBuffer& /*cmdBuffer*/, uint32_t /*frameIndex*/)
     {
     };
 
     renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer));
     renderGraph.addRenderTargetLayoutTransition("TransLUTPass", "SkyViewLUTPass", 0);
     renderGraph.addDependency("MultiScatPass", "SkyViewLUTPass",
-        [tex = resourceContext.getImage("multiScatTex")](const VulkanRenderPass&, VkCommandBuffer cmdBuffer,
+        [tex = resourceContext.getImage("multiScatTex")](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer,
             uint32_t frameIndex)
         {
             VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -143,8 +143,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
             barrier.subresourceRange.baseArrayLayer = frameIndex;
             barrier.subresourceRange.layerCount = 1;
 
-            vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                0, 0, nullptr, 0, nullptr, 0, &barrier);
+            vkCmdPipelineBarrier(cmdBuffer.getHandle(), VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 0, &barrier);
         });
 
     // Sky View LUT
@@ -194,6 +194,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     skyCameraVolumesNode->pass("CameraVolumesPass").material = cameraVolumesMaterial;
     skyCameraVolumesNode->pass("CameraVolumesPass").pipeline = cameraVolumesPipeline;
 
+    renderer.getDevice().flushDescriptorUpdates();
+
     // Ray marching - final step
     renderGraph.addRenderPass("RayMarchingPass", createRayMarchingPass(renderer));
     renderGraph.addRenderTargetLayoutTransition("CameraVolumesPass", "RayMarchingPass", 0);
@@ -213,6 +215,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     rayMarchingMaterial->writeDescriptor(1, 4, renderGraph.getRenderPass("DepthPrePass"), 0,
         resourceContext.getSampler("nearestNeighbor"));
+
+    renderer.getDevice().flushDescriptorUpdates();
 
     auto skyRayMarchingNode =
         renderNodes.emplace("skyRayMarchingNode", std::make_unique<RenderNode>()).first->second.get();

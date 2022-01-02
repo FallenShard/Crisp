@@ -175,17 +175,34 @@ VkSampleCountFlagBits VulkanRenderPass::getDefaultSampleCount() const
     return m_defaultSampleCount;
 }
 
+coro::Task<int> VulkanRenderPass::updateInitialLayouts(Renderer* renderer)
+{
+    VkCommandBuffer cmdBuffer = co_await renderer->getNextCommandBuffer();
+    for (const auto& [i, renderTarget] : enumerate(m_renderTargets))
+    {
+        const auto& desc = m_attachmentDescriptions.at(i);
+        const auto& info = m_renderTargetInfos.at(i);
+        renderTarget->transitionLayout(cmdBuffer, desc.initialLayout, info.initSrcStageFlags, info.initDstStageFlags);
+    }
+
+    std::cout << "Layout updated!" << std::endl;
+    co_return 42;
+}
+
 void VulkanRenderPass::createRenderTargets(Renderer& renderer)
 {
     const VkExtent3D extent = { m_renderArea.width, m_renderArea.height, 1u };
     const auto layerCount = m_bufferedRenderTargets ? RendererConfig::VirtualFrameCount : 1;
 
-    m_renderTargets.resize(m_attachmentDescriptions.size());
-    for (const auto& [i, attachment] : enumerate(m_attachmentDescriptions))
+    m_renderTargets.resize(m_renderTargetInfos.size());
+    for (const auto& [i, renderTargetInfo] : enumerate(m_renderTargetInfos))
     {
+        const auto& attachment = m_attachmentDescriptions.at(i);
         m_renderTargets[i] = std::make_unique<VulkanImage>(renderer.getDevice(), extent, layerCount, 1,
-            attachment.format, m_renderTargetInfos.at(i).usage, determineImageAspect(attachment.format), 0);
+            attachment.format, renderTargetInfo.usage, determineImageAspect(attachment.format), 0);
     }
+
+    createRenderTargetViewsAndFramebuffers(renderer.getDevice(), layerCount);
 
     renderer.enqueueResourceUpdate(
         [this](VkCommandBuffer cmdBuffer)
@@ -198,8 +215,6 @@ void VulkanRenderPass::createRenderTargets(Renderer& renderer)
                     info.initDstStageFlags);
             }
         });
-
-    createRenderTargetViewsAndFramebuffers(renderer.getDevice(), layerCount);
 }
 
 void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice& device, const uint32_t layerCount)

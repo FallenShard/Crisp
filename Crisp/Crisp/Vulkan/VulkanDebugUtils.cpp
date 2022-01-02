@@ -20,22 +20,26 @@ VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         typeStr = "Validation";
 
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+    {
         logger->debug("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
             callbackData->pMessage);
+    }
     else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+    {
         logger->info("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
             callbackData->pMessage);
+    }
     else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    {
         logger->warn("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
             callbackData->pMessage);
-    else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    }
+    else
     {
         logger->error("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
             callbackData->pMessage);
     }
-    else
-        logger->error("{} {} {} \n{}", "Unknown", callbackData->messageIdNumber, callbackData->pMessageIdName,
-            callbackData->pMessage);
+
     return VK_FALSE;
 }
 } // namespace

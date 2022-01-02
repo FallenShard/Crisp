@@ -100,10 +100,10 @@ void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass,
     {
         sourceNode->dependencies[destinationPass] =
             [sourceRenderTargetIndex, layerMultiplier, dstStageFlags](const VulkanRenderPass& sourcePass,
-                VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
             auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-            renderTarget.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            renderTarget.transitionLayout(cmdBuffer.getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 frameIndex * layerMultiplier, layerMultiplier, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 dstStageFlags);
         };
@@ -112,10 +112,10 @@ void RenderGraph::addRenderTargetLayoutTransition(const std::string& sourcePass,
     {
         sourceNode->dependencies[destinationPass] =
             [sourceRenderTargetIndex, layerMultiplier, dstStageFlags](const VulkanRenderPass& sourcePass,
-                VkCommandBuffer cmdBuffer, uint32_t frameIndex)
+                VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
             auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-            renderTarget.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            renderTarget.transitionLayout(cmdBuffer.getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 frameIndex * layerMultiplier, layerMultiplier, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 dstStageFlags);
         };
@@ -164,7 +164,7 @@ void RenderGraph::printExecutionOrder()
 {
     for (uint32_t i = 0; i < m_executionOrder.size(); ++i)
     {
-        logger->info("{}. {}", i, m_executionOrder[i]->name);
+        logger->warn("{}. {}", i, m_executionOrder[i]->name);
     }
 }
 
@@ -209,13 +209,14 @@ void RenderGraph::executeCommandLists() const
     m_renderer->enqueueDrawCommand(
         [this](VkCommandBuffer cmdBuffer)
         {
+            VulkanCommandBuffer commandBuffer(cmdBuffer);
             uint32_t frameIndex = m_renderer->getCurrentVirtualFrameIndex();
             for (auto node : m_executionOrder)
             {
                 if (node->isCompute)
-                    executeComputePass(cmdBuffer, frameIndex, *node);
+                    executeComputePass(commandBuffer, frameIndex, *node);
                 else
-                    executeRenderPass(cmdBuffer, frameIndex, *node);
+                    executeRenderPass(commandBuffer, frameIndex, *node);
             }
         });
 }
@@ -235,49 +236,49 @@ const VulkanRenderPass& RenderGraph::getRenderPass(std::string name)
     return *m_nodes.at(name)->renderPass;
 }
 
-void RenderGraph::executeDrawCommand(const DrawCommand& command, Renderer* renderer, VkCommandBuffer cmdBuffer,
-    int virtualFrameIndex)
+void RenderGraph::executeDrawCommand(const DrawCommand& command, Renderer& renderer, VulkanCommandBuffer& cmdBuffer,
+    uint32_t virtualFrameIndex)
 {
-    command.pipeline->bind(cmdBuffer);
+    command.pipeline->bind(cmdBuffer.getHandle());
     const auto dynamicState = command.pipeline->getDynamicStateFlags();
     if (dynamicState & PipelineDynamicState::Viewport)
     {
         if (command.viewport.width != 0.0f)
-            vkCmdSetViewport(cmdBuffer, 0, 1, &command.viewport);
+            vkCmdSetViewport(cmdBuffer.getHandle(), 0, 1, &command.viewport);
         else
-            renderer->setDefaultViewport(cmdBuffer);
+            renderer.setDefaultViewport(cmdBuffer.getHandle());
     }
 
     if (dynamicState & PipelineDynamicState::Scissor)
     {
         if (command.scissor.extent.width != 0)
-            vkCmdSetScissor(cmdBuffer, 0, 1, &command.scissor);
+            vkCmdSetScissor(cmdBuffer.getHandle(), 0, 1, &command.scissor);
         else
-            renderer->setDefaultScissor(cmdBuffer);
+            renderer.setDefaultScissor(cmdBuffer.getHandle());
     }
 
-    command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer,
+    command.pipeline->getPipelineLayout()->setPushConstants(cmdBuffer.getHandle(),
         static_cast<const char*>(command.pushConstantView.data));
 
     if (command.material)
-        command.material->bind(virtualFrameIndex, cmdBuffer, command.dynamicBufferOffsets);
+        command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
 
-    command.geometry->bindVertexBuffers(cmdBuffer);
-    command.drawFunc(cmdBuffer, command.geometryView);
+    command.geometry->bindVertexBuffers(cmdBuffer.getHandle());
+    command.drawFunc(cmdBuffer.getHandle(), command.geometryView);
 }
 
-void RenderGraph::executeRenderPass(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
+void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
 {
     bool useSecondaries = node.commands[0].size() > 100;
 
-    node.renderPass->begin(cmdBuffer, virtualFrameIndex,
+    node.renderPass->begin(cmdBuffer.getHandle(), virtualFrameIndex,
         useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
     for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getNumSubpasses(); subpassIndex++)
     {
         if (subpassIndex > 0)
         {
             useSecondaries = node.commands[subpassIndex].size() > 100;
-            node.renderPass->nextSubpass(cmdBuffer,
+            node.renderPass->nextSubpass(cmdBuffer.getHandle(),
                 useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
         }
 
@@ -296,8 +297,7 @@ void RenderGraph::executeRenderPass(VkCommandBuffer cmdBuffer, uint32_t virtualF
                     cmdCtx.cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance);
 
                     for (std::size_t k = start; k < end; ++k)
-                        executeDrawCommand(node.commands[subpassIndex][k], m_renderer, cmdCtx.cmdBuffer->getHandle(),
-                            frameIdx);
+                        executeDrawCommand(node.commands[subpassIndex][k], *m_renderer, *cmdCtx.cmdBuffer, frameIdx);
 
                     cmdCtx.cmdBuffer->end();
                 });
@@ -306,30 +306,30 @@ void RenderGraph::executeRenderPass(VkCommandBuffer cmdBuffer, uint32_t virtualF
             for (auto& cmdCtx : m_secondaryCommandBuffers[virtualFrameIndex])
                 secondaryBuffers.push_back(cmdCtx.cmdBuffer->getHandle());
 
-            vkCmdExecuteCommands(cmdBuffer, static_cast<uint32_t>(secondaryBuffers.size()), secondaryBuffers.data());
+            cmdBuffer.executeSecondaryBuffers(secondaryBuffers);
         }
         else
         {
             for (const auto& command : node.commands[subpassIndex])
-                executeDrawCommand(command, m_renderer, cmdBuffer, virtualFrameIndex);
+                executeDrawCommand(command, *m_renderer, cmdBuffer, virtualFrameIndex);
         }
     }
 
-    node.renderPass->end(cmdBuffer, virtualFrameIndex);
+    node.renderPass->end(cmdBuffer.getHandle(), virtualFrameIndex);
     for (const auto& dep : node.dependencies)
         dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);
 }
 
-void RenderGraph::executeComputePass(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
+void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
 {
     if (!node.isEnabled)
         return;
 
-    node.pipeline->bind(cmdBuffer);
-    node.material->bind(virtualFrameIndex, cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE);
+    node.pipeline->bind(cmdBuffer.getHandle());
+    node.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), VK_PIPELINE_BIND_POINT_COMPUTE);
     if (node.preDispatchCallback)
         node.preDispatchCallback(cmdBuffer, virtualFrameIndex);
-    vkCmdDispatch(cmdBuffer, node.numWorkGroups.x, node.numWorkGroups.y, node.numWorkGroups.z);
+    cmdBuffer.dispatchCompute(node.numWorkGroups);
 
     for (const auto& dep : node.dependencies)
         dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);

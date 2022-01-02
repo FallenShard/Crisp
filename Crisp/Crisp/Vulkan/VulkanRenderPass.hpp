@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include <CrispCore/Coroutines/Task.hpp>
+
 #include "VulkanResource.hpp"
 
 namespace crisp
@@ -94,6 +96,8 @@ public:
     {
         m_name = std::move(name);
     }
+
+    coro::Task<int> updateInitialLayouts(Renderer* renderer);
 
 protected:
     void createRenderTargets(Renderer& renderer);

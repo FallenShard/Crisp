@@ -13,4 +13,7 @@ public:
     VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode,
         float anisotropy, float maxLod);
 };
+
+std::unique_ptr<VulkanSampler> createLinearClampSampler(const VulkanDevice& device);
+
 } // namespace crisp

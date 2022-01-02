@@ -10,6 +10,7 @@
 
 namespace crisp
 {
+
 CubeMapRenderPass::CubeMapRenderPass(Renderer& renderer, VkExtent2D renderArea, bool allocateMipmaps)
     : VulkanRenderPass(renderer, false, 1)
     , m_allocateMipmaps(allocateMipmaps)
@@ -18,26 +19,17 @@ CubeMapRenderPass::CubeMapRenderPass(Renderer& renderer, VkExtent2D renderArea, 
     m_renderArea = renderArea;
 
     RenderPassBuilder builder;
+    builder.setNumSubpasses(6).addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
     for (int i = 0; i < 6; i++)
     {
         builder.addAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
             .setAttachmentOps(i, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(i, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            .setAttachmentLayouts(i, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            .addColorAttachmentRef(i, i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     }
 
-    std::tie(m_handle, m_attachmentDescriptions) =
-        builder.setNumSubpasses(6)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addColorAttachmentRef(1, 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addColorAttachmentRef(2, 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addColorAttachmentRef(3, 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addColorAttachmentRef(4, 4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addColorAttachmentRef(5, 5, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
+    std::tie(m_handle, m_attachmentDescriptions) = builder.create(renderer.getDevice().getHandle());
 
     m_attachmentClearValues.resize(m_attachmentDescriptions.size());
     for (int i = 0; i < 6; i++)

@@ -24,10 +24,13 @@ public:
 
     static uint32_t getDefaultSceneIdx();
 
+    static bool enableRayTracingExtension();
+
 private:
     static std::filesystem::path ResourcesPath;
     static std::filesystem::path ShaderSourcesPath;
 
     static uint32_t DefaultSceneIdx;
+    static bool EnableRayTracingExtension;
 };
 } // namespace crisp

@@ -7,6 +7,7 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
+#include <CrispCore/Coroutines/Task.hpp>
 #include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
@@ -20,10 +21,9 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
 {
     static constexpr uint32_t CubeMapFaceCount = 6;
 
-    float viewportSize = static_cast<float>(cubeMapSize);
     auto cubeMapPass = std::make_unique<CubeMapRenderPass>(*renderer, VkExtent2D{ cubeMapSize, cubeMapSize }, true);
     std::vector<std::unique_ptr<VulkanPipeline>> cubeMapPipelines(CubeMapFaceCount);
-    for (int i = 0; i < CubeMapFaceCount; i++)
+    for (uint32_t i = 0; i < CubeMapFaceCount; ++i)
         cubeMapPipelines[i] = renderer->createPipelineFromLua("EquirectToCube.lua", *cubeMapPass, i);
 
     auto unitCube = std::make_unique<Geometry>(renderer, createCubeMesh({ VertexAttribute::Position }));
@@ -34,8 +34,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     renderer->getDevice().flushDescriptorUpdates();
 
     renderer->enqueueResourceUpdate(
-        [&unitCube, &cubeMapPipelines, &cubeMapPass, &cubeMapMaterial, viewportSize, cubeMapSize](
-            VkCommandBuffer cmdBuffer)
+        [&unitCube, &cubeMapPipelines, &cubeMapPass, &cubeMapMaterial](VkCommandBuffer cmdBuffer)
         {
             glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
             glm::mat4 captureViews[] = { glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
@@ -228,6 +227,30 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
     return std::make_pair(std::move(filteredCubeMap), std::move(view));
 }
 
+coro::Task<std::unique_ptr<VulkanImage>> integrateBrdfLutTask(Renderer* renderer)
+{
+    std::shared_ptr<VulkanRenderPass> texPass =
+        createTexturePass(*renderer, VkExtent2D{ 512, 512 }, VK_FORMAT_R16G16_SFLOAT, false);
+    std::shared_ptr<VulkanPipeline> pipeline = renderer->createPipelineFromLua("BrdfLut.lua", *texPass, 0);
+
+    co_await texPass->updateInitialLayouts(renderer);
+
+    std::cout << "Textures updated" << std::endl;
+
+    VkCommandBuffer cmdBuffer = co_await renderer->getNextCommandBuffer();
+
+    texPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+
+    pipeline->bind(cmdBuffer);
+    renderer->drawFullScreenQuad(cmdBuffer);
+
+    texPass->end(cmdBuffer, 0);
+    texPass->getRenderTarget(0).transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+    co_return texPass->extractRenderTarget(0);
+}
+
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer)
 {
     std::shared_ptr<VulkanRenderPass> texPass =
@@ -249,5 +272,11 @@ std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer)
     renderer->flushResourceUpdates(true);
 
     return texPass->extractRenderTarget(0);
+
+    /*auto task = integrateBrdfLutTask(renderer);
+    task.handle.resume();
+    renderer->flushCoroutines();
+    return task.get();*/
 }
+
 } // namespace crisp

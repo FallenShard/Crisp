@@ -21,7 +21,7 @@ public:
     void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset,
         VkDeviceSize dstOffset, VkDeviceSize size);
 
-    VulkanBufferView createView() const;
+    VulkanBufferSpan createSpan() const;
 
 protected:
     VulkanMemoryHeap::Allocation m_allocation;

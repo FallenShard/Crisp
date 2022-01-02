@@ -53,11 +53,11 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
         auto& cmdBuffer = executor.cmdBuffer;
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-        cmdBuffer.insertPipelineBarrier(deviceBuffer.createView(), VK_PIPELINE_STAGE_TRANSFER_BIT,
+        cmdBuffer.insertBufferMemoryBarrier(deviceBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-        cmdBuffer.insertPipelineBarrier(downloadBuffer.createView(), VK_PIPELINE_STAGE_TRANSFER_BIT,
+        cmdBuffer.insertBufferMemoryBarrier(downloadBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
     }
 
@@ -92,7 +92,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     // Copy and sync
     deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-    cmdBuffer.insertPipelineBarrier(deviceBuffer.createView(), VK_PIPELINE_STAGE_TRANSFER_BIT,
+    cmdBuffer.insertBufferMemoryBarrier(deviceBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
     // Unassigned queue family for now, until first command
@@ -112,7 +112,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     downloadBuffer.copyFrom(transferCmdBuffer.getHandle(), deviceBuffer);
-    transferCmdBuffer.insertPipelineBarrier(downloadBuffer.createView(), VK_PIPELINE_STAGE_TRANSFER_BIT,
+    transferCmdBuffer.insertBufferMemoryBarrier(downloadBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
     transferCmdBuffer.transferOwnership(deviceBuffer.getHandle(), transferQueue.getFamilyIndex(),
         generalQueue.getFamilyIndex());
@@ -120,7 +120,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     StagingVulkanBuffer downloadBuffer2(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-    cmdBuffer.insertPipelineBarrier(downloadBuffer2.createView(), VK_PIPELINE_STAGE_TRANSFER_BIT,
+    cmdBuffer.insertBufferMemoryBarrier(downloadBuffer2.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
 
     cmdBuffer.end();

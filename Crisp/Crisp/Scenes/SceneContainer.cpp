@@ -38,7 +38,7 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
         return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
     else if (name == sceneNames[6])
         return std::make_unique<NormalMappingScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[7])
+    else if (name == sceneNames[7] && ApplicationEnvironment::enableRayTracingExtension())
         return std::make_unique<VulkanRayTracingScene>(std::forward<Args>(args)...);
     else if (name == sceneNames[8])
         return std::make_unique<OceanScene>(std::forward<Args>(args)...);

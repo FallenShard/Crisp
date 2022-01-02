@@ -41,11 +41,13 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
 
     // Create fundamental objects for the API
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
-    // deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    if (ApplicationEnvironment::enableRayTracingExtension())
+    {
+        deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    }
 
     m_context = std::make_unique<VulkanContext>(surfCreatorCallback,
         ApplicationEnvironment::getRequiredVulkanExtensions(), true);
@@ -86,8 +88,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     };
     m_fullScreenGeometry = std::make_unique<Geometry>(this, vertices, faces);
 
-    m_linearClampSampler = std::make_unique<VulkanSampler>(*m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipelineFromLua("Tonemapping.lua", getDefaultRenderPass(), 0);
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 }
@@ -276,6 +277,47 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     m_resourceUpdates.clear();
 }
 
+void Renderer::flushCoroutines()
+{
+    if (m_cmdBufferCoroutines.empty())
+        return;
+
+    const VulkanQueue& generalQueue = m_device->getGeneralQueue();
+    auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = cmdPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    m_coroCmdBuffer = commandBuffer;
+    for (auto coro : m_cmdBufferCoroutines)
+        coro.resume();
+
+    vkEndCommandBuffer(commandBuffer);
+
+    VkFence tempFence = m_device->createFence(0);
+    generalQueue.submit(commandBuffer, tempFence);
+    m_device->wait(tempFence);
+
+    finish();
+
+    vkDestroyFence(m_device->getHandle(), tempFence, nullptr);
+
+    vkFreeCommandBuffers(m_device->getHandle(), cmdPool, 1, &commandBuffer);
+    vkResetCommandPool(m_device->getHandle(), cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+    vkDestroyCommandPool(m_device->getHandle(), cmdPool, nullptr);
+
+    m_cmdBufferCoroutines.clear();
+}
+
 void Renderer::drawFrame()
 {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
@@ -454,6 +496,12 @@ void Renderer::record(VkCommandBuffer commandBuffer)
         uniformBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
     for (const auto& update : m_resourceUpdates)
         update(commandBuffer);
+
+    m_coroCmdBuffer = commandBuffer;
+    for (auto h : m_cmdBufferCoroutines)
+        h.resume();
+    m_cmdBufferCoroutines.clear();
+
     for (const auto& drawCommand : m_drawCommands)
         drawCommand(commandBuffer);
 

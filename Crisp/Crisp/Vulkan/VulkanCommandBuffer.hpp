@@ -2,7 +2,13 @@
 
 #include <Crisp/Vulkan/VulkanBufferView.hpp>
 
+#include <CrispCore/Math/Headers.hpp>
+#include <CrispCore/MemoryRegion.hpp>
+
 #include <vulkan/vulkan.h>
+
+#include <span>
+#include <vector>
 
 namespace crisp
 {
@@ -26,9 +32,25 @@ public:
     }
 
     void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
-    void insertPipelineBarrier(const VulkanBufferView& bufferView, VkPipelineStageFlags srcStage,
+    void insertBufferMemoryBarrier(const VulkanBufferSpan& bufferSpan, VkPipelineStageFlags srcStage,
         VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const;
-    void copyBuffer(const VulkanBufferView& srcBufferView, VkBuffer dstBuffer) const;
+    void insertBufferMemoryBarrier(const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage,
+        VkPipelineStageFlags dstStage) const;
+    void insertBufferMemoryBarriers(std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage,
+        VkPipelineStageFlags dstStage) const;
+    void insertImageMemoryBarrier(const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage,
+        VkPipelineStageFlags dstStage) const;
+    // void insertImageMemoryBarrier(const VulkanBufferView& bufferView, VkPipelineStageFlags srcStage,
+    //     VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const;
+    // void insertMemoryBarrier(VkPipelineStageFlags srcStage, VkAccessFlags srcAccess, VkPipelineStageFlags dstStage,
+    //     VkAccessFlags dstAccess) const;
+
+    void executeSecondaryBuffers(const std::vector<VkCommandBuffer>& commandBuffers) const;
+
+    void updateBuffer(const VulkanBufferSpan& bufferSpan, const MemoryRegion& memoryRegion) const;
+    void copyBuffer(const VulkanBufferSpan& srcBufferSpan, VkBuffer dstBuffer) const;
+
+    void dispatchCompute(const glm::ivec3& workGroupCount) const;
 
 private:
     VkCommandBuffer m_handle;

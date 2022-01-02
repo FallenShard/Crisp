@@ -57,8 +57,9 @@ std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(Renderer* renderer, c
     for (const auto& [setId, descId] : dynamicDescriptors)
         layoutBuilder.setDescriptorDynamic(setId, descId, true);
 
-    auto pipeline = m_builder.create(renderer->getDevice(), layoutBuilder.create(renderer->getDevice()),
-        renderPass.getHandle(), subpassIndex);
+    auto layout = layoutBuilder.create(renderer->getDevice());
+
+    auto pipeline = m_builder.create(renderer->getDevice(), std::move(layout), renderPass.getHandle(), subpassIndex);
     pipeline->setTag(m_configName);
     return std::move(pipeline);
 }

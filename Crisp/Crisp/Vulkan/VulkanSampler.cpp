@@ -32,4 +32,11 @@ VulkanSampler::VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkF
     samplerInfo.maxLod = maxLod;
     vkCreateSampler(device.getHandle(), &samplerInfo, nullptr, &m_handle);
 }
+
+std::unique_ptr<VulkanSampler> createLinearClampSampler(const VulkanDevice& device)
+{
+    return std::make_unique<VulkanSampler>(device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+}
+
 } // namespace crisp

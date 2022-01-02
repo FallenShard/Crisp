@@ -51,7 +51,7 @@ void VulkanBuffer::copyFrom(const VkCommandBuffer cmdBuffer, const VulkanBuffer&
     vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
 }
 
-VulkanBufferView VulkanBuffer::createView() const
+VulkanBufferSpan VulkanBuffer::createSpan() const
 {
     return { m_handle, 0, m_size };
 }
