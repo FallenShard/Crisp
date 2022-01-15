@@ -5,6 +5,7 @@ namespace crisp
 enum class BufferUpdatePolicy
 {
     Constant,
-    PerFrame
+    PerFrame,
+    PerFrameGpu
 };
 } // namespace crisp

@@ -13,7 +13,7 @@ namespace
 auto logger = createLoggerMt("VulkanImage");
 }
 
-VulkanImage::VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
+VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
     : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
     , m_type(createInfo.imageType)
     , m_device(&device)
@@ -27,11 +27,12 @@ VulkanImage::VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createIn
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation = device.getMemoryAllocator().allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
+    m_allocation =
+        device.getMemoryAllocator().allocateImage(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
     vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
 }
 
-VulkanImage::VulkanImage(VulkanDevice& device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps,
+VulkanImage::VulkanImage(const VulkanDevice& device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps,
     VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
     : VulkanResource(device.getResourceDeallocator())
     , m_type(extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D)
@@ -61,7 +62,8 @@ VulkanImage::VulkanImage(VulkanDevice& device, VkExtent3D extent, uint32_t numLa
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation = device.getMemoryAllocator().allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
+    m_allocation =
+        device.getMemoryAllocator().allocateImage(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
     vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
 }
 

@@ -49,6 +49,7 @@ RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<
         logger->warn("Render graph already contains a node named {}\n", name);
 
     auto iter = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
+    m_renderer->updateInitialLayouts(*iter.first->second->renderPass);
     return *iter.first->second;
 }
 
@@ -68,7 +69,10 @@ void RenderGraph::resize(int /*width*/, int /*height*/)
     for (auto& [key, node] : m_nodes)
     {
         if (!node->isCompute)
-            node->renderPass->recreate(*m_renderer);
+        {
+            node->renderPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+            m_renderer->updateInitialLayouts(*node->renderPass);
+        }
     }
 }
 
@@ -320,15 +324,15 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
         dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);
 }
 
-void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const
+void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, Node& node) const
 {
-    if (!node.isEnabled)
-        return;
+    /*if (!node.isEnabled)
+        return;*/
 
     node.pipeline->bind(cmdBuffer.getHandle());
     node.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), VK_PIPELINE_BIND_POINT_COMPUTE);
     if (node.preDispatchCallback)
-        node.preDispatchCallback(cmdBuffer, virtualFrameIndex);
+        node.preDispatchCallback(node, cmdBuffer, virtualFrameIndex);
     cmdBuffer.dispatchCompute(node.numWorkGroups);
 
     for (const auto& dep : node.dependencies)

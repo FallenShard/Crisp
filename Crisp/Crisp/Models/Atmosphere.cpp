@@ -60,6 +60,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
 robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, const std::string& dependentPass)
 {
+    const VulkanDevice& device = renderer.getDevice();
     robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> renderNodes;
     resourceContext.createUniformBuffer("atmosphere", sizeof(SkyAtmosphereConstantBufferStructure),
         BufferUpdatePolicy::PerFrame);
@@ -67,7 +68,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         BufferUpdatePolicy::PerFrame);
 
     // Transmittance lookup
-    renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer));
+    auto& transPassNode = renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer.getDevice()));
+    renderer.updateInitialLayouts(*transPassNode.renderPass);
     auto transLutPipeline =
         resourceContext.createPipeline("transLut", "SkyTransLut.lua", renderGraph.getRenderPass("TransLUTPass"), 0);
     auto transLutMaterial = resourceContext.createMaterial("transLut", transLutPipeline);
@@ -121,11 +123,13 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         resourceContext.getSampler("linearClamp"));
     multiScatPass.material->setDynamicBufferView(0, *resourceContext.getUniformBuffer("atmosphereCommon"), 0);
     multiScatPass.material->setDynamicBufferView(1, *resourceContext.getUniformBuffer("atmosphere"), 0);
-    multiScatPass.preDispatchCallback = [](VulkanCommandBuffer& /*cmdBuffer*/, uint32_t /*frameIndex*/)
+    multiScatPass.preDispatchCallback =
+        [](RenderGraph::Node& /*node*/, VulkanCommandBuffer& /*cmdBuffer*/, uint32_t /*frameIndex*/)
     {
     };
 
-    renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer));
+    auto& skyViewPass = renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer.getDevice()));
+    renderer.updateInitialLayouts(*skyViewPass.renderPass);
     renderGraph.addRenderTargetLayoutTransition("TransLUTPass", "SkyViewLUTPass", 0);
     renderGraph.addDependency("MultiScatPass", "SkyViewLUTPass",
         [tex = resourceContext.getImage("multiScatTex")](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer,
@@ -163,9 +167,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     skyViewLutNode->pass("SkyViewLUTPass").pipeline = skyViewLutPipeline;
 
     // Camera volumes
-    auto camVolPass = std::make_unique<CameraVolumesPass>(renderer);
-    auto& camPass = *camVolPass;
-    renderGraph.addRenderPass("CameraVolumesPass", std::move(camVolPass));
+    auto& camVolPass = renderGraph.addRenderPass("CameraVolumesPass", createSkyVolumePass(device));
     renderGraph.addRenderTargetLayoutTransition("SkyViewLUTPass", "CameraVolumesPass", 0);
     auto cameraVolumesPipeline = resourceContext.createPipeline("skyCameraVolumes", "SkyCameraVolumes.lua",
         renderGraph.getRenderPass("CameraVolumesPass"), 0);
@@ -197,7 +199,9 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     renderer.getDevice().flushDescriptorUpdates();
 
     // Ray marching - final step
-    renderGraph.addRenderPass("RayMarchingPass", createRayMarchingPass(renderer));
+    auto& rayMarchingPass = renderGraph.addRenderPass("RayMarchingPass",
+        createRayMarchingPass(renderer.getDevice(), renderer.getSwapChainExtent()));
+    renderer.updateInitialLayouts(*rayMarchingPass.renderPass);
     renderGraph.addRenderTargetLayoutTransition("CameraVolumesPass", "RayMarchingPass", 0);
     renderGraph.addRenderTargetLayoutTransition("DepthPrePass", "RayMarchingPass", 0);
     auto rayMarchingPipeline = resourceContext.createPipeline("rayMarching", "SkyRayMarching.lua",
@@ -211,8 +215,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         VK_IMAGE_LAYOUT_GENERAL);
     rayMarchingMaterial->writeDescriptor(1, 2, renderGraph.getRenderPass("SkyViewLUTPass"), 0,
         resourceContext.getSampler("linearClamp"));
-    rayMarchingMaterial->writeDescriptor(1, 3, camPass.getArrayViews(), resourceContext.getSampler("linearClamp"),
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    rayMarchingMaterial->writeDescriptor(1, 3, *camVolPass.renderPass, 0, resourceContext.getSampler("linearClamp"));
     rayMarchingMaterial->writeDescriptor(1, 4, renderGraph.getRenderPass("DepthPrePass"), 0,
         resourceContext.getSampler("nearestNeighbor"));
 
@@ -226,6 +230,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
 
     renderGraph.addRenderTargetLayoutTransition("RayMarchingPass", dependentPass, 0);
 
+    renderer.flushResourceUpdates(true);
     return renderNodes;
 }
 } // namespace crisp

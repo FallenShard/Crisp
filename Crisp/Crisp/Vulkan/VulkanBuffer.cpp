@@ -18,7 +18,7 @@ VulkanBuffer::VulkanBuffer(const VulkanDevice& device, const VkDeviceSize size, 
     // Allocate the required memory
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation = device.getMemoryAllocator().allocate(memProps, memRequirements).unwrap();
+    m_allocation = device.getMemoryAllocator().allocateBuffer(memProps, memRequirements).unwrap();
     vkBindBufferMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
 }
 
@@ -54,6 +54,11 @@ void VulkanBuffer::copyFrom(const VkCommandBuffer cmdBuffer, const VulkanBuffer&
 VulkanBufferSpan VulkanBuffer::createSpan() const
 {
     return { m_handle, 0, m_size };
+}
+
+VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const
+{
+    return { m_handle, offset, size };
 }
 
 StagingVulkanBuffer::StagingVulkanBuffer(VulkanDevice& device, const VkDeviceSize size,

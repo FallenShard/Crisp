@@ -43,7 +43,7 @@ public:
         glm::ivec3 workGroupSize;
         glm::ivec3 numWorkGroups;
 
-        std::function<void(VulkanCommandBuffer&, uint32_t)> preDispatchCallback;
+        std::function<void(Node&, VulkanCommandBuffer&, uint32_t)> preDispatchCallback;
         bool isEnabled = true;
     };
 
@@ -79,7 +79,7 @@ public:
 
 private:
     void executeRenderPass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;
-    void executeComputePass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;
+    void executeComputePass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, Node& node) const;
 
     Renderer* m_renderer;
 

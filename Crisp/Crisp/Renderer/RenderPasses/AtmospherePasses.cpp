@@ -11,145 +11,91 @@
 
 namespace crisp
 {
-std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(Renderer& renderer)
+std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(const VulkanDevice& device)
 {
-    auto [handle, attachmentDescriptions] =
-        RenderPassBuilder()
-            .addAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    return RenderPassBuilder()
+        .setRenderTargetsBuffered(true)
+        .setSwapChainDependency(false)
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-    RenderPassDescription description{};
-    description.isSwapChainDependent = false;
-    description.renderArea = { 256, 64 };
-    description.subpassCount = 1;
-    description.attachmentDescriptions = std::move(attachmentDescriptions);
-    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
-    description.renderTargetInfos[0].configureColorRenderTarget(
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-
-    return std::make_unique<VulkanRenderPass>(renderer, handle, std::move(description));
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, { 256, 64 });
 }
 
-std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(Renderer& renderer)
+std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& device)
 {
-    auto [handle, attachmentDescriptions] =
-        RenderPassBuilder()
-            .addAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    return RenderPassBuilder()
+        .setRenderTargetsBuffered(true)
+        .setSwapChainDependency(false)
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-    RenderPassDescription description{};
-    description.isSwapChainDependent = false;
-    description.renderArea = { 192, 108 };
-    description.subpassCount = 1;
-    description.attachmentDescriptions = std::move(attachmentDescriptions);
-    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
-    description.renderTargetInfos[0].configureColorRenderTarget(
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-
-    return std::make_unique<VulkanRenderPass>(renderer, handle, std::move(description));
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, { 192, 108 });
 }
 
-CameraVolumesPass::CameraVolumesPass(Renderer& renderer)
-    : VulkanRenderPass(renderer, false, 1)
+std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device)
 {
-    m_renderArea = { 32, 32 };
+    return RenderPassBuilder()
+        .setRenderTargetsBuffered(true)
+        .setSwapChainDependency(false)
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
+        .setRenderTargetDepthSlices(0, 64, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+        .setRenderTargetBuffered(0, false)
 
-    RenderPassBuilder builder{};
-    std::tie(m_handle, m_attachmentDescriptions) =
-        builder.addAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
-    m_renderTargetInfos.resize(m_attachmentDescriptions.size());
-    setColorRenderTargetInfo(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0, 0, 32)
+        .setAttachmentBufferOverDepthSlices(0, true)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-    createResources(renderer);
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, { 32, 32 });
 }
 
-void CameraVolumesPass::createResources(Renderer& renderer)
+std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& device, VkExtent2D renderArea)
 {
-    const uint32_t depthSlices = 32;
-    m_renderTargets.resize(1);
-    VkExtent3D extent{ m_renderArea.width, m_renderArea.height, depthSlices };
+    return RenderPassBuilder()
+        .setRenderTargetsBuffered(true)
+        .setSwapChainDependency(true)
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
-    m_renderTargets[0] =
-        std::make_unique<VulkanImage>(renderer.getDevice(), extent, 1, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-            VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT);
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-    renderer.enqueueResourceUpdate(
-        [this](VkCommandBuffer cmdBuffer)
-        {
-            m_renderTargets[0]->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        });
-
-    m_arrayViews.resize(2);
-    m_arrayViews[0] = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0 * 32, depthSlices);
-    m_arrayViews[1] = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0 * 32, depthSlices);
-
-    const uint32_t layerCount = RendererConfig::VirtualFrameCount;
-    m_renderTargetViews.resize(layerCount);
-    m_framebuffers.resize(layerCount);
-    for (const auto& [i, renderTargetViews] : enumerate(m_renderTargetViews))
-    {
-        renderTargetViews.resize(1);
-        std::vector<VkImageView> viewHandles(1);
-        for (uint32_t j = 0; j < 1; ++j)
-        {
-            renderTargetViews.at(j) = m_renderTargets[0]->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0 * 32, depthSlices);
-            viewHandles.at(j) = renderTargetViews.at(j)->getHandle();
-        }
-        m_framebuffers.at(i) =
-            std::make_unique<VulkanFramebuffer>(renderer.getDevice(), m_handle, m_renderArea, viewHandles, depthSlices);
-    }
-}
-
-std::unique_ptr<VulkanRenderPass> createRayMarchingPass(Renderer& renderer)
-{
-    auto [handle, attachmentDescriptions] =
-        RenderPassBuilder()
-            .addAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
-
-    RenderPassDescription description{};
-    description.isSwapChainDependent = true;
-    description.subpassCount = 1;
-    description.attachmentDescriptions = std::move(attachmentDescriptions);
-    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
-    description.renderTargetInfos[0].configureColorRenderTarget(
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-
-    return std::make_unique<VulkanRenderPass>(renderer, handle, std::move(description));
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, renderArea);
 }
 
 } // namespace crisp

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <memory>
-#include <vector>
+#include <Crisp/Vulkan/VulkanResource.hpp>
 
 #include <CrispCore/Coroutines/Task.hpp>
 
-#include "VulkanResource.hpp"
+#include <memory>
+#include <vector>
 
 namespace crisp
 {
@@ -13,50 +13,52 @@ class VulkanDevice;
 class VulkanImage;
 class VulkanImageView;
 class VulkanFramebuffer;
-class Renderer;
+class VulkanSwapChain;
 
 struct RenderTargetInfo
 {
-    VkImageUsageFlags usage;
     VkPipelineStageFlags initSrcStageFlags{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
     VkPipelineStageFlags initDstStageFlags;
     VkClearValue clearValue;
 
-    inline void configureColorRenderTarget(VkImageUsageFlags additionalFlags,
-        VkClearColorValue clearVal = { 0.0f, 0.0f, 0.0f, 0.0f })
-    {
-        initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | additionalFlags;
-        clearValue.color = clearVal;
-    }
+    VkImageUsageFlags usage;
+    uint32_t layerCount{ 1 };
+    uint32_t mipmapCount{ 1 };
+    VkFormat format{ VK_FORMAT_UNDEFINED };
+    VkSampleCountFlagBits sampleCount{};
+    uint32_t depthSlices{ 1 };
+    VkImageCreateFlags createFlags{};
+    std::optional<bool> buffered;
+};
 
-    inline void configureDepthRenderTarget(VkImageUsageFlags additionalFlags = 0,
-        VkClearDepthStencilValue clearVal = { 0.0f, 0 })
-    {
-        initDstStageFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | additionalFlags;
-        clearValue.depthStencil = clearVal;
-    }
+struct AttachmentMapping
+{
+    uint32_t renderTargetIndex;
+    VkImageSubresourceRange subresource;
+    bool bufferOverDepthSlices{ false };
 };
 
 struct RenderPassDescription
 {
-    std::optional<VkExtent2D> renderArea;
-    bool isSwapChainDependent;
-    uint32_t subpassCount;
+    VkExtent2D renderArea{ 0, 0 };
+    bool isSwapChainDependent{ false };
+    uint32_t subpassCount{ 0 };
     std::vector<VkAttachmentDescription> attachmentDescriptions;
+    std::vector<AttachmentMapping> attachmentMappings;
     std::vector<RenderTargetInfo> renderTargetInfos;
     bool bufferedRenderTargets{ true };
+    bool allocateRenderTargets{ true };
 };
 
-class VulkanRenderPass : public VulkanResource<VkRenderPass, vkDestroyRenderPass>
+class VulkanRenderPass final : public VulkanResource<VkRenderPass, vkDestroyRenderPass>
 {
 public:
-    VulkanRenderPass(Renderer& renderer, bool isWindowSizeDependent, uint32_t numSubpasses);
-    VulkanRenderPass(Renderer& renderer, VkRenderPass renderPass, RenderPassDescription&& renderPassDescription);
-    virtual ~VulkanRenderPass();
+    VulkanRenderPass(const VulkanDevice& device, bool isSwapChainDependent, uint32_t subpassCount);
+    VulkanRenderPass(const VulkanDevice& device, VkRenderPass renderPass,
+        RenderPassDescription&& renderPassDescription);
+    ~VulkanRenderPass();
 
-    void recreate(Renderer& renderer);
+    void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
 
     VkExtent2D getRenderArea() const;
     VkViewport createViewport() const;
@@ -88,6 +90,11 @@ public:
         return m_framebuffers.at(frameIdx).get();
     }
 
+    std::unique_ptr<VulkanFramebuffer>& getFramebuffer(uint32_t frameIdx)
+    {
+        return m_framebuffers.at(frameIdx);
+    }
+
     inline const std::string& getName() const
     {
         return m_name;
@@ -97,15 +104,15 @@ public:
         m_name = std::move(name);
     }
 
-    coro::Task<int> updateInitialLayouts(Renderer* renderer);
+    void updateInitialLayouts(VkCommandBuffer cmdBuffer);
 
 protected:
-    void createRenderTargets(Renderer& renderer);
-    void createRenderTargetViewsAndFramebuffers(const VulkanDevice& device, uint32_t layerCount);
+    void createRenderTargets(const VulkanDevice& device);
+    void createRenderTargetViewsAndFramebuffers(const VulkanDevice& device);
 
     VkExtent3D getRenderAreaExtent() const;
 
-    virtual void createResources(Renderer& renderer);
+    void createResources(const VulkanDevice& device);
     void freeResources();
 
     void setDepthRenderTargetInfo(uint32_t index, VkImageUsageFlags additionalFlags,
@@ -126,9 +133,12 @@ protected:
 
     std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
 
+    std::vector<AttachmentMapping> m_attachmentMappings;
+
     std::string m_name;
 
     bool m_combinedImages{ false };
     bool m_bufferedRenderTargets{ true };
+    bool m_allocateRenderTargets{ true };
 };
 } // namespace crisp

@@ -15,8 +15,8 @@ class VulkanImageView;
 class VulkanImage : public VulkanResource<VkImage, vkDestroyImage>
 {
 public:
-    VulkanImage(VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect);
-    VulkanImage(VulkanDevice& device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
+    VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect);
+    VulkanImage(const VulkanDevice& device, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
         VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags);
     virtual ~VulkanImage();
 
@@ -52,7 +52,7 @@ private:
 
     VulkanMemoryHeap::Allocation m_allocation;
 
-    VulkanDevice* m_device;
+    const VulkanDevice* m_device;
 
     VkImageType m_type;
     VkFormat m_format;

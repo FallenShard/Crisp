@@ -26,14 +26,15 @@ class VulkanMemoryAllocator
 public:
     VulkanMemoryAllocator(const VulkanPhysicalDevice& physicalDevice, VkDevice deviceHandle);
 
-    Result<VulkanMemoryHeap*> getHeapFromMemProps(VkMemoryPropertyFlags flags, uint32_t memoryTypeBits) const;
     VulkanMemoryHeap& getDeviceBufferHeap() const;
     VulkanMemoryHeap& getDeviceImageHeap() const;
     VulkanMemoryHeap& getStagingBufferHeap() const;
 
     DeviceMemoryMetrics getDeviceMemoryUsage() const;
 
-    Result<VulkanMemoryHeap::Allocation> allocate(VkMemoryPropertyFlags memoryProperties,
+    Result<VulkanMemoryHeap::Allocation> allocateBuffer(VkMemoryPropertyFlags memoryProperties,
+        const VkMemoryRequirements& memoryRequirements);
+    Result<VulkanMemoryHeap::Allocation> allocateImage(VkMemoryPropertyFlags memoryProperties,
         const VkMemoryRequirements& memoryRequirements);
 
 private:

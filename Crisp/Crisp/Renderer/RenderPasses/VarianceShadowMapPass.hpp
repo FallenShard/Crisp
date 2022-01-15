@@ -4,5 +4,6 @@
 
 namespace crisp
 {
-std::unique_ptr<VulkanRenderPass> createVarianceShadowMappingPass(Renderer& renderer, unsigned int shadowMapSize);
+std::unique_ptr<VulkanRenderPass> createVarianceShadowMappingPass(const VulkanDevice& device,
+    unsigned int shadowMapSize);
 } // namespace crisp

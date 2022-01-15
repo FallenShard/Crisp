@@ -4,12 +4,5 @@
 
 namespace crisp
 {
-class ForwardLightingPass : public VulkanRenderPass
-{
-public:
-    ForwardLightingPass(Renderer& renderer, VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
-
-protected:
-    virtual void createResources(Renderer& renderer) override;
-};
+std::unique_ptr<VulkanRenderPass> createForwardLightingPass(const VulkanDevice& device, VkExtent2D renderArea);
 } // namespace crisp

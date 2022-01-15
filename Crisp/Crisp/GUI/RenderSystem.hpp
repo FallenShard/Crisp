@@ -89,7 +89,6 @@ private:
     void updateFullScreenMaterial();
 
     Renderer* m_renderer;
-    VulkanDevice* m_device;
 
     glm::mat4 m_P;
 

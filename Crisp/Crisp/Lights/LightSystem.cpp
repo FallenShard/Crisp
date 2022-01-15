@@ -220,7 +220,8 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
     cullingPass.material->setDynamicBufferView(1, *m_pointLightBuffer, 0);
     cullingPass.material->setDynamicBufferView(2, cameraBuffer, 0);
     cullingPass.material->setDynamicBufferView(3, *m_lightIndexListBuffer, 0);
-    cullingPass.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
+    cullingPass.preDispatchCallback =
+        [this](RenderGraph::Node& /*node*/, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
     {
         // Before culling can start, zero out the light index count buffer
         glm::uvec4 zero(0);

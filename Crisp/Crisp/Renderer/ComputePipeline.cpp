@@ -5,6 +5,8 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
+#include <Crisp/ShadingLanguage/Reflection.hpp>
+
 namespace crisp
 {
 std::unordered_map<VkPipeline, glm::uvec3> workGroupSizes;
@@ -15,24 +17,23 @@ glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline)
 }
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, std::string&& shaderName,
-    uint32_t numDynamicStorageBuffers, uint32_t /*numDescriptorSets*/, std::size_t pushConstantSize,
-    const glm::uvec3& workGroupSize)
+    uint32_t numDynamicStorageBuffers, uint32_t /*numDescriptorSets*/, const glm::uvec3& workGroupSize)
 {
+    auto refl = crisp::sl::parseShaderUniformInputMetadata(renderer->getShaderSourcePath(shaderName)).unwrap();
+
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     for (uint32_t i = 0; i < numDynamicStorageBuffers; i++)
         bindings.push_back({ i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT });
 
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder.defineDescriptorSet(0, false, std::move(bindings));
-    if (pushConstantSize > 0)
-        layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, static_cast<uint32_t>(pushConstantSize));
-
-    VulkanDevice& device = renderer->getDevice();
-
-    auto layout = layoutBuilder.create(device);
+    if (!refl.pushConstants.empty())
+    {
+        layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, refl.pushConstants.front().size);
+    }
+    auto layout = layoutBuilder.create(renderer->getDevice());
 
     std::vector<VkSpecializationMapEntry> specEntries = {
-  //   id,               offset,             size
         {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
         {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
         {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}
@@ -52,11 +53,12 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(Renderer* renderer, std::s
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
     VkPipeline pipelineHandle;
-    vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineHandle);
+    vkCreateComputePipelines(renderer->getDevice().getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+        &pipelineHandle);
     workGroupSizes[pipelineHandle] = workGroupSize;
 
-    auto pipeline =
-        std::make_unique<VulkanPipeline>(device, pipelineHandle, std::move(layout), PipelineDynamicStateFlags());
+    auto pipeline = std::make_unique<VulkanPipeline>(renderer->getDevice(), pipelineHandle, std::move(layout),
+        PipelineDynamicStateFlags());
     pipeline->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
     return std::move(pipeline);
 }

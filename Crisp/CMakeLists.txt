@@ -105,8 +105,8 @@ add_library(Crisp
     "Crisp/Renderer/RenderPasses/BlurPass.hpp"
     "Crisp/Renderer/RenderPasses/CubeMapRenderPass.cpp"
     "Crisp/Renderer/RenderPasses/CubeMapRenderPass.hpp"
-    "Crisp/Renderer/RenderPasses/DefaultRenderPass.cpp"
-    "Crisp/Renderer/RenderPasses/DefaultRenderPass.hpp"
+    
+    
     "Crisp/Renderer/RenderPasses/DepthPass.cpp"
     "Crisp/Renderer/RenderPasses/DepthPass.hpp"
     "Crisp/Renderer/RenderPasses/ForwardLightingPass.cpp"
@@ -255,7 +255,7 @@ add_library(Crisp
     "Crisp/Vulkan/VulkanSampler.hpp"
     "Crisp/Vulkan/VulkanSwapChain.cpp"
     "Crisp/Vulkan/VulkanSwapChain.hpp"   
-)
+ "Crisp/Vulkan/VulkanEnumToString.hpp" "Crisp/Vulkan/VulkanEnumToString.cpp" "Crisp/Renderer/StorageBuffer.hpp" "Crisp/Renderer/StorageBuffer.cpp")
 
 set_target_properties(Crisp PROPERTIES
     LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"

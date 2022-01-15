@@ -5,6 +5,7 @@
 #include <Crisp/vulkan/VulkanRenderPass.hpp>
 
 #include <Crisp/Renderer/DescriptorSetAllocator.hpp>
+#include <Crisp/Renderer/StorageBuffer.hpp>
 
 namespace crisp
 {
@@ -194,6 +195,11 @@ void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const Unifor
 
         m_device->postDescriptorWrite(std::move(write), std::move(infos));
     }
+}
+
+void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer)
+{
+    writeDescriptor(setIndex, binding, storageBuffer.getDescriptorInfo());
 }
 
 void Material::setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset)

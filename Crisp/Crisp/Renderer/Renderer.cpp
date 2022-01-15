@@ -8,6 +8,7 @@
 
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 #include <Crisp/vulkan/VulkanCommandPool.hpp>
@@ -15,7 +16,7 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/LuaPipelineBuilder.hpp>
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderPasses/DefaultRenderPass.hpp>
+#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
@@ -31,7 +32,31 @@ namespace crisp
 namespace
 {
 auto logger = spdlog::stdout_color_mt("Renderer");
+
+std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(const VulkanDevice& device,
+    const VulkanSwapChain& swapChain)
+{
+    return RenderPassBuilder()
+        .setAllocateRenderTagets(false)
+        .setSwapChainDependency(true)
+        .setRenderTargetsBuffered(true)
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, swapChain.getImageFormat())
+        .configureColorRenderTarget(0, 0)
+
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, swapChain.getExtent());
 }
+
+} // namespace
 
 Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     : m_currentFrameIndex(0)
@@ -56,7 +81,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     m_device = std::make_unique<VulkanDevice>(*m_physicalDevice,
         createDefaultQueueConfiguration(*m_context, *m_physicalDevice), RendererConfig::VirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
-    m_defaultRenderPass = std::make_unique<DefaultRenderPass>(*this);
+    m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain);
     logger->info("Created all base components");
 
     m_defaultViewport = m_swapChain->getViewport();
@@ -148,7 +173,7 @@ VkExtent3D Renderer::getSwapChainExtent3D() const
     return { m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1 };
 }
 
-DefaultRenderPass& Renderer::getDefaultRenderPass() const
+VulkanRenderPass& Renderer::getDefaultRenderPass() const
 {
     return *m_defaultRenderPass;
 }
@@ -338,7 +363,7 @@ void Renderer::drawFrame()
         return;
     }
 
-    m_defaultRenderPass->recreateFramebuffer(*this, m_swapChain->getImageView(swapImageIndex.value()));
+    updateSwapChainRenderPass(virtualFrameIndex, m_swapChain->getImageView(swapImageIndex.value()));
 
     /*for (const auto& worker : m_workers)
     {*/
@@ -424,6 +449,15 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(std::string_view
     const VulkanRenderPass& renderPass, int subpassIndex)
 {
     return LuaPipelineBuilder(getResourcesPath() / "Pipelines" / pipelineName).create(this, renderPass, subpassIndex);
+}
+
+void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass)
+{
+    enqueueResourceUpdate(
+        [&renderPass](VkCommandBuffer cmdBuffer)
+        {
+            renderPass.updateInitialLayouts(cmdBuffer);
+        });
 }
 
 void Renderer::loadShaders(const std::filesystem::path& directoryPath)
@@ -540,6 +574,27 @@ void Renderer::recreateSwapChain()
     vkDeviceWaitIdle(m_device->getHandle());
 
     m_swapChain->recreate(*m_device, *m_context);
-    m_defaultRenderPass->recreate(*this);
+    m_defaultRenderPass->recreate(*m_device, m_swapChain->getExtent());
 }
+
+void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView)
+{
+    auto& framebuffer = m_defaultRenderPass->getFramebuffer(virtualFrameIndex);
+    if (framebuffer && framebuffer->getAttachment(0) == swapChainImageView)
+        return;
+
+    if (!m_swapChainFramebuffers.contains(swapChainImageView))
+    {
+        const auto attachmentViews = { swapChainImageView };
+        m_swapChainFramebuffers.emplace(swapChainImageView,
+            std::make_unique<VulkanFramebuffer>(*m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(),
+                attachmentViews));
+    }
+
+    if (framebuffer)
+        framebuffer.swap(m_swapChainFramebuffers.at(framebuffer->getAttachment(0)));
+
+    framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));
+}
+
 } // namespace crisp

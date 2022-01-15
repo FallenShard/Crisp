@@ -4,9 +4,5 @@
 
 namespace crisp
 {
-class LightShaftPass : public VulkanRenderPass
-{
-public:
-    LightShaftPass(Renderer& renderer);
-};
+std::unique_ptr<VulkanRenderPass> createLightShaftPass(const VulkanDevice& device, VkExtent2D renderArea);
 } // namespace crisp

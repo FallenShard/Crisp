@@ -77,17 +77,23 @@ VkPushConstantRange parsePushConstant(const Statement* statement, VkShaderStageF
             case TokenType::Vec4:
                 fieldSize = 4 * sizeof(float);
                 break;
+            case TokenType::Vec3:
+                fieldSize = 3 * sizeof(float);
+                break;
             case TokenType::Vec2:
                 fieldSize = 2 * sizeof(float);
                 break;
             case TokenType::Float:
                 fieldSize = sizeof(float);
                 break;
+            case TokenType::Uvec3:
+                fieldSize = 3 * sizeof(uint32_t);
+                break;
             case TokenType::Uint:
-                fieldSize = sizeof(unsigned int);
+                fieldSize = sizeof(uint32_t);
                 break;
             case TokenType::Int:
-                fieldSize = sizeof(int);
+                fieldSize = sizeof(int32_t);
                 break;
 
             default:

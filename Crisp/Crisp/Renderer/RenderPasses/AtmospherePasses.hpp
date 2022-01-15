@@ -144,22 +144,6 @@ struct SkyAtmosphereConstantBufferStructure
 
 constexpr auto sz = sizeof(SkyAtmosphereConstantBufferStructure);
 
-class CameraVolumesPass : public VulkanRenderPass
-{
-public:
-    CameraVolumesPass(Renderer& renderer);
-
-    inline const std::vector<std::unique_ptr<VulkanImageView>>& getArrayViews() const
-    {
-        return m_arrayViews;
-    }
-
-protected:
-    virtual void createResources(Renderer& renderer) override;
-
-    std::vector<std::unique_ptr<VulkanImageView>> m_arrayViews;
-};
-
 struct CommonConstantBufferStructure
 {
     glm::mat4 gSkyViewProjMat = glm::transpose(glm::mat4{
@@ -199,8 +183,9 @@ struct CommonConstantBufferStructure
     // float gScreenshotCaptureActive{ 0.0 };
 };
 
-std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(Renderer& renderer);
-std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(Renderer& renderer);
-std::unique_ptr<VulkanRenderPass> createRayMarchingPass(Renderer& renderer);
+std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(const VulkanDevice& device);
+std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& device);
+std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device);
+std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& device, VkExtent2D renderArea);
 
 } // namespace crisp

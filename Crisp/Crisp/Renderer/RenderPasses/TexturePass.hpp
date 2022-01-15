@@ -4,6 +4,6 @@
 
 namespace crisp
 {
-std::unique_ptr<VulkanRenderPass> createTexturePass(Renderer& renderer, VkExtent2D renderArea, VkFormat textureFormat,
-    bool bufferedRenderTargets);
+std::unique_ptr<VulkanRenderPass> createTexturePass(const VulkanDevice& device, VkExtent2D renderArea,
+    VkFormat textureFormat, bool bufferedRenderTargets);
 } // namespace crisp

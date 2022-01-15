@@ -255,10 +255,9 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     oscillationPass.material->writeDescriptor(0, 5,
         m_resourceContext->getImageView("normalZView0")->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-    oscillationPass.preDispatchCallback = [this](VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+    oscillationPass.preDispatchCallback =
+        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
     {
-        auto& pass = m_renderGraph->getNode(OscillationPass);
-
         VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
         barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -269,7 +268,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
         vkCmdPipelineBarrier(cmdBuffer.getHandle(), VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
-        pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, values);
+        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, values);
     };
 
     int layerToRead = applyFFT("fftImage");
@@ -279,7 +278,8 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     int ln1 = applyFFT("normalX");
     int ln2 = applyFFT("normalZ");
 
-    m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(*m_renderer));
+    m_renderGraph->addRenderPass(MainPass,
+        createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
 
     m_renderGraph->addDependency(OscillationPass, MainPass,
         [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
@@ -514,10 +514,9 @@ int OceanScene::applyFFT(std::string image)
         bitReversePass.material->writeDescriptor(0, 1,
             m_resourceContext->getImageView(imageViewWrite)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-        bitReversePass.preDispatchCallback = [this, image](VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+        bitReversePass.preDispatchCallback =
+            [this, image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            auto& pass = m_renderGraph->getNode(image + "BitReversePass0");
-
             struct PCData
             {
                 uint32_t horizontal;
@@ -526,7 +525,7 @@ int OceanScene::applyFFT(std::string image)
             };
 
             PCData pcValues = { 1, logN, m_time };
-            pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcValues);
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcValues);
         };
         m_renderGraph->addDependency(OscillationPass, image + "BitReversePass0",
             [this, image, imageLayerRead](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer,
@@ -568,7 +567,8 @@ int OceanScene::applyFFT(std::string image)
         fftPass.material->writeDescriptor(0, 1,
             m_resourceContext->getImageView(imageViewWrite)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-        fftPass.preDispatchCallback = [this, i, &fftPass](VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+        fftPass.preDispatchCallback =
+            [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             struct PCData
             {
@@ -578,7 +578,7 @@ int OceanScene::applyFFT(std::string image)
             };
 
             PCData pcvalues = { i + 1, m_time, N };
-            fftPass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
         };
 
         logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
@@ -644,10 +644,9 @@ int OceanScene::applyFFT(std::string image)
         bitReversePass2.material->writeDescriptor(0, 1,
             m_resourceContext->getImageView(imageViewWrite)->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-        bitReversePass2.preDispatchCallback = [this, image](VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+        bitReversePass2.preDispatchCallback =
+            [this, image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            auto& pass = m_renderGraph->getNode(image + "BitReversePass1");
-
             struct PCData
             {
                 uint32_t horizontal;
@@ -656,7 +655,7 @@ int OceanScene::applyFFT(std::string image)
             };
 
             PCData pcvalues = { 0, logN, m_time };
-            pass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
         };
 
         logger->info("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
@@ -702,7 +701,8 @@ int OceanScene::applyFFT(std::string image)
 
         logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
-        fftPass.preDispatchCallback = [this, i, &fftPass](VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+        fftPass.preDispatchCallback =
+            [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             struct PCData
             {
@@ -712,7 +712,7 @@ int OceanScene::applyFFT(std::string image)
             };
 
             PCData pcvalues = { i + 1, m_time, N };
-            fftPass.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
         };
 
         if (i == logN - 1)

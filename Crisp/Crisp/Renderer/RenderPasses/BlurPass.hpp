@@ -4,6 +4,6 @@
 
 namespace crisp
 {
-std::unique_ptr<VulkanRenderPass> createBlurPass(Renderer& renderer, VkFormat format,
-    std::optional<VkExtent2D> renderArea = {});
+std::unique_ptr<VulkanRenderPass> createBlurPass(const VulkanDevice& device, VkFormat format, VkExtent2D renderArea,
+    bool isSwapChainDependent);
 } // namespace crisp

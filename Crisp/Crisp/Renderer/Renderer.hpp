@@ -18,9 +18,8 @@ namespace crisp
 {
 class VulkanDevice;
 class VulkanSwapChain;
-
+class VulkanFramebuffer;
 class VulkanRenderPass;
-class DefaultRenderPass;
 class VulkanPipeline;
 class VulkanSampler;
 class VulkanImageView;
@@ -55,7 +54,7 @@ public:
     VkExtent2D getSwapChainExtent() const;
     VkExtent3D getSwapChainExtent3D() const;
 
-    DefaultRenderPass& getDefaultRenderPass() const;
+    VulkanRenderPass& getDefaultRenderPass() const;
     VkViewport getDefaultViewport() const;
     VkRect2D getDefaultScissor() const;
 
@@ -133,6 +132,8 @@ public:
         return Awaitable{ this };
     }
 
+    void updateInitialLayouts(VulkanRenderPass& renderPass);
+
 private:
     void loadShaders(const std::filesystem::path& directoryPath);
     VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
@@ -141,6 +142,7 @@ private:
     void present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex);
 
     void recreateSwapChain();
+    void updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView);
 
     uint64_t m_currentFrameIndex;
     std::filesystem::path m_resourcesPath;
@@ -149,7 +151,8 @@ private:
     std::unique_ptr<VulkanPhysicalDevice> m_physicalDevice;
     std::unique_ptr<VulkanDevice> m_device;
     std::unique_ptr<VulkanSwapChain> m_swapChain;
-    std::unique_ptr<DefaultRenderPass> m_defaultRenderPass;
+    std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
+    robin_hood::unordered_flat_map<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_swapChainFramebuffers;
 
     VkViewport m_defaultViewport;
     VkRect2D m_defaultScissor;

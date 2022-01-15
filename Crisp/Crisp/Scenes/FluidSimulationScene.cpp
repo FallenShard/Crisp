@@ -40,7 +40,8 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_uniformBuffers.emplace("camera",
         std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
 
-    auto& mainPassNode = m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(*m_renderer));
+    auto& mainPassNode = m_renderGraph->addRenderPass(MainPass,
+        createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
 
     m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);

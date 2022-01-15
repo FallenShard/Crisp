@@ -53,27 +53,23 @@ BlurParams blurV = { 1.0f / Application::DefaultWindowHeight, 0.0f, 1.0f, 3 };
 
 std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer)
 {
-    auto [handle, attachmentDescriptions] =
-        RenderPassBuilder()
-            .addAttachment(VK_FORMAT_R32G32B32A32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    return RenderPassBuilder()
+        .setRenderTargetsBuffered(true)
+        .setSwapChainDependency(true)
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT)
 
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-    RenderPassDescription description{};
-    description.isSwapChainDependent = true;
-    description.subpassCount = 1;
-    description.attachmentDescriptions = std::move(attachmentDescriptions);
-    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
-    description.renderTargetInfos[0].configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    return std::make_unique<VulkanRenderPass>(renderer, handle, std::move(description));
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(renderer.getDevice(), renderer.getSwapChainExtent());
 }
 
 } // namespace
@@ -140,10 +136,12 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 2);
 
-    auto mainPass = std::make_unique<ForwardLightingPass>(*m_renderer);
+    auto mainPass = createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent());
     auto ssaoPass = createAmbientOcclusionPass(*m_renderer);
-    auto blurHPass = createBlurPass(*m_renderer, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto blurVPass = createBlurPass(*m_renderer, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto blurHPass =
+        createBlurPass(m_renderer->getDevice(), VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent(), true);
+    auto blurVPass =
+        createBlurPass(m_renderer->getDevice(), VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent(), true);
 
     VulkanPipeline* colorPipeline = m_resourceContext->createPipeline("color", "UniformColor.lua", *mainPass, 0);
     Material* colorMaterial = m_resourceContext->createMaterial("color", colorPipeline);

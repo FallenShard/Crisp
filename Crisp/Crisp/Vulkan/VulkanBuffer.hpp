@@ -23,6 +23,8 @@ public:
 
     VulkanBufferSpan createSpan() const;
 
+    VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
+
 protected:
     VulkanMemoryHeap::Allocation m_allocation;
     VkDeviceSize m_size;
@@ -39,6 +41,12 @@ public:
 
     template <typename T>
     inline void updateFromHost(const std::vector<T>& buffer)
+    {
+        updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
+    }
+
+    template <typename T, size_t N>
+    inline void updateFromHost(const std::array<T, N>& buffer)
     {
         updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
     }

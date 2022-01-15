@@ -84,15 +84,22 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
 
     m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
-    m_renderGraph->addRenderPass(DepthPrePass, createDepthPass(*m_renderer));
+    m_renderGraph->addRenderPass(DepthPrePass,
+        createDepthPass(m_renderer->getDevice(), m_renderer->getSwapChainExtent()));
 
     // Main render pass
 
-    m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(*m_renderer, VK_SAMPLE_COUNT_1_BIT));
+    m_renderGraph->addRenderPass(MainPass,
+        createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
     m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, MainPass, 0);
     // Shadow map pass
-    m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(*m_renderer, ShadowMapSize, CascadeCount));
+    m_renderGraph->addRenderPass(CsmPass, createShadowMapPass(m_renderer->getDevice(), ShadowMapSize, CascadeCount));
     m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
+
+    m_resourceContext->addImageView("csmFrame0",
+        m_renderGraph->getRenderPass(CsmPass).createRenderTargetView(m_renderer->getDevice(), 0, 0, CascadeCount));
+    m_resourceContext->addImageView("csmFrame1", m_renderGraph->getRenderPass(CsmPass).createRenderTargetView(
+                                                     m_renderer->getDevice(), 0, CascadeCount, CascadeCount));
 
     // Wrap-up render graph definition
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
@@ -122,12 +129,12 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
     createPlane();
     createShaderballs();
 
+    m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
+
     auto nodes = addAtmosphereRenderPasses(*m_renderGraph, *m_renderer, *m_resourceContext, MainPass);
     for (auto& [key, value] : nodes)
         m_renderNodes.emplace(std::move(key), std::move(value));
-
     m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
-    // m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
     m_renderGraph->sortRenderPasses().unwrap();
     m_renderGraph->printExecutionOrder();
@@ -177,18 +184,19 @@ void PbrScene::update(float dt)
 
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(camParams);
 
-    const glm::mat4 myP = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) *
-                          glm::perspective(66.6f * glm::pi<float>() / 180.0f, 1280.0f / 720.0f, 0.1f, 20000.0f);
-    const glm::mat4 myV =
+    const glm::mat4 testP = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) *
+                            glm::perspective(66.6f * glm::pi<float>() / 180.0f, 1280.0f / 720.0f, 0.1f, 20000.0f);
+    const glm::mat4 testV =
         glm::lookAt(glm::vec3(0.0f, 0.5f, 1.0f), glm::vec3(0.0f, 0.5f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    const glm::mat4 VP = myP * myV;
+    const glm::mat4 VP = testP * testV;
     atmosphere.gSkyViewProjMat = VP;
-
-    //
-    atmosphere.gSkyViewProjMat = camParams.P * camParams.V;
-    atmosphere.camera = m_cameraController->getCamera().getPosition();
-    atmosphere.view_ray = m_cameraController->getCamera().getLookDir();
+    // atmosphere.gSkyViewProjMat = camParams.P * camParams.V;
     atmosphere.gSkyInvViewProjMat = glm::inverse(atmosphere.gSkyViewProjMat);
+    ////
+
+    // atmosphere.camera = m_cameraController->getCamera().getPosition();
+    // atmosphere.view_ray = m_cameraController->getCamera().getLookDir();
+    //
     m_resourceContext->getUniformBuffer("atmosphere")->updateStagingBuffer(atmosphere);
 
     commonConstantData.gSkyViewProjMat = atmosphere.gSkyViewProjMat;
@@ -363,7 +371,10 @@ Material* PbrScene::createPbrTexMaterial(const std::string& type, const std::str
     material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
 
     material->writeDescriptor(1, 0, *m_lightSystem->getCascadedDirectionalLightBuffer());
-    material->writeDescriptor(1, 1, m_renderGraph->getRenderPass(CsmPass), 0,
+
+    material->writeDescriptor(1, 1, 0, *m_resourceContext->getImageView("csmFrame0"),
+        m_resourceContext->getSampler("nearestNeighbor"));
+    material->writeDescriptor(1, 1, 1, *m_resourceContext->getImageView("csmFrame1"),
         m_resourceContext->getSampler("nearestNeighbor"));
 
     VulkanSampler* linearRepeatSampler = m_resourceContext->getSampler("linearRepeat");
@@ -550,16 +561,16 @@ void PbrScene::createGui(gui::Form* form)
     addLabeledSlider("Azimuth", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v)
     {
         azimuth = static_cast<float>(v);
-        atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
+        /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
         atmosphere.sun_direction.y = std::sin(altitude);
-        atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);
+        atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
     };
     addLabeledSlider("Altitude", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v)
     {
         altitude = static_cast<float>(v);
-        atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
+        /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
         atmosphere.sun_direction.y = std::sin(altitude);
-        atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);
+        atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
     };
 
     addLabeledSlider("Roughness", m_uniformMaterialParams.roughness, 0.0, 1.0)

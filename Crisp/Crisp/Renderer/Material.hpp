@@ -15,6 +15,7 @@ namespace crisp
 class VulkanPipeline;
 class VulkanDevice;
 class UniformBuffer;
+class StorageBuffer;
 class DescriptorSetAllocator;
 
 class Material
@@ -41,6 +42,7 @@ public:
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer, int elementSize,
         int elementCount);
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer);
 
     void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
     void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer,

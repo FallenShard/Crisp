@@ -36,29 +36,6 @@ VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanPhysicalDevice& physica
         stagingBufferHeapIndex, deviceHandle, "Staging Buffer Heap");
 }
 
-Result<VulkanMemoryHeap*> VulkanMemoryAllocator::getHeapFromMemProps(VkMemoryPropertyFlags flags,
-    uint32_t memoryTypeBits) const
-{
-    const uint32_t supportedHeapIndex = m_physicalDevice->findMemoryType(memoryTypeBits, flags).unwrap();
-
-    if (m_deviceImageHeap->isFromHeapIndex(supportedHeapIndex, flags))
-    {
-        return m_deviceImageHeap.get();
-    }
-
-    if (m_deviceBufferHeap->isFromHeapIndex(supportedHeapIndex, flags))
-    {
-        return m_deviceBufferHeap.get();
-    }
-
-    if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, flags))
-    {
-        return m_stagingBufferHeap.get();
-    }
-
-    return resultError("Failed to get a heap from specified properties!");
-}
-
 VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceBufferHeap() const
 {
     return *m_deviceBufferHeap;
@@ -86,10 +63,35 @@ DeviceMemoryMetrics VulkanMemoryAllocator::getDeviceMemoryUsage() const
     return memoryMetrics;
 }
 
-Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocate(VkMemoryPropertyFlags memoryProperties,
+Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(VkMemoryPropertyFlags memoryProperties,
     const VkMemoryRequirements& memoryRequirements)
 {
-    auto heap = getHeapFromMemProps(memoryProperties, memoryRequirements.memoryTypeBits).unwrap();
-    return heap->allocate(memoryRequirements.size, memoryRequirements.alignment);
+    const uint32_t supportedHeapIndex =
+        m_physicalDevice->findMemoryType(memoryRequirements.memoryTypeBits, memoryProperties).unwrap();
+
+    if (m_deviceBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
+    {
+        return m_deviceBufferHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
+    }
+    else if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
+    {
+        return m_stagingBufferHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
+    }
+
+    return resultError("Failed to get a heap from specified properties when allocating a buffer!");
+}
+
+Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateImage(VkMemoryPropertyFlags memoryProperties,
+    const VkMemoryRequirements& memoryRequirements)
+{
+    const uint32_t supportedHeapIndex =
+        m_physicalDevice->findMemoryType(memoryRequirements.memoryTypeBits, memoryProperties).unwrap();
+
+    if (m_deviceImageHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
+    {
+        return m_deviceImageHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
+    }
+
+    return resultError("Failed to get a heap from specified properties when allocating an image!");
 }
 } // namespace crisp

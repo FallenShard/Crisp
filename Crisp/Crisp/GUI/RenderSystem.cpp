@@ -15,7 +15,6 @@
 #include <Crisp/vulkan/VulkanImageView.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
-#include <Crisp/Renderer/RenderPasses/DefaultRenderPass.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/Texture.hpp>
 
@@ -30,34 +29,34 @@ static constexpr float DepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
 
-std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(crisp::Renderer& renderer)
+std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(const crisp::VulkanDevice& device,
+    const VkExtent2D swapChainExtent)
 {
-    auto [handle, attachmentDescriptions] =
-        crisp::RenderPassBuilder()
-            .addAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addAttachment(VK_FORMAT_D32_SFLOAT, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-            .setAttachmentLayouts(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .setDepthAttachmentRef(0, 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
+    return crisp::RenderPassBuilder()
+        .setRenderTargetsBuffered(true)
+        .setSwapChainDependency(true)
 
-    crisp::RenderPassDescription description{};
-    description.isSwapChainDependent = true;
-    description.attachmentDescriptions = std::move(attachmentDescriptions);
-    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
-    description.renderTargetInfos[0].configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT);
-    description.renderTargetInfos[1].configureDepthRenderTarget(0, { 1.0f, 0 });
-    description.subpassCount = 1;
+        .setRenderTargetCount(2)
+        .setRenderTargetFormat(0, VK_FORMAT_R8G8B8A8_UNORM)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT)
+        .setRenderTargetFormat(1, VK_FORMAT_D32_SFLOAT)
+        .configureDepthRenderTarget(1, 0, { 1.0f, 0 })
 
-    return std::make_unique<crisp::VulkanRenderPass>(renderer, handle, std::move(description));
+        .setAttachmentCount(2)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .setAttachmentMapping(1, 1)
+        .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+        .setAttachmentLayouts(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .setDepthAttachmentRef(0, 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, swapChainExtent);
 }
 
 } // namespace
@@ -66,14 +65,14 @@ namespace crisp::gui
 {
 RenderSystem::RenderSystem(Renderer* renderer)
     : m_renderer(renderer)
-    , m_device(&renderer->getDevice())
 {
     float width = static_cast<float>(m_renderer->getSwapChainExtent().width);
     float height = static_cast<float>(m_renderer->getSwapChainExtent().height);
     m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + DepthLayers);
 
     // Create the render pass where all GUI controls will be drawn
-    m_guiPass = createGuiRenderPass(*m_renderer);
+    m_guiPass = createGuiRenderPass(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->updateInitialLayouts(*m_guiPass);
 
     // Create pipelines for different types of drawable objects
     createPipelines();
@@ -81,7 +80,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     // Gui texture atlas
     loadTextureAtlas();
-    m_linearClampSampler = std::make_unique<VulkanSampler>(*m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
+    m_linearClampSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
         VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     logger->info("Texture initialized");
 
@@ -120,7 +119,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
         descWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descWrite.descriptorCount = 1;
         descWrite.pImageInfo = &imageInfo;
-        vkUpdateDescriptorSets(m_device->getHandle(), 1, &descWrite, 0, nullptr);
+        vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), 1, &descWrite, 0, nullptr);
     }
     m_tcTransforms =
         std::make_unique<DynamicUniformBufferResource>(m_renderer, tcSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
@@ -345,7 +344,8 @@ void RenderSystem::resize(int /*width*/, int /*height*/)
     m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f,
         static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
 
-    m_guiPass->recreate(*m_renderer);
+    m_guiPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->updateInitialLayouts(*m_guiPass);
     updateFullScreenMaterial();
 }
 
@@ -403,8 +403,8 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
     descWrites[1].descriptorCount = 1;
     descWrites[1].pImageInfo = &imageInfo;
 
-    vkUpdateDescriptorSets(m_device->getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0,
-        nullptr);
+    vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), static_cast<uint32_t>(descWrites.size()),
+        descWrites.data(), 0, nullptr);
 
     m_fonts.emplace_back(std::move(fontTexture));
 
@@ -452,7 +452,7 @@ void RenderSystem::initGuiRenderTargetResources()
 void RenderSystem::updateFullScreenMaterial()
 {
     m_fsMaterial->writeDescriptor(0, 0, *m_guiPass, 0, m_linearClampSampler.get());
-    m_device->flushDescriptorUpdates();
+    m_renderer->getDevice().flushDescriptorUpdates();
 }
 
 void RenderSystem::loadTextureAtlas()

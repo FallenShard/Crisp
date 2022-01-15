@@ -1,7 +1,6 @@
 #include "TexturePass.hpp"
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
@@ -10,33 +9,27 @@
 namespace crisp
 {
 
-std::unique_ptr<VulkanRenderPass> createTexturePass(Renderer& renderer, VkExtent2D renderArea, VkFormat textureFormat,
-    const bool bufferedRenderTargets)
+std::unique_ptr<VulkanRenderPass> createTexturePass(const VulkanDevice& device, VkExtent2D renderArea,
+    VkFormat textureFormat, const bool bufferedRenderTargets)
 {
-    auto [handle, attachmentDescriptions] =
-        RenderPassBuilder()
-            .addAttachment(textureFormat, VK_SAMPLE_COUNT_1_BIT)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    return RenderPassBuilder()
+        .setSwapChainDependency(false)
+        .setRenderTargetsBuffered(bufferedRenderTargets)
 
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(renderer.getDevice().getHandle());
+        .setRenderTargetCount(1)
+        .setRenderTargetFormat(0, textureFormat)
+        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
-    RenderPassDescription description{};
-    description.bufferedRenderTargets = bufferedRenderTargets;
-    description.isSwapChainDependent = false;
-    description.renderArea = renderArea;
-    description.subpassCount = 1;
-    description.attachmentDescriptions = std::move(attachmentDescriptions);
-    description.renderTargetInfos.resize(description.attachmentDescriptions.size());
-    description.renderTargetInfos[0].configureColorRenderTarget(
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        .setAttachmentCount(1)
+        .setAttachmentMapping(0, 0)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-    return std::make_unique<VulkanRenderPass>(renderer, handle, std::move(description));
+        .setNumSubpasses(1)
+        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, renderArea);
 }
 
 } // namespace crisp

@@ -4,18 +4,5 @@
 
 namespace crisp
 {
-class LiquidRenderPass : public VulkanRenderPass
-{
-public:
-    enum RenderTarget
-    {
-        GBuffer,
-        Depth,
-        LiquidMask,
-
-        Count
-    };
-
-    LiquidRenderPass(Renderer& renderer);
-};
+std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& device, VkExtent2D renderArea);
 } // namespace crisp

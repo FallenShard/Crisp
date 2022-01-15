@@ -74,7 +74,8 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
     m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
 
     // Main render pass
-    m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(*m_renderer, VK_SAMPLE_COUNT_1_BIT));
+    m_renderGraph->addRenderPass(MainPass,
+        createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);

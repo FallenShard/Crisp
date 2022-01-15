@@ -19,9 +19,11 @@ namespace crisp
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(Renderer* renderer,
     std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize)
 {
+    renderer->flushResourceUpdates(true);
     static constexpr uint32_t CubeMapFaceCount = 6;
 
-    auto cubeMapPass = std::make_unique<CubeMapRenderPass>(*renderer, VkExtent2D{ cubeMapSize, cubeMapSize }, true);
+    auto cubeMapPass = createCubeMapPass(renderer->getDevice(), VkExtent2D{ cubeMapSize, cubeMapSize }, true);
+    renderer->updateInitialLayouts(*cubeMapPass);
     std::vector<std::unique_ptr<VulkanPipeline>> cubeMapPipelines(CubeMapFaceCount);
     for (uint32_t i = 0; i < CubeMapFaceCount; ++i)
         cubeMapPipelines[i] = renderer->createPipelineFromLua("EquirectToCube.lua", *cubeMapPass, i);
@@ -89,7 +91,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 {
     static constexpr uint32_t CubeMapFaceCount = 6;
 
-    auto convPass = std::make_shared<CubeMapRenderPass>(*renderer, VkExtent2D{ cubeMapSize, cubeMapSize });
+    auto convPass = createCubeMapPass(renderer->getDevice(), VkExtent2D{ cubeMapSize, cubeMapSize });
+    renderer->updateInitialLayouts(*convPass);
     std::vector<std::unique_ptr<VulkanPipeline>> convPipelines(CubeMapFaceCount);
     for (int i = 0; i < CubeMapFaceCount; i++)
         convPipelines[i] = renderer->createPipelineFromLua("ConvolveDiffuse.lua", *convPass, i);
@@ -159,8 +162,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
 
         unsigned int w = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
         unsigned int h = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
-        std::shared_ptr<CubeMapRenderPass> prefilterPass =
-            std::make_unique<CubeMapRenderPass>(*renderer, VkExtent2D{ w, h });
+        std::shared_ptr<VulkanRenderPass> prefilterPass = createCubeMapPass(renderer->getDevice(), VkExtent2D{ w, h });
+        renderer->updateInitialLayouts(*prefilterPass);
 
         std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(CubeMapFaceCount);
         for (int j = 0; j < CubeMapFaceCount; j++)
@@ -230,14 +233,11 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
 coro::Task<std::unique_ptr<VulkanImage>> integrateBrdfLutTask(Renderer* renderer)
 {
     std::shared_ptr<VulkanRenderPass> texPass =
-        createTexturePass(*renderer, VkExtent2D{ 512, 512 }, VK_FORMAT_R16G16_SFLOAT, false);
+        createTexturePass(renderer->getDevice(), VkExtent2D{ 512, 512 }, VK_FORMAT_R16G16_SFLOAT, false);
     std::shared_ptr<VulkanPipeline> pipeline = renderer->createPipelineFromLua("BrdfLut.lua", *texPass, 0);
 
-    co_await texPass->updateInitialLayouts(renderer);
-
-    std::cout << "Textures updated" << std::endl;
-
     VkCommandBuffer cmdBuffer = co_await renderer->getNextCommandBuffer();
+    texPass->updateInitialLayouts(cmdBuffer);
 
     texPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -254,7 +254,8 @@ coro::Task<std::unique_ptr<VulkanImage>> integrateBrdfLutTask(Renderer* renderer
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer)
 {
     std::shared_ptr<VulkanRenderPass> texPass =
-        createTexturePass(*renderer, VkExtent2D{ 512, 512 }, VK_FORMAT_R16G16_SFLOAT, false);
+        createTexturePass(renderer->getDevice(), VkExtent2D{ 512, 512 }, VK_FORMAT_R16G16_SFLOAT, false);
+    renderer->updateInitialLayouts(*texPass);
     std::shared_ptr<VulkanPipeline> pipeline = renderer->createPipelineFromLua("BrdfLut.lua", *texPass, 0);
 
     renderer->enqueueResourceUpdate(

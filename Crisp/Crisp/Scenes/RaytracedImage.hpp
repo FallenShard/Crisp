@@ -9,44 +9,41 @@
 
 namespace crisp
 {
-    class Renderer;
-    class VulkanDevice;
-    class VulkanBuffer;
-    class StagingVulkanBuffer;
-    class VulkanSampler;
-    class Material;
-    class VulkanImageView;
-    class VulkanPipeline;
-    class VulkanImage;
+class Renderer;
+class VulkanDevice;
+class VulkanBuffer;
+class StagingVulkanBuffer;
+class VulkanSampler;
+class Material;
+class VulkanImageView;
+class VulkanPipeline;
+class VulkanImage;
 
-    class RayTracedImage
-    {
-    public:
-        RayTracedImage(uint32_t width, uint32_t height, VkFormat format, Renderer* renderer);
-        ~RayTracedImage();
+class RayTracedImage
+{
+public:
+    RayTracedImage(uint32_t width, uint32_t height, Renderer* renderer);
+    ~RayTracedImage();
 
-        void postTextureUpdate(RayTracerUpdate rayTracerUpdate);
+    void postTextureUpdate(RayTracerUpdate rayTracerUpdate);
 
-        void draw();
-        void resize(int width, int height);
+    void draw(Renderer* renderer);
+    void resize(int width, int height);
 
-    private:
-        Renderer*     m_renderer;
-        VulkanDevice* m_device;
+private:
+    std::unique_ptr<VulkanPipeline> m_pipeline;
+    std::unique_ptr<Material> m_material;
 
-        std::unique_ptr<VulkanPipeline> m_pipeline;
-        std::unique_ptr<Material> m_material;
+    VkExtent3D m_extent;
+    uint32_t m_numChannels;
 
-        VkExtent3D m_extent;
-        uint32_t   m_numChannels;
+    std::vector<std::pair<unsigned int, RayTracerUpdate>> m_textureUpdates;
+    std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
 
-        std::vector<std::pair<unsigned int, RayTracerUpdate>> m_textureUpdates;
-        std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
+    std::unique_ptr<VulkanImage> m_image;
+    std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
+    std::unique_ptr<VulkanSampler> m_sampler;
 
-        std::unique_ptr<VulkanImage>                  m_image;
-        std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;
-        std::unique_ptr<VulkanSampler>                m_sampler;
-
-        VkViewport   m_viewport;
-    };
-}
+    VkViewport m_viewport;
+};
+} // namespace crisp

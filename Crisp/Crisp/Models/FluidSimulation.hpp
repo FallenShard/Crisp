@@ -25,8 +25,6 @@ public:
 
     virtual float getParticleRadius() const = 0;
 
-    virtual void drawGeometry(VkCommandBuffer cmdBuffer) const = 0;
-
     virtual VulkanBuffer* getVertexBuffer(std::string_view key) const = 0;
 
     virtual uint32_t getParticleCount() const = 0;

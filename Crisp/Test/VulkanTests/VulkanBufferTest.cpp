@@ -13,14 +13,13 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer)
 {
     const auto& [deps, device] = createDevice();
 
-    constexpr VkDeviceSize size = 100;
-    StagingVulkanBuffer stagingBuffer(*device, size);
-    ASSERT_TRUE(stagingBuffer.getHandle() != VK_NULL_HANDLE);
-    ASSERT_EQ(stagingBuffer.getSize(), size);
+    std::array<float, 100> data;
+    std::iota(data.begin(), data.end(), 0.0f);
 
-    std::vector<float> data(size / sizeof(float));
-    for (uint32_t i = 0; i < data.size(); ++i)
-        data[i] = static_cast<float>(i);
+    constexpr VkDeviceSize size = data.size() * sizeof(float);
+    StagingVulkanBuffer stagingBuffer(*device, size);
+    ASSERT_NE(stagingBuffer.getHandle(), VK_NULL_HANDLE);
+    ASSERT_EQ(stagingBuffer.getSize(), size);
 
     stagingBuffer.updateFromHost(data);
     const float* ptr = stagingBuffer.getHostVisibleData<float>();
