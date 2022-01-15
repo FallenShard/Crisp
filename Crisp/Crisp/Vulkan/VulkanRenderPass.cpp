@@ -202,6 +202,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
     const size_t renderTargetViewCount = m_attachmentDescriptions.size();
     for (const auto& [layerIdx, rtViews] : enumerate(m_renderTargetViews))
     {
+        uint32_t framebufferLayers = 1;
         rtViews.resize(renderTargetViewCount);
         std::vector<VkImageView> rtViewHandles(renderTargetViewCount);
         for (const auto& [attachmentIdx, mapping] : enumerate(m_attachmentMappings))
@@ -216,6 +217,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
                 const VkImageViewType type = depthSliceCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                 rtViews.at(attachmentIdx) = renderTarget.createView(type, baseDepthOffset, depthSliceCount);
                 rtViewHandles.at(attachmentIdx) = rtViews.at(attachmentIdx)->getHandle();
+                framebufferLayers = depthSliceCount;
             }
             else
             {
@@ -228,7 +230,8 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
             }
         }
 
-        m_framebuffers[layerIdx] = std::make_unique<VulkanFramebuffer>(device, m_handle, m_renderArea, rtViewHandles);
+        m_framebuffers[layerIdx] =
+            std::make_unique<VulkanFramebuffer>(device, m_handle, m_renderArea, rtViewHandles, framebufferLayers);
     }
 }
 
