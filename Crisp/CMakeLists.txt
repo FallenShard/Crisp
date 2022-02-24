@@ -99,8 +99,8 @@ add_library(Crisp
     "Crisp/Models/SPH.hpp"
     
     
-    "Crisp/Renderer/RenderPasses/AtmospherePasses.cpp"
-    "Crisp/Renderer/RenderPasses/AtmospherePasses.hpp"
+    
+    
     "Crisp/Renderer/RenderPasses/BlurPass.cpp"
     "Crisp/Renderer/RenderPasses/BlurPass.hpp"
     "Crisp/Renderer/RenderPasses/CubeMapRenderPass.cpp"

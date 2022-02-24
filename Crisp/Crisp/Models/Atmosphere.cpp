@@ -83,7 +83,7 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& devi
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(true)
         .setRenderTargetCount(1)
-        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
+        .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
         .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
         .setAttachmentCount(1)
@@ -105,7 +105,6 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
         .defineDescriptorSet(0, false,
             {
                 {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-                {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
     })
         .defineDescriptorSet(1, true,
             {
@@ -131,7 +130,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
 
     VkComputePipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
     pipelineInfo.stage =
-        createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer.getShaderModule("multiple-scattering.comp"));
+        createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer.getShaderModule("sky-multiple-scattering.comp"));
     pipelineInfo.stage.pSpecializationInfo = &specInfo;
     pipelineInfo.layout = layout->getHandle();
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -154,6 +153,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         BufferUpdatePolicy::PerFrame);
     resourceContext.createUniformBuffer("atmosphereCommon", sizeof(CommonConstantBufferStructure),
         BufferUpdatePolicy::PerFrame);
+    resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParametersBuffer),
+        BufferUpdatePolicy::PerFrame);
 
     // Transmittance lookup
     auto& transPassNode = renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer.getDevice()));
@@ -161,8 +162,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     auto transLutPipeline =
         resourceContext.createPipeline("transLut", "SkyTransLut.lua", renderGraph.getRenderPass("TransLUTPass"), 0);
     auto transLutMaterial = resourceContext.createMaterial("transLut", transLutPipeline);
-    transLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereCommon"));
-    transLutMaterial->writeDescriptor(0, 1, *resourceContext.getUniformBuffer("atmosphere"));
+    transLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
 
     auto transLutNode = renderNodes.emplace("transLutNode", std::make_unique<RenderNode>()).first->second.get();
     transLutNode->geometry = renderer.getFullScreenGeometry();
@@ -201,16 +201,14 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     multiScatPass.numWorkGroups = glm::ivec3(32, 32, 1);
     multiScatPass.pipeline = createMultiScatPipeline(renderer, multiScatPass.workGroupSize);
     multiScatPass.material = std::make_unique<Material>(multiScatPass.pipeline.get());
-    multiScatPass.material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereCommon"));
-    multiScatPass.material->writeDescriptor(0, 1, *resourceContext.getUniformBuffer("atmosphere"));
+    multiScatPass.material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
 
     std::vector<VulkanImageView*> views{ resourceContext.getImageView("multiScatTexView0"),
         resourceContext.getImageView("multiScatTexView1") };
     multiScatPass.material->writeDescriptor(1, 0, views, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     multiScatPass.material->writeDescriptor(1, 1, renderGraph.getRenderPass("TransLUTPass"), 0,
         resourceContext.getSampler("linearClamp"));
-    multiScatPass.material->setDynamicBufferView(0, *resourceContext.getUniformBuffer("atmosphereCommon"), 0);
-    multiScatPass.material->setDynamicBufferView(1, *resourceContext.getUniformBuffer("atmosphere"), 0);
+    multiScatPass.material->setDynamicBufferView(0, *resourceContext.getUniformBuffer("atmosphereBuffer"), 0);
     multiScatPass.preDispatchCallback =
         [](RenderGraph::Node& /*node*/, VulkanCommandBuffer& /*cmdBuffer*/, uint32_t /*frameIndex*/)
     {
@@ -243,8 +241,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     auto skyViewLutPipeline =
         resourceContext.createPipeline("skyViewLut", "SkyViewLut.lua", renderGraph.getRenderPass("SkyViewLUTPass"), 0);
     auto skyViewLutMaterial = resourceContext.createMaterial("skyViewLut", skyViewLutPipeline);
-    skyViewLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereCommon"));
-    skyViewLutMaterial->writeDescriptor(0, 1, *resourceContext.getUniformBuffer("atmosphere"));
+    skyViewLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
     skyViewLutMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0,
         resourceContext.getSampler("linearClamp"));
     skyViewLutMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"),
@@ -260,8 +257,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     auto cameraVolumesPipeline = resourceContext.createPipeline("skyCameraVolumes", "SkyCameraVolumes.lua",
         renderGraph.getRenderPass("CameraVolumesPass"), 0);
     auto cameraVolumesMaterial = resourceContext.createMaterial("skyCameraVolumes", cameraVolumesPipeline);
-    cameraVolumesMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereCommon"));
-    cameraVolumesMaterial->writeDescriptor(0, 1, *resourceContext.getUniformBuffer("atmosphere"));
+    cameraVolumesMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
     cameraVolumesMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0,
         resourceContext.getSampler("linearClamp"));
     cameraVolumesMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"),
@@ -295,8 +291,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     auto rayMarchingPipeline = resourceContext.createPipeline("rayMarching", "SkyRayMarching.lua",
         renderGraph.getRenderPass("RayMarchingPass"), 0);
     auto rayMarchingMaterial = resourceContext.createMaterial("rayMarching", rayMarchingPipeline);
-    rayMarchingMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereCommon"));
-    rayMarchingMaterial->writeDescriptor(0, 1, *resourceContext.getUniformBuffer("atmosphere"));
+    rayMarchingMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
     rayMarchingMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0,
         resourceContext.getSampler("linearClamp"));
     rayMarchingMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"),

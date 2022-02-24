@@ -11,7 +11,7 @@ layout(location = 0) in vertexData
 
 void main()
 {
-    for(int i = 0; i < 3; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         gl_Position = gl_in[i].gl_Position;
         gl_Layer = vertices[0].sliceId;

@@ -184,23 +184,31 @@ void PbrScene::update(float dt)
 
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(camParams);
 
-    const glm::mat4 testP = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) *
-                            glm::perspective(66.6f * glm::pi<float>() / 180.0f, 1280.0f / 720.0f, 0.1f, 20000.0f);
+    const glm::mat4 testP = /*glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) **/
+        glm::perspective(66.6f * glm::pi<float>() / 180.0f, 1280.0f / 720.0f, 0.1f, 20000.0f);
     const glm::mat4 testV =
         glm::lookAt(glm::vec3(0.0f, 0.5f, 1.0f), glm::vec3(0.0f, 0.5f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     const glm::mat4 VP = testP * testV;
     atmosphere.gSkyViewProjMat = VP;
-    // atmosphere.gSkyViewProjMat = camParams.P * camParams.V;
-    atmosphere.gSkyInvViewProjMat = glm::inverse(atmosphere.gSkyViewProjMat);
-    ////
 
+    // atmosphere.gSkyViewProjMat = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) * camParams.P * camParams.V;
     // atmosphere.camera = m_cameraController->getCamera().getPosition();
-    // atmosphere.view_ray = m_cameraController->getCamera().getLookDir();
-    //
+    /*atmosphere.view_ray = m_cameraController->getCamera().getLookDir();*/
+
+    atmosphere.gSkyInvViewProjMat = glm::inverse(atmosphere.gSkyViewProjMat);
     m_resourceContext->getUniformBuffer("atmosphere")->updateStagingBuffer(atmosphere);
 
     commonConstantData.gSkyViewProjMat = atmosphere.gSkyViewProjMat;
     m_resourceContext->getUniformBuffer("atmosphereCommon")->updateStagingBuffer(commonConstantData);
+
+    AtmosphereParametersBuffer atmoBuffer{};
+    atmoBuffer.VP = atmosphere.gSkyViewProjMat;
+    atmoBuffer.invVP = glm::inverse(atmoBuffer.VP);
+    atmoBuffer.cameraPosition = atmosphere.camera;
+
+    const auto screenExtent = m_renderer->getSwapChainExtent();
+    atmoBuffer.screenResolution = glm::vec2(screenExtent.width, screenExtent.height);
+    m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer(atmoBuffer);
 }
 
 void PbrScene::render()

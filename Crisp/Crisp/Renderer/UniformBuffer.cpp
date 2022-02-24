@@ -25,10 +25,12 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy
     }
     else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) // Setup ring buffering
     {
-        m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment);
+        const VkDeviceSize minAlignment = renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment;
+        const VkDeviceSize unitsOfAlignment = ((size - 1) / minAlignment) + 1;
+        m_singleRegionSize = unitsOfAlignment * minAlignment;
         m_buffer = std::make_unique<VulkanBuffer>(device, RendererConfig::VirtualFrameCount * m_singleRegionSize,
             usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, size);
+        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, m_singleRegionSize);
 
         if (data)
             updateStagingBuffer(data, size);
