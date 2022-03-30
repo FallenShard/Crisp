@@ -7,9 +7,6 @@ real-time rendering that I have encountered in computer graphics, both during my
 
 It is developed sporadically during my free time so updates are not very frequent. The real-time rendering code is developed with Vulkan API.
 
-It is developed sporadically during my free time so updates are not very frequent.
-The real-time rendering code is developed with Vulkan API.
-
 Currently, the following demos are implemented through the real-time renderer:
   - SSAO
   - (WC)SPH simulation with compute shaders
