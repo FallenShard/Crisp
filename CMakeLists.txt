@@ -7,7 +7,37 @@ set_property(GLOBAL PROPERTY CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(MSVC)
   add_compile_options(/MP /JMC /Zi /W4 /WX)
+else()
+  add_compile_options(-W -Wall -Werror)
 endif()
+
+# Creates a static library with C++ 20 standard support.
+function(add_cpp_static_library targetName)
+    add_library(${targetName} STATIC ${ARGN})
+    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
+endfunction()
+
+# Creates a header-only library with C++ 20 standard support.
+function(add_cpp_interface_library targetName)
+    add_library(${targetName} INTERFACE ${ARGN})
+    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
+endfunction()
+
+# Creates a binary with C++ 20 standard support.
+function(add_cpp_binary targetName)
+    add_executable(${targetName} ${ARGN})
+    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
+endfunction()
+
+# Copies a list of shared libraries into the designated target's directory.
+function(copy_shared_libs targetName sharedLibNames)
+    foreach(sharedLib ${ARGN})
+        add_custom_command(TARGET ${targetName} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:${sharedLib}> $<TARGET_FILE_DIR:${targetName}>)
+    endforeach()
+endfunction()
+
 
 # List all used third-party libraries
 add_subdirectory(Externals/lua)
@@ -25,17 +55,15 @@ add_subdirectory(Externals/gzip)
 add_subdirectory(Externals/zlib)
 add_subdirectory(Externals/gtest)
 add_subdirectory(Externals/spdlog)
+add_subdirectory(Externals/MPMCQueue)
 add_subdirectory(Externals/robin_hood)
+add_subdirectory(Externals/tinygltf)
+add_subdirectory(Externals/json)
 
-add_subdirectory(CrispCore)
-add_subdirectory(CrispCore/Test)
+add_subdirectory(Crisp)
 
 add_subdirectory(Vesper)
 add_subdirectory(Vesper/Test)
-
-add_subdirectory(Crisp)
-add_subdirectory(Crisp/Test)
-add_subdirectory(Crisp/Main)
 
 # Set the start-up project to be the main executable CrispMain
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT CrispMain)

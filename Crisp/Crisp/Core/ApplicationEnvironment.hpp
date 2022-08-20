@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/CommandLineParser.hpp>
+#include <Crisp/Core/CommandLineParser.hpp>
 
 #include <filesystem>
 
@@ -9,7 +9,15 @@ namespace crisp
 class ApplicationEnvironment
 {
 public:
-    ApplicationEnvironment(int argc, char** argv);
+    struct Parameters
+    {
+        std::string configPath{};
+        uint32_t defaultSceneIndex{4};
+        bool enableRayTracingExtension{false};
+        std::string logLevel{"info"};
+    };
+
+    explicit ApplicationEnvironment(Parameters&& parameters);
     ~ApplicationEnvironment();
 
     // Returns the path to the folder where assets are stored
@@ -17,20 +25,20 @@ public:
 
     // Returns the path to the folder where shader sources are stored
     // Useful for hot-reloading
-    static std::filesystem::path getShaderSourcesPath();
+    static std::filesystem::path getShaderSourceDirectory();
 
     // Returns the names of the extensions that are required to successfully open a Vulkan window on this platform
-    static std::vector<std::string> getRequiredVulkanExtensions();
+    static std::vector<std::string> getRequiredVulkanInstanceExtensions();
 
-    static uint32_t getDefaultSceneIdx();
-
-    static bool enableRayTracingExtension();
+    static const Parameters& getParameters();
 
 private:
     static std::filesystem::path ResourcesPath;
     static std::filesystem::path ShaderSourcesPath;
 
-    static uint32_t DefaultSceneIdx;
-    static bool EnableRayTracingExtension;
+    static Parameters Arguments;
 };
+
+Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv);
+
 } // namespace crisp

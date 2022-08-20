@@ -5,7 +5,7 @@
 #include <sstream>
 #include <vector>
 
-#include <CrispCore/Event.hpp>
+#include <Crisp/Event.hpp>
 
 #include "Control.hpp"
 #include "Form.hpp"
@@ -132,9 +132,12 @@ public:
 
     float getNormalizedValue() const
     {
-        return !m_discreteValues.empty()
-                   ? static_cast<float>(m_indexValue) / (getValueCount() - 1)
-                   : std::max(0.0f, std::min(1.0f, static_cast<float>(m_indexValue * m_increment) /
+        return !m_discreteValues.empty() ? static_cast<float>(m_indexValue) / (getValueCount() - 1)
+                                         : std::max(
+                                               0.0f,
+                                               std::min(
+                                                   1.0f,
+                                                   static_cast<float>(m_indexValue * m_increment) /
                                                        static_cast<float>(m_maxValue - m_minValue)));
     }
 
@@ -212,26 +215,26 @@ public:
         , m_idleColor(0.0f, 0.75f, 0.75f)
         , m_pressedColor(0.0f, 0.3f, 0.3f)
     {
-        setSizeHint({ 200.0f, 20.0f });
-        setPadding({ 0.0f, 20.0f }, { 0.0f, 0.0f });
+        setSizeHint({200.0f, 20.0f});
+        setPadding({0.0f, 20.0f}, {0.0f, 0.0f});
         m_M = glm::translate(glm::vec3(m_position, m_depthOffset)) * glm::scale(glm::vec3(m_sizeHint, 1.0f));
 
         m_backgroundRect->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-        m_backgroundRect->setSizeHint({ 0.0f, 2.0f });
+        m_backgroundRect->setSizeHint({0.0f, 2.0f});
         m_backgroundRect->setColor(glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
         m_backgroundRect->setAnchor(Anchor::CenterLeft);
         m_backgroundRect->setOrigin(Origin::CenterLeft);
         m_backgroundRect->setParent(this);
 
-        m_foregroundRect->setSizeHint({ m_sizeHint.x * 0.5f, 2.0f });
+        m_foregroundRect->setSizeHint({m_sizeHint.x * 0.5f, 2.0f});
         m_foregroundRect->setDepthOffset(2.0f);
         m_foregroundRect->setColor(glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
         m_foregroundRect->setAnchor(Anchor::CenterLeft);
         m_foregroundRect->setOrigin(Origin::CenterLeft);
         m_foregroundRect->setParent(this);
 
-        m_indicatorRect->setSizeHint({ 7, 20 });
-        m_indicatorRect->setPosition({ m_sizeHint.x * 0.5f, 0.0f });
+        m_indicatorRect->setSizeHint({7, 20});
+        m_indicatorRect->setPosition({m_sizeHint.x * 0.5f, 0.0f});
         m_indicatorRect->setDepthOffset(2.0f);
         m_indicatorRect->setColor(glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
         m_indicatorRect->setAnchor(Anchor::CenterLeft);
@@ -240,11 +243,14 @@ public:
 
         m_label->setAnchor(Anchor::CenterRight);
         m_label->setOrigin(Origin::CenterLeft);
-        m_label->setPosition({ -10.0f, 0.0f });
+        m_label->setPosition({-10.0f, 0.0f});
         m_label->setParent(this);
 
         glm::vec4 finalColor = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
-        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(0.5, finalColor, finalColor,
+        m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, Easing::SlowOut>>(
+            0.5,
+            finalColor,
+            finalColor,
             [this](const glm::vec4& t)
             {
                 setColor(t);
@@ -414,8 +420,8 @@ private:
     {
         Rect<float> bounds = m_backgroundRect->getAbsoluteBounds();
         float localPos = normValue * bounds.width;
-        m_indicatorRect->setPosition({ localPos, 0.0f });
-        m_foregroundRect->setSizeHint({ localPos, 2.0f });
+        m_indicatorRect->setPosition({localPos, 0.0f});
+        m_foregroundRect->setSizeHint({localPos, 2.0f});
         setValidationFlags(Validation::Geometry);
 
         m_label->setText(m_model.getValueString());

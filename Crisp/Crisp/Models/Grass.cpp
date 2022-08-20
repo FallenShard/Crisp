@@ -3,14 +3,14 @@
 #include <random>
 
 #include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImageView.hpp>
-#include <Crisp/vulkan/VulkanRenderPass.hpp>
-#include <Crisp/vulkan/VulkanSampler.hpp>
-#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/VulkanSampler.hpp>
 
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
@@ -21,8 +21,12 @@ namespace
 static const int PC0 = 0;
 }
 
-Grass::Grass(Renderer* renderer, VulkanRenderPass* /*mainRenderPass*/, VulkanRenderPass* /*shadowRenderPass*/,
-    UniformBuffer* /*cameraBuffer*/, VulkanSampler* /*sampler*/)
+Grass::Grass(
+    Renderer* renderer,
+    VulkanRenderPass* /*mainRenderPass*/,
+    VulkanRenderPass* /*shadowRenderPass*/,
+    UniformBuffer* /*cameraBuffer*/,
+    VulkanSampler* /*sampler*/)
     : m_renderer(renderer)
 {
     // m_shadowPipelines.reserve(4);
@@ -30,7 +34,7 @@ Grass::Grass(Renderer* renderer, VulkanRenderPass* /*mainRenderPass*/, VulkanRen
     //     m_shadowPipelines.emplace_back(createInstancingShadowMapPipeline(m_renderer, shadowRenderPass, i));
     // m_shadowMaterial = std::make_unique<Material>(m_shadowPipelines[0].get());
     ////m_renderer->getDevice()->postDescriptorWrite(m_shadowMaterial->makeDescriptorWrite(0, 0),
-    ///csm->getLightTransformBuffer()->getDescriptorInfo());
+    /// csm->getLightTransformBuffer()->getDescriptorInfo());
 
     // std::default_random_engine randomEngine(std::random_device{}());
     // std::uniform_real_distribution<float> distrib(0.0f, 1.0f);

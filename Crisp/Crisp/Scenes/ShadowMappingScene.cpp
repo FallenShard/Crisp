@@ -10,6 +10,7 @@
 #include <Crisp/Renderer/RenderPasses/TexturePass.hpp>
 #include <Crisp/Renderer/RenderPasses/VarianceShadowMapPass.hpp>
 
+#include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -37,12 +38,12 @@
 #include <Crisp/GUI/Slider.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Models/Grass.hpp>
 #include <Crisp/Models/Skybox.hpp>
-#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 
-#include <CrispCore/LuaConfig.hpp>
-#include <CrispCore/Math/Constants.hpp>
+#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Math/Constants.hpp>
 
 #include <random>
 #include <thread>
@@ -50,9 +51,9 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 
+#include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Profiler.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
-#include <CrispCore/IO/MeshLoader.hpp>
-#include <CrispCore/Profiler.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -294,10 +295,15 @@ void ShadowMappingScene::onMaterialSelected(const std::string& materialName)
 
     auto material = m_resourceContext->getMaterial("pbrTex");
 
-    VulkanSampler* linearRepeatSampler = m_resourceContext->getSampler("linearRepeat");
-    const std::vector<std::string> texNames = { "diffuse", "metallic", "roughness", "normal", "ao" };
-    const std::vector<VkFormat> formats = { VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM,
-        VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
+    auto& imageCache = m_resourceContext->imageCache;
+
+    const std::vector<std::string> texNames = {"diffuse", "metallic", "roughness", "normal", "ao"};
+    const std::vector<VkFormat> formats = {
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM};
     for (uint32_t i = 0; i < texNames.size(); ++i)
     {
         const std::string& filename = "PbrMaterials/" + materialName + "/" + texNames[i] + ".png";
@@ -305,14 +311,14 @@ void ShadowMappingScene::onMaterialSelected(const std::string& materialName)
         if (std::filesystem::exists(path))
         {
             std::string key = materialName + "-" + texNames[i];
-            m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
-            material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
+            imageCache.addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
+            material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }
         else
         {
             spdlog::warn("Texture type {} is using default values for '{}'", materialName, texNames[i]);
             std::string key = "default-" + texNames[i];
-            material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
+            material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }
     }
     m_renderer->getDevice().flushDescriptorUpdates();
@@ -327,33 +333,45 @@ RenderNode* ShadowMappingScene::createRenderNode(std::string id, int transformIn
 
 void ShadowMappingScene::createCommonTextures()
 {
-    m_resourceContext->addSampler("nearestNeighbor",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
-    m_resourceContext->addSampler("linearRepeat",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-    m_resourceContext->addSampler("linearMipmap",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f));
-    m_resourceContext->addSampler("linearClamp",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 1.0f));
-    m_resourceContext->addSampler("linearMirrorRepeat",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, 16.0f, 11.0f));
+    auto& imageCache = m_resourceContext->imageCache;
+    imageCache.addSampler(
+        "nearestNeighbor",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
+    imageCache.addSampler(
+        "linearRepeat",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
+    imageCache.addSampler(
+        "linearMipmap",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(),
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            16.0f,
+            5.0f));
+    imageCache.addSampler(
+        "linearClamp",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(),
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            16.0f,
+            1.0f));
+    imageCache.addSampler(
+        "linearMirrorRepeat",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(),
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+            16.0f,
+            11.0f));
 
     // For textured pbr
-    m_resourceContext->addImageWithView("default-diffuse",
-        createTexture(m_renderer, Image::createDefaultAlbedoMap(), VK_FORMAT_R8G8B8A8_SRGB));
-    m_resourceContext->addImageWithView("default-metallic",
-        createTexture(m_renderer, Image::createDefaultMetallicMap(), VK_FORMAT_R8G8B8A8_UNORM));
-    m_resourceContext->addImageWithView("default-roughness",
-        createTexture(m_renderer, Image::createDefaultRoughnessMap(), VK_FORMAT_R8G8B8A8_UNORM));
-    m_resourceContext->addImageWithView("default-normal",
-        createTexture(m_renderer, Image::createDefaultNormalMap(), VK_FORMAT_R8G8B8A8_UNORM));
-    m_resourceContext->addImageWithView("default-ao",
-        createTexture(m_renderer, Image::createDefaultAmbientOcclusionMap(), VK_FORMAT_R8G8B8A8_UNORM));
+    addDefaultPbrTexturesToImageCache(imageCache);
 
     // Environment map
     LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
@@ -364,26 +382,30 @@ void ShadowMappingScene::createCommonTextures()
     auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
     setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
     setupReflectEnvMap(m_renderer, *cubeMapView, 1024);
-    m_resourceContext->addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
-    m_resourceContext->addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
+    imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
 
     m_resourceContext->createPipeline("pbrTex", "PbrTex.lua", m_renderGraph->getRenderPass(MainPass), 0);
 }
 
 Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type)
 {
+    auto& imageCache = m_resourceContext->imageCache;
     auto material = m_resourceContext->createMaterial("pbrTex" + type, "pbrTex");
     material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
 
     material->writeDescriptor(1, 0, *m_lightSystem->getCascadedDirectionalLightBuffer());
-    material->writeDescriptor(1, 1, *m_renderGraph->getNode(CsmPass).renderPass, 0,
-        m_resourceContext->getSampler("nearestNeighbor"));
+    material->writeDescriptor(
+        1, 1, *m_renderGraph->getNode(CsmPass).renderPass, 0, &imageCache.getSampler("nearestNeighbor"));
 
-    VulkanSampler* linearRepeatSampler = m_resourceContext->getSampler("linearRepeat");
-    const std::vector<std::string> texNames = { "diffuse", "metallic", "roughness", "normal", "ao" };
-    const std::vector<VkFormat> formats = { VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM,
-        VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
+    const std::vector<std::string> texNames = {"diffuse", "metallic", "roughness", "normal", "ao"};
+    const std::vector<VkFormat> formats = {
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM};
     for (uint32_t i = 0; i < texNames.size(); ++i)
     {
         const std::string& filename = "PbrMaterials/" + type + "/" + texNames[i] + ".png";
@@ -391,23 +413,20 @@ Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type)
         if (std::filesystem::exists(path))
         {
             std::string key = type + "-" + texNames[i];
-            m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
-            material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
+            imageCache.addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
+            material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }
         else
         {
             spdlog::warn("Texture type {} is using default values for '{}'\n", type, texNames[i]);
             std::string key = "default-" + texNames[i];
-            material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
+            material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }
     }
 
-    material->writeDescriptor(2, 0, *m_resourceContext->getImageView("envIrrMap"),
-        m_resourceContext->getSampler("linearClamp"));
-    material->writeDescriptor(2, 1, *m_resourceContext->getImageView("filteredMap"),
-        m_resourceContext->getSampler("linearMipmap"));
-    material->writeDescriptor(2, 2, *m_resourceContext->getImageView("brdfLut"),
-        m_resourceContext->getSampler("linearClamp"));
+    material->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
+    material->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
+    material->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     return material;
 }
 
@@ -518,18 +537,18 @@ void ShadowMappingScene::createShaderballs()
 
 void ShadowMappingScene::createTrees()
 {
-    std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
-    std::vector<VertexAttributeDescriptor> shadowAlphaVertexFormat = { VertexAttribute::Position,
-        VertexAttribute::TexCoord };
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal,
-        VertexAttribute::TexCoord, VertexAttribute::Tangent };
+    std::vector<VertexAttributeDescriptor> shadowVertexFormat = {VertexAttribute::Position};
+    std::vector<VertexAttributeDescriptor> shadowAlphaVertexFormat = {
+        VertexAttribute::Position, VertexAttribute::TexCoord};
+    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
+        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent};
 
     TriangleMesh treeMesh(
-        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", pbrVertexFormat));
+        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", pbrVertexFormat).unwrap());
     m_resourceContext->addGeometry("tree", std::make_unique<Geometry>(m_renderer, treeMesh, pbrVertexFormat));
     m_resourceContext->addGeometry("treeShadow", std::make_unique<Geometry>(m_renderer, treeMesh, shadowVertexFormat));
-    m_resourceContext->addGeometry("treeShadowAlpha",
-        std::make_unique<Geometry>(m_renderer, treeMesh, shadowAlphaVertexFormat));
+    m_resourceContext->addGeometry(
+        "treeShadowAlpha", std::make_unique<Geometry>(m_renderer, treeMesh, shadowAlphaVertexFormat));
 
     // Create the alpha-mask material
     auto alphaPipeline =
@@ -537,32 +556,28 @@ void ShadowMappingScene::createTrees()
     auto alphaMaterial = m_resourceContext->createMaterial("alphaMask", alphaPipeline);
     alphaMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
+    auto& imageCache = m_resourceContext->imageCache;
     const Image image(
         loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipOnLoad::Y)
             .unwrap());
-    m_resourceContext->addImageWithView("leaves", createTexture(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
-    alphaMaterial->writeDescriptor(1, 0, *m_resourceContext->getImageView("leaves"),
-        m_resourceContext->getSampler("linearClamp"));
+    imageCache.addImageWithView("leaves", createTexture(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
+    alphaMaterial->writeDescriptor(1, 0, imageCache.getImageView("leaves"), imageCache.getSampler("linearClamp"));
 
     const Image normalMap(
         loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipOnLoad::Y)
             .unwrap());
-    m_resourceContext->addImageWithView("leavesNormalMap",
-        createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
-    alphaMaterial->writeDescriptor(1, 1, *m_resourceContext->getImageView("leavesNormalMap"),
-        m_resourceContext->getSampler("linearClamp"));
+    imageCache.addImageWithView("leavesNormalMap", createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+    alphaMaterial->writeDescriptor(
+        1, 1, imageCache.getImageView("leavesNormalMap"), imageCache.getSampler("linearClamp"));
 
     alphaMaterial->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
     alphaMaterial->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));
-    alphaMaterial->writeDescriptor(1, 4, m_renderGraph->getRenderPass(CsmPass), 0,
-        m_resourceContext->getSampler("nearestNeighbor"));
+    alphaMaterial->writeDescriptor(
+        1, 4, m_renderGraph->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
 
-    alphaMaterial->writeDescriptor(2, 0, *m_resourceContext->getImageView("envIrrMap"),
-        m_resourceContext->getSampler("linearClamp"));
-    alphaMaterial->writeDescriptor(2, 1, *m_resourceContext->getImageView("filteredMap"),
-        m_resourceContext->getSampler("linearMipmap"));
-    alphaMaterial->writeDescriptor(2, 2, *m_resourceContext->getImageView("brdfLut"),
-        m_resourceContext->getSampler("linearClamp"));
+    alphaMaterial->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
+    alphaMaterial->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
+    alphaMaterial->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 
     auto trunkPipeline =
         m_resourceContext->createPipeline("treeTrunk", "TreeTrunk.lua", m_renderGraph->getRenderPass(MainPass), 0);
@@ -570,35 +585,31 @@ void ShadowMappingScene::createTrees()
     auto createOpaqueMaterial =
         [this, trunkPipeline](std::string materialKey, std::string diffuseMapFilename, std::string normalMapFilename)
     {
+        auto& imageCache = m_resourceContext->imageCache;
         auto material = m_resourceContext->createMaterial(materialKey, trunkPipeline);
 
         material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
         const Image ambientMap =
             loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipOnLoad::Y).unwrap();
-        m_resourceContext->addImageWithView(diffuseMapFilename,
-            createTexture(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
-        material->writeDescriptor(1, 0, *m_resourceContext->getImageView(diffuseMapFilename),
-            m_resourceContext->getSampler("linearRepeat"));
+        imageCache.addImageWithView(diffuseMapFilename, createTexture(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
+        material->writeDescriptor(
+            1, 0, imageCache.getImageView(diffuseMapFilename), imageCache.getSampler("linearRepeat"));
 
         const Image normalMap =
             loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipOnLoad::Y).unwrap();
-        m_resourceContext->addImageWithView(normalMapFilename,
-            createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
-        material->writeDescriptor(1, 1, *m_resourceContext->getImageView(normalMapFilename),
-            m_resourceContext->getSampler("linearRepeat"));
+        imageCache.addImageWithView(normalMapFilename, createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+        material->writeDescriptor(
+            1, 1, imageCache.getImageView(normalMapFilename), imageCache.getSampler("linearRepeat"));
 
         material->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
         material->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));
-        material->writeDescriptor(1, 4, m_renderGraph->getRenderPass(CsmPass), 0,
-            m_resourceContext->getSampler("nearestNeighbor"));
+        material->writeDescriptor(
+            1, 4, m_renderGraph->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
 
-        material->writeDescriptor(2, 0, *m_resourceContext->getImageView("envIrrMap"),
-            m_resourceContext->getSampler("linearClamp"));
-        material->writeDescriptor(2, 1, *m_resourceContext->getImageView("filteredMap"),
-            m_resourceContext->getSampler("linearMipmap"));
-        material->writeDescriptor(2, 2, *m_resourceContext->getImageView("brdfLut"),
-            m_resourceContext->getSampler("linearClamp"));
+        material->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
+        material->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
+        material->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 
         return material;
     };
@@ -657,8 +668,7 @@ void ShadowMappingScene::createTrees()
         auto csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
         csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
         csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(c));
-        csmMaterial->writeDescriptor(1, 0, *m_resourceContext->getImageView("leaves"),
-            m_resourceContext->getSampler("linearClamp"));
+        csmMaterial->writeDescriptor(1, 0, imageCache.getImageView("leaves"), imageCache.getSampler("linearClamp"));
     }
 
     for (int i = 0; i < rowCount; i++)
@@ -721,11 +731,11 @@ void ShadowMappingScene::createPlane()
     //
     // floor->pass(MainPass).material = material;
 
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal,
-        VertexAttribute::TexCoord, VertexAttribute::Tangent };
+    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
+        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent};
 
-    m_resourceContext->addGeometry("floor",
-        std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
+    m_resourceContext->addGeometry(
+        "floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
@@ -771,8 +781,11 @@ void ShadowMappingScene::setupInput()
 
         case Key::C:
         {
-            glm::vec4 cameraColors[4] = { glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 0.3f, 0.3f, 1.0f),
-                glm::vec4(1.0f, 0.6f, 0.6f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) };
+            glm::vec4 cameraColors[4] = {
+                glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+                glm::vec4(1.0f, 0.3f, 0.3f, 1.0f),
+                glm::vec4(1.0f, 0.6f, 0.6f, 1.0f),
+                glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)};
             for (int i = 0; i < 4; ++i)
             {
                 float lo = m_lightSystem->getCascadeSplitLo(i);
@@ -781,8 +794,11 @@ void ShadowMappingScene::setupInput()
                 m_boxVisualizer->setBoxColor(i, cameraColors[i]);
             }
 
-            glm::vec4 colors[4] = { glm::vec4(1.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
-                glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) };
+            glm::vec4 colors[4] = {
+                glm::vec4(1.0f, 1.0f, 0.0f, 1.0f),
+                glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+                glm::vec4(0.0f, 1.0f, 1.0f, 1.0f),
+                glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)};
             for (int i = 4; i < 8; ++i)
             {
                 m_boxVisualizer->setBoxCorners(i, m_lightSystem->getCascadeFrustumPoints(i - 4));
@@ -814,15 +830,15 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
 
     panel->setId("shadowMappingPanel");
-    panel->setPadding({ 20, 20 });
-    panel->setPosition({ 20, 40 });
+    panel->setPadding({20, 20});
+    panel->setPosition({20, 40});
     panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
     panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
 
     int y = 0;
 
     auto numSamplesLabel = std::make_unique<Label>(form, "CSM Split Lambda");
-    numSamplesLabel->setPosition({ 0, y });
+    numSamplesLabel->setPosition({0, y});
     panel->addControl(std::move(numSamplesLabel));
     y += 20;
 
@@ -830,7 +846,7 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     lambdaSlider->setId("lambdaSlider");
     lambdaSlider->setAnchor(Anchor::TopCenter);
     lambdaSlider->setOrigin(Origin::TopCenter);
-    lambdaSlider->setPosition({ 0, y });
+    lambdaSlider->setPosition({0, y});
     lambdaSlider->setMinValue(0.0f);
     lambdaSlider->setMaxValue(1.0f);
     lambdaSlider->setValue(0.5f);
@@ -843,7 +859,7 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     roughnessSlider->setId("roughnessSlider");
     roughnessSlider->setAnchor(Anchor::TopCenter);
     roughnessSlider->setOrigin(Origin::TopCenter);
-    roughnessSlider->setPosition({ 0, y });
+    roughnessSlider->setPosition({0, y});
     roughnessSlider->setValue(0.0f);
     roughnessSlider->setIncrement(0.01f);
     roughnessSlider->valueChanged.subscribe<&ShadowMappingScene::setRoughness>(scene);
@@ -854,7 +870,7 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     metallicSlider->setId("metallicSlider");
     metallicSlider->setAnchor(Anchor::TopCenter);
     metallicSlider->setOrigin(Origin::TopCenter);
-    metallicSlider->setPosition({ 0, y });
+    metallicSlider->setPosition({0, y});
     metallicSlider->setValue(0.0f);
     metallicSlider->setIncrement(0.01f);
     metallicSlider->valueChanged.subscribe<&ShadowMappingScene::setMetallic>(scene);
@@ -865,7 +881,7 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     redSlider->setId("redSlider");
     redSlider->setAnchor(Anchor::TopCenter);
     redSlider->setOrigin(Origin::TopCenter);
-    redSlider->setPosition({ 0, y });
+    redSlider->setPosition({0, y});
     redSlider->setValue(0.0f);
     redSlider->setIncrement(0.01f);
     redSlider->valueChanged.subscribe<&ShadowMappingScene::setRedAlbedo>(scene);
@@ -876,7 +892,7 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     greenSlider->setId("greenSlider");
     greenSlider->setAnchor(Anchor::TopCenter);
     greenSlider->setOrigin(Origin::TopCenter);
-    greenSlider->setPosition({ 0, y });
+    greenSlider->setPosition({0, y});
     greenSlider->setValue(0.0f);
     greenSlider->setIncrement(0.01f);
     greenSlider->valueChanged.subscribe<&ShadowMappingScene::setGreenAlbedo>(scene);
@@ -887,7 +903,7 @@ std::unique_ptr<gui::Panel> createShadowMappingSceneGui(gui::Form* form, ShadowM
     blueSlider->setId("blueSlider");
     blueSlider->setAnchor(Anchor::TopCenter);
     blueSlider->setOrigin(Origin::TopCenter);
-    blueSlider->setPosition({ 0, y });
+    blueSlider->setPosition({0, y});
     blueSlider->setValue(0.0f);
     blueSlider->setIncrement(0.01f);
     blueSlider->valueChanged.subscribe<&ShadowMappingScene::setBlueAlbedo>(scene);

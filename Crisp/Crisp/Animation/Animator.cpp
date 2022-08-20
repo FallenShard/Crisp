@@ -63,11 +63,14 @@ void Animator::update(double dt)
     // Remove all finished animations
     if (hasFinishedAnimations)
     {
-        m_activeAnimations.erase(std::remove_if(m_activeAnimations.begin(), m_activeAnimations.end(),
-                                     [this](const std::shared_ptr<Animation>& anim)
-                                     {
-                                         return anim->isFinished();
-                                     }),
+        m_activeAnimations.erase(
+            std::remove_if(
+                m_activeAnimations.begin(),
+                m_activeAnimations.end(),
+                [](const std::shared_ptr<Animation>& anim)
+                {
+                    return anim->isFinished();
+                }),
             m_activeAnimations.end());
     }
 }
@@ -99,10 +102,14 @@ void Animator::clearObjectAnimations(void* targetObject)
 {
     auto iter = m_animationLifetimes.find(targetObject);
     if (iter == m_animationLifetimes.end())
+    {
         return;
+    }
 
     for (auto& anim : iter->second)
+    {
         m_removedAnimations.insert(anim);
+    }
 
     m_animationLifetimes.erase(iter);
 }

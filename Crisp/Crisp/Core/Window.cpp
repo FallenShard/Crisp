@@ -51,6 +51,8 @@ Window::Window(Window&& other) noexcept
     , closed(std::move(other.closed))
     , focusGained(std::move(other.focusGained))
     , focusLost(std::move(other.focusLost))
+    , minimized(std::move(other.minimized))
+    , restored(std::move(other.restored))
     , m_window(std::exchange(other.m_window, nullptr))
 {
 }
@@ -68,6 +70,8 @@ Window& Window::operator=(Window&& other) noexcept
     closed = std::move(other.closed);
     focusGained = std::move(other.focusGained);
     focusLost = std::move(other.focusLost);
+    minimized = std::move(other.minimized);
+    restored = std::move(other.restored);
     m_window = std::exchange(other.m_window, nullptr);
     return *this;
 }
@@ -115,6 +119,11 @@ void Window::setCursorPosition(const glm::vec2& position)
 void Window::setTitle(const std::string& title)
 {
     glfwSetWindowTitle(m_window, title.c_str());
+}
+
+void Window::setSize(const int32_t width, const int32_t height)
+{
+    glfwSetWindowSize(m_window, width, height);
 }
 
 glm::ivec2 Window::getSize() const

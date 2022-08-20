@@ -1,6 +1,8 @@
 #pragma once
 
-#include <CrispCore/ChromeProfiler.hpp>
+#include <Crisp/ChromeProfiler.hpp>
+
+#include <rigtorp/MPMCQueue.h>
 
 #include <condition_variable>
 #include <functional>
@@ -10,6 +12,7 @@
 
 namespace crisp
 {
+
 template <typename T>
 class ConcurrentQueue
 {
@@ -26,7 +29,8 @@ public:
     T pop()
     {
         std::unique_lock lock(mutex);
-        condVar.wait(lock,
+        condVar.wait(
+            lock,
             [this]()
             {
                 return !taskQueue.empty();
@@ -36,8 +40,19 @@ public:
         return item;
     }
 
+    bool tryPop(T& item)
+    {
+        std::unique_lock lock(mutex);
+        if (taskQueue.empty())
+            return false;
+
+        item = taskQueue.front();
+        taskQueue.pop();
+        return true;
+    }
+
 private:
-    std::queue<std::function<void()>> taskQueue;
+    std::queue<T> taskQueue;
     std::mutex mutex;
     std::condition_variable condVar;
 };
@@ -45,27 +60,58 @@ private:
 class ThreadPool
 {
 public:
+    using TaskType = std::function<void()>;
+
     ThreadPool()
-        : m_workers(std::thread::hardware_concurrency())
+        : m_taskQueue()
+        , m_workers(std::thread::hardware_concurrency())
         , m_jobCount(0)
     {
         for (std::size_t i = 0; i < m_workers.size(); ++i)
         {
             auto& worker = m_workers[i];
-            worker = std::thread(
+            worker.index = static_cast<int32_t>(i);
+            worker.thread = std::thread(
                 [this, i]()
                 {
-                    ChromeProfiler::setThreadName("Worker " + std::to_string(i));
+                    auto& context = m_workers.at(i);
+                    ChromeProfiler::setThreadName("Worker " + std::to_string(context.index));
                     while (true)
                     {
-                        auto t = m_taskQueue.pop();
-                        if (t == nullptr)
+                        TaskType task = m_taskQueue.pop();
+                        if (task == nullptr)
                         {
                             m_taskQueue.push(nullptr);
                             break;
                         }
 
-                        t();
+                        task();
+                        // if (m_taskQueue.try_pop(task))
+                        //{
+                        //     if (task == nullptr)
+                        //     {
+                        //         m_taskQueue.push(nullptr);
+                        //         break;
+                        //     }
+
+                        //    task();
+                        //    context.popAttempts = 0;
+                        //}
+                        // else
+                        //{
+                        //    ++context.popAttempts;
+
+                        //    std::this_thread::yield();
+                        //    /*if (context.popAttempts == 1)
+                        //    {
+
+                        //        std::this_thread::yield();
+                        //    }
+                        //    else
+                        //    {
+                        //        m_jobCondVar std::this_thread::sleep_for(st)
+                        //    }*/
+                        //}
                     }
 
                     ChromeProfiler::flushThreadBuffer();
@@ -77,21 +123,26 @@ public:
     {
         m_taskQueue.push(nullptr);
         for (auto& w : m_workers)
-            w.join();
+            w.thread.join();
+    }
+
+    void schedule(TaskType&& taskType)
+    {
+        m_taskQueue.push(std::move(taskType));
     }
 
     template <typename F>
     void parallelFor(std::size_t iterationCount, F&& iterationCallback)
     {
-        std::size_t jobsToSchedule = m_workers.size();
-        std::size_t iterationsPerJob = iterationCount / jobsToSchedule;
-        std::size_t remaining = iterationCount % jobsToSchedule;
+        const std::size_t jobsToSchedule = m_workers.size();
+        const std::size_t iterationsPerJob = iterationCount / jobsToSchedule;
+        const std::size_t remaining = iterationCount % jobsToSchedule;
 
         m_jobCount = jobsToSchedule;
         std::size_t start = 0;
         for (std::size_t i = 0; i < jobsToSchedule; ++i)
         {
-            std::size_t iterCount = iterationsPerJob + (remaining > i ? 1 : 0);
+            const std::size_t iterCount = iterationsPerJob + (remaining > i ? 1 : 0);
 
             m_taskQueue.push(
                 [this, i, cb = std::move(iterationCallback), start, end = start + iterCount]
@@ -112,7 +163,8 @@ public:
         }
 
         std::unique_lock lock(m_jobMutex);
-        m_jobCondVar.wait(lock,
+        m_jobCondVar.wait(
+            lock,
             [this]
             {
                 return m_jobCount == 0;
@@ -150,7 +202,8 @@ public:
         }
 
         std::unique_lock lock(m_jobMutex);
-        m_jobCondVar.wait(lock,
+        m_jobCondVar.wait(
+            lock,
             [this]
             {
                 return m_jobCount == 0;
@@ -158,8 +211,18 @@ public:
     }
 
 private:
-    std::vector<std::thread> m_workers;
-    ConcurrentQueue<std::function<void()>> m_taskQueue;
+    struct Worker
+    {
+        alignas(std::hardware_destructive_interference_size) int32_t index{0};
+        uint32_t popAttempts{0};
+
+        std::thread thread;
+    };
+
+    ConcurrentQueue<TaskType> m_taskQueue;
+    // rigtorp::MPMCQueue<TaskType> m_taskQueue;
+
+    std::vector<Worker> m_workers;
 
     std::size_t m_jobCount;
     std::mutex m_jobMutex;

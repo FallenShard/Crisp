@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/Event.hpp>
+#include <Crisp/Event.hpp>
 
 namespace crisp::gui
 {
@@ -12,6 +12,7 @@ public:
         , m_triggerPeriod(triggerPeriod)
     {
     }
+
     ~StopWatch() {}
 
     void accumulate(double dt)

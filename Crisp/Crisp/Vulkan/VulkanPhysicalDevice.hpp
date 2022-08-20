@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -48,26 +48,32 @@ public:
     {
         return m_handle;
     }
+
     inline const VkPhysicalDeviceFeatures& getFeatures() const
     {
         return m_features.features;
     }
+
     inline const VkPhysicalDeviceFeatures2& getFeatures2() const
     {
         return m_features;
     }
+
     inline const VkPhysicalDeviceProperties& getProperties() const
     {
         return m_properties.properties;
     }
+
     inline const VkPhysicalDeviceLimits& getLimits() const
     {
         return m_properties.properties.limits;
     }
+
     inline const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const
     {
         return m_rayTracingPipelineProperties;
     }
+
     inline const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const
     {
         return m_memoryProperties.memoryProperties;
@@ -89,8 +95,8 @@ public:
     Result<uint32_t> findDeviceBufferMemoryType(VkDevice device) const;
     Result<uint32_t> findStagingBufferMemoryType(VkDevice device) const;
 
-    Result<VkFormat> findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
-        VkFormatFeatureFlags features) const;
+    Result<VkFormat> findSupportedFormat(
+        const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
     Result<VkFormat> findSupportedDepthFormat() const;
 
     VkFormatProperties getFormatProperties(VkFormat format) const;

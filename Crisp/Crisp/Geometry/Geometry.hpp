@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Geometry/GeometryView.hpp>
-#include <CrispCore/Mesh/TriangleMesh.hpp>
+#include <Crisp/Mesh/TriangleMesh.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
@@ -18,11 +18,18 @@ public:
     Geometry(Renderer* renderer);
     Geometry(Renderer* renderer, const TriangleMesh& mesh);
     Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat);
-    Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat,
-        bool padToVec4, VkBufferUsageFlags usageFlags);
+    Geometry(
+        Renderer* renderer,
+        const TriangleMesh& mesh,
+        const std::vector<VertexAttributeDescriptor>& vertexFormat,
+        bool padToVec4,
+        VkBufferUsageFlags usageFlags);
     Geometry(Renderer* renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
-    Geometry(Renderer* renderer, InterleavedVertexBuffer&& interleavedVertexBuffer,
-        const std::vector<glm::uvec3>& faces, const std::vector<TriangleMeshView>& parts = {});
+    Geometry(
+        Renderer* renderer,
+        InterleavedVertexBuffer&& interleavedVertexBuffer,
+        const std::vector<glm::uvec3>& faces,
+        const std::vector<TriangleMeshView>& parts = {});
 
     template <typename VertexType, typename IndexType>
     Geometry(Renderer* renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
@@ -71,6 +78,7 @@ public:
     {
         return m_indexBuffer.get();
     }
+
     inline uint32_t getIndexCount() const
     {
         return m_indexCount;
@@ -80,6 +88,7 @@ public:
     {
         return m_vertexCount;
     }
+
     inline uint32_t getInstanceCount() const
     {
         return m_instanceCount;
@@ -89,6 +98,7 @@ public:
     {
         m_vertexCount = vertexCount;
     }
+
     inline void setInstanceCount(uint32_t instanceCount)
     {
         m_instanceCount = instanceCount;

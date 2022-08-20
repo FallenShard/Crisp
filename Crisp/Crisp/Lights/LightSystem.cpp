@@ -7,10 +7,10 @@
 
 #include <Crisp/Lights/ForwardClusteredShading.hpp>
 
+#include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-
-#include <Crisp/Renderer/ComputePipeline.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #include <random>
 
@@ -21,25 +21,26 @@ namespace
 static constexpr const char* LightCullingPass = "lightCullingPass";
 }
 
-LightSystem::LightSystem(Renderer* renderer, uint32_t shadowMapSize)
+LightSystem::LightSystem(
+    Renderer* renderer, const DirectionalLight& dirLight, const uint32_t shadowMapSize, const uint32_t cascadeCount)
     : m_renderer(renderer)
+    , m_directionalLight(dirLight)
     , m_directionalLightBuffer(
           std::make_unique<UniformBuffer>(renderer, sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame))
-    , m_splitLambda(0.5f)
     , m_shadowMapSize(shadowMapSize)
+    , m_splitLambda(0.5f)
 {
-}
-
-void LightSystem::enableCascadedShadowMapping(uint32_t cascadeCount, uint32_t /*shadowMapSize*/)
-{
-    m_cascadedDirectionalLightBuffer = std::make_unique<UniformBuffer>(m_renderer,
-        cascadeCount * sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
-    m_cascades.resize(cascadeCount);
-    for (auto& cascade : m_cascades)
+    if (cascadeCount > 0)
     {
-        cascade.light = std::make_unique<DirectionalLight>(*m_directionalLight);
-        cascade.buffer =
-            std::make_unique<UniformBuffer>(m_renderer, sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
+        m_cascades.resize(cascadeCount);
+        for (auto& cascade : m_cascades)
+        {
+            cascade.light = m_directionalLight;
+            cascade.buffer =
+                std::make_unique<UniformBuffer>(m_renderer, sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
+        }
+        m_cascadedDirectionalLightBuffer = std::make_unique<UniformBuffer>(
+            m_renderer, cascadeCount * sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
     }
 }
 
@@ -53,13 +54,13 @@ void LightSystem::update(const Camera& camera, float /*dt*/)
         auto& cascade = m_cascades[i];
 
         glm::vec4 centerRadius = camera.computeFrustumBoundingSphere(cascade.begin, cascade.end);
-        cascade.light->fitProjectionToFrustum(camera.computeFrustumPoints(cascade.begin, cascade.end), centerRadius,
-            centerRadius.w, m_shadowMapSize);
+        cascade.light.fitProjectionToFrustum(
+            camera.computeFrustumPoints(cascade.begin, cascade.end), centerRadius, centerRadius.w, m_shadowMapSize);
 
-        const auto desc = cascade.light->createDescriptor();
-        m_cascadedDirectionalLightBuffer->updateStagingBuffer(&desc, sizeof(LightDescriptor),
-            i * sizeof(LightDescriptor));
+        const auto desc = cascade.light.createDescriptor();
         cascade.buffer->updateStagingBuffer(desc);
+        m_cascadedDirectionalLightBuffer->updateStagingBuffer(
+            &desc, sizeof(LightDescriptor), i * sizeof(LightDescriptor));
     }
 
     if (m_pointLightBuffer)
@@ -69,22 +70,18 @@ void LightSystem::update(const Camera& camera, float /*dt*/)
         for (const auto& pl : m_pointLights)
             lightDescriptors.push_back(pl.createDescriptorData());
 
-        m_pointLightBuffer->updateStagingBuffer(lightDescriptors.data(),
-            lightDescriptors.size() * sizeof(LightDescriptor));
+        m_pointLightBuffer->updateStagingBuffer(
+            lightDescriptors.data(), lightDescriptors.size() * sizeof(LightDescriptor));
     }
 }
 
 void LightSystem::setDirectionalLight(const DirectionalLight& dirLight)
 {
-    if (!m_directionalLight)
-        m_directionalLight = std::make_unique<DirectionalLight>(dirLight);
-    else
-        *m_directionalLight = dirLight;
-
-    m_directionalLightBuffer->updateStagingBuffer(m_directionalLight->createDescriptor());
+    m_directionalLight = dirLight;
+    m_directionalLightBuffer->updateStagingBuffer(m_directionalLight.createDescriptor());
 }
 
-void LightSystem::setSplitLambda(float splitLambda)
+void LightSystem::setSplitLambda(const float splitLambda)
 {
     m_splitLambda = splitLambda;
 }
@@ -106,11 +103,18 @@ UniformBuffer* LightSystem::getCascadedDirectionalLightBuffer(uint32_t index) co
 
 std::array<glm::vec3, 8> LightSystem::getCascadeFrustumPoints(uint32_t cascadeIndex) const
 {
-    std::array<glm::vec3, 8> frustumPoints = { glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec3(+1.0f, -1.0f, 0.0f),
-        glm::vec3(+1.0f, +1.0f, 0.0f), glm::vec3(-1.0f, +1.0f, 0.0f), glm::vec3(-1.0f, -1.0f, 1.0f),
-        glm::vec3(+1.0f, -1.0f, 1.0f), glm::vec3(+1.0f, +1.0f, 1.0f), glm::vec3(-1.0f, +1.0f, 1.0f) };
+    std::array<glm::vec3, 8> frustumPoints = {
+        glm::vec3(-1.0f, -1.0f, 0.0f),
+        glm::vec3(+1.0f, -1.0f, 0.0f),
+        glm::vec3(+1.0f, +1.0f, 0.0f),
+        glm::vec3(-1.0f, +1.0f, 0.0f),
+        glm::vec3(-1.0f, -1.0f, 1.0f),
+        glm::vec3(+1.0f, -1.0f, 1.0f),
+        glm::vec3(+1.0f, +1.0f, 1.0f),
+        glm::vec3(-1.0f, +1.0f, 1.0f),
+    };
 
-    const auto lightToWorld = glm::inverse(m_cascades.at(cascadeIndex).light->createDescriptor().VP);
+    const auto lightToWorld = glm::inverse(m_cascades.at(cascadeIndex).light.createDescriptor().VP);
     for (auto& p : frustumPoints)
         p = glm::vec3(lightToWorld * glm::vec4(p, 1.0f));
 
@@ -127,52 +131,31 @@ float LightSystem::getCascadeSplitHi(uint32_t cascadeIndex) const
     return m_cascades.at(cascadeIndex).end;
 }
 
-void LightSystem::createPointLightBuffer(uint32_t pointLightCount)
+void LightSystem::createPointLightBuffer(std::vector<PointLight>&& pointLights)
 {
-    m_pointLights.resize(pointLightCount);
+    m_pointLights = std::move(pointLights);
 
-    std::vector<LightDescriptor> lightDescriptors;
-    float w = 32 * 5.0f;
-    float h = 15.0f * 5.0f;
-    float zz = 15.0f * 5.0f;
-    int r = 16;
-    int c = 8;
-    int l = 8;
-
-    std::default_random_engine eng;
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    for (int i = 0; i < r; ++i)
+    std::vector<LightDescriptor> lightDescriptors{};
+    lightDescriptors.reserve(m_pointLights.size());
+    for (const auto& light : m_pointLights)
     {
-        float normI = static_cast<float>(i) / static_cast<float>(r - 1);
-
-        for (int j = 0; j < c; ++j)
-        {
-            float normJ = static_cast<float>(j) / static_cast<float>(c - 1);
-            for (int k = 0; k < l; ++k)
-            {
-                float normK = static_cast<float>(k) / static_cast<float>(l - 1);
-                glm::vec3 spectrum = 5.0f * dist(eng) * glm::vec3(dist(eng), dist(eng), dist(eng));
-                glm::vec3 position = glm::vec3((normJ - 0.5f) * w, 1.0f + normK * zz, (normI - 0.5f) * h);
-                int index = i * c * l + j * l + k;
-
-                glm::vec3 pp = glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * glm::vec3(w, zz, h);
-                m_pointLights[index] = PointLight(spectrum, pp, glm::vec3(1.0f));
-                m_pointLights[index].calculateRadius();
-                lightDescriptors.push_back(m_pointLights[index].createDescriptorData());
-            }
-        }
+        lightDescriptors.emplace_back(light.createDescriptorData());
     }
 
-    m_pointLightBuffer = std::make_unique<UniformBuffer>(m_renderer, m_pointLights.size() * sizeof(LightDescriptor),
-        true, BufferUpdatePolicy::PerFrame, lightDescriptors.data());
+    m_pointLightBuffer = std::make_unique<UniformBuffer>(
+        m_renderer,
+        m_pointLights.size() * sizeof(LightDescriptor),
+        true,
+        BufferUpdatePolicy::PerFrame,
+        lightDescriptors.data());
 }
 
 void LightSystem::createTileGridBuffers(const CameraParameters& cameraParams)
 {
     m_tileSize = glm::ivec2(16); // 16x16 tiles
     m_tileGridDimensions = calculateTileGridDims(m_tileSize, cameraParams.screenSize);
-    auto tileFrusta = createTileFrusta(m_tileSize, cameraParams.screenSize, cameraParams.P);
-    std::size_t tileCount = tileFrusta.size();
+    const auto tileFrusta = createTileFrusta(m_tileSize, cameraParams.screenSize, cameraParams.P);
+    const std::size_t tileCount = tileFrusta.size();
 
     m_tilePlaneBuffer =
         std::make_unique<UniformBuffer>(m_renderer, tileCount * sizeof(TileFrustum), true, tileFrusta.data());
@@ -180,25 +163,21 @@ void LightSystem::createTileGridBuffers(const CameraParameters& cameraParams)
     m_lightIndexListBuffer =
         std::make_unique<UniformBuffer>(m_renderer, tileCount * sizeof(uint32_t) * m_pointLights.size(), true);
 
-    VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    createInfo.flags = 0;
-    createInfo.imageType = VK_IMAGE_TYPE_2D;
-    createInfo.format = VK_FORMAT_R32G32_UINT;
-    createInfo.extent = VkExtent3D{ (uint32_t)m_tileGridDimensions.x, (uint32_t)m_tileGridDimensions.y, 1u };
-    createInfo.mipLevels = 1;
-    createInfo.arrayLayers = RendererConfig::VirtualFrameCount;
-    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_lightGrid = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    m_lightGrid = createSampledStorageImage(
+        *m_renderer,
+        VK_FORMAT_R32G32_UINT,
+        VkExtent3D{static_cast<uint32_t>(m_tileGridDimensions.x), static_cast<uint32_t>(m_tileGridDimensions.y), 1u});
+
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
         m_lightGridViews.emplace_back(m_lightGrid->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
 
     m_renderer->enqueueResourceUpdate(
         [this](VkCommandBuffer cmdBuffer)
         {
-            m_lightGrid->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            m_lightGrid->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 }
@@ -226,7 +205,7 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
         // Before culling can start, zero out the light index count buffer
         glm::uvec4 zero(0);
 
-        VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+        VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         barrier.buffer = m_lightIndexCountBuffer->get();
@@ -234,15 +213,17 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
         barrier.size = sizeof(zero);
 
         vkCmdUpdateBuffer(cmdBuffer.getHandle(), barrier.buffer, barrier.offset, barrier.size, &zero);
-        cmdBuffer.insertBufferMemoryBarrier(barrier, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        cmdBuffer.insertBufferMemoryBarrier(
+            barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     };
 
     // m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, LightCullingPass, 0);
-    renderGraph.addDependency(LightCullingPass, "MainPass",
+    renderGraph.addDependency(
+        LightCullingPass,
+        "MainPass",
         [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             auto info = m_lightIndexListBuffer->getDescriptorInfo();
@@ -250,8 +231,8 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
             barrier.offset = info.offset;
             barrier.size = info.range;
 
-            cmdBuffer.insertBufferMemoryBarrier(barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            cmdBuffer.insertBufferMemoryBarrier(
+                barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
     // TODO: Unsorted
@@ -265,7 +246,8 @@ void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const Uniform
     // m_pipelines.emplace("sm", std::move(smPipeline));
     // m_materials.emplace("sm", std::move(smMaterial));
 
-    // auto vsmPipeline = m_renderer->createPipelineFromLua("VarianceShadowMap.lua", vsmPassNode.renderPass.get(), 0);
+    // auto vsmPipeline = m_renderer->createPipelineFromLua("VarianceShadowMap.lua", vsmPassNode.renderPass.get(),
+    // 0);
     // auto vsmMaterial = std::make_unique<Material>(vsmPipeline.get());
     // vsmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack)));
     // vsmMaterial->writeDescriptor(0, 1, m_shadowMapper->getLightFullTransformBuffer()->getDescriptorInfo());
@@ -288,7 +270,6 @@ UniformBuffer* LightSystem::getPointLightBuffer() const
 UniformBuffer* LightSystem::getLightIndexBuffer() const
 {
     return m_lightIndexListBuffer.get();
-    ;
 }
 
 const std::vector<std::unique_ptr<VulkanImageView>>& LightSystem::getTileGridViews() const
@@ -315,5 +296,42 @@ void LightSystem::updateSplitIntervals(const float zNear, const float zFar)
         m_cascades[i].end = splitPos - zNear;
         m_cascades[i + 1].begin = splitPos - zNear;
     }
+}
+
+std::vector<PointLight> createRandomPointLights(const uint32_t count)
+{
+    constexpr float width = 32.0f * 5.0f;
+    constexpr float depth = 15.0f * 5.0f;
+    constexpr float height = 15.0f * 5.0f;
+    constexpr glm::vec3 domainExtent{width, height, depth};
+    const int32_t gridX = 16;
+    const int32_t gridZ = 8;
+    const int32_t gridY = count / gridX / gridZ;
+
+    std::vector<PointLight> pointLights{};
+    pointLights.reserve(count);
+
+    std::default_random_engine eng{};
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    for (int32_t i = 0; i < gridX; ++i)
+    {
+        // const float normI = static_cast<float>(i) / static_cast<float>(gridX - 1);
+        for (int32_t j = 0; j < gridZ; ++j)
+        {
+            // const float normJ = static_cast<float>(j) / static_cast<float>(gridZ - 1);
+            for (int32_t k = 0; k < gridY; ++k)
+            {
+                // const float normK = static_cast<float>(k) / static_cast<float>(gridY - 1);
+                const glm::vec3 spectrum = 5.0f * dist(eng) * glm::vec3(dist(eng), dist(eng), dist(eng));
+                /*const glm::vec3 position =
+                    glm::vec3((normJ - 0.5f) * width, 1.0f + normK * height, (normI - 0.5f) * depth);*/
+
+                const glm::vec3 stratifiedPos = glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * domainExtent;
+                pointLights.emplace_back(spectrum, stratifiedPos, glm::vec3(0.0f, 1.0f, 0.0f)).calculateRadius();
+            }
+        }
+    }
+
+    return pointLights;
 }
 } // namespace crisp

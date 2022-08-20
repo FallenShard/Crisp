@@ -22,15 +22,24 @@ target_include_directories(CrispTest PUBLIC ".")
 
 target_link_libraries(CrispTest PRIVATE gtest)
 target_link_libraries(CrispTest PRIVATE gtestMain)
-target_link_libraries(CrispTest PRIVATE Crisp)
+target_link_libraries(CrispTest PRIVATE CrispVulkan CrispGlslUtils CrispCamera CrispRenderer CrispModels)
+copy_shared_libs(CrispTest vulkan lua freetype zlib tbb tbbMalloc embree)
 
-function(copy_shared_libs targetNames)
-    foreach(targetName ${ARGV})
-        add_custom_command(TARGET CrispTest POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:${targetName}> $<TARGET_FILE_DIR:CrispTest>
-        )
-    endforeach()
-endfunction()
+add_cpp_binary(CrispCoreTest
+    "BitFlagsTest.cpp"
+    "CommandLineParserTest.cpp"
+    "DelegateTest.cpp"
+    "EventTest.cpp"
+    "GlmStructuredBindingsTest.cpp"
+    "LuaConfigTest.cpp"
+    "StringUtilsTest.cpp"
+    "WavefrontObjTest.cpp")
 
-copy_shared_libs(vulkan lua freetype zlib tbb tbbMalloc embree)
+target_link_libraries(CrispCoreTest PRIVATE gtest)
+target_link_libraries(CrispCoreTest PRIVATE gtestMain)
+target_link_libraries(CrispCoreTest PRIVATE CrispMeshIo CrispEvent CrispApplicationEnvironment CrispBitFlags CrispUtils CrispStringUtils)
+
+add_custom_command(TARGET CrispCoreTest POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:lua> $<TARGET_FILE_DIR:CrispCoreTest>
+)

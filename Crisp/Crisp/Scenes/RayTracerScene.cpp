@@ -14,10 +14,10 @@
 #include <Crisp/GUI/MemoryUsageBar.hpp>
 #include <Crisp/GUI/Panel.hpp>
 #include <Crisp/GUI/Slider.hpp>
+#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/IO/OpenEXRWriter.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
 #include <Crisp/vulkan/VulkanImageView.hpp>
-#include <CrispCore/IO/FileUtils.hpp>
-#include <CrispCore/IO/OpenEXRWriter.hpp>
 
 namespace crisp
 {
@@ -146,16 +146,16 @@ void RayTracerScene::createGui()
 
     auto panel = std::make_unique<gui::Panel>(form);
     panel->setId("vesperOptionsPanel");
-    panel->setPosition({ 10, 30 });
-    panel->setSizeHint({ 200, 500 });
-    panel->setPadding({ 10, 10 });
+    panel->setPosition({10, 30});
+    panel->setSizeHint({200, 500});
+    panel->setPadding({10, 10});
     panel->setAnchor(gui::Anchor::TopLeft);
     panel->setVerticalSizingPolicy(gui::SizingPolicy::WrapContent);
 
     auto button = std::make_unique<gui::Button>(form);
     button->setId("openButton");
     button->setText("Open XML Scene");
-    button->setSizeHint({ 100, 30 });
+    button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
     button->clicked += [this]()
     {
@@ -166,8 +166,8 @@ void RayTracerScene::createGui()
     button = std::make_unique<gui::Button>(form);
     button->setId("renderButton");
     button->setText("Start Raytracing");
-    button->setPosition({ 0, 40 });
-    button->setSizeHint({ 100, 30 });
+    button->setPosition({0, 40});
+    button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
     button->clicked += [this]()
     {
@@ -178,8 +178,8 @@ void RayTracerScene::createGui()
     button = std::make_unique<gui::Button>(form);
     button->setId("stopButton");
     button->setText("Stop Raytracing");
-    button->setPosition({ 0, 80 });
-    button->setSizeHint({ 100, 30 });
+    button->setPosition({0, 80});
+    button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
     button->clicked += [this]()
     {
@@ -190,8 +190,8 @@ void RayTracerScene::createGui()
     button = std::make_unique<gui::Button>(form);
     button->setId("saveButton");
     button->setText("Save as EXR");
-    button->setPosition({ 0, 120 });
-    button->setSizeHint({ 100, 30 });
+    button->setPosition({0, 120});
+    button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
     button->clicked += [this]()
     {
@@ -204,18 +204,18 @@ void RayTracerScene::createGui()
 
     auto progressBarBg = std::make_unique<gui::Panel>(form);
     progressBarBg->setId("progressBarBg");
-    progressBarBg->setPosition({ 0, 0 });
-    progressBarBg->setSizeHint({ 500, 20 });
-    progressBarBg->setPadding({ 3, 3 });
+    progressBarBg->setPosition({0, 0});
+    progressBarBg->setSizeHint({500, 20});
+    progressBarBg->setPadding({3, 3});
     progressBarBg->setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
     progressBarBg->setAnchor(gui::Anchor::BottomRight);
     progressBarBg->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent, 0.5f);
 
     auto progressBar = std::make_unique<gui::Panel>(form);
     progressBar->setId("progressBar");
-    progressBar->setPosition({ 0, 0 });
-    progressBar->setSizeHint({ 500, 20 });
-    progressBar->setPadding({ 3, 3 });
+    progressBar->setPosition({0, 0});
+    progressBar->setSizeHint({500, 20});
+    progressBar->setPadding({3, 3});
     progressBar->setColor(glm::vec4(0.1f, 0.5f, 0.1f, 1.0f));
     progressBar->setAnchor(gui::Anchor::BottomLeft);
     progressBar->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent, 0.0);

@@ -1,6 +1,6 @@
 #include "FbxImporter.hpp"
 
-#include <CrispCore/Mesh/TriangleMesh.hpp>
+#include <Crisp/Mesh/TriangleMesh.hpp>
 
 #include <array>
 #include <fstream>
@@ -284,7 +284,7 @@ bool FbxImporter::importFile(const std::filesystem::path& filePath)
         m_triangles[i] = glm::uvec3(v0, v1, ~v2);
     }
 
-    m_meshParts.push_back({ "", 0, static_cast<uint32_t>(m_triangles.size()) });
+    m_meshParts.push_back({"", 0, static_cast<uint32_t>(m_triangles.size())});
 
     return true;
 }
@@ -294,8 +294,8 @@ bool FbxImporter::isFbxFile(const std::filesystem::path& filePath)
     return filePath.extension().string() == ".fbx";
 }
 
-void FbxImporter::moveDataToTriangleMesh(TriangleMesh& /*triangleMesh*/,
-    std::vector<VertexAttributeDescriptor> /*vertexAttribs*/)
+void FbxImporter::moveDataToTriangleMesh(
+    TriangleMesh& /*triangleMesh*/, std::vector<VertexAttributeDescriptor> /*vertexAttribs*/)
 {
     /*triangleMesh.setMeshName(m_path.filename().stem().string());
     triangleMesh.setFaces(std::move(m_triangles));

@@ -141,7 +141,8 @@ target_link_libraries(Vesper PUBLIC embree)
 target_link_libraries(Vesper PUBLIC tinyexr)
 target_link_libraries(Vesper PUBLIC rapidxml)
 
-target_link_libraries(Vesper PUBLIC CrispCore)
+target_link_libraries(Vesper PUBLIC CrispMath CrispFormat spdlog CrispRobinHood)
 
 target_include_directories(Vesper PRIVATE "./Vesper")
 target_include_directories(Vesper PUBLIC ".")
+target_include_directories(Vesper PUBLIC "../Crisp")

@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
@@ -17,21 +17,25 @@ namespace internal
 {
 template <typename T>
 struct IndexTypeTrait;
+
 template <>
 struct IndexTypeTrait<glm::u16vec2>
 {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16;
 };
+
 template <>
 struct IndexTypeTrait<glm::u16vec3>
 {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16;
 };
+
 template <>
 struct IndexTypeTrait<glm::uvec3>
 {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32;
 };
+
 template <>
 struct IndexTypeTrait<glm::uvec4>
 {
@@ -42,12 +46,16 @@ struct IndexTypeTrait<glm::uvec4>
 class IndexBuffer
 {
 public:
-    IndexBuffer(Renderer* renderer, VkIndexType indexType, BufferUpdatePolicy updatePolicy, size_t size,
+    IndexBuffer(
+        Renderer* renderer,
+        VkIndexType indexType,
+        BufferUpdatePolicy updatePolicy,
+        size_t size,
         const void* data = nullptr);
 
     template <typename T>
-    IndexBuffer(Renderer* renderer, const std::vector<T>& data,
-        BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
+    IndexBuffer(
+        Renderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
         : IndexBuffer(renderer, internal::IndexTypeTrait<T>::value, updatePolicy, data.size() * sizeof(T), data.data())
     {
     }

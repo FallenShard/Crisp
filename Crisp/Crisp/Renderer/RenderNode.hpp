@@ -6,7 +6,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 namespace crisp
 {
@@ -78,24 +78,24 @@ struct RenderNode
 
     MaterialData& pass(std::string renderPassName)
     {
-        return materials[SubpassKey{ renderPassName, 0 }][-1];
+        return materials[SubpassKey{renderPassName, 0}][-1];
     }
 
     MaterialData& subpass(std::string renderPassName, int subpassIndex)
     {
-        return materials[SubpassKey{ renderPassName, subpassIndex }][-1];
+        return materials[SubpassKey{renderPassName, subpassIndex}][-1];
     }
 
     MaterialData& pass(int part, std::string renderPassName)
     {
-        MaterialData& matData = materials[SubpassKey{ renderPassName, 0 }][part];
+        MaterialData& matData = materials[SubpassKey{renderPassName, 0}][part];
         matData.part = part;
         return matData;
     }
 
     MaterialData& subpass(int part, std::string renderPassName, int subpassIndex)
     {
-        MaterialData& matData = materials[SubpassKey{ renderPassName, subpassIndex }][part];
+        MaterialData& matData = materials[SubpassKey{renderPassName, subpassIndex}][part];
         matData.part = part;
         return matData;
     }

@@ -7,7 +7,7 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 using namespace crisp;
 

@@ -1,7 +1,7 @@
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 namespace crisp
 {
@@ -26,8 +26,8 @@ VulkanPhysicalDevice& VulkanPhysicalDevice::operator=(VulkanPhysicalDevice&& oth
     return *this;
 }
 
-bool VulkanPhysicalDevice::isSuitable(const VkSurfaceKHR surface,
-    const std::vector<const char*>& deviceExtensions) const
+bool VulkanPhysicalDevice::isSuitable(
+    const VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const
 {
     if (!queryQueueFamilyIndices(surface).isComplete())
         return false;
@@ -82,7 +82,7 @@ QueueFamilyIndices VulkanPhysicalDevice::queryQueueFamilyIndices(const VkSurface
 
 SurfaceSupport VulkanPhysicalDevice::querySurfaceSupport(const VkSurfaceKHR surface) const
 {
-    SurfaceSupport surfaceSupport = { surface };
+    SurfaceSupport surfaceSupport = {surface};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_handle, surface, &surfaceSupport.capabilities);
 
     uint32_t formatCount = 0;
@@ -98,8 +98,8 @@ SurfaceSupport VulkanPhysicalDevice::querySurfaceSupport(const VkSurfaceKHR surf
     if (presentModeCount > 0)
     {
         surfaceSupport.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_handle, surface, &presentModeCount,
-            surfaceSupport.presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(
+            m_handle, surface, &presentModeCount, surfaceSupport.presentModes.data());
     }
 
     return surfaceSupport;
@@ -116,8 +116,8 @@ std::vector<VkQueueFamilyProperties> VulkanPhysicalDevice::queryQueueFamilyPrope
     return queueFamilies;
 }
 
-Result<uint32_t> VulkanPhysicalDevice::findMemoryType(const uint32_t memoryTypeMask,
-    const VkMemoryPropertyFlags properties) const
+Result<uint32_t> VulkanPhysicalDevice::findMemoryType(
+    const uint32_t memoryTypeMask, const VkMemoryPropertyFlags properties) const
 {
     const VkPhysicalDeviceMemoryProperties& memProperties = getMemoryProperties();
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
@@ -143,7 +143,7 @@ Result<uint32_t> VulkanPhysicalDevice::findMemoryType(const VkMemoryPropertyFlag
 
 Result<uint32_t> VulkanPhysicalDevice::findDeviceImageMemoryType(const VkDevice device) const
 {
-    VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
     imageInfo.extent.width = 1;
     imageInfo.extent.height = 1;
@@ -169,7 +169,7 @@ Result<uint32_t> VulkanPhysicalDevice::findDeviceImageMemoryType(const VkDevice 
 
 Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(const VkDevice device) const
 {
-    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = 1;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -185,7 +185,7 @@ Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(const VkDevice
 
 Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevice device) const
 {
-    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = 1;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -222,13 +222,16 @@ void VulkanPhysicalDevice::setDeviceExtensions(std::vector<std::string>&& device
 VkDevice VulkanPhysicalDevice::createLogicalDevice(const VulkanQueueConfiguration& config) const
 {
     std::vector<const char*> enabledExtensions;
-    std::transform(m_deviceExtensions.begin(), m_deviceExtensions.end(), std::back_inserter(enabledExtensions),
+    std::transform(
+        m_deviceExtensions.begin(),
+        m_deviceExtensions.end(),
+        std::back_inserter(enabledExtensions),
         [](const std::string& ext)
         {
             return ext.c_str();
         });
 
-    VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    VkDeviceCreateInfo createInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     createInfo.pNext = &m_features;
     // createInfo.pEnabledFeatures        = &m_features.features;
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.createInfos.size());
@@ -241,8 +244,8 @@ VkDevice VulkanPhysicalDevice::createLogicalDevice(const VulkanQueueConfiguratio
     return device;
 }
 
-Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkFormat>& candidates,
-    const VkImageTiling tiling, const VkFormatFeatureFlags features) const
+Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(
+    const std::vector<VkFormat>& candidates, const VkImageTiling tiling, const VkFormatFeatureFlags features) const
 {
     for (const auto& format : candidates)
     {
@@ -261,8 +264,10 @@ Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkF
 
 Result<VkFormat> VulkanPhysicalDevice::findSupportedDepthFormat() const
 {
-    return findSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-        VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    return findSupportedFormat(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 VkFormatProperties VulkanPhysicalDevice::getFormatProperties(VkFormat format) const
@@ -274,16 +279,16 @@ VkFormatProperties VulkanPhysicalDevice::getFormatProperties(VkFormat format) co
 
 void VulkanPhysicalDevice::initFeaturesAndProperties()
 {
-    m_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    m_properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
-    m_rayTracingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-    m_accelerationStructureFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
-    m_memoryProperties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
-    m_features11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
-    m_features12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-    m_properties11 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES };
-    m_properties12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
-    m_rayTracingPipelineProperties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
+    m_features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    m_properties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    m_rayTracingFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
+    m_accelerationStructureFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
+    m_memoryProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+    m_features11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+    m_features12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    m_properties11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES};
+    m_properties12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES};
+    m_rayTracingPipelineProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
 
     m_features.pNext = &m_features11;
     m_features11.pNext = &m_features12;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/LuaConfig.hpp>
+#include <Crisp/LuaConfig.hpp>
 
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 
@@ -16,8 +16,8 @@ public:
     LuaPipelineBuilder();
     LuaPipelineBuilder(std::filesystem::path configPath);
 
-    std::unique_ptr<VulkanPipeline> create(Renderer* renderer, const VulkanRenderPass& renderPass,
-        uint32_t subpassIndex = 0);
+    std::unique_ptr<VulkanPipeline> create(
+        Renderer* renderer, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
 
 private:
     std::unordered_map<VkShaderStageFlagBits, std::string> getShaderFileMap();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Crisp/Core/ThreadPool.hpp>
+
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/VirtualFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
@@ -99,7 +101,8 @@ public:
     Geometry* getFullScreenGeometry() const;
 
     std::unique_ptr<VulkanPipeline> createPipelineFromLua(std::string_view pipelineName,
-        const VulkanRenderPass& renderPass, int subpassIndex);
+        const VulkanRenderPass& renderPass,
+        int subpassIndex);
 
     template <typename... Args>
     std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args)
@@ -133,6 +136,16 @@ public:
     }
 
     void updateInitialLayouts(VulkanRenderPass& renderPass);
+
+    void schedule(std::function<void()>&& task)
+    {
+        m_threadPool.schedule(std::move(task));
+    }
+
+    void scheduleOnMainThread(std::function<void()>&& task)
+    {
+        m_mainThreadQueue.push(std::move(task));
+    }
 
 private:
     void loadShaders(const std::filesystem::path& directoryPath);
@@ -186,5 +199,8 @@ private:
 
     std::list<std::coroutine_handle<>> m_cmdBufferCoroutines;
     VkCommandBuffer m_coroCmdBuffer;
+
+    ThreadPool m_threadPool;
+    ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
 };
 } // namespace crisp

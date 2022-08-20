@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <vector>
 
@@ -36,10 +36,10 @@ private:
     void createSwapChain(const VulkanDevice& device, const VulkanContext& context);
     void createSwapChainImageViews(VkDevice deviceHandle);
 
-    Result<VkSurfaceFormatKHR> chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats,
-        const VkSurfaceFormatKHR& surfaceFormat) const;
-    Result<VkPresentModeKHR> choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes,
-        VkPresentModeKHR presentMode) const;
+    Result<VkSurfaceFormatKHR> chooseSurfaceFormat(
+        const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat) const;
+    Result<VkPresentModeKHR> choosePresentMode(
+        const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;
     VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
     std::vector<VkImage> m_images;

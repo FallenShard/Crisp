@@ -1,15 +1,17 @@
 #include "DynamicUniformBufferResource.hpp"
 
+#include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/UniformMultiBuffer.hpp>
 #include <Crisp/vulkan/VulkanDevice.hpp>
-#include <CrispCore/Math/Headers.hpp>
 
 namespace crisp::gui
 {
-DynamicUniformBufferResource::DynamicUniformBufferResource(Renderer* renderer,
-    const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets, uint32_t resourceSize,
+DynamicUniformBufferResource::DynamicUniformBufferResource(
+    Renderer* renderer,
+    const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets,
+    uint32_t resourceSize,
     uint32_t descBinding)
     : m_renderer(renderer)
     , m_resourceSize(resourceSize)

@@ -11,7 +11,7 @@
 #include <Crisp/Lights/LightDescriptor.hpp>
 #include <Crisp/Renderer/Material.hpp>
 
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 namespace crisp
 {

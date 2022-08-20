@@ -1,7 +1,7 @@
 #pragma once
 
-#include <CrispCore/RobinHood.hpp>
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -10,6 +10,6 @@
 
 namespace crisp
 {
-	Result<VkShaderStageFlags> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath);
-	Result<VkShaderStageFlags> getShaderStageFromShaderType(const std::string& glslShaderType);
-}
+Result<VkShaderStageFlags> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath);
+Result<VkShaderStageFlags> getShaderStageFromShaderType(const std::string& glslShaderType);
+} // namespace crisp

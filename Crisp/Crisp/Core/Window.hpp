@@ -2,9 +2,8 @@
 
 #include <Crisp/Core/Keyboard.hpp>
 #include <Crisp/Core/Mouse.hpp>
-
-#include <CrispCore/Event.hpp>
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Event.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -21,8 +20,6 @@ enum class CursorState
     Disabled,
     Normal
 };
-
-class EventHub;
 
 class Window
 {
@@ -48,9 +45,11 @@ public:
     void setCursorState(CursorState cursorState);
     void setCursorPosition(const glm::vec2& position);
     void setTitle(const std::string& title);
+    void setSize(int32_t width, int32_t height);
 
     glm::ivec2 getSize() const;
     glm::vec2 getCursorPosition() const;
+
     inline GLFWwindow* getHandle() const
     {
         return m_window;

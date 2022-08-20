@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 
-#include <CrispCore/Logger.hpp>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
@@ -8,8 +8,11 @@ namespace
 {
 auto logger = createLoggerMt("VulkanDebug");
 
-VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* /*userData*/)
+VkBool32 debugMessengerCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+    void* /*userData*/)
 {
     const char* typeStr = "Unknown";
     if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
@@ -21,22 +24,38 @@ VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {
-        logger->debug("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
+        logger->debug(
+            "{} {} {} \n{}",
+            typeStr,
+            callbackData->messageIdNumber,
+            callbackData->pMessageIdName,
             callbackData->pMessage);
     }
     else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
     {
-        logger->info("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
+        logger->info(
+            "{} {} {} \n{}",
+            typeStr,
+            callbackData->messageIdNumber,
+            callbackData->pMessageIdName,
             callbackData->pMessage);
     }
     else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        logger->warn("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
+        logger->warn(
+            "{} {} {} \n{}",
+            typeStr,
+            callbackData->messageIdNumber,
+            callbackData->pMessageIdName,
             callbackData->pMessage);
     }
     else
     {
-        logger->error("{} {} {} \n{}", typeStr, callbackData->messageIdNumber, callbackData->pMessageIdName,
+        logger->error(
+            "{} {} {} \n{}",
+            typeStr,
+            callbackData->messageIdNumber,
+            callbackData->pMessageIdName,
             callbackData->pMessage);
     }
 
@@ -44,8 +63,11 @@ VkBool32 debugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 }
 } // namespace
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-    const VkAllocationCallbacks* allocator, VkDebugUtilsMessengerEXT* messenger)
+VkResult CreateDebugUtilsMessengerEXT(
+    VkInstance instance,
+    const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
+    const VkAllocationCallbacks* allocator,
+    VkDebugUtilsMessengerEXT* messenger)
 {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr)
@@ -54,8 +76,8 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
         return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT messenger,
-    const VkAllocationCallbacks* pAllocator)
+void DestroyDebugUtilsMessengerEXT(
+    VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator)
 {
     if (messenger == nullptr)
         return;
@@ -67,7 +89,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 
 VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
 {
-    VkDebugUtilsMessengerCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+    VkDebugUtilsMessengerCreateInfoEXT createInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
     createInfo.flags = 0;
     createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
                                  VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |

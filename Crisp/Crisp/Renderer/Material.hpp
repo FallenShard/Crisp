@@ -24,10 +24,12 @@ public:
     Material(VulkanPipeline* pipeline);
     Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator);
 
+    // Methods to update a descriptor referencing an image.
     void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo&& imageInfo);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView,
         const VulkanSampler* sampler);
-
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView,
+        const VulkanSampler& sampler);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanRenderPass& renderPass,
         uint32_t renderTargetIndex, const VulkanSampler* sampler);
     void writeDescriptor(uint32_t setIndex, uint32_t binding,

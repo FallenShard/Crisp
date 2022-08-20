@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/BitFlags.hpp>
+#include <Crisp/BitFlags.hpp>
 
 namespace crisp
 {

@@ -3,11 +3,10 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp
 {
-class Geometry;
 class VulkanBuffer;
 class VulkanDevice;
 class VulkanCommandPool;
@@ -15,14 +14,19 @@ class VulkanCommandPool;
 class VulkanAccelerationStructure : public VulkanResource<VkAccelerationStructureKHR, nullptr>
 {
 public:
-    VulkanAccelerationStructure(const VulkanDevice& device, const VkAccelerationStructureGeometryKHR& geometry,
-        uint32_t primitiveCount, const glm::mat4& transform);
-    VulkanAccelerationStructure(const VulkanDevice& device,
-        const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures = {});
+    VulkanAccelerationStructure(
+        const VulkanDevice& device,
+        const VkAccelerationStructureGeometryKHR& geometry,
+        uint32_t primitiveCount,
+        const glm::mat4& transform);
+    VulkanAccelerationStructure(
+        const VulkanDevice& device, const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures = {});
 
     ~VulkanAccelerationStructure();
 
-    void build(const VulkanDevice& device, VkCommandBuffer cmdBuffer,
+    void build(
+        const VulkanDevice& device,
+        VkCommandBuffer cmdBuffer,
         const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures);
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;

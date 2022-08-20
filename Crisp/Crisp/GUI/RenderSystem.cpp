@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <Crisp/IO/FontLoader.hpp>
-#include <CrispCore/IO/ImageLoader.hpp>
+#include <Crisp/IO/ImageLoader.hpp>
 
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
@@ -29,8 +29,8 @@ static constexpr float DepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
 
-std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(const crisp::VulkanDevice& device,
-    const VkExtent2D swapChainExtent)
+std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(
+    const crisp::VulkanDevice& device, const VkExtent2D swapChainExtent)
 {
     return crisp::RenderPassBuilder()
         .setRenderTargetsBuffered(true)
@@ -40,7 +40,7 @@ std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(const crisp::Vulkan
         .setRenderTargetFormat(0, VK_FORMAT_R8G8B8A8_UNORM)
         .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT)
         .setRenderTargetFormat(1, VK_FORMAT_D32_SFLOAT)
-        .configureDepthRenderTarget(1, 0, { 1.0f, 0 })
+        .configureDepthRenderTarget(1, 0, {1.0f, 0})
 
         .setAttachmentCount(2)
         .setAttachmentMapping(0, 0)
@@ -48,14 +48,19 @@ std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(const crisp::Vulkan
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         .setAttachmentMapping(1, 1)
         .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-        .setAttachmentLayouts(1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .setAttachmentLayouts(
+            1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         .setDepthAttachmentRef(0, 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
         .create(device, swapChainExtent);
 }
 
@@ -80,8 +85,8 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     // Gui texture atlas
     loadTextureAtlas();
-    m_linearClampSampler = std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    m_linearClampSampler = std::make_unique<VulkanSampler>(
+        m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     logger->info("Texture initialized");
 
     // Initialize gui render target rendering resources
@@ -95,12 +100,12 @@ RenderSystem::RenderSystem(Renderer* renderer)
     std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets;
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
         transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
-    m_transforms = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets,
-        static_cast<uint32_t>(sizeof(glm::mat4)), 0);
+    m_transforms = std::make_unique<DynamicUniformBufferResource>(
+        m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
     // Initialize resources to support dynamic addition of color resources
-    m_colors = std::make_unique<DynamicUniformBufferResource>(m_renderer, transformAndColorSets,
-        static_cast<uint32_t>(sizeof(glm::vec4)), 1);
+    m_colors = std::make_unique<DynamicUniformBufferResource>(
+        m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
     // Initialize resources to support dynamic addition of textured controls
     std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets;
@@ -195,14 +200,17 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
     textRes->allocatedFaceCount = TextGeometryResource::NumInitialAllocatedCharacters * 2;   // 2 Triangles per letter
     textRes->updatedBufferIndex = 0;
     textRes->isUpdatedOnDevice = false;
-    textRes->vertexBuffer = std::make_unique<VertexBuffer>(m_renderer,
-        textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
-    textRes->indexBuffer = std::make_unique<IndexBuffer>(m_renderer, VK_INDEX_TYPE_UINT16, BufferUpdatePolicy::PerFrame,
+    textRes->vertexBuffer = std::make_unique<VertexBuffer>(
+        m_renderer, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
+    textRes->indexBuffer = std::make_unique<IndexBuffer>(
+        m_renderer,
+        VK_INDEX_TYPE_UINT16,
+        BufferUpdatePolicy::PerFrame,
         textRes->allocatedFaceCount * sizeof(glm::u16vec3));
     textRes->firstBinding = 0;
     textRes->bindingCount = 1;
-    textRes->buffers = { textRes->vertexBuffer->get() };
-    textRes->offsets = { 0 };
+    textRes->buffers = {textRes->vertexBuffer->get()};
+    textRes->offsets = {0};
     textRes->indexBufferOffset = 0;
     textRes->indexCount = 32;
     textRes->descSet = m_fonts.at(fontId)->descSet;
@@ -244,8 +252,8 @@ void RenderSystem::drawQuad(unsigned int transformResourceId, uint32_t colorId, 
     m_drawCommands.emplace_back(&RenderSystem::renderQuad, transformResourceId, colorId, depth);
 }
 
-void RenderSystem::drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId,
-    float depth) const
+void RenderSystem::drawTexture(
+    unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const
 {
     m_drawCommands.emplace_back(&RenderSystem::renderTexture, transformId, colorId, texCoordId, depth);
 }
@@ -294,7 +302,9 @@ void RenderSystem::submitDrawCommands()
     m_renderer->enqueueDrawCommand(
         [this](VkCommandBuffer commandBuffer)
         {
-            std::sort(m_drawCommands.begin(), m_drawCommands.end(),
+            std::sort(
+                m_drawCommands.begin(),
+                m_drawCommands.end(),
                 [](const GuiDrawCommand& a, const GuiDrawCommand& b)
                 {
                     return a.depth < b.depth;
@@ -322,8 +332,13 @@ void RenderSystem::submitDrawCommands()
             m_debugRects.clear();
             m_rectColors.clear();
 
-            m_guiPass->getRenderTarget(0).transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                currentFrame, 1, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            m_guiPass->getRenderTarget(0).transitionLayout(
+                commandBuffer,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                currentFrame,
+                1,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
     m_renderer->enqueueDefaultPassDrawCommand(
@@ -341,8 +356,13 @@ void RenderSystem::submitDrawCommands()
 
 void RenderSystem::resize(int /*width*/, int /*height*/)
 {
-    m_P = glm::ortho(0.0f, static_cast<float>(m_renderer->getSwapChainExtent().width), 0.0f,
-        static_cast<float>(m_renderer->getSwapChainExtent().height), 0.5f, 0.5f + DepthLayers);
+    m_P = glm::ortho(
+        0.0f,
+        static_cast<float>(m_renderer->getSwapChainExtent().width),
+        0.0f,
+        static_cast<float>(m_renderer->getSwapChainExtent().height),
+        0.5f,
+        0.5f + DepthLayers);
 
     m_guiPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_renderer->updateInitialLayouts(*m_guiPass);
@@ -356,7 +376,7 @@ const Renderer& RenderSystem::getRenderer() const
 
 glm::vec2 RenderSystem::getScreenSize() const
 {
-    return { m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height };
+    return {m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height};
 }
 
 uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
@@ -377,8 +397,13 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
     auto height = fontTexture->font->height;
     auto byteSize = width * height * numChannels * sizeof(unsigned char);
 
-    fontTexture->texture = std::make_unique<Texture>(m_renderer, VkExtent3D{ width, height, 1 }, 1, VK_FORMAT_R8_UNORM,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+    fontTexture->texture = std::make_unique<Texture>(
+        m_renderer,
+        VkExtent3D{width, height, 1},
+        1,
+        VK_FORMAT_R8_UNORM,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT);
     fontTexture->texture->fill(fontTexture->font->textureData.data(), byteSize);
     fontTexture->VulkanImageView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
@@ -403,8 +428,8 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
     descWrites[1].descriptorCount = 1;
     descWrites[1].pImageInfo = &imageInfo;
 
-    vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), static_cast<uint32_t>(descWrites.size()),
-        descWrites.data(), 0, nullptr);
+    vkUpdateDescriptorSets(
+        m_renderer->getDevice().getHandle(), static_cast<uint32_t>(descWrites.size()), descWrites.data(), 0, nullptr);
 
     m_fonts.emplace_back(std::move(fontTexture));
 
@@ -458,8 +483,12 @@ void RenderSystem::updateFullScreenMaterial()
 void RenderSystem::loadTextureAtlas()
 {
     const auto image = loadImage(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png").unwrap();
-    m_guiAtlas = std::make_unique<Texture>(m_renderer, VkExtent3D{ image.getWidth(), image.getHeight(), 1u }, 1,
-        VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    m_guiAtlas = std::make_unique<Texture>(
+        m_renderer,
+        VkExtent3D{image.getWidth(), image.getHeight(), 1u},
+        1,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_IMAGE_ASPECT_COLOR_BIT);
     m_guiAtlasView = m_guiAtlas->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
     m_guiAtlas->fill(image.getData(), image.getByteSize());
@@ -472,14 +501,21 @@ void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, cons
     m_renderer->setDefaultScissor(cmdBuffer);
 
     // Latest updated buffer
-    VkDescriptorSet descSets[] = { m_transforms->getDescriptorSet(frameIdx) };
-    uint32_t dynamicOffsets[] = { m_transforms->getDynamicOffset(cmd.transformId),
-        m_colors->getDynamicOffset(cmd.colorId) };
-    uint32_t pushConstants[2] = { m_transforms->getPushConstantValue(cmd.transformId),
-        m_colors->getPushConstantValue(cmd.colorId) };
+    VkDescriptorSet descSets[] = {m_transforms->getDescriptorSet(frameIdx)};
+    uint32_t dynamicOffsets[] = {
+        m_transforms->getDynamicOffset(cmd.transformId), m_colors->getDynamicOffset(cmd.colorId)};
+    uint32_t pushConstants[2] = {
+        m_transforms->getPushConstantValue(cmd.transformId), m_colors->getPushConstantValue(cmd.colorId)};
 
-    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_colorQuadPipeline->getPipelineLayout()->getHandle(), 0, 1, descSets, 2, dynamicOffsets);
+    vkCmdBindDescriptorSets(
+        cmdBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_colorQuadPipeline->getPipelineLayout()->getHandle(),
+        0,
+        1,
+        descSets,
+        2,
+        dynamicOffsets);
     m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, pushConstants[0]);
     m_colorQuadPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(int), pushConstants[1]);
 
@@ -493,19 +529,37 @@ void RenderSystem::renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, cons
     m_renderer->setDefaultViewport(cmdBuffer);
     m_renderer->setDefaultScissor(cmdBuffer);
 
-    VkDescriptorSet descSets[] = { m_transforms->getDescriptorSet(frameIdx), textRes->descSet };
-    uint32_t dynamicOffsets[] = { m_transforms->getDynamicOffset(cmd.transformId),
-        m_colors->getDynamicOffset(cmd.colorId) };
-    int pushConstants[2] = { static_cast<int>(m_transforms->getPushConstantValue(cmd.transformId)),
-        static_cast<int>(m_colors->getPushConstantValue(cmd.colorId)) };
+    VkDescriptorSet descSets[] = {m_transforms->getDescriptorSet(frameIdx), textRes->descSet};
+    uint32_t dynamicOffsets[] = {
+        m_transforms->getDynamicOffset(cmd.transformId), m_colors->getDynamicOffset(cmd.colorId)};
+    int pushConstants[2] = {
+        static_cast<int>(m_transforms->getPushConstantValue(cmd.transformId)),
+        static_cast<int>(m_colors->getPushConstantValue(cmd.colorId))};
 
-    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_textPipeline->getPipelineLayout()->getHandle(), 0, 2, descSets, 2, dynamicOffsets);
+    vkCmdBindDescriptorSets(
+        cmdBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_textPipeline->getPipelineLayout()->getHandle(),
+        0,
+        2,
+        descSets,
+        2,
+        dynamicOffsets);
 
-    vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0,
-        sizeof(int), &pushConstants[0]);
-    vkCmdPushConstants(cmdBuffer, m_textPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT,
-        sizeof(int), sizeof(int), &pushConstants[1]);
+    vkCmdPushConstants(
+        cmdBuffer,
+        m_textPipeline->getPipelineLayout()->getHandle(),
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(int),
+        &pushConstants[0]);
+    vkCmdPushConstants(
+        cmdBuffer,
+        m_textPipeline->getPipelineLayout()->getHandle(),
+        VK_SHADER_STAGE_FRAGMENT_BIT,
+        sizeof(int),
+        sizeof(int),
+        &pushConstants[1]);
 
     textRes->drawIndexed(cmdBuffer);
 }
@@ -516,20 +570,39 @@ void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, c
     m_renderer->setDefaultViewport(cmdBuffer);
     m_renderer->setDefaultScissor(cmdBuffer);
 
-    VkDescriptorSet descSets[] = { m_transforms->getDescriptorSet(frameIdx),
-        m_tcTransforms->getDescriptorSet(frameIdx) };
-    uint32_t dynamicOffsets[] = { m_transforms->getDynamicOffset(cmd.transformId),
-        m_colors->getDynamicOffset(cmd.colorId), m_tcTransforms->getDynamicOffset(cmd.textId) };
-    int pushConstants[3] = { static_cast<int>(m_transforms->getPushConstantValue(cmd.transformId)),
+    VkDescriptorSet descSets[] = {m_transforms->getDescriptorSet(frameIdx), m_tcTransforms->getDescriptorSet(frameIdx)};
+    uint32_t dynamicOffsets[] = {
+        m_transforms->getDynamicOffset(cmd.transformId),
+        m_colors->getDynamicOffset(cmd.colorId),
+        m_tcTransforms->getDynamicOffset(cmd.textId)};
+    int pushConstants[3] = {
+        static_cast<int>(m_transforms->getPushConstantValue(cmd.transformId)),
         static_cast<int>(m_colors->getPushConstantValue(cmd.colorId)),
-        static_cast<int>(m_tcTransforms->getPushConstantValue(cmd.textId)) };
+        static_cast<int>(m_tcTransforms->getPushConstantValue(cmd.textId))};
 
-    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_texQuadPipeline->getPipelineLayout()->getHandle(), 0, 2, descSets, 3, dynamicOffsets);
-    vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0,
-        sizeof(int), &pushConstants[0]);
-    vkCmdPushConstants(cmdBuffer, m_texQuadPipeline->getPipelineLayout()->getHandle(), VK_SHADER_STAGE_FRAGMENT_BIT,
-        sizeof(int), 2 * sizeof(int), &pushConstants[1]);
+    vkCmdBindDescriptorSets(
+        cmdBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_texQuadPipeline->getPipelineLayout()->getHandle(),
+        0,
+        2,
+        descSets,
+        3,
+        dynamicOffsets);
+    vkCmdPushConstants(
+        cmdBuffer,
+        m_texQuadPipeline->getPipelineLayout()->getHandle(),
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(int),
+        &pushConstants[0]);
+    vkCmdPushConstants(
+        cmdBuffer,
+        m_texQuadPipeline->getPipelineLayout()->getHandle(),
+        VK_SHADER_STAGE_FRAGMENT_BIT,
+        sizeof(int),
+        2 * sizeof(int),
+        &pushConstants[1]);
 
     m_quadGeometry->bindAndDraw(cmdBuffer);
 }
@@ -537,7 +610,7 @@ void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, c
 void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const
 {
     glm::mat4 transform =
-        glm::translate(glm::vec3{ rect.x, rect.y, -1.0f }) * glm::scale(glm::vec3{ rect.width, rect.height, 1.0f });
+        glm::translate(glm::vec3{rect.x, rect.y, -1.0f}) * glm::scale(glm::vec3{rect.width, rect.height, 1.0f});
     m_debugRectPipeline->bind(cmdBuffer);
     m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_VERTEX_BIT, 0, m_P * transform);
     m_debugRectPipeline->setPushConstant(cmdBuffer, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), color);
@@ -570,8 +643,8 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
 
         textVertices.emplace_back(x1, y1, gInfo.atlasOffsetX, 0.0f);
         textVertices.emplace_back(x2, y1, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, 0.0f);
-        textVertices.emplace_back(x2, y2, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth,
-            gInfo.bmpHeight / atlasHeight);
+        textVertices.emplace_back(
+            x2, y2, gInfo.atlasOffsetX + gInfo.bmpWidth / atlasWidth, gInfo.bmpHeight / atlasHeight);
         textVertices.emplace_back(x1, y2, gInfo.atlasOffsetX, gInfo.bmpHeight / atlasHeight);
 
         textFaces.emplace_back(ind + 0, ind + 2, ind + 1);

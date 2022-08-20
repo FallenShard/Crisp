@@ -1,7 +1,7 @@
 #pragma once
 
+#include <Crisp/Common/Result.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-#include <CrispCore/Result.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -15,8 +15,8 @@ using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCall
 class VulkanContext
 {
 public:
-    VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions,
-        bool enableValidationLayers);
+    VulkanContext(
+        SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers);
     ~VulkanContext();
 
     VulkanContext(const VulkanContext& other) = delete;

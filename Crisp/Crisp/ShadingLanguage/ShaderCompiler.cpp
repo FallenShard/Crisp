@@ -1,7 +1,8 @@
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
-#include <CrispCore/IO/FileUtils.hpp>
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/IO/FileUtils.hpp>
+
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -14,8 +15,8 @@ namespace crisp
 namespace
 {
 const std::filesystem::path GlslExtension = ".glsl";
-const robin_hood::unordered_set<std::string> ShaderExtensions = { "vert", "frag", "tesc", "tese", "geom", "comp",
-    "rgen", "rchit", "rmiss" };
+const robin_hood::unordered_set<std::string> ShaderExtensions = {
+    "vert", "frag", "tesc", "tese", "geom", "comp", "rgen", "rchit", "rmiss"};
 
 auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 } // namespace
@@ -66,28 +67,30 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         // Output file is shader-name.<stage>.spv
         const std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
 
-        const std::filesystem::file_time_type inputModifiedTs = inputEntry.last_write_time();
+        auto maybeGlslSource{preprocessGlslSource(inputPath)};
+        if (!maybeGlslSource.hasValue())
+        {
+            logger->error(maybeGlslSource.getError());
+            continue;
+        }
+        const auto glslSource{maybeGlslSource.unwrap()};
         const std::filesystem::file_time_type outputModifiedTs = std::filesystem::exists(outputPath)
                                                                      ? std::filesystem::last_write_time(outputPath)
                                                                      : std::filesystem::file_time_type{};
-
-        if (inputModifiedTs > outputModifiedTs)
+        if (glslSource.lastModifiedRecursive > outputModifiedTs)
         {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
             const std::filesystem::path tempInputPath = inputDir / "temp.glsl";
 
             logger->info("Compiling {}", inputPath.filename().string());
-            auto preprocessedShaderSource = preprocessGlslSource(inputPath);
-            if (!preprocessedShaderSource.hasValue())
-            {
-                logger->error(preprocessedShaderSource.getError());
-                continue;
-            }
 
-            stringToFile(tempInputPath, preprocessedShaderSource.unwrap()).unwrap();
+            stringToFile(tempInputPath, glslSource.sourceCode).unwrap();
 
-            const std::string command = fmt::format("glslangValidator.exe --target-env vulkan1.2 -o {} -S {} {}",
-                tempOutputPath.string(), shaderType, tempInputPath.string());
+            const std::string command = fmt::format(
+                "glslangValidator.exe --target-env vulkan1.2 -o {} -S {} {}",
+                tempOutputPath.string(),
+                shaderType,
+                tempInputPath.string());
 
             // Open a subprocess to compile this shader
             FILE* pipe = _popen(command.c_str(), "rt");
@@ -137,29 +140,39 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
     }
 }
 
-Result<std::string> preprocessGlslSource(const std::filesystem::path& inputPath)
+Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath)
 {
     constexpr std::string_view includeDirective("#include");
+    constexpr std::size_t trimLeft = 2;  // space + \"
+    constexpr std::size_t trimRight = 1; // \"
 
     std::stringstream preprocessed;
 
     std::size_t lineIdx = 0;
     std::string line;
     std::ifstream inputFile(inputPath);
+
+    GlslSourceFile result{};
+    result.lastModifiedRecursive = std::filesystem::last_write_time(inputPath);
     while (std::getline(inputFile, line))
     {
         if (line.starts_with(includeDirective))
         {
-            constexpr std::size_t trimLeft = 2;  // space + \"
-            constexpr std::size_t trimRight = 1; // \"
             const std::string relativeIncludePath = line.substr(includeDirective.size() + trimLeft);
             const std::filesystem::path includeFilePath =
                 inputPath.parent_path() / relativeIncludePath.substr(0, relativeIncludePath.size() - trimRight);
             if (!std::filesystem::exists(includeFilePath))
+            {
                 return resultError(
                     "Invalid include path {} at line {} of {}!", relativeIncludePath, lineIdx, inputPath.string());
-
+            }
             preprocessed << fileToString(includeFilePath).unwrap() << '\n';
+
+            const auto includeWriteTime{std::filesystem::last_write_time(includeFilePath)};
+            if (includeWriteTime > result.lastModifiedRecursive)
+            {
+                result.lastModifiedRecursive = includeWriteTime;
+            }
         }
         else
         {
@@ -168,6 +181,7 @@ Result<std::string> preprocessGlslSource(const std::filesystem::path& inputPath)
         ++lineIdx;
     }
 
-    return preprocessed.str();
+    result.sourceCode = preprocessed.str();
+    return result;
 }
 } // namespace crisp

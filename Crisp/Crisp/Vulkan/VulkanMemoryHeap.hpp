@@ -1,7 +1,7 @@
 #pragma once
 
-#include <CrispCore/Result.hpp>
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/Result.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -42,10 +42,12 @@ public:
         {
             allocationBlock->heap->free(*this);
         }
+
         inline void* getBlockMappedPtr() const
         {
             return allocationBlock->mappedPtr;
         }
+
         inline char* getMappedPtr() const
         {
             return static_cast<char*>(allocationBlock->mappedPtr) + offset;
@@ -57,7 +59,11 @@ public:
         }
     };
 
-    VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memoryTypeIndex, VkDevice device,
+    VulkanMemoryHeap(
+        VkMemoryPropertyFlags memProps,
+        VkDeviceSize blockSize,
+        uint32_t memoryTypeIndex,
+        VkDevice device,
         std::string tag);
     ~VulkanMemoryHeap();
 
@@ -70,6 +76,7 @@ public:
     {
         return m_usedSize;
     }
+
     inline VkDeviceSize getAllocatedSize() const
     {
         return m_allocationBlocks.size() * m_blockSize;

@@ -2,10 +2,13 @@
 
 #include <type_traits>
 
-#include <CrispCore/BitFlags.hpp>
+#include <Crisp/BitFlags.hpp>
 
-namespace crisp::gui
+namespace crisp
 {
+namespace gui
+{
+
 enum class SizingPolicy
 {
     Fixed,
@@ -46,7 +49,6 @@ enum class Validation
     Color = 2,
     All = Geometry | Color
 };
-DECLARE_BITFLAG(Validation)
 
 enum class State
 {
@@ -57,4 +59,7 @@ enum class State
 
     Count
 };
-} // namespace crisp::gui
+} // namespace gui
+
+DECLARE_BITFLAG_IN_NAMESPACE(gui, Validation)
+} // namespace crisp

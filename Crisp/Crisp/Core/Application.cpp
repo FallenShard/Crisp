@@ -1,22 +1,20 @@
 #include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/Window.hpp>
+
 #include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Form.hpp>
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/MemoryUsageBar.hpp>
 #include <Crisp/GUI/RenderSystem.hpp>
 #include <Crisp/GUI/StatusBar.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Scenes/SceneContainer.hpp>
 
-#include <CrispCore/ChromeProfiler.hpp>
-#include <CrispCore/Logger.hpp>
+#include <Crisp/ChromeProfiler.hpp>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
 namespace
 {
-auto logger = createLoggerMt("Application");
+const auto logger = createLoggerMt("Application");
+
 void logFps(double frameTime, double fps)
 {
     logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
@@ -54,7 +52,7 @@ Application::Application(const ApplicationEnvironment&)
 
     auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
     comboBox->setId("sceneComboBox");
-    comboBox->setPosition({ 0, 0 });
+    comboBox->setPosition({0, 0});
     comboBox->setItems(SceneContainer::getSceneNames());
     comboBox->setWidthHint(200.0f);
 
@@ -168,10 +166,12 @@ void Application::updateFrameStatistics(double frameTime)
         m_accumulatedFrames = spillOverFrac;
     }
 }
+
 void Application::onMinimize()
 {
     m_isMinimized = true;
 }
+
 void Application::onRestore()
 {
     m_isMinimized = false;

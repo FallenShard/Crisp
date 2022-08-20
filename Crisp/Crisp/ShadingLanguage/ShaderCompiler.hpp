@@ -1,13 +1,19 @@
 #pragma once
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <filesystem>
 #include <string>
 
 namespace crisp
 {
-    void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir);
+struct GlslSourceFile
+{
+    std::string sourceCode;
+    std::filesystem::file_time_type lastModifiedRecursive;
+};
 
-    Result<std::string> preprocessGlslSource(const std::filesystem::path& inputPath);
-}
+void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir);
+
+Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath);
+} // namespace crisp

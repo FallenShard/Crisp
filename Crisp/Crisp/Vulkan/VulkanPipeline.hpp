@@ -5,7 +5,7 @@
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <CrispCore/BitFlags.hpp>
+#include <Crisp/BitFlags.hpp>
 
 #include <filesystem>
 
@@ -26,8 +26,11 @@ DECLARE_BITFLAG(PipelineDynamicState);
 class VulkanPipeline final : public VulkanResource<VkPipeline, vkDestroyPipeline>
 {
 public:
-    VulkanPipeline(const VulkanDevice& device, VkPipeline pipelineHandle,
-        std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags);
+    VulkanPipeline(
+        const VulkanDevice& device,
+        VkPipeline pipelineHandle,
+        std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+        PipelineDynamicStateFlags dynamicStateFlags);
 
     inline VulkanPipelineLayout* getPipelineLayout() const
     {
@@ -49,21 +52,25 @@ public:
     }
 
     template <typename T>
-    inline void setPushConstant(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset,
-        T&& value) const
+    inline void setPushConstant(
+        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& value) const
     {
         vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, sizeof(T), &value);
     }
 
-    inline void setPushConstant(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset,
-        uint32_t size, const char* value) const
+    inline void setPushConstant(
+        VkCommandBuffer cmdBuffer,
+        VkShaderStageFlags shaderStages,
+        uint32_t offset,
+        uint32_t size,
+        const char* value) const
     {
         vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset);
     }
 
     template <typename T, typename... Ts>
-    inline void setPushConstants(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg,
-        Ts&&... args) const
+    inline void setPushConstants(
+        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg, Ts&&... args) const
     {
         setPushConstantsWithOffset(cmdBuffer, shaderStages, 0, std::forward<T>(arg), std::forward<Ts>(args)...);
     }
@@ -82,8 +89,8 @@ public:
 
 protected:
     template <typename T, typename... Ts>
-    inline void setPushConstantsWithOffset(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset,
-        T&& arg, Ts&&... args) const
+    inline void setPushConstantsWithOffset(
+        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const
     {
         setPushConstant(cmdBuffer, shaderStages, offset, std::forward<T>(arg));
 

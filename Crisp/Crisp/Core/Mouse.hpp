@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Keyboard.hpp"
+#include <Crisp/Core/Keyboard.hpp>
 
 namespace crisp
 {

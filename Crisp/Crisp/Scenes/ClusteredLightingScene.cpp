@@ -23,8 +23,8 @@
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Models/Skybox.hpp>
-#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
 
 #include <Crisp/Lights/DirectionalLight.hpp>
 #include <Crisp/Lights/EnvironmentLighting.hpp>
@@ -37,9 +37,9 @@
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <CrispCore/LuaConfig.hpp>
-#include <CrispCore/Math/Constants.hpp>
-#include <CrispCore/Profiler.hpp>
+#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Math/Constants.hpp>
+#include <Crisp/Profiler.hpp>
 
 namespace crisp
 {
@@ -68,19 +68,20 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
     // Main render pass
     /*m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer->getDevice(),
                                                renderer->getSwapChainExtent(), VK_SAMPLE_COUNT_8_BIT));*/
-    m_renderGraph->addRenderPass(MainPass,
-        createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
+    m_renderGraph->addRenderPass(
+        MainPass, createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);
 
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
 
-    m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
-    m_lightSystem->setDirectionalLight(
-        DirectionalLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5)));
-    m_lightSystem->enableCascadedShadowMapping(CascadeCount, ShadowMapSize);
-    m_lightSystem->createPointLightBuffer(1024);
+    m_lightSystem = std::make_unique<LightSystem>(
+        m_renderer,
+        DirectionalLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5)),
+        ShadowMapSize,
+        CascadeCount);
+    m_lightSystem->createPointLightBuffer(createRandomPointLights(1024));
     m_lightSystem->createTileGridBuffers(m_cameraController->getCameraParameters());
     m_lightSystem->addLightClusteringPass(*m_renderGraph, *m_resourceContext->getUniformBuffer("camera"));
 
@@ -90,15 +91,16 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
 
     // Geometry setup
-    std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
-    m_resourceContext->addGeometry("cubeRT",
-        std::make_unique<Geometry>(m_renderer, createCubeMesh({ VertexAttribute::Position, VertexAttribute::Normal })));
-    m_resourceContext->addGeometry("cubeShadow",
-        std::make_unique<Geometry>(m_renderer, createCubeMesh(shadowVertexFormat)));
-    m_resourceContext->addGeometry("sphereShadow",
-        std::make_unique<Geometry>(m_renderer, createSphereMesh(shadowVertexFormat)));
-    m_resourceContext->addGeometry("floorShadow",
-        std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowVertexFormat)));
+    std::vector<VertexAttributeDescriptor> shadowVertexFormat = {VertexAttribute::Position};
+    m_resourceContext->addGeometry(
+        "cubeRT",
+        std::make_unique<Geometry>(m_renderer, createCubeMesh({VertexAttribute::Position, VertexAttribute::Normal})));
+    m_resourceContext->addGeometry(
+        "cubeShadow", std::make_unique<Geometry>(m_renderer, createCubeMesh(shadowVertexFormat)));
+    m_resourceContext->addGeometry(
+        "sphereShadow", std::make_unique<Geometry>(m_renderer, createSphereMesh(shadowVertexFormat)));
+    m_resourceContext->addGeometry(
+        "floorShadow", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowVertexFormat)));
 
     createCommonTextures();
 
@@ -189,21 +191,42 @@ RenderNode* ClusteredLightingScene::createRenderNode(std::string id, int transfo
 
 void ClusteredLightingScene::createCommonTextures()
 {
-    m_resourceContext->addSampler("nearestNeighbor",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
-    m_resourceContext->addSampler("linearRepeat",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-    m_resourceContext->addSampler("linearMipmap",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f));
-    m_resourceContext->addSampler("linearClamp",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 11.0f));
-    m_resourceContext->addSampler("linearMirrorRepeat",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, 16.0f, 11.0f));
+    auto& imageCache = m_resourceContext->imageCache;
+    imageCache.addSampler(
+        "nearestNeighbor",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
+    imageCache.addSampler(
+        "linearRepeat",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
+    imageCache.addSampler(
+        "linearMipmap",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(),
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            16.0f,
+            5.0f));
+    imageCache.addSampler(
+        "linearClamp",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(),
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            16.0f,
+            11.0f));
+    imageCache.addSampler(
+        "linearMirrorRepeat",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(),
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+            16.0f,
+            11.0f));
 
     // Environment map
     LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
@@ -214,15 +237,15 @@ void ClusteredLightingScene::createCommonTextures()
     auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
 
     auto [diffEnv, diffEnvView] = setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
-    m_resourceContext->addImageWithView("envIrrMap", std::move(diffEnv), std::move(diffEnvView));
+    imageCache.addImageWithView("envIrrMap", std::move(diffEnv), std::move(diffEnvView));
     auto [reflEnv, reflEnvView] = setupReflectEnvMap(m_renderer, *cubeMapView, 512);
-    m_resourceContext->addImageWithView("filteredMap", std::move(reflEnv), std::move(reflEnvView));
+    imageCache.addImageWithView("filteredMap", std::move(reflEnv), std::move(reflEnvView));
 
-    m_resourceContext->addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
-    m_resourceContext->addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
+    imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
 
-    auto pbrPipeline = m_resourceContext->createPipeline("pbrUnif", "PbrClusteredLights.lua",
-        m_renderGraph->getRenderPass(MainPass), 0);
+    auto pbrPipeline = m_resourceContext->createPipeline(
+        "pbrUnif", "PbrClusteredLights.lua", m_renderGraph->getRenderPass(MainPass), 0);
     auto pbrMaterial = m_resourceContext->createMaterial("pbrUnif", pbrPipeline);
     pbrMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     pbrMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
@@ -230,19 +253,17 @@ void ClusteredLightingScene::createCommonTextures()
     m_uniformMaterialParams.albedo = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     m_uniformMaterialParams.metallic = 0.0f;
     m_uniformMaterialParams.roughness = 0.1f;
-    m_resourceContext->addUniformBuffer("pbrUnifParams",
+    m_resourceContext->addUniformBuffer(
+        "pbrUnifParams",
         std::make_unique<UniformBuffer>(m_renderer, m_uniformMaterialParams, BufferUpdatePolicy::PerFrame));
     pbrMaterial->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("pbrUnifParams"));
 
     pbrMaterial->writeDescriptor(1, 0, *m_lightSystem->getPointLightBuffer());
     pbrMaterial->writeDescriptor(1, 1, *m_lightSystem->getLightIndexBuffer());
 
-    pbrMaterial->writeDescriptor(2, 0, *m_resourceContext->getImageView("envIrrMap"),
-        m_resourceContext->getSampler("linearClamp"));
-    pbrMaterial->writeDescriptor(2, 1, *m_resourceContext->getImageView("filteredMap"),
-        m_resourceContext->getSampler("linearMipmap"));
-    pbrMaterial->writeDescriptor(2, 2, *m_resourceContext->getImageView("brdfLut"),
-        m_resourceContext->getSampler("linearClamp"));
+    pbrMaterial->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), &imageCache.getSampler("linearClamp"));
+    pbrMaterial->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), &imageCache.getSampler("linearMipmap"));
+    pbrMaterial->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), &imageCache.getSampler("linearClamp"));
 
     pbrMaterial->writeDescriptor(3, 0, m_lightSystem->getTileGridViews(), nullptr, VK_IMAGE_LAYOUT_GENERAL);
 }
@@ -275,11 +296,11 @@ void ClusteredLightingScene::createShaderball()
 
 void ClusteredLightingScene::createPlane()
 {
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal,
-        VertexAttribute::TexCoord, VertexAttribute::Tangent };
+    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
+        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent};
 
-    m_resourceContext->addGeometry("floor",
-        std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
+    m_resourceContext->addGeometry(
+        "floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

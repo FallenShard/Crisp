@@ -2,6 +2,8 @@
 
 namespace
 {
+constexpr float kDefaultNearZ{0.1f};
+constexpr float kDefaultFarZ{1000.0f};
 const glm::mat4 InvertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
 
 glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar)
@@ -30,7 +32,7 @@ constexpr glm::vec<3, ScalarType> AxisZ = { ScalarType(0.0), ScalarType(0.0), Sc
 namespace crisp
 {
 Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight)
-    : Camera(viewportWidth, viewportHeight, 0.1f, 1000.0f)
+    : Camera(viewportWidth, viewportHeight, kDefaultNearZ, kDefaultFarZ)
 {
 }
 

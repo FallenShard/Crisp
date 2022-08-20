@@ -14,9 +14,8 @@ std::pair<std::unique_ptr<VulkanContext>, Window> createContextWithSurface()
 {
     Window window = Window({ 0, 0 }, { 200, 200 }, "unit_test", true);
     return { std::make_unique<VulkanContext>(window.createSurfaceCallback(),
-                                             ApplicationEnvironment::getRequiredVulkanExtensions(),
-                                             false),
-             std::move(window) };
+                 ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false),
+        std::move(window) };
 }
 
 TEST_F(VulkanContextTest, WithoutSurface)

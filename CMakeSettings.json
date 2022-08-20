@@ -1,47 +1,53 @@
 ﻿{
-    "configurations": [
-      {
-        "name": "x64-Debug",
-        "generator": "Ninja",
-        "configurationType": "Debug",
-        "inheritEnvironments": [ "msvc_x64_x64" ],
-        "buildRoot": "${projectDir}\\build\\${name}",
-        "installRoot": "${projectDir}\\install\\${name}",
-        "cmakeCommandArgs": "",
-        "buildCommandArgs": "",
-        "ctestCommandArgs": "",
-        "enableMicrosoftCodeAnalysis": false,
-        "enableClangTidyCodeAnalysis": false,
-        "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
-      },
-      {
-          "name": "x64-Release",
-          "generator": "Ninja",
-          "configurationType": "Release",
-          "buildRoot": "${projectDir}\\build\\${name}",
-          "installRoot": "${projectDir}\\install\\${name}",
-          "cmakeCommandArgs": "",
-          "buildCommandArgs": "",
-          "ctestCommandArgs": "",
-          "inheritEnvironments": [ "msvc_x64_x64" ],
-          "enableMicrosoftCodeAnalysis": false,
-          "enableClangTidyCodeAnalysis": false,
-          "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
-      },
-      {
-        "name": "x64-RelWithDebInfo",
-        "generator": "Ninja",
-        "configurationType": "RelWithDebInfo",
-        "buildRoot": "${projectDir}\\build\\${name}",
-        "installRoot": "${projectDir}\\install\\${name}",
-        "cmakeCommandArgs": "",
-        "buildCommandArgs": "",
-        "ctestCommandArgs": "",
-        "inheritEnvironments": [ "msvc_x64_x64" ],
-        "variables": [],
-        "enableMicrosoftCodeAnalysis": false,
-        "enableClangTidyCodeAnalysis": false,
-        "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
-      }
-    ]
+  "configurations": [
+    {
+      "name": "x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [
+        "msvc_x64_x64"
+      ],
+      "buildRoot": "${projectDir}\\build\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "enableMicrosoftCodeAnalysis": true,
+      "enableClangTidyCodeAnalysis": false,
+      "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
+    },
+    {
+      "name": "x64-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\build\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [
+        "msvc_x64_x64"
+      ],
+      "enableMicrosoftCodeAnalysis": false,
+      "enableClangTidyCodeAnalysis": false,
+      "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
+    },
+    {
+      "name": "x64-RelWithDebInfo",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\build\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [
+        "msvc_x64_x64"
+      ],
+      "variables": [],
+      "enableMicrosoftCodeAnalysis": false,
+      "enableClangTidyCodeAnalysis": false,
+      "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
+    }
+  ]
 }

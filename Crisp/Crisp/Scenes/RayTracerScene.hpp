@@ -2,7 +2,7 @@
 
 #include <Crisp/Scenes/Scene.hpp>
 
-#include <CrispCore/Event.hpp>
+#include <Crisp/Event.hpp>
 #include <Vesper/RayTracerUpdate.hpp>
 
 #include <tbb/concurrent_queue.h>

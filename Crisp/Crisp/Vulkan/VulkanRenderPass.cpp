@@ -1,6 +1,5 @@
 #include "VulkanRenderPass.hpp"
 
-#include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanEnumToString.hpp>
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
@@ -8,7 +7,7 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
-#include <CrispCore/Enumerate.hpp>
+#include <Crisp/Enumerate.hpp>
 
 namespace crisp
 {
@@ -21,8 +20,8 @@ VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device, bool isSwapChainD
 {
 }
 
-VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device, VkRenderPass renderPass,
-    RenderPassDescription&& description)
+VulkanRenderPass::VulkanRenderPass(
+    const VulkanDevice& device, VkRenderPass renderPass, RenderPassDescription&& description)
     : VulkanResource(renderPass, device.getResourceDeallocator())
     , m_isWindowSizeDependent(description.isSwapChainDependent)
     , m_renderArea(description.renderArea)
@@ -36,8 +35,8 @@ VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device, VkRenderPass rend
 {
     if (description.renderArea.width == 0 || description.renderArea.height == 0)
     {
-        spdlog::critical("Render area of zero specified: [{}, {}]", description.renderArea.width,
-            description.renderArea.height);
+        spdlog::critical(
+            "Render area of zero specified: [{}, {}]", description.renderArea.width, description.renderArea.height);
         std::exit(-1);
     }
 
@@ -74,7 +73,7 @@ VkExtent2D VulkanRenderPass::getRenderArea() const
 
 VkViewport VulkanRenderPass::createViewport() const
 {
-    return { 0.0f, 0.0f, static_cast<float>(m_renderArea.width), static_cast<float>(m_renderArea.height), 0.0f, 1.0f };
+    return {0.0f, 0.0f, static_cast<float>(m_renderArea.width), static_cast<float>(m_renderArea.height), 0.0f, 1.0f};
 }
 
 VkRect2D VulkanRenderPass::createScissor() const
@@ -85,13 +84,13 @@ VkRect2D VulkanRenderPass::createScissor() const
     };
 }
 
-void VulkanRenderPass::begin(const VkCommandBuffer cmdBuffer, const uint32_t frameIndex,
-    const VkSubpassContents content) const
+void VulkanRenderPass::begin(
+    const VkCommandBuffer cmdBuffer, const uint32_t frameIndex, const VkSubpassContents content) const
 {
-    VkRenderPassBeginInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+    VkRenderPassBeginInfo renderPassInfo = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
     renderPassInfo.renderPass = m_handle;
     renderPassInfo.framebuffer = m_framebuffers.at(frameIndex)->getHandle();
-    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = m_renderArea;
     renderPassInfo.clearValueCount = static_cast<uint32_t>(m_attachmentClearValues.size());
     renderPassInfo.pClearValues = m_attachmentClearValues.data();
@@ -138,18 +137,28 @@ std::vector<VulkanImageView*> VulkanRenderPass::getRenderTargetViews(uint32_t re
     return imageViews;
 }
 
-std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(const VulkanDevice& device, uint32_t index,
-    uint32_t numFrames) const
+std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(
+    const VulkanDevice& device, uint32_t index, uint32_t numFrames) const
 {
-    return std::make_unique<VulkanImageView>(device, *m_renderTargets.at(index),
-        numFrames > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D, 0, numFrames, 0, 1);
+    return std::make_unique<VulkanImageView>(
+        device,
+        *m_renderTargets.at(index),
+        numFrames > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
+        0,
+        numFrames,
+        0,
+        1);
 }
 
-std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(const VulkanDevice& device, uint32_t index,
-    uint32_t baseLayer, uint32_t numLayers) const
+std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(
+    const VulkanDevice& device, uint32_t index, uint32_t baseLayer, uint32_t numLayers) const
 {
-    return std::make_unique<VulkanImageView>(device, *m_renderTargets.at(index),
-        numLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D, baseLayer, numLayers);
+    return std::make_unique<VulkanImageView>(
+        device,
+        *m_renderTargets.at(index),
+        numLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
+        baseLayer,
+        numLayers);
 }
 
 std::unique_ptr<VulkanImage> VulkanRenderPass::extractRenderTarget(uint32_t index)
@@ -185,10 +194,17 @@ void VulkanRenderPass::createRenderTargets(const VulkanDevice& device)
             layerMultiplier = *info.buffered ? RendererConfig::VirtualFrameCount : 1;
         }
 
-        const VkExtent3D dims = { m_renderArea.width, m_renderArea.height, info.depthSlices };
+        const VkExtent3D dims = {m_renderArea.width, m_renderArea.height, info.depthSlices};
         const uint32_t totalLayerCount = info.layerCount * layerMultiplier;
-        m_renderTargets[i] = std::make_unique<VulkanImage>(device, dims, totalLayerCount, info.mipmapCount, info.format,
-            info.usage, determineImageAspect(info.format), info.createFlags);
+        m_renderTargets[i] = std::make_unique<VulkanImage>(
+            device,
+            dims,
+            totalLayerCount,
+            info.mipmapCount,
+            info.format,
+            info.usage,
+            determineImageAspect(info.format),
+            info.createFlags);
     }
 }
 
@@ -237,7 +253,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
 
 VkExtent3D VulkanRenderPass::getRenderAreaExtent() const
 {
-    return { m_renderArea.width, m_renderArea.height, 1u };
+    return {m_renderArea.width, m_renderArea.height, 1u};
 }
 
 void VulkanRenderPass::createResources(const VulkanDevice& device)
@@ -260,8 +276,8 @@ void VulkanRenderPass::freeResources()
     m_framebuffers.clear();
 }
 
-void VulkanRenderPass::setDepthRenderTargetInfo(uint32_t index, VkImageUsageFlags additionalFlags,
-    VkClearDepthStencilValue clearValue)
+void VulkanRenderPass::setDepthRenderTargetInfo(
+    uint32_t index, VkImageUsageFlags additionalFlags, VkClearDepthStencilValue clearValue)
 {
     m_renderTargetInfos.at(index).initDstStageFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     m_renderTargetInfos.at(index).usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | additionalFlags;
@@ -273,8 +289,8 @@ void VulkanRenderPass::setDepthRenderTargetInfo(uint32_t index, VkImageUsageFlag
     m_attachmentClearValues.at(index).depthStencil = clearValue;
 }
 
-void VulkanRenderPass::setColorRenderTargetInfo(uint32_t index, VkImageUsageFlags additionalFlags,
-    VkClearColorValue clearValue)
+void VulkanRenderPass::setColorRenderTargetInfo(
+    uint32_t index, VkImageUsageFlags additionalFlags, VkClearColorValue clearValue)
 {
     m_renderTargetInfos.at(index).initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     m_renderTargetInfos.at(index).usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | additionalFlags;

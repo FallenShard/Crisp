@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/Mesh/VertexAttributeDescriptor.hpp>
+#include <Crisp/Mesh/VertexAttributeDescriptor.hpp>
 
 #include <filesystem>
 #include <string>

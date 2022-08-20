@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -86,7 +86,7 @@ private:
 
     float m_viscosityFactor = 5.0f;
     float m_kappa = 1.0f;
-    glm::vec3 m_gravity = { 0.0f, -9.81f, 0.0f };
+    glm::vec3 m_gravity = {0.0f, -9.81f, 0.0f};
     bool m_runSimulation = false;
 
     RenderGraph* m_renderGraph;

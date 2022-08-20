@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
@@ -17,7 +17,11 @@ class UniformBuffer
 public:
     UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
     UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, const void* data = nullptr);
-    UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, BufferUpdatePolicy updatePolicy,
+    UniformBuffer(
+        Renderer* renderer,
+        size_t size,
+        bool isShaderStorageBuffer,
+        BufferUpdatePolicy updatePolicy,
         const void* data = nullptr);
 
     template <typename T>

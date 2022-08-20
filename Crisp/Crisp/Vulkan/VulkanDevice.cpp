@@ -4,7 +4,7 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <CrispCore/Logger.hpp>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
@@ -13,8 +13,8 @@ namespace
 auto logger = createLoggerMt("VulkanDevice");
 }
 
-VulkanDevice::VulkanDevice(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig,
-    int32_t virtualFrameCount)
+VulkanDevice::VulkanDevice(
+    const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
     : m_handle(physicalDevice.createLogicalDevice(queueConfig))
     , m_physicalDevice(&physicalDevice)
     , m_generalQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(0)))
@@ -59,7 +59,7 @@ const VulkanQueue& VulkanDevice::getTransferQueue() const
 
 void VulkanDevice::invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size)
 {
-    VkMappedMemoryRange memRange = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
+    VkMappedMemoryRange memRange = {VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
     memRange.memory = memory;
     memRange.offset = offset;
     memRange.size = size;
@@ -93,7 +93,7 @@ void VulkanDevice::flushMappedRanges()
 
 VkSemaphore VulkanDevice::createSemaphore() const
 {
-    VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    VkSemaphoreCreateInfo semInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 
     VkSemaphore semaphore;
     vkCreateSemaphore(m_handle, &semInfo, nullptr, &semaphore);
@@ -102,7 +102,7 @@ VkSemaphore VulkanDevice::createSemaphore() const
 
 VkFence VulkanDevice::createFence(VkFenceCreateFlags flags) const
 {
-    VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fenceInfo.flags = flags;
 
     VkFence fence;
@@ -148,8 +148,8 @@ void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescripto
 void VulkanDevice::flushDescriptorUpdates()
 {
     if (!m_descriptorWrites.empty())
-        vkUpdateDescriptorSets(m_handle, static_cast<uint32_t>(m_descriptorWrites.size()), m_descriptorWrites.data(), 0,
-            nullptr);
+        vkUpdateDescriptorSets(
+            m_handle, static_cast<uint32_t>(m_descriptorWrites.size()), m_descriptorWrites.data(), 0, nullptr);
 
     m_descriptorWrites.clear();
     m_imageInfos.clear();

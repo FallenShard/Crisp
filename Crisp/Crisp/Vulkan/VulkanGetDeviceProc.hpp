@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <vulkan/vulkan.h>
 

@@ -4,17 +4,22 @@
 
 namespace crisp
 {
-VulkanSampler::VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter,
-    VkSamplerAddressMode addressMode)
+VulkanSampler::VulkanSampler(
+    const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode)
     : VulkanSampler(device, minFilter, magFilter, addressMode, 1.0f, 0.0f)
 {
 }
 
-VulkanSampler::VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter,
-    VkSamplerAddressMode addressMode, float anisotropy, float maxLod)
+VulkanSampler::VulkanSampler(
+    const VulkanDevice& device,
+    VkFilter minFilter,
+    VkFilter magFilter,
+    VkSamplerAddressMode addressMode,
+    float anisotropy,
+    float maxLod)
     : VulkanResource(device.getResourceDeallocator())
 {
-    VkSamplerCreateInfo samplerInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    VkSamplerCreateInfo samplerInfo = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     samplerInfo.magFilter = magFilter;
     samplerInfo.minFilter = minFilter;
     samplerInfo.addressModeU = addressMode;
@@ -35,8 +40,14 @@ VulkanSampler::VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkF
 
 std::unique_ptr<VulkanSampler> createLinearClampSampler(const VulkanDevice& device)
 {
-    return std::make_unique<VulkanSampler>(device, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    return std::make_unique<VulkanSampler>(
+        device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+}
+
+std::unique_ptr<VulkanSampler> createNearestClampSampler(const VulkanDevice& device)
+{
+    return std::make_unique<VulkanSampler>(
+        device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 }
 
 } // namespace crisp

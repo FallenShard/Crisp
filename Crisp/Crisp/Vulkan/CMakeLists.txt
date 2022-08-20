@@ -1,0 +1,63 @@
+add_cpp_static_library(CrispVulkan
+    "DescriptorSetAllocator.cpp"
+    "DescriptorSetAllocator.hpp"
+    "VulkanAccelerationStructure.cpp"
+    "VulkanAccelerationStructure.hpp"
+    "VulkanGetDeviceProc.hpp"
+    "VulkanBuffer.cpp"
+    "VulkanBuffer.hpp"
+    "VulkanBufferView.hpp"
+    "VulkanCommandBuffer.cpp"
+    "VulkanCommandBuffer.hpp"
+    "VulkanCommandPool.cpp"
+    "VulkanCommandPool.hpp"
+    "VulkanContext.cpp"
+    "VulkanContext.hpp"
+    "VulkanDebugUtils.cpp"
+    "VulkanDebugUtils.hpp"
+    "VulkanDescriptorSet.cpp"
+    "VulkanDescriptorSet.hpp"
+    "VulkanDevice.cpp"
+    "VulkanDevice.hpp"
+    "VulkanFormatTraits.hpp"
+    "VulkanFramebuffer.cpp"
+    "VulkanFramebuffer.hpp"
+    "VulkanImage.cpp"
+    "VulkanImage.hpp"
+    "VulkanImageView.cpp"
+    "VulkanImageView.hpp"
+    "VulkanMemoryAllocator.cpp"
+    "VulkanMemoryAllocator.hpp"
+    "VulkanMemoryHeap.cpp"
+    "VulkanMemoryHeap.hpp"
+    "VulkanPhysicalDevice.cpp"
+    "VulkanPhysicalDevice.hpp"
+    "VulkanPipeline.cpp"
+    "VulkanPipeline.hpp"
+    "VulkanPipelineLayout.cpp"
+    "VulkanPipelineLayout.hpp"
+    "VulkanQueue.cpp"
+    "VulkanQueue.hpp"
+    "VulkanQueueConfiguration.cpp"
+    "VulkanQueueConfiguration.hpp"
+    "VulkanRenderPass.cpp"
+    "VulkanRenderPass.hpp"
+    "VulkanResource.hpp"
+    "VulkanResourceDeallocator.hpp"
+    "VulkanResourceDeallocator.cpp"
+    "VulkanSampler.cpp"
+    "VulkanSampler.hpp"
+    "VulkanSwapChain.cpp"
+    "VulkanSwapChain.hpp"
+    "VulkanEnumToString.hpp"
+    "VulkanEnumToString.cpp"
+)
+target_include_directories(CrispVulkan PUBLIC "../../")
+target_link_libraries(CrispVulkan
+    PUBLIC CrispBitFlags
+    PUBLIC CrispRendererConfig
+    PUBLIC CrispResult
+    PUBLIC CrispRobinHood
+    PUBLIC CrispLogger
+    PUBLIC CrispUtils
+    PUBLIC vulkan)

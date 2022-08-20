@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
@@ -15,8 +15,12 @@ class Renderer;
 class StorageBuffer
 {
 public:
-    StorageBuffer(Renderer* renderer, VkDeviceSize size, VkBufferUsageFlags additionalUsageFlags = 0,
-        BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::PerFrameGpu, const void* data = nullptr);
+    StorageBuffer(
+        Renderer* renderer,
+        VkDeviceSize size,
+        VkBufferUsageFlags additionalUsageFlags = 0,
+        BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::PerFrameGpu,
+        const void* data = nullptr);
 
     ~StorageBuffer();
 

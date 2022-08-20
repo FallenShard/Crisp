@@ -5,15 +5,15 @@
 namespace crisp
 {
 Animation::Animation(double startDelay, double duration, bool isLooped, int loopCount)
-    : m_startDelay(startDelay)
-    , m_duration(duration)
-    , m_isLooped(isLooped)
-    , m_isActive(false)
-    , m_isFinished(false)
-    , m_loopCount(loopCount == 0 ? std::numeric_limits<int>::max() : loopCount)
-    , m_loopsCompleted(0)
+    : m_duration(duration)
+    , m_startDelay(startDelay)
     , m_elapsedTime(0)
     , m_elapsedDelayTime(0)
+    , m_isActive(false)
+    , m_isFinished(false)
+    , m_isLooped(isLooped)
+    , m_loopCount(loopCount == 0 ? std::numeric_limits<int>::max() : loopCount)
+    , m_loopsCompleted(0)
     , m_framesCompleted(0)
 {
 }

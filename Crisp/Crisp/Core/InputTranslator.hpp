@@ -7,7 +7,7 @@
 
 namespace crisp
 {
-inline Key translateGlfwToKey(int keyCode)
+inline Key translateGlfwToKey(const int keyCode)
 {
     switch (keyCode)
     {

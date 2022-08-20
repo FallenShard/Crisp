@@ -1,7 +1,7 @@
 #pragma once
 
-#include <CrispCore/Event.hpp>
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Event.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp
 {
@@ -10,6 +10,12 @@ class Animation
 public:
     Animation(double startDelay, double duration, bool isLooped = false, int loopCount = 1);
     virtual ~Animation() = default;
+
+    Animation(const Animation&) = default;
+    Animation(Animation&&) = default;
+
+    Animation& operator=(const Animation&) = default;
+    Animation& operator=(Animation&&) = default;
 
     double getDuration() const;
 

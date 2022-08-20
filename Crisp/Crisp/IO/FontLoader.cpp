@@ -1,5 +1,5 @@
 #define NOMINMAX
-#include "FontLoader.hpp"
+#include <Crisp/IO/FontLoader.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -84,7 +84,7 @@ std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) con
         height = std::max(height, glyph->bitmap.rows);
     }
 
-    return { width, height };
+    return {width, height};
 }
 
 void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const
@@ -102,8 +102,8 @@ void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint
             continue;
         }
 
-        updateTexData(font.textureData, glyph->bitmap.buffer, currX, paddedWidth, glyph->bitmap.width,
-            glyph->bitmap.rows);
+        updateTexData(
+            font.textureData, glyph->bitmap.buffer, currX, paddedWidth, glyph->bitmap.width, glyph->bitmap.rows);
 
         font.glyphs[i - CharBegin].atlasOffsetX =
             static_cast<float>(currX) / static_cast<float>(font.width) * xOffsetScale;
@@ -121,8 +121,13 @@ void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint
     font.height = paddedHeight;
 }
 
-void FontLoader::updateTexData(std::vector<unsigned char>& texData, unsigned char* data, int xOffset, uint32_t dstWidth,
-    uint32_t width, uint32_t height) const
+void FontLoader::updateTexData(
+    std::vector<unsigned char>& texData,
+    unsigned char* data,
+    int xOffset,
+    uint32_t dstWidth,
+    uint32_t width,
+    uint32_t height) const
 {
     for (uint32_t y = 0; y < height; y++)
     {

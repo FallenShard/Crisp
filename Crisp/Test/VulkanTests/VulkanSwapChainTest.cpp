@@ -7,7 +7,7 @@
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 using namespace crisp;
 
@@ -20,6 +20,7 @@ struct VulkanSwapChainData
 {
     T deps;
     VulkanSwapChain swapChain;
+
     VulkanSwapChainData(T&& deps, VulkanSwapChain&& swapChain)
         : deps(std::move(deps))
         , swapChain(std::move(swapChain))
@@ -32,13 +33,15 @@ auto createSwapChain(bool tripleBuffering)
 {
     struct
     {
-        std::unique_ptr<Window> window{ std::make_unique<Window>(0, 0, Width, Height, "unit_test", true) };
-        std::unique_ptr<VulkanContext> context{ std::make_unique<VulkanContext>(window->createSurfaceCallback(),
-            ApplicationEnvironment::getRequiredVulkanExtensions(), false) };
-        std::unique_ptr<VulkanPhysicalDevice> physicalDevice{ std::make_unique<VulkanPhysicalDevice>(
-            context->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap()) };
-        std::unique_ptr<VulkanDevice> device{ std::make_unique<VulkanDevice>(*physicalDevice,
-            createDefaultQueueConfiguration(*context, *physicalDevice), RendererConfig::VirtualFrameCount) };
+        std::unique_ptr<Window> window{std::make_unique<Window>(0, 0, Width, Height, "unit_test", true)};
+        std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(
+            window->createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false)};
+        std::unique_ptr<VulkanPhysicalDevice> physicalDevice{std::make_unique<VulkanPhysicalDevice>(
+            context->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap())};
+        std::unique_ptr<VulkanDevice> device{std::make_unique<VulkanDevice>(
+            *physicalDevice,
+            createDefaultQueueConfiguration(*context, *physicalDevice),
+            RendererConfig::VirtualFrameCount)};
     } deps;
 
     VulkanSwapChain swapChain(*deps.device, *deps.context, tripleBuffering);
@@ -110,15 +113,15 @@ TEST_F(VulkanSwapChainTest, Recreate)
 
 TEST_F(VulkanSwapChainTest, WindowResized)
 {
-    auto [deps, swapChain] = createSwapChain<150u, 300>(false);
+    auto [deps, swapChain] = createSwapChain<150, 300>(false);
     ASSERT_NE(swapChain.getHandle(), nullptr);
     EXPECT_EQ(swapChain.getExtent().width, 150u);
     EXPECT_EQ(swapChain.getExtent().height, 300u);
 
-    glfwSetWindowSize(deps.window->getHandle(), 512, 1024);
+    deps.window->setSize(512, 1024);
     swapChain.recreate(*deps.device, *deps.context);
 
     ASSERT_NE(swapChain.getHandle(), nullptr);
-    EXPECT_EQ(swapChain.getExtent().width, 512u);
-    EXPECT_EQ(swapChain.getExtent().height, 1024u);
+    EXPECT_EQ(swapChain.getExtent().width, 512);
+    EXPECT_EQ(swapChain.getExtent().height, 1024);
 }

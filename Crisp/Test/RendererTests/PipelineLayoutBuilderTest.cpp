@@ -9,7 +9,7 @@
 
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <numeric>
 
@@ -24,7 +24,9 @@ TEST_F(PipelineLayoutBuilderTest, BasicUsage)
     const auto& [deps, device] = createDevice();
 
     PipelineLayoutBuilder builder{};
-    builder.defineDescriptorSet(0, false,
+    builder.defineDescriptorSet(
+        0,
+        false,
         {
             {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
             {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},

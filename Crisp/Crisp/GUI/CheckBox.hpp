@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include <CrispCore/Event.hpp>
+#include <Crisp/Event.hpp>
 
 #include <Crisp/Animation/PropertyAnimation.hpp>
 #include <Crisp/Gui/Control.hpp>

@@ -22,8 +22,11 @@ VulkanQueue::VulkanQueue(const VulkanDevice& device, QueueIdentifier queueId)
 {
 }
 
-VkResult VulkanQueue::submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer,
-    VkFence fence, VkPipelineStageFlags waitPipelineStage) const
+VkResult VulkanQueue::submit(VkSemaphore waitSemaphore,
+    VkSemaphore signalSemaphore,
+    VkCommandBuffer commandBuffer,
+    VkFence fence,
+    VkPipelineStageFlags waitPipelineStage) const
 {
     const VkPipelineStageFlags waitStage[] = { waitPipelineStage };
 

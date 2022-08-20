@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -10,6 +10,7 @@ namespace crisp
 {
 class VulkanResourceDeallocator;
 using VulkanDestructorCallback = void (*)(void*, VulkanResourceDeallocator*);
+
 struct DeferredDestructor
 {
     int64_t deferredFrameIndex;
@@ -31,7 +32,7 @@ public:
     template <typename VulkanHandleType>
     void deferDestruction(int32_t framesToLive, VulkanHandleType handle, VulkanDestructorCallback callback)
     {
-        m_deferredDestructors.push_back({ m_currentFrameIndex, framesToLive, handle, callback });
+        m_deferredDestructors.push_back({m_currentFrameIndex, framesToLive, handle, callback});
     }
 
     void deferMemoryDeallocation(int32_t framesToLive, VulkanMemoryHeap::Allocation allocation)
@@ -69,10 +70,10 @@ public:
     }
 
 private:
-    VkDevice m_deviceHandle{ VK_NULL_HANDLE };
+    VkDevice m_deviceHandle{VK_NULL_HANDLE};
 
-    int64_t m_currentFrameIndex{ -1 };
-    int32_t m_virtualFrameCount{ 1 };
+    int64_t m_currentFrameIndex{-1};
+    int32_t m_virtualFrameCount{1};
 
     robin_hood::unordered_flat_map<void*, std::string> m_handleTagMap;
 

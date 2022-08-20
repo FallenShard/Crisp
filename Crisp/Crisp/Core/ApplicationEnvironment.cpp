@@ -1,12 +1,10 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
-#include <CrispCore/ChromeProfiler.hpp>
-#include <CrispCore/CommandLineParser.hpp>
-#include <CrispCore/LuaConfig.hpp>
+#include <Crisp/ChromeProfiler.hpp>
+#include <Crisp/Common/Logger.hpp>
+#include <Crisp/LuaConfig.hpp>
 
 #include <GLFW/glfw3.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
 #include <vulkan/vulkan.h>
 
 namespace crisp
@@ -19,30 +17,41 @@ void glfwErrorHandler(int errorCode, const char* message)
 {
     logger->error("GLFW error code: {}. Message: {}", errorCode, message);
 }
+
+void setSpdlogLevel(const std::string_view level)
+{
+    if (level == "critical")
+        spdlog::set_level(spdlog::level::critical);
+    else if (level == "error")
+        spdlog::set_level(spdlog::level::err);
+    else if (level == "warning")
+        spdlog::set_level(spdlog::level::warn);
+    else if (level == "info")
+        spdlog::set_level(spdlog::level::info);
+    else if (level == "debug")
+        spdlog::set_level(spdlog::level::debug);
+    else if (level == "trace")
+        spdlog::set_level(spdlog::level::trace);
+    else
+        spdlog::set_level(spdlog::level::info);
+}
+
 } // namespace
 
 std::filesystem::path ApplicationEnvironment::ResourcesPath;
 std::filesystem::path ApplicationEnvironment::ShaderSourcesPath;
-uint32_t ApplicationEnvironment::DefaultSceneIdx{ 4 };
-bool ApplicationEnvironment::EnableRayTracingExtension{ false };
+ApplicationEnvironment::Parameters ApplicationEnvironment::Arguments{};
 
-ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
+ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
 {
-    spdlog::set_pattern("%^[%T.%e][%n][%l][Tid: %t]:%$ %v");
-    spdlog::set_level(spdlog::level::warn);
-    spdlog::info("Current path: {}", std::filesystem::current_path().string());
-
-    std::filesystem::path configPath{};
-    CommandLineParser cmdLineParser{};
-    cmdLineParser.addOption("config", configPath, true);
-    cmdLineParser.addOption("scene", DefaultSceneIdx);
-    cmdLineParser.addOption("enable_ray_tracing", EnableRayTracingExtension);
-    cmdLineParser.parse(argc, argv).unwrap();
-
+    Arguments = std::move(parameters);
     ChromeProfiler::setThreadName("Main Thread");
 
-    glfwSetErrorCallback(glfwErrorHandler);
+    spdlog::set_pattern("%^[%T.%e][%n][%l][Tid: %t]:%$ %v");
+    setSpdlogLevel(Arguments.logLevel);
+    spdlog::info("Current path: {}", std::filesystem::current_path().string());
 
+    glfwSetErrorCallback(glfwErrorHandler);
     if (glfwInit() == GLFW_FALSE)
     {
         logger->critical("Could not initialize GLFW library!\n");
@@ -50,7 +59,7 @@ ApplicationEnvironment::ApplicationEnvironment(int argc, char** argv)
     }
 
     LuaConfig lua;
-    lua.openFile(configPath);
+    lua.openFile(Arguments.configPath);
     ResourcesPath = lua.get<std::string>("resourcesPath").value();
     ShaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
 }
@@ -68,12 +77,12 @@ std::filesystem::path ApplicationEnvironment::getResourcesPath()
     return ResourcesPath;
 }
 
-std::filesystem::path ApplicationEnvironment::getShaderSourcesPath()
+std::filesystem::path ApplicationEnvironment::getShaderSourceDirectory()
 {
     return ShaderSourcesPath;
 }
 
-std::vector<std::string> ApplicationEnvironment::getRequiredVulkanExtensions()
+std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtensions()
 {
     std::vector<std::string> extensions;
     unsigned int glfwExtensionCount = 0;
@@ -84,13 +93,23 @@ std::vector<std::string> ApplicationEnvironment::getRequiredVulkanExtensions()
     return extensions;
 }
 
-uint32_t ApplicationEnvironment::getDefaultSceneIdx()
+const ApplicationEnvironment::Parameters& ApplicationEnvironment::getParameters()
 {
-    return DefaultSceneIdx;
+    return Arguments;
 }
 
-bool ApplicationEnvironment::enableRayTracingExtension()
+Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv)
 {
-    return EnableRayTracingExtension;
+    ApplicationEnvironment::Parameters args{};
+    CommandLineParser parser{};
+    parser.addOption("config", args.configPath, true);
+    parser.addOption("scene", args.defaultSceneIndex);
+    parser.addOption("enable_ray_tracing", args.enableRayTracingExtension);
+    parser.addOption("log_level", args.logLevel);
+    if (!parser.parse(argc, argv).isValid())
+        return resultError("Failed to parse input arguments!");
+
+    return args;
 }
+
 } // namespace crisp

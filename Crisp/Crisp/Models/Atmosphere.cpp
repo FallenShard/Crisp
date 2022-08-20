@@ -11,6 +11,16 @@
 
 namespace crisp
 {
+AtmosphereParameters::AtmosphereParameters()
+{
+    const glm::mat4 testP = /*glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) **/
+        glm::perspective(glm::radians(66.6f), 1280.0f / 720.0f, 0.1f, 20000.0f);
+    const glm::mat4 testV =
+        glm::lookAt(glm::vec3(0.0f, 0.5f, 1.0f), glm::vec3(0.0f, 0.5f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    VP = testP * testV;
+    invVP = glm::inverse(VP);
+}
+
 std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(const VulkanDevice& device)
 {
     return RenderPassBuilder()
@@ -27,9 +37,14 @@ std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(const VulkanDevice&
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, { 256, 64 });
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, {256, 64});
 }
 
 std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& device)
@@ -48,9 +63,14 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& devic
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, { 192, 108 });
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, {192, 108});
 }
 
 std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device)
@@ -72,9 +92,14 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, { 32, 32 });
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .create(device, {32, 32});
 }
 
 std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& device, VkExtent2D renderArea)
@@ -93,8 +118,13 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& devi
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
         .create(device, renderArea);
 }
 
@@ -102,14 +132,18 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
 {
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder
-        .defineDescriptorSet(0, false,
+        .defineDescriptorSet(
+            0,
+            false,
             {
                 {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
     })
-        .defineDescriptorSet(1, true,
+        .defineDescriptorSet(
+            1,
+            true,
             {
-                { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT },
-                { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT },
+                {0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
             });
 
     VulkanDevice& device = renderer.getDevice();
@@ -128,7 +162,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
     specInfo.dataSize = sizeof(workGroupSize);
     specInfo.pData = glm::value_ptr(workGroupSize);
 
-    VkComputePipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+    VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     pipelineInfo.stage =
         createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer.getShaderModule("sky-multiple-scattering.comp"));
     pipelineInfo.stage.pSpecializationInfo = &specInfo;
@@ -147,14 +181,11 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
 robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, const std::string& dependentPass)
 {
+    ImageCache& imageCache = resourceContext.imageCache;
     const VulkanDevice& device = renderer.getDevice();
     robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> renderNodes;
-    resourceContext.createUniformBuffer("atmosphere", sizeof(SkyAtmosphereConstantBufferStructure),
-        BufferUpdatePolicy::PerFrame);
-    resourceContext.createUniformBuffer("atmosphereCommon", sizeof(CommonConstantBufferStructure),
-        BufferUpdatePolicy::PerFrame);
-    resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParametersBuffer),
-        BufferUpdatePolicy::PerFrame);
+
+    resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParameters), BufferUpdatePolicy::PerFrame);
 
     // Transmittance lookup
     auto& transPassNode = renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer.getDevice()));
@@ -170,28 +201,31 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     transLutNode->pass("TransLUTPass").pipeline = transLutPipeline;
 
     // Multiscattering
-    VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;
     createInfo.imageType = VK_IMAGE_TYPE_2D;
     createInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-    createInfo.extent = VkExtent3D{ 32u, 32u, 1u };
+    createInfo.extent = VkExtent3D{32u, 32u, 1u};
     createInfo.mipLevels = 1;
     createInfo.arrayLayers = 2;
     createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    resourceContext.addImage("multiScatTex",
-        std::make_unique<VulkanImage>(renderer.getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT));
-    resourceContext.addImageView("multiScatTexView0",
-        resourceContext.getImage("multiScatTex")->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    resourceContext.addImageView("multiScatTexView1",
-        resourceContext.getImage("multiScatTex")->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
+    imageCache.addImage(
+        "multiScatTex", std::make_unique<VulkanImage>(renderer.getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT));
+    imageCache.addImageView(
+        "multiScatTexView0", imageCache.getImage("multiScatTex").createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+    imageCache.addImageView(
+        "multiScatTexView1", imageCache.getImage("multiScatTex").createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
 
     renderer.enqueueResourceUpdate(
-        [tex = resourceContext.getImage("multiScatTex")](VkCommandBuffer cmdBuffer)
+        [tex = &imageCache.getImage("multiScatTex")](VkCommandBuffer cmdBuffer)
         {
-            tex->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            tex->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
         });
 
@@ -203,11 +237,11 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     multiScatPass.material = std::make_unique<Material>(multiScatPass.pipeline.get());
     multiScatPass.material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
 
-    std::vector<VulkanImageView*> views{ resourceContext.getImageView("multiScatTexView0"),
-        resourceContext.getImageView("multiScatTexView1") };
+    std::vector<VulkanImageView*> views{
+        &imageCache.getImageView("multiScatTexView0"), &imageCache.getImageView("multiScatTexView1")};
     multiScatPass.material->writeDescriptor(1, 0, views, nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    multiScatPass.material->writeDescriptor(1, 1, renderGraph.getRenderPass("TransLUTPass"), 0,
-        resourceContext.getSampler("linearClamp"));
+    multiScatPass.material->writeDescriptor(
+        1, 1, renderGraph.getRenderPass("TransLUTPass"), 0, &imageCache.getSampler("linearClamp"));
     multiScatPass.material->setDynamicBufferView(0, *resourceContext.getUniformBuffer("atmosphereBuffer"), 0);
     multiScatPass.preDispatchCallback =
         [](RenderGraph::Node& /*node*/, VulkanCommandBuffer& /*cmdBuffer*/, uint32_t /*frameIndex*/)
@@ -217,11 +251,13 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     auto& skyViewPass = renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer.getDevice()));
     renderer.updateInitialLayouts(*skyViewPass.renderPass);
     renderGraph.addRenderTargetLayoutTransition("TransLUTPass", "SkyViewLUTPass", 0);
-    renderGraph.addDependency("MultiScatPass", "SkyViewLUTPass",
-        [tex = resourceContext.getImage("multiScatTex")](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer,
-            uint32_t frameIndex)
+    renderGraph.addDependency(
+        "MultiScatPass",
+        "SkyViewLUTPass",
+        [tex = &imageCache.getImage("multiScatTex")](
+            const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
-            VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -233,8 +269,17 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
             barrier.subresourceRange.baseArrayLayer = frameIndex;
             barrier.subresourceRange.layerCount = 1;
 
-            vkCmdPipelineBarrier(cmdBuffer.getHandle(), VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 0, &barrier);
+            vkCmdPipelineBarrier(
+                cmdBuffer.getHandle(),
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0,
+                0,
+                nullptr,
+                0,
+                nullptr,
+                0,
+                &barrier);
         });
 
     // Sky View LUT
@@ -242,10 +287,9 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
         resourceContext.createPipeline("skyViewLut", "SkyViewLut.lua", renderGraph.getRenderPass("SkyViewLUTPass"), 0);
     auto skyViewLutMaterial = resourceContext.createMaterial("skyViewLut", skyViewLutPipeline);
     skyViewLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
-    skyViewLutMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0,
-        resourceContext.getSampler("linearClamp"));
-    skyViewLutMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"),
-        VK_IMAGE_LAYOUT_GENERAL);
+    skyViewLutMaterial->writeDescriptor(
+        1, 0, renderGraph.getRenderPass("TransLUTPass"), 0, &imageCache.getSampler("linearClamp"));
+    skyViewLutMaterial->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
     auto skyViewLutNode = renderNodes.emplace("skyViewLutNode", std::make_unique<RenderNode>()).first->second.get();
     skyViewLutNode->geometry = renderer.getFullScreenGeometry();
     skyViewLutNode->pass("SkyViewLUTPass").material = skyViewLutMaterial;
@@ -254,14 +298,13 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     // Camera volumes
     auto& camVolPass = renderGraph.addRenderPass("CameraVolumesPass", createSkyVolumePass(device));
     renderGraph.addRenderTargetLayoutTransition("SkyViewLUTPass", "CameraVolumesPass", 0);
-    auto cameraVolumesPipeline = resourceContext.createPipeline("skyCameraVolumes", "SkyCameraVolumes.lua",
-        renderGraph.getRenderPass("CameraVolumesPass"), 0);
+    auto cameraVolumesPipeline = resourceContext.createPipeline(
+        "skyCameraVolumes", "SkyCameraVolumes.lua", renderGraph.getRenderPass("CameraVolumesPass"), 0);
     auto cameraVolumesMaterial = resourceContext.createMaterial("skyCameraVolumes", cameraVolumesPipeline);
     cameraVolumesMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
-    cameraVolumesMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0,
-        resourceContext.getSampler("linearClamp"));
-    cameraVolumesMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"),
-        VK_IMAGE_LAYOUT_GENERAL);
+    cameraVolumesMaterial->writeDescriptor(
+        1, 0, renderGraph.getRenderPass("TransLUTPass"), 0, &imageCache.getSampler("linearClamp"));
+    cameraVolumesMaterial->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
 
     // Voxelized multiple scattering
     const std::vector<glm::vec2> vertices = {
@@ -283,25 +326,24 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     renderer.getDevice().flushDescriptorUpdates();
 
     // Ray marching - final step
-    auto& rayMarchingPass = renderGraph.addRenderPass("RayMarchingPass",
-        createRayMarchingPass(renderer.getDevice(), renderer.getSwapChainExtent()));
+    auto& rayMarchingPass = renderGraph.addRenderPass(
+        "RayMarchingPass", createRayMarchingPass(renderer.getDevice(), renderer.getSwapChainExtent()));
     renderer.updateInitialLayouts(*rayMarchingPass.renderPass);
     renderGraph.addRenderTargetLayoutTransition("CameraVolumesPass", "RayMarchingPass", 0);
     renderGraph.addRenderTargetLayoutTransition("DepthPrePass", "RayMarchingPass", 0);
-    auto rayMarchingPipeline = resourceContext.createPipeline("rayMarching", "SkyRayMarching.lua",
-        renderGraph.getRenderPass("RayMarchingPass"), 0);
+    auto rayMarchingPipeline = resourceContext.createPipeline(
+        "rayMarching", "SkyRayMarching.lua", renderGraph.getRenderPass("RayMarchingPass"), 0);
     auto rayMarchingMaterial = resourceContext.createMaterial("rayMarching", rayMarchingPipeline);
     rayMarchingMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
-    rayMarchingMaterial->writeDescriptor(1, 0, renderGraph.getRenderPass("TransLUTPass"), 0,
-        resourceContext.getSampler("linearClamp"));
-    rayMarchingMaterial->writeDescriptor(1, 1, views, resourceContext.getSampler("linearClamp"),
-        VK_IMAGE_LAYOUT_GENERAL);
-    rayMarchingMaterial->writeDescriptor(1, 2, renderGraph.getRenderPass("SkyViewLUTPass"), 0,
-        resourceContext.getSampler("linearClamp"));
+    rayMarchingMaterial->writeDescriptor(
+        1, 0, renderGraph.getRenderPass("TransLUTPass"), 0, &imageCache.getSampler("linearClamp"));
+    rayMarchingMaterial->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
+    rayMarchingMaterial->writeDescriptor(
+        1, 2, renderGraph.getRenderPass("SkyViewLUTPass"), 0, &imageCache.getSampler("linearClamp"));
 
-    rayMarchingMaterial->writeDescriptor(1, 3, *camVolPass.renderPass, 0, resourceContext.getSampler("linearClamp"));
-    rayMarchingMaterial->writeDescriptor(1, 4, renderGraph.getRenderPass("DepthPrePass"), 0,
-        resourceContext.getSampler("nearestNeighbor"));
+    rayMarchingMaterial->writeDescriptor(1, 3, *camVolPass.renderPass, 0, &imageCache.getSampler("linearClamp"));
+    rayMarchingMaterial->writeDescriptor(
+        1, 4, renderGraph.getRenderPass("DepthPrePass"), 0, &imageCache.getSampler("nearestNeighbor"));
 
     renderer.getDevice().flushDescriptorUpdates();
 

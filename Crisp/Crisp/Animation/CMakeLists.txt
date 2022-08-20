@@ -1,0 +1,11 @@
+add_cpp_static_library(CrispAnimation
+    "Animation.cpp"
+    "Animation.hpp"
+    "Animator.cpp"
+    "Animator.hpp"
+    "PropertyAnimation.hpp")
+target_include_directories(CrispAnimation PUBLIC "../../")
+target_link_libraries(CrispAnimation
+    PUBLIC CrispMath
+    PUBLIC CrispRobinHood
+    PUBLIC CrispEvent)

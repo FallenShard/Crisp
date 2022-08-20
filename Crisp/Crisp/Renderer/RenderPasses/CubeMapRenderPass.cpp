@@ -1,11 +1,11 @@
 #include "CubeMapRenderPass.hpp"
 
+#include <Crisp/Image/Image.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/vulkan/VulkanDevice.hpp>
 #include <Crisp/vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/vulkan/VulkanImage.hpp>
-#include <CrispCore/Image/Image.hpp>
 
 namespace crisp
 {
@@ -89,8 +89,8 @@ namespace crisp
 //    m_framebuffers[0] = std::make_unique<VulkanFramebuffer>(device, m_handle, m_renderArea, renderTargetViewHandles);
 //}
 
-std::unique_ptr<VulkanRenderPass> createCubeMapPass(const VulkanDevice& device, VkExtent2D renderArea,
-    bool allocateMipmaps)
+std::unique_ptr<VulkanRenderPass> createCubeMapPass(
+    const VulkanDevice& device, VkExtent2D renderArea, bool allocateMipmaps)
 {
     const auto mipmapCount = !allocateMipmaps ? 1 : Image::getMipLevels(renderArea.width, renderArea.height);
     const auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
@@ -101,13 +101,20 @@ std::unique_ptr<VulkanRenderPass> createCubeMapPass(const VulkanDevice& device, 
         .setRenderTargetCount(1)
         .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
         .setRenderTargetLayersAndMipmaps(0, 6)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
-                                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | additionalFlags)
+        .configureColorRenderTarget(
+            0,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                additionalFlags)
         .setRenderTargetDepthSlices(0, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
     builder.setAttachmentCount(6);
-    builder.setNumSubpasses(6).addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+    builder.setNumSubpasses(6).addDependency(
+        VK_SUBPASS_EXTERNAL,
+        0,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_ACCESS_SHADER_READ_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 
     for (int i = 0; i < 6; i++)
     {

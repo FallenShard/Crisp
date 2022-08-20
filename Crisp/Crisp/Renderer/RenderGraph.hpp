@@ -6,8 +6,8 @@
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-#include <CrispCore/Result.hpp>
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/Result.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 #include <tbb/concurrent_vector.h>
 
@@ -53,10 +53,14 @@ public:
     Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
     Node& addComputePass(std::string computePassName);
     void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
-    void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass,
-        uint32_t sourceRenderTargetIndex);
-    void addRenderTargetLayoutTransition(const std::string& sourcePass, const std::string& destinationPass,
-        uint32_t sourceRenderTargetIndex, uint32_t layerMultiplier);
+    void addRenderTargetLayoutTransitionToScreen(const std::string& sourcePass, uint32_t sourceRenderTargetIndex);
+    void addRenderTargetLayoutTransition(
+        const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex);
+    void addRenderTargetLayoutTransition(
+        const std::string& sourcePass,
+        const std::string& destinationPass,
+        uint32_t sourceRenderTargetIndex,
+        uint32_t layerMultiplier);
 
     void resize(int width, int height);
 
@@ -74,8 +78,8 @@ public:
 
     const VulkanRenderPass& getRenderPass(std::string name);
 
-    static void executeDrawCommand(const DrawCommand& command, Renderer& renderer, VulkanCommandBuffer& cmdBuffer,
-        uint32_t virtualFrameIndex);
+    static void executeDrawCommand(
+        const DrawCommand& command, Renderer& renderer, VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex);
 
 private:
     void executeRenderPass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;

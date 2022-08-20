@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/Event.hpp>
+#include <Crisp/Event.hpp>
 
 #include <Crisp/GUI/Control.hpp>
 #include <Crisp/GUI/DrawComponents/RectDrawComponent.hpp>

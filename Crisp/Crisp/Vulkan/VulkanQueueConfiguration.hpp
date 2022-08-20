@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <CrispCore/BitFlags.hpp>
+#include <Crisp/BitFlags.hpp>
 
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
@@ -37,8 +37,10 @@ struct VulkanQueueConfiguration
     std::vector<QueueIdentifier> queueIdentifiers;
 };
 
-VulkanQueueConfiguration createQueueConfiguration(const std::vector<QueueTypeFlags>& requestedQueueTypes,
-    const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice);
-VulkanQueueConfiguration createDefaultQueueConfiguration(const VulkanContext& context,
+VulkanQueueConfiguration createQueueConfiguration(
+    const std::vector<QueueTypeFlags>& requestedQueueTypes,
+    const VulkanContext& context,
     const VulkanPhysicalDevice& physicalDevice);
+VulkanQueueConfiguration createDefaultQueueConfiguration(
+    const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice);
 } // namespace crisp

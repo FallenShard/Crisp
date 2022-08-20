@@ -2,7 +2,7 @@
 
 #include <Crisp/Animation/Animation.hpp>
 
-#include <CrispCore/Math/Constants.hpp>
+#include <Crisp/Math/Constants.hpp>
 
 namespace crisp
 {
@@ -32,8 +32,14 @@ public:
     {
     }
 
-    PropertyAnimation(double duration, T start, T end, std::function<void(const T&)> updater, double delay = 0,
-        bool isLooped = false, int loopCount = 1)
+    PropertyAnimation(
+        double duration,
+        T start,
+        T end,
+        std::function<void(const T&)> updater,
+        double delay = 0,
+        bool isLooped = false,
+        int loopCount = 1)
         : Animation(delay, duration, isLooped, loopCount)
         , m_propertyStart(start)
         , m_propertyEnd(end)
@@ -41,7 +47,11 @@ public:
     {
     }
 
-    PropertyAnimation(double duration, std::function<void(const T&)> updater, double delay = 0, bool isLooped = false,
+    PropertyAnimation(
+        double duration,
+        std::function<void(const T&)> updater,
+        double delay = 0,
+        bool isLooped = false,
         int loopCount = 1)
         : Animation(delay, duration, isLooped, loopCount)
         , m_updater(updater)

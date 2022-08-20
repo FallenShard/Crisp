@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "CrispCore/BitFlags.hpp"
+#include "Crisp/BitFlags.hpp"
 
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
@@ -18,7 +18,7 @@ namespace internal
 template <uint32_t loc, uint32_t binding, int offset, VkFormat format, VkFormat... formats>
 void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs)
 {
-    vertexAttribs.emplace_back(VkVertexInputAttributeDescription{ loc, binding, format, offset });
+    vertexAttribs.emplace_back(VkVertexInputAttributeDescription{loc, binding, format, offset});
 
     if constexpr (sizeof...(formats) > 0)
         fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
@@ -63,7 +63,7 @@ public:
     PipelineBuilder& addVertexInputBinding()
     {
         m_vertexInputBindings.emplace_back(
-            VkVertexInputBindingDescription{ binding, FormatSizeof<formats...>::value, inputRate });
+            VkVertexInputBindingDescription{binding, FormatSizeof<formats...>::value, inputRate});
         m_vertexInputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertexInputBindings.size());
         m_vertexInputState.pVertexBindingDescriptions = m_vertexInputBindings.data();
         return *this;
@@ -88,8 +88,8 @@ public:
         return *this;
     }
 
-    PipelineBuilder& addVertexInputBinding(uint32_t binding, VkVertexInputRate inputRate,
-        const std::vector<VkFormat>& formats);
+    PipelineBuilder& addVertexInputBinding(
+        uint32_t binding, VkVertexInputRate inputRate, const std::vector<VkFormat>& formats);
     PipelineBuilder& addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats);
 
     PipelineBuilder& setFullScreenVertexLayout();
@@ -120,8 +120,11 @@ public:
 
     PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
 
-    std::unique_ptr<VulkanPipeline> create(const VulkanDevice& device,
-        std::unique_ptr<VulkanPipelineLayout> pipelineLayout, VkRenderPass renderPass, uint32_t subpassIndex);
+    std::unique_ptr<VulkanPipeline> create(
+        const VulkanDevice& device,
+        std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+        VkRenderPass renderPass,
+        uint32_t subpassIndex);
     PipelineDynamicStateFlags createDynamicStateFlags() const;
 
 private:
@@ -160,6 +163,6 @@ private:
     PipelineStateFlags m_pipelineStateFlags;
 };
 
-VkPipelineShaderStageCreateInfo createShaderStageInfo(VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule,
-    const char* entryPoint = "main");
+VkPipelineShaderStageCreateInfo createShaderStageInfo(
+    VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint = "main");
 } // namespace crisp

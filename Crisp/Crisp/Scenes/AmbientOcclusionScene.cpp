@@ -3,7 +3,7 @@
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <CrispCore/IO/ImageLoader.hpp>
+#include <Crisp/IO/ImageLoader.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
@@ -16,7 +16,7 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <CrispCore/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
 
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/vulkan/VulkanDevice.hpp>
@@ -29,8 +29,8 @@
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <CrispCore/IO/MeshLoader.hpp>
-#include <CrispCore/Math/Warp.hpp>
+#include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Math/Warp.hpp>
 
 #include <random>
 
@@ -48,8 +48,8 @@ struct BlurParams
     int radius;
 };
 
-BlurParams blurH = { 0.0f, 1.0f / Application::DefaultWindowWidth, 1.0f, 3 };
-BlurParams blurV = { 1.0f / Application::DefaultWindowHeight, 0.0f, 1.0f, 3 };
+BlurParams blurH = {0.0f, 1.0f / Application::DefaultWindowWidth, 1.0f, 3};
+BlurParams blurV = {1.0f / Application::DefaultWindowHeight, 0.0f, 1.0f, 3};
 
 std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer)
 {
@@ -67,8 +67,13 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer)
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
         .create(renderer.getDevice(), renderer.getSwapChainExtent());
 }
 
@@ -78,7 +83,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     : m_renderer(renderer)
     , m_app(app)
     , m_resourceContext(std::make_unique<ResourceContext>(renderer))
-    , m_ssaoParams{ 128, 0.5f }
+    , m_ssaoParams{128, 0.5f}
 {
     m_cameraController = std::make_unique<FreeCameraController>(m_app->getWindow());
     /*m_cameraController->getCamera().setRotation(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
@@ -106,11 +111,11 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
         noiseTexData.push_back(glm::vec4(s, 1.0f));
     }
 
-    VkImageCreateInfo noiseTexInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    VkImageCreateInfo noiseTexInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     noiseTexInfo.flags = 0;
     noiseTexInfo.imageType = VK_IMAGE_TYPE_2D;
     noiseTexInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    noiseTexInfo.extent = { 4, 4, 1u };
+    noiseTexInfo.extent = {4, 4, 1u};
     noiseTexInfo.mipLevels = 1;
     noiseTexInfo.arrayLayers = 1;
     noiseTexInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -118,18 +123,28 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     noiseTexInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     noiseTexInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     noiseTexInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_resourceContext->addImageWithView("noise", createTexture(m_renderer, noiseTexData.size() * sizeof(glm::vec4),
-                                                     noiseTexData.data(), noiseTexInfo, VK_IMAGE_ASPECT_COLOR_BIT));
+    auto& imageCache = m_resourceContext->imageCache;
+    imageCache.addImageWithView(
+        "noise",
+        createTexture(
+            m_renderer,
+            noiseTexData.size() * sizeof(glm::vec4),
+            noiseTexData.data(),
+            noiseTexInfo,
+            VK_IMAGE_ASPECT_COLOR_BIT));
 
-    m_resourceContext->addSampler("linearRepeat",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT));
-    m_resourceContext->addSampler("nearestClamp",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
-    m_resourceContext->addSampler("linearClamp",
-        std::make_unique<VulkanSampler>(m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
+    imageCache.addSampler(
+        "linearRepeat",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT));
+    imageCache.addSampler(
+        "nearestClamp",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
+    imageCache.addSampler(
+        "linearClamp",
+        std::make_unique<VulkanSampler>(
+            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
 
     m_sampleBuffer =
         std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
@@ -151,13 +166,16 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     Material* normalMaterial = m_resourceContext->createMaterial("normal", normalPipeline);
     normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-    std::vector<VertexAttributeDescriptor> shadowFormat = { VertexAttribute::Position };
+    std::vector<VertexAttributeDescriptor> shadowFormat = {VertexAttribute::Position};
     m_resourceContext->addGeometry("floorPos", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowFormat)));
 
-    std::vector<VertexAttributeDescriptor> vertexFormat = { VertexAttribute::Position, VertexAttribute::Normal };
-    m_resourceContext->addGeometry("sponza",
-        std::make_unique<Geometry>(m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", vertexFormat)));
+    std::vector<VertexAttributeDescriptor> vertexFormat = {VertexAttribute::Position, VertexAttribute::Normal};
+    m_resourceContext->addGeometry(
+        "sponza",
+        std::make_unique<Geometry>(
+            m_renderer,
+            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", vertexFormat)
+                .unwrap()));
 
     m_skybox = std::make_unique<Skybox>(m_renderer, *mainPass, "Creek");
 
@@ -191,30 +209,29 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
     // mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
 
-    auto ssaoNode = m_resourceContext->createPostProcessingEffectNode("ssao", "Ssao.lua",
-        m_renderGraph->getRenderPass("ssaoPass"), "ssaoPass");
+    auto ssaoNode = m_resourceContext->createPostProcessingEffectNode(
+        "ssao", "Ssao.lua", m_renderGraph->getRenderPass("ssaoPass"), "ssaoPass");
     ssaoNode->pass("ssaoPass")
-        .material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("mainPass"), 0,
-            m_resourceContext->getSampler("nearestClamp"));
+        .material->writeDescriptor(
+            0, 0, m_renderGraph->getRenderPass("mainPass"), 0, &imageCache.getSampler("nearestClamp"));
     ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 1, *m_cameraBuffer);
     ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 2, *m_sampleBuffer);
     ssaoNode->pass("ssaoPass")
-        .material->writeDescriptor(0, 3, *m_resourceContext->getImageView("noise"),
-            m_resourceContext->getSampler("linearRepeat"));
+        .material->writeDescriptor(0, 3, imageCache.getImageView("noise"), imageCache.getSampler("linearRepeat"));
     ssaoNode->pass("ssaoPass").setPushConstantView(m_ssaoParams);
 
-    auto blurHNode = m_resourceContext->createPostProcessingEffectNode("blurH", "GaussianBlur.lua",
-        m_renderGraph->getRenderPass("blurHPass"), "blurHPass");
+    auto blurHNode = m_resourceContext->createPostProcessingEffectNode(
+        "blurH", "GaussianBlur.lua", m_renderGraph->getRenderPass("blurHPass"), "blurHPass");
     blurHNode->pass("blurHPass")
-        .material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("ssaoPass"), 0,
-            m_resourceContext->getSampler("linearClamp"));
+        .material->writeDescriptor(
+            0, 0, m_renderGraph->getRenderPass("ssaoPass"), 0, &imageCache.getSampler("linearClamp"));
     blurHNode->pass("blurHPass").setPushConstantView(blurH);
 
-    auto blurVNode = m_resourceContext->createPostProcessingEffectNode("blurV", "GaussianBlur.lua",
-        m_renderGraph->getRenderPass("blurVPass"), "blurVPass");
+    auto blurVNode = m_resourceContext->createPostProcessingEffectNode(
+        "blurV", "GaussianBlur.lua", m_renderGraph->getRenderPass("blurVPass"), "blurVPass");
     blurVNode->pass("blurVPass")
-        .material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("blurHPass"), 0,
-            m_resourceContext->getSampler("linearClamp"));
+        .material->writeDescriptor(
+            0, 0, m_renderGraph->getRenderPass("blurHPass"), 0, &imageCache.getSampler("linearClamp"));
     blurVNode->pass("blurVPass").setPushConstantView(blurV);
 
     m_renderer->getDevice().flushDescriptorUpdates();
@@ -236,7 +253,7 @@ void AmbientOcclusionScene::resize(int width, int height)
 
     auto* mainPass = m_renderGraph->getNode("mainPass").renderPass.get();
     m_resourceContext->getMaterial("Ssao.lua")
-        ->writeDescriptor(0, 0, *mainPass, 0, m_resourceContext->getSampler("nearestClamp"));
+        ->writeDescriptor(0, 0, *mainPass, 0, &m_resourceContext->imageCache.getSampler("nearestClamp"));
 }
 
 void AmbientOcclusionScene::update(float dt)
@@ -274,34 +291,34 @@ void AmbientOcclusionScene::createGui()
     using namespace gui;
     auto panel = std::make_unique<Panel>(m_app->getForm());
     panel->setId("ambientOcclusionPanel");
-    panel->setPadding({ 20, 20 });
-    panel->setPosition({ 20, 40 });
+    panel->setPadding({20, 20});
+    panel->setPosition({20, 40});
     panel->setSizingPolicy(SizingPolicy::WrapContent, SizingPolicy::WrapContent);
 
     int y = 0;
 
     auto numSamplesLabel = std::make_unique<Label>(m_app->getForm(), "Number of samples");
-    numSamplesLabel->setPosition({ 0, y });
+    numSamplesLabel->setPosition({0, y});
     panel->addControl(std::move(numSamplesLabel));
     y += 20;
 
     auto numSamplesSlider = std::make_unique<IntSlider>(m_app->getForm());
     numSamplesSlider->setId("numSamplesSlider");
-    numSamplesSlider->setPosition({ 0, y });
-    numSamplesSlider->setDiscreteValues({ 16, 32, 64, 128, 256, 512 });
+    numSamplesSlider->setPosition({0, y});
+    numSamplesSlider->setDiscreteValues({16, 32, 64, 128, 256, 512});
     numSamplesSlider->setIndexValue(3);
     numSamplesSlider->valueChanged.subscribe<&AmbientOcclusionScene::setNumSamples>(this);
     panel->addControl(std::move(numSamplesSlider));
     y += 30;
 
     auto radiusLabel = std::make_unique<Label>(m_app->getForm(), "Radius");
-    radiusLabel->setPosition({ 0, y });
+    radiusLabel->setPosition({0, y});
     panel->addControl(std::move(radiusLabel));
     y += 20;
 
     auto radiusSlider = std::make_unique<DoubleSlider>(m_app->getForm());
     radiusSlider->setId("radiusSlider");
-    radiusSlider->setPosition({ 0, y });
+    radiusSlider->setPosition({0, y});
     radiusSlider->setMinValue(0.1);
     radiusSlider->setMaxValue(2.0);
     radiusSlider->setIncrement(0.1);

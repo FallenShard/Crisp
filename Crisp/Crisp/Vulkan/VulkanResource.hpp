@@ -3,7 +3,7 @@
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-#include <CrispCore/Logger.hpp>
+#include <Crisp/Common/Logger.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -24,6 +24,7 @@ public:
         , m_deallocator(&deallocator)
     {
     }
+
     VulkanResource(T handle, VulkanResourceDeallocator& deallocator)
         : m_handle(handle)
         , m_deallocator(&deallocator)
@@ -31,6 +32,7 @@ public:
     }
 
     VulkanResource(const VulkanResource& other) = delete;
+
     VulkanResource(VulkanResource&& other) noexcept
         : m_deallocator(std::exchange(other.m_deallocator, nullptr))
         , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
@@ -47,7 +49,9 @@ public:
                 return;
             }
 
-            m_deallocator->deferDestruction(m_framesToLive, m_handle,
+            m_deallocator->deferDestruction(
+                m_framesToLive,
+                m_handle,
                 [](void* handle, VulkanResourceDeallocator* deallocator)
                 {
                     destroyDeferred(handle, deallocator, destroyFunc);
@@ -64,6 +68,7 @@ public:
     }
 
     VulkanResource& operator=(const VulkanResource& other) = delete;
+
     VulkanResource& operator=(VulkanResource&& other) noexcept
     {
         m_deallocator = std::exchange(other.m_deallocator, nullptr);

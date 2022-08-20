@@ -3,8 +3,9 @@
 #include "Scene.hpp"
 #include <Crisp/Renderer/Renderer.hpp>
 
-#include <CrispCore/Math/Headers.hpp>
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Math/Headers.hpp>
+
 
 namespace crisp
 {
@@ -76,6 +77,6 @@ private:
     std::vector<std::vector<VkDescriptorSet>> m_descSets;
     std::unique_ptr<VulkanBuffer> m_sbtBuffer;
 
-    uint32_t m_frameIdx{ 0 };
+    uint32_t m_frameIdx{0};
 };
 } // namespace crisp

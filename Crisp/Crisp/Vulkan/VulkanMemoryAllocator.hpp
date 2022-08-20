@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -32,10 +32,10 @@ public:
 
     DeviceMemoryMetrics getDeviceMemoryUsage() const;
 
-    Result<VulkanMemoryHeap::Allocation> allocateBuffer(VkMemoryPropertyFlags memoryProperties,
-        const VkMemoryRequirements& memoryRequirements);
-    Result<VulkanMemoryHeap::Allocation> allocateImage(VkMemoryPropertyFlags memoryProperties,
-        const VkMemoryRequirements& memoryRequirements);
+    Result<VulkanMemoryHeap::Allocation> allocateBuffer(
+        VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements);
+    Result<VulkanMemoryHeap::Allocation> allocateImage(
+        VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements);
 
 private:
     const VulkanPhysicalDevice* m_physicalDevice;

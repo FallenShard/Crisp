@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Geometry/TransformPack.hpp>
 #include <Crisp/Renderer/DrawCommand.hpp>
@@ -26,7 +26,10 @@ class Skybox
 {
 public:
     Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder);
-    Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const VulkanImageView& cubeMapView,
+    Skybox(
+        Renderer* renderer,
+        const VulkanRenderPass& renderPass,
+        const VulkanImageView& cubeMapView,
         const VulkanSampler& sampler);
     ~Skybox();
 

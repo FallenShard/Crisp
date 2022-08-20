@@ -2,8 +2,9 @@
 
 #include <Crisp/Renderer/RenderNode.hpp>
 
-#include <CrispCore/Math/Headers.hpp>
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Math/Headers.hpp>
+
 
 #include <string>
 
@@ -16,7 +17,7 @@ class ResourceContext;
 static constexpr float EarthMieScaleHeight = 1.2f;
 static constexpr float EarthRayleighScaleHeight = 8.0f;
 
-struct AtmosphereParametersBuffer
+struct AtmosphereParameters
 {
     glm::mat4 VP = glm::transpose(glm::mat4{
         -0.856325269,
@@ -56,16 +57,16 @@ struct AtmosphereParametersBuffer
     });
 
     // Rayleigh scattering coefficients + exponential distribution scale in the atmosphere
-    glm::vec3 rayleighScattering{ 0.005802f, 0.013558f, 0.033100f };
-    float rayleighDensityScale{ -1.0f / EarthRayleighScaleHeight };
+    glm::vec3 rayleighScattering{0.005802f, 0.013558f, 0.033100f};
+    float rayleighDensityScale{-1.0f / EarthRayleighScaleHeight};
 
     // Mie scattering coefficients + exponential distribution scale in the atmosphere
-    glm::vec3 mieScattering{ 0.003996f, 0.003996f, 0.003996f };
-    float mieDensityScale{ -1.0f / EarthMieScaleHeight };
+    glm::vec3 mieScattering{0.003996f, 0.003996f, 0.003996f};
+    float mieDensityScale{-1.0f / EarthMieScaleHeight};
 
     // Mie extinction coefficients + phase function excentricity
     glm::vec3 mieExtinctionAndPhase = glm::vec3(0.004440f);
-    float miePhaseG{ 0.80f };
+    float miePhaseG{0.80f};
 
     // Mie absorption coefficients
     glm::vec4 mieAbsorption = glm::vec4(0.00044f);
@@ -88,7 +89,7 @@ struct AtmosphereParametersBuffer
     float bottomRadius = 6360.0f;
 
     // glm::vec3 sunDirection = { 0.00, 0.90045, 0.43497 };
-    glm::vec3 sunDirection = { 0.00, 0.43497, -0.90045 };
+    glm::vec3 sunDirection = {0.00, 0.43497, -0.90045};
 
     // Maximum considered atmosphere height (center to atmosphere top) in km.
     float topRadius = 6460.0f;
@@ -96,15 +97,17 @@ struct AtmosphereParametersBuffer
     glm::vec4 sunIlluminance = glm::vec4(1.0f);
 
     // glm::vec3 cameraPosition = { 0.00, -1.00, 0.50 };
-    glm::vec3 cameraPosition = { 0.00, 0.5, 1.0 };
+    glm::vec3 cameraPosition = {0.00, 0.5, 1.0};
     int32_t multiScatteringLutResolution = 32;
 
     glm::vec2 screenResolution;
     int32_t transmittanceLutWidth = 256;
     int32_t transmittanceLutHeight = 64;
 
-    int minRayMarchingSamples = 4;
-    int maxRayMarchingSamples = 14;
+    int32_t minRayMarchingSamples = 4;
+    int32_t maxRayMarchingSamples = 14;
+
+    AtmosphereParameters();
 };
 
 robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(

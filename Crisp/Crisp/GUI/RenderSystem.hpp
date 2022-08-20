@@ -7,8 +7,8 @@
 #include <vulkan/vulkan.h>
 
 #include <Crisp/IO/FontLoader.hpp>
-#include <CrispCore/Math/Headers.hpp>
-#include <CrispCore/Math/Rect.hpp>
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Math/Rect.hpp>
 
 #include <Crisp/Renderer/IndexBuffer.hpp>
 #include <Crisp/Renderer/VertexBuffer.hpp>
@@ -68,7 +68,10 @@ public:
 
     void drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const;
     void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const;
-    void drawText(unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId,
+    void drawText(
+        unsigned int textRenderResourceId,
+        unsigned int transformResourceId,
+        uint32_t colorResourceId,
         float depth) const;
     void drawDebugRect(Rect<float> rect, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)) const;
 
@@ -123,6 +126,7 @@ private:
         std::unique_ptr<VulkanImageView> VulkanImageView;
         VkDescriptorSet descSet;
     };
+
     std::vector<std::unique_ptr<FontTexture>> m_fonts;
     FontLoader m_fontLoader;
 
@@ -154,6 +158,7 @@ private:
         void updateStagingBuffer(std::string text, const Font& font);
         void drawIndexed(VkCommandBuffer cmdBuffer) const;
     };
+
     static constexpr uint32_t TextResourceIncrement = 10;
     std::vector<std::unique_ptr<TextGeometryResource>> m_textResources;
     std::set<unsigned int> m_textResourceIdPool;
@@ -175,6 +180,7 @@ private:
             , textId(0)
         {
         }
+
         GuiDrawCommand(Callback callback, uint32_t transId, uint32_t colorId, uint32_t textResId, float d)
             : drawFuncPtr(callback)
             , transformId(transId)

@@ -1,10 +1,9 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <CrispCore/Logger.hpp>
+#include <Crisp/Common/Logger.hpp>
 
 #include <algorithm>
 #include <unordered_set>
@@ -15,10 +14,10 @@ namespace
 {
 auto logger = createLoggerMt("VulkanContext");
 
-const std::vector<const char*> ValidationLayers = { "VK_LAYER_KHRONOS_validation" };
+const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"};
 
-[[nodiscard]] Result<> assertRequiredExtensionSupport(const std::vector<const char*>& requiredExtensions,
-    const std::vector<VkExtensionProperties>& supportedExtensions)
+[[nodiscard]] Result<> assertRequiredExtensionSupport(
+    const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
 {
     std::unordered_set<std::string> pendingExtensions;
 
@@ -77,8 +76,8 @@ const std::vector<const char*> ValidationLayers = { "VK_LAYER_KHRONOS_validation
 
 VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers)
 {
-    VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    appInfo.pApplicationName = Application::Title;
+    VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
+    appInfo.pApplicationName = "Crisp";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "CrispEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -88,13 +87,16 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
         reqPlatformExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     std::vector<const char*> enabledExtensions;
-    std::transform(reqPlatformExtensions.begin(), reqPlatformExtensions.end(), std::back_inserter(enabledExtensions),
+    std::transform(
+        reqPlatformExtensions.begin(),
+        reqPlatformExtensions.end(),
+        std::back_inserter(enabledExtensions),
         [](const auto& ext)
         {
             return ext.c_str();
         });
 
-    VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+    VkInstanceCreateInfo createInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
@@ -124,8 +126,8 @@ VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator surfa
 }
 } // namespace
 
-VulkanContext::VulkanContext(SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions,
-    const bool enableValidationLayers)
+VulkanContext::VulkanContext(
+    SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, const bool enableValidationLayers)
     : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
     , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
     , m_surface(surfaceCreator ? createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE)
@@ -158,7 +160,10 @@ Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std
     }
 
     std::vector<const char*> requestedDeviceExtensions;
-    std::transform(deviceExtensions.begin(), deviceExtensions.end(), std::back_inserter(requestedDeviceExtensions),
+    std::transform(
+        deviceExtensions.begin(),
+        deviceExtensions.end(),
+        std::back_inserter(requestedDeviceExtensions),
         [](const std::string& ext)
         {
             return ext.c_str();

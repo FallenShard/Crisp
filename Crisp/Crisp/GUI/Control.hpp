@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 
-#include <CrispCore/Math/Headers.hpp>
-#include <CrispCore/Math/Rect.hpp>
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Math/Rect.hpp>
 
 #include <Crisp/GUI/GuiEnums.hpp>
 #include <Crisp/GUI/RenderSystem.hpp>
@@ -31,8 +31,8 @@ public:
     void setOrigin(Origin origin);
     Origin getOrigin() const;
 
-    void setSizingPolicy(SizingPolicy horizontal, SizingPolicy vertical, float widthPercent = 1.0f,
-        float heightPercent = 1.0f);
+    void setSizingPolicy(
+        SizingPolicy horizontal, SizingPolicy vertical, float widthPercent = 1.0f, float heightPercent = 1.0f);
 
     void setHorizontalSizingPolicy(SizingPolicy sizing, float widthPercent = 1.0f);
     SizingPolicy getHorizontalSizingPolicy() const;
@@ -94,6 +94,7 @@ public:
     {
         return static_cast<T*>(getControlById(id));
     }
+
     virtual Control* getControlById(const std::string& id);
 
     unsigned int getRootDistance() const;

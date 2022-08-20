@@ -3,7 +3,7 @@
 
 int main(int argc, char** argv)
 {
-    crisp::ApplicationEnvironment environment(argc, argv);
+    crisp::ApplicationEnvironment environment(crisp::parse(argc, argv).unwrap());
     crisp::Application application(environment);
     application.run();
     return EXIT_SUCCESS;

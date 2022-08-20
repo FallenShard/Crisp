@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <CrispCore/Coroutines/Task.hpp>
+#include <Crisp/Coroutines/Task.hpp>
 
 #include <memory>
 #include <vector>
@@ -17,16 +17,16 @@ class VulkanSwapChain;
 
 struct RenderTargetInfo
 {
-    VkPipelineStageFlags initSrcStageFlags{ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT };
+    VkPipelineStageFlags initSrcStageFlags{VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
     VkPipelineStageFlags initDstStageFlags;
     VkClearValue clearValue;
 
     VkImageUsageFlags usage;
-    uint32_t layerCount{ 1 };
-    uint32_t mipmapCount{ 1 };
-    VkFormat format{ VK_FORMAT_UNDEFINED };
+    uint32_t layerCount{1};
+    uint32_t mipmapCount{1};
+    VkFormat format{VK_FORMAT_UNDEFINED};
     VkSampleCountFlagBits sampleCount{};
-    uint32_t depthSlices{ 1 };
+    uint32_t depthSlices{1};
     VkImageCreateFlags createFlags{};
     std::optional<bool> buffered;
 };
@@ -35,27 +35,27 @@ struct AttachmentMapping
 {
     uint32_t renderTargetIndex;
     VkImageSubresourceRange subresource;
-    bool bufferOverDepthSlices{ false };
+    bool bufferOverDepthSlices{false};
 };
 
 struct RenderPassDescription
 {
-    VkExtent2D renderArea{ 0, 0 };
-    bool isSwapChainDependent{ false };
-    uint32_t subpassCount{ 0 };
+    VkExtent2D renderArea{0, 0};
+    bool isSwapChainDependent{false};
+    uint32_t subpassCount{0};
     std::vector<VkAttachmentDescription> attachmentDescriptions;
     std::vector<AttachmentMapping> attachmentMappings;
     std::vector<RenderTargetInfo> renderTargetInfos;
-    bool bufferedRenderTargets{ true };
-    bool allocateRenderTargets{ true };
+    bool bufferedRenderTargets{true};
+    bool allocateRenderTargets{true};
 };
 
 class VulkanRenderPass final : public VulkanResource<VkRenderPass, vkDestroyRenderPass>
 {
 public:
     VulkanRenderPass(const VulkanDevice& device, bool isSwapChainDependent, uint32_t subpassCount);
-    VulkanRenderPass(const VulkanDevice& device, VkRenderPass renderPass,
-        RenderPassDescription&& renderPassDescription);
+    VulkanRenderPass(
+        const VulkanDevice& device, VkRenderPass renderPass, RenderPassDescription&& renderPassDescription);
     ~VulkanRenderPass();
 
     void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
@@ -71,10 +71,10 @@ public:
     VulkanImage& getRenderTarget(uint32_t index) const;
     const VulkanImageView& getRenderTargetView(uint32_t renderTargetIndex, uint32_t frameIndex) const;
     std::vector<VulkanImageView*> getRenderTargetViews(uint32_t renderTargetIndex) const;
-    std::unique_ptr<VulkanImageView> createRenderTargetView(const VulkanDevice& device, uint32_t index,
-        uint32_t numFrames) const;
-    std::unique_ptr<VulkanImageView> createRenderTargetView(const VulkanDevice& device, uint32_t index,
-        uint32_t baseLayer, uint32_t numLayers) const;
+    std::unique_ptr<VulkanImageView> createRenderTargetView(
+        const VulkanDevice& device, uint32_t index, uint32_t numFrames) const;
+    std::unique_ptr<VulkanImageView> createRenderTargetView(
+        const VulkanDevice& device, uint32_t index, uint32_t baseLayer, uint32_t numLayers) const;
 
     std::unique_ptr<VulkanImage> extractRenderTarget(uint32_t index);
 
@@ -99,6 +99,7 @@ public:
     {
         return m_name;
     }
+
     inline void setName(std::string name)
     {
         m_name = std::move(name);
@@ -115,10 +116,10 @@ protected:
     void createResources(const VulkanDevice& device);
     void freeResources();
 
-    void setDepthRenderTargetInfo(uint32_t index, VkImageUsageFlags additionalFlags,
-        VkClearDepthStencilValue clearValue = { 0.0f, 0 });
-    void setColorRenderTargetInfo(uint32_t index, VkImageUsageFlags additionalFlags,
-        VkClearColorValue clearValue = { 0.0f, 0.0f, 0.0f, 0.0f });
+    void setDepthRenderTargetInfo(
+        uint32_t index, VkImageUsageFlags additionalFlags, VkClearDepthStencilValue clearValue = {0.0f, 0});
+    void setColorRenderTargetInfo(
+        uint32_t index, VkImageUsageFlags additionalFlags, VkClearColorValue clearValue = {0.0f, 0.0f, 0.0f, 0.0f});
 
     uint32_t m_numSubpasses;
     bool m_isWindowSizeDependent;
@@ -137,8 +138,8 @@ protected:
 
     std::string m_name;
 
-    bool m_combinedImages{ false };
-    bool m_bufferedRenderTargets{ true };
-    bool m_allocateRenderTargets{ true };
+    bool m_combinedImages{false};
+    bool m_bufferedRenderTargets{true};
+    bool m_allocateRenderTargets{true};
 };
 } // namespace crisp

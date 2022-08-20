@@ -4,8 +4,8 @@
 #include <Crisp/ShadingLanguage/Parser.hpp>
 #include <Crisp/ShadingLanguage/ShaderType.hpp>
 
-#include <CrispCore/Enumerate.hpp>
-#include <CrispCore/IO/FileUtils.hpp>
+#include <Crisp/Enumerate.hpp>
+#include <Crisp/IO/FileUtils.hpp>
 
 #include <spdlog/spdlog.h>
 
@@ -97,8 +97,8 @@ VkPushConstantRange parsePushConstant(const Statement* statement, VkShaderStageF
                 break;
 
             default:
-                spdlog::critical("Unknown token size '{}' while parsing push constant!",
-                    field->fullType->specifier->type.lexeme);
+                spdlog::critical(
+                    "Unknown token size '{}' while parsing push constant!", field->fullType->specifier->type.lexeme);
                 break;
             }
             pc.size += fieldSize * multiplier;
@@ -123,8 +123,8 @@ Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::fi
         binding.descriptorCount = 1;
         binding.stageFlags = stageFlags;
 
-        auto parseLayoutQualifier = [&metadata, &binding, &statement, &setId](
-                                        const sl::LayoutQualifier& layoutQualifier)
+        auto parseLayoutQualifier =
+            [&metadata, &binding, &statement, &setId](const sl::LayoutQualifier& layoutQualifier)
         {
             for (const auto& id : layoutQualifier.ids)
             {

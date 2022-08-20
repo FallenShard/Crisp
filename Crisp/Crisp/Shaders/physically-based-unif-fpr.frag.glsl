@@ -17,7 +17,7 @@ layout(location = 4) in vec3 eyeBitangent;
 layout(location = 0) out vec4 fragColor;
 
 // ----- Camera -----
-layout(set = 0, binding = 1) uniform Camera
+layout(set = 1, binding = 0) uniform Camera
 {
     mat4 V;
     mat4 P;
@@ -25,19 +25,40 @@ layout(set = 0, binding = 1) uniform Camera
     vec2 nearFar;
 };
 
+// ----- Generic Light Descriptor of 256 bytes -----
+struct LightDescriptor
+{
+    mat4 V;
+    mat4 P;
+    mat4 VP;
+    vec4 position;
+    vec4 direction;
+    vec4 spectrum;
+    vec4 params;
+};
+
+// ----- Directional Light -----
+layout(set = 1, binding = 1) uniform CascadedLight
+{
+    LightDescriptor cascadedLight[4];
+};
+
+layout(set = 1, binding = 2) uniform sampler2DArray cascadedShadowMapArray;
+
+// ----- Environment Lighting -----
+layout(set = 1, binding = 3) uniform samplerCube irrMap;
+layout(set = 1, binding = 4) uniform samplerCube refMap;
+layout(set = 1, binding = 5) uniform sampler2D brdfLut;
+
 // ----- PBR Microfacet BRDF -------
-layout(set = 0, binding = 2) uniform Material
+layout(set = 2, binding = 0) uniform Material
 {
     vec4 albedo;
     float metallic;
     float roughness;
 } material;
 
-// ----- Environment Lighting -----
-layout (set = 2, binding = 0) uniform samplerCube irrMap;
-layout (set = 2, binding = 1) uniform samplerCube refMap;
-layout (set = 2, binding = 2) uniform sampler2D brdfLut;
-layout(set = 2, binding = 3) uniform sampler2D sheenLut;
+layout(set = 2, binding = 1) uniform sampler2D sheenLut;
 
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
 {
@@ -56,26 +77,6 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
 
    return (kD * diffuse + specular) * ao;
 }
-
-// ----- Generic Light Descriptor of 256 bytes -----
-struct LightDescriptor
-{
-    mat4 V;
-    mat4 P;
-    mat4 VP;
-    vec4 position;
-    vec4 direction;
-    vec4 spectrum;
-    vec4 params;
-};
-
-// ----- Directional Light -----
-layout(set = 1, binding = 0) uniform CascadedLight
-{
-    LightDescriptor cascadedLight[4];
-};
-
-layout(set = 1, binding = 1) uniform sampler2DArray cascadedShadowMapArray;
 
 vec3 evalDirectionalLightRadiance(out vec3 eyeL)
 {
@@ -341,10 +342,10 @@ void main()
 
     const vec3 Li = ((diffuse + specularity) * sheenScale + sheen) * Le * NdotL;
 
-    // float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
+    float shadowCoeff = evalCascadedShadow(worldPosition, 0.005f);
 
     // const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
-    fragColor = vec4(vec3(Li), 1.0f);
+    fragColor = vec4(shadowCoeff * vec3(Li), 1.0f);
 
     //
     //

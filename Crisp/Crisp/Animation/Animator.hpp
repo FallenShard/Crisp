@@ -2,7 +2,7 @@
 
 #include <Crisp/Animation/Animation.hpp>
 
-#include <CrispCore/RobinHood.hpp>
+#include <Crisp/Common/RobinHood.hpp>
 
 #include <memory>
 #include <vector>

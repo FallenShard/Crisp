@@ -4,7 +4,7 @@
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
-#include <Vulkan/vulkan.h>
+#include <vulkan/vulkan.h>
 
 #include <thread>
 #include <vector>

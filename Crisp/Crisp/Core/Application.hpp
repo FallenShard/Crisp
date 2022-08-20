@@ -1,22 +1,18 @@
 #pragma once
 
 #include <Crisp/Core/ApplicationEnvironment.hpp>
+#include <Crisp/Core/Window.hpp>
+#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/SceneContainer.hpp>
 
-#include <CrispCore/Event.hpp>
-#include <CrispCore/Timer.hpp>
+#include <Crisp/Event.hpp>
+#include <Crisp/Timer.hpp>
 
 #include <memory>
 
 namespace crisp
 {
-class Window;
-class Renderer;
-class SceneContainer;
-
-namespace gui
-{
-class Form;
-}
 
 class Application
 {
@@ -64,6 +60,6 @@ private:
     double m_accumulatedFrames;
     double m_updatePeriod;
 
-    bool m_isMinimized{ false };
+    bool m_isMinimized{false};
 };
 } // namespace crisp

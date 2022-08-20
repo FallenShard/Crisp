@@ -20,9 +20,9 @@
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
-#include <CrispCore/ChromeProfiler.hpp>
-#include <CrispCore/IO/FileUtils.hpp>
-#include <CrispCore/Math/Headers.hpp>
+#include <Crisp/ChromeProfiler.hpp>
+#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -33,8 +33,8 @@ namespace
 {
 auto logger = spdlog::stdout_color_mt("Renderer");
 
-std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(const VulkanDevice& device,
-    const VulkanSwapChain& swapChain)
+std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
+    const VulkanDevice& device, const VulkanSwapChain& swapChain)
 {
     return RenderPassBuilder()
         .setAllocateRenderTagets(false)
@@ -51,8 +51,13 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(const VulkanDevice& 
 
         .setNumSubpasses(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+        .addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            0,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
         .create(device, swapChain.getExtent());
 }
 
@@ -62,11 +67,11 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     : m_currentFrameIndex(0)
     , m_resourcesPath(ApplicationEnvironment::getResourcesPath())
 {
-    recompileShaderDir(ApplicationEnvironment::getShaderSourcesPath(), m_resourcesPath / "Shaders");
+    recompileShaderDir(ApplicationEnvironment::getShaderSourceDirectory(), m_resourcesPath / "Shaders");
 
     // Create fundamental objects for the API
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
-    if (ApplicationEnvironment::enableRayTracingExtension())
+    if (ApplicationEnvironment::getParameters().enableRayTracingExtension)
     {
         deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
         deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
@@ -74,12 +79,14 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
     }
 
-    m_context = std::make_unique<VulkanContext>(surfCreatorCallback,
-        ApplicationEnvironment::getRequiredVulkanExtensions(), true);
+    m_context = std::make_unique<VulkanContext>(
+        surfCreatorCallback, ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), true);
     m_physicalDevice =
         std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());
-    m_device = std::make_unique<VulkanDevice>(*m_physicalDevice,
-        createDefaultQueueConfiguration(*m_context, *m_physicalDevice), RendererConfig::VirtualFrameCount);
+    m_device = std::make_unique<VulkanDevice>(
+        *m_physicalDevice,
+        createDefaultQueueConfiguration(*m_context, *m_physicalDevice),
+        RendererConfig::VirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain);
     logger->info("Created all base components");
@@ -140,7 +147,7 @@ const std::filesystem::path& Renderer::getResourcesPath() const
 
 std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const
 {
-    return ApplicationEnvironment::getShaderSourcesPath() / (shaderName + ".glsl");
+    return ApplicationEnvironment::getShaderSourceDirectory() / (shaderName + ".glsl");
 }
 
 VulkanContext& Renderer::getContext() const
@@ -170,7 +177,7 @@ VkExtent2D Renderer::getSwapChainExtent() const
 
 VkExtent3D Renderer::getSwapChainExtent3D() const
 {
-    return { m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1 };
+    return {m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1};
 }
 
 VulkanRenderPass& Renderer::getDefaultRenderPass() const
@@ -199,7 +206,7 @@ VkShaderModule Renderer::compileGlsl(const std::filesystem::path& path, std::str
     std::string command = "glslangValidator.exe -V -o ";
     command += (m_resourcesPath / "Shaders" / (id + ".spv")).make_preferred().string();
     command += ' ';
-    command += (ApplicationEnvironment::getShaderSourcesPath() / path).make_preferred().string();
+    command += (ApplicationEnvironment::getShaderSourceDirectory() / path).make_preferred().string();
     std::system(command.c_str());
 
     return loadShaderModule(id);
@@ -268,7 +275,7 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
 
     const VulkanQueue& generalQueue = m_device->getGeneralQueue();
     auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandPool = cmdPool;
     allocInfo.commandBufferCount = 1;
@@ -276,7 +283,7 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
@@ -309,7 +316,7 @@ void Renderer::flushCoroutines()
 
     const VulkanQueue& generalQueue = m_device->getGeneralQueue();
     auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandPool = cmdPool;
     allocInfo.commandBufferCount = 1;
@@ -317,7 +324,7 @@ void Renderer::flushCoroutines()
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
@@ -349,6 +356,12 @@ void Renderer::drawFrame()
     // Obtain a frame that we can safely draw into
     auto& frame = m_virtualFrames[virtualFrameIndex];
     frame.waitCompletion(m_device->getHandle());
+
+    std::function<void()> task;
+    while (m_mainThreadQueue.tryPop(task))
+    {
+        task();
+    }
 
     // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
     m_device->getResourceDeallocator().incrementFrameCount();
@@ -424,8 +437,8 @@ void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageV
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
         m_sceneImageViews.push_back(imageViews[i].get());
 
-    m_sceneMaterial->writeDescriptor(0, 0, imageViews, m_linearClampSampler.get(),
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    m_sceneMaterial->writeDescriptor(
+        0, 0, imageViews, m_linearClampSampler.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     m_device->flushDescriptorUpdates();
 }
@@ -445,8 +458,8 @@ Geometry* Renderer::getFullScreenGeometry() const
     return m_fullScreenGeometry.get();
 }
 
-std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(std::string_view pipelineName,
-    const VulkanRenderPass& renderPass, int subpassIndex)
+std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(
+    std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex)
 {
     return LuaPipelineBuilder(getResourcesPath() / "Pipelines" / pipelineName).create(this, renderPass, subpassIndex);
 }
@@ -491,22 +504,27 @@ VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shad
 
     const auto shaderCode = readBinaryFile(shaderModulePath).unwrap();
 
-    VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
     createInfo.codeSize = shaderCode.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
     VkShaderModule shaderModule(VK_NULL_HANDLE);
     vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
 
-    m_shaderModules.insert_or_assign(shaderKey, ShaderModule{ shaderModule, timestamp });
+    m_shaderModules.insert_or_assign(shaderKey, ShaderModule{shaderModule, timestamp});
     return shaderModule;
 }
 
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(VirtualFrame& virtualFrame)
 {
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(m_device->getHandle(), m_swapChain->getHandle(),
-        std::numeric_limits<uint64_t>::max(), virtualFrame.imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(
+        m_device->getHandle(),
+        m_swapChain->getHandle(),
+        std::numeric_limits<uint64_t>::max(),
+        virtualFrame.imageAvailableSemaphore,
+        VK_NULL_HANDLE,
+        &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         logger->warn("Swap chain is 'out of date'");
@@ -556,8 +574,8 @@ void Renderer::record(VkCommandBuffer commandBuffer)
 
 void Renderer::present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex)
 {
-    const VkResult result = m_device->getGeneralQueue().present(virtualFrame.renderFinishedSemaphore,
-        m_swapChain->getHandle(), swapChainImageIndex);
+    const VkResult result = m_device->getGeneralQueue().present(
+        virtualFrame.renderFinishedSemaphore, m_swapChain->getHandle(), swapChainImageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
@@ -585,10 +603,11 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
 
     if (!m_swapChainFramebuffers.contains(swapChainImageView))
     {
-        const auto attachmentViews = { swapChainImageView };
-        m_swapChainFramebuffers.emplace(swapChainImageView,
-            std::make_unique<VulkanFramebuffer>(*m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(),
-                attachmentViews));
+        const auto attachmentViews = {swapChainImageView};
+        m_swapChainFramebuffers.emplace(
+            swapChainImageView,
+            std::make_unique<VulkanFramebuffer>(
+                *m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(), attachmentViews));
     }
 
     if (framebuffer)

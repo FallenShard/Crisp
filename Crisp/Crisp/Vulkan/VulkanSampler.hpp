@@ -10,10 +10,16 @@ class VulkanSampler final : public VulkanResource<VkSampler, vkDestroySampler>
 {
 public:
     VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode);
-    VulkanSampler(const VulkanDevice& device, VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode,
-        float anisotropy, float maxLod);
+    VulkanSampler(
+        const VulkanDevice& device,
+        VkFilter minFilter,
+        VkFilter magFilter,
+        VkSamplerAddressMode addressMode,
+        float anisotropy,
+        float maxLod);
 };
 
 std::unique_ptr<VulkanSampler> createLinearClampSampler(const VulkanDevice& device);
+std::unique_ptr<VulkanSampler> createNearestClampSampler(const VulkanDevice& device);
 
 } // namespace crisp

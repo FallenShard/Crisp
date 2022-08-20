@@ -2,8 +2,8 @@
 
 #include <Crisp/Vulkan/VulkanBufferView.hpp>
 
-#include <CrispCore/Math/Headers.hpp>
-#include <CrispCore/MemoryRegion.hpp>
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/MemoryRegion.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -32,14 +32,18 @@ public:
     }
 
     void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
-    void insertBufferMemoryBarrier(const VulkanBufferSpan& bufferSpan, VkPipelineStageFlags srcStage,
-        VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const;
-    void insertBufferMemoryBarrier(const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage,
-        VkPipelineStageFlags dstStage) const;
-    void insertBufferMemoryBarriers(std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage,
-        VkPipelineStageFlags dstStage) const;
-    void insertImageMemoryBarrier(const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage,
-        VkPipelineStageFlags dstStage) const;
+    void insertBufferMemoryBarrier(
+        const VulkanBufferSpan& bufferSpan,
+        VkPipelineStageFlags srcStage,
+        VkAccessFlags srcAccess,
+        VkPipelineStageFlags dstStage,
+        VkAccessFlags dstAccess) const;
+    void insertBufferMemoryBarrier(
+        const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const;
+    void insertBufferMemoryBarriers(
+        std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const;
+    void insertImageMemoryBarrier(
+        const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const;
     // void insertImageMemoryBarrier(const VulkanBufferView& bufferView, VkPipelineStageFlags srcStage,
     //     VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const;
     // void insertMemoryBarrier(VkPipelineStageFlags srcStage, VkAccessFlags srcAccess, VkPipelineStageFlags dstStage,

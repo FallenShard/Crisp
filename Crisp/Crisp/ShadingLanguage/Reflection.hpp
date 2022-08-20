@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CrispCore/Result.hpp>
+#include <Crisp/Common/Result.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -10,13 +10,13 @@
 
 namespace crisp::sl
 {
-    struct ShaderUniformInputMetadata
-    {
-        std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
-        std::vector<VkPushConstantRange> pushConstants;
+struct ShaderUniformInputMetadata
+{
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
+    std::vector<VkPushConstantRange> pushConstants;
 
-        void merge(ShaderUniformInputMetadata&& metadata);
-    };
+    void merge(ShaderUniformInputMetadata&& metadata);
+};
 
-    Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::filesystem::path& sourcePath);
-}
+Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::filesystem::path& sourcePath);
+} // namespace crisp::sl
