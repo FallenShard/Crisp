@@ -44,8 +44,8 @@ public:
 
     glm::vec2 getViewDepthRange() const;
 
-    std::array<glm::vec3, Camera::FrustumPointCount> computeFrustumPoints(float zNear, float zFar) const;
-    std::array<glm::vec3, Camera::FrustumPointCount> computeFrustumPoints() const;
+    std::array<glm::vec3, FrustumPointCount> computeFrustumPoints(float zNear, float zFar) const;
+    std::array<glm::vec3, FrustumPointCount> computeFrustumPoints() const;
 
     glm::vec4 computeFrustumBoundingSphere(float zNear, float zFar) const;
 

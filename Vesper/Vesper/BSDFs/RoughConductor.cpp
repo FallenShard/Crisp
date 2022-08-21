@@ -1,8 +1,8 @@
 #include "RoughConductor.hpp"
 
-#include "Core/Fresnel.hpp"
 #include "Samplers/Sampler.hpp"
 #include <Crisp/Math/CoordinateFrame.hpp>
+#include <Crisp/Optics/Fresnel.hpp>
 
 #include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 

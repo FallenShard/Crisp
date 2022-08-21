@@ -1,11 +1,11 @@
 #include "Microfacet.hpp"
 
-#include "Core/Fresnel.hpp"
 #include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 #include "Samplers/Sampler.hpp"
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Warp.hpp>
+#include <Crisp/Optics/Fresnel.hpp>
 
 namespace crisp
 {

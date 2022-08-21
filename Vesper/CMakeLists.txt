@@ -40,7 +40,6 @@ add_library(Vesper
     "Vesper/Cameras/CameraFactory.hpp"
     "Vesper/Cameras/Perspective.cpp"
     "Vesper/Cameras/Perspective.hpp"
-    "Vesper/Core/Fresnel.hpp"
     "Vesper/Core/Intersection.hpp"
     "Vesper/Core/MipMap.cpp"
     "Vesper/Core/MipMap.hpp"
@@ -130,7 +129,12 @@ add_library(Vesper
 set_target_properties(Vesper PROPERTIES CXX_STANDARD 20)
 
 target_link_libraries(Vesper
-    PUBLIC CrispMath CrispFormat spdlog CrispRobinHood CrispSpectrum
+    PUBLIC CrispMath
+    PUBLIC CrispFormat
+    PUBLIC spdlog
+    PUBLIC CrispRobinHood
+    PUBLIC CrispSpectrum
+    PUBLIC CrispOptics
     PUBLIC tbb
     PUBLIC embree
     PUBLIC tinyexr
