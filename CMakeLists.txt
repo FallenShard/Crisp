@@ -15,12 +15,14 @@ endif()
 function(add_cpp_static_library targetName)
     add_library(${targetName} STATIC ${ARGN})
     set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
+    target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
 endfunction()
 
 # Creates a header-only library with C++ 20 standard support.
 function(add_cpp_interface_library targetName)
     add_library(${targetName} INTERFACE ${ARGN})
     set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
+    target_include_directories(${targetName} INTERFACE ${CRISP_INCLUDE_DIR})
 endfunction()
 
 # Creates a binary with C++ 20 standard support.
@@ -30,7 +32,7 @@ function(add_cpp_binary targetName)
 endfunction()
 
 # Copies a list of shared libraries into the designated target's directory.
-function(copy_shared_libs targetName sharedLibNames)
+function(copy_shared_libs targetName)
     foreach(sharedLib ${ARGN})
         add_custom_command(TARGET ${targetName} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

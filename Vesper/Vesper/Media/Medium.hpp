@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Spectrums/Spectrum.hpp"
-#include <Crisp/Math/Headers.hpp>
 #include <Crisp/Math/Ray.hpp>
+#include <Crisp/Spectra/Spectrum.hpp>
+
 
 #include "Core/VariantMap.hpp"
 

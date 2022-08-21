@@ -64,8 +64,6 @@ add_cpp_static_library(CrispRenderer
     "PipelineCache.cpp"
     "PipelineCache.hpp"
 )
-target_include_directories(CrispRenderer PUBLIC ".")
-target_compile_definitions(CrispRenderer PUBLIC __TBB_NO_IMPLICIT_LINKAGE)
 target_link_libraries(CrispRenderer
     PUBLIC CrispBitFlags
     PUBLIC CrispVulkan
@@ -86,7 +84,6 @@ add_cpp_static_library(CrispImageCache
     "ImageCache.hpp"
     "ImageCache.cpp"
 )
-target_include_directories(CrispImageCache PUBLIC ".")
 target_link_libraries(CrispImageCache
     PUBLIC CrispVulkan
     PRIVATE CrispRenderer
@@ -95,4 +92,3 @@ target_link_libraries(CrispImageCache
 add_cpp_interface_library(CrispRendererConfig
     "RendererConfig.hpp"
 )
-target_include_directories(CrispRendererConfig INTERFACE ".")

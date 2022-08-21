@@ -26,7 +26,6 @@ add_cpp_static_library(CrispScenes
     "VulkanRayTracingScene.hpp"
     "WorldScene.cpp"
     "WorldScene.hpp")
-target_include_directories(CrispScenes PUBLIC "../../")
 target_link_libraries(CrispScenes
     PUBLIC CrispRenderer
     PUBLIC CrispCamera

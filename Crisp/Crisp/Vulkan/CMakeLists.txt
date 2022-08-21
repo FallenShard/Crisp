@@ -52,7 +52,6 @@ add_cpp_static_library(CrispVulkan
     "VulkanEnumToString.hpp"
     "VulkanEnumToString.cpp"
 )
-target_include_directories(CrispVulkan PUBLIC "../../")
 target_link_libraries(CrispVulkan
     PUBLIC CrispBitFlags
     PUBLIC CrispRendererConfig

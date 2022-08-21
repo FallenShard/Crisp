@@ -4,7 +4,7 @@
 #include <Crisp/Math/Ray.hpp>
 
 #include "Core/VariantMap.hpp"
-#include "Spectrums/Spectrum.hpp"
+#include <Crisp/Spectra/Spectrum.hpp>
 
 namespace crisp
 {

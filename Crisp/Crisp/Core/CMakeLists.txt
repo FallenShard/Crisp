@@ -4,7 +4,6 @@ add_cpp_static_library(CrispWindow
     "Mouse.hpp"
     "Keyboard.hpp"
     "InputTranslator.hpp")
-target_include_directories(CrispWindow PUBLIC "../../")
 target_link_libraries(CrispWindow
     PUBLIC CrispBitFlags
     PUBLIC CrispMath
@@ -18,7 +17,6 @@ add_cpp_interface_library(CrispInput
     "Mouse.hpp"
     "Keyboard.hpp"
     "InputTranslator.hpp")
-target_include_directories(CrispInput INTERFACE "../../")
 target_link_libraries(CrispInput
     INTERFACE CrispBitFlags
     INTERFACE glfw)
@@ -29,7 +27,6 @@ add_cpp_static_library(CrispApplicationEnvironment
     "ApplicationEnvironment.hpp"
     "CommandLineParser.cpp"
     "CommandLineParser.hpp")
-target_include_directories(CrispApplicationEnvironment PUBLIC "../../")
 target_link_libraries(CrispApplicationEnvironment
     PUBLIC CrispUtils
     PUBLIC CrispLogger
@@ -42,7 +39,6 @@ target_link_libraries(CrispApplicationEnvironment
 add_cpp_static_library(CrispApplication
     "Application.cpp"
     "Application.hpp")
-target_include_directories(CrispApplication PUBLIC "../../")
 target_link_libraries(CrispApplication
     PUBLIC CrispBitFlags
     PUBLIC CrispMath
@@ -58,7 +54,6 @@ target_link_libraries(CrispApplication
 
 add_cpp_interface_library(CrispCoreUtils
     "ThreadPool.hpp")
-target_include_directories(CrispCoreUtils INTERFACE "../../")
 target_link_libraries(CrispCoreUtils
     INTERFACE CrispUtils
     INTERFACE MPMCQueue)

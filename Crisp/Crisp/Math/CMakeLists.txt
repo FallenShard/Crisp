@@ -14,6 +14,5 @@ add_cpp_static_library(CrispMath
     "Transform.hpp"
     "Warp.cpp"
     "Warp.hpp")
-target_include_directories(CrispMath PUBLIC ".")
 target_link_libraries(CrispMath
     PUBLIC glm)

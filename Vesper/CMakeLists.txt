@@ -120,10 +120,6 @@ add_library(Vesper
     "Vesper/Shapes/ShapeFactory.hpp"
     "Vesper/Shapes/Sphere.cpp"
     "Vesper/Shapes/Sphere.hpp"
-    "Vesper/Spectrums/RgbSpectrum.cpp"
-    "Vesper/Spectrums/RgbSpectrum.hpp"
-    "Vesper/Spectrums/Spectrum.hpp"
-    "Vesper/Spectrums/WeightedRgbSpectrum.hpp"
     "Vesper/Textures/CheckerboardTexture.hpp"
     "Vesper/Textures/ConstantTexture.hpp"
     "Vesper/Textures/Texture.hpp"
@@ -131,18 +127,14 @@ add_library(Vesper
     "Vesper/Textures/UVTexture.cpp"
     "Vesper/Textures/UVTexture.hpp"
 )
+set_target_properties(Vesper PROPERTIES CXX_STANDARD 20)
 
-set_target_properties(Vesper PROPERTIES
-    CXX_STANDARD 20)
-target_compile_definitions(Vesper PUBLIC __TBB_NO_IMPLICIT_LINKAGE)
-
-target_link_libraries(Vesper PUBLIC tbb)
-target_link_libraries(Vesper PUBLIC embree)
-target_link_libraries(Vesper PUBLIC tinyexr)
-target_link_libraries(Vesper PUBLIC rapidxml)
-
-target_link_libraries(Vesper PUBLIC CrispMath CrispFormat spdlog CrispRobinHood)
+target_link_libraries(Vesper
+    PUBLIC CrispMath CrispFormat spdlog CrispRobinHood CrispSpectrum
+    PUBLIC tbb
+    PUBLIC embree
+    PUBLIC tinyexr
+    PUBLIC rapidxml)
 
 target_include_directories(Vesper PRIVATE "./Vesper")
 target_include_directories(Vesper PUBLIC ".")
-target_include_directories(Vesper PUBLIC "../Crisp")

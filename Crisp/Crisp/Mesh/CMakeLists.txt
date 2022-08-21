@@ -8,7 +8,6 @@ add_cpp_static_library(CrispMesh
     "VertexAttributeDescriptor.cpp"
     "VertexAttributeDescriptor.hpp"
     "VertexAttributeTraits.hpp")
-target_include_directories(CrispMesh PUBLIC "../../")
 target_link_libraries(CrispMesh
     PUBLIC CrispMath
     PUBLIC spdlog

@@ -1,3 +1,6 @@
+# Default include path for all Crisp targets.
+set(CRISP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_subdirectory(Crisp/Animation)
 add_subdirectory(Crisp/Camera)
 add_subdirectory(Crisp/Common)
@@ -14,6 +17,7 @@ add_subdirectory(Crisp/Models)
 add_subdirectory(Crisp/Renderer)
 add_subdirectory(Crisp/Scenes)
 add_subdirectory(Crisp/ShadingLanguage)
+add_subdirectory(Crisp/Spectra)
 add_subdirectory(Crisp/Vulkan)
 add_subdirectory(Crisp)
 add_subdirectory(Main)

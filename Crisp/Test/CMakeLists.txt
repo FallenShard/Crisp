@@ -14,11 +14,9 @@ add_executable(CrispTest
     "VulkanTests/VulkanTest.hpp"
     "VulkanTests/VulkanResourceDeallocatorTest.cpp"
     "VulkanTests/VulkanComputeTest.cpp" "AtmosphereShadingTests/TransmittanceLutTest.cpp")
-
+target_include_directories(CrispTest PUBLIC ".")
 set_target_properties(CrispTest PROPERTIES
     CXX_STANDARD 20)
-
-target_include_directories(CrispTest PUBLIC ".")
 
 target_link_libraries(CrispTest PRIVATE gtest)
 target_link_libraries(CrispTest PRIVATE gtestMain)

@@ -12,7 +12,6 @@ add_cpp_static_library(CrispLights
     "PointLight.hpp"
     "ShadowMapper.cpp"
     "ShadowMapper.hpp")
-target_include_directories(CrispLights PUBLIC "../../")
 target_link_libraries(CrispLights
     PUBLIC CrispRenderer
     PUBLIC CrispGeometry

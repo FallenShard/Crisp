@@ -13,6 +13,5 @@ add_cpp_static_library(CrispModels
     "Skybox.hpp"
     "SPH.cpp"
     "SPH.hpp")
-target_include_directories(CrispModels PUBLIC "../../")
 target_link_libraries(CrispModels
     PUBLIC CrispRenderer)

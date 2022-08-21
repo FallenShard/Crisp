@@ -1,4 +1,5 @@
 add_library(tbb SHARED IMPORTED GLOBAL)
+target_compile_definitions(tbb INTERFACE __TBB_NO_IMPLICIT_LINKAGE)
 target_include_directories(tbb INTERFACE ".")
 set_target_properties(tbb PROPERTIES IMPORTED_IMPLIB
     ${PROJECT_SOURCE_DIR}/Externals/tbb/tbb.lib)

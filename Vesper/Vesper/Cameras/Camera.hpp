@@ -4,7 +4,7 @@
 
 #include "Core/VariantMap.hpp"
 #include "ReconstructionFilters/ReconstructionFilter.hpp"
-#include "Spectrums/Spectrum.hpp"
+#include <Crisp/Spectra/Spectrum.hpp>
 #include <Crisp/Math/Ray.hpp>
 
 namespace crisp

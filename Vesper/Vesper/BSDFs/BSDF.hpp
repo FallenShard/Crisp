@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Core/VariantMap.hpp"
-#include "Spectrums/Spectrum.hpp"
 #include "Textures/Texture.hpp"
 #include <Crisp/BitFlags.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Spectra/Spectrum.hpp>
+
 
 namespace crisp
 {

@@ -37,7 +37,6 @@ add_cpp_static_library(CrispGui
     "StatusBar.cpp"
     "StatusBar.hpp"
     "StopWatch.hpp")
-target_include_directories(CrispGui PUBLIC "../../")
 target_link_libraries(CrispGui
     PUBLIC CrispEvent
     PUBLIC CrispAnimation

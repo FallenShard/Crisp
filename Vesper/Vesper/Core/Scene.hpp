@@ -11,7 +11,7 @@
 
 #include "Core/Intersection.hpp"
 #include "Lights/Light.hpp"
-#include "Spectrums/Spectrum.hpp"
+#include <Crisp/Spectra/Spectrum.hpp>
 #include <Crisp/Math/BoundingBox.hpp>
 #include <Crisp/Math/Ray.hpp>
 

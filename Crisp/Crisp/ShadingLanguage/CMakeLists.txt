@@ -14,7 +14,6 @@ add_cpp_static_library(CrispGlslUtils
     "Statements.hpp"
     "Token.hpp"
     "Visitor.hpp")
-target_include_directories(CrispGlslUtils PUBLIC "../../")
 target_link_libraries(CrispGlslUtils
     PUBLIC CrispMath
     PUBLIC CrispResult
