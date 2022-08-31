@@ -76,7 +76,9 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
 
     // Main render pass
     m_renderGraph->addRenderPass(
-        MainPass, createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
+        MainPass,
+        createForwardLightingPass(
+            m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);

@@ -8,6 +8,12 @@ namespace crisp
 {
 RenderPassBuilder::RenderPassBuilder() {}
 
+RenderPassBuilder& RenderPassBuilder::setAllocateRenderTagets(bool allocateRenderTargets)
+{
+    m_allocateRenderTargets = allocateRenderTargets;
+    return *this;
+}
+
 RenderPassBuilder& RenderPassBuilder::setSwapChainDependency(bool isDependent)
 {
     m_isSwapChainDependent = isDependent;
@@ -20,78 +26,6 @@ RenderPassBuilder& RenderPassBuilder::setRenderTargetsBuffered(bool renderTarget
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setAllocateRenderTagets(bool allocateRenderTargets)
-{
-    m_allocateRenderTargets = allocateRenderTargets;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setRenderTargetCount(uint32_t count)
-{
-    m_renderTargetInfos.resize(count);
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setRenderTargetFormat(
-    uint32_t index, VkFormat format, VkSampleCountFlagBits sampleCount)
-{
-    auto& info = m_renderTargetInfos.at(index);
-    info.format = format;
-    info.sampleCount = sampleCount;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setRenderTargetDepthSlices(
-    uint32_t index, uint32_t depthSlices, VkImageCreateFlags createFlags)
-{
-    auto& info = m_renderTargetInfos.at(index);
-    info.depthSlices = depthSlices;
-    info.createFlags = createFlags;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setRenderTargetLayersAndMipmaps(
-    uint32_t index, uint32_t layerCount, uint32_t mipMapCount)
-{
-    auto& info = m_renderTargetInfos.at(index);
-    info.layerCount = layerCount;
-    info.mipmapCount = mipMapCount;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setRenderTargetBuffered(uint32_t index, bool renderTargetBuffered)
-{
-    auto& info = m_renderTargetInfos.at(index);
-    info.buffered = renderTargetBuffered;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::configureColorRenderTarget(
-    uint32_t index, VkImageUsageFlags usageFlags, VkClearColorValue clearValue)
-{
-    m_renderTargetInfos.at(index).initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    m_renderTargetInfos.at(index).usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | usageFlags;
-    m_renderTargetInfos.at(index).clearValue.color = clearValue;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::configureDepthRenderTarget(
-    uint32_t index, VkImageUsageFlags usageFlags, VkClearDepthStencilValue clearValue)
-{
-    if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT)
-    {
-        m_renderTargetInfos.at(index).initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else
-    {
-        m_renderTargetInfos.at(index).initDstStageFlags =
-            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    }
-    m_renderTargetInfos.at(index).usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | usageFlags;
-    m_renderTargetInfos.at(index).clearValue.depthStencil = clearValue;
-    return *this;
-}
-
 RenderPassBuilder& RenderPassBuilder::setAttachmentCount(uint32_t count)
 {
     m_attachments.resize(count);
@@ -100,13 +34,38 @@ RenderPassBuilder& RenderPassBuilder::setAttachmentCount(uint32_t count)
 }
 
 RenderPassBuilder& RenderPassBuilder::setAttachmentMapping(
-    uint32_t attachmentIdx, uint32_t renderTargetIdx, uint32_t layerIdx, uint32_t layerCount)
+    uint32_t attachmentIdx,
+    const RenderTargetInfo& renderTargetInfo,
+    uint32_t renderTargetIdx,
+    uint32_t layerIdx,
+    uint32_t layerCount)
 {
     m_attachmentMappings.at(attachmentIdx).renderTargetIndex = renderTargetIdx;
     m_attachmentMappings.at(attachmentIdx).subresource.baseArrayLayer = layerIdx;
     m_attachmentMappings.at(attachmentIdx).subresource.layerCount = layerCount;
-    m_attachments.at(attachmentIdx).format = m_renderTargetInfos.at(renderTargetIdx).format;
-    m_attachments.at(attachmentIdx).samples = m_renderTargetInfos.at(renderTargetIdx).sampleCount;
+    m_attachmentMappings.at(attachmentIdx).subresource.baseMipLevel = 0;
+    m_attachmentMappings.at(attachmentIdx).subresource.levelCount = 1;
+    m_attachments.at(attachmentIdx).format = renderTargetInfo.format;
+    m_attachments.at(attachmentIdx).samples = renderTargetInfo.sampleCount;
+    return *this;
+}
+
+RenderPassBuilder& RenderPassBuilder::setAttachmentMapping(
+    uint32_t attachmentIdx,
+    const RenderTargetInfo& renderTargetInfo,
+    uint32_t renderTargetIdx,
+    uint32_t firstLayer,
+    uint32_t layerCount,
+    uint32_t firstMipLevel,
+    uint32_t mipLevelCount)
+{
+    m_attachmentMappings.at(attachmentIdx).renderTargetIndex = renderTargetIdx;
+    m_attachmentMappings.at(attachmentIdx).subresource.baseArrayLayer = firstLayer;
+    m_attachmentMappings.at(attachmentIdx).subresource.layerCount = layerCount;
+    m_attachmentMappings.at(attachmentIdx).subresource.baseMipLevel = firstMipLevel;
+    m_attachmentMappings.at(attachmentIdx).subresource.levelCount = mipLevelCount;
+    m_attachments.at(attachmentIdx).format = renderTargetInfo.format;
+    m_attachments.at(attachmentIdx).samples = renderTargetInfo.sampleCount;
     return *this;
 }
 
@@ -119,24 +78,24 @@ RenderPassBuilder& RenderPassBuilder::setAttachmentBufferOverDepthSlices(uint32_
 RenderPassBuilder& RenderPassBuilder::setAttachmentOps(
     uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp)
 {
-    m_attachments[attachmentIndex].loadOp = loadOp;
-    m_attachments[attachmentIndex].storeOp = storeOp;
+    m_attachments.at(attachmentIndex).loadOp = loadOp;
+    m_attachments.at(attachmentIndex).storeOp = storeOp;
     return *this;
 }
 
 RenderPassBuilder& RenderPassBuilder::setAttachmentStencilOps(
     uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp)
 {
-    m_attachments[attachmentIndex].stencilLoadOp = loadOp;
-    m_attachments[attachmentIndex].stencilStoreOp = storeOp;
+    m_attachments.at(attachmentIndex).stencilLoadOp = loadOp;
+    m_attachments.at(attachmentIndex).stencilStoreOp = storeOp;
     return *this;
 }
 
 RenderPassBuilder& RenderPassBuilder::setAttachmentLayouts(
     uint32_t attachmentIndex, VkImageLayout initialLayout, VkImageLayout finalLayout)
 {
-    m_attachments[attachmentIndex].initialLayout = initialLayout;
-    m_attachments[attachmentIndex].finalLayout = finalLayout;
+    m_attachments.at(attachmentIndex).initialLayout = initialLayout;
+    m_attachments.at(attachmentIndex).finalLayout = finalLayout;
     return *this;
 }
 
@@ -154,7 +113,7 @@ RenderPassBuilder& RenderPassBuilder::setNumSubpasses(uint32_t numSubpasses)
 RenderPassBuilder& RenderPassBuilder::setSubpassDescription(
     uint32_t subpass, VkPipelineBindPoint bindPoint, VkSubpassDescriptionFlags flags)
 {
-    m_subpasses[subpass] = {flags, bindPoint};
+    m_subpasses.at(subpass) = {flags, bindPoint};
     return *this;
 }
 
@@ -228,7 +187,8 @@ std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder:
     return std::make_pair(renderPass, m_attachments);
 }
 
-std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(const VulkanDevice& device, VkExtent2D renderArea) const
+std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(
+    const VulkanDevice& device, VkExtent2D renderArea, std::vector<RenderTarget*> renderTargets) const
 {
     auto [handle, attachments] = create(device.getHandle());
 
@@ -240,7 +200,7 @@ std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(const VulkanDevice& 
     description.subpassCount = static_cast<uint32_t>(m_subpasses.size());
     description.attachmentDescriptions = std::move(attachments);
     description.attachmentMappings = m_attachmentMappings;
-    description.renderTargetInfos = m_renderTargetInfos;
+    description.renderTargets = renderTargets;
 
     return std::make_unique<VulkanRenderPass>(device, handle, std::move(description));
 }

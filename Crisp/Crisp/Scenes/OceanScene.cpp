@@ -328,7 +328,9 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     int ln2 = applyFFT("normalZ");
 
     m_renderGraph->addRenderPass(
-        MainPass, createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
+        MainPass,
+        createForwardLightingPass(
+            m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     m_renderGraph->addDependency(
         OscillationPass,

@@ -11,7 +11,59 @@ namespace crisp
 namespace
 {
 auto logger = createLoggerMt("VulkanImage");
+
+const char* toString(const VkImageLayout layout)
+{
+    switch (layout)
+    {
+    case VK_IMAGE_LAYOUT_UNDEFINED:
+        return "Undefined";
+    case VK_IMAGE_LAYOUT_GENERAL:
+        return "General";
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        return "ColorAttachment";
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        return "DepthStencilAttachment";
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        return "DepthStencilReadOnly";
+    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        return "ShaderReadOnly";
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        return "TransferSrc";
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        return "TransferDst";
+    case VK_IMAGE_LAYOUT_PREINITIALIZED:
+        return "Preinitialized";
+    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
+        return "DepthReadOnlyStencilAttachment";
+    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
+        return "DepthAttachmentStencilReadOnly";
+    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
+        return "DepthAttachment";
+    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
+        return "DepthReadOnly";
+    case VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL:
+        return "StencilAttachment";
+    case VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL:
+        return "StencilReadOnly";
+    case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL:
+        return "ReadOnly";
+    case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+        return "Attachment";
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        return "PresentSrc";
+    case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
+        return "SharedPresent";
+    case VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT:
+        return "FragmentDensityMap";
+    case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR:
+        return "FragmentShadingRateAttachment";
+    default:
+        logger->critical("Unknown layout encountered: {}.", layout);
+        return "Unknown";
+    }
 }
+} // namespace
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
     : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
@@ -232,17 +284,17 @@ void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
 {
     if (m_mipLevels > 1)
     {
-        VkImageSubresourceRange subresRange = {};
-        subresRange.aspectMask = m_aspect;
-        subresRange.baseMipLevel = 0;
-        subresRange.levelCount = 1;
-        subresRange.baseArrayLayer = 0;
-        subresRange.layerCount = m_numLayers;
+        VkImageSubresourceRange currSubresource = {};
+        currSubresource.aspectMask = m_aspect;
+        currSubresource.baseMipLevel = 0;
+        currSubresource.levelCount = 1;
+        currSubresource.baseArrayLayer = 0;
+        currSubresource.layerCount = m_numLayers;
 
         transitionLayout(
             commandBuffer,
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            subresRange,
+            currSubresource,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT);
 
@@ -266,12 +318,12 @@ void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
             imageBlit.dstOffsets[1].y = std::max(int32_t(m_extent.height >> i), 1);
             imageBlit.dstOffsets[1].z = 1;
 
-            subresRange.baseMipLevel = i;
+            currSubresource.baseMipLevel = i;
 
             transitionLayout(
                 commandBuffer,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                subresRange,
+                currSubresource,
                 VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_TRANSFER_BIT);
             vkCmdBlitImage(
@@ -286,7 +338,7 @@ void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
             transitionLayout(
                 commandBuffer,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                subresRange,
+                currSubresource,
                 VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_TRANSFER_BIT);
         }
@@ -462,8 +514,8 @@ std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(
         }
     }
 
-    logger->error("Unsupported layout transition: {} to {}!", oldLayout, newLayout);
-    return {0, 0};
+    logger->critical("Unsupported layout transition: {} to {}!", toString(oldLayout), toString(newLayout));
+    std::exit(-1);
 }
 
 VkImageAspectFlags determineImageAspect(VkFormat format)

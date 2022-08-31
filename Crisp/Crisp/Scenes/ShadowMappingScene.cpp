@@ -8,7 +8,6 @@
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/RenderPasses/TexturePass.hpp>
-#include <Crisp/Renderer/RenderPasses/VarianceShadowMapPass.hpp>
 
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>

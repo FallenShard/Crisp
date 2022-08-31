@@ -5,63 +5,67 @@
 
 #include "Scene.hpp"
 
+#include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
-#include <Crisp/Camera/FreeCameraController.hpp>
+#include <Crisp/Renderer/RenderTargetCache.hpp>
 
 namespace crisp
 {
-    class Application;
+class Application;
 
-    class FluidSimulation;
+class FluidSimulation;
 
-    class SceneRenderPass;
-    class VulkanPipeline;
-    class VulkanImageView;
-    class UniformBuffer;
-    class VulkanDevice;
-    class Renderer;
-    class VulkanSampler;
-    class RenderGraph;
+class SceneRenderPass;
+class VulkanPipeline;
+class VulkanImageView;
+class UniformBuffer;
+class VulkanDevice;
+class Renderer;
+class VulkanSampler;
+class RenderGraph;
 
-    class FluidSimulationScene : public AbstractScene
+class FluidSimulationScene : public AbstractScene
+{
+public:
+    FluidSimulationScene(Renderer* renderer, Application* app);
+    ~FluidSimulationScene();
+
+    virtual void resize(int width, int height) override;
+    virtual void update(float dt) override;
+    virtual void render() override;
+
+private:
+    void createGui();
+
+    Renderer* m_renderer;
+    Application* m_app;
+
+    std::unique_ptr<FreeCameraController> m_cameraController;
+
+    std::unique_ptr<FluidSimulation> m_fluidSimulation;
+
+    std::unique_ptr<VulkanPipeline> m_pointSpritePipeline;
+    std::unique_ptr<Material> m_pointSpriteMaterial;
+
+    TransformPack m_transforms;
+    std::unique_ptr<UniformBuffer> m_transformsBuffer;
+
+    struct ParticleParams
     {
-    public:
-        FluidSimulationScene(Renderer* renderer, Application* app);
-        ~FluidSimulationScene();
-
-        virtual void resize(int width, int height) override;
-        virtual void update(float dt)  override;
-        virtual void render() override;
-
-    private:
-        void createGui();
-
-        Renderer*     m_renderer;
-        Application*  m_app;
-
-        std::unique_ptr<FreeCameraController> m_cameraController;
-
-        std::unique_ptr<FluidSimulation> m_fluidSimulation;
-
-        std::unique_ptr<VulkanPipeline> m_pointSpritePipeline;
-        std::unique_ptr<Material> m_pointSpriteMaterial;
-
-        TransformPack m_transforms;
-        std::unique_ptr<UniformBuffer> m_transformsBuffer;
-
-        struct ParticleParams
-        {
-            float radius;
-            float screenSpaceScale;
-        };
-        ParticleParams m_particleParams;
-
-        std::unordered_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
-        std::unique_ptr<RenderGraph> m_renderGraph;
-
-        RenderNode m_fluidRenderNode;
-
-        std::unique_ptr<Geometry> m_fluidGeometry;
+        float radius;
+        float screenSpaceScale;
     };
-}
+
+    ParticleParams m_particleParams;
+
+    std::unordered_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
+    std::unique_ptr<RenderGraph> m_renderGraph;
+
+    RenderNode m_fluidRenderNode;
+
+    std::unique_ptr<Geometry> m_fluidGeometry;
+
+    RenderTargetCache m_renderTargetCache;
+};
+} // namespace crisp

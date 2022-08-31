@@ -21,17 +21,26 @@ AtmosphereParameters::AtmosphereParameters()
     invVP = glm::inverse(VP);
 }
 
-std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(const VulkanDevice& device)
+std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache)
 {
+    std::vector<RenderTarget*> renderTargets(1);
+    renderTargets[0] = renderTargetCache.addRenderTarget(
+        "TransmittanceMap",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .setLayerAndMipLevelCount(1)
+            .setBuffered(true)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+            .setSize({256, 64})
+            .create(device));
+
     return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(false)
-        .setRenderTargetCount(1)
-        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -44,20 +53,28 @@ std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(const VulkanDevice&
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, {256, 64});
+        .create(device, {256, 64}, std::move(renderTargets));
 }
 
-std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& device)
+std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& device, RenderTargetCache& renderTargetCache)
 {
+    std::vector<RenderTarget*> renderTargets(1);
+    renderTargets[0] = renderTargetCache.addRenderTarget(
+        "SkyViewLut",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .setLayerAndMipLevelCount(1)
+            .setBuffered(true)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+            .setSize({192, 108})
+            .create(device));
+
     return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(false)
-        .setRenderTargetCount(1)
-        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -70,22 +87,29 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& devic
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, {192, 108});
+        .create(device, {192, 108}, std::move(renderTargets));
 }
 
-std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device)
+std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device, RenderTargetCache& renderTargetCache)
 {
+    std::vector<RenderTarget*> renderTargets(1);
+    renderTargets[0] = renderTargetCache.addRenderTarget(
+        "SkyVolumeLut",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .setDepthSliceCount(32 * RendererConfig::VirtualFrameCount)
+            .setCreateFlags(VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
+            .setBuffered(true)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+            .setSize({32, 32})
+            .create(device));
+
     return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(false)
-        .setRenderTargetCount(1)
-        .setRenderTargetFormat(0, VK_FORMAT_R16G16B16A16_SFLOAT)
-        .setRenderTargetDepthSlices(0, 32 * RendererConfig::VirtualFrameCount, VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-        .setRenderTargetBuffered(0, false)
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0, 0, 32)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0, 0, 32)
         .setAttachmentBufferOverDepthSlices(0, true)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -99,20 +123,28 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, {32, 32});
+        .create(device, {32, 32}, std::move(renderTargets));
 }
 
-std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& device, VkExtent2D renderArea)
+std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, VkExtent2D renderArea)
 {
+    std::vector<RenderTarget*> renderTargets(1);
+    renderTargets[0] = renderTargetCache.addRenderTarget(
+        "RayMarchedAtmosphere",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+            .setSize(renderArea)
+            .setBuffered(true)
+            .create(device));
+
     return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(true)
-        .setRenderTargetCount(1)
-        .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -125,7 +157,7 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(const VulkanDevice& devi
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, renderArea);
+        .create(device, renderArea, std::move(renderTargets));
 }
 
 std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, const glm::uvec3& workGroupSize)
@@ -179,7 +211,11 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
 }
 
 robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
-    RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, const std::string& dependentPass)
+    RenderGraph& renderGraph,
+    Renderer& renderer,
+    ResourceContext& resourceContext,
+    RenderTargetCache& renderTargetCache,
+    const std::string& dependentPass)
 {
     ImageCache& imageCache = resourceContext.imageCache;
     const VulkanDevice& device = renderer.getDevice();
@@ -188,7 +224,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParameters), BufferUpdatePolicy::PerFrame);
 
     // Transmittance lookup
-    auto& transPassNode = renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer.getDevice()));
+    auto& transPassNode =
+        renderGraph.addRenderPass("TransLUTPass", createTransmittanceLutPass(renderer.getDevice(), renderTargetCache));
     renderer.updateInitialLayouts(*transPassNode.renderPass);
     auto transLutPipeline =
         resourceContext.createPipeline("transLut", "SkyTransLut.lua", renderGraph.getRenderPass("TransLUTPass"), 0);
@@ -248,7 +285,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     {
     };
 
-    auto& skyViewPass = renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer.getDevice()));
+    auto& skyViewPass =
+        renderGraph.addRenderPass("SkyViewLUTPass", createSkyViewLutPass(renderer.getDevice(), renderTargetCache));
     renderer.updateInitialLayouts(*skyViewPass.renderPass);
     renderGraph.addRenderTargetLayoutTransition("TransLUTPass", "SkyViewLUTPass", 0);
     renderGraph.addDependency(
@@ -296,7 +334,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     skyViewLutNode->pass("SkyViewLUTPass").pipeline = skyViewLutPipeline;
 
     // Camera volumes
-    auto& camVolPass = renderGraph.addRenderPass("CameraVolumesPass", createSkyVolumePass(device));
+    auto& camVolPass = renderGraph.addRenderPass("CameraVolumesPass", createSkyVolumePass(device, renderTargetCache));
     renderGraph.addRenderTargetLayoutTransition("SkyViewLUTPass", "CameraVolumesPass", 0);
     auto cameraVolumesPipeline = resourceContext.createPipeline(
         "skyCameraVolumes", "SkyCameraVolumes.lua", renderGraph.getRenderPass("CameraVolumesPass"), 0);
@@ -327,7 +365,8 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
 
     // Ray marching - final step
     auto& rayMarchingPass = renderGraph.addRenderPass(
-        "RayMarchingPass", createRayMarchingPass(renderer.getDevice(), renderer.getSwapChainExtent()));
+        "RayMarchingPass",
+        createRayMarchingPass(renderer.getDevice(), renderTargetCache, renderer.getSwapChainExtent()));
     renderer.updateInitialLayouts(*rayMarchingPass.renderPass);
     renderGraph.addRenderTargetLayoutTransition("CameraVolumesPass", "RayMarchingPass", 0);
     renderGraph.addRenderTargetLayoutTransition("DepthPrePass", "RayMarchingPass", 0);

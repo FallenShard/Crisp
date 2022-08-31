@@ -51,17 +51,24 @@ struct BlurParams
 BlurParams blurH = {0.0f, 1.0f / Application::DefaultWindowWidth, 1.0f, 3};
 BlurParams blurV = {1.0f / Application::DefaultWindowHeight, 0.0f, 1.0f, 3};
 
-std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer)
+std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer, RenderTargetCache& renderTargetCache)
 {
+    std::vector<RenderTarget*> renderTargets(1);
+    renderTargets[0] = renderTargetCache.addRenderTarget(
+        "AmbientOcclusionMap",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
+            .setBuffered(true)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
+            .setSize(renderer.getSwapChainExtent())
+            .create(renderer.getDevice()));
+
     return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(true)
-        .setRenderTargetCount(1)
-        .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT)
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -74,7 +81,7 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer)
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(renderer.getDevice(), renderer.getSwapChainExtent());
+        .create(renderer.getDevice(), renderer.getSwapChainExtent(), std::move(renderTargets));
 }
 
 } // namespace
@@ -151,12 +158,21 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 2);
 
-    auto mainPass = createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent());
-    auto ssaoPass = createAmbientOcclusionPass(*m_renderer);
-    auto blurHPass =
-        createBlurPass(m_renderer->getDevice(), VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent(), true);
-    auto blurVPass =
-        createBlurPass(m_renderer->getDevice(), VK_FORMAT_R32G32B32A32_SFLOAT, m_renderer->getSwapChainExtent(), true);
+    auto mainPass = createForwardLightingPass(
+        m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent());
+    auto ssaoPass = createAmbientOcclusionPass(*m_renderer, m_resourceContext->renderTargetCache);
+    auto blurHPass = createBlurPass(
+        m_renderer->getDevice(),
+        m_resourceContext->renderTargetCache,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        m_renderer->getSwapChainExtent(),
+        true);
+    auto blurVPass = createBlurPass(
+        m_renderer->getDevice(),
+        m_resourceContext->renderTargetCache,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        m_renderer->getSwapChainExtent(),
+        true);
 
     VulkanPipeline* colorPipeline = m_resourceContext->createPipeline("color", "UniformColor.lua", *mainPass, 0);
     Material* colorMaterial = m_resourceContext->createMaterial("color", colorPipeline);

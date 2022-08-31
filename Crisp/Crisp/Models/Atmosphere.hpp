@@ -1,10 +1,10 @@
 #pragma once
 
 #include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/RenderTargetCache.hpp>
 
 #include <Crisp/Common/RobinHood.hpp>
 #include <Crisp/Math/Headers.hpp>
-
 
 #include <string>
 
@@ -111,6 +111,10 @@ struct AtmosphereParameters
 };
 
 robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
-    RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, const std::string& dependentPass);
+    RenderGraph& renderGraph,
+    Renderer& renderer,
+    ResourceContext& resourceContext,
+    RenderTargetCache& renderTargetCache,
+    const std::string& dependentPass);
 
 } // namespace crisp

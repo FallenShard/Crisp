@@ -15,8 +15,6 @@ add_cpp_static_library(CrispRenderer
     "RenderPasses/ShadowPass.hpp"
     "RenderPasses/TexturePass.cpp"
     "RenderPasses/TexturePass.hpp"
-    "RenderPasses/VarianceShadowMapPass.cpp"
-    "RenderPasses/VarianceShadowMapPass.hpp"
     "BufferUpdatePolicy.hpp"
     "ComputePipeline.cpp"
     "ComputePipeline.hpp"
@@ -63,6 +61,8 @@ add_cpp_static_library(CrispRenderer
     "ImageCache.cpp"
     "PipelineCache.cpp"
     "PipelineCache.hpp"
+    "RenderTargetCache.cpp"
+    "RenderTargetCache.hpp"
 )
 target_link_libraries(CrispRenderer
     PUBLIC CrispBitFlags

@@ -16,6 +16,8 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/Material.hpp>
 
+#include <Crisp/Renderer/RenderTargetCache.hpp>
+
 namespace crisp
 {
 class Renderer;
@@ -195,6 +197,8 @@ private:
     void renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
     void renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;
     void renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const;
+
+    RenderTargetCache m_renderTargetCache;
 
     mutable std::vector<GuiDrawCommand> m_drawCommands;
 

@@ -69,7 +69,9 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
     /*m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer->getDevice(),
                                                renderer->getSwapChainExtent(), VK_SAMPLE_COUNT_8_BIT));*/
     m_renderGraph->addRenderPass(
-        MainPass, createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
+        MainPass,
+        createForwardLightingPass(
+            m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);

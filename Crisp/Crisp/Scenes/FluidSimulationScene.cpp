@@ -37,19 +37,20 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     , m_renderGraph(std::make_unique<RenderGraph>(m_renderer))
 {
     m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
-    m_uniformBuffers.emplace("camera",
-        std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
+    m_uniformBuffers.emplace(
+        "camera", std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
 
-    auto& mainPassNode = m_renderGraph->addRenderPass(MainPass,
-        createForwardLightingPass(m_renderer->getDevice(), renderer->getSwapChainExtent()));
+    auto& mainPassNode = m_renderGraph->addRenderPass(
+        MainPass,
+        createForwardLightingPass(m_renderer->getDevice(), m_renderTargetCache, renderer->getSwapChainExtent()));
     m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
 
     m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
 
     m_transformsBuffer =
         std::make_unique<UniformBuffer>(m_renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
-    m_uniformBuffers.emplace("params",
-        std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame));
+    m_uniformBuffers.emplace(
+        "params", std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame));
 
     m_pointSpritePipeline = m_renderer->createPipelineFromLua("PointSprite.lua", *mainPassNode.renderPass, 0);
     m_pointSpriteMaterial = std::make_unique<Material>(m_pointSpritePipeline.get());
@@ -127,8 +128,8 @@ void FluidSimulationScene::createGui()
     std::unique_ptr<Panel> panel = std::make_unique<Panel>(m_app->getForm());
 
     panel->setId("fluidSimulationPanel");
-    panel->setPadding({ 20, 20 });
-    panel->setPosition({ 20, 40 });
+    panel->setPadding({20, 20});
+    panel->setPosition({20, 40});
     panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
     panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
 
@@ -136,7 +137,7 @@ void FluidSimulationScene::createGui()
     auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal)
     {
         auto label = std::make_unique<Label>(m_app->getForm(), labelText);
-        label->setPosition({ 0, y });
+        label->setPosition({0, y});
         panel->addControl(std::move(label));
         y += 20;
 
@@ -144,7 +145,7 @@ void FluidSimulationScene::createGui()
         slider->setId(labelText + "Slider");
         slider->setAnchor(Anchor::TopCenter);
         slider->setOrigin(Origin::TopCenter);
-        slider->setPosition({ 0, y });
+        slider->setPosition({0, y});
         slider->setValue(val);
         slider->setIncrement(0.1);
         slider->setPrecision(1);
@@ -170,7 +171,7 @@ void FluidSimulationScene::createGui()
     };
 
     auto viscoLabel = std::make_unique<Label>(m_app->getForm(), "Viscosity");
-    viscoLabel->setPosition({ 0, y });
+    viscoLabel->setPosition({0, y});
     panel->addControl(std::move(viscoLabel));
     y += 20;
 
@@ -178,7 +179,7 @@ void FluidSimulationScene::createGui()
     viscositySlider->setId("viscositySlider");
     viscositySlider->setAnchor(Anchor::TopCenter);
     viscositySlider->setOrigin(Origin::TopCenter);
-    viscositySlider->setPosition({ 0, y });
+    viscositySlider->setPosition({0, y});
     viscositySlider->setMaxValue(30);
     viscositySlider->setMinValue(3);
     viscositySlider->setValue(3);
@@ -190,7 +191,7 @@ void FluidSimulationScene::createGui()
     y += 30;
 
     auto surfaceTensionLabel = std::make_unique<Label>(m_app->getForm(), "Surface Tension");
-    surfaceTensionLabel->setPosition({ 0, y });
+    surfaceTensionLabel->setPosition({0, y});
     panel->addControl(std::move(surfaceTensionLabel));
     y += 20;
 
@@ -198,7 +199,7 @@ void FluidSimulationScene::createGui()
     surfaceTensionSlider->setId("surfaceTensionSlider");
     surfaceTensionSlider->setAnchor(Anchor::TopCenter);
     surfaceTensionSlider->setOrigin(Origin::TopCenter);
-    surfaceTensionSlider->setPosition({ 0, y });
+    surfaceTensionSlider->setPosition({0, y});
     surfaceTensionSlider->setMaxValue(50);
     surfaceTensionSlider->setMinValue(1);
     surfaceTensionSlider->setValue(1);
@@ -211,8 +212,8 @@ void FluidSimulationScene::createGui()
 
     auto resetButton = std::make_unique<Button>(m_app->getForm());
     resetButton->setId("resetButton");
-    resetButton->setPosition({ 0, y });
-    resetButton->setSizeHint({ 0, 30 });
+    resetButton->setPosition({0, y});
+    resetButton->setSizeHint({0, 30});
     resetButton->setText("Reset Simulation");
     resetButton->setHorizontalSizingPolicy(SizingPolicy::FillParent);
     resetButton->clicked += [this]()

@@ -15,23 +15,23 @@ std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& dev
     return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(true)
-        .setRenderTargetCount(3)
+        /*.setRenderTargetCount(3)
         .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
         .configureColorRenderTarget(0, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
         .setRenderTargetFormat(1, VK_FORMAT_D32_SFLOAT)
         .configureColorRenderTarget(1, 0)
         .setRenderTargetFormat(2, VK_FORMAT_R32G32B32A32_SFLOAT)
-        .configureColorRenderTarget(2, VK_IMAGE_USAGE_SAMPLED_BIT)
+        .configureColorRenderTarget(2, VK_IMAGE_USAGE_SAMPLED_BIT)*/
 
         .setAttachmentCount(3)
-        .setAttachmentMapping(0, 0)
+        //.setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .setAttachmentMapping(1, 1)
+        //.setAttachmentMapping(1, 1)
         .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
         .setAttachmentLayouts(
             1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-        .setAttachmentMapping(2, 2)
+        //.setAttachmentMapping(2, 2)
         .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -54,6 +54,6 @@ std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& dev
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
-        .create(device, renderArea);
+        .create(device, renderArea, {});
 }
 } // namespace crisp

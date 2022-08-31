@@ -64,9 +64,9 @@ Material* ResourceContext::getMaterial(std::string id)
     return m_materials.at(id).get();
 }
 
-UniformBuffer* ResourceContext::getUniformBuffer(std::string id)
+UniformBuffer* ResourceContext::getUniformBuffer(std::string id) const
 {
-    return m_uniformBuffers[id].get();
+    return m_uniformBuffers.at(id).get();
 }
 
 void ResourceContext::recreatePipelines()

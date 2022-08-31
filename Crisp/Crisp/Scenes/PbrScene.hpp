@@ -8,7 +8,6 @@
 #include <Crisp/ConnectionHandler.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-
 namespace crisp
 {
 namespace gui

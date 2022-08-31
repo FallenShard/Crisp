@@ -6,6 +6,7 @@
 #include <Crisp/Renderer/VirtualFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 
+#include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
 #include <array>
@@ -36,7 +37,7 @@ class Material;
 class Renderer
 {
 public:
-    static constexpr unsigned int NumVirtualFrames = RendererConfig::VirtualFrameCount;
+    static constexpr uint32_t NumVirtualFrames = RendererConfig::VirtualFrameCount;
 
     Renderer(SurfaceCreator surfCreatorCallback);
     ~Renderer();
@@ -100,9 +101,8 @@ public:
 
     Geometry* getFullScreenGeometry() const;
 
-    std::unique_ptr<VulkanPipeline> createPipelineFromLua(std::string_view pipelineName,
-        const VulkanRenderPass& renderPass,
-        int subpassIndex);
+    std::unique_ptr<VulkanPipeline> createPipelineFromLua(
+        std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex);
 
     template <typename... Args>
     std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args)
@@ -114,7 +114,7 @@ public:
     {
         struct Awaitable
         {
-            Renderer* renderer{ nullptr };
+            Renderer* renderer{nullptr};
 
             bool await_ready() const noexcept
             {
@@ -132,7 +132,7 @@ public:
             }
         };
 
-        return Awaitable{ this };
+        return Awaitable{this};
     }
 
     void updateInitialLayouts(VulkanRenderPass& renderPass);
@@ -158,7 +158,7 @@ private:
     void updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView);
 
     uint64_t m_currentFrameIndex;
-    std::filesystem::path m_resourcesPath;
+    std::filesystem::path m_assetDirectory;
 
     std::unique_ptr<VulkanContext> m_context;
     std::unique_ptr<VulkanPhysicalDevice> m_physicalDevice;
@@ -199,6 +199,8 @@ private:
 
     std::list<std::coroutine_handle<>> m_cmdBufferCoroutines;
     VkCommandBuffer m_coroCmdBuffer;
+
+    RenderTarget m_swapChainRenderTarget;
 
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;

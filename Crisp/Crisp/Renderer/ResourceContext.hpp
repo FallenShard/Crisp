@@ -5,6 +5,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/PipelineCache.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
 #include <Crisp/Common/RobinHood.hpp>
@@ -52,7 +53,7 @@ public:
 
     Geometry* getGeometry(std::string id);
     Material* getMaterial(std::string id);
-    UniformBuffer* getUniformBuffer(std::string id);
+    UniformBuffer* getUniformBuffer(std::string id) const;
 
     void recreatePipelines();
 
@@ -68,6 +69,7 @@ public:
 
     ImageCache imageCache;
     PipelineCache pipelineCache;
+    RenderTargetCache renderTargetCache;
 
 private:
     Renderer* m_renderer;

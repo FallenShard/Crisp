@@ -23,30 +23,44 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
+namespace crisp::gui
+{
 namespace
 {
 static constexpr float DepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
 
-std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(
-    const crisp::VulkanDevice& device, const VkExtent2D swapChainExtent)
+std::unique_ptr<VulkanRenderPass> createGuiRenderPass(
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D swapChainExtent)
 {
-    return crisp::RenderPassBuilder()
+    std::vector<RenderTarget*> renderTargets(2);
+    renderTargets[0] = renderTargetCache.addRenderTarget(
+        "GuiPassColor",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R8G8B8A8_UNORM)
+            .setBuffered(true)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
+            .setSize(swapChainExtent)
+            .create(device));
+    renderTargets[1] = renderTargetCache.addRenderTarget(
+        "GuiPassDepth",
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_D32_SFLOAT)
+            .setBuffered(true)
+            .configureDepthRenderTarget(0, {1.0f, 0})
+            .setSize(swapChainExtent)
+            .create(device));
+
+    return RenderPassBuilder()
         .setRenderTargetsBuffered(true)
         .setSwapChainDependency(true)
 
-        .setRenderTargetCount(2)
-        .setRenderTargetFormat(0, VK_FORMAT_R8G8B8A8_UNORM)
-        .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT)
-        .setRenderTargetFormat(1, VK_FORMAT_D32_SFLOAT)
-        .configureDepthRenderTarget(1, 0, {1.0f, 0})
-
         .setAttachmentCount(2)
-        .setAttachmentMapping(0, 0)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .setAttachmentMapping(1, 1)
+        .setAttachmentMapping(1, renderTargets[1]->info, 1)
         .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
         .setAttachmentLayouts(
             1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
@@ -61,13 +75,11 @@ std::unique_ptr<crisp::VulkanRenderPass> createGuiRenderPass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, swapChainExtent);
+        .create(device, swapChainExtent, renderTargets);
 }
 
 } // namespace
 
-namespace crisp::gui
-{
 RenderSystem::RenderSystem(Renderer* renderer)
     : m_renderer(renderer)
 {
@@ -76,7 +88,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
     m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + DepthLayers);
 
     // Create the render pass where all GUI controls will be drawn
-    m_guiPass = createGuiRenderPass(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_guiPass = createGuiRenderPass(m_renderer->getDevice(), m_renderTargetCache, m_renderer->getSwapChainExtent());
     m_renderer->updateInitialLayouts(*m_guiPass);
 
     // Create pipelines for different types of drawable objects

@@ -16,6 +16,8 @@
 
 #include "Crisp/ChromeProfiler.hpp"
 
+#include <Crisp/Enumerate.hpp>
+
 namespace crisp
 {
 namespace
@@ -50,7 +52,14 @@ RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<
         logger->warn("Render graph already contains a node named {}\n", name);
 
     auto iter = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
-    m_renderer->updateInitialLayouts(*iter.first->second->renderPass);
+    // logger->info("Preparing render pass: {}.", iter.)
+    m_renderer->enqueueResourceUpdate(
+        [pass = iter](VkCommandBuffer cmdBuffer)
+        {
+            logger->info("Updating render pass {}", pass.first->first);
+            pass.first->second->renderPass->updateInitialLayouts(cmdBuffer);
+        });
+    // updateInitialLayouts(*iter.first->second->renderPass);
     return *iter.first->second;
 }
 
@@ -113,15 +122,18 @@ void RenderGraph::addRenderTargetLayoutTransition(
     if (attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT)
     {
         sourceNode->dependencies[destinationPass] =
-            [sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
+            [s = sourcePass, sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
                 const VulkanRenderPass& sourcePass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
+            logger->info("Transitioning: {}", s);
             auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
+            const auto& range =
+                sourcePass.getRenderTargetView(sourceRenderTargetIndex, frameIndex).getSubresourceRange();
+
             renderTarget.transitionLayout(
                 cmdBuffer.getHandle(),
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                frameIndex * layerMultiplier,
-                layerMultiplier,
+                range,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 dstStageFlags);
         };
@@ -129,15 +141,17 @@ void RenderGraph::addRenderTargetLayoutTransition(
     else if (attachmentAspect == VK_IMAGE_ASPECT_DEPTH_BIT)
     {
         sourceNode->dependencies[destinationPass] =
-            [sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
+            [s = sourcePass, sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
                 const VulkanRenderPass& sourcePass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
+            logger->info("Transitioning: {}", s);
             auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
+            const auto& range =
+                sourcePass.getRenderTargetView(sourceRenderTargetIndex, frameIndex).getSubresourceRange();
             renderTarget.transitionLayout(
                 cmdBuffer.getHandle(),
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                frameIndex * layerMultiplier,
-                layerMultiplier,
+                range,
                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 dstStageFlags);
         };

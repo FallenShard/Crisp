@@ -34,18 +34,23 @@ namespace
 auto logger = spdlog::stdout_color_mt("Renderer");
 
 std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
-    const VulkanDevice& device, const VulkanSwapChain& swapChain)
+    const VulkanDevice& device, const VulkanSwapChain& swapChain, RenderTarget& renderTarget)
 {
+    std::vector<RenderTarget*> renderTargets{&renderTarget};
+    renderTargets[0]->info.buffered = true;
+    renderTargets[0]->info.format = swapChain.getImageFormat();
+    renderTargets[0]->info.size = swapChain.getExtent();
+
     return RenderPassBuilder()
         .setAllocateRenderTagets(false)
-        .setSwapChainDependency(true)
-        .setRenderTargetsBuffered(true)
-        .setRenderTargetCount(1)
+        //.setSwapChainDependency(true)
+        //.setRenderTargetsBuffered(true)
+        /*.setRenderTargetCount(1)
         .setRenderTargetFormat(0, swapChain.getImageFormat())
-        .configureColorRenderTarget(0, 0)
+        .configureColorRenderTarget(0, 0)*/
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
+        .setAttachmentMapping(0, renderTargets[0]->info, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 
@@ -58,16 +63,16 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
             0,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, swapChain.getExtent());
+        .create(device, swapChain.getExtent(), std::move(renderTargets));
 }
 
 } // namespace
 
 Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     : m_currentFrameIndex(0)
-    , m_resourcesPath(ApplicationEnvironment::getResourcesPath())
+    , m_assetDirectory(ApplicationEnvironment::getResourcesPath())
 {
-    recompileShaderDir(ApplicationEnvironment::getShaderSourceDirectory(), m_resourcesPath / "Shaders");
+    recompileShaderDir(ApplicationEnvironment::getShaderSourceDirectory(), m_assetDirectory / "Shaders");
 
     // Create fundamental objects for the API
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
@@ -88,7 +93,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         createDefaultQueueConfiguration(*m_context, *m_physicalDevice),
         RendererConfig::VirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
-    m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain);
+    m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
     logger->info("Created all base components");
 
     m_defaultViewport = m_swapChain->getViewport();
@@ -107,7 +112,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
 
     // Creates a map of all shaders
-    loadShaders(m_resourcesPath / "Shaders");
+    loadShaders(m_assetDirectory / "Shaders");
 
     // create vertex buffer
     const std::vector<glm::vec2> vertices = {
@@ -142,7 +147,7 @@ Renderer::~Renderer()
 
 const std::filesystem::path& Renderer::getResourcesPath() const
 {
-    return m_resourcesPath;
+    return m_assetDirectory;
 }
 
 std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const
@@ -197,14 +202,14 @@ VkRect2D Renderer::getDefaultScissor() const
 
 VkShaderModule Renderer::loadShaderModule(const std::string& key)
 {
-    return loadSpirvShaderModule(m_resourcesPath / "Shaders" / (key + ".spv"));
+    return loadSpirvShaderModule(m_assetDirectory / "Shaders" / (key + ".spv"));
 }
 
 VkShaderModule Renderer::compileGlsl(const std::filesystem::path& path, std::string id, std::string type)
 {
     logger->info("Compiling: {}", path.string());
     std::string command = "glslangValidator.exe -V -o ";
-    command += (m_resourcesPath / "Shaders" / (id + ".spv")).make_preferred().string();
+    command += (m_assetDirectory / "Shaders" / (id + ".spv")).make_preferred().string();
     command += ' ';
     command += (ApplicationEnvironment::getShaderSourceDirectory() / path).make_preferred().string();
     std::system(command.c_str());
