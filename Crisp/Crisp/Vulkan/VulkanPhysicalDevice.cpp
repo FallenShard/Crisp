@@ -1,7 +1,10 @@
+#include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
+
+#include <ranges>
 
 namespace crisp
 {
@@ -27,7 +30,7 @@ VulkanPhysicalDevice& VulkanPhysicalDevice::operator=(VulkanPhysicalDevice&& oth
 }
 
 bool VulkanPhysicalDevice::isSuitable(
-    const VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const
+    const VkSurfaceKHR surface, const std::vector<std::string>& deviceExtensions) const
 {
     if (!queryQueueFamilyIndices(surface).isComplete())
         return false;
@@ -199,13 +202,13 @@ Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevic
     return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 }
 
-bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<const char*>& deviceExtensions) const
+bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const
 {
     uint32_t extensionCount = 0;
-    vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, nullptr);
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, nullptr));
 
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, availableExtensions.data());
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, availableExtensions.data()));
 
     robin_hood::unordered_set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
     for (const auto& ext : availableExtensions)
@@ -222,9 +225,8 @@ void VulkanPhysicalDevice::setDeviceExtensions(std::vector<std::string>&& device
 VkDevice VulkanPhysicalDevice::createLogicalDevice(const VulkanQueueConfiguration& config) const
 {
     std::vector<const char*> enabledExtensions;
-    std::transform(
-        m_deviceExtensions.begin(),
-        m_deviceExtensions.end(),
+    std::ranges::transform(
+        m_deviceExtensions,
         std::back_inserter(enabledExtensions),
         [](const std::string& ext)
         {
@@ -240,7 +242,7 @@ VkDevice VulkanPhysicalDevice::createLogicalDevice(const VulkanQueueConfiguratio
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
     VkDevice device(VK_NULL_HANDLE);
-    vkCreateDevice(m_handle, &createInfo, nullptr, &device);
+    VK_CHECK(vkCreateDevice(m_handle, &createInfo, nullptr, &device));
     return device;
 }
 

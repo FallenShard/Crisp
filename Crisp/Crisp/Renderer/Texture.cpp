@@ -8,20 +8,30 @@
 
 namespace crisp
 {
-Texture::Texture(Renderer* renderer, VkExtent3D extent, uint32_t numLayers, VkFormat format, VkImageUsageFlags usage,
-    VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
+Texture::Texture(
+    Renderer* renderer,
+    VkExtent3D extent,
+    uint32_t numLayers,
+    VkFormat format,
+    VkImageUsageFlags usage,
+    VkImageCreateFlags createFlags)
+    : m_renderer(renderer)
+{
+    m_image = std::make_unique<VulkanImage>(renderer->getDevice(), extent, numLayers, 1, format, usage, createFlags);
+}
+
+Texture::Texture(
+    Renderer* renderer,
+    VkExtent3D extent,
+    uint32_t numLayers,
+    uint32_t numMipmaps,
+    VkFormat format,
+    VkImageUsageFlags usage,
+    VkImageCreateFlags createFlags)
     : m_renderer(renderer)
 {
     m_image =
-        std::make_unique<VulkanImage>(renderer->getDevice(), extent, numLayers, 1, format, usage, aspect, createFlags);
-}
-
-Texture::Texture(Renderer* renderer, VkExtent3D extent, uint32_t numLayers, uint32_t numMipmaps, VkFormat format,
-    VkImageUsageFlags usage, VkImageAspectFlags aspect, VkImageCreateFlags createFlags)
-    : m_renderer(renderer)
-{
-    m_image = std::make_unique<VulkanImage>(renderer->getDevice(), extent, numLayers, numMipmaps, format, usage, aspect,
-        createFlags);
+        std::make_unique<VulkanImage>(renderer->getDevice(), extent, numLayers, numMipmaps, format, usage, createFlags);
 }
 
 Texture::~Texture() {}
@@ -31,14 +41,19 @@ VulkanImage* Texture::getImage() const
     return m_image.get();
 }
 
-void Texture::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, uint32_t baseLayer,
-    uint32_t numLayers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
+void Texture::transitionLayout(
+    VkCommandBuffer cmdBuffer,
+    VkImageLayout newLayout,
+    uint32_t baseLayer,
+    uint32_t numLayers,
+    VkPipelineStageFlags srcStage,
+    VkPipelineStageFlags dstStage)
 {
     m_image->transitionLayout(cmdBuffer, newLayout, baseLayer, numLayers, srcStage, dstStage);
 }
 
-void Texture::updateFromStaging(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer,
-    uint32_t numLayers)
+void Texture::updateFromStaging(
+    VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers)
 {
     m_image->copyFrom(commandBuffer, buffer, baseLayer, numLayers);
 }
@@ -51,13 +66,23 @@ void Texture::fill(const void* data, VkDeviceSize size)
     m_renderer->enqueueResourceUpdate(
         [this, buffer](VkCommandBuffer cmdBuffer)
         {
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                0,
+                1,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT);
             m_image->copyFrom(cmdBuffer, *buffer, 0, 1);
 
             if (m_image->getMipLevels() > 1)
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 1,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    0,
+                    1,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT);
 
             for (uint32_t i = 1; i < m_image->getMipLevels(); i++)
             {
@@ -86,12 +111,27 @@ void Texture::fill(const void* data, VkDeviceSize size)
                 mipRange.baseArrayLayer = 0;
                 mipRange.layerCount = 1;
 
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipRange,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-                vkCmdBlitImage(cmdBuffer, m_image->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    m_image->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR);
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mipRange,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    mipRange,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT);
+                vkCmdBlitImage(
+                    cmdBuffer,
+                    m_image->getHandle(),
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    m_image->getHandle(),
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1,
+                    &imageBlit,
+                    VK_FILTER_LINEAR);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    mipRange,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT);
             }
 
             VkImageSubresourceRange mipRange = {};
@@ -100,8 +140,12 @@ void Texture::fill(const void* data, VkDeviceSize size)
             mipRange.levelCount = m_image->getMipLevels();
             mipRange.baseArrayLayer = 0;
             mipRange.layerCount = 1;
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                mipRange,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 }
 
@@ -113,11 +157,21 @@ void Texture::fill(const void* data, VkDeviceSize size, uint32_t baseLayer, uint
     m_renderer->enqueueResourceUpdate(
         [this, buffer, baseLayer, numLayers](VkCommandBuffer cmdBuffer)
         {
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, baseLayer, numLayers,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                baseLayer,
+                numLayers,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT);
             m_image->copyFrom(cmdBuffer, *buffer, baseLayer, numLayers);
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, baseLayer, numLayers,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                baseLayer,
+                numLayers,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 }
 
@@ -126,11 +180,21 @@ void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize /*size*/)
     m_renderer->enqueueResourceUpdate(
         [this, &buffer](VkCommandBuffer cmdBuffer)
         {
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                0,
+                1,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
             m_image->copyFrom(cmdBuffer, buffer, 0, 1);
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 1,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                0,
+                1,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         });
 }
 
@@ -139,16 +203,26 @@ void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize /*size*/, uint32_t b
     m_renderer->enqueueResourceUpdate(
         [this, &buffer, baseLayer, numLayers](VkCommandBuffer cmdBuffer)
         {
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, baseLayer, numLayers,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                baseLayer,
+                numLayers,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT);
             m_image->copyFrom(cmdBuffer, buffer, baseLayer, numLayers);
-            m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, baseLayer, numLayers,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            m_image->transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                baseLayer,
+                numLayers,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 }
 
-std::unique_ptr<VulkanImageView> Texture::createView(VkImageViewType type, uint32_t baseLayer, uint32_t numLayers,
-    uint32_t baseMipLevel, uint32_t mipLevels)
+std::unique_ptr<VulkanImageView> Texture::createView(
+    VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
 {
     return m_image->createView(type, baseLayer, numLayers, baseMipLevel, mipLevels);
 }

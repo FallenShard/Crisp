@@ -71,7 +71,7 @@ target_link_libraries(CrispRenderer
     PUBLIC CrispMath
     PUBLIC CrispUtils
     PUBLIC CrispGeometry
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispResult
     PUBLIC CrispCoreUtils
     PUBLIC CrispRendererConfig

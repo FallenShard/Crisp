@@ -4,7 +4,7 @@ add_cpp_interface_library(CrispEvent
     "ConnectionHandler.hpp"
 )
 target_link_libraries(CrispEvent
-    INTERFACE CrispRobinHood)
+    INTERFACE CrispHashMap)
 
 
 add_cpp_interface_library(CrispBitFlags

@@ -39,18 +39,14 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     std::vector<RenderTarget*> renderTargets{&renderTarget};
     renderTargets[0]->info.buffered = true;
     renderTargets[0]->info.format = swapChain.getImageFormat();
-    renderTargets[0]->info.size = swapChain.getExtent();
+    renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
+    renderTargets[0]->info.isSwapChainDependent = true;
 
     return RenderPassBuilder()
-        .setAllocateRenderTagets(false)
-        //.setSwapChainDependency(true)
-        //.setRenderTargetsBuffered(true)
-        /*.setRenderTargetCount(1)
-        .setRenderTargetFormat(0, swapChain.getImageFormat())
-        .configureColorRenderTarget(0, 0)*/
+        .setAllocateAttachmentViews(false)
 
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 
@@ -92,9 +88,8 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         *m_physicalDevice,
         createDefaultQueueConfiguration(*m_context, *m_physicalDevice),
         RendererConfig::VirtualFrameCount);
-    m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_context, false);
+    m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_physicalDevice, m_context->getSurface(), false);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
-    logger->info("Created all base components");
 
     m_defaultViewport = m_swapChain->getViewport();
     m_defaultScissor = m_swapChain->getScissorRect();
@@ -251,10 +246,6 @@ void Renderer::resize(int /*width*/, int /*height*/)
 {
     recreateSwapChain();
 
-    m_defaultViewport.width = static_cast<float>(m_swapChain->getExtent().width);
-    m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
-    m_defaultScissor.extent = m_swapChain->getExtent();
-
     flushResourceUpdates(true);
 }
 
@@ -369,12 +360,12 @@ void Renderer::drawFrame()
     }
 
     // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
-    m_device->getResourceDeallocator().incrementFrameCount();
+    m_device->getResourceDeallocator().decrementLifetimes();
 
     // Flush all noncoherent updates
     m_device->flushMappedRanges();
 
-    std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
+    const std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
     if (!swapImageIndex.has_value())
     {
         logger->error("Failed to acquire swap chain image!");
@@ -596,7 +587,12 @@ void Renderer::recreateSwapChain()
 {
     vkDeviceWaitIdle(m_device->getHandle());
 
-    m_swapChain->recreate(*m_device, *m_context);
+    m_swapChain->recreate(*m_device, *m_physicalDevice, m_context->getSurface());
+    m_defaultViewport.width = static_cast<float>(m_swapChain->getExtent().width);
+    m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
+    m_defaultScissor.extent = m_swapChain->getExtent();
+
+    m_swapChainRenderTarget.info.size = m_swapChain->getExtent();
     m_defaultRenderPass->recreate(*m_device, m_swapChain->getExtent());
 }
 

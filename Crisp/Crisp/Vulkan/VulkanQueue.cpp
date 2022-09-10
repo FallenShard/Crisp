@@ -1,36 +1,34 @@
 #include "VulkanQueue.hpp"
 
-#include <Crisp/vulkan/VulkanContext.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanContext.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
 namespace crisp
 {
-VulkanQueue::VulkanQueue(const VulkanDevice& device, uint32_t familyIndex, uint32_t queueIndex)
+VulkanQueue::VulkanQueue(
+    const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId)
     : m_deviceHandle(device.getHandle())
-    , m_familyIndex(familyIndex)
-    , m_index(queueIndex)
-    , m_familyProperties(device.getPhysicalDevice().queryQueueFamilyProperties().at(familyIndex))
+    , m_familyIndex(queueId.familyIndex)
+    , m_index(queueId.index)
+    , m_familyProperties(physicalDevice.queryQueueFamilyProperties().at(m_familyIndex))
 {
-    VkDeviceQueueInfo2 info = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2 };
+    VkDeviceQueueInfo2 info = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2};
     info.queueFamilyIndex = m_familyIndex;
     info.queueIndex = m_index;
     vkGetDeviceQueue2(m_deviceHandle, &info, &m_handle);
 }
 
-VulkanQueue::VulkanQueue(const VulkanDevice& device, QueueIdentifier queueId)
-    : VulkanQueue(device, queueId.familyIndex, queueId.index)
-{
-}
-
-VkResult VulkanQueue::submit(VkSemaphore waitSemaphore,
+VkResult VulkanQueue::submit(
+    VkSemaphore waitSemaphore,
     VkSemaphore signalSemaphore,
     VkCommandBuffer commandBuffer,
     VkFence fence,
     VkPipelineStageFlags waitPipelineStage) const
 {
-    const VkPipelineStageFlags waitStage[] = { waitPipelineStage };
+    const VkPipelineStageFlags waitStage[] = {waitPipelineStage};
 
-    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     if (waitSemaphore != VK_NULL_HANDLE)
     {
         submitInfo.waitSemaphoreCount = 1;
@@ -51,7 +49,7 @@ VkResult VulkanQueue::submit(VkSemaphore waitSemaphore,
 
 VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer, VkFence fence) const
 {
-    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &cmdBuffer;
     return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
@@ -59,7 +57,7 @@ VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer, VkFence fence) const
 
 VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const
 {
-    VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+    VkPresentInfoKHR presentInfo = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &waitSemaphore;
     presentInfo.swapchainCount = 1;
@@ -76,7 +74,7 @@ void VulkanQueue::waitIdle() const
 
 VkCommandPool VulkanQueue::createCommandPool(VkCommandPoolCreateFlags flags) const
 {
-    VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     poolInfo.queueFamilyIndex = m_familyIndex;
     poolInfo.flags = flags;
 

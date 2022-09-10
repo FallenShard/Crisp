@@ -1,8 +1,7 @@
 #include <Crisp/ShadingLanguage/Lexer.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>
-
 
 #include <spdlog/spdlog.h>
 

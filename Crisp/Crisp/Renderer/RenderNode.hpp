@@ -6,7 +6,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 
 namespace crisp
 {

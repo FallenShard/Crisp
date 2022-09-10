@@ -7,41 +7,27 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Enumerate.hpp>
 
 namespace crisp
 {
 
-// VulkanRenderPass::VulkanRenderPass(
-//     const VulkanDevice& device,
-//     std::vector<std::shared_ptr<VulkanImage>>&& renderTargets,
-//     bool isSwapChainDependent,
-//     uint32_t subpassCount)
-//     : VulkanResource(nullptr, device.getResourceDeallocator())
-//     , m_isWindowSizeDependent(isSwapChainDependent)
-//     , m_numSubpasses(subpassCount)
-//     , m_defaultSampleCount(VK_SAMPLE_COUNT_1_BIT)
-//     , m_renderTargets(std::move(renderTargets))
-//{
-// }
-
 VulkanRenderPass::VulkanRenderPass(
     const VulkanDevice& device, const VkRenderPass renderPass, RenderPassDescription&& description)
     : VulkanResource(renderPass, device.getResourceDeallocator())
     , m_isSwapChainDependent(description.isSwapChainDependent)
+    , m_allocateAttachmentViews(description.allocateAttachmentViews)
     , m_renderArea(description.renderArea)
     , m_subpassCount(description.subpassCount)
-    , m_defaultSampleCount(VK_SAMPLE_COUNT_1_BIT)
     , m_renderTargets(std::move(description.renderTargets))
     , m_attachmentDescriptions(std::move(description.attachmentDescriptions))
     , m_attachmentMappings(std::move(description.attachmentMappings))
-    , m_allocateResources(description.allocateRenderTargets)
 {
-    if (m_renderArea.width == 0 || m_renderArea.height == 0)
-    {
-        spdlog::critical("Render area of zero specified: [{}, {}]", m_renderArea.width, m_renderArea.height);
-        std::exit(-1);
-    }
+    CRISP_CHECK(m_renderArea.width > 0, "Render area has non-positive width!");
+    CRISP_CHECK(m_renderArea.height > 0, "Render area has non-positive height!");
+    CRISP_CHECK(
+        m_attachmentMappings.size() == m_attachmentDescriptions.size(), "Attachment and description size mismatch!");
 
     m_attachmentClearValues.resize(m_attachmentDescriptions.size());
     for (const auto& [i, clearValue] : enumerate(m_attachmentClearValues))
@@ -103,15 +89,16 @@ void VulkanRenderPass::end(const VkCommandBuffer cmdBuffer, const uint32_t frame
 {
     vkCmdEndRenderPass(cmdBuffer);
 
-    if (m_renderTargetViews.empty())
-    {
+    if (m_attachmentViews.empty())
         return;
-    }
 
-    for (const auto& [i, renderTargetView] : enumerate(m_renderTargetViews.at(frameIndex)))
+    for (const auto& [i, attachmentView] : enumerate(m_attachmentViews.at(frameIndex)))
     {
-        auto& image = renderTargetView->getImage();
-        image.setImageLayout(m_attachmentDescriptions.at(i).finalLayout, renderTargetView->getSubresourceRange());
+        const uint32_t renderTargetIndex{m_attachmentMappings.at(i).renderTargetIndex};
+        auto& image = *m_renderTargets.at(renderTargetIndex)->image;
+
+        // We unconditionally set the layout here because the render pass did an automatic layout transition.
+        image.setImageLayout(m_attachmentDescriptions.at(i).finalLayout, attachmentView->getSubresourceRange());
     }
 }
 
@@ -128,146 +115,81 @@ VulkanImage& VulkanRenderPass::getRenderTarget(const uint32_t index) const
 const VulkanImageView& VulkanRenderPass::getRenderTargetView(
     const uint32_t attachmentIndex, const uint32_t frameIndex) const
 {
-    return *m_renderTargetViews.at(frameIndex).at(attachmentIndex);
+    return *m_attachmentViews.at(frameIndex).at(attachmentIndex);
 }
 
 std::vector<VulkanImageView*> VulkanRenderPass::getRenderTargetViews(uint32_t renderTargetIndex) const
 {
-    std::vector<VulkanImageView*> imageViews(m_renderTargetViews.size());
-    for (uint32_t i = 0; i < m_renderTargetViews.size(); ++i)
-        imageViews.at(i) = m_renderTargetViews.at(i).at(renderTargetIndex).get();
-    return imageViews;
-}
-
-std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(
-    const VulkanDevice& device, const uint32_t attachmentIndex, const uint32_t frameCount) const
-{
-    return std::make_unique<VulkanImageView>(
-        device,
-        *m_renderTargets.at(attachmentIndex)->image,
-        frameCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
-        0,
-        frameCount,
-        0,
-        1);
-}
-
-std::unique_ptr<VulkanImageView> VulkanRenderPass::createRenderTargetView(
-    const VulkanDevice& device,
-    const uint32_t attachmentIndex,
-    const uint32_t baseLayer,
-    const uint32_t layerCount) const
-{
-    return std::make_unique<VulkanImageView>(
-        device,
-        *m_renderTargets.at(attachmentIndex)->image,
-        layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
-        baseLayer,
-        layerCount);
+    std::vector<VulkanImageView*> perFrameAttachmentViews(m_attachmentViews.size());
+    for (uint32_t i = 0; i < perFrameAttachmentViews.size(); ++i)
+        perFrameAttachmentViews[i] = m_attachmentViews[i].at(renderTargetIndex).get();
+    return perFrameAttachmentViews;
 }
 
 void VulkanRenderPass::updateInitialLayouts(VkCommandBuffer cmdBuffer)
 {
-    for (const auto& frameRenderTargetViews : m_renderTargetViews)
+    for (const auto& frameAttachmentViews : m_attachmentViews)
     {
-        for (const auto& [i, renderTargetView] : enumerate(frameRenderTargetViews))
+        for (const auto& [i, attachmentView] : enumerate(frameAttachmentViews))
         {
-            auto& image = renderTargetView->getImage();
-            auto& desc = m_attachmentDescriptions.at(i);
-            auto& mapping = m_attachmentMappings.at(i);
-            auto& info = m_renderTargets.at(mapping.renderTargetIndex)->info;
-            // image.setImageLayout(desc.finalLayout, renderTargetView->getSubresourceRange());
+            const auto renderTargetIndex{m_attachmentMappings.at(i).renderTargetIndex};
+            const auto initialLayout{m_attachmentDescriptions.at(i).initialLayout};
+            auto& info = m_renderTargets.at(renderTargetIndex)->info;
+            auto& image = *m_renderTargets.at(renderTargetIndex)->image;
+
             image.transitionLayout(
                 cmdBuffer,
-                desc.initialLayout,
-                renderTargetView->getSubresourceRange(),
+                initialLayout,
+                attachmentView->getSubresourceRange(),
                 info.initSrcStageFlags,
                 info.initDstStageFlags);
         }
     }
-
-    /*for (const auto& [i, renderTarget] : enumerate(m_renderTargets))
-    {
-        const auto& desc = m_attachmentDescriptions.at(i);
-        const auto& info = renderTarget->info;
-        renderTarget->image->transitionLayout(
-            cmdBuffer, desc.initialLayout, info.initSrcStageFlags, info.initDstStageFlags);
-    }*/
 }
-
-// void VulkanRenderPass::createRenderTargets(const VulkanDevice& device)
-//{
-//     m_renderTargets.resize(m_renderTargetInfos.size());
-//     for (const auto& [i, info] : enumerate(m_renderTargetInfos))
-//     {
-//         auto layerMultiplier = m_bufferedRenderTargets ? RendererConfig::VirtualFrameCount : 1;
-//         if (info.buffered.has_value())
-//         {
-//             layerMultiplier = *info.buffered ? RendererConfig::VirtualFrameCount : 1;
-//         }
-//
-//         const VkExtent3D dims = {m_renderArea.width, m_renderArea.height, info.depthSlices};
-//         const uint32_t totalLayerCount = info.layerCount * layerMultiplier;
-//         m_renderTargets[i] = std::make_unique<VulkanImage>(
-//             device,
-//             dims,
-//             totalLayerCount,
-//             info.mipmapCount,
-//             info.format,
-//             info.usage,
-//             determineImageAspect(info.format),
-//             info.createFlags);
-//     }
-// }
 
 void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice& device)
 {
-    // Check if any render target is buffered. In that case, we'll buffer the views.
-    uint32_t layerMultiplier{1};
-    for (const auto& rt : m_renderTargets)
+    m_attachmentViews.resize(RendererConfig::VirtualFrameCount);
+    for (const auto& [frameIdx, frameAttachmentViews] : enumerate(m_attachmentViews))
     {
-        if (rt->info.buffered)
-        {
-            layerMultiplier = RendererConfig::VirtualFrameCount;
-            break;
-        }
-    }
-    m_renderTargetViews.resize(layerMultiplier);
-    m_framebuffers.resize(layerMultiplier);
-
-    const size_t renderTargetViewCount{m_attachmentDescriptions.size()};
-    for (const auto& [layerIdx, rtViews] : enumerate(m_renderTargetViews))
-    {
-        uint32_t framebufferLayers = 1;
-        rtViews.resize(renderTargetViewCount);
-        std::vector<VkImageView> attachmentViewHandles(renderTargetViewCount);
+        // Typically 1, but for depth slice rendering, we need to modify it.
+        uint32_t framebufferLayerCount{1};
+        frameAttachmentViews.resize(m_attachmentDescriptions.size());
+        std::vector<VkImageView> attachmentViewHandles(frameAttachmentViews.size());
         for (const auto& [attachmentIdx, mapping] : enumerate(m_attachmentMappings))
         {
             auto& renderTarget = *m_renderTargets.at(mapping.renderTargetIndex);
-
             if (mapping.bufferOverDepthSlices)
             {
-                const uint32_t depthSliceCount = renderTarget.info.depthSlices / layerMultiplier;
-                const uint32_t baseDepthOffset = static_cast<uint32_t>(layerIdx) * depthSliceCount;
-                const VkImageViewType type = depthSliceCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-                rtViews.at(attachmentIdx) = renderTarget.image->createView(type, baseDepthOffset, depthSliceCount);
-                attachmentViewHandles.at(attachmentIdx) = rtViews.at(attachmentIdx)->getHandle();
-                framebufferLayers = depthSliceCount;
+                // TODO: fix this to have similar interface to layer-based buffering.
+                framebufferLayerCount = renderTarget.info.buffered
+                                            ? renderTarget.info.depthSlices / RendererConfig::VirtualFrameCount
+                                            : renderTarget.info.depthSlices;
+                const uint32_t frameDepthOffset =
+                    renderTarget.info.buffered ? static_cast<uint32_t>(frameIdx) * framebufferLayerCount : 0;
+                const VkImageViewType type =
+                    framebufferLayerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+                frameAttachmentViews[attachmentIdx] =
+                    renderTarget.image->createView(type, frameDepthOffset, framebufferLayerCount);
             }
             else
             {
-                const uint32_t baseLayerOffset = static_cast<uint32_t>(layerIdx) * renderTarget.info.layerCount;
-                const uint32_t firstLayer = baseLayerOffset + mapping.subresource.baseArrayLayer;
+                // This handles the case where the render target isn't buffered. In that case, we create another
+                // image view that essentially points to the same region as the virtual frame 0.
+                const uint32_t frameLayerOffset =
+                    renderTarget.info.buffered ? static_cast<uint32_t>(frameIdx) * renderTarget.info.layerCount : 0;
+                const uint32_t firstLayer = frameLayerOffset + mapping.subresource.baseArrayLayer;
                 const uint32_t layerCount = mapping.subresource.layerCount;
                 const VkImageViewType type = layerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-                rtViews.at(attachmentIdx) = renderTarget.image->createView(
+                frameAttachmentViews[attachmentIdx] = renderTarget.image->createView(
                     type, firstLayer, layerCount, mapping.subresource.baseMipLevel, mapping.subresource.levelCount);
-                attachmentViewHandles.at(attachmentIdx) = rtViews.at(attachmentIdx)->getHandle();
             }
+
+            attachmentViewHandles[attachmentIdx] = frameAttachmentViews[attachmentIdx]->getHandle();
         }
 
-        m_framebuffers[layerIdx] = std::make_unique<VulkanFramebuffer>(
-            device, m_handle, m_renderArea, attachmentViewHandles, framebufferLayers);
+        m_framebuffers[frameIdx] = std::make_unique<VulkanFramebuffer>(
+            device, m_handle, m_renderArea, attachmentViewHandles, framebufferLayerCount);
     }
 }
 
@@ -278,47 +200,17 @@ VkExtent3D VulkanRenderPass::getRenderAreaExtent() const
 
 void VulkanRenderPass::createResources(const VulkanDevice& device)
 {
-    if (m_allocateResources)
+    m_framebuffers.resize(RendererConfig::VirtualFrameCount);
+    if (m_allocateAttachmentViews)
     {
-        // createRenderTargets(device);
         createRenderTargetViewsAndFramebuffers(device);
-    }
-    else
-    {
-        m_framebuffers.resize(RendererConfig::VirtualFrameCount);
     }
 }
 
 void VulkanRenderPass::freeResources()
 {
-    m_renderTargets.clear();
-    m_renderTargetViews.clear();
+    m_attachmentViews.clear();
     m_framebuffers.clear();
 }
 
-// void VulkanRenderPass::setDepthRenderTargetInfo(
-//     uint32_t index, VkImageUsageFlags additionalFlags, VkClearDepthStencilValue clearValue)
-//{
-//     m_renderTargetInfos.at(index).initDstStageFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-//     m_renderTargetInfos.at(index).usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | additionalFlags;
-//
-//     if (m_attachmentClearValues.size() <= index)
-//     {
-//         m_attachmentClearValues.resize(index + 1);
-//     }
-//     m_attachmentClearValues.at(index).depthStencil = clearValue;
-// }
-//
-// void VulkanRenderPass::setColorRenderTargetInfo(
-//     uint32_t index, VkImageUsageFlags additionalFlags, VkClearColorValue clearValue)
-//{
-//     m_renderTargetInfos.at(index).initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-//     m_renderTargetInfos.at(index).usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | additionalFlags;
-//
-//     if (m_attachmentClearValues.size() <= index)
-//     {
-//         m_attachmentClearValues.resize(index + 1);
-//     }
-//     m_attachmentClearValues.at(index).color = clearValue;
-// }
 } // namespace crisp

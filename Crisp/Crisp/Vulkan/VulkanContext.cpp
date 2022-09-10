@@ -1,11 +1,10 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
+#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <Crisp/Common/Logger.hpp>
-
-#include <algorithm>
 #include <unordered_set>
 
 namespace crisp
@@ -35,8 +34,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
         pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any
     }
 
-    size_t numSupportedReqExts = requiredExtensions.size() - pendingExtensions.size();
-
+    const size_t numSupportedReqExts{requiredExtensions.size() - pendingExtensions.size()};
     logger->info("{}/{} required extensions supported.", numSupportedReqExts, requiredExtensions.size());
 
     if (!pendingExtensions.empty())
@@ -57,10 +55,10 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
         return {};
 
     uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
 
     std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()));
 
     std::unordered_set<std::string> availableLayersSet;
     for (const auto& layer : availableLayers)
@@ -81,7 +79,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "CrispEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_2;
+    appInfo.apiVersion = VK_API_VERSION_1_3;
 
     if (enableValidationLayers)
         reqPlatformExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -104,13 +102,13 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     createInfo.ppEnabledLayerNames = enableValidationLayers ? ValidationLayers.data() : nullptr;
 
     VkInstance instance;
-    vkCreateInstance(&createInfo, nullptr, &instance);
+    VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
 
     uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr));
 
     std::vector<VkExtensionProperties> extensionProps(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data());
+    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data()));
 
     assertRequiredExtensionSupport(enabledExtensions, extensionProps).unwrap();
     assertValidationLayerSupport(enableValidationLayers).unwrap();
@@ -121,7 +119,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
 VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator surfaceCreator)
 {
     VkSurfaceKHR surface;
-    surfaceCreator(instance, nullptr, &surface);
+    VK_CHECK(surfaceCreator(instance, nullptr, &surface));
     return surface;
 }
 } // namespace
@@ -147,32 +145,21 @@ VulkanContext::~VulkanContext()
 Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const
 {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
-    if (deviceCount == 0)
-        return resultError("Vulkan found no physical devices. Device count: {}", deviceCount);
+    VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr));
+    CRISP_CHECK(deviceCount > 0, "Vulkan found no physical devices.");
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
+    VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data()));
 
     if (m_surface == VK_NULL_HANDLE)
     {
         return VulkanPhysicalDevice(devices.front());
     }
 
-    std::vector<const char*> requestedDeviceExtensions;
-    std::transform(
-        deviceExtensions.begin(),
-        deviceExtensions.end(),
-        std::back_inserter(requestedDeviceExtensions),
-        [](const std::string& ext)
-        {
-            return ext.c_str();
-        });
-
     for (const auto& device : devices)
     {
         VulkanPhysicalDevice physicalDevice(device);
-        if (physicalDevice.isSuitable(m_surface, requestedDeviceExtensions))
+        if (physicalDevice.isSuitable(m_surface, deviceExtensions))
         {
             physicalDevice.setDeviceExtensions(std::move(deviceExtensions));
             return physicalDevice;

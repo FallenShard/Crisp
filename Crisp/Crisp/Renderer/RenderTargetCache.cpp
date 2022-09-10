@@ -1,5 +1,6 @@
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp
@@ -37,9 +38,10 @@ RenderTargetBuilder& RenderTargetBuilder::setBuffered(bool isBuffered)
     return *this;
 }
 
-RenderTargetBuilder& RenderTargetBuilder::setSize(VkExtent2D size)
+RenderTargetBuilder& RenderTargetBuilder::setSize(const VkExtent2D size, const bool isSwapChainDependent)
 {
     m_info.size = size;
+    m_info.isSwapChainDependent = isSwapChainDependent;
     return *this;
 }
 
@@ -73,51 +75,41 @@ RenderTargetBuilder& RenderTargetBuilder::configureDepthRenderTarget(
 
 std::unique_ptr<RenderTarget> RenderTargetBuilder::create(const VulkanDevice& device)
 {
-    const VkExtent3D dims = {m_info.size.width, m_info.size.height, m_info.depthSlices};
-    const uint32_t layerMultiplier = m_info.buffered ? RendererConfig::VirtualFrameCount : 1;
+    const VkExtent3D dims{m_info.size.width, m_info.size.height, m_info.depthSlices};
+    const uint32_t layerMultiplier = m_info.buffered && m_info.depthSlices == 1 ? RendererConfig::VirtualFrameCount : 1;
     const uint32_t totalLayerCount = m_info.layerCount * layerMultiplier;
     return std::make_unique<RenderTarget>(
         m_info,
         std::make_unique<VulkanImage>(
-            device,
-            dims,
-            totalLayerCount,
-            m_info.mipmapCount,
-            m_info.format,
-            m_info.usage,
-            determineImageAspect(m_info.format),
-            m_info.createFlags));
+            device, dims, totalLayerCount, m_info.mipmapCount, m_info.format, m_info.usage, m_info.createFlags));
 }
 
 RenderTarget* RenderTargetCache::addRenderTarget(std::string&& name, std::unique_ptr<RenderTarget> renderTarget)
 {
-    if (m_renderTargets.contains(name))
-    {
-        spdlog::critical("Render target with name {} is already present in cache!", name);
-        std::exit(-1);
-    }
+    CRISP_CHECK(
+        m_renderTargets.find(name) == m_renderTargets.end(),
+        "Render target with name {} is already present in cache!",
+        name);
     return m_renderTargets.emplace(std::move(name), std::move(renderTarget)).first->second.get();
 }
 
-void RenderTargetCache::resizeRenderTargets(const VulkanDevice& device, VkExtent2D /*swapChainExtent*/)
+void RenderTargetCache::resizeRenderTargets(const VulkanDevice& device, const VkExtent2D swapChainExtent)
 {
-    for (auto& [name, rt] : m_renderTargets)
+    for (auto& [name, renderTarget] : m_renderTargets)
     {
-        const auto& info = rt->info;
-        const uint32_t layerMultiplier = info.buffered ? RendererConfig::VirtualFrameCount : 1;
+        auto& info = renderTarget->info;
+        // If this render target does not depend on the swap chain size, no need to resize.
+        if (!info.isSwapChainDependent)
+        {
+            continue;
+        }
 
-        // const VkExtent2D size = info.size ? *info.size : swapChainExtent;
-        const VkExtent3D dims = {info.size.width, info.size.height, info.depthSlices};
-        const uint32_t totalLayerCount = info.layerCount * layerMultiplier;
-        rt->image = std::make_unique<VulkanImage>(
-            device,
-            dims,
-            totalLayerCount,
-            info.mipmapCount,
-            info.format,
-            info.usage,
-            determineImageAspect(info.format),
-            info.createFlags);
+        info.size = swapChainExtent;
+        const uint32_t layerMultiplier{info.buffered && info.depthSlices == 1 ? RendererConfig::VirtualFrameCount : 1};
+        const VkExtent3D dims{info.size.width, info.size.height, info.depthSlices};
+        const uint32_t totalLayerCount{info.layerCount * layerMultiplier};
+        renderTarget->image = std::make_unique<VulkanImage>(
+            device, dims, totalLayerCount, info.mipmapCount, info.format, info.usage, info.createFlags);
     }
 }
 

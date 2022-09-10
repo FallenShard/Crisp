@@ -13,8 +13,6 @@ namespace crisp
 std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& device, VkExtent2D renderArea)
 {
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(true)
         /*.setRenderTargetCount(3)
         .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
         .configureColorRenderTarget(0, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)

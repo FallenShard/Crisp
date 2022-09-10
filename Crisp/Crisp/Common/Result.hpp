@@ -31,7 +31,7 @@ struct LocationFormatString
     fmt::string_view str;
     std::source_location loc;
 
-    LocationFormatString(const char* str, const std::source_location& loc = std::source_location::current())
+    LocationFormatString(const char* str = "", const std::source_location& loc = std::source_location::current())
         : str(str)
         , loc(loc)
     {
@@ -132,7 +132,7 @@ private:
 template <typename... Args>
 detail::Unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args)
 {
-    spdlog::critical(
+    spdlog::error(
         "File: {}\n[Function: {}][Line {}, Column {}]",
         formatString.loc.file_name(),
         formatString.loc.function_name(),

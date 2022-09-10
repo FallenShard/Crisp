@@ -17,7 +17,7 @@ public:
     RenderTargetBuilder& setDepthSliceCount(uint32_t depthSlices = 1);
     RenderTargetBuilder& setCreateFlags(VkImageCreateFlags createFlags);
     RenderTargetBuilder& setBuffered(bool isBuffered);
-    RenderTargetBuilder& setSize(VkExtent2D size);
+    RenderTargetBuilder& setSize(VkExtent2D size, bool isSwapChainDependent);
     RenderTargetBuilder& configureColorRenderTarget(
         VkImageUsageFlags usageFlags, VkClearColorValue clearValue = {0, 0, 0, 0});
     RenderTargetBuilder& configureDepthRenderTarget(
@@ -45,7 +45,7 @@ public:
     void transitionInitialLayouts();
 
 private:
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderTarget>> m_renderTargets;
+    FlatHashMap<std::string, std::unique_ptr<RenderTarget>> m_renderTargets;
 };
 
 } // namespace crisp

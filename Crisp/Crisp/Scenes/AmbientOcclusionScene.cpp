@@ -60,15 +60,12 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer,
             .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
-            .setSize(renderer.getSwapChainExtent())
+            .setSize(renderer.getSwapChainExtent(), true)
             .create(renderer.getDevice()));
 
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(true)
-
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -133,12 +130,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addImageWithView(
         "noise",
-        createTexture(
-            m_renderer,
-            noiseTexData.size() * sizeof(glm::vec4),
-            noiseTexData.data(),
-            noiseTexInfo,
-            VK_IMAGE_ASPECT_COLOR_BIT));
+        createVulkanImage(m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo));
 
     imageCache.addSampler(
         "linearRepeat",

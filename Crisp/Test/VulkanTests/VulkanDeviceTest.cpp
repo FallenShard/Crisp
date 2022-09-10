@@ -19,7 +19,6 @@ TEST_F(VulkanDeviceTest, ValidHandle)
 {
     const auto& [deps, device] = createDevice();
     ASSERT_NE(device->getHandle(), nullptr);
-    ASSERT_EQ(device->getPhysicalDevice().getHandle(), deps.physicalDevice->getHandle());
 }
 
 TEST_F(VulkanDeviceTest, Queues)

@@ -6,8 +6,8 @@
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Common/Result.hpp>
-#include <Crisp/Common/RobinHood.hpp>
 
 #include <tbb/concurrent_vector.h>
 
@@ -20,16 +20,15 @@ class RenderGraph
 public:
     using DependencyCallback = std::function<void(const VulkanRenderPass&, VulkanCommandBuffer&, uint32_t)>;
 
+    enum class NodeType
+    {
+        Rasterizer,
+        Compute,
+        Raytracing
+    };
+
     struct Node
     {
-        std::string name;
-        std::unordered_map<std::string, DependencyCallback> dependencies;
-
-        std::unique_ptr<VulkanRenderPass> renderPass;
-
-        // Rendered nodes can be culled/filtered down into commands
-        tbb::concurrent_vector<tbb::concurrent_vector<DrawCommand>> commands;
-
         Node() = default;
         Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
         Node(Node&& node) = default;
@@ -37,7 +36,16 @@ public:
 
         void addCommand(DrawCommand&& command, uint32_t subpassIndex = 0);
 
-        bool isCompute = false;
+        std::string name;
+        NodeType type{NodeType::Rasterizer};
+
+        std::unordered_map<std::string, DependencyCallback> dependencies;
+
+        std::unique_ptr<VulkanRenderPass> renderPass;
+
+        // Rendered nodes can be culled/filtered down into commands
+        tbb::concurrent_vector<tbb::concurrent_vector<DrawCommand>> commands;
+
         std::unique_ptr<VulkanPipeline> pipeline;
         std::unique_ptr<Material> material;
         glm::ivec3 workGroupSize;
@@ -88,7 +96,7 @@ private:
     Renderer* m_renderer;
 
     std::vector<Node*> m_executionOrder;
-    robin_hood::unordered_map<std::string, std::unique_ptr<Node>> m_nodes;
+    FlatHashMap<std::string, std::unique_ptr<Node>> m_nodes;
 
     struct CmdBufferContext
     {

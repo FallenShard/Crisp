@@ -6,7 +6,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(MSVC)
-  add_compile_options(/MP /JMC /Zi /W4 /WX)
+  add_compile_options(/MP /JMC /Zi /W4 /WX /Zc:preprocessor)
 else()
   add_compile_options(-W -Wall -Werror)
 endif()

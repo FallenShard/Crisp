@@ -32,15 +32,12 @@ std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(
             .setLayerAndMipLevelCount(1)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            .setSize({256, 64})
+            .setSize({256, 64}, false)
             .create(device));
 
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(false)
-
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -66,15 +63,12 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(const VulkanDevice& devic
             .setLayerAndMipLevelCount(1)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            .setSize({192, 108})
+            .setSize({192, 108}, false)
             .create(device));
 
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(false)
-
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -101,15 +95,12 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device
             .setCreateFlags(VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            .setSize({32, 32})
+            .setSize({32, 32}, false)
             .create(device));
 
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(false)
-
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0, 0, 32)
+        .setAttachmentMapping(0, 0, 0, 32)
         .setAttachmentBufferOverDepthSlices(0, true)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -135,16 +126,13 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
         RenderTargetBuilder()
             .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            .setSize(renderArea)
+            .setSize(renderArea, true)
             .setBuffered(true)
             .create(device));
 
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(true)
-
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
@@ -210,7 +198,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
     return uniqueHandle;
 }
 
-robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
+FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     RenderGraph& renderGraph,
     Renderer& renderer,
     ResourceContext& resourceContext,
@@ -249,8 +237,7 @@ robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmo
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageCache.addImage(
-        "multiScatTex", std::make_unique<VulkanImage>(renderer.getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT));
+    imageCache.addImage("multiScatTex", std::make_unique<VulkanImage>(renderer.getDevice(), createInfo));
     imageCache.addImageView(
         "multiScatTexView0", imageCache.getImage("multiScatTex").createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     imageCache.addImageView(

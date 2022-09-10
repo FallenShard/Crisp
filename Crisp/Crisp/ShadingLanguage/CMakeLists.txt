@@ -17,7 +17,7 @@ add_cpp_static_library(CrispGlslUtils
 target_link_libraries(CrispGlslUtils
     PUBLIC CrispMath
     PUBLIC CrispResult
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispFileUtils
     PUBLIC CrispUtils
     PUBLIC vulkan)

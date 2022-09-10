@@ -44,7 +44,7 @@ auto createSwapChain(bool tripleBuffering)
             RendererConfig::VirtualFrameCount)};
     } deps;
 
-    VulkanSwapChain swapChain(*deps.device, *deps.context, tripleBuffering);
+    VulkanSwapChain swapChain(*deps.device, *deps.physicalDevice, deps.context->getSurface(), tripleBuffering);
     return VulkanSwapChainData(std::move(deps), std::move(swapChain));
 }
 
@@ -106,7 +106,7 @@ TEST_F(VulkanSwapChainTest, Recreate)
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     for (uint32_t i = 0; i < 5; ++i)
-        swapChain.recreate(*deps.device, *deps.context);
+        swapChain.recreate(*deps.device, *deps.physicalDevice, deps.context->getSurface());
     ASSERT_NE(swapChain.getHandle(), nullptr);
     ASSERT_EQ(swapChain.getSwapChainImageCount(), 2u);
 }
@@ -119,7 +119,7 @@ TEST_F(VulkanSwapChainTest, WindowResized)
     EXPECT_EQ(swapChain.getExtent().height, 300u);
 
     deps.window->setSize(512, 1024);
-    swapChain.recreate(*deps.device, *deps.context);
+    swapChain.recreate(*deps.device, *deps.physicalDevice, deps.context->getSurface());
 
     ASSERT_NE(swapChain.getHandle(), nullptr);
     EXPECT_EQ(swapChain.getExtent().width, 512);

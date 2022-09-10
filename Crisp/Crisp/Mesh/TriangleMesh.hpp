@@ -1,11 +1,10 @@
 #pragma once
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Math/BoundingBox.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Mesh/TriangleMeshView.hpp>
 #include <Crisp/Mesh/VertexAttributeBuffer.hpp>
-
 
 #include <vector>
 

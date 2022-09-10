@@ -4,6 +4,7 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Common/Logger.hpp>
 
 namespace crisp
@@ -63,18 +64,23 @@ const char* toString(const VkImageLayout layout)
         return "Unknown";
     }
 }
+
+void adaptSubresouceRange(VkImageType type, VkImageSubresourceRange& subresouceRange) {
+    if (type == VK_IMAGE_TYPE_3D)
+    {
+        subresouceRange.baseArrayLayer = 0;
+        subresouceRange.layerCount = 1;
+    }
+}
+
 } // namespace
 
-VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo, VkImageAspectFlags aspect)
+VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)
     : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
-    , m_type(createInfo.imageType)
     , m_device(&device)
-    , m_format(createInfo.format)
-    , m_extent(createInfo.extent)
-    , m_mipLevels(createInfo.mipLevels)
-    , m_numLayers(createInfo.arrayLayers)
-    , m_aspect(aspect)
-    , m_layouts(m_numLayers, std::vector<VkImageLayout>(m_mipLevels, VK_IMAGE_LAYOUT_UNDEFINED))
+    , m_createInfo(createInfo)
+    , m_aspect(determineImageAspect(m_createInfo.format))
+    , m_layouts(m_createInfo.arrayLayers, std::vector<VkImageLayout>(m_createInfo.mipLevels, VK_IMAGE_LAYOUT_UNDEFINED))
 {
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
@@ -91,32 +97,25 @@ VulkanImage::VulkanImage(
     uint32_t numMipmaps,
     VkFormat format,
     VkImageUsageFlags usage,
-    VkImageAspectFlags aspect,
     VkImageCreateFlags createFlags)
     : VulkanResource(device.getResourceDeallocator())
-    , m_type(extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D)
     , m_device(&device)
-    , m_format(format)
-    , m_extent(extent)
-    , m_numLayers(numLayers)
-    , m_mipLevels(numMipmaps)
-    , m_aspect(aspect)
+    , m_createInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO}
+    , m_aspect(determineImageAspect(format))
     , m_layouts(numLayers, std::vector<VkImageLayout>(numMipmaps, VK_IMAGE_LAYOUT_UNDEFINED))
 {
-    // Create an image handle
-    VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    imageInfo.flags = createFlags;
-    imageInfo.imageType = m_type;
-    imageInfo.format = format;
-    imageInfo.extent = extent;
-    imageInfo.mipLevels = numMipmaps;
-    imageInfo.arrayLayers = numLayers;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.usage = usage;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_handle = device.createImage(imageInfo);
+    m_createInfo.flags = createFlags;
+    m_createInfo.imageType = extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    m_createInfo.format = format;
+    m_createInfo.extent = extent;
+    m_createInfo.mipLevels = numMipmaps;
+    m_createInfo.arrayLayers = numLayers;
+    m_createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    m_createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    m_createInfo.usage = usage;
+    m_createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    m_createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    m_handle = device.createImage(m_createInfo);
 
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
@@ -131,37 +130,27 @@ VulkanImage::~VulkanImage()
     m_deallocator->deferMemoryDeallocation(m_framesToLive, m_allocation);
 }
 
-void VulkanImage::setImageLayout(VkImageLayout newLayout, uint32_t baseLayer)
+void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range)
 {
-    m_layouts[baseLayer][0] = newLayout;
-}
-
-void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange subresourceRange)
-{
-    if (m_type == VK_IMAGE_TYPE_3D)
+    adaptSubresouceRange(m_createInfo.imageType, range);
+    CRISP_CHECK(range.baseArrayLayer >= 0 && range.baseArrayLayer + range.layerCount <= m_layouts.size());
+    for (uint32_t i = range.baseArrayLayer; i < range.baseArrayLayer + range.layerCount; ++i)
     {
-        m_layouts[0][0] = newLayout;
-        return;
-    }
-
-    for (uint32_t i = subresourceRange.baseArrayLayer;
-         i < subresourceRange.baseArrayLayer + subresourceRange.layerCount;
-         ++i)
-        for (uint32_t j = subresourceRange.baseMipLevel;
-             j < subresourceRange.baseMipLevel + subresourceRange.levelCount;
-             ++j)
+        CRISP_CHECK(range.baseMipLevel >= 0 && range.baseMipLevel + range.levelCount <= m_layouts[i].size());
+        for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j)
             m_layouts[i][j] = newLayout;
+    }
 }
 
 void VulkanImage::transitionLayout(
     VkCommandBuffer cmdBuffer, VkImageLayout newLayout, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage)
 {
-    VkImageSubresourceRange subresRange;
-    subresRange.baseMipLevel = 0;
-    subresRange.levelCount = m_mipLevels;
-    subresRange.baseArrayLayer = 0;
-    subresRange.layerCount = m_numLayers;
-    subresRange.aspectMask = m_aspect;
+    VkImageSubresourceRange subresRange{
+        .aspectMask = m_aspect,
+        .baseMipLevel = 0,
+        .levelCount = m_createInfo.mipLevels,
+        .baseArrayLayer = 0,
+        .layerCount = m_createInfo.arrayLayers};
     transitionLayout(cmdBuffer, newLayout, subresRange, srcStage, dstStage);
 }
 
@@ -173,12 +162,12 @@ void VulkanImage::transitionLayout(
     VkPipelineStageFlags srcStage,
     VkPipelineStageFlags dstStage)
 {
-    VkImageSubresourceRange subresRange;
-    subresRange.baseMipLevel = 0;
-    subresRange.levelCount = m_mipLevels;
-    subresRange.baseArrayLayer = baseLayer;
-    subresRange.layerCount = numLayers;
-    subresRange.aspectMask = m_aspect;
+    VkImageSubresourceRange subresRange{
+        .aspectMask = m_aspect,
+        .baseMipLevel = 0,
+        .levelCount = m_createInfo.mipLevels,
+        .baseArrayLayer = baseLayer,
+        .layerCount = numLayers};
     transitionLayout(cmdBuffer, newLayout, subresRange, srcStage, dstStage);
 }
 
@@ -192,12 +181,12 @@ void VulkanImage::transitionLayout(
     VkPipelineStageFlags srcStage,
     VkPipelineStageFlags dstStage)
 {
-    VkImageSubresourceRange subresRange;
-    subresRange.baseMipLevel = baseLevel;
-    subresRange.levelCount = levelCount;
-    subresRange.baseArrayLayer = baseLayer;
-    subresRange.layerCount = numLayers;
-    subresRange.aspectMask = m_aspect;
+    VkImageSubresourceRange subresRange{
+        .aspectMask = m_aspect,
+        .baseMipLevel = baseLevel,
+        .levelCount = levelCount,
+        .baseArrayLayer = baseLayer,
+        .layerCount = numLayers};
     transitionLayout(buffer, newLayout, subresRange, srcStage, dstStage);
 }
 
@@ -208,39 +197,13 @@ void VulkanImage::transitionLayout(
     VkPipelineStageFlags srcStage,
     VkPipelineStageFlags dstStage)
 {
-    if (m_type == VK_IMAGE_TYPE_3D)
-    {
-        if (m_layouts[0][0] == newLayout)
-            return;
+    subresRange.baseArrayLayer = m_createInfo.imageType == VK_IMAGE_TYPE_3D ? 0 : subresRange.baseArrayLayer;
+    subresRange.layerCount = m_createInfo.imageType == VK_IMAGE_TYPE_3D ? 1 : subresRange.layerCount;
 
-        VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-        barrier.oldLayout = m_layouts[0][0];
-        barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = m_handle;
-        barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-        std::tie(barrier.srcAccessMask, barrier.dstAccessMask) = determineAccessMasks(m_layouts[0][0], newLayout);
-
-        vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-        m_layouts[0][0] = newLayout;
+    if (matchesLayout(newLayout, subresRange))
         return;
-    }
 
-    bool sameLayouts = true;
-    for (uint32_t i = subresRange.baseArrayLayer; i < subresRange.baseArrayLayer + subresRange.layerCount; ++i)
-        for (uint32_t j = subresRange.baseMipLevel; j < subresRange.baseMipLevel + subresRange.levelCount; ++j)
-        {
-            if (m_layouts[i][j] != newLayout)
-            {
-                sameLayouts = false;
-                break;
-            }
-        }
-
-    if (sameLayouts)
-        return;
+    CRISP_CHECK(isSameLayoutInRange(subresRange), "Attempting to transition an image across different layouts!");
 
     VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.oldLayout = m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel];
@@ -253,15 +216,12 @@ void VulkanImage::transitionLayout(
         determineAccessMasks(m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel], newLayout);
 
     vkCmdPipelineBarrier(cmdBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    for (auto i = subresRange.baseArrayLayer; i < subresRange.baseArrayLayer + subresRange.layerCount; ++i)
-        for (auto j = subresRange.baseMipLevel; j < subresRange.baseMipLevel + subresRange.levelCount; ++j)
-            m_layouts[i][j] = newLayout;
+    setImageLayout(newLayout, subresRange);
 }
 
 void VulkanImage::copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer)
 {
-    copyFrom(commandBuffer, buffer, 0, m_numLayers);
+    copyFrom(commandBuffer, buffer, 0, m_createInfo.arrayLayers);
 }
 
 void VulkanImage::copyFrom(
@@ -269,9 +229,9 @@ void VulkanImage::copyFrom(
 {
     VkBufferImageCopy copyRegion = {};
     copyRegion.bufferOffset = 0;
-    copyRegion.bufferImageHeight = m_extent.height;
-    copyRegion.bufferRowLength = m_extent.width;
-    copyRegion.imageExtent = m_extent;
+    copyRegion.bufferImageHeight = m_createInfo.extent.height;
+    copyRegion.bufferRowLength = m_createInfo.extent.width;
+    copyRegion.imageExtent = m_createInfo.extent;
     copyRegion.imageOffset = {0, 0, 0};
     copyRegion.imageSubresource.aspectMask = m_aspect;
     copyRegion.imageSubresource.baseArrayLayer = baseLayer;
@@ -282,14 +242,14 @@ void VulkanImage::copyFrom(
 
 void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
 {
-    if (m_mipLevels > 1)
+    if (m_createInfo.mipLevels > 1)
     {
         VkImageSubresourceRange currSubresource = {};
         currSubresource.aspectMask = m_aspect;
         currSubresource.baseMipLevel = 0;
         currSubresource.levelCount = 1;
         currSubresource.baseArrayLayer = 0;
-        currSubresource.layerCount = m_numLayers;
+        currSubresource.layerCount = m_createInfo.arrayLayers;
 
         transitionLayout(
             commandBuffer,
@@ -298,24 +258,24 @@ void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-        for (uint32_t i = 1; i < m_mipLevels; i++)
+        for (uint32_t i = 1; i < m_createInfo.mipLevels; i++)
         {
             VkImageBlit imageBlit = {};
 
             imageBlit.srcSubresource.aspectMask = m_aspect;
             imageBlit.srcSubresource.baseArrayLayer = 0;
-            imageBlit.srcSubresource.layerCount = m_numLayers;
+            imageBlit.srcSubresource.layerCount = m_createInfo.arrayLayers;
             imageBlit.srcSubresource.mipLevel = i - 1;
-            imageBlit.srcOffsets[1].x = std::max(int32_t(m_extent.width >> (i - 1)), 1);
-            imageBlit.srcOffsets[1].y = std::max(int32_t(m_extent.height >> (i - 1)), 1);
+            imageBlit.srcOffsets[1].x = std::max(int32_t(m_createInfo.extent.width >> (i - 1)), 1);
+            imageBlit.srcOffsets[1].y = std::max(int32_t(m_createInfo.extent.height >> (i - 1)), 1);
             imageBlit.srcOffsets[1].z = 1;
 
             imageBlit.dstSubresource.aspectMask = m_aspect;
             imageBlit.dstSubresource.baseArrayLayer = 0;
-            imageBlit.dstSubresource.layerCount = m_numLayers;
+            imageBlit.dstSubresource.layerCount = m_createInfo.arrayLayers;
             imageBlit.dstSubresource.mipLevel = i;
-            imageBlit.dstOffsets[1].x = std::max(int32_t(m_extent.width >> i), 1);
-            imageBlit.dstOffsets[1].y = std::max(int32_t(m_extent.height >> i), 1);
+            imageBlit.dstOffsets[1].x = std::max(int32_t(m_createInfo.extent.width >> i), 1);
+            imageBlit.dstOffsets[1].y = std::max(int32_t(m_createInfo.extent.height >> i), 1);
             imageBlit.dstOffsets[1].z = 1;
 
             currSubresource.baseMipLevel = i;
@@ -352,16 +312,16 @@ void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, 
     imageBlit.srcSubresource.baseArrayLayer = 0;
     imageBlit.srcSubresource.layerCount = 6;
     imageBlit.srcSubresource.mipLevel = 0;
-    imageBlit.srcOffsets[1].x = image.m_extent.width;
-    imageBlit.srcOffsets[1].y = image.m_extent.height;
+    imageBlit.srcOffsets[1].x = image.m_createInfo.extent.width;
+    imageBlit.srcOffsets[1].y = image.m_createInfo.extent.height;
     imageBlit.srcOffsets[1].z = 1;
 
     imageBlit.dstSubresource.aspectMask = m_aspect;
     imageBlit.dstSubresource.baseArrayLayer = 0;
     imageBlit.dstSubresource.layerCount = 6;
     imageBlit.dstSubresource.mipLevel = mipLevel;
-    imageBlit.dstOffsets[1].x = image.m_extent.width;
-    imageBlit.dstOffsets[1].y = image.m_extent.height;
+    imageBlit.dstOffsets[1].x = image.m_createInfo.extent.width;
+    imageBlit.dstOffsets[1].y = image.m_createInfo.extent.height;
     imageBlit.dstOffsets[1].z = 1;
 
     VkImageSubresourceRange mipRange = {};
@@ -396,7 +356,8 @@ void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, 
 
 std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type)
 {
-    return std::make_unique<VulkanImageView>(*m_device, *this, type, 0, m_numLayers, 0, m_mipLevels);
+    return std::make_unique<VulkanImageView>(
+        *m_device, *this, type, 0, m_createInfo.arrayLayers, 0, m_createInfo.mipLevels);
 }
 
 std::unique_ptr<VulkanImageView> VulkanImage::createView(
@@ -407,17 +368,17 @@ std::unique_ptr<VulkanImageView> VulkanImage::createView(
 
 uint32_t VulkanImage::getMipLevels() const
 {
-    return m_mipLevels;
+    return m_createInfo.mipLevels;
 }
 
 uint32_t VulkanImage::getWidth() const
 {
-    return m_extent.width;
+    return m_createInfo.extent.width;
 }
 
 uint32_t VulkanImage::getHeight() const
 {
-    return m_extent.height;
+    return m_createInfo.extent.height;
 }
 
 VkImageAspectFlags VulkanImage::getAspectMask() const
@@ -427,7 +388,40 @@ VkImageAspectFlags VulkanImage::getAspectMask() const
 
 VkFormat VulkanImage::getFormat() const
 {
-    return m_format;
+    return m_createInfo.format;
+}
+
+bool VulkanImage::matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const
+{
+    CRISP_CHECK(range.baseArrayLayer >= 0 && range.baseArrayLayer + range.layerCount <= m_layouts.size());
+    for (uint32_t i = range.baseArrayLayer; i < range.baseArrayLayer + range.layerCount; ++i)
+    {
+        CRISP_CHECK(range.baseMipLevel >= 0 && range.baseMipLevel + range.levelCount <= m_layouts[i].size());
+        for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j)
+        {
+            if (m_layouts[i][j] != imageLayout)
+                return false;
+        }
+    }
+
+    return true;
+}
+
+bool VulkanImage::isSameLayoutInRange(const VkImageSubresourceRange& range) const
+{
+    CRISP_CHECK(range.baseArrayLayer >= 0 && range.baseArrayLayer + range.layerCount <= m_layouts.size());
+
+    FlatHashSet<VkImageLayout> uniqueLayouts{};
+    for (uint32_t i = range.baseArrayLayer; i < range.baseArrayLayer + range.layerCount; ++i)
+    {
+        CRISP_CHECK(range.baseMipLevel >= 0 && range.baseMipLevel + range.levelCount <= m_layouts[i].size());
+        for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j)
+        {
+            uniqueLayouts.insert(m_layouts[i][j]);
+        }
+    }
+
+    return uniqueLayouts.size() <= 1;
 }
 
 std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(
@@ -520,16 +514,17 @@ std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(
 
 VkImageAspectFlags determineImageAspect(VkFormat format)
 {
-    if (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D16_UNORM)
+    switch (format)
     {
+    case VK_FORMAT_D32_SFLOAT:
+    case VK_FORMAT_D16_UNORM:
         return VK_IMAGE_ASPECT_DEPTH_BIT;
-    }
-    if (format == VK_FORMAT_D16_UNORM_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
-        format == VK_FORMAT_D32_SFLOAT_S8_UINT)
-    {
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
         return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    default:
+        return VK_IMAGE_ASPECT_COLOR_BIT;
     }
-
-    return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 } // namespace crisp

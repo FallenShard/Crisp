@@ -3,7 +3,7 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 #include <string>

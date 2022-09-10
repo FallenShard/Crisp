@@ -3,9 +3,8 @@
 #include "Scene.hpp"
 #include <Crisp/Renderer/Renderer.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
-
 
 namespace crisp
 {

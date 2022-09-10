@@ -7,6 +7,6 @@ add_cpp_static_library(CrispCamera
     "TargetCameraController.hpp")
 target_link_libraries(CrispCamera
     PUBLIC CrispMath
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispEvent
     PUBLIC CrispWindow)

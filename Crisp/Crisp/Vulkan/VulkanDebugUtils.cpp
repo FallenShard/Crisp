@@ -11,7 +11,7 @@ auto logger = createLoggerMt("VulkanDebug");
 VkBool32 debugMessengerCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+    const VkDebugUtilsMessengerCallbackDataEXT* data,
     void* /*userData*/)
 {
     const char* typeStr = "Unknown";
@@ -24,39 +24,19 @@ VkBool32 debugMessengerCallback(
 
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {
-        logger->debug(
-            "{} {} {} \n{}",
-            typeStr,
-            callbackData->messageIdNumber,
-            callbackData->pMessageIdName,
-            callbackData->pMessage);
+        logger->debug("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
     }
     else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
     {
-        logger->info(
-            "{} {} {} \n{}",
-            typeStr,
-            callbackData->messageIdNumber,
-            callbackData->pMessageIdName,
-            callbackData->pMessage);
+        logger->info("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
     }
     else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        logger->warn(
-            "{} {} {} \n{}",
-            typeStr,
-            callbackData->messageIdNumber,
-            callbackData->pMessageIdName,
-            callbackData->pMessage);
+        logger->warn("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
     }
     else
     {
-        logger->error(
-            "{} {} {} \n{}",
-            typeStr,
-            callbackData->messageIdNumber,
-            callbackData->pMessageIdName,
-            callbackData->pMessage);
+        logger->error("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
     }
 
     return VK_FALSE;
@@ -82,7 +62,8 @@ void DestroyDebugUtilsMessengerEXT(
     if (messenger == nullptr)
         return;
 
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    const auto func =
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr)
         func(instance, messenger, pAllocator);
 }
@@ -101,7 +82,6 @@ VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
 
     VkDebugUtilsMessengerEXT callback;
     CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
-    logger->info("Debug messenger created!");
     return callback;
 }
 } // namespace crisp

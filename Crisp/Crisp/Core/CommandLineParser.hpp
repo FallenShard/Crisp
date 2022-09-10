@@ -1,7 +1,7 @@
 #pragma once
 
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Common/Result.hpp>
-#include <Crisp/Common/RobinHood.hpp>
 #include <Crisp/StringUtils.hpp>
 
 #include <any>

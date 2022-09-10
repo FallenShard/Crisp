@@ -1,4 +1,4 @@
-#include "RenderGraph.hpp"
+#include <Crisp/Renderer/RenderGraph.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/Material.hpp>
@@ -8,15 +8,14 @@
 
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 
+#include <Crisp/ChromeProfiler.hpp>
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Common/Logger.hpp>
+#include <Crisp/Enumerate.hpp>
 
 #include <exception>
 #include <stack>
 #include <string_view>
-
-#include "Crisp/ChromeProfiler.hpp"
-
-#include <Crisp/Enumerate.hpp>
 
 namespace crisp
 {
@@ -48,37 +47,33 @@ RenderGraph::~RenderGraph() {}
 
 RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)
 {
-    if (m_nodes.count(name) > 0)
-        logger->warn("Render graph already contains a node named {}\n", name);
+    CRISP_CHECK(m_nodes.find(name) == m_nodes.end(), "Render graph already contains a node named {}", name);
 
-    auto iter = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
-    // logger->info("Preparing render pass: {}.", iter.)
+    const auto& [iter, inserted] = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
     m_renderer->enqueueResourceUpdate(
-        [pass = iter](VkCommandBuffer cmdBuffer)
+        [node = iter->second.get()](VkCommandBuffer cmdBuffer)
         {
-            logger->info("Updating render pass {}", pass.first->first);
-            pass.first->second->renderPass->updateInitialLayouts(cmdBuffer);
+            logger->info("Initializing render target layouts for {}", node->name);
+            node->renderPass->updateInitialLayouts(cmdBuffer);
         });
-    // updateInitialLayouts(*iter.first->second->renderPass);
-    return *iter.first->second;
+    return *iter->second;
 }
 
-RenderGraph::Node& RenderGraph::addComputePass(std::string computePassName)
+RenderGraph::Node& RenderGraph::addComputePass(std::string name)
 {
-    if (m_nodes.count(computePassName) > 0)
-        logger->warn("Render graph already contains a node named {}\n", computePassName);
+    CRISP_CHECK(m_nodes.find(name) == m_nodes.end(), "Render graph already contains a node named {}", name);
 
-    auto iter = m_nodes.emplace(computePassName, std::make_unique<Node>());
-    iter.first->second->name = computePassName;
-    iter.first->second->isCompute = true;
-    return *iter.first->second;
+    const auto& [iter, inserted] = m_nodes.emplace(name, std::make_unique<Node>());
+    iter->second->name = std::move(name);
+    iter->second->type = NodeType::Compute;
+    return *iter->second;
 }
 
 void RenderGraph::resize(int /*width*/, int /*height*/)
 {
     for (auto& [key, node] : m_nodes)
     {
-        if (!node->isCompute)
+        if (node->type != NodeType::Compute)
         {
             node->renderPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
             m_renderer->updateInitialLayouts(*node->renderPass);
@@ -116,8 +111,9 @@ void RenderGraph::addRenderTargetLayoutTransition(
     RenderGraph::Node* dstNode = nullptr;
     if (m_nodes.count(destinationPass))
         dstNode = m_nodes.at(destinationPass).get();
-    VkPipelineStageFlags dstStageFlags =
-        dstNode && dstNode->isCompute ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    VkPipelineStageFlags dstStageFlags = dstNode && dstNode->type == NodeType::Compute
+                                             ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                                             : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 
     if (attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT)
     {
@@ -125,7 +121,6 @@ void RenderGraph::addRenderTargetLayoutTransition(
             [s = sourcePass, sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
                 const VulkanRenderPass& sourcePass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
-            logger->info("Transitioning: {}", s);
             auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
             const auto& range =
                 sourcePass.getRenderTargetView(sourceRenderTargetIndex, frameIndex).getSubresourceRange();
@@ -144,7 +139,6 @@ void RenderGraph::addRenderTargetLayoutTransition(
             [s = sourcePass, sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
                 const VulkanRenderPass& sourcePass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
         {
-            logger->info("Transitioning: {}", s);
             auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
             const auto& range =
                 sourcePass.getRenderTargetView(sourceRenderTargetIndex, frameIndex).getSubresourceRange();
@@ -160,7 +154,7 @@ void RenderGraph::addRenderTargetLayoutTransition(
 
 Result<> RenderGraph::sortRenderPasses()
 {
-    robin_hood::unordered_map<std::string, int32_t> fanIn;
+    HashMap<std::string, int32_t> fanIn;
     for (auto& [srcPass, node] : m_nodes)
     {
         if (fanIn.count(srcPass) == 0)
@@ -250,7 +244,7 @@ void RenderGraph::executeCommandLists() const
             uint32_t frameIndex = m_renderer->getCurrentVirtualFrameIndex();
             for (auto node : m_executionOrder)
             {
-                if (node->isCompute)
+                if (node->type == NodeType::Compute)
                     executeComputePass(commandBuffer, frameIndex, *node);
                 else
                     executeRenderPass(commandBuffer, frameIndex, *node);
@@ -312,7 +306,7 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
         cmdBuffer.getHandle(),
         virtualFrameIndex,
         useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
-    for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getNumSubpasses(); subpassIndex++)
+    for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getSubpassCount(); subpassIndex++)
     {
         if (subpassIndex > 0)
         {
@@ -380,7 +374,7 @@ RenderGraph::Node::Node(std::string name, std::unique_ptr<VulkanRenderPass> rend
     : name(name)
     , renderPass(std::move(renderPass))
 {
-    commands.resize(this->renderPass->getNumSubpasses());
+    commands.resize(this->renderPass->getSubpassCount());
 }
 
 void RenderGraph::Node::addCommand(DrawCommand&& command, uint32_t subpassIndex)

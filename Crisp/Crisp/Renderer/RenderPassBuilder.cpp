@@ -1,28 +1,34 @@
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 
+#include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Enumerate.hpp>
 
 namespace crisp
 {
+namespace
+{
+bool checkSwapChainDependency(const std::vector<RenderTarget*>& renderTargets)
+{
+    for (const auto& renderTarget : renderTargets)
+    {
+        if (renderTarget->info.isSwapChainDependent)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
 RenderPassBuilder::RenderPassBuilder() {}
 
-RenderPassBuilder& RenderPassBuilder::setAllocateRenderTagets(bool allocateRenderTargets)
+RenderPassBuilder& RenderPassBuilder::setAllocateAttachmentViews(bool allocateAttachmentViews)
 {
-    m_allocateRenderTargets = allocateRenderTargets;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setSwapChainDependency(bool isDependent)
-{
-    m_isSwapChainDependent = isDependent;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setRenderTargetsBuffered(bool renderTargetsBuffered)
-{
-    m_bufferedRenderTargets = renderTargetsBuffered;
+    m_allocateAttachmentViews = allocateAttachmentViews;
     return *this;
 }
 
@@ -35,24 +41,6 @@ RenderPassBuilder& RenderPassBuilder::setAttachmentCount(uint32_t count)
 
 RenderPassBuilder& RenderPassBuilder::setAttachmentMapping(
     uint32_t attachmentIdx,
-    const RenderTargetInfo& renderTargetInfo,
-    uint32_t renderTargetIdx,
-    uint32_t layerIdx,
-    uint32_t layerCount)
-{
-    m_attachmentMappings.at(attachmentIdx).renderTargetIndex = renderTargetIdx;
-    m_attachmentMappings.at(attachmentIdx).subresource.baseArrayLayer = layerIdx;
-    m_attachmentMappings.at(attachmentIdx).subresource.layerCount = layerCount;
-    m_attachmentMappings.at(attachmentIdx).subresource.baseMipLevel = 0;
-    m_attachmentMappings.at(attachmentIdx).subresource.levelCount = 1;
-    m_attachments.at(attachmentIdx).format = renderTargetInfo.format;
-    m_attachments.at(attachmentIdx).samples = renderTargetInfo.sampleCount;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setAttachmentMapping(
-    uint32_t attachmentIdx,
-    const RenderTargetInfo& renderTargetInfo,
     uint32_t renderTargetIdx,
     uint32_t firstLayer,
     uint32_t layerCount,
@@ -64,8 +52,6 @@ RenderPassBuilder& RenderPassBuilder::setAttachmentMapping(
     m_attachmentMappings.at(attachmentIdx).subresource.layerCount = layerCount;
     m_attachmentMappings.at(attachmentIdx).subresource.baseMipLevel = firstMipLevel;
     m_attachmentMappings.at(attachmentIdx).subresource.levelCount = mipLevelCount;
-    m_attachments.at(attachmentIdx).format = renderTargetInfo.format;
-    m_attachments.at(attachmentIdx).samples = renderTargetInfo.sampleCount;
     return *this;
 }
 
@@ -172,34 +158,43 @@ RenderPassBuilder& RenderPassBuilder::addDependency(
     return *this;
 }
 
-std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder::create(VkDevice device) const
+std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder::create(
+    VkDevice device, std::vector<RenderTarget*> renderTargets) const
 {
+    std::vector<VkAttachmentDescription> attachments(m_attachments);
+    for (const auto& [i, attachment] : enumerate(attachments))
+    {
+        attachment.format = renderTargets.at(m_attachmentMappings[i].renderTargetIndex)->info.format;
+        attachment.samples = renderTargets.at(m_attachmentMappings[i].renderTargetIndex)->info.sampleCount;
+    }
+
     VkRenderPassCreateInfo renderPassInfo = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
-    renderPassInfo.pAttachments = m_attachments.data();
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = static_cast<uint32_t>(m_subpasses.size());
     renderPassInfo.pSubpasses = m_subpasses.data();
     renderPassInfo.dependencyCount = static_cast<uint32_t>(m_dependencies.size());
     renderPassInfo.pDependencies = m_dependencies.data();
 
     VkRenderPass renderPass;
-    vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
-    return std::make_pair(renderPass, m_attachments);
+    VK_CHECK(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
+    return std::make_pair(renderPass, std::move(attachments));
 }
 
 std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(
     const VulkanDevice& device, VkExtent2D renderArea, std::vector<RenderTarget*> renderTargets) const
 {
-    auto [handle, attachments] = create(device.getHandle());
+    auto [handle, attachments] = create(device.getHandle(), renderTargets);
 
     RenderPassDescription description{};
-    description.bufferedRenderTargets = m_bufferedRenderTargets;
-    description.isSwapChainDependent = m_isSwapChainDependent;
-    description.allocateRenderTargets = m_allocateRenderTargets;
-    description.renderArea = renderArea;
     description.subpassCount = static_cast<uint32_t>(m_subpasses.size());
+    description.renderArea = renderArea;
+    description.isSwapChainDependent = checkSwapChainDependency(renderTargets);
+
+    description.allocateAttachmentViews = m_allocateAttachmentViews;
     description.attachmentDescriptions = std::move(attachments);
     description.attachmentMappings = m_attachmentMappings;
+
     description.renderTargets = renderTargets;
 
     return std::make_unique<VulkanRenderPass>(device, handle, std::move(description));

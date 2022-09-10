@@ -12,8 +12,6 @@ namespace crisp
 std::unique_ptr<VulkanRenderPass> createLightShaftPass(const VulkanDevice& device, VkExtent2D renderArea)
 {
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(true)
         /*.setRenderTargetCount(1)
         .setRenderTargetFormat(0, VK_FORMAT_R8G8B8A8_UNORM)
         .configureColorRenderTarget(0, VK_IMAGE_USAGE_SAMPLED_BIT)*/

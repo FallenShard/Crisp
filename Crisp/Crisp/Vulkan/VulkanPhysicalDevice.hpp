@@ -79,7 +79,7 @@ public:
         return m_memoryProperties.memoryProperties;
     }
 
-    bool isSuitable(VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) const;
+    bool isSuitable(VkSurfaceKHR surface, const std::vector<std::string>& deviceExtensions) const;
 
     bool supportsPresentation(uint32_t queueFamilyIndex, VkSurfaceKHR surface) const;
     QueueFamilyIndices queryQueueFamilyIndices(VkSurfaceKHR surface) const;
@@ -104,7 +104,7 @@ public:
 private:
     void initFeaturesAndProperties();
 
-    bool supportsDeviceExtensions(const std::vector<const char*>& deviceExtensions) const;
+    bool supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const;
 
     VkPhysicalDevice m_handle; // Implicitly cleaned up with VkInstance
     VkPhysicalDeviceFeatures2 m_features;

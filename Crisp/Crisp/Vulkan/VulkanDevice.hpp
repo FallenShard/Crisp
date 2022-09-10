@@ -14,7 +14,9 @@ class VulkanQueue;
 class VulkanDevice
 {
 public:
-    VulkanDevice(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig,
+    VulkanDevice(
+        const VulkanPhysicalDevice& physicalDevice,
+        const VulkanQueueConfiguration& queueConfig,
         int32_t virtualFrameCount);
     ~VulkanDevice();
 
@@ -24,7 +26,6 @@ public:
     VulkanDevice& operator=(VulkanDevice&&) = delete;
 
     VkDevice getHandle() const;
-    const VulkanPhysicalDevice& getPhysicalDevice() const;
     const VulkanQueue& getGeneralQueue() const;
     const VulkanQueue& getComputeQueue() const;
     const VulkanQueue& getTransferQueue() const;
@@ -49,7 +50,7 @@ public:
 
     inline VkDeviceAddress getBufferAddress(VkBuffer buffer) const
     {
-        VkBufferDeviceAddressInfo getAddressInfo = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        VkBufferDeviceAddressInfo getAddressInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
         getAddressInfo.buffer = buffer;
         return vkGetBufferDeviceAddress(m_handle, &getAddressInfo);
     }
@@ -70,13 +71,18 @@ public:
         if constexpr (N == 0)
             return;
 
-        vkWaitForFences(m_handle, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE,
+        vkWaitForFences(
+            m_handle,
+            static_cast<uint32_t>(fences.size()),
+            fences.data(),
+            VK_TRUE,
             std::numeric_limits<uint64_t>::max());
     }
 
 private:
     VkDevice m_handle;
-    const VulkanPhysicalDevice* m_physicalDevice;
+
+    VkDeviceSize m_nonCoherentAtomSize;
 
     std::unique_ptr<VulkanQueue> m_generalQueue;
     std::unique_ptr<VulkanQueue> m_computeQueue;

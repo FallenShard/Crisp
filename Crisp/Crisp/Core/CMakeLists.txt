@@ -30,7 +30,7 @@ add_cpp_static_library(CrispApplicationEnvironment
 target_link_libraries(CrispApplicationEnvironment
     PUBLIC CrispUtils
     PUBLIC CrispLogger
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispStringUtils
     PUBLIC glfw
     PUBLIC vulkan)

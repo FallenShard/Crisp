@@ -1,13 +1,6 @@
 #pragma once
 
-#include <initializer_list>
-#include <set>
-#include <vector>
-
-#include <vulkan/vulkan.h>
-
 #include <Crisp/BitFlags.hpp>
-
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
 namespace crisp

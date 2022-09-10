@@ -24,8 +24,8 @@ LuaPipelineBuilder::LuaPipelineBuilder(std::filesystem::path configPath)
 {
 }
 
-std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(Renderer* renderer, const VulkanRenderPass& renderPass,
-    uint32_t subpassIndex)
+std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(
+    Renderer* renderer, const VulkanRenderPass& renderPass, uint32_t subpassIndex)
 {
     const auto shaderFileMap = getShaderFileMap();
     sl::ShaderUniformInputMetadata metadata{};
@@ -254,9 +254,9 @@ void LuaPipelineBuilder::readRasterizationState()
     }
 }
 
-void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& renderPass)
+void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& /*renderPass*/)
 {
-    m_builder.setSampleCount(renderPass.getDefaultSampleCount());
+    // m_builder.setSampleCount(renderPass.getDefaultSampleCount());
     if (!m_config.hasVariable("multisample"))
         return;
 

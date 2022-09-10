@@ -162,18 +162,14 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
 {
     setupInput();
 
-    //// Camera
     m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
     m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
-
     m_renderGraph->addRenderPass(
         DepthPrePass,
         createDepthPass(
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, m_renderer->getSwapChainExtent()));
-
-    ////// Main render pass
     m_renderGraph->addRenderPass(
         MainPass,
         createForwardLightingPass(
@@ -191,13 +187,14 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addImageView(
         "csmFrame0",
-        m_renderGraph->getRenderPass(CsmPasses[0]).createRenderTargetView(m_renderer->getDevice(), 0, 0, CascadeCount));
+        m_resourceContext->renderTargetCache.get("ShadowMap")
+            ->image->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, CascadeCount));
     imageCache.addImageView(
         "csmFrame1",
-        m_renderGraph->getRenderPass(CsmPasses[0])
-            .createRenderTargetView(m_renderer->getDevice(), 0, CascadeCount, CascadeCount));
+        m_resourceContext->renderTargetCache.get("ShadowMap")
+            ->image->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, CascadeCount, CascadeCount));
 
-    //// Wrap-up render graph definition
+    // Wrap-up render graph definition
     m_renderGraph->addRenderTargetLayoutTransitionToScreen(MainPass, 0);
 
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
@@ -223,14 +220,14 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
         csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
     }
 
-    // createPlane();
+    createPlane();
     createShaderballs();
 
-    // auto nodes = addAtmosphereRenderPasses(
-    //     *m_renderGraph, *m_renderer, *m_resourceContext, m_resourceContext->renderTargetCache, MainPass);
-    // for (auto& [key, value] : nodes)
-    //     m_renderNodes.emplace(std::move(key), std::move(value));
-    // m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
+    auto nodes = addAtmosphereRenderPasses(
+        *m_renderGraph, *m_renderer, *m_resourceContext, m_resourceContext->renderTargetCache, MainPass);
+    for (auto& [key, value] : nodes)
+        m_renderNodes.emplace(std::move(key), std::move(value));
+    m_renderer->setSceneImageView(m_renderGraph->getNode("RayMarchingPass").renderPass.get(), 0);
 
     m_renderGraph->sortRenderPasses().unwrap();
     m_renderGraph->printExecutionOrder();
@@ -255,6 +252,8 @@ PbrScene::~PbrScene()
 void PbrScene::resize(int width, int height)
 {
     m_cameraController->onViewportResized(width, height);
+
+    m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
 
     m_renderGraph->resize(width, height);
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
@@ -298,10 +297,10 @@ void PbrScene::update(float dt)
     ////// m_resourceContext->getUniformBuffer("atmosphereCommon")->updateStagingBuffer(commonConstantData);
 
     //// atmoBuffer.cameraPosition = atmosphere.camera;
-    // AtmosphereParameters atmosphere{};
-    // const auto screenExtent = m_renderer->getSwapChainExtent();
-    // atmosphere.screenResolution = glm::vec2(screenExtent.width, screenExtent.height);
-    // m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer(atmosphere);
+    AtmosphereParameters atmosphere{};
+    const auto screenExtent = m_renderer->getSwapChainExtent();
+    atmosphere.screenResolution = glm::vec2(screenExtent.width, screenExtent.height);
+    m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer(atmosphere);
 }
 
 void PbrScene::render()
@@ -371,7 +370,7 @@ void PbrScene::onMaterialSelected(const std::string& /*materialName*/)
         if (std::filesystem::exists(path))
         {
             std::string key = "shaderBall-" + texNames[i];
-            m_resourceContext->addImageWithView(key, createTexture(m_renderer, filename, formats[i], true));
+            m_resourceContext->addImageWithView(key, convertToVulkanImage(m_renderer, filename, formats[i], true));
             material->writeDescriptor(1, 2 + i, *m_resourceContext->getImageView(key), linearRepeatSampler);
         }
         else
@@ -463,8 +462,7 @@ void PbrScene::createCommonTextures()
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    auto sheenLut =
-        createTexture(m_renderer, buffer.size() * sizeof(float), buffer.data(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    auto sheenLut = createVulkanImage(m_renderer, buffer.size() * sizeof(float), buffer.data(), createInfo);
     imageCache.addImageWithView("sheenLut", std::move(sheenLut));
 }
 
@@ -528,12 +526,12 @@ void PbrScene::createShaderballs()
             setMaterialSceneParams(*pbrShaderBall->pass(MainPass).material, *m_resourceContext, *m_lightSystem);
             pbrShaderBall->pass(MainPass).setPushConstantView(m_uniformMaterialParams.uvScale);
 
-            /*for (uint32_t c = 0; c < CascadeCount; ++c)
+            for (uint32_t c = 0; c < CascadeCount; ++c)
             {
-                auto& subpass = pbrShaderBall->subpass(CsmPass, c);
+                auto& subpass = pbrShaderBall->pass(CsmPasses[c]);
                 subpass.geometry = m_resourceContext->getGeometry("shaderBallPosOnly");
                 subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
-            }*/
+            }
         }
     }
 

@@ -14,26 +14,17 @@ class RenderPassBuilder
 public:
     RenderPassBuilder();
 
-    RenderPassBuilder& setSwapChainDependency(bool isDependent);
-    RenderPassBuilder& setRenderTargetsBuffered(bool renderTargetsBuffered);
-    RenderPassBuilder& setAllocateRenderTagets(bool allocateRenderTargets);
+    RenderPassBuilder& setAllocateAttachmentViews(bool allocateAttachmentViews);
 
     // Attachment configuration
     RenderPassBuilder& setAttachmentCount(uint32_t count);
     RenderPassBuilder& setAttachmentMapping(
         uint32_t attachmentIndex,
-        const RenderTargetInfo& renderTargetInfo,
         uint32_t renderTargetIndex,
         uint32_t firstLayer = 0,
-        uint32_t layerCount = 1);
-    RenderPassBuilder& setAttachmentMapping(
-        uint32_t attachmentIndex,
-        const RenderTargetInfo& renderTargetInfo,
-        uint32_t renderTargetIndex,
-        uint32_t firstLayer,
-        uint32_t layerCount,
-        uint32_t firstMipLevel,
-        uint32_t mipLevelCount);
+        uint32_t layerCount = 1,
+        uint32_t firstMipLevel = 0,
+        uint32_t mipLevelCount = 1);
     RenderPassBuilder& setAttachmentBufferOverDepthSlices(uint32_t attachmentIndex, bool bufferOverDepth);
     RenderPassBuilder& setAttachmentOps(
         uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp);
@@ -63,7 +54,8 @@ public:
         VkAccessFlags dstAccessMask,
         VkDependencyFlags flags = 0);
 
-    std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> create(VkDevice device) const;
+    std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> create(
+        VkDevice device, std::vector<RenderTarget*> renderTargets) const;
 
     std::unique_ptr<VulkanRenderPass> create(
         const VulkanDevice& device, VkExtent2D renderArea, std::vector<RenderTarget*> renderTargets) const;
@@ -80,8 +72,6 @@ private:
     std::vector<VkSubpassDescription> m_subpasses;
     std::vector<VkSubpassDependency> m_dependencies;
 
-    bool m_bufferedRenderTargets{true};
-    bool m_isSwapChainDependent{false};
-    bool m_allocateRenderTargets{true};
+    bool m_allocateAttachmentViews{true};
 };
 } // namespace crisp

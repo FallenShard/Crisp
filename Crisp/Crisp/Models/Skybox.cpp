@@ -45,7 +45,6 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
         1,
         VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_IMAGE_ASPECT_COLOR_BIT,
         VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
     for (uint32_t i = 0; i < NumCubeMapFaces; ++i)

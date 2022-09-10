@@ -310,7 +310,12 @@ void ShadowMappingScene::onMaterialSelected(const std::string& materialName)
         if (std::filesystem::exists(path))
         {
             std::string key = materialName + "-" + texNames[i];
-            imageCache.addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
+            imageCache.addImageWithView(
+                key,
+                convertToVulkanImage(
+                    m_renderer,
+                    loadImage(m_renderer->getResourcesPath() / "Textures" / filename, 4, FlipOnLoad::Y).unwrap(),
+                    formats[i]));
             material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }
         else
@@ -412,7 +417,12 @@ Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type)
         if (std::filesystem::exists(path))
         {
             std::string key = type + "-" + texNames[i];
-            imageCache.addImageWithView(key, createTexture(m_renderer, filename, formats[i], FlipOnLoad::Y));
+            imageCache.addImageWithView(
+                key,
+                convertToVulkanImage(
+                    m_renderer,
+                    loadImage(m_renderer->getResourcesPath() / "Textures" / filename, 4, FlipOnLoad::Y).unwrap(),
+                    formats[i]));
             material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }
         else
@@ -436,7 +446,7 @@ void ShadowMappingScene::createTerrain()
     /*std::unique_ptr<ImageFileBuffer> image = std::make_unique<ImageFileBuffer>(m_renderer->getResourcesPath() /
     "Textures/heightmap.jpg", 1);
 
-    m_images["heightMap"] = createTexture(m_renderer, *image, VK_FORMAT_R8_UNORM);
+    m_images["heightMap"] = convertToVulkanImage(m_renderer, *image, VK_FORMAT_R8_UNORM);
     m_imageViews["heightMap"] = m_images["heightMap"]->createView(VK_IMAGE_VIEW_TYPE_2D);
 
     int tileCount = 128;
@@ -559,13 +569,14 @@ void ShadowMappingScene::createTrees()
     const Image image(
         loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipOnLoad::Y)
             .unwrap());
-    imageCache.addImageWithView("leaves", createTexture(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
+    imageCache.addImageWithView("leaves", convertToVulkanImage(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
     alphaMaterial->writeDescriptor(1, 0, imageCache.getImageView("leaves"), imageCache.getSampler("linearClamp"));
 
     const Image normalMap(
         loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipOnLoad::Y)
             .unwrap());
-    imageCache.addImageWithView("leavesNormalMap", createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+    imageCache.addImageWithView(
+        "leavesNormalMap", convertToVulkanImage(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
     alphaMaterial->writeDescriptor(
         1, 1, imageCache.getImageView("leavesNormalMap"), imageCache.getSampler("linearClamp"));
 
@@ -591,13 +602,15 @@ void ShadowMappingScene::createTrees()
 
         const Image ambientMap =
             loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipOnLoad::Y).unwrap();
-        imageCache.addImageWithView(diffuseMapFilename, createTexture(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
+        imageCache.addImageWithView(
+            diffuseMapFilename, convertToVulkanImage(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
         material->writeDescriptor(
             1, 0, imageCache.getImageView(diffuseMapFilename), imageCache.getSampler("linearRepeat"));
 
         const Image normalMap =
             loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipOnLoad::Y).unwrap();
-        imageCache.addImageWithView(normalMapFilename, createTexture(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+        imageCache.addImageWithView(
+            normalMapFilename, convertToVulkanImage(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
         material->writeDescriptor(
             1, 1, imageCache.getImageView(normalMapFilename), imageCache.getSampler("linearRepeat"));
 

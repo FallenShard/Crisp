@@ -19,7 +19,6 @@ namespace crisp
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
     Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize)
 {
-    renderer->flushResourceUpdates(true);
     static constexpr uint32_t CubeMapFaceCount = 6;
 
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
@@ -32,7 +31,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
                                    .configureColorRenderTarget(
                                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
                                        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | additionalFlags)
-                                   .setSize({cubeMapSize, cubeMapSize})
+                                   .setSize({cubeMapSize, cubeMapSize}, false)
                                    .create(renderer->getDevice());
 
     auto cubeMapPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
@@ -121,7 +120,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
             .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
             .configureColorRenderTarget(
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            .setSize({cubeMapSize, cubeMapSize})
+            .setSize({cubeMapSize, cubeMapSize}, false)
             .create(renderer->getDevice());
 
     auto convPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
@@ -199,7 +198,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                                       .configureColorRenderTarget(
                                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
                                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-                                      .setSize({cubeMapSize, cubeMapSize})
+                                      .setSize({cubeMapSize, cubeMapSize}, false)
                                       .create(renderer->getDevice());
 
     for (int i = 0; i < static_cast<int>(mipLevels); i++)

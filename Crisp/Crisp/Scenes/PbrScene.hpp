@@ -4,7 +4,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 #include <Crisp/ConnectionHandler.hpp>
 #include <Crisp/Math/Headers.hpp>
 

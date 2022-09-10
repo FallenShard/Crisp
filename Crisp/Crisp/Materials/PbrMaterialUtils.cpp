@@ -61,7 +61,8 @@ void addToImageCache(const PbrTextureGroup& texGroup, const std::string& materia
         if (texture)
         {
             const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
-            imageCache.addImageWithView(key, createTexture(imageCache.getRenderer(), *texture, texInfo.defaultFormat));
+            imageCache.addImageWithView(
+                key, convertToVulkanImage(imageCache.getRenderer(), *texture, texInfo.defaultFormat));
         }
     };
 

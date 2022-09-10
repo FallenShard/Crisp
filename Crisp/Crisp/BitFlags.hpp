@@ -12,21 +12,27 @@ struct IsBitFlag
     static constexpr bool value = false;
 };
 
-template <typename EnumBits, typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
+template <
+    typename EnumBits,
+    typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
     typename MaskType = std::underlying_type_t<EnumBits>>
 constexpr MaskType operator|(EnumBits bit1, EnumBits bit2)
 {
     return static_cast<MaskType>(bit1) | static_cast<MaskType>(bit2);
 }
 
-template <typename EnumBits, typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
+template <
+    typename EnumBits,
+    typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
     typename MaskType = std::underlying_type_t<EnumBits>>
 constexpr MaskType operator|(MaskType bits, EnumBits bit)
 {
     return bits | static_cast<MaskType>(bit);
 }
 
-template <typename EnumBits, typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
+template <
+    typename EnumBits,
+    typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
     typename MaskType = std::underlying_type_t<EnumBits>>
 class BitFlags
 {
@@ -116,6 +122,11 @@ public:
     inline operator bool() const
     {
         return m_mask != 0;
+    }
+
+    inline MaskType getMask() const
+    {
+        return m_mask;
     }
 
     void print()

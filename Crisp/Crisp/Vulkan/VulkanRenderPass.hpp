@@ -3,8 +3,6 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <Crisp/Coroutines/Task.hpp>
-
 #include <memory>
 #include <vector>
 
@@ -13,7 +11,6 @@ namespace crisp
 class VulkanDevice;
 class VulkanImageView;
 class VulkanFramebuffer;
-class VulkanSwapChain;
 
 struct RenderTargetInfo
 {
@@ -38,6 +35,7 @@ struct RenderTargetInfo
 
     // Indicates if the render target has a fixed size. If not set, it is resized to the swap chain.
     VkExtent2D size{0, 0};
+    bool isSwapChainDependent{false};
 };
 
 struct RenderTarget
@@ -55,24 +53,20 @@ struct AttachmentMapping
 
 struct RenderPassDescription
 {
+    uint32_t subpassCount{0};
     VkExtent2D renderArea{0, 0};
     bool isSwapChainDependent{false};
-    uint32_t subpassCount{0};
+
+    bool allocateAttachmentViews{true};
     std::vector<VkAttachmentDescription> attachmentDescriptions;
     std::vector<AttachmentMapping> attachmentMappings;
-    bool bufferedRenderTargets{true};
-    bool allocateRenderTargets{true};
+
     std::vector<RenderTarget*> renderTargets;
 };
 
 class VulkanRenderPass final : public VulkanResource<VkRenderPass, vkDestroyRenderPass>
 {
 public:
-    // VulkanRenderPass(
-    //     const VulkanDevice& device,
-    //     std::vector<std::shared_ptr<VulkanImage>>&& renderTargets,
-    //     bool isSwapChainDependent,
-    //     uint32_t subpassCount);
     VulkanRenderPass(
         const VulkanDevice& device, VkRenderPass renderPassHandle, RenderPassDescription&& renderPassDescription);
     ~VulkanRenderPass();
@@ -90,19 +84,10 @@ public:
     VulkanImage& getRenderTarget(uint32_t index) const;
     const VulkanImageView& getRenderTargetView(uint32_t attachmentIndex, uint32_t frameIndex) const;
     std::vector<VulkanImageView*> getRenderTargetViews(uint32_t renderTargetIndex) const;
-    std::unique_ptr<VulkanImageView> createRenderTargetView(
-        const VulkanDevice& device, uint32_t attachmentIndex, uint32_t frameCount) const;
-    std::unique_ptr<VulkanImageView> createRenderTargetView(
-        const VulkanDevice& device, uint32_t attachmentIndex, uint32_t baseLayer, uint32_t layerCount) const;
 
-    inline uint32_t getNumSubpasses() const
+    inline uint32_t getSubpassCount() const
     {
         return m_subpassCount;
-    }
-
-    inline VkSampleCountFlagBits getDefaultSampleCount() const
-    {
-        return m_defaultSampleCount;
     }
 
     const VulkanFramebuffer* getFramebuffer(uint32_t frameIdx) const
@@ -115,15 +100,9 @@ public:
         return m_framebuffers.at(frameIdx);
     }
 
-    /*inline const std::string& getName() const
-    {
-        return m_resouceDeallo;
-    }*/
-
     void updateInitialLayouts(VkCommandBuffer cmdBuffer);
 
 protected:
-    // void createRenderTargets(const VulkanDevice& device);
     void createRenderTargetViewsAndFramebuffers(const VulkanDevice& device);
 
     VkExtent3D getRenderAreaExtent() const;
@@ -131,18 +110,16 @@ protected:
     void createResources(const VulkanDevice& device);
     void freeResources();
 
-    /*void setDepthRenderTargetInfo(
-        uint32_t index, VkImageUsageFlags additionalFlags, VkClearDepthStencilValue clearValue = {0.0f, 0});
-    void setColorRenderTargetInfo(
-        uint32_t index, VkImageUsageFlags additionalFlags, VkClearColorValue clearValue = {0.0f, 0.0f, 0.0f, 0.0f});*/
+    // If true, indicates that this render pass should resize its views according to the swap chain extent.
+    // Otherwise, the render pass has a fixed size.
+    bool m_isSwapChainDependent{true};
 
-    // High-level metadata.
-    bool m_isSwapChainDependent;
-    bool m_allocateResources{true};
+    // If true, indicates that the render pass should allocate its own image views.
+    // Otherwise, attachment views are supplied from the outer context.
+    bool m_allocateAttachmentViews{true};
+
     VkExtent2D m_renderArea;
     uint32_t m_subpassCount;
-
-    VkSampleCountFlagBits m_defaultSampleCount;
 
     std::vector<RenderTarget*> m_renderTargets;
 
@@ -151,12 +128,7 @@ protected:
     std::vector<VkClearValue> m_attachmentClearValues;
 
     // Accessed view is indexed as [frameIdx][attachmentViewIdx].
-    std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_renderTargetViews;
-
+    std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_attachmentViews;
     std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
-
-    // std::string m_name;
-
-    // bool m_bufferedRenderTargets{true};
 };
 } // namespace crisp

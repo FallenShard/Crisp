@@ -4,9 +4,9 @@ target_link_libraries(CrispFormat
     INTERFACE fmt)
 
 
-add_cpp_interface_library(CrispRobinHood
-    "RobinHood.hpp")
-target_link_libraries(CrispRobinHood
+add_cpp_interface_library(CrispHashMap
+    "HashMap.hpp")
+target_link_libraries(CrispHashMap
     INTERFACE robin_hood)
 
 
@@ -21,3 +21,8 @@ add_cpp_interface_library(CrispResult
     "Result.hpp")
 target_link_libraries(CrispResult
     INTERFACE CrispLogger)
+
+add_cpp_interface_library(CrispChecks
+    "Checks.hpp")
+target_link_libraries(CrispChecks
+    INTERFACE CrispResult)

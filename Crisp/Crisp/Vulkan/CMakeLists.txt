@@ -7,6 +7,8 @@ add_cpp_static_library(CrispVulkan
     "VulkanBuffer.cpp"
     "VulkanBuffer.hpp"
     "VulkanBufferView.hpp"
+    "VulkanChecks.cpp"
+    "VulkanChecks.hpp"
     "VulkanCommandBuffer.cpp"
     "VulkanCommandBuffer.hpp"
     "VulkanCommandPool.cpp"
@@ -56,7 +58,8 @@ target_link_libraries(CrispVulkan
     PUBLIC CrispBitFlags
     PUBLIC CrispRendererConfig
     PUBLIC CrispResult
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispLogger
     PUBLIC CrispUtils
+    PUBLIC CrispChecks
     PUBLIC vulkan)

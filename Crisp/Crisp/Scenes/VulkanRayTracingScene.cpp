@@ -241,7 +241,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
 
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
         m_rtImageViews.emplace_back(m_rtImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
@@ -402,9 +402,9 @@ void VulkanRayTracingScene::createPlane()
 
     m_resourceContext->addSampler("linearRepeat", std::make_unique<VulkanSampler>(m_renderer->getDevice(),
     VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-    m_resourceContext->addImageWithView("normalMap", createTexture(m_renderer, "path.jpg", VK_FORMAT_R8G8B8A8_UNORM));
-    m_resourceContext->addImageWithView("diffuseMap", createTexture(m_renderer, "uv_rainbow.jpg",
-    VK_FORMAT_R8G8B8A8_SRGB));
+    m_resourceContext->addImageWithView("normalMap", convertToVulkanImage(m_renderer, "path.jpg",
+    VK_FORMAT_R8G8B8A8_UNORM)); m_resourceContext->addImageWithView("diffuseMap", convertToVulkanImage(m_renderer,
+    "uv_rainbow.jpg", VK_FORMAT_R8G8B8A8_SRGB));
 
     VulkanPipeline* pipeline = m_resourceContext->createPipeline("normalMap", "NormalMap.lua",
     m_renderGraph->getRenderPass(MainPass), 0); Material* material = m_resourceContext->createMaterial("normalMap",

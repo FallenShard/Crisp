@@ -41,7 +41,7 @@ std::unique_ptr<VulkanRenderPass> createGuiRenderPass(
             .setFormat(VK_FORMAT_R8G8B8A8_UNORM)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
-            .setSize(swapChainExtent)
+            .setSize(swapChainExtent, true)
             .create(device));
     renderTargets[1] = renderTargetCache.addRenderTarget(
         "GuiPassDepth",
@@ -49,18 +49,15 @@ std::unique_ptr<VulkanRenderPass> createGuiRenderPass(
             .setFormat(VK_FORMAT_D32_SFLOAT)
             .setBuffered(true)
             .configureDepthRenderTarget(0, {1.0f, 0})
-            .setSize(swapChainExtent)
+            .setSize(swapChainExtent, true)
             .create(device));
 
     return RenderPassBuilder()
-        .setRenderTargetsBuffered(true)
-        .setSwapChainDependency(true)
-
         .setAttachmentCount(2)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .setAttachmentMapping(1, renderTargets[1]->info, 1)
+        .setAttachmentMapping(1, 1)
         .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
         .setAttachmentLayouts(
             1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
@@ -376,6 +373,7 @@ void RenderSystem::resize(int /*width*/, int /*height*/)
         0.5f,
         0.5f + DepthLayers);
 
+    m_renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_guiPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_renderer->updateInitialLayouts(*m_guiPass);
     updateFullScreenMaterial();
@@ -414,8 +412,7 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
         VkExtent3D{width, height, 1},
         1,
         VK_FORMAT_R8_UNORM,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_IMAGE_ASPECT_COLOR_BIT);
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
     fontTexture->texture->fill(fontTexture->font->textureData.data(), byteSize);
     fontTexture->VulkanImageView = fontTexture->texture->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
 
@@ -500,8 +497,7 @@ void RenderSystem::loadTextureAtlas()
         VkExtent3D{image.getWidth(), image.getHeight(), 1u},
         1,
         VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_IMAGE_ASPECT_COLOR_BIT);
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
     m_guiAtlasView = m_guiAtlas->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1);
     m_guiAtlas->fill(image.getData(), image.getByteSize());
 }

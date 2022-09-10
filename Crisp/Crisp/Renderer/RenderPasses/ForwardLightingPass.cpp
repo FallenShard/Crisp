@@ -19,7 +19,7 @@ std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
             .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
-            .setSize(renderArea)
+            .setSize(renderArea, true)
             .create(device));
     renderTargets[1] = renderTargetCache.addRenderTarget(
         "ForwardPassDepth",
@@ -27,18 +27,15 @@ std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
             .setFormat(VK_FORMAT_D32_SFLOAT)
             .setBuffered(true)
             .configureDepthRenderTarget(0)
-            .setSize(renderArea)
+            .setSize(renderArea, true)
             .create(device));
 
     return RenderPassBuilder()
-        .setSwapChainDependency(true)
-        .setRenderTargetsBuffered(true)
-
         .setAttachmentCount(2)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .setAttachmentMapping(1, renderTargets[1]->info, 1)
+        .setAttachmentMapping(1, 1)
         .setAttachmentOps(1, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_DONT_CARE)
         .setAttachmentLayouts(
             1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)

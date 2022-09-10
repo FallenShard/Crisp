@@ -132,7 +132,7 @@ target_link_libraries(Vesper
     PUBLIC CrispMath
     PUBLIC CrispFormat
     PUBLIC spdlog
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispSpectrum
     PUBLIC CrispOptics
     PUBLIC tbb

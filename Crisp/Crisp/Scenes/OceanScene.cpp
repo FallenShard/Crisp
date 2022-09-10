@@ -183,7 +183,7 @@ std::unique_ptr<VulkanImage> createStorageImage(
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    return std::make_unique<VulkanImage>(device, createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    return std::make_unique<VulkanImage>(device, createInfo);
 }
 
 bool paused = false;

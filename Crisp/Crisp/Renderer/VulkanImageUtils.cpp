@@ -35,7 +35,7 @@ void fillLayers(
         });
 }
 
-std::unique_ptr<VulkanImage> createTexture(Renderer* renderer, const Image& image, VkFormat format)
+std::unique_ptr<VulkanImage> convertToVulkanImage(Renderer* renderer, const Image& image, VkFormat format)
 {
     VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     imageInfo.flags = 0;
@@ -49,7 +49,7 @@ std::unique_ptr<VulkanImage> createTexture(Renderer* renderer, const Image& imag
     imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    auto vulkanImage = std::make_unique<VulkanImage>(renderer->getDevice(), imageInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    auto vulkanImage = std::make_unique<VulkanImage>(renderer->getDevice(), imageInfo);
 
     std::shared_ptr<VulkanBuffer> stagingBuffer =
         createStagingBuffer(renderer->getDevice(), image.getByteSize(), image.getData());
@@ -83,21 +83,10 @@ std::unique_ptr<VulkanImage> createTexture(Renderer* renderer, const Image& imag
     return vulkanImage;
 }
 
-std::unique_ptr<VulkanImage> createTexture(
-    Renderer* renderer, const std::string& filename, const VkFormat format, const FlipOnLoad flipOnLoad)
+std::unique_ptr<VulkanImage> createVulkanImage(
+    Renderer* renderer, VkDeviceSize size, const void* data, VkImageCreateInfo imageCreateInfo)
 {
-    return createTexture(
-        renderer, loadImage(renderer->getResourcesPath() / "Textures" / filename, 4, flipOnLoad).unwrap(), format);
-}
-
-std::unique_ptr<VulkanImage> createTexture(
-    Renderer* renderer,
-    VkDeviceSize size,
-    const void* data,
-    VkImageCreateInfo imageCreateInfo,
-    VkImageAspectFlags imageAspect)
-{
-    auto image = std::make_unique<VulkanImage>(renderer->getDevice(), imageCreateInfo, imageAspect);
+    auto image = std::make_unique<VulkanImage>(renderer->getDevice(), imageCreateInfo);
 
     std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer->getDevice(), size, data);
     renderer->enqueueResourceUpdate(
@@ -133,7 +122,7 @@ std::unique_ptr<VulkanImage> createTexture(
 std::unique_ptr<VulkanImage> createEnvironmentMap(
     Renderer* renderer, const std::string& filename, const VkFormat format, const FlipOnLoad flipOnLoad)
 {
-    return createTexture(
+    return convertToVulkanImage(
         renderer,
         loadImage(renderer->getResourcesPath() / "Textures/EnvironmentMaps" / filename, 4, flipOnLoad).unwrap(),
         format);
@@ -154,7 +143,7 @@ std::unique_ptr<VulkanImage> createMipmapCubeMap(
     imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    return std::make_unique<VulkanImage>(renderer->getDevice(), imageInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    return std::make_unique<VulkanImage>(renderer->getDevice(), imageInfo);
 }
 
 std::unique_ptr<VulkanImage> createSampledStorageImage(
@@ -171,6 +160,6 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    return std::make_unique<VulkanImage>(renderer.getDevice(), createInfo, VK_IMAGE_ASPECT_COLOR_BIT);
+    return std::make_unique<VulkanImage>(renderer.getDevice(), createInfo);
 }
 } // namespace crisp

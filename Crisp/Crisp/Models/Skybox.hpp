@@ -18,7 +18,6 @@ class VulkanImageView;
 class VulkanSampler;
 
 class Material;
-class Texture;
 class UniformBuffer;
 class Geometry;
 

@@ -6,5 +6,5 @@ add_cpp_static_library(CrispAnimation
     "PropertyAnimation.hpp")
 target_link_libraries(CrispAnimation
     PUBLIC CrispMath
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispEvent)

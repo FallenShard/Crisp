@@ -9,12 +9,16 @@
 namespace crisp
 {
 class VulkanDevice;
-class VulkanContext;
+class VulkanPhysicalDevice;
 
 class VulkanSwapChain : public VulkanResource<VkSwapchainKHR, vkDestroySwapchainKHR>
 {
 public:
-    VulkanSwapChain(const VulkanDevice& device, const VulkanContext& context, bool tripleBuffering);
+    VulkanSwapChain(
+        const VulkanDevice& device,
+        const VulkanPhysicalDevice& physicalDevice,
+        VkSurfaceKHR surface,
+        bool tripleBuffering);
     ~VulkanSwapChain();
 
     VulkanSwapChain(const VulkanSwapChain& other) = delete;
@@ -30,10 +34,10 @@ public:
     VkImageView getImageView(size_t index) const;
     uint32_t getSwapChainImageCount() const;
 
-    void recreate(const VulkanDevice& device, const VulkanContext& context);
+    void recreate(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
 
 private:
-    void createSwapChain(const VulkanDevice& device, const VulkanContext& context);
+    void createSwapChain(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
     void createSwapChainImageViews(VkDevice deviceHandle);
 
     Result<VkSurfaceFormatKHR> chooseSurfaceFormat(

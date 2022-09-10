@@ -24,15 +24,12 @@ std::unique_ptr<VulkanRenderPass> createTexturePass(
             .setLayerAndMipLevelCount(1)
             .setBuffered(bufferedRenderTargets)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-            .setSize(renderArea)
+            .setSize(renderArea, false)
             .create(device));
 
     return RenderPassBuilder()
-        .setSwapChainDependency(false)
-        .setRenderTargetsBuffered(bufferedRenderTargets)
-
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, renderTargets[0]->info, 0)
+        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 

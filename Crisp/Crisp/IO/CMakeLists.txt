@@ -26,7 +26,7 @@ add_cpp_static_library(CrispMeshIo
 target_link_libraries(CrispMeshIo
     PUBLIC CrispResult
     PUBLIC CrispLogger
-    PUBLIC CrispRobinHood
+    PUBLIC CrispHashMap
     PUBLIC CrispMaterial
     PUBLIC CrispMesh
     PRIVATE CrispStringUtils

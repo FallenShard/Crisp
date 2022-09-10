@@ -16,10 +16,10 @@ auto logger = createLoggerMt("VulkanDevice");
 VulkanDevice::VulkanDevice(
     const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
     : m_handle(physicalDevice.createLogicalDevice(queueConfig))
-    , m_physicalDevice(&physicalDevice)
-    , m_generalQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(0)))
-    , m_computeQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(1)))
-    , m_transferQueue(std::make_unique<VulkanQueue>(*this, queueConfig.queueIdentifiers.at(2)))
+    , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
+    , m_generalQueue(std::make_unique<VulkanQueue>(*this, physicalDevice, queueConfig.queueIdentifiers.at(0)))
+    , m_computeQueue(std::make_unique<VulkanQueue>(*this, physicalDevice, queueConfig.queueIdentifiers.at(1)))
+    , m_transferQueue(std::make_unique<VulkanQueue>(*this, physicalDevice, queueConfig.queueIdentifiers.at(2)))
     , m_memoryAllocator(std::make_unique<VulkanMemoryAllocator>(physicalDevice, m_handle))
     , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, virtualFrameCount))
 {
@@ -35,11 +35,6 @@ VulkanDevice::~VulkanDevice()
 VkDevice VulkanDevice::getHandle() const
 {
     return m_handle;
-}
-
-const VulkanPhysicalDevice& VulkanDevice::getPhysicalDevice() const
-{
-    return *m_physicalDevice;
 }
 
 const VulkanQueue& VulkanDevice::getGeneralQueue() const
@@ -75,15 +70,14 @@ void VulkanDevice::invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize off
 
 void VulkanDevice::flushMappedRanges()
 {
-    const VkDeviceSize nonCoherentAtomSize = m_physicalDevice->getLimits().nonCoherentAtomSize;
     if (!m_unflushedRanges.empty())
     {
         for (auto& range : m_unflushedRanges)
         {
             if (range.size != VK_WHOLE_SIZE)
-                range.size = ((range.size - 1) / nonCoherentAtomSize + 1) * nonCoherentAtomSize;
+                range.size = ((range.size - 1) / m_nonCoherentAtomSize + 1) * m_nonCoherentAtomSize;
 
-            range.offset = (range.offset / nonCoherentAtomSize) * nonCoherentAtomSize;
+            range.offset = (range.offset / m_nonCoherentAtomSize) * m_nonCoherentAtomSize;
         }
 
         vkFlushMappedMemoryRanges(m_handle, static_cast<uint32_t>(m_unflushedRanges.size()), m_unflushedRanges.data());

@@ -14,7 +14,7 @@
 namespace crisp
 {
 RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* renderer)
-    : m_extent({ width, height, 1u })
+    : m_extent({width, height, 1u})
     , m_numChannels(4)
 {
     m_viewport.minDepth = 0.0f;
@@ -28,20 +28,35 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
     m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(renderer->getDevice(), byteSize);
     m_stagingBuffer->updateFromHost(data.data(), byteSize, 0);
 
-    m_image = std::make_unique<VulkanImage>(renderer->getDevice(), m_extent, RendererConfig::VirtualFrameCount, 1,
-        VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_IMAGE_ASPECT_COLOR_BIT, 0);
+    m_image = std::make_unique<VulkanImage>(
+        renderer->getDevice(),
+        m_extent,
+        RendererConfig::VirtualFrameCount,
+        1,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        0);
 
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
     {
         renderer->enqueueResourceUpdate(
             [this, i, size = byteSize, stagingBuffer = m_stagingBuffer.get()](VkCommandBuffer cmdBuffer)
             {
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i, 1,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    i,
+                    1,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT);
                 m_image->copyFrom(cmdBuffer, *stagingBuffer, i, 1);
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, i, 1,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    i,
+                    1,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             });
         m_imageViews.push_back(m_image->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
     }
@@ -84,8 +99,13 @@ void RayTracedImage::draw(Renderer* renderer)
             {
                 uint32_t frameIdx = renderer->getCurrentVirtualFrameIndex();
 
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, frameIdx, 1,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    frameIdx,
+                    1,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT);
 
                 // Perform the copy from the buffer that has accumulated the updates through memcpy
                 std::vector<VkBufferImageCopy> copyRegions;
@@ -102,8 +122,8 @@ void RayTracedImage::draw(Renderer* renderer)
                     copyRegions[i].imageExtent.width = texUpdate.width;
                     copyRegions[i].imageExtent.height = texUpdate.height;
                     copyRegions[i].imageExtent.depth = 1;
-                    copyRegions[i].imageOffset = { texUpdate.x,
-                        static_cast<int32_t>(m_extent.height) - texUpdate.y - texUpdate.height, 0 };
+                    copyRegions[i].imageOffset = {
+                        texUpdate.x, static_cast<int32_t>(m_extent.height) - texUpdate.y - texUpdate.height, 0};
                     copyRegions[i].imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                     copyRegions[i].imageSubresource.baseArrayLayer = frameIdx;
                     copyRegions[i].imageSubresource.layerCount = 1;
@@ -111,21 +131,33 @@ void RayTracedImage::draw(Renderer* renderer)
                     texUpdateItem.first--;
                     i++;
                 }
-                vkCmdCopyBufferToImage(cmdBuffer, m_stagingBuffer->getHandle(), m_image->getHandle(),
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()),
+                vkCmdCopyBufferToImage(
+                    cmdBuffer,
+                    m_stagingBuffer->getHandle(),
+                    m_image->getHandle(),
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    static_cast<uint32_t>(copyRegions.size()),
                     copyRegions.data());
 
-                m_textureUpdates.erase(std::remove_if(m_textureUpdates.begin(), m_textureUpdates.end(),
-                                           [](const std::pair<unsigned int, RayTracerUpdate>& item)
-                                           {
-                                               return item.first <= 0;
-                                               // Erase those updates that have been written NumVirtualFrames times
-                                               // already
-                                           }),
+                m_textureUpdates.erase(
+                    std::remove_if(
+                        m_textureUpdates.begin(),
+                        m_textureUpdates.end(),
+                        [](const std::pair<unsigned int, RayTracerUpdate>& item)
+                        {
+                            return item.first <= 0;
+                            // Erase those updates that have been written NumVirtualFrames times
+                            // already
+                        }),
                     m_textureUpdates.end());
 
-                m_image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                m_image->transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    frameIdx,
+                    1,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             });
     }
 

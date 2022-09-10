@@ -8,7 +8,7 @@
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
-#include <Crisp/Common/RobinHood.hpp>
+#include <Crisp/Common/HashMap.hpp>
 
 #include <memory>
 

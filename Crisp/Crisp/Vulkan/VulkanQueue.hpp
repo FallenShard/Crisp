@@ -5,15 +5,19 @@
 namespace crisp
 {
 class VulkanDevice;
+class VulkanPhysicalDevice;
 
 class VulkanQueue
 {
 public:
-    VulkanQueue(const VulkanDevice& device, uint32_t familyIndex, uint32_t queueIndex);
-    VulkanQueue(const VulkanDevice& device, QueueIdentifier queueId);
+    VulkanQueue(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId);
 
-    VkResult submit(VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkCommandBuffer commandBuffer,
-        VkFence fence, VkPipelineStageFlags waitPipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) const;
+    VkResult submit(
+        VkSemaphore waitSemaphore,
+        VkSemaphore signalSemaphore,
+        VkCommandBuffer commandBuffer,
+        VkFence fence,
+        VkPipelineStageFlags waitPipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) const;
     VkResult submit(VkCommandBuffer cmdBuffer, VkFence fence = VK_NULL_HANDLE) const;
     VkResult present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const;
 
