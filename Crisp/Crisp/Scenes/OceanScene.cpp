@@ -23,8 +23,7 @@
 
 #include <Crisp/LuaConfig.hpp>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
@@ -113,10 +112,8 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     VkPipeline pipeline;
     vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
-    auto uniqueHandle =
-        std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), PipelineDynamicStateFlags());
-    uniqueHandle->setBindPoint(VK_PIPELINE_BIND_POINT_COMPUTE);
-    return uniqueHandle;
+    return std::make_unique<VulkanPipeline>(
+        device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
 }
 
 std::unique_ptr<VulkanPipeline> createOscillationPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
@@ -206,10 +203,11 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-    std::vector<VertexAttributeDescriptor> vertexFormat = {VertexAttribute::Position};
-    TriangleMesh mesh = createGridMesh(vertexFormat, 50.0, N - 1);
+    std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {{VertexAttribute::Position}};
+    TriangleMesh mesh = createGridMesh(flatten(vertexFormat), 50.0, N - 1);
     m_resourceContext->addGeometry(
-        "ocean", std::make_unique<Geometry>(m_renderer, mesh, vertexFormat, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+        "ocean",
+        std::make_unique<Geometry>(*m_renderer, mesh, vertexFormat, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
     auto fftImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
     auto displacementXImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
@@ -347,7 +345,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
                 barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
         });
 
-    m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
+    m_renderGraph->addDependency(MainPass, "SCREEN", 0);
     m_renderGraph->sortRenderPasses().unwrap();
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 

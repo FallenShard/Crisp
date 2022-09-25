@@ -1,7 +1,6 @@
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 
 #include <Crisp/Common/Checks.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp
 {

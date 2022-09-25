@@ -2,6 +2,7 @@
 
 #include <Crisp/Common/Format.hpp>
 
+#define SPDLOG_FMT_EXTERNAL_HO
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 

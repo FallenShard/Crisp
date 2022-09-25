@@ -4,18 +4,17 @@
 
 namespace crisp
 {
-void fillLayer(VulkanImage& image, Renderer* renderer, const void* data, VkDeviceSize size, uint32_t layerIdx)
+void fillImageLayer(VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx)
 {
-    fillLayers(image, renderer, data, size, layerIdx, 1);
+    fillImageLayers(image, renderer, data, size, layerIdx, 1);
 }
 
-void fillLayers(
-    VulkanImage& image, Renderer* renderer, const void* data, VkDeviceSize size, uint32_t layerIdx, uint32_t numLayers)
+void fillImageLayers(
+    VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx, uint32_t numLayers)
 {
-    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer->getDevice(), size, data);
-
-    renderer->enqueueResourceUpdate(
-        [&image, layerIdx, numLayers, renderer, stagingBuffer](VkCommandBuffer cmdBuffer)
+    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer.getDevice(), size, data);
+    renderer.enqueueResourceUpdate(
+        [&image, layerIdx, numLayers, stagingBuffer](VkCommandBuffer cmdBuffer)
         {
             image.transitionLayout(
                 cmdBuffer,
@@ -84,13 +83,13 @@ std::unique_ptr<VulkanImage> convertToVulkanImage(Renderer* renderer, const Imag
 }
 
 std::unique_ptr<VulkanImage> createVulkanImage(
-    Renderer* renderer, VkDeviceSize size, const void* data, VkImageCreateInfo imageCreateInfo)
+    Renderer& renderer, const VkDeviceSize size, const void* data, const VkImageCreateInfo imageCreateInfo)
 {
-    auto image = std::make_unique<VulkanImage>(renderer->getDevice(), imageCreateInfo);
+    auto image = std::make_unique<VulkanImage>(renderer.getDevice(), imageCreateInfo);
 
-    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer->getDevice(), size, data);
-    renderer->enqueueResourceUpdate(
-        [renderer, stagingBuffer, image = image.get()](VkCommandBuffer cmdBuffer)
+    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer.getDevice(), size, data);
+    renderer.enqueueResourceUpdate(
+        [stagingBuffer, image = image.get()](VkCommandBuffer cmdBuffer)
         {
             image->transitionLayout(
                 cmdBuffer,
@@ -162,4 +161,33 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     return std::make_unique<VulkanImage>(renderer.getDevice(), createInfo);
 }
+
+// void transitionComputeWriteToFragmentShading(VulkanImage& image, const VkImageSubresourceRange range) {
+//     VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+//     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+//     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//     barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+//     barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+//     barrier.image = tex->getHandle();
+//     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//     barrier.subresourceRange.baseMipLevel = 0;
+//     barrier.subresourceRange.levelCount = 1;
+//     barrier.subresourceRange.baseArrayLayer = frameIndex;
+//     barrier.subresourceRange.layerCount = 1;
+//
+//     image.transitionLayout
+//
+//     vkCmdPipelineBarrier(
+//         cmdBuffer.getHandle(),
+//         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+//         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+//         0,
+//         0,
+//         nullptr,
+//         0,
+//         nullptr,
+//         0,
+//         &barrier);
+// }
+
 } // namespace crisp

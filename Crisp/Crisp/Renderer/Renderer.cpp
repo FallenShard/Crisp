@@ -1,7 +1,5 @@
 #include <Crisp/Renderer/Renderer.hpp>
 
-#include <Crisp/Core/ApplicationEnvironment.hpp>
-
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
@@ -14,7 +12,7 @@
 #include <Crisp/vulkan/VulkanCommandPool.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Renderer/LuaPipelineBuilder.hpp>
+#include <Crisp/Renderer/IO/LuaPipelineBuilder.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
@@ -24,8 +22,7 @@
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
@@ -64,15 +61,19 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
 
 } // namespace
 
-Renderer::Renderer(SurfaceCreator surfCreatorCallback)
+Renderer::Renderer(
+    std::vector<std::string>&& requiredVulkanInstanceExtensions,
+    SurfaceCreator surfCreatorCallback,
+    AssetPaths&& assetPaths,
+    const bool enableRayTracingExtensions)
     : m_currentFrameIndex(0)
-    , m_assetDirectory(ApplicationEnvironment::getResourcesPath())
+    , m_assetPaths(std::move(assetPaths))
 {
-    recompileShaderDir(ApplicationEnvironment::getShaderSourceDirectory(), m_assetDirectory / "Shaders");
+    recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
 
     // Create fundamental objects for the API
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
-    if (ApplicationEnvironment::getParameters().enableRayTracingExtension)
+    if (enableRayTracingExtensions)
     {
         deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
         deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
@@ -80,8 +81,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
     }
 
-    m_context = std::make_unique<VulkanContext>(
-        surfCreatorCallback, ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), true);
+    m_context = std::make_unique<VulkanContext>(surfCreatorCallback, std::move(requiredVulkanInstanceExtensions), true);
     m_physicalDevice =
         std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(
@@ -102,12 +102,14 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
         frame.renderFinishedSemaphore = m_device->createSemaphore();
     }
 
+    m_shaderCache = std::make_unique<ShaderCache>(m_device->getHandle());
+
     m_workers.resize(1);
     for (auto& w : m_workers)
         w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
 
     // Creates a map of all shaders
-    loadShaders(m_assetDirectory / "Shaders");
+    loadShaders(m_assetPaths.spvShaderDir);
 
     // create vertex buffer
     const std::vector<glm::vec2> vertices = {
@@ -118,7 +120,7 @@ Renderer::Renderer(SurfaceCreator surfCreatorCallback)
     const std::vector<glm::uvec3> faces = {
         {0, 2, 1}
     };
-    m_fullScreenGeometry = std::make_unique<Geometry>(this, vertices, faces);
+    m_fullScreenGeometry = std::make_unique<Geometry>(*this, vertices, faces);
 
     m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipelineFromLua("Tonemapping.lua", getDefaultRenderPass(), 0);
@@ -133,21 +135,21 @@ Renderer::~Renderer()
         vkDestroySemaphore(m_device->getHandle(), frameRes.imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(m_device->getHandle(), frameRes.renderFinishedSemaphore, nullptr);
     }
+}
 
-    for (auto& shaderModule : m_shaderModules)
-    {
-        vkDestroyShaderModule(m_device->getHandle(), shaderModule.second.handle, nullptr);
-    }
+const AssetPaths& Renderer::getAssetPaths() const
+{
+    return m_assetPaths;
 }
 
 const std::filesystem::path& Renderer::getResourcesPath() const
 {
-    return m_assetDirectory;
+    return m_assetPaths.resourceDir;
 }
 
 std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const
 {
-    return ApplicationEnvironment::getShaderSourceDirectory() / (shaderName + ".glsl");
+    return m_assetPaths.shaderSourceDir / (shaderName + ".glsl");
 }
 
 VulkanContext& Renderer::getContext() const
@@ -197,16 +199,16 @@ VkRect2D Renderer::getDefaultScissor() const
 
 VkShaderModule Renderer::loadShaderModule(const std::string& key)
 {
-    return loadSpirvShaderModule(m_assetDirectory / "Shaders" / (key + ".spv"));
+    return loadSpirvShaderModule(m_assetPaths.spvShaderDir / (key + ".spv"));
 }
 
 VkShaderModule Renderer::compileGlsl(const std::filesystem::path& path, std::string id, std::string type)
 {
     logger->info("Compiling: {}", path.string());
     std::string command = "glslangValidator.exe -V -o ";
-    command += (m_assetDirectory / "Shaders" / (id + ".spv")).make_preferred().string();
+    command += (m_assetPaths.spvShaderDir / (id + ".spv")).make_preferred().string();
     command += ' ';
-    command += (ApplicationEnvironment::getShaderSourceDirectory() / path).make_preferred().string();
+    command += (m_assetPaths.shaderSourceDir / path).make_preferred().string();
     std::system(command.c_str());
 
     return loadShaderModule(id);
@@ -214,7 +216,7 @@ VkShaderModule Renderer::compileGlsl(const std::filesystem::path& path, std::str
 
 VkShaderModule Renderer::getShaderModule(const std::string& key) const
 {
-    return m_shaderModules.at(key).handle;
+    return m_shaderCache->getShaderModuleHandle(key);
 }
 
 void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const
@@ -415,7 +417,7 @@ void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t re
 {
     if (renderPass)
     {
-        m_sceneImageViews = renderPass->getRenderTargetViews(renderTargetIndex);
+        m_sceneImageViews = renderPass->getAttachmentViews(renderTargetIndex);
         for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
             m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
 
@@ -480,35 +482,7 @@ void Renderer::loadShaders(const std::filesystem::path& directoryPath)
 
 VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath)
 {
-    auto timestamp = std::filesystem::last_write_time(shaderModulePath);
-
-    auto shaderKey = shaderModulePath.stem().string();
-    auto existingItem = m_shaderModules.find(shaderKey);
-    if (existingItem != m_shaderModules.end())
-    {
-        // Cached shader module is same or newer
-        if (existingItem->second.lastModifiedTimestamp >= timestamp)
-        {
-            return existingItem->second.handle;
-        }
-        else
-        {
-            logger->info("Reloading shader module: {}", shaderKey);
-            vkDestroyShaderModule(m_device->getHandle(), existingItem->second.handle, nullptr);
-        }
-    }
-
-    const auto shaderCode = readBinaryFile(shaderModulePath).unwrap();
-
-    VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-    createInfo.codeSize = shaderCode.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
-
-    VkShaderModule shaderModule(VK_NULL_HANDLE);
-    vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
-
-    m_shaderModules.insert_or_assign(shaderKey, ShaderModule{shaderModule, timestamp});
-    return shaderModule;
+    return m_shaderCache->loadSpirvShaderModule(shaderModulePath);
 }
 
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(VirtualFrame& virtualFrame)
@@ -611,9 +585,11 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
                 *m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(), attachmentViews));
     }
 
+    // Release ownership of the framebuffer into the pool of swap chain framebuffers.
     if (framebuffer)
         framebuffer.swap(m_swapChainFramebuffers.at(framebuffer->getAttachment(0)));
 
+    // Acquire ownership of the framebuffer used for the current image to be rendered.
     framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));
 }
 

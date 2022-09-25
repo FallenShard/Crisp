@@ -14,26 +14,21 @@ namespace crisp
 {
 
 VulkanRenderPass::VulkanRenderPass(
-    const VulkanDevice& device, const VkRenderPass renderPass, RenderPassDescription&& description)
-    : VulkanResource(renderPass, device.getResourceDeallocator())
-    , m_isSwapChainDependent(description.isSwapChainDependent)
-    , m_allocateAttachmentViews(description.allocateAttachmentViews)
-    , m_renderArea(description.renderArea)
-    , m_subpassCount(description.subpassCount)
-    , m_renderTargets(std::move(description.renderTargets))
-    , m_attachmentDescriptions(std::move(description.attachmentDescriptions))
-    , m_attachmentMappings(std::move(description.attachmentMappings))
+    const VulkanDevice& device, const VkRenderPass handle, RenderPassParameters&& parameters)
+    : VulkanResource(handle, device.getResourceDeallocator())
+    , m_params(std::move(parameters))
 {
-    CRISP_CHECK(m_renderArea.width > 0, "Render area has non-positive width!");
-    CRISP_CHECK(m_renderArea.height > 0, "Render area has non-positive height!");
+    CRISP_CHECK(m_params.renderArea.width > 0, "Render area has non-positive width!");
+    CRISP_CHECK(m_params.renderArea.height > 0, "Render area has non-positive height!");
     CRISP_CHECK(
-        m_attachmentMappings.size() == m_attachmentDescriptions.size(), "Attachment and description size mismatch!");
+        m_params.attachmentMappings.size() == m_params.attachmentDescriptions.size(),
+        "Attachment and description size mismatch!");
 
-    m_attachmentClearValues.resize(m_attachmentDescriptions.size());
+    m_attachmentClearValues.resize(m_params.attachmentDescriptions.size());
     for (const auto& [i, clearValue] : enumerate(m_attachmentClearValues))
     {
-        const auto& mapping = m_attachmentMappings.at(i);
-        clearValue = m_renderTargets.at(mapping.renderTargetIndex)->info.clearValue;
+        const auto& mapping = m_params.attachmentMappings.at(i);
+        clearValue = m_params.renderTargets.at(mapping.renderTargetIndex)->info.clearValue;
     }
 
     createResources(device);
@@ -46,29 +41,35 @@ VulkanRenderPass::~VulkanRenderPass()
 
 void VulkanRenderPass::recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent)
 {
-    if (m_isSwapChainDependent)
+    if (m_params.isSwapChainDependent)
     {
         freeResources();
 
-        m_renderArea = swapChainExtent;
+        m_params.renderArea = swapChainExtent;
         createResources(device);
     }
 }
 
 VkExtent2D VulkanRenderPass::getRenderArea() const
 {
-    return m_renderArea;
+    return m_params.renderArea;
 }
 
 VkViewport VulkanRenderPass::createViewport() const
 {
-    return {0.0f, 0.0f, static_cast<float>(m_renderArea.width), static_cast<float>(m_renderArea.height), 0.0f, 1.0f};
+    return {
+        0.0f,
+        0.0f,
+        static_cast<float>(m_params.renderArea.width),
+        static_cast<float>(m_params.renderArea.height),
+        0.0f,
+        1.0f};
 }
 
 VkRect2D VulkanRenderPass::createScissor() const
 {
     constexpr VkOffset2D zeroOrigin{0, 0};
-    return {zeroOrigin, m_renderArea};
+    return {zeroOrigin, m_params.renderArea};
 }
 
 void VulkanRenderPass::begin(
@@ -78,7 +79,7 @@ void VulkanRenderPass::begin(
     renderPassInfo.renderPass = m_handle;
     renderPassInfo.framebuffer = m_framebuffers.at(frameIndex)->getHandle();
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = m_renderArea;
+    renderPassInfo.renderArea.extent = m_params.renderArea;
     renderPassInfo.clearValueCount = static_cast<uint32_t>(m_attachmentClearValues.size());
     renderPassInfo.pClearValues = m_attachmentClearValues.data();
 
@@ -94,11 +95,11 @@ void VulkanRenderPass::end(const VkCommandBuffer cmdBuffer, const uint32_t frame
 
     for (const auto& [i, attachmentView] : enumerate(m_attachmentViews.at(frameIndex)))
     {
-        const uint32_t renderTargetIndex{m_attachmentMappings.at(i).renderTargetIndex};
-        auto& image = *m_renderTargets.at(renderTargetIndex)->image;
+        const uint32_t renderTargetIndex{m_params.attachmentMappings.at(i).renderTargetIndex};
+        auto& image = *m_params.renderTargets.at(renderTargetIndex)->image;
 
         // We unconditionally set the layout here because the render pass did an automatic layout transition.
-        image.setImageLayout(m_attachmentDescriptions.at(i).finalLayout, attachmentView->getSubresourceRange());
+        image.setImageLayout(m_params.attachmentDescriptions.at(i).finalLayout, attachmentView->getSubresourceRange());
     }
 }
 
@@ -109,16 +110,22 @@ void VulkanRenderPass::nextSubpass(const VkCommandBuffer cmdBuffer, const VkSubp
 
 VulkanImage& VulkanRenderPass::getRenderTarget(const uint32_t index) const
 {
-    return *m_renderTargets.at(index)->image;
+    return *m_params.renderTargets.at(index)->image;
 }
 
-const VulkanImageView& VulkanRenderPass::getRenderTargetView(
+VulkanImage& VulkanRenderPass::getRenderTargetFromAttachmentIndex(const uint32_t attachmentIndex) const
+{
+    const uint32_t renderTargetIndex{m_params.attachmentMappings.at(attachmentIndex).renderTargetIndex};
+    return *m_params.renderTargets.at(renderTargetIndex)->image;
+}
+
+const VulkanImageView& VulkanRenderPass::getAttachmentView(
     const uint32_t attachmentIndex, const uint32_t frameIndex) const
 {
     return *m_attachmentViews.at(frameIndex).at(attachmentIndex);
 }
 
-std::vector<VulkanImageView*> VulkanRenderPass::getRenderTargetViews(uint32_t renderTargetIndex) const
+std::vector<VulkanImageView*> VulkanRenderPass::getAttachmentViews(uint32_t renderTargetIndex) const
 {
     std::vector<VulkanImageView*> perFrameAttachmentViews(m_attachmentViews.size());
     for (uint32_t i = 0; i < perFrameAttachmentViews.size(); ++i)
@@ -132,10 +139,10 @@ void VulkanRenderPass::updateInitialLayouts(VkCommandBuffer cmdBuffer)
     {
         for (const auto& [i, attachmentView] : enumerate(frameAttachmentViews))
         {
-            const auto renderTargetIndex{m_attachmentMappings.at(i).renderTargetIndex};
-            const auto initialLayout{m_attachmentDescriptions.at(i).initialLayout};
-            auto& info = m_renderTargets.at(renderTargetIndex)->info;
-            auto& image = *m_renderTargets.at(renderTargetIndex)->image;
+            const auto renderTargetIndex{m_params.attachmentMappings.at(i).renderTargetIndex};
+            const auto initialLayout{m_params.attachmentDescriptions.at(i).initialLayout};
+            auto& info = m_params.renderTargets.at(renderTargetIndex)->info;
+            auto& image = *m_params.renderTargets.at(renderTargetIndex)->image;
 
             image.transitionLayout(
                 cmdBuffer,
@@ -154,11 +161,11 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
     {
         // Typically 1, but for depth slice rendering, we need to modify it.
         uint32_t framebufferLayerCount{1};
-        frameAttachmentViews.resize(m_attachmentDescriptions.size());
+        frameAttachmentViews.resize(m_params.attachmentDescriptions.size());
         std::vector<VkImageView> attachmentViewHandles(frameAttachmentViews.size());
-        for (const auto& [attachmentIdx, mapping] : enumerate(m_attachmentMappings))
+        for (const auto& [attachmentIdx, mapping] : enumerate(m_params.attachmentMappings))
         {
-            auto& renderTarget = *m_renderTargets.at(mapping.renderTargetIndex);
+            auto& renderTarget = *m_params.renderTargets.at(mapping.renderTargetIndex);
             if (mapping.bufferOverDepthSlices)
             {
                 // TODO: fix this to have similar interface to layer-based buffering.
@@ -189,19 +196,14 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
         }
 
         m_framebuffers[frameIdx] = std::make_unique<VulkanFramebuffer>(
-            device, m_handle, m_renderArea, attachmentViewHandles, framebufferLayerCount);
+            device, m_handle, m_params.renderArea, attachmentViewHandles, framebufferLayerCount);
     }
-}
-
-VkExtent3D VulkanRenderPass::getRenderAreaExtent() const
-{
-    return {m_renderArea.width, m_renderArea.height, 1u};
 }
 
 void VulkanRenderPass::createResources(const VulkanDevice& device)
 {
     m_framebuffers.resize(RendererConfig::VirtualFrameCount);
-    if (m_allocateAttachmentViews)
+    if (m_params.allocateAttachmentViews)
     {
         createRenderTargetViewsAndFramebuffers(device);
     }

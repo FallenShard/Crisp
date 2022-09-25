@@ -130,20 +130,11 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addImageWithView(
         "noise",
-        createVulkanImage(m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo));
+        createVulkanImage(*m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo));
 
-    imageCache.addSampler(
-        "linearRepeat",
-        std::make_unique<VulkanSampler>(
-            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT));
-    imageCache.addSampler(
-        "nearestClamp",
-        std::make_unique<VulkanSampler>(
-            m_renderer->getDevice(), VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
-    imageCache.addSampler(
-        "linearClamp",
-        std::make_unique<VulkanSampler>(
-            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE));
+    imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice()));
+    imageCache.addSampler("nearestClamp", createNearestClampSampler(m_renderer->getDevice()));
+    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice()));
 
     m_sampleBuffer =
         std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
@@ -174,16 +165,20 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     Material* normalMaterial = m_resourceContext->createMaterial("normal", normalPipeline);
     normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-    std::vector<VertexAttributeDescriptor> shadowFormat = {VertexAttribute::Position};
-    m_resourceContext->addGeometry("floorPos", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowFormat)));
+    const VertexLayoutDescription shadowFormat = {{VertexAttribute::Position}};
+    m_resourceContext->addGeometry(
+        "floorPos", std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(shadowFormat)), shadowFormat));
 
-    std::vector<VertexAttributeDescriptor> vertexFormat = {VertexAttribute::Position, VertexAttribute::Normal};
+    const VertexLayoutDescription vertexFormat = {
+        {VertexAttribute::Position, VertexAttribute::Normal}
+    };
     m_resourceContext->addGeometry(
         "sponza",
         std::make_unique<Geometry>(
-            m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", vertexFormat)
-                .unwrap()));
+            *m_renderer,
+            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", flatten(vertexFormat))
+                .unwrap(),
+            vertexFormat));
 
     m_skybox = std::make_unique<Skybox>(m_renderer, *mainPass, "Creek");
 
@@ -192,10 +187,10 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
     m_renderGraph->addRenderPass("blurHPass", std::move(blurHPass));
     m_renderGraph->addRenderPass("blurVPass", std::move(blurVPass));
-    m_renderGraph->addRenderTargetLayoutTransition("mainPass", "ssaoPass", 0);
-    m_renderGraph->addRenderTargetLayoutTransition("ssaoPass", "blurHPass", 0);
-    m_renderGraph->addRenderTargetLayoutTransition("blurHPass", "blurVPass", 0);
-    m_renderGraph->addRenderTargetLayoutTransition("blurVPass", "SCREEN", 0);
+    m_renderGraph->addDependency("mainPass", "ssaoPass", 0);
+    m_renderGraph->addDependency("ssaoPass", "blurHPass", 0);
+    m_renderGraph->addDependency("blurHPass", "blurVPass", 0);
+    m_renderGraph->addDependency("blurVPass", "SCREEN", 0);
     m_renderGraph->sortRenderPasses().unwrap();
 
     m_renderer->setSceneImageView(m_renderGraph->getNode("blurVPass").renderPass.get(), 0);

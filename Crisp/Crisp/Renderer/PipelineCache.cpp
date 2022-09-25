@@ -6,12 +6,13 @@
 
 namespace crisp
 {
-PipelineCache::PipelineCache(Renderer* renderer)
-    : m_renderer(renderer)
+PipelineCache::PipelineCache(const AssetPaths& assetPaths)
+    : m_assetPaths(assetPaths)
 {
 }
 
 VulkanPipeline* PipelineCache::loadPipeline(
+    Renderer* renderer,
     const std::string& id,
     const std::string_view luaFilename,
     const VulkanRenderPass& renderPass,
@@ -23,11 +24,11 @@ VulkanPipeline* PipelineCache::loadPipeline(
     pipelineInfo.subpassIndex = subpassIndex;
 
     auto& pipeline =
-        m_pipelines.emplace(id, m_renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex)).first->second;
+        m_pipelines.emplace(id, renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex)).first->second;
     pipeline->setTag(id);
 
     auto layout = pipeline->getPipelineLayout();
-    m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator(m_renderer->getDevice());
+    m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator(renderer->getDevice());
 
     return pipeline.get();
 }
@@ -37,18 +38,16 @@ VulkanPipeline* PipelineCache::getPipeline(const std::string& key) const
     return m_pipelines.at(key).get();
 }
 
-void PipelineCache::recreatePipelines()
+void PipelineCache::recreatePipelines(Renderer& renderer)
 {
-    recompileShaderDir(
-        ApplicationEnvironment::getShaderSourceDirectory(), ApplicationEnvironment::getResourcesPath() / "Shaders");
+    recompileShaderDir(renderer.getAssetPaths().shaderSourceDir, renderer.getAssetPaths().spvShaderDir);
 
-    m_renderer->enqueueResourceUpdate(
-        [this](VkCommandBuffer)
+    renderer.enqueueResourceUpdate(
+        [this, &renderer](VkCommandBuffer)
         {
             for (auto& [id, info] : m_pipelineInfos)
             {
-                auto pipeline =
-                    m_renderer->createPipelineFromLua(info.luaFilename, *info.renderPass, info.subpassIndex);
+                auto pipeline = renderer.createPipelineFromLua(info.luaFilename, *info.renderPass, info.subpassIndex);
                 m_pipelines[id]->swapAll(*pipeline);
             }
         });

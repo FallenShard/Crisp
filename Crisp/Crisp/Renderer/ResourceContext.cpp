@@ -7,14 +7,14 @@ namespace crisp
 ResourceContext::ResourceContext(Renderer* renderer)
     : m_renderer(renderer)
     , imageCache(renderer)
-    , pipelineCache(renderer)
+    , pipelineCache(renderer->getAssetPaths())
 {
 }
 
 VulkanPipeline* ResourceContext::createPipeline(
     std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex)
 {
-    return pipelineCache.loadPipeline(id, luaFilename, renderPass, subpassIndex);
+    return pipelineCache.loadPipeline(m_renderer, id, luaFilename, renderPass, subpassIndex);
 }
 
 Material* ResourceContext::createMaterial(std::string materialId, std::string pipelineId)
@@ -71,6 +71,6 @@ UniformBuffer* ResourceContext::getUniformBuffer(std::string id) const
 
 void ResourceContext::recreatePipelines()
 {
-    pipelineCache.recreatePipelines();
+    pipelineCache.recreatePipelines(*m_renderer);
 }
 } // namespace crisp

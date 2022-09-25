@@ -28,7 +28,7 @@
 #include <Crisp/Lights/EnvironmentLighting.hpp>
 #include <Crisp/Lights/PointLight.hpp>
 
-#include <Crisp/Lights/ForwardClusteredShading.hpp>
+#include <Crisp/Lights/LightClustering.hpp>
 #include <Crisp/Lights/ShadowMapper.hpp>
 #include <Crisp/Models/BoxVisualizer.hpp>
 
@@ -54,7 +54,7 @@
 #include <Crisp/Profiler.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
@@ -109,18 +109,18 @@ ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Application* app)
     // m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_4_BIT));
 
     ////auto& depthPrePass = m_renderGraph->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
-    ////m_renderGraph->addRenderTargetLayoutTransition(DepthPrePass, MainPass, 0);
+    ////m_renderGraph->addDependency(DepthPrePass, MainPass, 0);
 
     //// Shadow map pass
     // m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
-    // m_renderGraph->addRenderTargetLayoutTransition(CsmPass, MainPass, 0, CascadeCount);
+    // m_renderGraph->addDependency(CsmPass, MainPass, 0, CascadeCount);
     ////
     ////auto& vsmPassNode = m_renderGraph->addRenderPass(VsmPass, std::make_unique<VarianceShadowMapPass>(m_renderer,
-    /// ShadowMapSize)); /m_renderGraph->addRenderTargetLayoutTransition(VsmPass, MainPass, 0);
+    /// ShadowMapSize)); /m_renderGraph->addDependency(VsmPass, MainPass, 0);
     ////
 
     //// Wrap-up render graph definition
-    // m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);
+    // m_renderGraph->addDependency(MainPass, "SCREEN", 2);
     // m_renderGraph->sortRenderPasses();
     // m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
 
@@ -546,18 +546,21 @@ void ShadowMappingScene::createShaderballs()
 
 void ShadowMappingScene::createTrees()
 {
-    std::vector<VertexAttributeDescriptor> shadowVertexFormat = {VertexAttribute::Position};
-    std::vector<VertexAttributeDescriptor> shadowAlphaVertexFormat = {
-        VertexAttribute::Position, VertexAttribute::TexCoord};
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
-        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent};
+    const VertexLayoutDescription shadowVertexFormat = {{VertexAttribute::Position}};
+    const VertexLayoutDescription shadowAlphaVertexFormat = {
+        {VertexAttribute::Position, VertexAttribute::TexCoord}
+    };
+    const VertexLayoutDescription pbrVertexFormat = {
+        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+    };
 
     TriangleMesh treeMesh(
-        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", pbrVertexFormat).unwrap());
-    m_resourceContext->addGeometry("tree", std::make_unique<Geometry>(m_renderer, treeMesh, pbrVertexFormat));
-    m_resourceContext->addGeometry("treeShadow", std::make_unique<Geometry>(m_renderer, treeMesh, shadowVertexFormat));
+        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", flatten(pbrVertexFormat))
+            .unwrap());
+    m_resourceContext->addGeometry("tree", std::make_unique<Geometry>(*m_renderer, treeMesh, pbrVertexFormat));
+    m_resourceContext->addGeometry("treeShadow", std::make_unique<Geometry>(*m_renderer, treeMesh, shadowVertexFormat));
     m_resourceContext->addGeometry(
-        "treeShadowAlpha", std::make_unique<Geometry>(m_renderer, treeMesh, shadowAlphaVertexFormat));
+        "treeShadowAlpha", std::make_unique<Geometry>(*m_renderer, treeMesh, shadowAlphaVertexFormat));
 
     // Create the alpha-mask material
     auto alphaPipeline =
@@ -743,11 +746,13 @@ void ShadowMappingScene::createPlane()
     //
     // floor->pass(MainPass).material = material;
 
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
-        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent};
-
+    const VertexLayoutDescription PbrVertexFormat = {
+        {VertexAttribute::Position},
+        { VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+    };
     m_resourceContext->addGeometry(
-        "floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
+        "floor",
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(PbrVertexFormat), 200.0f), PbrVertexFormat));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

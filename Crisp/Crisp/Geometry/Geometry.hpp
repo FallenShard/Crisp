@@ -12,53 +12,49 @@
 
 namespace crisp
 {
+using VertexLayoutDescription = std::vector<std::vector<VertexAttributeDescriptor>>;
+
 class Geometry
 {
 public:
-    Geometry(Renderer* renderer);
-    Geometry(Renderer* renderer, const TriangleMesh& mesh);
-    Geometry(Renderer* renderer, const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexFormat);
+    Geometry() = default;
+    Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLayoutDescription& vertexLayoutDescription);
     Geometry(
-        Renderer* renderer,
+        Renderer& renderer,
         const TriangleMesh& mesh,
-        const std::vector<VertexAttributeDescriptor>& vertexFormat,
+        const VertexLayoutDescription& vertexLayoutDescription,
         bool padToVec4,
         VkBufferUsageFlags usageFlags);
-    Geometry(Renderer* renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
     Geometry(
-        Renderer* renderer,
-        InterleavedVertexBuffer&& interleavedVertexBuffer,
+        Renderer& renderer,
+        std::vector<InterleavedVertexBuffer>&& vertexBuffers,
         const std::vector<glm::uvec3>& faces,
         const std::vector<TriangleMeshView>& parts = {});
 
+    Geometry(Renderer& renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
+
     template <typename VertexType, typename IndexType>
-    Geometry(Renderer* renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
+    Geometry(Renderer& renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
         : m_indexBuffer(nullptr)
         , m_indexCount(0)
         , m_vertexCount(0)
-        , m_instanceCount(0)
+        , m_instanceCount(1)
     {
         if (!vertices.empty())
         {
-            auto vertexBuffer = createVertexBuffer(renderer->getDevice(), vertices.size() * sizeof(VertexType));
-            renderer->fillDeviceBuffer(vertexBuffer.get(), vertices);
+            auto vertexBuffer = createVertexBuffer(renderer.getDevice(), vertices.size() * sizeof(VertexType));
+            renderer.fillDeviceBuffer(vertexBuffer.get(), vertices);
             m_vertexBuffers.push_back(std::move(vertexBuffer));
-        }
-
-        m_indexBuffer = createIndexBuffer(renderer->getDevice(), faces.size() * sizeof(IndexType));
-        renderer->fillDeviceBuffer(m_indexBuffer.get(), faces);
-        m_indexCount = static_cast<uint32_t>(faces.size()) * IndexType::length();
-
-        for (const auto& buffer : m_vertexBuffers)
-        {
-            m_buffers.push_back(buffer->getHandle());
+            m_vertexBufferHandles.push_back(m_vertexBuffers.back()->getHandle());
             m_offsets.push_back(0);
         }
 
-        m_firstBinding = 0;
-        m_bindingCount = static_cast<uint32_t>(m_buffers.size());
+        m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(IndexType));
+        renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
+        m_indexCount = static_cast<uint32_t>(faces.size()) * IndexType::length();
 
-        m_instanceCount = 1;
+        m_firstBinding = 0;
+        m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
     }
 
     void addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer);
@@ -109,21 +105,29 @@ public:
         m_offsets.at(bufferIndex) = offset;
     }
 
+    inline uint32_t getVertexBufferCount() const
+    {
+        return static_cast<uint32_t>(m_vertexBuffers.size());
+    }
+
     IndexedGeometryView createIndexedGeometryView() const;
     IndexedGeometryView createIndexedGeometryView(uint32_t partIndex) const;
     ListGeometryView createListGeometryView() const;
 
 private:
+    // The geometry owns the buffers that contain vertex attributes.
     std::vector<std::unique_ptr<VulkanBuffer>> m_vertexBuffers;
-    std::unique_ptr<VulkanBuffer> m_indexBuffer;
-    uint32_t m_indexCount;
-    uint32_t m_vertexCount;
-    uint32_t m_instanceCount;
+    // The geometry also owns the index buffer if we have indexed geometry.
+    std::unique_ptr<VulkanBuffer> m_indexBuffer{nullptr};
 
-    std::vector<VkBuffer> m_buffers;
+    uint32_t m_indexCount{0};
+    uint32_t m_vertexCount{0};
+    uint32_t m_instanceCount{0};
+
+    std::vector<VkBuffer> m_vertexBufferHandles;
     std::vector<VkDeviceSize> m_offsets;
-    uint32_t m_firstBinding;
-    uint32_t m_bindingCount;
+    uint32_t m_firstBinding{0};
+    uint32_t m_bindingCount{0};
 
     std::vector<TriangleMeshView> m_parts;
 };

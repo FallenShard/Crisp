@@ -3,6 +3,7 @@
 #include <Crisp/Mesh/VertexAttributeTraits.hpp>
 
 #include <string>
+#include <vector>
 
 namespace crisp
 {
@@ -16,4 +17,16 @@ struct VertexAttributeDescriptor
     VertexAttributeDescriptor(VertexAttribute attribType);
     VertexAttributeDescriptor(const std::string& name, uint32_t size);
 };
+
+template <typename T>
+std::vector<T> flatten(const std::vector<std::vector<T>>& vec)
+{
+    std::vector<T> result;
+    for (const auto& v : vec)
+    {
+        result.insert(result.end(), v.begin(), v.end());
+    }
+    return result;
+}
+
 } // namespace crisp

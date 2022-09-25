@@ -36,39 +36,33 @@ public:
 
         void addCommand(DrawCommand&& command, uint32_t subpassIndex = 0);
 
+        // General data.
         std::string name;
         NodeType type{NodeType::Rasterizer};
+        HashMap<std::string, DependencyCallback> dependencies;
+        bool isEnabled{true};
 
-        std::unordered_map<std::string, DependencyCallback> dependencies;
-
+        // Rasterizer data.
         std::unique_ptr<VulkanRenderPass> renderPass;
-
-        // Rendered nodes can be culled/filtered down into commands
         tbb::concurrent_vector<tbb::concurrent_vector<DrawCommand>> commands;
 
+        // Compute data.
         std::unique_ptr<VulkanPipeline> pipeline;
         std::unique_ptr<Material> material;
         glm::ivec3 workGroupSize;
         glm::ivec3 numWorkGroups;
-
         std::function<void(Node&, VulkanCommandBuffer&, uint32_t)> preDispatchCallback;
-        bool isEnabled = true;
     };
 
     RenderGraph(Renderer* renderer);
     ~RenderGraph();
 
-    Node& addRenderPass(std::string renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
-    Node& addComputePass(std::string computePassName);
-    void addDependency(std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback);
-    void addRenderTargetLayoutTransitionToScreen(const std::string& sourcePass, uint32_t sourceRenderTargetIndex);
-    void addRenderTargetLayoutTransition(
-        const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex);
-    void addRenderTargetLayoutTransition(
-        const std::string& sourcePass,
-        const std::string& destinationPass,
-        uint32_t sourceRenderTargetIndex,
-        uint32_t layerMultiplier);
+    Node& addRenderPass(const std::string& renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
+    Node& addComputePass(const std::string& computePassName);
+
+    void addDependency(const std::string& srcPass, const std::string& dstPass, DependencyCallback callback);
+    void addDependencyToPresentation(const std::string& srcPass, uint32_t srcAttachmentIndex);
+    void addDependency(const std::string& srcPass, const std::string& dstPass, uint32_t srcAttachmentIndex);
 
     void resize(int width, int height);
 

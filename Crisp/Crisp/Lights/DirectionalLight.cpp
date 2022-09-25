@@ -1,6 +1,6 @@
 #include <Crisp/Lights/DirectionalLight.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
@@ -65,8 +65,8 @@ glm::mat4 fitTightOrthoAroundFrustum(const glm::mat4& view, const std::array<glm
     // auto t2 = m_projection * glm::vec4(orthoMax.x, orthoMax.y, -orthoMax.z, 1.0f); // should give [ 1,  1, 1]
 }
 
-glm::mat4 fitSphereOrthoAroundFrustum(glm::mat4& /*view*/, const std::array<glm::vec3, 8>& worldFrustumPoints,
-    const glm::vec3& /*direction*/)
+glm::mat4 fitSphereOrthoAroundFrustum(
+    glm::mat4& /*view*/, const std::array<glm::vec3, 8>& worldFrustumPoints, const glm::vec3& /*direction*/)
 {
     static int C = 0;
 
@@ -110,8 +110,8 @@ glm::mat4 fitSphereOrthoAroundFrustum(glm::mat4& /*view*/, const std::array<glm:
 }
 } // namespace
 
-DirectionalLight::DirectionalLight(const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& minCorner,
-    const glm::vec3& maxCorner)
+DirectionalLight::DirectionalLight(
+    const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& minCorner, const glm::vec3& maxCorner)
     : m_direction(glm::normalize(direction))
     , m_radiance(radiance)
 {
@@ -146,8 +146,11 @@ void DirectionalLight::fitProjectionToFrustum(const std::array<glm::vec3, 8>& wo
     m_projection = fitSphereOrthoAroundFrustum(m_view, worldFrustumPoints, m_direction);
 }
 
-void DirectionalLight::fitProjectionToFrustum(const std::array<glm::vec3, 8>& /*worldFrustumPoints*/,
-    const glm::vec3& center, float radius, uint32_t shadowMapSize)
+void DirectionalLight::fitProjectionToFrustum(
+    const std::array<glm::vec3, 8>& /*worldFrustumPoints*/,
+    const glm::vec3& center,
+    float radius,
+    uint32_t shadowMapSize)
 {
     static const glm::vec3 YAxis(0.0f, 1.0f, 0.0f);
     const glm::vec3 right = glm::normalize(glm::cross(m_direction, YAxis));

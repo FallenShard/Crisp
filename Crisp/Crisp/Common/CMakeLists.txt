@@ -1,7 +1,7 @@
 add_cpp_interface_library(CrispFormat
     "Format.hpp")
 target_link_libraries(CrispFormat
-    INTERFACE fmt)
+    INTERFACE fmt::fmt-header-only)
 
 
 add_cpp_interface_library(CrispHashMap
@@ -13,7 +13,7 @@ target_link_libraries(CrispHashMap
 add_cpp_interface_library(CrispLogger
     "Logger.hpp")
 target_link_libraries(CrispLogger
-    INTERFACE spdlog
+    INTERFACE spdlog::spdlog_header_only
     INTERFACE CrispFormat)
 
 
@@ -21,6 +21,7 @@ add_cpp_interface_library(CrispResult
     "Result.hpp")
 target_link_libraries(CrispResult
     INTERFACE CrispLogger)
+
 
 add_cpp_interface_library(CrispChecks
     "Checks.hpp")

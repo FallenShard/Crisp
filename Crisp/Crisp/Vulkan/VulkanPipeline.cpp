@@ -4,13 +4,18 @@
 
 namespace crisp
 {
-VulkanPipeline::VulkanPipeline(const VulkanDevice& device, VkPipeline pipelineHandle,
-    std::unique_ptr<VulkanPipelineLayout> pipelineLayout, PipelineDynamicStateFlags dynamicStateFlags)
+VulkanPipeline::VulkanPipeline(
+    const VulkanDevice& device,
+    const VkPipeline pipelineHandle,
+    std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+    const VkPipelineBindPoint bindPoint,
+    VertexLayout&& vertexLayout,
+    const PipelineDynamicStateFlags dynamicStateFlags)
     : VulkanResource(pipelineHandle, device.getResourceDeallocator())
     , m_pipelineLayout(std::move(pipelineLayout))
     , m_dynamicStateFlags(dynamicStateFlags)
-    , m_subpassIndex(0)
-    , m_bindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS)
+    , m_bindPoint(bindPoint)
+    , m_vertexLayout(std::move(vertexLayout))
 {
 }
 

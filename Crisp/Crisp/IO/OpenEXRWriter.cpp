@@ -1,7 +1,7 @@
 #include "OpenEXRWriter.hpp"
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
+
 #include <tinyexr/tinyexr.h>
 
 #include <iostream>
@@ -18,8 +18,8 @@ OpenEXRWriter::OpenEXRWriter() {}
 
 OpenEXRWriter::~OpenEXRWriter() {}
 
-void OpenEXRWriter::write(const std::string& fileName, const float* rgba, unsigned int width, unsigned int height,
-    bool flipYAxis)
+void OpenEXRWriter::write(
+    const std::string& fileName, const float* rgba, unsigned int width, unsigned int height, bool flipYAxis)
 {
     EXRHeader header;
     InitEXRHeader(&header);

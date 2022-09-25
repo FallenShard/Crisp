@@ -60,12 +60,13 @@ const char* toString(const VkImageLayout layout)
     case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR:
         return "FragmentShadingRateAttachment";
     default:
-        logger->critical("Unknown layout encountered: {}.", layout);
+        logger->critical("Unknown layout encountered: {}.", static_cast<uint32_t>(layout));
         return "Unknown";
     }
 }
 
-void adaptSubresouceRange(VkImageType type, VkImageSubresourceRange& subresouceRange) {
+void adaptSubresouceRange(VkImageType type, VkImageSubresourceRange& subresouceRange)
+{
     if (type == VK_IMAGE_TYPE_3D)
     {
         subresouceRange.baseArrayLayer = 0;

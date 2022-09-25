@@ -2,8 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <stdexcept>
 
@@ -22,18 +21,22 @@ VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanPhysicalDevice& physica
 {
     // Device buffer memory
     const uint32_t deviceBufferHeapIndex = m_physicalDevice->findDeviceBufferMemoryType(deviceHandle).unwrap();
-    m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize,
-        deviceBufferHeapIndex, deviceHandle, "Device Buffer Heap");
+    m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, deviceBufferHeapIndex, deviceHandle, "Device Buffer Heap");
 
     // Device image memory
     const uint32_t deviceImageHeapIndex = m_physicalDevice->findDeviceImageMemoryType(deviceHandle).unwrap();
-    m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize,
-        deviceImageHeapIndex, deviceHandle, "Device Image Heap");
+    m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, deviceImageHeapIndex, deviceHandle, "Device Image Heap");
 
     // Staging memory
     const uint32_t stagingBufferHeapIndex = m_physicalDevice->findStagingBufferMemoryType(deviceHandle).unwrap();
-    m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, StagingHeapSize,
-        stagingBufferHeapIndex, deviceHandle, "Staging Buffer Heap");
+    m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        StagingHeapSize,
+        stagingBufferHeapIndex,
+        deviceHandle,
+        "Staging Buffer Heap");
 }
 
 VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceBufferHeap() const
@@ -63,8 +66,8 @@ DeviceMemoryMetrics VulkanMemoryAllocator::getDeviceMemoryUsage() const
     return memoryMetrics;
 }
 
-Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(VkMemoryPropertyFlags memoryProperties,
-    const VkMemoryRequirements& memoryRequirements)
+Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(
+    VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements)
 {
     const uint32_t supportedHeapIndex =
         m_physicalDevice->findMemoryType(memoryRequirements.memoryTypeBits, memoryProperties).unwrap();
@@ -81,8 +84,8 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(VkMem
     return resultError("Failed to get a heap from specified properties when allocating a buffer!");
 }
 
-Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateImage(VkMemoryPropertyFlags memoryProperties,
-    const VkMemoryRequirements& memoryRequirements)
+Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateImage(
+    VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements)
 {
     const uint32_t supportedHeapIndex =
         m_physicalDevice->findMemoryType(memoryRequirements.memoryTypeBits, memoryProperties).unwrap();

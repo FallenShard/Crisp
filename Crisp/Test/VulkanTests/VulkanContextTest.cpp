@@ -1,4 +1,4 @@
-#include <VulkanTests/VulkanTest.hpp>
+#include <Test/VulkanTests/VulkanTest.hpp>
 
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 #include <Crisp/Core/Window.hpp>
@@ -12,10 +12,11 @@ class VulkanContextTest : public VulkanTest
 
 std::pair<std::unique_ptr<VulkanContext>, Window> createContextWithSurface()
 {
-    Window window = Window({ 0, 0 }, { 200, 200 }, "unit_test", true);
-    return { std::make_unique<VulkanContext>(window.createSurfaceCallback(),
-                 ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false),
-        std::move(window) };
+    Window window = Window({0, 0}, {200, 200}, "unit_test", true);
+    return {
+        std::make_unique<VulkanContext>(
+            window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false),
+        std::move(window)};
 }
 
 TEST_F(VulkanContextTest, WithoutSurface)

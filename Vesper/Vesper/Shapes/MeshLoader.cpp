@@ -2,7 +2,7 @@
 
 #include <Crisp/IO/WavefrontObjReader.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <fstream>
 
@@ -25,10 +25,10 @@ bool MeshLoader::load(
         return true;
     }
 
-    if (WavefrontObjReader::isWavefrontObjFile(path))
+    if (isWavefrontObjFile(path))
     {
         spdlog::info("Loading Wavefront Obj mesh: {}", path.filename().string());
-        auto objMesh = WavefrontObjReader().read(path);
+        auto objMesh = readWavefrontObj(path);
         positions = std::move(objMesh.positions);
         normals = std::move(objMesh.normals);
         texCoords = std::move(objMesh.texCoords);

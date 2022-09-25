@@ -16,7 +16,6 @@ class CameraController;
 
 class Renderer;
 class UniformBuffer;
-class VertexBuffer;
 class IndexBuffer;
 
 class MeshGeometry;

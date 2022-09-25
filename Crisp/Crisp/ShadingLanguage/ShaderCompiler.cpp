@@ -3,8 +3,7 @@
 #include <Crisp/Common/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <array>
 #include <fstream>
@@ -102,13 +101,23 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
             // Read the pipe, typically the subprocess stdout
             lineBuffer.fill(0);
+            uint32_t errorCount{0};
             while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe))
             {
                 const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
                 if (view.substr(0, 5) == "ERROR")
+                {
                     logger->error("{}", view);
+                    ++errorCount;
+                }
                 else if (view.substr(0, 7) == "WARNING")
                     logger->warn("{}", view);
+            }
+            if (errorCount > 0)
+            {
+                logger->critical("Encountered errors while compiling: {}", inputPath.stem().string());
+                std::filesystem::remove(tempInputPath);
+                std::abort();
             }
 
             // Close the pipe and overwrite the output spv on success

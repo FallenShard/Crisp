@@ -3,36 +3,13 @@
 #include <memory>
 #include <vector>
 
-#include "Crisp/BitFlags.hpp"
-
+#include <Crisp/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <vulkan/vulkan.h>
 
 namespace crisp
 {
 class VulkanDevice;
-
-namespace internal
-{
-template <uint32_t loc, uint32_t binding, int offset, VkFormat format, VkFormat... formats>
-void fillVertexAttribs(std::vector<VkVertexInputAttributeDescription>& vertexAttribs)
-{
-    vertexAttribs.emplace_back(VkVertexInputAttributeDescription{loc, binding, format, offset});
-
-    if constexpr (sizeof...(formats) > 0)
-        fillVertexAttribs<loc + 1, binding, offset + FormatSizeof<format>::value, formats...>(vertexAttribs);
-}
-
-template <uint32_t loc, uint32_t binding, VkFormat... formats>
-std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes()
-{
-    std::vector<VkVertexInputAttributeDescription> vertexAttribs;
-    fillVertexAttribs<loc, binding, 0, formats...>(vertexAttribs);
-    return vertexAttribs;
-}
-
-} // namespace internal
 
 enum class PipelineState
 {
@@ -58,35 +35,6 @@ public:
     PipelineBuilder& addShaderStage(VkPipelineShaderStageCreateInfo&& shaderStage);
     PipelineBuilder& setShaderStages(std::initializer_list<VkPipelineShaderStageCreateInfo> shaderStages);
     PipelineBuilder& setShaderStages(std::vector<VkPipelineShaderStageCreateInfo>&& shaderStages);
-
-    template <uint32_t binding, VkVertexInputRate inputRate, VkFormat... formats>
-    PipelineBuilder& addVertexInputBinding()
-    {
-        m_vertexInputBindings.emplace_back(
-            VkVertexInputBindingDescription{binding, FormatSizeof<formats...>::value, inputRate});
-        m_vertexInputState.vertexBindingDescriptionCount = static_cast<uint32_t>(m_vertexInputBindings.size());
-        m_vertexInputState.pVertexBindingDescriptions = m_vertexInputBindings.data();
-        return *this;
-    }
-
-    template <VkFormat... formats>
-    PipelineBuilder& setVertexAttributes()
-    {
-        m_vertexInputAttributes = internal::generateVertexInputAttributes<0, 0, formats...>();
-        m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
-        m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
-        return *this;
-    }
-
-    template <uint32_t startLoc, uint32_t binding, VkFormat... formats>
-    PipelineBuilder& addVertexAttributes()
-    {
-        auto attribs = internal::generateVertexInputAttributes<startLoc, binding, formats...>();
-        m_vertexInputAttributes.insert(m_vertexInputAttributes.end(), attribs.begin(), attribs.end());
-        m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexInputAttributes.size());
-        m_vertexInputState.pVertexAttributeDescriptions = m_vertexInputAttributes.data();
-        return *this;
-    }
 
     PipelineBuilder& addVertexInputBinding(
         uint32_t binding, VkVertexInputRate inputRate, const std::vector<VkFormat>& formats);
@@ -136,8 +84,7 @@ private:
 
     std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
-    std::vector<VkVertexInputBindingDescription> m_vertexInputBindings;
-    std::vector<VkVertexInputAttributeDescription> m_vertexInputAttributes;
+    VertexLayout m_vertexLayout;
     VkPipelineVertexInputStateCreateInfo m_vertexInputState;
 
     VkPipelineInputAssemblyStateCreateInfo m_inputAssemblyState;

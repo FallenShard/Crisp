@@ -1,7 +1,7 @@
 #include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <numeric>
 

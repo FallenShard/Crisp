@@ -38,11 +38,7 @@ struct WavefrontObjMesh
     robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> materials;
 };
 
-class WavefrontObjReader
-{
-public:
-    WavefrontObjMesh read(const std::filesystem::path& objFilePath);
+bool isWavefrontObjFile(const std::filesystem::path& path);
+WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath);
 
-    static bool isWavefrontObjFile(const std::filesystem::path& path);
-};
 } // namespace crisp

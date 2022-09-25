@@ -15,7 +15,8 @@ struct VertexAttributeBuffer
 
 struct InterleavedVertexBuffer
 {
-    std::size_t vertexSize = 0;
+    std::size_t vertexSize{0};
     std::vector<std::byte> buffer;
 };
+
 } // namespace crisp

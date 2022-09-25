@@ -2,7 +2,7 @@
 
 #include "Form.hpp"
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 #include <sstream>
 
 namespace crisp::gui
@@ -161,7 +161,7 @@ void Control::setSizeHint(const glm::vec2& sizeHint)
 
 glm::vec2 Control::getSize() const
 {
-    return { getWidth(), getHeight() };
+    return {getWidth(), getHeight()};
 }
 
 float Control::getWidth() const
@@ -293,7 +293,7 @@ float Control::getOpacity() const
 
 Rect<float> Control::getAbsoluteBounds() const
 {
-    return { m_M[3][0], m_M[3][1], m_M[0][0], m_M[1][1] };
+    return {m_M[3][0], m_M[3][1], m_M[0][0], m_M[1][1]};
 }
 
 const glm::mat4& Control::getModelMatrix() const

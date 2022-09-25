@@ -1,6 +1,6 @@
 #include <Crisp/IO/FileUtils.hpp>
 
-#include <commdlg.h>
+// #include <commdlg.h>
 
 #include <fstream>
 #include <sstream>
@@ -71,7 +71,7 @@ Result<std::vector<char>> readBinaryFile(const std::filesystem::path& filePath)
 
 std::string openFileDialog()
 {
-    const int bufferSize = MAX_PATH;
+    /*const int bufferSize = MAX_PATH;
     char oldDir[bufferSize];
     GetCurrentDirectory(bufferSize, oldDir);
 
@@ -91,6 +91,7 @@ std::string openFileDialog()
     }
 
     SetCurrentDirectory(oldDir);
-    return std::string(fileNameBuffer);
+    return std::string(fileNameBuffer);*/
+    return "";
 }
 } // namespace crisp

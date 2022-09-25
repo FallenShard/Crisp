@@ -2,11 +2,12 @@
 
 #include <Crisp/Core/ThreadPool.hpp>
 
+#include <Crisp/Renderer/AssetPaths.hpp>
+#include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
+#include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Renderer/VirtualFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
-
-#include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
 #include <array>
@@ -39,7 +40,11 @@ class Renderer
 public:
     static constexpr uint32_t NumVirtualFrames = RendererConfig::VirtualFrameCount;
 
-    Renderer(SurfaceCreator surfCreatorCallback);
+    Renderer(
+        std::vector<std::string>&& requiredVulkanInstanceExtensions,
+        SurfaceCreator surfCreatorCallback,
+        AssetPaths&& assetPaths,
+        bool enableRayTracingExtensions);
     ~Renderer();
 
     Renderer(const Renderer& other) = delete;
@@ -47,6 +52,7 @@ public:
     Renderer& operator=(const Renderer& other) = delete;
     Renderer& operator=(Renderer&& other) = delete;
 
+    const AssetPaths& getAssetPaths() const;
     const std::filesystem::path& getResourcesPath() const;
     std::filesystem::path getShaderSourcePath(const std::string& shaderName) const;
 
@@ -158,27 +164,21 @@ private:
     void updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView);
 
     uint64_t m_currentFrameIndex;
-    std::filesystem::path m_assetDirectory;
+    AssetPaths m_assetPaths;
 
     std::unique_ptr<VulkanContext> m_context;
     std::unique_ptr<VulkanPhysicalDevice> m_physicalDevice;
     std::unique_ptr<VulkanDevice> m_device;
     std::unique_ptr<VulkanSwapChain> m_swapChain;
     std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
-    robin_hood::unordered_flat_map<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_swapChainFramebuffers;
+    FlatHashMap<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_swapChainFramebuffers;
 
     VkViewport m_defaultViewport;
     VkRect2D m_defaultScissor;
 
     std::array<VirtualFrame, NumVirtualFrames> m_virtualFrames;
 
-    struct ShaderModule
-    {
-        VkShaderModule handle;
-        std::filesystem::file_time_type lastModifiedTimestamp;
-    };
-
-    std::unordered_map<std::string, ShaderModule> m_shaderModules;
+    std::unique_ptr<ShaderCache> m_shaderCache;
 
     using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
     FunctionVector m_resourceUpdates;

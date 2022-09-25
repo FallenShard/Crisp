@@ -10,7 +10,7 @@ void doAssert(const bool expr, const char* exprString, LocationFormatString&& fo
     if (expr)
         return;
 
-    const auto argsFormat = fmt::format(formatString.str, std::forward<Args>(args)...);
+    const auto argsFormat = fmt::format(fmt::runtime(formatString.str, std::forward<Args>(args)...));
     spdlog::critical(
         "File: {}\n({}:{}) -- Function: `{}`, Condition: {}\nMessage: {}",
         formatString.loc.file_name(),

@@ -18,7 +18,7 @@ class ComboBox;
 class SceneContainer
 {
 public:
-    SceneContainer(Renderer* renderer, Application* app);
+    SceneContainer(Renderer* renderer, Application* app, uint32_t firstSceneIndex);
     ~SceneContainer();
 
     static std::vector<std::string> getSceneNames();

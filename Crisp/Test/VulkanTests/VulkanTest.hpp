@@ -9,10 +9,10 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
+#include <Crisp/Common/Logger.hpp>
 #include <Crisp/Common/Result.hpp>
 
 #include <glfw/glfw3.h>
-#include <spdlog/spdlog.h>
 
 class VulkanTest : public ::testing::Test
 {

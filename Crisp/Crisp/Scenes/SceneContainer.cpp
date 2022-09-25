@@ -12,14 +12,23 @@
 #include <Crisp/Scenes/TestScene.hpp>
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
 namespace
 {
-std::vector<std::string> sceneNames = { "Ambient Occlusion", "Liquid Simulation", "Shadow Mapping", "Ray Tracer",
-    "Physically-based Rendering", "Clustered Lighting", "Normal Mapping", "VulkanRayTracingScene", "Ocean", "Null" };
+std::vector<std::string> sceneNames = {
+    "Ambient Occlusion",
+    "Liquid Simulation",
+    "Shadow Mapping",
+    "Ray Tracer",
+    "Physically-based Rendering",
+    "Clustered Lighting",
+    "Normal Mapping",
+    "VulkanRayTracingScene",
+    "Ocean",
+    "Null"};
 
 template <typename... Args>
 std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... args)
@@ -38,7 +47,7 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
         return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
     else if (name == sceneNames[6])
         return std::make_unique<NormalMappingScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[7] && ApplicationEnvironment::getParameters().enableRayTracingExtension)
+    else if (name == sceneNames[7])
         return std::make_unique<VulkanRayTracingScene>(std::forward<Args>(args)...);
     else if (name == sceneNames[8])
         return std::make_unique<OceanScene>(std::forward<Args>(args)...);
@@ -50,11 +59,11 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
 }
 } // namespace
 
-SceneContainer::SceneContainer(Renderer* renderer, Application* app)
+SceneContainer::SceneContainer(Renderer* renderer, Application* app, const uint32_t firstSceneIndex)
     : m_renderer(renderer)
     , m_application(app)
 {
-    m_defaultSceneIndex = ApplicationEnvironment::getParameters().defaultSceneIndex;
+    m_defaultSceneIndex = firstSceneIndex;
 }
 
 SceneContainer::~SceneContainer() {}

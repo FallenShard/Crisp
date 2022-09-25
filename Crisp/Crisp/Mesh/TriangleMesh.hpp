@@ -30,9 +30,8 @@ public:
     uint32_t getIndexCount() const;
     uint32_t getVertexCount() const;
 
-    InterleavedVertexBuffer interleave() const;
-    InterleavedVertexBuffer interleave(
-        const std::vector<VertexAttributeDescriptor>& vertexAttribs, bool padToVec4) const;
+    std::vector<InterleavedVertexBuffer> interleave(
+        const std::vector<std::vector<VertexAttributeDescriptor>>& vertexAttribs, bool padToVec4) const;
 
     static std::vector<glm::vec3> computeVertexNormals(
         const std::vector<glm::vec3>& positions, const std::vector<glm::uvec3>& faces);
@@ -70,13 +69,14 @@ public:
     float calculateFaceArea(uint32_t triangleId) const;
 
 private:
+    InterleavedVertexBuffer interleave(
+        const std::vector<VertexAttributeDescriptor>& vertexAttribs, bool padToVec4) const;
+
     std::vector<glm::vec3> m_positions;
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
     std::vector<glm::vec4> m_tangents;
     robin_hood::unordered_flat_map<std::string, VertexAttributeBuffer> m_customAttributes;
-
-    std::vector<VertexAttributeDescriptor> m_interleavedFormat;
 
     std::vector<glm::uvec3> m_faces;
     std::vector<TriangleMeshView> m_views;

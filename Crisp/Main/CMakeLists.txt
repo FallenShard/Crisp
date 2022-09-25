@@ -6,4 +6,4 @@ set_target_properties(CrispMain PROPERTIES
     VS_DEBUGGER_COMMAND_ARGUMENTS "config=D:/version-control/Crisp/Config.lua scene=3"
 )
 target_link_libraries(CrispMain PRIVATE CrispApplication)
-copy_shared_libs(CrispMain vulkan lua freetype zlib tbb tbbMalloc embree)
+copy_shared_libs(CrispMain vulkan lua freetype zlib) # tbb tbbMalloc embree)

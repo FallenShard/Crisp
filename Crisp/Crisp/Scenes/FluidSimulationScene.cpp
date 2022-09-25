@@ -43,7 +43,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     auto& mainPassNode = m_renderGraph->addRenderPass(
         MainPass,
         createForwardLightingPass(m_renderer->getDevice(), m_renderTargetCache, renderer->getSwapChainExtent()));
-    m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
+    m_renderGraph->addDependency(MainPass, "SCREEN", 0);
 
     m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
 
@@ -60,7 +60,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
     m_app->getWindow()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
-    m_fluidGeometry = std::make_unique<Geometry>(m_renderer);
+    m_fluidGeometry = std::make_unique<Geometry>();
     m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("position"));
     m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("color"));
     m_fluidGeometry->setVertexCount(m_fluidSimulation->getParticleCount());

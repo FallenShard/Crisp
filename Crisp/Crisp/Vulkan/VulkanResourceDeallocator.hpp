@@ -30,6 +30,7 @@ auto selectDestroyFunc()
         return vkDestroyBuffer;
     else
     {
+        static_assert("Invalid VulkanHandle");
         return []()
         {
         };
@@ -106,7 +107,7 @@ private:
 
     int32_t m_virtualFrameCount{1};
 
-    robin_hood::unordered_flat_map<void*, std::string> m_handleTagMap;
+    FlatHashMap<void*, std::string> m_handleTagMap;
 
     std::vector<DeferredDestructor> m_deferredDestructors;
     std::vector<std::pair<int32_t, VulkanMemoryHeap::Allocation>> m_deferredDeallocations;

@@ -1,5 +1,5 @@
-#include <VulkanTests/ScopeCommandBufferExecutor.hpp>
-#include <VulkanTests/VulkanTest.hpp>
+#include <Test/VulkanTests/ScopeCommandBufferExecutor.hpp>
+#include <Test/VulkanTests/VulkanTest.hpp>
 
 #include <numeric>
 
@@ -33,7 +33,9 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
 
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
-    VulkanBuffer deviceBuffer(*device, size,
+    VulkanBuffer deviceBuffer(
+        *device,
+        size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -52,12 +54,20 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
         auto& cmdBuffer = executor.cmdBuffer;
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(deviceBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+        cmdBuffer.insertBufferMemoryBarrier(
+            deviceBuffer.createSpan(),
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT);
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(downloadBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
+        cmdBuffer.insertBufferMemoryBarrier(
+            downloadBuffer.createSpan(),
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_HOST_BIT,
+            VK_ACCESS_HOST_READ_BIT);
     }
 
     const float* ptr = downloadBuffer.getHostVisibleData<float>();

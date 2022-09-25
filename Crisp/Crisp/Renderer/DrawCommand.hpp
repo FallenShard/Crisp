@@ -1,14 +1,14 @@
 #pragma once
 
-#include <variant>
-#include <vector>
-#include <vulkan/vulkan.h>
-
-#include "UniformBuffer.hpp"
-
-#include "Material.hpp"
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Geometry/GeometryView.hpp>
+#include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Renderer/UniformBuffer.hpp>
+
+#include <vulkan/vulkan.h>
+
+#include <variant>
+#include <vector>
 
 namespace crisp
 {
@@ -63,8 +63,8 @@ inline void drawIndexed(VkCommandBuffer cmdBuffer, const GeometryViewVariant& ge
 {
     const auto& view = std::get<IndexedGeometryView>(geomView);
     vkCmdBindIndexBuffer(cmdBuffer, view.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(cmdBuffer, view.indexCount, view.instanceCount, view.firstIndex, view.vertexOffset,
-        view.firstInstance);
+    vkCmdDrawIndexed(
+        cmdBuffer, view.indexCount, view.instanceCount, view.firstIndex, view.vertexOffset, view.firstInstance);
 }
 
 template <typename GeometryView>

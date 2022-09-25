@@ -38,18 +38,14 @@ void setSpdlogLevel(const std::string_view level)
 
 } // namespace
 
-std::filesystem::path ApplicationEnvironment::ResourcesPath;
-std::filesystem::path ApplicationEnvironment::ShaderSourcesPath;
-ApplicationEnvironment::Parameters ApplicationEnvironment::Arguments{};
-
 ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
 {
-    Arguments = std::move(parameters);
+    m_arguments = std::move(parameters);
     ChromeProfiler::setThreadName("Main Thread");
 
     spdlog::set_pattern("%^[%T.%e][%n][%l][Tid: %t]:%$ %v");
-    setSpdlogLevel(Arguments.logLevel);
-    spdlog::info("Current path: {}", std::filesystem::current_path().string());
+    setSpdlogLevel(m_arguments.logLevel);
+    logger->info("Current path: {}", std::filesystem::current_path().string());
 
     glfwSetErrorCallback(glfwErrorHandler);
     if (glfwInit() == GLFW_FALSE)
@@ -59,9 +55,9 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     }
 
     LuaConfig lua;
-    lua.openFile(Arguments.configPath);
-    ResourcesPath = lua.get<std::string>("resourcesPath").value();
-    ShaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
+    lua.openFile(m_arguments.configPath);
+    m_resourcesPath = lua.get<std::string>("resourcesPath").value();
+    m_shaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
 }
 
 ApplicationEnvironment::~ApplicationEnvironment()
@@ -72,14 +68,14 @@ ApplicationEnvironment::~ApplicationEnvironment()
     ChromeProfiler::finalize();
 }
 
-std::filesystem::path ApplicationEnvironment::getResourcesPath()
+const std::filesystem::path& ApplicationEnvironment::getResourcesPath() const
 {
-    return ResourcesPath;
+    return m_resourcesPath;
 }
 
-std::filesystem::path ApplicationEnvironment::getShaderSourceDirectory()
+const std::filesystem::path& ApplicationEnvironment::getShaderSourceDirectory() const
 {
-    return ShaderSourcesPath;
+    return m_shaderSourcesPath;
 }
 
 std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtensions()
@@ -93,9 +89,9 @@ std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtens
     return extensions;
 }
 
-const ApplicationEnvironment::Parameters& ApplicationEnvironment::getParameters()
+const ApplicationEnvironment::Parameters& ApplicationEnvironment::getParameters() const
 {
-    return Arguments;
+    return m_arguments;
 }
 
 Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv)

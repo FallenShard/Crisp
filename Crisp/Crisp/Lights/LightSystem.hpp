@@ -1,6 +1,9 @@
 #pragma once
 
+#include <Crisp/Camera/Camera.hpp>
+#include <Crisp/Lights/CascadedShadowMapping.hpp>
 #include <Crisp/Lights/DirectionalLight.hpp>
+#include <Crisp/Lights/LightClustering.hpp>
 #include <Crisp/Lights/LightDescriptor.hpp>
 #include <Crisp/Lights/PointLight.hpp>
 
@@ -14,8 +17,6 @@ class RenderGraph;
 class VulkanImage;
 class VulkanImageView;
 class UniformBuffer;
-class Camera;
-struct CameraParameters;
 
 class LightSystem
 {
@@ -32,7 +33,7 @@ public:
     }
 
     // Cascaded shadow mapping for directional light.
-    std::array<glm::vec3, 8> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
+    std::array<glm::vec3, Camera::FrustumPointCount> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
     void setSplitLambda(float splitLambda);
     float getCascadeSplitLo(uint32_t cascadeIndex) const;
     float getCascadeSplitHi(uint32_t cascadeIndex) const;
@@ -50,44 +51,19 @@ public:
     const std::vector<std::unique_ptr<VulkanImageView>>& getTileGridViews() const;
 
 private:
-    void updateSplitIntervals(float zNear, float zFar);
-
     Renderer* m_renderer;
 
     DirectionalLight m_directionalLight;
     std::unique_ptr<UniformBuffer> m_directionalLightBuffer;
+    CascadedShadowMapping m_cascadedShadowMapping;
 
     uint32_t m_shadowMapSize;
 
-    float m_splitLambda;
-
-    struct Cascade
-    {
-        float begin;
-        float end;
-
-        DirectionalLight light;
-        std::unique_ptr<UniformBuffer> buffer;
-    };
-
-    std::vector<Cascade> m_cascades;
-    std::unique_ptr<UniformBuffer> m_cascadedDirectionalLightBuffer;
-
     std::vector<PointLight> m_pointLights;
     std::unique_ptr<UniformBuffer> m_pointLightBuffer;
+    LightClustering m_lightClustering;
 
-    glm::ivec2 m_tileSize;
-    glm::ivec2 m_tileGridDimensions;
-    std::size_t m_tileCount;
-    std::unique_ptr<UniformBuffer> m_tilePlaneBuffer;
-    std::unique_ptr<UniformBuffer> m_lightIndexCountBuffer;
-    std::unique_ptr<UniformBuffer> m_lightIndexListBuffer;
-    std::unique_ptr<VulkanImage> m_lightGrid;
-    std::vector<std::unique_ptr<VulkanImageView>> m_lightGridViews;
-
-    // many light buffer
-    // shadow maps
-
+    // TODO: Implement omnidirectional shadow maps for select point lights.
     // std::vector<ConeLight> m_coneLights;
 };
 

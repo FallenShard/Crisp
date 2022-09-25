@@ -4,6 +4,7 @@
 
 #include <Crisp/Common/Logger.hpp>
 #include <Crisp/IO/ImageLoader.hpp>
+#include <Crisp/IO/OpenEXRReader.hpp>
 
 namespace crisp
 {
@@ -85,6 +86,28 @@ void addDefaultPbrTexturesToImageCache(ImageCache& imageCache)
     textureGroup.occlusion = createDefaultAmbientOcclusionMap();
     textureGroup.emissive = createDefaultEmissiveMap();
     addToImageCache(textureGroup, "default", imageCache);
+}
+
+std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir)
+{
+    OpenEXRReader reader;
+    std::vector<float> buffer;
+    uint32_t w, h;
+    reader.read(assetDir / "Textures/Sheen_E.exr", buffer, w, h);
+    VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    createInfo.flags = 0;
+    createInfo.imageType = VK_IMAGE_TYPE_2D;
+    createInfo.format = VK_FORMAT_R32_SFLOAT;
+    createInfo.extent = {w, h, 1u};
+    createInfo.mipLevels = 1;
+    createInfo.arrayLayers = 1;
+    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    createInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    return createVulkanImage(renderer, buffer.size() * sizeof(float), buffer.data(), createInfo);
 }
 
 } // namespace crisp

@@ -34,7 +34,7 @@ public:
     static void begin(const char* message)
     {
         getThreadStream() << fmt::format(
-            "{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"B\",\"name\":\"{}\"},\n",
+            fmt::runtime("{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"B\",\"name\":\"{}\"},\n"),
             1,
             getThreadName(),
             getCurrentTime(),
@@ -44,7 +44,10 @@ public:
     static void end()
     {
         getThreadStream() << fmt::format(
-            "{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"E\"},\n", 1, getThreadName(), getCurrentTime());
+            fmt::runtime("{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"E\"},\n"),
+            1,
+            getThreadName(),
+            getCurrentTime());
     }
 
     static void finalize()

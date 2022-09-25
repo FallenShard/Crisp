@@ -1,11 +1,11 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {
-VulkanMemoryHeap::VulkanMemoryHeap(VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memTypeIdx,
-    VkDevice device, std::string tag)
+VulkanMemoryHeap::VulkanMemoryHeap(
+    VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memTypeIdx, VkDevice device, std::string tag)
     : m_device(device)
     , m_properties(memProps)
     , m_memoryTypeIndex(memTypeIdx)
@@ -25,11 +25,11 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
 {
     if (size > m_blockSize)
     {
-        return resultError("Requested allocation size is greater than the block size: {} MB > {} MB!", size >> 20,
-            m_blockSize >> 20);
+        return resultError(
+            "Requested allocation size is greater than the block size: {} MB > {} MB!", size >> 20, m_blockSize >> 20);
     }
 
-    Allocation allocation{ nullptr, 0, 0 };
+    Allocation allocation{nullptr, 0, 0};
     AllocationBlock* allocationBlock = nullptr;
     uint64_t foundChunkOffset = 0;
     uint64_t foundChunkSize = 0;
@@ -50,8 +50,10 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
         std::tie(foundChunkOffset, foundChunkSize) = m_allocationBlocks.back().findFreeChunk(size, alignment);
         if (foundChunkSize == 0)
         {
-            return resultError("Failed to find the requested size in a newly allocated block! {} MB > {} MB.",
-                size >> 20, m_blockSize >> 20);
+            return resultError(
+                "Failed to find the requested size in a newly allocated block! {} MB > {} MB.",
+                size >> 20,
+                m_blockSize >> 20);
         }
 
         allocationBlock = &m_allocationBlocks.back();
@@ -60,7 +62,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
     const uint64_t alignedOffset =
         foundChunkOffset + ((alignment - (foundChunkOffset & (alignment - 1))) & (alignment - 1));
 
-    allocation = { allocationBlock, alignedOffset, size };
+    allocation = {allocationBlock, alignedOffset, size};
 
     m_usedSize += allocation.size;
 
@@ -116,10 +118,10 @@ bool VulkanMemoryHeap::isFromHeapIndex(uint32_t heapIndex, VkMemoryPropertyFlags
 
 VulkanMemoryHeap::AllocationBlock VulkanMemoryHeap::allocateBlock(uint64_t size)
 {
-    VkMemoryAllocateFlagsInfo allocateFlagsInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
+    VkMemoryAllocateFlagsInfo allocateFlagsInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO};
     allocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
-    VkMemoryAllocateInfo devAllocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    VkMemoryAllocateInfo devAllocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     devAllocInfo.pNext = &allocateFlagsInfo;
     devAllocInfo.allocationSize = size;
     devAllocInfo.memoryTypeIndex = m_memoryTypeIndex;
@@ -179,9 +181,9 @@ std::pair<uint64_t, uint64_t> VulkanMemoryHeap::AllocationBlock::findFreeChunk(u
 
         if (size <= usableSize)
         {
-            return { chunkOffset, chunkSize };
+            return {chunkOffset, chunkSize};
         }
     }
-    return { 0, 0 };
+    return {0, 0};
 }
 } // namespace crisp

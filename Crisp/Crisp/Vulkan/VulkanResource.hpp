@@ -1,9 +1,8 @@
 #pragma once
 
+#include <Crisp/Common/Logger.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
-
-#include <Crisp/Common/Logger.hpp>
 
 #include <vulkan/vulkan.h>
 

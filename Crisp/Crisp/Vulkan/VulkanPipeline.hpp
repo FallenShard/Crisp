@@ -11,17 +11,21 @@
 
 namespace crisp
 {
-class Renderer;
-class VulkanRenderPass;
 class VulkanDevice;
 
 enum class PipelineDynamicState
 {
-    Unknown = 0x00,
+    None = 0x00,
     Viewport = 0x01,
     Scissor = 0x02
 };
 DECLARE_BITFLAG(PipelineDynamicState);
+
+struct VertexLayout
+{
+    std::vector<VkVertexInputBindingDescription> bindings;
+    std::vector<VkVertexInputAttributeDescription> attributes;
+};
 
 class VulkanPipeline final : public VulkanResource<VkPipeline, vkDestroyPipeline>
 {
@@ -30,16 +34,13 @@ public:
         const VulkanDevice& device,
         VkPipeline pipelineHandle,
         std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
-        PipelineDynamicStateFlags dynamicStateFlags);
+        VkPipelineBindPoint bindPoint,
+        VertexLayout&& vertexLayout,
+        PipelineDynamicStateFlags dynamicStateFlags = PipelineDynamicState::None);
 
     inline VulkanPipelineLayout* getPipelineLayout() const
     {
         return m_pipelineLayout.get();
-    }
-
-    void setBindPoint(VkPipelineBindPoint pipelineBindPoint)
-    {
-        m_bindPoint = pipelineBindPoint;
     }
 
     void bind(VkCommandBuffer buffer) const;
@@ -80,9 +81,14 @@ public:
         return m_dynamicStateFlags;
     }
 
-    inline void setLuaFilepath(std::filesystem::path path)
+    inline const VertexLayout& getVertexLayout() const
     {
-        m_luaFilepath = path;
+        return m_vertexLayout;
+    }
+
+    inline void setConfigPath(std::filesystem::path path)
+    {
+        m_configPath = path;
     }
 
     void swapAll(VulkanPipeline& other);
@@ -100,11 +106,9 @@ protected:
 
     std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;
     PipelineDynamicStateFlags m_dynamicStateFlags;
+    VertexLayout m_vertexLayout;
 
-    std::filesystem::path m_luaFilepath; // Config file where the pipeline is described
-    const VulkanRenderPass* m_renderPass;
-    const uint32_t m_subpassIndex;
-
-    VkPipelineBindPoint m_bindPoint;
+    std::filesystem::path m_configPath; // Config file where the pipeline is described.
+    const VkPipelineBindPoint m_bindPoint;
 };
 } // namespace crisp

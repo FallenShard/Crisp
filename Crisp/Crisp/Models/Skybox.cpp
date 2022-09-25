@@ -18,13 +18,13 @@ namespace crisp
 constexpr std::size_t NumCubeMapFaces = 6;
 const std::array<const std::string, NumCubeMapFaces> SideFilenames = {
     "left", "right", "top", "bottom", "back", "front"};
-const std::vector<VertexAttributeDescriptor> VertexAttribs = {VertexAttribute::Position};
+const VertexLayoutDescription VertexAttribs = {{VertexAttribute::Position}};
 
 Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder)
 {
     m_cubeGeometry = std::make_unique<Geometry>(
-        renderer,
-        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", VertexAttribs).unwrap(),
+        *renderer,
+        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(VertexAttribs)).unwrap(),
         VertexAttribs);
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
@@ -48,11 +48,10 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
         VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
     for (uint32_t i = 0; i < NumCubeMapFaces; ++i)
-        fillLayer(*m_cubeMap, renderer, cubeMapImages[i].getData(), width * height * 4, i);
+        fillImageLayer(*m_cubeMap, *renderer, cubeMapImages[i].getData(), width * height * 4, i);
 
     m_cubeMapView = m_cubeMap->createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
-    m_sampler = std::make_unique<VulkanSampler>(
-        renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    m_sampler = createLinearClampSampler(renderer->getDevice());
     m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);
     updateRenderNode(*m_sampler, *m_cubeMapView);
 
@@ -66,8 +65,8 @@ Skybox::Skybox(
     const VulkanSampler& sampler)
 {
     m_cubeGeometry = std::make_unique<Geometry>(
-        renderer,
-        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", VertexAttribs).unwrap(),
+        *renderer,
+        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(VertexAttribs)).unwrap(),
         VertexAttribs);
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
@@ -89,7 +88,7 @@ void Skybox::updateRenderNode(const VulkanSampler& sampler, const VulkanImageVie
     m_renderNode.transformPack = &m_transformPack;
     m_renderNode.transformIndex = 0;
     m_renderNode.geometry = m_cubeGeometry.get();
-    m_renderNode.pass("mainPass").material = m_material.get();
+    m_renderNode.pass("forwardPass").material = m_material.get();
 }
 
 void Skybox::updateTransforms(const glm::mat4& V, const glm::mat4& P)

@@ -100,7 +100,7 @@ struct RenderNode
         return matData;
     }
 
-    robin_hood::unordered_map<SubpassKey, robin_hood::unordered_map<int, MaterialData>, SubpassKeyHasher> materials;
+    robin_hood::unordered_flat_map<SubpassKey, FlatHashMap<int32_t, MaterialData>, SubpassKeyHasher> materials;
 
     RenderNode();
     RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, int transformIndex);

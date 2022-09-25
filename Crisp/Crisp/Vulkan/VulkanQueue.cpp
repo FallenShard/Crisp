@@ -7,8 +7,8 @@
 namespace crisp
 {
 VulkanQueue::VulkanQueue(
-    const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId)
-    : m_deviceHandle(device.getHandle())
+    const VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId)
+    : m_deviceHandle(deviceHandle)
     , m_familyIndex(queueId.familyIndex)
     , m_index(queueId.index)
     , m_familyProperties(physicalDevice.queryQueueFamilyProperties().at(m_familyIndex))

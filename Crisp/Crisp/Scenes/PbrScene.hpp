@@ -75,7 +75,7 @@ private:
 
     std::unique_ptr<RenderGraph> m_renderGraph;
     std::unique_ptr<ResourceContext> m_resourceContext;
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::unique_ptr<VulkanImage> m_multiScatTex;
     std::vector<std::unique_ptr<VulkanImageView>> m_multiScatTexViews;

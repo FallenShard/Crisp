@@ -11,35 +11,35 @@ const std::filesystem::path ResourceDir("D:/version-control/Crisp/Resources/Mesh
 
 TEST(WavefrontObjTest, LoadAjax)
 {
-    const auto mesh = WavefrontObjReader().read(ResourceDir / "ajax.obj");
+    const auto mesh = readWavefrontObj(ResourceDir / "ajax.obj");
     EXPECT_EQ(mesh.positions.size(), 409'676);
     EXPECT_EQ(mesh.triangles.size(), 544'566);
 }
 
 TEST(WavefrontObjTest, LoadBuddha)
 {
-    const auto mesh = WavefrontObjReader().read(ResourceDir / "buddha.obj");
+    const auto mesh = readWavefrontObj(ResourceDir / "buddha.obj");
     EXPECT_EQ(mesh.positions.size(), 49'990);
     EXPECT_EQ(mesh.triangles.size(), 100'000);
 }
 
 TEST(WavefrontObjTest, LoadCube)
 {
-    const auto mesh = WavefrontObjReader().read(ResourceDir / "cube.obj");
+    const auto mesh = readWavefrontObj(ResourceDir / "cube.obj");
     EXPECT_EQ(mesh.positions.size(), 24);
     EXPECT_EQ(mesh.triangles.size(), 12);
 }
 
 TEST(WavefrontObjTest, LoadShaderBall)
 {
-    const auto mesh = WavefrontObjReader().read(ResourceDir / "shader_ball.obj");
+    const auto mesh = readWavefrontObj(ResourceDir / "shader_ball.obj");
     EXPECT_EQ(mesh.positions.size(), 35'877);
     EXPECT_EQ(mesh.triangles.size(), 67'832);
 }
 
 TEST(WavefrontObjTest, LoadCamelHead)
 {
-    const auto mesh = WavefrontObjReader().read(ResourceDir / "camelhead.obj");
+    const auto mesh = readWavefrontObj(ResourceDir / "camelhead.obj");
     EXPECT_EQ(mesh.positions.size(), 11'381);
     EXPECT_EQ(mesh.triangles.size(), 22'704);
 }

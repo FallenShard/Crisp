@@ -7,7 +7,7 @@
 #include <iostream>
 #include <streambuf>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <gzip/decompress.hpp>
 

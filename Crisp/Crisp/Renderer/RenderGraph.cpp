@@ -45,7 +45,7 @@ RenderGraph::RenderGraph(Renderer* renderer)
 
 RenderGraph::~RenderGraph() {}
 
-RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)
+RenderGraph::Node& RenderGraph::addRenderPass(const std::string& name, std::unique_ptr<VulkanRenderPass> renderPass)
 {
     CRISP_CHECK(m_nodes.find(name) == m_nodes.end(), "Render graph already contains a node named {}", name);
 
@@ -59,7 +59,7 @@ RenderGraph::Node& RenderGraph::addRenderPass(std::string name, std::unique_ptr<
     return *iter->second;
 }
 
-RenderGraph::Node& RenderGraph::addComputePass(std::string name)
+RenderGraph::Node& RenderGraph::addComputePass(const std::string& name)
 {
     CRISP_CHECK(m_nodes.find(name) == m_nodes.end(), "Render graph already contains a node named {}", name);
 
@@ -82,74 +82,44 @@ void RenderGraph::resize(int /*width*/, int /*height*/)
 }
 
 void RenderGraph::addDependency(
-    std::string sourcePass, std::string destinationPass, RenderGraph::DependencyCallback callback)
+    const std::string& srcPass, const std::string& dstPass, RenderGraph::DependencyCallback callback)
 {
-    m_nodes.at(sourcePass)->dependencies[destinationPass] = callback;
+    m_nodes.at(srcPass)->dependencies[dstPass] = callback;
 }
 
-void RenderGraph::addRenderTargetLayoutTransitionToScreen(
-    const std::string& sourcePass, uint32_t sourceRenderTargetIndex)
+void RenderGraph::addDependencyToPresentation(const std::string& srcPass, const uint32_t srcAttachmentIndex)
 {
-    addRenderTargetLayoutTransition(sourcePass, "SCREEN", sourceRenderTargetIndex);
+    addDependency(srcPass, "PRESENT", srcAttachmentIndex);
 }
 
-void RenderGraph::addRenderTargetLayoutTransition(
-    const std::string& sourcePass, const std::string& destinationPass, uint32_t sourceRenderTargetIndex)
+void RenderGraph::addDependency(
+    const std::string& srcPass, const std::string& dstPass, const uint32_t srcAttachmentIndex)
 {
-    addRenderTargetLayoutTransition(sourcePass, destinationPass, sourceRenderTargetIndex, 1);
-}
+    auto& sourceNode{*m_nodes.at(srcPass)};
+    const auto* dstNode{m_nodes.contains(dstPass) ? m_nodes.at(dstPass).get() : nullptr};
+    const VkPipelineStageFlagBits dstStageFlags{
+        dstNode && dstNode->type == NodeType::Compute ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                                                      : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
 
-void RenderGraph::addRenderTargetLayoutTransition(
-    const std::string& sourcePass,
-    const std::string& destinationPass,
-    uint32_t sourceRenderTargetIndex,
-    uint32_t layerMultiplier)
-{
-    RenderGraph::Node* sourceNode = m_nodes.at(sourcePass).get();
-    VkImageAspectFlags attachmentAspect =
-        sourceNode->renderPass->getRenderTarget(sourceRenderTargetIndex).getAspectMask();
-    RenderGraph::Node* dstNode = nullptr;
-    if (m_nodes.count(destinationPass))
-        dstNode = m_nodes.at(destinationPass).get();
-    VkPipelineStageFlags dstStageFlags = dstNode && dstNode->type == NodeType::Compute
-                                             ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
-                                             : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    // We take the attachment aspect to determine if we are transitionin depth or color target.
+    const VkImageAspectFlags attachmentAspect{
+        sourceNode.renderPass->getAttachmentView(srcAttachmentIndex, 0).getSubresourceRange().aspectMask};
+    const VkPipelineStageFlagBits srcStageFlags{
+        attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                                                      : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT};
 
-    if (attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT)
+    sourceNode.dependencies[dstPass] =
+        [srcAttachmentIndex, srcStageFlags, dstStageFlags](
+            const VulkanRenderPass& srcPass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
     {
-        sourceNode->dependencies[destinationPass] =
-            [s = sourcePass, sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
-                const VulkanRenderPass& sourcePass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
-        {
-            auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-            const auto& range =
-                sourcePass.getRenderTargetView(sourceRenderTargetIndex, frameIndex).getSubresourceRange();
-
-            renderTarget.transitionLayout(
-                cmdBuffer.getHandle(),
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                range,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                dstStageFlags);
-        };
-    }
-    else if (attachmentAspect == VK_IMAGE_ASPECT_DEPTH_BIT)
-    {
-        sourceNode->dependencies[destinationPass] =
-            [s = sourcePass, sourceRenderTargetIndex, layerMultiplier, dstStageFlags](
-                const VulkanRenderPass& sourcePass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex)
-        {
-            auto& renderTarget = sourcePass.getRenderTarget(sourceRenderTargetIndex);
-            const auto& range =
-                sourcePass.getRenderTargetView(sourceRenderTargetIndex, frameIndex).getSubresourceRange();
-            renderTarget.transitionLayout(
-                cmdBuffer.getHandle(),
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                range,
-                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                dstStageFlags);
-        };
-    }
+        auto& renderTarget{srcPass.getRenderTargetFromAttachmentIndex(srcAttachmentIndex)};
+        renderTarget.transitionLayout(
+            cmdBuffer.getHandle(),
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            srcPass.getAttachmentView(srcAttachmentIndex, frameIndex).getSubresourceRange(),
+            srcStageFlags,
+            dstStageFlags);
+    };
 }
 
 Result<> RenderGraph::sortRenderPasses()
@@ -221,7 +191,10 @@ void RenderGraph::buildCommandLists(
     const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& renderNodes)
 {
     for (const auto& [id, renderNode] : renderNodes)
+    {
+        logger->info("Building commands for {}.", id);
         addToCommandLists(*renderNode);
+    }
 }
 
 void RenderGraph::buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes)

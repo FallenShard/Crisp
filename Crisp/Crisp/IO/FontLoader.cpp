@@ -4,7 +4,7 @@
 #include <cmath>
 #include <iostream>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp
 {

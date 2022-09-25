@@ -6,6 +6,8 @@
 
 namespace crisp
 {
+class Renderer;
+
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer,
     std::string&& shaderName,

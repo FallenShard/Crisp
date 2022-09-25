@@ -2,7 +2,6 @@
 #include <Crisp/IO/MeshLoader.hpp>
 #include <Crisp/IO/WavefrontObjReader.hpp>
 
-
 namespace crisp
 {
 namespace
@@ -28,9 +27,9 @@ TriangleMesh convertToTriangleMesh(
 Result<TriangleMesh> loadTriangleMesh(
     const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
 {
-    if (WavefrontObjReader::isWavefrontObjFile(path))
+    if (isWavefrontObjFile(path))
     {
-        return convertToTriangleMesh(path, WavefrontObjReader().read(path), vertexAttributes);
+        return convertToTriangleMesh(path, readWavefrontObj(path), vertexAttributes);
     }
     /*else if (FbxImporter::isFbxFile(path))
     {

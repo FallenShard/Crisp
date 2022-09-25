@@ -3,7 +3,9 @@
 #include <Crisp/IO/ImageLoader.hpp>
 
 #define TINYGLTF_IMPLEMENTATION
-#include <tiny_gltf/tiny_gltf.h>
+#define TINYGLTF_NO_STB_IMAGE
+#define TINYGLTF_NO_STB_IMAGE_WRITE
+#include <tiny_gltf.h>
 
 namespace crisp
 {

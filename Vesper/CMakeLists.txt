@@ -1,4 +1,4 @@
-add_library(Vesper
+add_cpp_static_library(Vesper
     "Vesper/BSDFs/BSDF.cpp"
     "Vesper/BSDFs/BSDF.hpp"
     "Vesper/BSDFs/BSDFFactory.cpp"
@@ -126,8 +126,6 @@ add_library(Vesper
     "Vesper/Textures/UVTexture.cpp"
     "Vesper/Textures/UVTexture.hpp"
 )
-set_target_properties(Vesper PROPERTIES CXX_STANDARD 20)
-
 target_link_libraries(Vesper
     PUBLIC CrispMath
     PUBLIC CrispFormat
@@ -139,6 +137,5 @@ target_link_libraries(Vesper
     PUBLIC embree
     PUBLIC tinyexr
     PUBLIC rapidxml)
-
+target_include_directories(Vesper PRIVATE ".")
 target_include_directories(Vesper PRIVATE "./Vesper")
-target_include_directories(Vesper PUBLIC ".")

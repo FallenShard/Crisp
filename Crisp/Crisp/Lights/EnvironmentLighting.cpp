@@ -40,7 +40,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     for (uint32_t i = 0; i < CubeMapFaceCount; ++i)
         cubeMapPipelines[i] = renderer->createPipelineFromLua("EquirectToCube.lua", *cubeMapPass, i);
 
-    auto unitCube = std::make_unique<Geometry>(renderer, createCubeMesh({VertexAttribute::Position}));
+    const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
+    auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
@@ -129,7 +130,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     for (int i = 0; i < CubeMapFaceCount; i++)
         convPipelines[i] = renderer->createPipelineFromLua("ConvolveDiffuse.lua", *convPass, i);
 
-    auto unitCube = std::make_unique<Geometry>(renderer, createCubeMesh({VertexAttribute::Position}));
+    const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
+    auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto convMaterial = std::make_unique<Material>(convPipelines[0].get());
@@ -189,7 +191,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
 
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f);
-    auto unitCube = std::make_unique<Geometry>(renderer, createCubeMesh({VertexAttribute::Position}));
+    const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
+    auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
 
     auto environmentSpecularMap = RenderTargetBuilder()
                                       .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
@@ -260,7 +263,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                     prefilterPass->getRenderTarget(0).transitionLayout(
                         cmdBuffer,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        prefilterPass->getRenderTargetView(k, 0).getSubresourceRange(),
+                        prefilterPass->getAttachmentView(k, 0).getSubresourceRange(),
                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
                     /*prefilterPass->getRenderTarget(0).transitionLayout(

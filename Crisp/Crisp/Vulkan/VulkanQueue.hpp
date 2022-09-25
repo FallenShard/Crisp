@@ -4,13 +4,12 @@
 
 namespace crisp
 {
-class VulkanDevice;
 class VulkanPhysicalDevice;
 
 class VulkanQueue
 {
 public:
-    VulkanQueue(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId);
+    VulkanQueue(VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId);
 
     VkResult submit(
         VkSemaphore waitSemaphore,
@@ -34,7 +33,7 @@ public:
     }
 
 private:
-    VkQueue m_handle;
+    VkQueue m_handle; // Deallocated automatically once the parent device is destroyed.
     VkDevice m_deviceHandle;
     uint32_t m_familyIndex;
     uint32_t m_index;

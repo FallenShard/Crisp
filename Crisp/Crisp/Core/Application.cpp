@@ -21,7 +21,7 @@ void logFps(double frameTime, double fps)
 }
 } // namespace
 
-Application::Application(const ApplicationEnvironment&)
+Application::Application(const ApplicationEnvironment& environment)
     : m_accumulatedTime(0.0)
     , m_accumulatedFrames(0.0)
     , m_updatePeriod(1.0)
@@ -31,11 +31,21 @@ Application::Application(const ApplicationEnvironment&)
     m_window = createWindow();
     logger->info("Window opened!");
 
-    m_renderer = std::make_unique<Renderer>(m_window->createSurfaceCallback());
+    AssetPaths assetPaths{};
+    assetPaths.shaderSourceDir = environment.getShaderSourceDirectory();
+    assetPaths.resourceDir = environment.getResourcesPath();
+    assetPaths.spvShaderDir = environment.getResourcesPath() / "Shaders";
+    m_renderer = std::make_unique<Renderer>(
+        environment.getRequiredVulkanInstanceExtensions(),
+        m_window->createSurfaceCallback(),
+        std::move(assetPaths),
+        environment.getParameters().enableRayTracingExtension);
     logger->info("Renderer created!");
 
-    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this);
-    logger->info("SceneContainer created!");
+    m_sceneContainer =
+        std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().defaultSceneIndex);
+    m_sceneContainer->onSceneSelected(m_sceneContainer->getDefaultScene());
+    logger->info("Scene created!");
 
     m_window->resized.subscribe<&Application::onResize>(this);
     m_window->minimized.subscribe<&Application::onMinimize>(this);
@@ -67,7 +77,6 @@ Application::Application(const ApplicationEnvironment&)
 
     auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
     cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-    cb->selectItem(m_sceneContainer->getDefaultSceneIndex());
     logger->info("Initialized start-up scene");
 }
 

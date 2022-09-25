@@ -186,18 +186,18 @@ std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(
 {
     auto [handle, attachments] = create(device.getHandle(), renderTargets);
 
-    RenderPassDescription description{};
-    description.subpassCount = static_cast<uint32_t>(m_subpasses.size());
-    description.renderArea = renderArea;
-    description.isSwapChainDependent = checkSwapChainDependency(renderTargets);
+    RenderPassParameters params{};
+    params.subpassCount = static_cast<uint32_t>(m_subpasses.size());
+    params.renderArea = renderArea;
+    params.isSwapChainDependent = checkSwapChainDependency(renderTargets);
 
-    description.allocateAttachmentViews = m_allocateAttachmentViews;
-    description.attachmentDescriptions = std::move(attachments);
-    description.attachmentMappings = m_attachmentMappings;
+    params.allocateAttachmentViews = m_allocateAttachmentViews;
+    params.attachmentDescriptions = std::move(attachments);
+    params.attachmentMappings = m_attachmentMappings;
 
-    description.renderTargets = renderTargets;
+    params.renderTargets = renderTargets;
 
-    return std::make_unique<VulkanRenderPass>(device, handle, std::move(description));
+    return std::make_unique<VulkanRenderPass>(device, handle, std::move(params));
 }
 
 } // namespace crisp

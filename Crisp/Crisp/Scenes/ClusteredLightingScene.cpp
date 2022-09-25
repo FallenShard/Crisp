@@ -74,7 +74,7 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
-    m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 2);
+    m_renderGraph->addDependency(MainPass, "SCREEN", 2);
 
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
 
@@ -93,16 +93,21 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
 
     // Geometry setup
-    std::vector<VertexAttributeDescriptor> shadowVertexFormat = {VertexAttribute::Position};
+    const VertexLayoutDescription shadowVertexFormat = {{VertexAttribute::Position}};
+    const VertexLayoutDescription cubeFormat{
+        {VertexAttribute::Position, VertexAttribute::Normal}
+    };
     m_resourceContext->addGeometry(
-        "cubeRT",
-        std::make_unique<Geometry>(m_renderer, createCubeMesh({VertexAttribute::Position, VertexAttribute::Normal})));
+        "cubeRT", std::make_unique<Geometry>(*m_renderer, createCubeMesh(flatten(cubeFormat)), cubeFormat));
     m_resourceContext->addGeometry(
-        "cubeShadow", std::make_unique<Geometry>(m_renderer, createCubeMesh(shadowVertexFormat)));
+        "cubeShadow",
+        std::make_unique<Geometry>(*m_renderer, createCubeMesh(flatten(shadowVertexFormat)), shadowVertexFormat));
     m_resourceContext->addGeometry(
-        "sphereShadow", std::make_unique<Geometry>(m_renderer, createSphereMesh(shadowVertexFormat)));
+        "sphereShadow",
+        std::make_unique<Geometry>(*m_renderer, createSphereMesh(flatten(shadowVertexFormat)), shadowVertexFormat));
     m_resourceContext->addGeometry(
-        "floorShadow", std::make_unique<Geometry>(m_renderer, createPlaneMesh(shadowVertexFormat)));
+        "floorShadow",
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(shadowVertexFormat)), shadowVertexFormat));
 
     createCommonTextures();
 
@@ -298,11 +303,13 @@ void ClusteredLightingScene::createShaderball()
 
 void ClusteredLightingScene::createPlane()
 {
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
-        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent};
+    const VertexLayoutDescription pbrVertexFormat = {
+        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+    };
 
     m_resourceContext->addGeometry(
-        "floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 200.0f)));
+        "floor",
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(pbrVertexFormat), 200.0f), pbrVertexFormat));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

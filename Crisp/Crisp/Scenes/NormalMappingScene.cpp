@@ -81,7 +81,7 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
-    m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
+    m_renderGraph->addDependency(MainPass, "SCREEN", 0);
     m_renderGraph->sortRenderPasses().unwrap();
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
@@ -158,14 +158,13 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
 void NormalMappingScene::createPlane()
 {
     auto& imageCache = m_resourceContext->imageCache;
-    std::vector<VertexAttributeDescriptor> pbrVertexFormat = {
-        VertexAttribute::Position,
-        VertexAttribute::Normal,
-        VertexAttribute::TexCoord,
-        VertexAttribute::Tangent,
+    const VertexLayoutDescription PbrVertexFormat = {
+        {VertexAttribute::Position},
+        { VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
     };
     m_resourceContext->addGeometry(
-        "floor", std::make_unique<Geometry>(m_renderer, createPlaneMesh(pbrVertexFormat, 10.0f)));
+        "floor",
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(PbrVertexFormat), 10.0f), PbrVertexFormat));
 
     imageCache.addSampler(
         "linearRepeat",
@@ -218,10 +217,11 @@ void NormalMappingScene::createPlane()
 
     // NANOSUIT
     TriangleMesh mesh(
-        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj ", pbrVertexFormat).unwrap());
+        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj ", flatten(PbrVertexFormat))
+            .unwrap());
     mesh.normalizeToUnitBox();
     mesh.transform(glm::translate(glm::vec3(0.0f, 0.5f, 0.0f)));
-    m_resourceContext->addGeometry("nanosuit", std::make_unique<Geometry>(m_renderer, mesh));
+    m_resourceContext->addGeometry("nanosuit", std::make_unique<Geometry>(*m_renderer, mesh, PbrVertexFormat));
 
     // Leg, Hand, Glass, Arm, Helmet,
     // Body

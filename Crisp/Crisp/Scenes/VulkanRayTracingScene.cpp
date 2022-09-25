@@ -93,7 +93,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     /// VK_SAMPLE_COUNT_1_BIT));
 
     ////// Wrap-up render graph definition
-    //// m_renderGraph->addRenderTargetLayoutTransition(MainPass, "SCREEN", 0);
+    //// m_renderGraph->addDependency(MainPass, "SCREEN", 0);
     //// m_renderGraph->sortRenderPasses().unwrap();
     //// m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
@@ -106,14 +106,16 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
 
     //// createPlane();
 
-    const std::vector<VertexAttributeDescriptor> posFormat = {VertexAttribute::Position, VertexAttribute::Normal};
+    const VertexLayoutDescription posFormat = {
+        {VertexAttribute::Position, VertexAttribute::Normal}
+    };
     //// m_resourceContext->addGeometry("floorPos", std::make_unique<Geometry>(m_renderer,
     //// createPlaneMesh(posFormat, 10.0f)));
     m_resourceContext->addGeometry(
         "walls",
         std::make_unique<Geometry>(
-            m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/walls.obj", posFormat).unwrap(),
+            *m_renderer,
+            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/walls.obj", flatten(posFormat)).unwrap(),
             posFormat,
             false,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -121,8 +123,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     m_resourceContext->addGeometry(
         "leftwall",
         std::make_unique<Geometry>(
-            m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/leftwall.obj", posFormat).unwrap(),
+            *m_renderer,
+            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/leftwall.obj", flatten(posFormat)).unwrap(),
             posFormat,
             false,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -130,8 +132,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     m_resourceContext->addGeometry(
         "rightwall",
         std::make_unique<Geometry>(
-            m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/rightwall.obj", posFormat).unwrap(),
+            *m_renderer,
+            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/rightwall.obj", flatten(posFormat)).unwrap(),
             posFormat,
             false,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -144,8 +146,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     m_resourceContext->addGeometry(
         "light",
         std::make_unique<Geometry>(
-            m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/light.obj", posFormat).unwrap(),
+            *m_renderer,
+            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/light.obj", flatten(posFormat)).unwrap(),
             posFormat,
             false,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -567,8 +569,11 @@ void VulkanRayTracingScene::createPipeline(std::unique_ptr<VulkanPipelineLayout>
             vkCmdUpdateBuffer(cmdBuffer, m_sbtBuffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
         });
     m_pipeline = std::make_unique<VulkanPipeline>(
-        m_renderer->getDevice(), pipeline, std::move(pipelineLayout), PipelineDynamicStateFlags{});
-    m_pipeline->setBindPoint(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+        m_renderer->getDevice(),
+        pipeline,
+        std::move(pipelineLayout),
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        VertexLayout{});
 }
 
 void VulkanRayTracingScene::updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx)

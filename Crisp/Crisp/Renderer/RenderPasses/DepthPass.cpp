@@ -10,9 +10,8 @@
 
 namespace crisp
 {
-
 std::unique_ptr<VulkanRenderPass> createDepthPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, VkExtent2D swapChainExtent)
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D swapChainExtent)
 {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
@@ -27,13 +26,15 @@ std::unique_ptr<VulkanRenderPass> createDepthPass(
 
     return RenderPassBuilder()
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
-        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentMapping(DepthPassDepthAttachmentIndex, 0)
+        .setAttachmentOps(DepthPassDepthAttachmentIndex, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(
-            0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+            DepthPassDepthAttachmentIndex,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 
         .setNumSubpasses(1)
-        .setDepthAttachmentRef(0, 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        .setDepthAttachmentRef(0, DepthPassDepthAttachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
         .addDependency(
             VK_SUBPASS_EXTERNAL,
             0,

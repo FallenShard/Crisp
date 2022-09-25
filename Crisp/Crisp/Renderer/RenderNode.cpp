@@ -1,5 +1,8 @@
 #include "RenderNode.hpp"
 
+#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Vulkan/VulkanPipeline.hpp>
+
 namespace crisp
 {
 RenderNode::RenderNode() {}
@@ -31,8 +34,8 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
         drawCommand.dynamicBufferViews = material->getDynamicBufferViews();
 
     if (renderNode.transformBuffer)
-        drawCommand.dynamicBufferViews[0] = { renderNode.transformBuffer,
-            renderNode.transformIndex * sizeof(TransformPack) };
+        drawCommand.dynamicBufferViews[0] = {
+            renderNode.transformBuffer, renderNode.transformIndex * sizeof(TransformPack)};
 
     drawCommand.dynamicBufferOffsets.resize(drawCommand.dynamicBufferViews.size());
     for (std::size_t i = 0; i < drawCommand.dynamicBufferOffsets.size(); ++i)
@@ -48,6 +51,9 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
         drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView(part));
     else
         drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView());
+
+    CRISP_CHECK(
+        drawCommand.pipeline->getVertexLayout().bindings.size() == drawCommand.geometry->getVertexBufferCount());
 
     return drawCommand;
 }

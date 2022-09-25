@@ -21,22 +21,22 @@ public:
     ~ApplicationEnvironment();
 
     // Returns the path to the folder where assets are stored
-    static std::filesystem::path getResourcesPath();
+    const std::filesystem::path& getResourcesPath() const;
 
     // Returns the path to the folder where shader sources are stored
     // Useful for hot-reloading
-    static std::filesystem::path getShaderSourceDirectory();
+    const std::filesystem::path& getShaderSourceDirectory() const;
 
     // Returns the names of the extensions that are required to successfully open a Vulkan window on this platform
     static std::vector<std::string> getRequiredVulkanInstanceExtensions();
 
-    static const Parameters& getParameters();
+    const Parameters& getParameters() const;
 
 private:
-    static std::filesystem::path ResourcesPath;
-    static std::filesystem::path ShaderSourcesPath;
+    std::filesystem::path m_resourcesPath;
+    std::filesystem::path m_shaderSourcesPath;
 
-    static Parameters Arguments;
+    Parameters m_arguments;
 };
 
 Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv);

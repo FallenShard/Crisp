@@ -46,8 +46,8 @@ layout(set = 1, binding = 1) uniform CascadedLight
 layout(set = 1, binding = 2) uniform sampler2DArray cascadedShadowMapArray;
 
 // ----- Environment Lighting -----
-layout(set = 1, binding = 3) uniform samplerCube irrMap;
-layout(set = 1, binding = 4) uniform samplerCube refMap;
+layout(set = 1, binding = 3) uniform samplerCube diffuseIrradianceMap;
+layout(set = 1, binding = 4) uniform samplerCube specularIrradianceMap;
 layout(set = 1, binding = 5) uniform sampler2D brdfLut;
 
 // ----- Material -----
@@ -122,7 +122,7 @@ float evalCascadedShadow(vec3 worldPos, float bias)
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
 {
     const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
-    const vec3 irradiance = texture(irrMap, worldN).rgb;
+    const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
     const vec3 diffuse = irradiance * albedo;
 
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
@@ -130,7 +130,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
 
     const float MaxReflectionLod = 4.0f;
-    const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
+    const vec3 prefilter = textureLod(specularIrradianceMap, worldR, roughness * MaxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
     const vec3 specular = prefilter * (F * brdf.x + brdf.y);
 

@@ -3,7 +3,7 @@
 #include <Crisp/Common/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <charconv>
 

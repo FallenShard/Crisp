@@ -1,5 +1,5 @@
-#include <VulkanTests/ScopeCommandBufferExecutor.hpp>
-#include <VulkanTests/VulkanTest.hpp>
+#include <Test/VulkanTests/ScopeCommandBufferExecutor.hpp>
+#include <Test/VulkanTests/VulkanTest.hpp>
 
 #include <numeric>
 

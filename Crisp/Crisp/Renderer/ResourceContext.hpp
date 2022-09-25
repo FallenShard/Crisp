@@ -62,7 +62,7 @@ public:
         return pipelineCache.getDescriptorAllocator(pipelineLayout);
     }
 
-    inline const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& getRenderNodes() const
+    inline const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& getRenderNodes() const
     {
         return m_renderNodes;
     }
@@ -74,11 +74,9 @@ public:
 private:
     Renderer* m_renderer;
 
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<Material>> m_materials;
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<Geometry>> m_geometries;
-
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
-
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<Material>> m_materials;
+    FlatHashMap<std::string, std::unique_ptr<Geometry>> m_geometries;
+    FlatHashMap<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 };
 } // namespace crisp

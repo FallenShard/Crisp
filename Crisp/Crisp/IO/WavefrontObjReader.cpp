@@ -1,8 +1,7 @@
 #include <Crisp/IO/WavefrontObjReader.hpp>
 
+#include <Crisp/Common/Logger.hpp>
 #include <Crisp/StringUtils.hpp>
-
-#include <spdlog/spdlog.h>
 
 #include <array>
 #include <charconv>
@@ -12,7 +11,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 
 namespace crisp
 {
@@ -72,17 +70,17 @@ struct ObjVertexHasher
     }
 };
 
-robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> loadMaterials(const std::filesystem::path& path)
+FlatHashMap<std::string, WavefrontObjMaterial> loadMaterials(const std::filesystem::path& path)
 {
-    robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> materials;
+    FlatHashMap<std::string, WavefrontObjMaterial> materials;
 
     WavefrontObjMaterial* currMat = nullptr;
     std::ifstream file(path);
     std::string line;
     while (std::getline(file, line))
     {
-        std::size_t prefixEnd = line.find_first_of(' ', 0);
-        std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
+        const std::size_t prefixEnd = line.find_first_of(' ', 0);
+        const std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
 
         if (prefix == "newmtl")
         {
@@ -171,7 +169,12 @@ GlmVecType parseAttribute(const std::string& line)
 };
 } // namespace
 
-WavefrontObjMesh WavefrontObjReader::read(const std::filesystem::path& objFilePath)
+bool isWavefrontObjFile(const std::filesystem::path& path)
+{
+    return path.extension().string() == ".obj";
+}
+
+WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath)
 {
     std::ifstream file(objFilePath);
 
@@ -310,8 +313,4 @@ WavefrontObjMesh WavefrontObjReader::read(const std::filesystem::path& objFilePa
     return mesh;
 }
 
-bool WavefrontObjReader::isWavefrontObjFile(const std::filesystem::path& path)
-{
-    return path.extension().string() == ".obj";
-}
 } // namespace crisp

@@ -1,5 +1,5 @@
-#include <VulkanTests/ScopeCommandBufferExecutor.hpp>
-#include <VulkanTests/VulkanTest.hpp>
+#include <Test/VulkanTests/ScopeCommandBufferExecutor.hpp>
+#include <Test/VulkanTests/VulkanTest.hpp>
 
 #include <numeric>
 
@@ -33,7 +33,9 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
 
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
-    VulkanBuffer deviceBuffer(*device, size,
+    VulkanBuffer deviceBuffer(
+        *device,
+        size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -52,12 +54,20 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
         auto& cmdBuffer = executor.cmdBuffer;
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(deviceBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+        cmdBuffer.insertBufferMemoryBarrier(
+            deviceBuffer.createSpan(),
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT);
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(downloadBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
+        cmdBuffer.insertBufferMemoryBarrier(
+            downloadBuffer.createSpan(),
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_HOST_BIT,
+            VK_ACCESS_HOST_READ_BIT);
     }
 
     const float* ptr = downloadBuffer.getHostVisibleData<float>();
@@ -71,7 +81,9 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
-    VulkanBuffer deviceBuffer(*device, size,
+    VulkanBuffer deviceBuffer(
+        *device,
+        size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -91,8 +103,12 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     // Copy and sync
     deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-    cmdBuffer.insertBufferMemoryBarrier(deviceBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+    cmdBuffer.insertBufferMemoryBarrier(
+        deviceBuffer.createSpan(),
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_TRANSFER_READ_BIT);
 
     // Unassigned queue family for now, until first command
     StagingVulkanBuffer downloadBuffer(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -101,8 +117,8 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     // Transfer ownership to the transfer queue FOR DMA
     const VulkanQueue& transferQueue = device->getTransferQueue();
-    cmdBuffer.transferOwnership(deviceBuffer.getHandle(), generalQueue.getFamilyIndex(),
-        transferQueue.getFamilyIndex());
+    cmdBuffer.transferOwnership(
+        deviceBuffer.getHandle(), generalQueue.getFamilyIndex(), transferQueue.getFamilyIndex());
 
     // Create the transfer execution context
     const VulkanCommandPool transferPool(transferQueue.createCommandPool(0), device->getResourceDeallocator());
@@ -111,25 +127,33 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     downloadBuffer.copyFrom(transferCmdBuffer.getHandle(), deviceBuffer);
-    transferCmdBuffer.insertBufferMemoryBarrier(downloadBuffer.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
-    transferCmdBuffer.transferOwnership(deviceBuffer.getHandle(), transferQueue.getFamilyIndex(),
-        generalQueue.getFamilyIndex());
+    transferCmdBuffer.insertBufferMemoryBarrier(
+        downloadBuffer.createSpan(),
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_HOST_BIT,
+        VK_ACCESS_HOST_READ_BIT);
+    transferCmdBuffer.transferOwnership(
+        deviceBuffer.getHandle(), transferQueue.getFamilyIndex(), generalQueue.getFamilyIndex());
     transferCmdBuffer.end();
 
     StagingVulkanBuffer downloadBuffer2(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-    cmdBuffer.insertBufferMemoryBarrier(downloadBuffer2.createSpan(), VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT);
+    cmdBuffer.insertBufferMemoryBarrier(
+        downloadBuffer2.createSpan(),
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_HOST_BIT,
+        VK_ACCESS_HOST_READ_BIT);
 
     cmdBuffer.end();
     generalQueue.submit(VK_NULL_HANDLE, semaphore, cmdBuffer.getHandle(), fence);
-    transferQueue.submit(semaphore, VK_NULL_HANDLE, transferCmdBuffer.getHandle(), transferFence,
-        VK_PIPELINE_STAGE_TRANSFER_BIT);
+    transferQueue.submit(
+        semaphore, VK_NULL_HANDLE, transferCmdBuffer.getHandle(), transferFence, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     // First wait for the general queue, it doesn't depend on anything
     // Then we can wait on the transfer queue and check if we copied correctly
-    device->wait(std::array{ fence, transferFence });
+    device->wait(std::array{fence, transferFence});
 
     vkDestroyFence(device->getHandle(), fence, nullptr);
     vkDestroyFence(device->getHandle(), transferFence, nullptr);

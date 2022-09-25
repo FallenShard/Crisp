@@ -15,15 +15,18 @@ struct DescriptorSetLayout
     VkDescriptorSetLayout handle;
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     std::vector<uint32_t> dynamicBufferIndices;
-    bool isBuffered{ false };
+    bool isBuffered{false};
 };
 
 class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout, vkDestroyPipelineLayout>
 {
 public:
-    VulkanPipelineLayout(const VulkanDevice& device, std::vector<VkDescriptorSetLayout>&& setLayouts,
+    VulkanPipelineLayout(
+        const VulkanDevice& device,
+        std::vector<VkDescriptorSetLayout>&& setLayouts,
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
-        std::vector<VkPushConstantRange>&& pushConstants, std::vector<bool> descriptorSetBufferedStatus,
+        std::vector<VkPushConstantRange>&& pushConstants,
+        std::vector<bool> descriptorSetBufferedStatus,
         std::unique_ptr<DescriptorSetAllocator> setAllocator);
     virtual ~VulkanPipelineLayout();
 
@@ -37,7 +40,12 @@ public:
     inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const
     {
         for (const auto& pushConstant : m_pushConstants)
-            vkCmdPushConstants(cmdBuffer, m_handle, pushConstant.stageFlags, pushConstant.offset, pushConstant.size,
+            vkCmdPushConstants(
+                cmdBuffer,
+                m_handle,
+                pushConstant.stageFlags,
+                pushConstant.offset,
+                pushConstant.size,
                 data + pushConstant.offset);
     }
 
@@ -78,8 +86,8 @@ public:
 
     void swap(VulkanPipelineLayout& other);
 
-    std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(VulkanDevice& device, uint32_t numCopies = 1,
-        VkDescriptorPoolCreateFlags flags = 0);
+    std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(
+        VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
 
 private:
     std::vector<DescriptorSetLayout> m_descriptorSetLayouts;

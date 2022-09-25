@@ -20,8 +20,7 @@
 
 #include <Crisp/GUI/DynamicUniformBufferResource.hpp>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 namespace crisp::gui
 {
@@ -466,7 +465,7 @@ void RenderSystem::initGeometryBuffers()
         {0, 2, 1},
         {0, 3, 2}
     };
-    m_quadGeometry = std::make_unique<Geometry>(m_renderer, quadVerts, quadFaces);
+    m_quadGeometry = std::make_unique<Geometry>(*m_renderer, quadVerts, quadFaces);
 
     std::vector<glm::uvec2> loopSegments = {
         {0, 1},
@@ -474,7 +473,7 @@ void RenderSystem::initGeometryBuffers()
         {2, 3},
         {3, 0}
     };
-    m_lineLoopGeometry = std::make_unique<Geometry>(m_renderer, quadVerts, loopSegments);
+    m_lineLoopGeometry = std::make_unique<Geometry>(*m_renderer, quadVerts, loopSegments);
 }
 
 void RenderSystem::initGuiRenderTargetResources()

@@ -8,18 +8,19 @@
 namespace crisp
 {
 class VulkanDevice;
-class VulkanPipelineLayout;
 
 class DescriptorSetAllocator
 {
 public:
-    DescriptorSetAllocator(VulkanDevice& device,
+    DescriptorSetAllocator(
+        VulkanDevice& device,
         const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings,
-        const std::vector<uint32_t>& numCopiesPerSet, VkDescriptorPoolCreateFlags flags = 0);
+        const std::vector<uint32_t>& numCopiesPerSet,
+        VkDescriptorPoolCreateFlags flags = 0);
     ~DescriptorSetAllocator();
 
-    VkDescriptorSet allocate(VkDescriptorSetLayout setLayout,
-        const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+    VkDescriptorSet allocate(
+        VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
 
     VulkanDevice& getDevice() const;
 
@@ -36,7 +37,9 @@ private:
         bool canAllocateSet(const std::vector<VkDescriptorSetLayoutBinding>& setBindings) const;
         void deductPoolSizes(const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
 
-        VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout setLayout,
+        VkDescriptorSet allocate(
+            VkDevice device,
+            VkDescriptorSetLayout setLayout,
             const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
     };
 

@@ -98,7 +98,7 @@ void Material::writeDescriptor(
         write.descriptorType = m_pipeline->getDescriptorType(setId, binding);
         write.descriptorCount = 1;
         m_device->postDescriptorWrite(
-            std::move(write), renderPass.getRenderTargetView(renderTargetIndex, i).getDescriptorInfo(sampler));
+            std::move(write), renderPass.getAttachmentView(renderTargetIndex, i).getDescriptorInfo(sampler));
     }
 }
 

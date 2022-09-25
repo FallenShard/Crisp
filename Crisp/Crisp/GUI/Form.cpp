@@ -2,8 +2,7 @@
 
 #include <iostream>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <Crisp/Common/Logger.hpp>
 
 #include <Crisp/Animation/PropertyAnimation.hpp>
 #include <Crisp/Gui/ControlGroup.hpp>
@@ -143,7 +142,7 @@ void Form::addToValidationList(Control* control)
 void Form::resize(int width, int height)
 {
     m_renderSystem->resize(width, height);
-    m_rootControlGroup->setSizeHint({ width, height });
+    m_rootControlGroup->setSizeHint({width, height});
 }
 
 void Form::setFocusedControl(Control* control)
@@ -219,7 +218,10 @@ void Form::validateControls()
 
 std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float /*duration*/)
 {
-    auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f,
+    auto anim = std::make_shared<PropertyAnimation<float>>(
+        0.3,
+        0.0f,
+        1.0f,
         [this, con = control.get()](const auto& t)
         {
             con->setOpacity(t);

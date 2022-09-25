@@ -138,6 +138,6 @@ detail::Unexpected<std::string> resultError(detail::LocationFormatString&& forma
         formatString.loc.function_name(),
         formatString.loc.line(),
         formatString.loc.column());
-    return detail::Unexpected<std::string>(fmt::format(formatString.str, std::forward<Args>(args)...));
+    return detail::Unexpected<std::string>(fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...));
 }
 } // namespace crisp

@@ -37,14 +37,13 @@ TriangleMesh::TriangleMesh(
     : m_positions(std::move(positions))
     , m_normals(std::move(normals))
     , m_texCoords(std::move(texCoords))
-    , m_interleavedFormat(std::move(vertexAttributes))
     , m_faces(std::move(faces))
 {
     m_views.emplace_back("", 0, static_cast<uint32_t>(m_faces.size() * 3));
 
     bool missingNormals = false;
     bool missingTangents = false;
-    for (const auto& attrib : m_interleavedFormat)
+    for (const auto& attrib : vertexAttributes)
     {
         if (attrib.type == VertexAttribute::Normal)
         {
@@ -94,11 +93,6 @@ uint32_t TriangleMesh::getVertexCount() const
     return static_cast<uint32_t>(m_positions.size());
 }
 
-InterleavedVertexBuffer TriangleMesh::interleave() const
-{
-    return interleave(m_interleavedFormat, false);
-}
-
 InterleavedVertexBuffer TriangleMesh::interleave(
     const std::vector<VertexAttributeDescriptor>& vertexAttribs, bool padToVec4) const
 {
@@ -136,6 +130,17 @@ InterleavedVertexBuffer TriangleMesh::interleave(
     }
 
     return interleavedBuffer;
+}
+
+std::vector<InterleavedVertexBuffer> TriangleMesh::interleave(
+    const std::vector<std::vector<VertexAttributeDescriptor>>& vertexAttribs, bool padToVec4) const
+{
+    std::vector<InterleavedVertexBuffer> buffers{};
+    for (const auto& attribGroup : vertexAttribs)
+    {
+        buffers.emplace_back(interleave(attribGroup, padToVec4));
+    }
+    return buffers;
 }
 
 std::vector<glm::vec3> TriangleMesh::computeVertexNormals(

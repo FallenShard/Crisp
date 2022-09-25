@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
@@ -13,14 +14,18 @@ class Renderer;
 class PipelineCache
 {
 public:
-    PipelineCache(Renderer* renderer);
+    PipelineCache(const AssetPaths& assetPaths);
 
     VulkanPipeline* loadPipeline(
-        const std::string& id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex);
+        Renderer* renderer,
+        const std::string& id,
+        std::string_view luaFilename,
+        const VulkanRenderPass& renderPass,
+        int subpassIndex);
 
     VulkanPipeline* getPipeline(const std::string& key) const;
 
-    void recreatePipelines();
+    void recreatePipelines(Renderer& renderer);
 
     inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout)
     {
@@ -28,7 +33,7 @@ public:
     }
 
 private:
-    Renderer* m_renderer;
+    AssetPaths m_assetPaths;
 
     struct PipelineInfo
     {
@@ -37,10 +42,8 @@ private:
         int subpassIndex;
     };
 
-    robin_hood::unordered_flat_map<std::string, PipelineInfo> m_pipelineInfos;
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
-
-    robin_hood::unordered_flat_map<VulkanPipelineLayout*, std::unique_ptr<DescriptorSetAllocator>>
-        m_descriptorAllocators;
+    FlatHashMap<std::string, PipelineInfo> m_pipelineInfos;
+    FlatHashMap<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
+    FlatHashMap<VulkanPipelineLayout*, std::unique_ptr<DescriptorSetAllocator>> m_descriptorAllocators;
 };
 } // namespace crisp
