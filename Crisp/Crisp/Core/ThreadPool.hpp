@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/ChromeProfiler.hpp>
+#include <Crisp/Utils/ChromeProfiler.hpp>
 
 #include <rigtorp/MPMCQueue.h>
 

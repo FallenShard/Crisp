@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <Crisp/BitFlags.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
 
 namespace crisp
 {

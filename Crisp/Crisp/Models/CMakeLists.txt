@@ -15,3 +15,8 @@ add_cpp_static_library(CrispModels
     "SPH.hpp")
 target_link_libraries(CrispModels
     PUBLIC CrispRenderer)
+
+add_cpp_test(CrispTest
+    "Test/TransmittanceLutTest.cpp")
+target_link_libraries(CrispTest PRIVATE CrispVulkanTestUtils CrispModels)
+copy_shared_libs(CrispTest vulkan lua freetype zlib)

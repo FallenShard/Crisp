@@ -4,8 +4,9 @@
 #include <Crisp/ShadingLanguage/Parser.hpp>
 #include <Crisp/ShadingLanguage/ShaderType.hpp>
 
-#include <Crisp/Enumerate.hpp>
 #include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/Utils/Enumerate.hpp>
+
 
 #include <Crisp/Common/Logger.hpp>
 

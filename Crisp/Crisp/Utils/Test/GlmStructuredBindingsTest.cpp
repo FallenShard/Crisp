@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <Crisp/GlmFormatters.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Utils/GlmFormatters.hpp>
 
 TEST(GlmStructuredBindingsTest, RValue)
 {

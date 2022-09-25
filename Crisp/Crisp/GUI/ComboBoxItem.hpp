@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Event.hpp>
+#include <Crisp/Core/Event.hpp>
 
 #include <Crisp/Animation/PropertyAnimation.hpp>
 

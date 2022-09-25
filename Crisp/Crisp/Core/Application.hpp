@@ -1,13 +1,12 @@
 #pragma once
 
 #include <Crisp/Core/ApplicationEnvironment.hpp>
+#include <Crisp/Core/Event.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/GUI/Form.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/SceneContainer.hpp>
-
-#include <Crisp/Event.hpp>
-#include <Crisp/Timer.hpp>
+#include <Crisp/Utils/Timer.hpp>
 
 #include <memory>
 

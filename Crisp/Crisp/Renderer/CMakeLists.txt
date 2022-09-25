@@ -98,3 +98,8 @@ target_link_libraries(CrispImageCache
 add_cpp_interface_library(CrispRendererConfig
     "RendererConfig.hpp"
 )
+
+add_cpp_test(CrispRendererTest
+    "Test/PipelineLayoutBuilderTest.cpp")
+target_link_libraries(CrispRendererTest PRIVATE CrispRenderer CrispVulkanTestUtils)
+copy_shared_libs(CrispRendererTest vulkan lua freetype zlib)

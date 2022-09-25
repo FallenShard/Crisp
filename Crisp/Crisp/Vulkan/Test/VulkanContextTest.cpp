@@ -1,4 +1,4 @@
-#include <Test/VulkanTests/VulkanTest.hpp>
+#include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 #include <Crisp/Core/Window.hpp>

@@ -10,5 +10,5 @@ add_cpp_static_library(CrispMesh
     "VertexAttributeTraits.hpp")
 target_link_libraries(CrispMesh
     PUBLIC CrispMath
-    PUBLIC spdlog
-    PUBLIC robin_hood)
+    PRIVATE CrispLogger
+    PUBLIC CrispHashMap)

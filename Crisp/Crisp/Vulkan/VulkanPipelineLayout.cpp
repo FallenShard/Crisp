@@ -4,7 +4,7 @@
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-#include <Crisp/Enumerate.hpp>
+#include <Crisp/Utils/Enumerate.hpp>
 
 namespace crisp
 {

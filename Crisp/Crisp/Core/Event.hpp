@@ -8,8 +8,8 @@
 #include <vector>
 
 #include <Crisp/Common/HashMap.hpp>
-#include <Crisp/ConnectionHandler.hpp>
-#include <Crisp/Delegate.hpp>
+#include <Crisp/Core/ConnectionHandler.hpp>
+#include <Crisp/Core/Delegate.hpp>
 
 namespace crisp
 {

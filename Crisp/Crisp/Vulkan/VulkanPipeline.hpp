@@ -5,7 +5,7 @@
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <Crisp/BitFlags.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
 
 #include <filesystem>
 

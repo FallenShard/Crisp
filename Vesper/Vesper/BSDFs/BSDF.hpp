@@ -2,10 +2,9 @@
 
 #include "Core/VariantMap.hpp"
 #include "Textures/Texture.hpp"
-#include <Crisp/BitFlags.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
-
+#include <Crisp/Utils/BitFlags.hpp>
 
 namespace crisp
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/BitFlags.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
 namespace crisp

@@ -6,7 +6,7 @@
 #include <Crisp/vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/vulkan/VulkanImage.hpp>
 
-#include <Crisp/Enumerate.hpp>
+#include <Crisp/Utils/Enumerate.hpp>
 
 namespace crisp
 {

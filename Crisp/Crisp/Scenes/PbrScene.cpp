@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Camera/TargetCameraController.hpp>
@@ -39,13 +39,13 @@
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/GlmFormatters.hpp>
 #include <Crisp/IO/GltfReader.hpp>
 #include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Utils/GlmFormatters.hpp>
 
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Profiler.hpp>
+#include <Crisp/Utils/Profiler.hpp>
 
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>

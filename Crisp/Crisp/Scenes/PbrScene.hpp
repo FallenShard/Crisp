@@ -5,7 +5,7 @@
 #include <Crisp/Scenes/Scene.hpp>
 
 #include <Crisp/Common/HashMap.hpp>
-#include <Crisp/ConnectionHandler.hpp>
+#include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 namespace crisp

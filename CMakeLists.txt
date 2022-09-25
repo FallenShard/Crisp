@@ -99,7 +99,6 @@ FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG        v1.10.0
 )
-set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 FetchContent_Declare(googletest
@@ -150,14 +149,12 @@ FetchContent_MakeAvailable(embree)
 # List all used third-party libraries
 add_subdirectory(Externals/lua)
 add_subdirectory(Externals/stb)
-# add_subdirectory(Externals/fmt)
 add_subdirectory(Externals/vulkan)
 add_subdirectory(Externals/tinyexr)
 add_subdirectory(Externals/rapidxml)
 add_subdirectory(Externals/freetype)
 add_subdirectory(Externals/gzip)
 add_subdirectory(Externals/zlib)
-# add_subdirectory(Externals/spdlog)
 
 add_subdirectory(Crisp)
 

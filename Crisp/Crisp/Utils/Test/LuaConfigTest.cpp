@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "Crisp/LuaConfig.hpp"
+#include "Crisp/Utils/LuaConfig.hpp"
 
 namespace
 {

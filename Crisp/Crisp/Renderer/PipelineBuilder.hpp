@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <Crisp/BitFlags.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 

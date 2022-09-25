@@ -1,9 +1,10 @@
 #pragma once
 
+#include <Crisp/Core/Event.hpp>
 #include <Crisp/Core/Keyboard.hpp>
 #include <Crisp/Core/Mouse.hpp>
-#include <Crisp/Event.hpp>
 #include <Crisp/Math/Headers.hpp>
+
 
 #include <vulkan/vulkan.h>
 

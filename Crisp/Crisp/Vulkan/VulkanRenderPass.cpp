@@ -8,7 +8,7 @@
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
 #include <Crisp/Common/Checks.hpp>
-#include <Crisp/Enumerate.hpp>
+#include <Crisp/Utils/Enumerate.hpp>
 
 namespace crisp
 {

@@ -14,17 +14,17 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {}
 
 void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage) const
 {
-    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = commandBufferUsage;
     beginInfo.pInheritanceInfo = nullptr;
 
     vkBeginCommandBuffer(m_handle, &beginInfo);
 }
 
-void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage,
-    const VkCommandBufferInheritanceInfo* inheritance) const
+void VulkanCommandBuffer::begin(
+    VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance) const
 {
-    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = commandBufferUsage;
     beginInfo.pInheritanceInfo = inheritance;
 
@@ -36,10 +36,10 @@ void VulkanCommandBuffer::end() const
     vkEndCommandBuffer(m_handle);
 }
 
-void VulkanCommandBuffer::transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex,
-    uint32_t dstQueueFamilyIndex) const
+void VulkanCommandBuffer::transferOwnership(
+    VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const
 {
-    VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+    VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     barrier.buffer = buffer;
     barrier.offset = 0;
     barrier.size = VK_WHOLE_SIZE;
@@ -47,14 +47,27 @@ void VulkanCommandBuffer::transferOwnership(VkBuffer buffer, uint32_t srcQueueFa
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
     barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
-    vkCmdPipelineBarrier(m_handle, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-        nullptr, 1, &barrier, 0, nullptr);
+    vkCmdPipelineBarrier(
+        m_handle,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0,
+        0,
+        nullptr,
+        1,
+        &barrier,
+        0,
+        nullptr);
 }
 
-void VulkanCommandBuffer::insertBufferMemoryBarrier(const VulkanBufferSpan& bufferSpan, VkPipelineStageFlags srcStage,
-    VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const
+void VulkanCommandBuffer::insertBufferMemoryBarrier(
+    const VulkanBufferSpan& bufferSpan,
+    VkPipelineStageFlags srcStage,
+    VkAccessFlags srcAccess,
+    VkPipelineStageFlags dstStage,
+    VkAccessFlags dstAccess) const
 {
-    VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+    VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     barrier.buffer = bufferSpan.handle;
     barrier.offset = bufferSpan.offset;
     barrier.size = bufferSpan.size;
@@ -63,21 +76,30 @@ void VulkanCommandBuffer::insertBufferMemoryBarrier(const VulkanBufferSpan& buff
     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 }
 
-void VulkanCommandBuffer::insertBufferMemoryBarrier(const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage,
-    VkPipelineStageFlags dstStage) const
+void VulkanCommandBuffer::insertBufferMemoryBarrier(
+    const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
 {
     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 }
 
-void VulkanCommandBuffer::insertBufferMemoryBarriers(std::span<VkBufferMemoryBarrier> barriers,
-    VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
+void VulkanCommandBuffer::insertBufferMemoryBarriers(
+    std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
 {
-    vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()),
-        barriers.data(), 0, nullptr);
+    vkCmdPipelineBarrier(
+        m_handle,
+        srcStage,
+        dstStage,
+        0,
+        0,
+        nullptr,
+        static_cast<uint32_t>(barriers.size()),
+        barriers.data(),
+        0,
+        nullptr);
 }
 
-void VulkanCommandBuffer::insertImageMemoryBarrier(const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage,
-    VkPipelineStageFlags dstStage) const
+void VulkanCommandBuffer::insertImageMemoryBarrier(
+    const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
 {
     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
@@ -105,7 +127,7 @@ void VulkanCommandBuffer::executeSecondaryBuffers(const std::vector<VkCommandBuf
 
 void VulkanCommandBuffer::updateBuffer(const VulkanBufferSpan& bufferSpan, const MemoryRegion& memoryRegion) const
 {
-    vkCmdUpdateBuffer(m_handle, bufferSpan.handle, bufferSpan.offset, bufferSpan.size, memoryRegion.getPtr());
+    vkCmdUpdateBuffer(m_handle, bufferSpan.handle, bufferSpan.offset, bufferSpan.size, memoryRegion.ptr);
 }
 
 void VulkanCommandBuffer::copyBuffer(const VulkanBufferSpan& srcBufferSpan, VkBuffer dstBuffer) const

@@ -21,7 +21,7 @@
 #include <Crisp/GUI/Panel.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <Crisp/Common/Logger.hpp>
 

@@ -5,8 +5,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <Crisp/Common/Logger.hpp>
-
 namespace crisp
 {
 std::vector<std::string> enumerateFiles(const std::filesystem::path& directory, const std::string& extension)

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Crisp/BitFlags.hpp>
 #include <Crisp/Math/Ray.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
+
 
 #include "Core/VariantMap.hpp"
 #include <Crisp/Spectra/Spectrum.hpp>

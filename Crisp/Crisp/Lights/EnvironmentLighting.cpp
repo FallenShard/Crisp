@@ -6,9 +6,9 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
-#include <Crisp/Coroutines/Task.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Utils/Task.hpp>
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>

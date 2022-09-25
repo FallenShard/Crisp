@@ -29,12 +29,16 @@ add_cpp_static_library(CrispApplicationEnvironment
     "CommandLineParser.hpp")
 target_link_libraries(CrispApplicationEnvironment
     PUBLIC CrispUtils
-    PUBLIC CrispLogger
+    PRIVATE CrispLogger
     PUBLIC CrispHashMap
     PUBLIC CrispStringUtils
     PUBLIC glfw
     PUBLIC vulkan)
 
+add_cpp_test(CrispApplicationEnvironmentTest
+    "Test/CommandLineParserTest.cpp")
+target_link_libraries(CrispApplicationEnvironmentTest PRIVATE CrispApplicationEnvironment)
+copy_shared_libs(CrispApplicationEnvironmentTest vulkan)
 
 add_cpp_static_library(CrispApplication
     "Application.cpp"
@@ -57,3 +61,16 @@ add_cpp_interface_library(CrispCoreUtils
 target_link_libraries(CrispCoreUtils
     INTERFACE CrispUtils
     INTERFACE MPMCQueue)
+
+add_cpp_interface_library(CrispEvent
+    "Event.hpp"
+    "Delegate.hpp"
+    "ConnectionHandler.hpp"
+)
+target_link_libraries(CrispEvent
+    INTERFACE CrispHashMap)
+
+add_cpp_test(CrispEventTest
+    "Test/DelegateTest.cpp"
+    "Test/EventTest.cpp")
+target_link_libraries(CrispEventTest PRIVATE CrispEvent)

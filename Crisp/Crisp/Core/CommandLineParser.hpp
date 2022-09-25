@@ -2,7 +2,7 @@
 
 #include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Common/Result.hpp>
-#include <Crisp/StringUtils.hpp>
+#include <Crisp/Utils/StringUtils.hpp>
 
 #include <any>
 #include <charconv>

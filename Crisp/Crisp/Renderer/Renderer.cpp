@@ -18,9 +18,10 @@
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
-#include <Crisp/ChromeProfiler.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Utils/ChromeProfiler.hpp>
+
 
 #include <Crisp/Common/Logger.hpp>
 

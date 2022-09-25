@@ -21,3 +21,7 @@ target_link_libraries(CrispGlslUtils
     PUBLIC CrispFileUtils
     PUBLIC CrispUtils
     PUBLIC vulkan)
+
+add_cpp_test(CrispGlslUtilsTest
+    "Test/LexerTest.cpp")
+target_link_libraries(CrispGlslUtilsTest PRIVATE CrispGlslUtils)

@@ -41,8 +41,8 @@
 #include <Crisp/Models/Grass.hpp>
 #include <Crisp/Models/Skybox.hpp>
 
-#include <Crisp/LuaConfig.hpp>
 #include <Crisp/Math/Constants.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <random>
 #include <thread>
@@ -51,8 +51,8 @@
 #include <Crisp/Lights/LightSystem.hpp>
 
 #include <Crisp/IO/MeshLoader.hpp>
-#include <Crisp/Profiler.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
+#include <Crisp/Utils/Profiler.hpp>
 
 #include <Crisp/Common/Logger.hpp>
 

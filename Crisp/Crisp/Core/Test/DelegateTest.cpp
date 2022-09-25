@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "../Crisp/Crisp/Delegate.hpp"
+#include "../Crisp/Crisp/Core/Delegate.hpp"
 
 using namespace crisp;
 

@@ -3,7 +3,6 @@
 #include <Crisp/Vulkan/VulkanBufferView.hpp>
 
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/MemoryRegion.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -14,6 +13,12 @@ namespace crisp
 {
 class VulkanDevice;
 class VulkanCommandPool;
+
+struct MemoryRegion
+{
+    void* ptr;
+    size_t size;
+};
 
 class VulkanCommandBuffer
 {

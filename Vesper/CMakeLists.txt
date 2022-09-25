@@ -129,7 +129,7 @@ add_cpp_static_library(Vesper
 target_link_libraries(Vesper
     PUBLIC CrispMath
     PUBLIC CrispFormat
-    PUBLIC spdlog
+    PRIVATE CrispLogger
     PUBLIC CrispHashMap
     PUBLIC CrispSpectrum
     PUBLIC CrispOptics
@@ -137,5 +137,5 @@ target_link_libraries(Vesper
     PUBLIC embree
     PUBLIC tinyexr
     PUBLIC rapidxml)
-target_include_directories(Vesper PRIVATE ".")
-target_include_directories(Vesper PRIVATE "./Vesper")
+target_include_directories(Vesper PUBLIC ".")
+target_include_directories(Vesper PUBLIC "./Vesper")

@@ -18,5 +18,5 @@ target_link_libraries(CrispLights
     PUBLIC CrispRenderer
     PUBLIC CrispGeometry
     PUBLIC CrispUtils
-    PUBLIC spdlog
+    PRIVATE CrispLogger
     PUBLIC robin_hood)

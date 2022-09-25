@@ -10,3 +10,8 @@ target_link_libraries(CrispCamera
     PUBLIC CrispHashMap
     PUBLIC CrispEvent
     PUBLIC CrispWindow)
+
+add_cpp_test(CrispCameraTest
+    "Test/CameraTest.cpp"
+    "Test/FreeCameraControllerTest.cpp")
+target_link_libraries(CrispCameraTest PRIVATE CrispCamera)

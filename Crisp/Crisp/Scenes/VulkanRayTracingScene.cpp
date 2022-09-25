@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 
@@ -39,7 +39,7 @@
 #include <Crisp/GUI/Slider.hpp>
 
 #include <Crisp/Math/Constants.hpp>
-#include <Crisp/Profiler.hpp>
+#include <Crisp/Utils/Profiler.hpp>
 
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 

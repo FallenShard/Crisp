@@ -8,10 +8,10 @@ add_cpp_static_library(CrispImageIo
 target_link_libraries(CrispImageIo
     PUBLIC CrispResult
     PUBLIC CrispImage
+    PRIVATE CrispLogger
     PRIVATE CrispFormat
     PRIVATE tinyexr
-    PRIVATE stb
-    PRIVATE spdlog)
+    PRIVATE stb)
 
 
 add_cpp_static_library(CrispMeshIo
@@ -25,15 +25,18 @@ add_cpp_static_library(CrispMeshIo
     "WavefrontObjReader.hpp")
 target_link_libraries(CrispMeshIo
     PUBLIC CrispResult
-    PUBLIC CrispLogger
     PUBLIC CrispHashMap
     PUBLIC CrispMaterial
     PUBLIC CrispMesh
+    PRIVATE CrispLogger
     PRIVATE CrispStringUtils
     PRIVATE CrispImageIo
     PRIVATE tinygltf
     PRIVATE gzip
     PRIVATE zlib)
+add_cpp_test(CrispMeshIoTest
+    "Test/WavefrontObjTest.cpp")
+target_link_libraries(CrispMeshIoTest PRIVATE CrispMeshIo)
 
 
 add_cpp_static_library(CrispFileUtils
@@ -41,8 +44,7 @@ add_cpp_static_library(CrispFileUtils
     "FileUtils.hpp")
 target_link_libraries(CrispFileUtils
     PUBLIC CrispResult
-    PUBLIC CrispFormat
-    PRIVATE spdlog)
+    PUBLIC CrispFormat)
 
 
 add_cpp_static_library(CrispFontIo
@@ -50,4 +52,4 @@ add_cpp_static_library(CrispFontIo
     "FontLoader.hpp")
 target_link_libraries(CrispFontIo
     PUBLIC freetype
-    PRIVATE spdlog)
+    PRIVATE CrispLogger)

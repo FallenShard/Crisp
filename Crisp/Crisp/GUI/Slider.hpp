@@ -5,7 +5,7 @@
 #include <sstream>
 #include <vector>
 
-#include <Crisp/Event.hpp>
+#include <Crisp/Core/Event.hpp>
 
 #include "Control.hpp"
 #include "Form.hpp"

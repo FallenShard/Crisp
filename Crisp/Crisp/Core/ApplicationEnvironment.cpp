@@ -1,8 +1,8 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
-#include <Crisp/ChromeProfiler.hpp>
 #include <Crisp/Common/Logger.hpp>
-#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Utils/ChromeProfiler.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>

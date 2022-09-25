@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/LuaConfig.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 
