@@ -210,7 +210,7 @@ bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<std::strin
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
     VK_CHECK(vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, availableExtensions.data()));
 
-    robin_hood::unordered_set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+    FlatHashSet<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
     for (const auto& ext : availableExtensions)
         requiredExtensions.erase(ext.extensionName);
 
