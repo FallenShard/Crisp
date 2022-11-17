@@ -72,6 +72,11 @@ public:
         return std::move(*m_value);
     }
 
+    constexpr T extract()
+    {
+        return std::move(*m_value);
+    }
+
     constexpr std::string getError()
     {
         if (!m_error)
@@ -84,6 +89,11 @@ public:
     }
 
     constexpr bool hasValue() const
+    {
+        return m_value.has_value();
+    }
+
+    constexpr operator bool() const
     {
         return m_value.has_value();
     }
