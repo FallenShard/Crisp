@@ -4,7 +4,7 @@
 
 TEST(CommandLineParserTest, Basic)
 {
-    const char* argLine = "Program123 width 443 path some_directive height=23";
+    const char* argLine = "Program123 width 443 --path some_directive height=23";
 
     int32_t width = 0;
     int16_t height = 0;

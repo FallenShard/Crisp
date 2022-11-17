@@ -1,8 +1,8 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
 #include <Crisp/Common/Logger.hpp>
+#include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
@@ -51,13 +51,12 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     if (glfwInit() == GLFW_FALSE)
     {
         logger->critical("Could not initialize GLFW library!\n");
-        std::exit(-1);
+        std::terminate();
     }
 
-    LuaConfig lua;
-    lua.openFile(m_arguments.configPath);
-    m_resourcesPath = lua.get<std::string>("resourcesPath").value();
-    m_shaderSourcesPath = lua.get<std::string>("shaderSourcesPath").value();
+    const auto json{loadJsonFromFile(m_arguments.configPath).unwrap()};
+    m_resourcesPath = json["resourcesPath"].get<std::string>();
+    m_shaderSourcesPath = json["shaderSourcesPath"].get<std::string>();
 }
 
 ApplicationEnvironment::~ApplicationEnvironment()

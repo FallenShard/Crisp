@@ -30,9 +30,8 @@ Result<> CommandLineParser::parse(const std::vector<std::string_view>& tokens)
         // Found a case of 'variable=value'
         if (const std::size_t pos = tokens[i].find('='); pos != std::string_view::npos)
         {
-            const std::string_view name = tokens[i].substr(0, pos);
-            const auto iter = m_argMap.find(std::string(name));
-            if (iter != m_argMap.end())
+            const std::string_view name = tokens[i].substr(0, pos).substr(tokens[i].find_first_not_of('-'));
+            if (const auto iter = m_argMap.find(std::string(name)); iter != m_argMap.end())
             {
                 iter->second.parser(tokens[i].substr(pos + 1));
                 iter->second.parsed = true;
@@ -47,8 +46,8 @@ Result<> CommandLineParser::parse(const std::vector<std::string_view>& tokens)
                 break;
             }
 
-            const auto iter = m_argMap.find(std::string(tokens[i]));
-            if (iter != m_argMap.end())
+            const std::string_view name = tokens[i].substr(tokens[i].find_first_not_of('-'));
+            if (const auto iter = m_argMap.find(std::string(name)); iter != m_argMap.end())
             {
                 iter->second.parser(tokens[i + 1]);
                 iter->second.parsed = true;
