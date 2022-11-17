@@ -50,5 +50,5 @@ inline void doAssert(const VkResult result, LocationFormatString&& formatString)
 #define VK_CHECK(expr, ...) crisp::detail::doAssert(expr, #expr __VA_OPT__(,) __VA_ARGS__)
 // clang-format on
 #else
-#define VK_CHECK(expr, ...)
+#define VK_CHECK(expr, ...) expr
 #endif
