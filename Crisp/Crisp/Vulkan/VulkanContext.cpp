@@ -54,7 +54,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     if (!validationLayersEnabled)
         return {};
 
-    uint32_t layerCount;
+    uint32_t layerCount{0};
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
 
     std::vector<VkLayerProperties> availableLayers(layerCount);
