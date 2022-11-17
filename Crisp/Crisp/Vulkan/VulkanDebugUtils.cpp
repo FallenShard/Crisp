@@ -1,7 +1,5 @@
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 
-#include <Crisp/Common/Logger.hpp>
-
 namespace crisp
 {
 namespace
@@ -41,6 +39,14 @@ VkBool32 debugMessengerCallback(
 
     return VK_FALSE;
 }
+
+bool debugMarkerPointersRetrieved{false};
+PFN_vkSetDebugUtilsObjectTagEXT vkSetDebugUtilsObjectTag;
+PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectName;
+PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabel;
+PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabel;
+PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabel;
+
 } // namespace
 
 VkResult CreateDebugUtilsMessengerEXT(
@@ -84,4 +90,34 @@ VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
     CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
     return callback;
 }
+
+VulkanDebugMarker::VulkanDebugMarker(const VkDevice device)
+    : m_device(device)
+{
+    if (!debugMarkerPointersRetrieved)
+    {
+        vkSetDebugUtilsObjectTag =
+            (PFN_vkSetDebugUtilsObjectTagEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectTagEXT");
+        vkSetDebugUtilsObjectName =
+            (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
+        vkCmdBeginDebugUtilsLabel =
+            (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
+        vkCmdEndDebugUtilsLabel =
+            (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
+        vkCmdInsertDebugUtilsLabel =
+            (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
+        debugMarkerPointersRetrieved = true;
+    }
+}
+
+void VulkanDebugMarker::setObjectName(
+    const uint64_t vulkanHandle, const char* name, const VkObjectType objectType) const
+{
+    VkDebugUtilsObjectNameInfoEXT nameInfo{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+    nameInfo.objectType = objectType;
+    nameInfo.objectHandle = vulkanHandle;
+    nameInfo.pObjectName = name;
+    vkSetDebugUtilsObjectName(m_device, &nameInfo);
+}
+
 } // namespace crisp
