@@ -35,11 +35,11 @@ struct PbrMaterial
 
 Image createDefaultAlbedoMap(const std::array<uint8_t, 4>& color = {255, 0, 255, 255});
 Image createDefaultNormalMap();
-Image createDefaultMetallicMap(float metallic = 0.0f);
-Image createDefaultRoughnessMap(float roughness = 0.125f);
+Image createDefaultMetallicMap(float metallic = 1.0f);
+Image createDefaultRoughnessMap(float roughness = 1.0f);
 Image createDefaultAmbientOcclusionMap();
 Image createDefaultEmissiveMap();
 
-PbrTextureGroup createDefaultTextureGroup();
+PbrTextureGroup createDefaultPbrTextureGroup();
 
 } // namespace crisp

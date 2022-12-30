@@ -54,15 +54,10 @@ private:
 
     void updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx);
 
-    Renderer* m_renderer;
-    Application* m_app;
-
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    std::unique_ptr<RenderGraph> m_renderGraph;
-    std::unique_ptr<ResourceContext> m_resourceContext;
     robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;

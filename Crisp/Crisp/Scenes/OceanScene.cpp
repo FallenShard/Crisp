@@ -187,10 +187,7 @@ bool paused = false;
 } // namespace
 
 OceanScene::OceanScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
-    , m_renderGraph(std::make_unique<RenderGraph>(renderer))
+    : AbstractScene(app, renderer)
 {
     m_app->getWindow()->keyPressed += [this](Key key, int /*modifiers*/)
     {

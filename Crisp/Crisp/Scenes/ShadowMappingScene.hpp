@@ -35,7 +35,6 @@ struct PbrUnifMaterial
     float roughness;
 };
 
-class Application;
 class FreeCameraController;
 
 class TransformBuffer;
@@ -49,8 +48,6 @@ class VarianceShadowMapPass;
 
 class VulkanImageView;
 
-class Renderer;
-class RenderGraph;
 struct RenderNode;
 
 class VulkanDevice;
@@ -61,8 +58,6 @@ class Skybox;
 
 class Grass;
 class RayTracingMaterial;
-
-class ResourceContext;
 
 class ShadowMappingScene : public AbstractScene
 {
@@ -100,9 +95,6 @@ private:
 
     void setupInput();
 
-    Renderer* m_renderer;
-    Application* m_app;
-
     std::unique_ptr<FreeCameraController> m_cameraController;
 
     std::unique_ptr<LightSystem> m_lightSystem;
@@ -112,8 +104,6 @@ private:
     std::unique_ptr<ShadowMapper> m_shadowMapper;
 
     robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
-
-    std::unique_ptr<ResourceContext> m_resourceContext;
 
     std::vector<ManyLightDescriptor> m_manyLights;
     std::unique_ptr<UniformBuffer> m_manyLightsBuffer;
@@ -125,8 +115,6 @@ private:
     std::vector<std::unique_ptr<VulkanImageView>> m_lightGridViews;
 
     PbrUnifMaterial m_pbrUnifMaterial;
-
-    std::unique_ptr<RenderGraph> m_renderGraph;
 
     std::unordered_map<std::string, std::unique_ptr<VulkanBuffer>> m_computeBuffers;
 

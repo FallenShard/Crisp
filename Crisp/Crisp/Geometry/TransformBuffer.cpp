@@ -8,9 +8,10 @@
 namespace crisp
 {
 TransformBuffer::TransformBuffer(Renderer* renderer, std::size_t numObjects)
-    : m_transforms(numObjects)
-    , m_transformBuffer(std::make_unique<UniformBuffer>(renderer, m_transforms.size() * sizeof(TransformPack),
-          BufferUpdatePolicy::PerFrame))
+    : m_activeTransforms(0)
+    , m_transforms(numObjects)
+    , m_transformBuffer(std::make_unique<UniformBuffer>(
+          renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame))
 {
 }
 
@@ -31,9 +32,10 @@ TransformPack* TransformBuffer::getPack(int index)
 
 void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P)
 {
-    if (m_transforms.size() > 500)
+    if (m_activeTransforms > 500)
     {
-        m_threadPool.parallelFor(m_transforms.size(),
+        m_threadPool.parallelFor(
+            m_activeTransforms,
             [this, &V, &P](std::size_t i, std::size_t /*jobIdx*/)
             {
                 auto& trans = m_transforms[i];
@@ -44,14 +46,15 @@ void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P)
     }
     else
     {
-        for (auto& trans : m_transforms)
+        for (uint32_t i = 0; i < m_activeTransforms; ++i)
         {
+            auto& trans = m_transforms[i];
             trans.MV = V * trans.M;
             trans.MVP = P * trans.MV;
             trans.N = glm::transpose(glm::inverse(glm::mat3(trans.MV)));
         }
     }
 
-    m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_transforms.size() * sizeof(TransformPack));
+    m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_activeTransforms * sizeof(TransformPack));
 }
 } // namespace crisp

@@ -18,4 +18,10 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const VulkanRenderPass& renderPass,
     uint32_t subpassIndex = 0);
 
+Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJsonPath(
+    const std::filesystem::path& path,
+    Renderer& renderer,
+    const VulkanRenderPass& renderPass,
+    uint32_t subpassIndex = 0);
+
 } // namespace crisp

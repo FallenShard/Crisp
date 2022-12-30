@@ -80,6 +80,7 @@ target_link_libraries(CrispRenderer
     PUBLIC CrispResult
     PUBLIC CrispCoreUtils
     PUBLIC CrispRendererConfig
+    PUBLIC CrispFrameContext
     PUBLIC tbb
     PRIVATE CrispFileUtils
     PUBLIC CrispGlslUtils
@@ -93,6 +94,13 @@ add_cpp_static_library(CrispImageCache
 target_link_libraries(CrispImageCache
     PUBLIC CrispVulkan
     PRIVATE CrispRenderer
+)
+
+add_cpp_interface_library(CrispFrameContext
+    "FrameContext.hpp"
+)
+target_link_libraries(CrispFrameContext
+    INTERFACE CrispVulkan
 )
 
 add_cpp_interface_library(CrispRendererConfig

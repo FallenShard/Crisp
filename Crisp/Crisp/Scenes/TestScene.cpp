@@ -2,23 +2,16 @@
 
 namespace crisp
 {
-    TestScene::TestScene(Renderer* /*renderer*/, Application* /*app*/)
-    {
-    }
-
-    TestScene::~TestScene()
-    {
-    }
-
-    void TestScene::resize(int /*width*/, int /*height*/)
-    {
-    }
-
-    void TestScene::update(float /*dt*/)
-    {
-    }
-
-    void TestScene::render()
-    {
-    }
+TestScene::TestScene(Renderer* renderer, Application* app)
+    : AbstractScene(app, renderer)
+{
 }
+
+TestScene::~TestScene() {}
+
+void TestScene::resize(int /*width*/, int /*height*/) {}
+
+void TestScene::update(float /*dt*/) {}
+
+void TestScene::render() {}
+} // namespace crisp

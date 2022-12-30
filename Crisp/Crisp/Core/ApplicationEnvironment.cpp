@@ -43,7 +43,7 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     m_arguments = std::move(parameters);
     ChromeProfiler::setThreadName("Main Thread");
 
-    spdlog::set_pattern("%^[%T.%e][%n][%l][Tid: %t]:%$ %v");
+    spdlog::set_pattern("%^[%T.%e][%n][%l][%t]:%$ %v");
     setSpdlogLevel(m_arguments.logLevel);
     logger->info("Current path: {}", std::filesystem::current_path().string());
 

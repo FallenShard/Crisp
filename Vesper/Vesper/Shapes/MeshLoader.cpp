@@ -1,6 +1,6 @@
 #include <Vesper/Shapes/MeshLoader.hpp>
 
-#include <Crisp/IO/WavefrontObjReader.hpp>
+#include <Crisp/Mesh/Io/WavefrontObjReader.hpp>
 
 #include <Crisp/Common/Logger.hpp>
 

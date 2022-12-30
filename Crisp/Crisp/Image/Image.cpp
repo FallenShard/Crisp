@@ -32,6 +32,69 @@ Image Image::createFromChannel(uint32_t channelIndex) const
     return Image(std::move(pixelData), m_width, m_height, dstChannelCount, channelByteSize);
 }
 
+Image Image::createSubImage(uint32_t row, uint32_t col, uint32_t width, uint32_t height) const
+{
+    std::vector<uint8_t> subImagePixelData(width * height * m_pixelByteSize);
+    for (uint32_t i = row; i < row + height; ++i)
+    {
+        for (uint32_t j = col; j < col + width; ++j)
+        {
+            const uint8_t* srcStart = &m_data.at((i * m_width + j) * m_pixelByteSize);
+            uint8_t* dstStart = &subImagePixelData.at(((i - row) * width + j - col) * m_pixelByteSize);
+            std::memcpy(dstStart, srcStart, m_pixelByteSize);
+        }
+    }
+    return Image(std::move(subImagePixelData), width, height, m_channelCount, m_pixelByteSize);
+}
+
+void Image::transpose()
+{
+    for (uint32_t i = 0; i < m_height; ++i)
+    {
+        for (uint32_t j = i + 1; j < m_width; ++j)
+        {
+            for (uint32_t k = 0; k < m_pixelByteSize; ++k)
+            {
+                std::swap(
+                    m_data.at((i * m_width + j) * m_pixelByteSize + k),
+                    m_data.at((j * m_width + i) * m_pixelByteSize + k));
+            }
+        }
+    }
+}
+
+void Image::mirrorX()
+{
+    for (uint32_t i = 0; i < m_height; ++i)
+    {
+        for (uint32_t j = 0; j < m_width / 2; ++j)
+        {
+            for (uint32_t k = 0; k < m_pixelByteSize; ++k)
+            {
+                std::swap(
+                    m_data.at((i * m_width + j) * m_pixelByteSize + k),
+                    m_data.at((i * m_width + m_width - 1 - j) * m_pixelByteSize + k));
+            }
+        }
+    }
+}
+
+void Image::mirrorY()
+{
+    for (uint32_t i = 0; i < m_height / 2; ++i)
+    {
+        for (uint32_t j = 0; j < m_width; ++j)
+        {
+            for (uint32_t k = 0; k < m_pixelByteSize; ++k)
+            {
+                std::swap(
+                    m_data.at((i * m_width + j) * m_pixelByteSize + k),
+                    m_data.at(((m_height - 1 - i) * m_width + j) * m_pixelByteSize + k));
+            }
+        }
+    }
+}
+
 uint32_t Image::getWidth() const
 {
     return m_width;

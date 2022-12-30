@@ -46,7 +46,7 @@
 #include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 #include <Crisp/Vulkan/VulkanGetDeviceProc.hpp>
 
-#include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 
 #include <random>
 
@@ -74,9 +74,7 @@ inline void initializeRayTracingApi(VkDevice device)
 } // namespace
 
 VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
+    : AbstractScene(app, renderer)
 {
     setupInput();
 

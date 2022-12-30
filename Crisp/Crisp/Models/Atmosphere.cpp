@@ -250,7 +250,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     // Transmittance lookup
     auto transLutNode = createPostProcessingRenderNode2(
-        TransmittanceLutPass, createTransmittanceLutPass(renderer.getDevice(), renderTargetCache), "SkyTransLut.lua");
+        TransmittanceLutPass, createTransmittanceLutPass(renderer.getDevice(), renderTargetCache), "SkyTransLut.json");
     transLutNode->pass(TransmittanceLutPass)
         .material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
 
@@ -322,7 +322,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     // Sky View LUT
     auto skyViewLutPipeline =
-        resourceContext.createPipeline("skyViewLut", "SkyViewLut.lua", renderGraph.getRenderPass(SkyViewLutPass), 0);
+        resourceContext.createPipeline("skyViewLut", "SkyViewLut.json", renderGraph.getRenderPass(SkyViewLutPass), 0);
     auto skyViewLutMaterial = resourceContext.createMaterial("skyViewLut", skyViewLutPipeline);
     skyViewLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
     skyViewLutMaterial->writeDescriptor(
@@ -335,7 +335,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         renderGraph.addRenderPass(ViewVolumePass, createSkyVolumePass(device, renderTargetCache));
         renderGraph.addDependency(SkyViewLutPass, ViewVolumePass, 0);
         auto pipeline = resourceContext.createPipeline(
-            "skyCameraVolumes", "SkyCameraVolumes.lua", renderGraph.getRenderPass(ViewVolumePass), 0);
+            "skyCameraVolumes", "SkyCameraVolumes.json", renderGraph.getRenderPass(ViewVolumePass), 0);
         auto material = resourceContext.createMaterial("skyCameraVolumes", pipeline);
         material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
         material->writeDescriptor(
@@ -365,7 +365,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         renderGraph.addDependency(ViewVolumePass, RayMarchingPass, 0);
         renderGraph.addDependency(DepthPrePass, RayMarchingPass, 0);
         auto pipeline = resourceContext.createPipeline(
-            "rayMarching", "SkyRayMarching.lua", renderGraph.getRenderPass(RayMarchingPass), 0);
+            "rayMarching", "SkyRayMarching.json", renderGraph.getRenderPass(RayMarchingPass), 0);
         auto material = resourceContext.createMaterial("rayMarching", pipeline);
         material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
         material->writeDescriptor(

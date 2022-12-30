@@ -21,13 +21,21 @@ struct NumChannels<VK_FORMAT_R32G32B32A32_SFLOAT>
     static constexpr uint32_t value = 4;
 };
 
-static constexpr uint32_t getNumChannels(VkFormat format)
+inline consteval uint32_t getNumChannels(VkFormat format)
 {
     switch (format)
     {
     case VK_FORMAT_R32G32B32A32_SFLOAT:
         return 4;
+    case VK_FORMAT_R8G8B8A8_SRGB:
+        return 4;
+    case VK_FORMAT_R8G8B8A8_UNORM:
+        return 4;
+    case VK_FORMAT_R8_UNORM:
+        return 1;
+
     default:
+        std::terminate();
         return 0;
     }
 }

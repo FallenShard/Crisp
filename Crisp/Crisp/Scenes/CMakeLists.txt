@@ -17,6 +17,7 @@ add_cpp_static_library(CrispScenes
     "RaytracedImage.hpp"
     "RayTracerScene.cpp"
     "RayTracerScene.hpp"
+    "Scene.cpp"
     "Scene.hpp"
     "ShadowMappingScene.cpp"
     "ShadowMappingScene.hpp"
@@ -33,5 +34,6 @@ target_link_libraries(CrispScenes
     PUBLIC CrispModels
     PUBLIC CrispMeshIo
     PUBLIC CrispMaterialUtils
+    PUBLIC CrispJsonUtils
     PUBLIC Vesper
     PRIVATE CrispApplication)

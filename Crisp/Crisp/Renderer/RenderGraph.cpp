@@ -13,7 +13,6 @@
 #include <Crisp/Utils/ChromeProfiler.hpp>
 #include <Crisp/Utils/Enumerate.hpp>
 
-
 #include <exception>
 #include <stack>
 #include <string_view>
@@ -102,7 +101,7 @@ void RenderGraph::addDependency(
         dstNode && dstNode->type == NodeType::Compute ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
                                                       : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
 
-    // We take the attachment aspect to determine if we are transitionin depth or color target.
+    // We take the attachment aspect to determine if we are transitioning depth or color target.
     const VkImageAspectFlags attachmentAspect{
         sourceNode.renderPass->getAttachmentView(srcAttachmentIndex, 0).getSubresourceRange().aspectMask};
     const VkPipelineStageFlagBits srcStageFlags{
@@ -193,7 +192,7 @@ void RenderGraph::buildCommandLists(
 {
     for (const auto& [id, renderNode] : renderNodes)
     {
-        logger->info("Building commands for {}.", id);
+        // logger->info("Building commands for {}.", id);
         addToCommandLists(*renderNode);
     }
 }
@@ -268,7 +267,7 @@ void RenderGraph::executeDrawCommand(
     if (command.material)
         command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
 
-    command.geometry->bindVertexBuffers(cmdBuffer.getHandle());
+    command.geometry->bindVertexBuffers(cmdBuffer.getHandle(), command.firstBuffer, command.bufferCount);
     command.drawFunc(cmdBuffer.getHandle(), command.geometryView);
 }
 

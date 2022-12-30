@@ -43,7 +43,7 @@ public:
         return addUniformBuffer(id, std::make_unique<UniformBuffer>(m_renderer, std::forward<Args>(args)...));
     }
 
-    void addGeometry(std::string id, std::unique_ptr<Geometry> geometry);
+    Geometry& addGeometry(std::string id, std::unique_ptr<Geometry> geometry);
 
     RenderNode* createPostProcessingEffectNode(
         std::string renderNodeId,

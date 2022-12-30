@@ -39,6 +39,8 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         }
     }
 
+    uint32_t shadersSkipped{0};
+    uint32_t shadersRecompiled{0};
     std::array<char, 4096> lineBuffer;
     for (const auto& inputEntry : std::filesystem::directory_iterator(inputDir))
     {
@@ -144,8 +146,15 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             }
 
             std::filesystem::remove(tempInputPath);
+
+            ++shadersRecompiled;
+        }
+        else
+        {
+            ++shadersSkipped;
         }
     }
+    logger->info("{} shaders recompiled, {} shaders skipped.", shadersRecompiled, shadersSkipped);
 }
 
 Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath)

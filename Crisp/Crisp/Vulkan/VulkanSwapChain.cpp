@@ -15,9 +15,10 @@ VulkanSwapChain::VulkanSwapChain(
     const VulkanDevice& device,
     const VulkanPhysicalDevice& physicalDevice,
     const VkSurfaceKHR surface,
-    bool tripleBuffering)
+    const TripleBuffering tripleBuffering)
     : VulkanResource(device.getResourceDeallocator())
-    , m_presentationMode(tripleBuffering ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR)
+    , m_presentationMode(
+          tripleBuffering == TripleBuffering::Enabled ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR)
 {
     createSwapChain(device, physicalDevice, surface);
     createSwapChainImageViews(device.getHandle());

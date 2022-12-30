@@ -38,10 +38,10 @@ private:
     std::vector<std::shared_ptr<Animation>> m_pendingAnimations;
 
     // The set of animations slated to be removed from active animations list
-    robin_hood::unordered_set<std::shared_ptr<Animation>> m_removedAnimations;
+    HashSet<std::shared_ptr<Animation>> m_removedAnimations;
 
     // Ties the lifetime of a group of animations to a particular object pointer
-    robin_hood::unordered_map<void*, std::vector<std::shared_ptr<Animation>>> m_animationLifetimes;
+    HashMap<void*, std::vector<std::shared_ptr<Animation>>> m_animationLifetimes;
 
     bool m_clearAllAnimations;
 };

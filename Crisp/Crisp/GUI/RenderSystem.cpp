@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <Crisp/IO/FontLoader.hpp>
-#include <Crisp/IO/ImageLoader.hpp>
+#include <Crisp/Image/Io/ImageLoader.hpp>
 
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
@@ -446,11 +446,11 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
 
 void RenderSystem::createPipelines()
 {
-    m_colorQuadPipeline = m_renderer->createPipelineFromLua("GuiColor.lua", *m_guiPass.get(), 0);
-    m_textPipeline = m_renderer->createPipelineFromLua("GuiText.lua", *m_guiPass.get(), 0);
-    m_texQuadPipeline = m_renderer->createPipelineFromLua("GuiTexture.lua", *m_guiPass.get(), 0);
-    m_debugRectPipeline = m_renderer->createPipelineFromLua("GuiDebug.lua", *m_guiPass.get(), 0);
-    m_fsQuadPipeline = m_renderer->createPipelineFromLua("Fullscreen.lua", m_renderer->getDefaultRenderPass(), 0);
+    m_colorQuadPipeline = m_renderer->createPipelineFromLua("GuiColor.json", *m_guiPass.get(), 0);
+    m_textPipeline = m_renderer->createPipelineFromLua("GuiText.json", *m_guiPass.get(), 0);
+    m_texQuadPipeline = m_renderer->createPipelineFromLua("GuiTexture.json", *m_guiPass.get(), 0);
+    m_debugRectPipeline = m_renderer->createPipelineFromLua("GuiDebug.json", *m_guiPass.get(), 0);
+    m_fsQuadPipeline = m_renderer->createPipelineFromLua("Fullscreen.json", m_renderer->getDefaultRenderPass(), 0);
 }
 
 void RenderSystem::initGeometryBuffers()

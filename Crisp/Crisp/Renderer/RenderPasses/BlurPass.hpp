@@ -10,5 +10,6 @@ std::unique_ptr<VulkanRenderPass> createBlurPass(
     RenderTargetCache& renderTargetCache,
     VkFormat format,
     VkExtent2D renderArea,
-    bool isSwapChainDependent);
+    bool isSwapChainDependent,
+    std::string&& renderTargetName = "BlurMap");
 } // namespace crisp

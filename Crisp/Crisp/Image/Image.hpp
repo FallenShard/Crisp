@@ -19,6 +19,11 @@ public:
     }
 
     Image createFromChannel(uint32_t channelIndex) const;
+    Image createSubImage(uint32_t row, uint32_t col, uint32_t width, uint32_t height) const;
+
+    void transpose();
+    void mirrorX();
+    void mirrorY();
 
     uint32_t getWidth() const;
     uint32_t getHeight() const;

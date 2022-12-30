@@ -12,7 +12,7 @@ class VulkanContextTest : public VulkanTest
 
 std::pair<std::unique_ptr<VulkanContext>, Window> createContextWithSurface()
 {
-    Window window = Window({0, 0}, {200, 200}, "unit_test", true);
+    Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
     return {
         std::make_unique<VulkanContext>(
             window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false),

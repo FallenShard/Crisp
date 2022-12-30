@@ -8,6 +8,13 @@
 
 namespace crisp::gui
 {
+enum class LayoutType
+{
+    Vertical,
+    Horizontal,
+    Absolute
+};
+
 class ControlGroup : public Control
 {
 public:
@@ -37,8 +44,21 @@ public:
     virtual Control* getControlById(const std::string& id);
     virtual void visit(std::function<void(Control*)> func) override;
 
+    void setLayoutType(LayoutType layoutType)
+    {
+        m_layoutType = layoutType;
+    }
+
+    void setLayoutSpacing(float spacing)
+    {
+        m_spacing = spacing;
+    }
+
 protected:
     glm::vec2 m_prevMousePos;
     std::vector<std::unique_ptr<Control>> m_children;
+
+    LayoutType m_layoutType{LayoutType::Absolute};
+    float m_spacing{10.0f};
 };
 } // namespace crisp::gui

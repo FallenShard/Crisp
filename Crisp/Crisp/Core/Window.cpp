@@ -6,19 +6,19 @@
 
 namespace crisp
 {
-Window::Window(const glm::ivec2& position, const glm::ivec2& size, std::string title, bool hidden)
-    : Window(position.x, position.y, size.x, size.y, title, hidden)
-{
-}
 
-Window::Window(int x, int y, int width, int height, std::string title, bool hidden)
+Window::Window(
+    const glm::ivec2& position, const glm::ivec2& size, const std::string& title, const WindowVisibility visibility)
 {
-    if (hidden)
+    if (visibility == WindowVisibility::Hidden)
+    {
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    }
 
+    // Disable OpenGL Context creation - we'll use Vulkan.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-    glfwSetWindowPos(m_window, x, y);
+    m_window = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+    glfwSetWindowPos(m_window, position.x, position.y);
 
     glfwSetWindowUserPointer(m_window, this);
     glfwSetWindowSizeCallback(m_window, resizeCallback);
@@ -87,7 +87,7 @@ std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)>
 glm::ivec2 Window::getDesktopResolution()
 {
     const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    return { mode->width, mode->height };
+    return {mode->width, mode->height};
 }
 
 void Window::pollEvents()
@@ -137,7 +137,7 @@ glm::vec2 Window::getCursorPosition() const
 {
     double x, y;
     glfwGetCursorPos(m_window, &x, &y);
-    return { static_cast<float>(x), static_cast<float>(y) };
+    return {static_cast<float>(x), static_cast<float>(y)};
 }
 
 bool Window::isKeyDown(Key key) const
@@ -193,7 +193,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
         {
             double xPos, yPos;
             glfwGetCursorPos(window, &xPos, &yPos);
-            dispatcher->mouseButtonPressed({ translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos });
+            dispatcher->mouseButtonPressed({translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos});
         }
     }
     else if (action == GLFW_RELEASE)
@@ -203,7 +203,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
         {
             double xPos, yPos;
             glfwGetCursorPos(window, &xPos, &yPos);
-            dispatcher->mouseButtonReleased({ translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos });
+            dispatcher->mouseButtonReleased({translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos});
         }
     }
 }

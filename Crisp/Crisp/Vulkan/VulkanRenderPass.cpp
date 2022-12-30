@@ -1,4 +1,4 @@
-#include "VulkanRenderPass.hpp"
+#include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanEnumToString.hpp>
@@ -22,7 +22,7 @@ VulkanRenderPass::VulkanRenderPass(
     CRISP_CHECK(m_params.renderArea.height > 0, "Render area has non-positive height!");
     CRISP_CHECK(
         m_params.attachmentMappings.size() == m_params.attachmentDescriptions.size(),
-        "Attachment and description size mismatch!");
+        "Attachment mapping and description size mismatch!");
 
     m_attachmentClearValues.resize(m_params.attachmentDescriptions.size());
     for (const auto& [i, clearValue] : enumerate(m_attachmentClearValues))

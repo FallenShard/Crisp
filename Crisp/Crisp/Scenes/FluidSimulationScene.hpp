@@ -12,8 +12,6 @@
 
 namespace crisp
 {
-class Application;
-
 class FluidSimulation;
 
 class SceneRenderPass;
@@ -21,9 +19,7 @@ class VulkanPipeline;
 class VulkanImageView;
 class UniformBuffer;
 class VulkanDevice;
-class Renderer;
 class VulkanSampler;
-class RenderGraph;
 
 class FluidSimulationScene : public AbstractScene
 {
@@ -37,9 +33,6 @@ public:
 
 private:
     void createGui();
-
-    Renderer* m_renderer;
-    Application* m_app;
 
     std::unique_ptr<FreeCameraController> m_cameraController;
 
@@ -60,7 +53,6 @@ private:
     ParticleParams m_particleParams;
 
     std::unordered_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
-    std::unique_ptr<RenderGraph> m_renderGraph;
 
     RenderNode m_fluidRenderNode;
 

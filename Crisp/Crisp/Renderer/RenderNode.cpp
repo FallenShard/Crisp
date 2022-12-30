@@ -35,7 +35,7 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
 
     if (renderNode.transformBuffer)
         drawCommand.dynamicBufferViews[0] = {
-            renderNode.transformBuffer, renderNode.transformIndex * sizeof(TransformPack)};
+            renderNode.transformBuffer, static_cast<uint32_t>(renderNode.transformIndex * sizeof(TransformPack))};
 
     drawCommand.dynamicBufferOffsets.resize(drawCommand.dynamicBufferViews.size());
     for (std::size_t i = 0; i < drawCommand.dynamicBufferOffsets.size(); ++i)
@@ -51,9 +51,10 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
         drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView(part));
     else
         drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView());
+    drawCommand.firstBuffer = firstBuffer == -1 ? 0 : firstBuffer;
+    drawCommand.bufferCount = bufferCount == -1 ? drawCommand.geometry->getVertexBufferCount() : bufferCount;
 
-    CRISP_CHECK(
-        drawCommand.pipeline->getVertexLayout().bindings.size() == drawCommand.geometry->getVertexBufferCount());
+    CRISP_CHECK(drawCommand.pipeline->getVertexLayout().bindings.size() == drawCommand.bufferCount);
 
     return drawCommand;
 }

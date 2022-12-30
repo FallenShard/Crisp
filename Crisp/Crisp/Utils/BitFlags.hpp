@@ -12,28 +12,22 @@ struct IsBitFlag
     static constexpr bool value = false;
 };
 
-template <
-    typename EnumBits,
-    typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
-    typename MaskType = std::underlying_type_t<EnumBits>>
-constexpr MaskType operator|(EnumBits bit1, EnumBits bit2)
+template <typename Enum>
+concept EnumBitFlagType = IsBitFlag<Enum>::value;
+
+template <EnumBitFlagType EnumType, typename MaskType = std::underlying_type_t<EnumType>>
+constexpr MaskType operator|(EnumType bit1, EnumType bit2)
 {
     return static_cast<MaskType>(bit1) | static_cast<MaskType>(bit2);
 }
 
-template <
-    typename EnumBits,
-    typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
-    typename MaskType = std::underlying_type_t<EnumBits>>
-constexpr MaskType operator|(MaskType bits, EnumBits bit)
+template <EnumBitFlagType EnumType, typename MaskType = std::underlying_type_t<EnumType>>
+constexpr MaskType operator|(std::underlying_type_t<EnumType> bits, EnumType bit)
 {
     return bits | static_cast<MaskType>(bit);
 }
 
-template <
-    typename EnumBits,
-    typename = typename std::enable_if_t<IsBitFlag<EnumBits>::value>,
-    typename MaskType = std::underlying_type_t<EnumBits>>
+template <EnumBitFlagType EnumType, typename MaskType = std::underlying_type_t<EnumType>>
 class BitFlags
 {
 public:
@@ -42,7 +36,7 @@ public:
     {
     }
 
-    BitFlags(EnumBits bits)
+    BitFlags(EnumType bits)
         : m_mask(static_cast<MaskType>(bits))
     {
     }
@@ -58,13 +52,13 @@ public:
         return *this;
     }
 
-    BitFlags& operator|=(const EnumBits bit)
+    BitFlags& operator|=(const EnumType bit)
     {
         m_mask |= static_cast<MaskType>(bit);
         return *this;
     }
 
-    BitFlags operator|(EnumBits bits)
+    BitFlags operator|(EnumType bits)
     {
         return BitFlags(m_mask | static_cast<MaskType>(bits));
     }
@@ -79,7 +73,7 @@ public:
         return m_mask == rhs.m_mask;
     }
 
-    inline bool operator==(const EnumBits bit) const
+    inline bool operator==(const EnumType bit) const
     {
         return m_mask == static_cast<MaskType>(bit);
     }
@@ -94,7 +88,7 @@ public:
         return m_mask != rhs.m_mask;
     }
 
-    inline bool operator!=(const EnumBits bit) const
+    inline bool operator!=(const EnumType bit) const
     {
         return m_mask != static_cast<MaskType>(bit);
     }
@@ -109,7 +103,7 @@ public:
         return m_mask == 0;
     }
 
-    inline BitFlags operator&(const EnumBits bits) const
+    inline BitFlags operator&(const EnumType bits) const
     {
         return BitFlags(m_mask & static_cast<MaskType>(bits));
     }
@@ -134,7 +128,7 @@ public:
         std::cout << std::bitset<sizeof(MaskType)>(m_mask);
     }
 
-    void disable(const EnumBits bit)
+    void disable(const EnumType bit)
     {
         m_mask &= ~(static_cast<MaskType>(bit));
     }

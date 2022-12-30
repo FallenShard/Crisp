@@ -15,11 +15,12 @@ std::unique_ptr<VulkanRenderPass> createBlurPass(
     RenderTargetCache& renderTargetCache,
     const VkFormat format,
     const VkExtent2D renderArea,
-    const bool isSwapChainDependent)
+    const bool isSwapChainDependent,
+    std::string&& renderTargetName)
 {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
-        "BlurMap",
+        std::move(renderTargetName),
         RenderTargetBuilder()
             .setFormat(format)
             .setLayerAndMipLevelCount(1)

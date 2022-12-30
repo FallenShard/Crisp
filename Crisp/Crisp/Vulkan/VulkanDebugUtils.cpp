@@ -5,6 +5,7 @@ namespace crisp
 namespace
 {
 auto logger = createLoggerMt("VulkanDebug");
+bool printAllDebugMessages{false};
 
 VkBool32 debugMessengerCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -19,6 +20,8 @@ VkBool32 debugMessengerCallback(
         typeStr = "Performance";
     if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
         typeStr = "Validation";
+    if (strcmp(typeStr, "General") == 0 && !printAllDebugMessages)
+        return VK_FALSE;
 
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {
@@ -35,6 +38,7 @@ VkBool32 debugMessengerCallback(
     else
     {
         logger->error("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
+        std::terminate();
     }
 
     return VK_FALSE;

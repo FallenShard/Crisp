@@ -93,6 +93,8 @@ struct DrawCommand
     Geometry* geometry;
     GeometryViewVariant geometryView;
     detail::DrawFunc drawFunc;
+    uint32_t firstBuffer;
+    uint32_t bufferCount;
 
     template <typename GeometryView, typename... Args>
     inline void setGeometryView(Args&&... args)

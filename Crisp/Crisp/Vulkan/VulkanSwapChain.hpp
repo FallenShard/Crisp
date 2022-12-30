@@ -11,6 +11,12 @@ namespace crisp
 class VulkanDevice;
 class VulkanPhysicalDevice;
 
+enum class TripleBuffering
+{
+    Enabled,
+    Disabled
+};
+
 class VulkanSwapChain : public VulkanResource<VkSwapchainKHR, vkDestroySwapchainKHR>
 {
 public:
@@ -18,7 +24,7 @@ public:
         const VulkanDevice& device,
         const VulkanPhysicalDevice& physicalDevice,
         VkSurfaceKHR surface,
-        bool tripleBuffering);
+        TripleBuffering tripleBuffering);
     ~VulkanSwapChain();
 
     VulkanSwapChain(const VulkanSwapChain& other) = delete;

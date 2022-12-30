@@ -3,12 +3,14 @@
 #include <Crisp/Core/ThreadPool.hpp>
 
 #include <Crisp/Renderer/AssetPaths.hpp>
+#include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Renderer/VirtualFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
+#include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 
 #include <array>
 #include <coroutine>
@@ -68,7 +70,6 @@ public:
     VkRect2D getDefaultScissor() const;
 
     VkShaderModule loadShaderModule(const std::string& key);
-    VkShaderModule compileGlsl(const std::filesystem::path& path, std::string id, std::string type);
     VkShaderModule getShaderModule(const std::string& key) const;
 
     void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
@@ -87,6 +88,8 @@ public:
     void flushResourceUpdates(bool waitOnAllQueues);
     void flushCoroutines();
 
+    FrameContext beginFrame();
+    void endFrame(const FrameContext& frameContext);
     void drawFrame();
 
     void finish();
@@ -153,6 +156,11 @@ public:
         m_mainThreadQueue.push(std::move(task));
     }
 
+    const VulkanDebugMarker& getDebugMarker() const
+    {
+        return *m_debugMarker;
+    }
+
 private:
     void loadShaders(const std::filesystem::path& directoryPath);
     VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
@@ -171,6 +179,7 @@ private:
     std::unique_ptr<VulkanDevice> m_device;
     std::unique_ptr<VulkanSwapChain> m_swapChain;
     std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
+    std::unique_ptr<VulkanDebugMarker> m_debugMarker;
     FlatHashMap<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_swapChainFramebuffers;
 
     VkViewport m_defaultViewport;
@@ -187,7 +196,7 @@ private:
 
     std::unique_ptr<Geometry> m_fullScreenGeometry;
 
-    std::unordered_set<UniformBuffer*> m_streamingUniformBuffers;
+    FlatHashSet<UniformBuffer*> m_streamingUniformBuffers;
 
     std::unique_ptr<VulkanPipeline> m_scenePipeline;
     std::unique_ptr<VulkanSampler> m_linearClampSampler;

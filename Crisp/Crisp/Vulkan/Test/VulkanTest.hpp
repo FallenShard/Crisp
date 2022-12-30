@@ -77,7 +77,8 @@ inline auto createDevice()
 {
     struct
     {
-        std::unique_ptr<crisp::Window> window{std::make_unique<crisp::Window>(0, 0, 200, 200, "unit_test", true)};
+        std::unique_ptr<crisp::Window> window{std::make_unique<crisp::Window>(
+            glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", crisp::WindowVisibility::Hidden)};
         std::unique_ptr<crisp::VulkanContext> context{std::make_unique<crisp::VulkanContext>(
             window->createSurfaceCallback(),
             crisp::ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),

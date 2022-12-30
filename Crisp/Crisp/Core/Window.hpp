@@ -5,7 +5,6 @@
 #include <Crisp/Core/Mouse.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-
 #include <vulkan/vulkan.h>
 
 #include <memory>
@@ -22,11 +21,20 @@ enum class CursorState
     Normal
 };
 
+enum class WindowVisibility
+{
+    Hidden,
+    Shown
+};
+
 class Window
 {
 public:
-    Window(const glm::ivec2& position, const glm::ivec2& size, std::string title, bool hidden = false);
-    Window(int x, int y, int width, int height, std::string title, bool hidden = false);
+    Window(
+        const glm::ivec2& position,
+        const glm::ivec2& size,
+        const std::string& title,
+        WindowVisibility visibility = WindowVisibility::Shown);
     ~Window();
 
     Window(const Window& other) = delete;

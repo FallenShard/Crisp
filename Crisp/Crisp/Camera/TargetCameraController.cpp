@@ -35,9 +35,18 @@ void TargetCameraController::setPanSpeed(const float panSpeed)
     m_panSpeed = panSpeed;
 }
 
+void TargetCameraController::setTarget(const glm::vec3& target)
+{
+    m_target = target;
+    const glm::dquat orientation =
+        glm::angleAxis(m_yaw, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::angleAxis(m_pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+    m_camera.setPosition(m_target + glm::quat(orientation) * glm::vec3(0.0f, 0.0f, m_distance));
+    m_camera.setOrientation(orientation);
+}
+
 void TargetCameraController::pan(const float dx, const float dy)
 {
-    m_target += m_camera.getRightDir() * m_panSpeed * dx + m_camera.getUpDir() * m_panSpeed * dy;
+    m_target += -m_camera.getRightDir() * m_panSpeed * dx - m_camera.getUpDir() * m_panSpeed * dy;
     const glm::dquat orientation =
         glm::angleAxis(m_yaw, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::angleAxis(m_pitch, glm::vec3(1.0f, 0.0f, 0.0f));
     m_camera.setPosition(m_target + glm::quat(orientation) * glm::vec3(0.0f, 0.0f, m_distance));

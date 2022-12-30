@@ -50,7 +50,7 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 
-#include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
@@ -93,9 +93,7 @@ glm::vec2 terrainPushConstants = glm::vec2(1.0f, 15.0f);
 } // namespace
 
 ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
+    : AbstractScene(app, renderer)
 {
     setupInput();
 
@@ -375,7 +373,7 @@ void ShadowMappingScene::createCommonTextures()
             11.0f));
 
     // For textured pbr
-    addDefaultPbrTexturesToImageCache(imageCache);
+    addPbrTexturesToImageCache(createDefaultPbrTextureGroup(), "default", imageCache);
 
     // Environment map
     LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");

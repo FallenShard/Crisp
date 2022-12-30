@@ -1,8 +1,8 @@
 #include "Skybox.hpp"
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/IO/ImageLoader.hpp>
-#include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
@@ -52,8 +52,10 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
 
     m_cubeMapView = m_cubeMap->createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
     m_sampler = createLinearClampSampler(renderer->getDevice());
-    m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);
+    m_pipeline = renderer->createPipelineFromLua("Skybox.json", renderPass, 0);
     updateRenderNode(*m_sampler, *m_cubeMapView);
+
+    // renderer->getDebugMarker().setObjectName(m_cubeMapView->getHandle(), "Cube Map View");
 
     renderer->getDevice().flushDescriptorUpdates();
 }
@@ -70,7 +72,7 @@ Skybox::Skybox(
         VertexAttribs);
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-    m_pipeline = renderer->createPipelineFromLua("Skybox.lua", renderPass, 0);
+    m_pipeline = renderer->createPipelineFromLua("Skybox.json", renderPass, 0);
     updateRenderNode(sampler, cubeMapView);
 
     renderer->getDevice().flushDescriptorUpdates();

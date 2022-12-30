@@ -1,6 +1,7 @@
 #include "PipelineLayoutBuilder.hpp"
 
-#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/vulkan/VulkanDevice.hpp>
 #include <Crisp/vulkan/VulkanPipelineLayout.hpp>
@@ -20,16 +21,10 @@ PipelineLayoutBuilder::PipelineLayoutBuilder(sl::ShaderUniformInputMetadata&& me
 }
 
 PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(
-    uint32_t setIndex, std::vector<VkDescriptorSetLayoutBinding>&& bindings, VkDescriptorSetLayoutCreateFlags flags)
-{
-    return defineDescriptorSet(setIndex, false, std::move(bindings), flags);
-}
-
-PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(
-    uint32_t setIndex,
-    bool isBuffered,
+    const uint32_t setIndex,
+    const bool isBuffered,
     std::vector<VkDescriptorSetLayoutBinding>&& bindings,
-    VkDescriptorSetLayoutCreateFlags flags)
+    const VkDescriptorSetLayoutCreateFlags flags)
 {
     if (m_setLayoutBindings.size() <= setIndex)
     {
@@ -129,6 +124,10 @@ void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex,
     VkDescriptorSetLayoutBinding& binding = m_setLayoutBindings.at(setIndex).at(bindingIndex);
     if (isDynamic)
     {
+        CRISP_CHECK(
+            binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+            binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
         if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
@@ -136,6 +135,10 @@ void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex,
     }
     else
     {
+        CRISP_CHECK(
+            binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+            binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
+
         if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
             binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)

@@ -10,7 +10,7 @@
 namespace crisp
 {
 std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, VkExtent2D renderArea)
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D renderArea)
 {
     std::vector<RenderTarget*> renderTargets(2);
     renderTargets[0] = renderTargetCache.addRenderTarget(
@@ -18,7 +18,7 @@ std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
         RenderTargetBuilder()
             .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
             .setBuffered(true)
-            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
+            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT, {1.0f, 0.5f, 0.0f, 1.0f})
             .setSize(renderArea, true)
             .create(device));
     renderTargets[1] = renderTargetCache.addRenderTarget(

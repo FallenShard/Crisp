@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 
@@ -7,6 +7,7 @@ set_property(GLOBAL PROPERTY CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Creates a static library with C++ 20 standard support.
 function(enable_default_cpp_compile_options targetName optionType)
+    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 23 LINKER_LANGUAGE CXX)
     if(MSVC)
       target_compile_options(${targetName} ${optionType} /MP /JMC /Zi /W4 /WX /Zc:preprocessor)
     else()
@@ -15,36 +16,39 @@ function(enable_default_cpp_compile_options targetName optionType)
 endfunction()
 
 # Creates a static library with C++ 20 standard support.
-function(add_cpp_static_library targetName)
+macro(add_cpp_static_library targetName)
     add_library(${targetName} STATIC ${ARGN})
-    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
-endfunction()
+endmacro()
+
+# Creates a shared library with C++ 20 standard support.
+macro(add_cpp_shared_library targetName)
+    add_library(${targetName} SHARED ${ARGN})
+    enable_default_cpp_compile_options(${targetName} PUBLIC)
+    target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
+endmacro()
 
 # Creates a header-only library with C++ 20 standard support.
-function(add_cpp_interface_library targetName)
+macro(add_cpp_interface_library targetName)
     add_library(${targetName} INTERFACE ${ARGN})
-    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
     enable_default_cpp_compile_options(${targetName} INTERFACE)
     target_include_directories(${targetName} INTERFACE ${CRISP_INCLUDE_DIR})
-endfunction()
+endmacro()
 
 # Creates a binary with C++ 20 standard support.
-function(add_cpp_binary targetName)
+macro(add_cpp_binary targetName)
     add_executable(${targetName} ${ARGN})
-    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
     enable_default_cpp_compile_options(${targetName} PUBLIC)
-endfunction()
+endmacro()
 
 # Creates a test with C++ 20 standard support.
-function(add_cpp_test targetName)
+macro(add_cpp_test targetName)
     add_executable(${targetName} ${ARGN})
-    set_target_properties(${targetName} PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE GTest::gtest)
     target_link_libraries(${targetName} PRIVATE GTest::gtest_main)
-endfunction()
+endmacro()
 
 # Copies a list of shared libraries into the designated target's directory. TO be used with DLL dependencies.
 function(copy_shared_libs targetName)

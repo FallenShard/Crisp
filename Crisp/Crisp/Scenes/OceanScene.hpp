@@ -7,13 +7,10 @@
 
 namespace crisp
 {
-class Application;
 class FreeCameraController;
 
 class TransformBuffer;
 
-class ResourceContext;
-class RenderGraph;
 struct RenderNode;
 class Skybox;
 
@@ -38,12 +35,6 @@ private:
     std::unique_ptr<VulkanImage> createInitialSpectrum();
     int applyFFT(std::string image);
     void createGui(gui::Form* form);
-
-    Application* m_app;
-
-    Renderer* m_renderer;
-    std::unique_ptr<ResourceContext> m_resourceContext;
-    std::unique_ptr<RenderGraph> m_renderGraph;
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<TransformBuffer> m_transformBuffer;

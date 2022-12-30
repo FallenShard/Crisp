@@ -54,6 +54,13 @@ public:
 
     void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer);
     void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers);
+    void copyFrom(
+        VkCommandBuffer commandBuffer,
+        const VulkanBuffer& buffer,
+        const VkExtent3D& extent,
+        uint32_t baseLayer,
+        uint32_t numLayers,
+        uint32_t mipLevel);
     void buildMipmaps(VkCommandBuffer commandBuffer);
     void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t layer);
 

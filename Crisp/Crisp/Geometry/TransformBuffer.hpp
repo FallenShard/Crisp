@@ -25,7 +25,13 @@ public:
 
     void update(const glm::mat4& V, const glm::mat4& P);
 
+    uint32_t getNextIndex()
+    {
+        return m_activeTransforms++;
+    }
+
 private:
+    uint32_t m_activeTransforms;
     std::vector<TransformPack> m_transforms;
     std::unique_ptr<UniformBuffer> m_transformBuffer;
     ThreadPool m_threadPool;

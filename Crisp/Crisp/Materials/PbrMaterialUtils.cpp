@@ -1,10 +1,11 @@
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 
 #include <Crisp/Common/Logger.hpp>
-#include <Crisp/IO/ImageLoader.hpp>
-#include <Crisp/IO/OpenEXRReader.hpp>
+#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Image/Io/OpenEXRReader.hpp>
 
 namespace crisp
 {
@@ -29,12 +30,13 @@ constexpr TexInfo EmissionTex = {"emissive", VK_FORMAT_R8G8B8A8_UNORM};
 
 PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
 {
-    const auto loadTextureOpt = [&materialDir](const std::string_view texName) -> std::optional<Image>
+    const auto loadTextureOpt =
+        [&materialDir](const std::string_view name, const uint32_t requestedChannels) -> std::optional<Image>
     {
-        const auto& path = materialDir / fmt::format("{}.png", texName);
+        const auto& path = materialDir / fmt::format("{}.png", name);
         if (std::filesystem::exists(path))
         {
-            return loadImage(path, 4, FlipOnLoad::Y).unwrap();
+            return loadImage(path, requestedChannels, FlipOnLoad::Y).unwrap();
         }
         else
         {
@@ -45,16 +47,16 @@ PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
     };
 
     PbrTextureGroup textureGroup{};
-    textureGroup.albedo = loadTextureOpt(AlbedoTex.name);
-    textureGroup.normal = loadTextureOpt(NormalTex.name);
-    textureGroup.roughness = loadTextureOpt(RoughnessTex.name);
-    textureGroup.metallic = loadTextureOpt(MetallicTex.name);
-    textureGroup.occlusion = loadTextureOpt(OcclusionTex.name);
-    textureGroup.emissive = loadTextureOpt(EmissionTex.name);
+    textureGroup.albedo = loadTextureOpt(AlbedoTex.name, getNumChannels(AlbedoTex.defaultFormat));
+    textureGroup.normal = loadTextureOpt(NormalTex.name, getNumChannels(NormalTex.defaultFormat));
+    textureGroup.roughness = loadTextureOpt(RoughnessTex.name, getNumChannels(RoughnessTex.defaultFormat));
+    textureGroup.metallic = loadTextureOpt(MetallicTex.name, getNumChannels(MetallicTex.defaultFormat));
+    textureGroup.occlusion = loadTextureOpt(OcclusionTex.name, getNumChannels(OcclusionTex.defaultFormat));
+    textureGroup.emissive = loadTextureOpt(EmissionTex.name, getNumChannels(EmissionTex.defaultFormat));
     return textureGroup;
 }
 
-void addToImageCache(const PbrTextureGroup& texGroup, const std::string& materialKey, ImageCache& imageCache)
+void addPbrTexturesToImageCache(const PbrTextureGroup& texGroup, const std::string& materialKey, ImageCache& imageCache)
 {
     const auto addTex =
         [&imageCache, &texGroup, &materialKey](const std::optional<Image>& texture, const TexInfo& texInfo)
@@ -75,17 +77,22 @@ void addToImageCache(const PbrTextureGroup& texGroup, const std::string& materia
     addTex(texGroup.emissive, EmissionTex);
 }
 
-void addDefaultPbrTexturesToImageCache(ImageCache& imageCache)
+void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache& imageCache)
 {
-    PbrTextureGroup textureGroup{};
-    textureGroup.albedo =
-        loadImage(imageCache.getRenderer()->getResourcesPath() / "Textures/uv_pattern.jpg", 4, FlipOnLoad::Y).unwrap();
-    textureGroup.normal = createDefaultNormalMap();
-    textureGroup.roughness = createDefaultRoughnessMap();
-    textureGroup.metallic = createDefaultMetallicMap();
-    textureGroup.occlusion = createDefaultAmbientOcclusionMap();
-    textureGroup.emissive = createDefaultEmissiveMap();
-    addToImageCache(textureGroup, "default", imageCache);
+    logger->info("Removing PBR textures with key: {}", materialKey);
+    const auto removeTexAndView = [&imageCache, &materialKey](const TexInfo& texInfo)
+    {
+        const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
+        imageCache.removeImage(key);
+        imageCache.removeImageView(key);
+    };
+
+    removeTexAndView(AlbedoTex);
+    removeTexAndView(NormalTex);
+    removeTexAndView(RoughnessTex);
+    removeTexAndView(MetallicTex);
+    removeTexAndView(OcclusionTex);
+    removeTexAndView(EmissionTex);
 }
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir)

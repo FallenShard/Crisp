@@ -2,6 +2,7 @@
 
 #include <Crisp/Common/Checks.hpp>
 #include <Crisp/Common/Logger.hpp>
+#include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -14,48 +15,6 @@ namespace crisp
 namespace
 {
 auto logger = createLoggerMt("JsonPipelineBuilder");
-
-enum class JsonType
-{
-    Null,
-    Object,
-    Array,
-    String,
-    Boolean,
-    NumberInt,
-    NumberUint,
-    NumberFloat,
-    Binary
-};
-
-template <JsonType type>
-constexpr nlohmann::detail::value_t toNlohmannJsonType()
-{
-    if constexpr (type == JsonType::Null)
-        return nlohmann::detail::value_t::null;
-    if constexpr (type == JsonType::Object)
-        return nlohmann::detail::value_t::object;
-    if constexpr (type == JsonType::Array)
-        return nlohmann::detail::value_t::array;
-    if constexpr (type == JsonType::String)
-        return nlohmann::detail::value_t::string;
-    if constexpr (type == JsonType::Boolean)
-        return nlohmann::detail::value_t::boolean;
-    if constexpr (type == JsonType::NumberInt)
-        return nlohmann::detail::value_t::number_integer;
-    if constexpr (type == JsonType::NumberUint)
-        return nlohmann::detail::value_t::number_unsigned;
-    if constexpr (type == JsonType::NumberFloat)
-        return nlohmann::detail::value_t::number_float;
-    if constexpr (type == JsonType::Binary)
-        return nlohmann::detail::value_t::binary;
-}
-
-template <JsonType fieldType>
-bool hasField(const nlohmann::json& json, const std::string_view key)
-{
-    return json.contains(key) && json[key].type() == toNlohmannJsonType<fieldType>();
-}
 
 Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohmann::json& json)
 {
@@ -79,20 +38,32 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
     return shaderFiles;
 }
 
-[[nodiscard]] Result<> readVertexInputBindings(const nlohmann::json& json, PipelineBuilder& builder)
+bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::string>& shaderFiles)
 {
-    CRISP_CHECK(json.is_array());
-    for (uint32_t i = 0; i < json.size(); ++i)
+    return shaderFiles.contains(VK_SHADER_STAGE_VERTEX_BIT) &&
+           shaderFiles.contains(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) &&
+           shaderFiles.contains(VK_SHADER_STAGE_FRAGMENT_BIT) &&
+           shaderFiles.contains(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+}
+
+[[nodiscard]] Result<> readVertexInputBindings(const nlohmann::json& arrayJson, PipelineBuilder& builder)
+{
+    for (uint32_t i = 0; i < arrayJson.size(); ++i)
     {
-        CRISP_CHECK(json[i].is_object());
+        CRISP_CHECK(arrayJson[i].is_object());
 
-        CRISP_CHECK(hasField<JsonType::String>(json[i], "inputRate"));
-        const auto inputRate{
-            json[i]["inputRate"] == "vertex" ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE};
+        CRISP_CHECK(hasField<JsonType::String>(arrayJson[i], "inputRate"));
+        VkVertexInputRate inputRate{};
+        if (arrayJson[i]["inputRate"] == "vertex")
+            inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        else if (arrayJson[i]["inputRate"] == "instance")
+            inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+        else
+            return resultError("Encountered unknown inputRate: {}", arrayJson[i]["inputRate"]);
 
-        CRISP_CHECK(hasField<JsonType::Array>(json[i], "formats"));
+        CRISP_CHECK(hasField<JsonType::Array>(arrayJson[i], "formats"));
         std::vector<VkFormat> formats;
-        for (const auto& f : json[i]["formats"])
+        for (const auto& f : arrayJson[i]["formats"])
         {
             if (f == "vec3")
                 formats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
@@ -140,13 +111,13 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
     {
         const auto& primTopology{json["primitiveTopology"]};
         if (primTopology == "lineList")
-        {
             builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-        }
         else if (primTopology == "pointList")
-        {
             builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
-        }
+        else if (primTopology == "triangleList")
+            builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        else
+            return resultError("Unknown primitive topology: {}", primTopology.get<std::string>());
     }
     return {};
 }
@@ -163,14 +134,23 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
     return {};
 }
 
-[[nodiscard]] Result<> readViewportState(const nlohmann::json& json, PipelineBuilder& builder)
+[[nodiscard]] Result<> readViewportState(
+    const nlohmann::json& json, const VulkanRenderPass& renderPass, PipelineBuilder& builder)
 {
-    CRISP_CHECK(json.is_object());
-
-    if (json.contains("controlPointCount"))
+    if (json.contains("viewports"))
     {
-        CRISP_CHECK(json["controlPointCount"].is_number_unsigned());
-        builder.setTessellationControlPoints(json["controlPointCount"].get<uint32_t>());
+        CRISP_CHECK(json["viewports"].is_array());
+        for (uint32_t i = 0; i < json["viewports"].size(); ++i)
+        {
+            if (json["viewports"][i] == "pass")
+                builder.setViewport(renderPass.createViewport());
+        }
+        CRISP_CHECK(json["scissors"].is_array());
+        for (uint32_t i = 0; i < json["scissors"].size(); ++i)
+        {
+            if (json["scissors"][i] == "pass")
+                builder.setScissor(renderPass.createScissor());
+        }
     }
     return {};
 }
@@ -185,6 +165,10 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
         if (json["cullMode"] == "front")
         {
             builder.setCullMode(VK_CULL_MODE_FRONT_BIT);
+        }
+        else if (json["cullMode"] == "back")
+        {
+            builder.setCullMode(VK_CULL_MODE_BACK_BIT);
         }
         else if (json["cullMode"] == "none")
         {
@@ -231,11 +215,8 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
 {
     CRISP_CHECK(json.is_object());
 
-    auto parseBlendFactor = [](const nlohmann::json& json, const VkBlendFactor defaultValue)
+    auto parseBlendFactor = [](const nlohmann::json& json)
     {
-        if (json.is_null())
-            return defaultValue;
-
         if (json == "one")
             return VK_BLEND_FACTOR_ONE;
         else if (json == "oneMinusSrcAlpha")
@@ -252,8 +233,8 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
         builder.setBlendState(0, json["enabled"].get<bool>());
         builder.setBlendFactors(
             0,
-            parseBlendFactor(json["src"], VK_BLEND_FACTOR_ONE),
-            parseBlendFactor(json["dst"], VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA));
+            json.contains("src") ? parseBlendFactor(json["src"]) : VK_BLEND_FACTOR_ONE,
+            json.contains("dst") ? parseBlendFactor(json["dst"]) : VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
     }
 
     return {};
@@ -312,6 +293,19 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
 
 } // namespace
 
+Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJsonPath(
+    const std::filesystem::path& path,
+    Renderer& renderer,
+    const VulkanRenderPass& renderPass,
+    const uint32_t subpassIndex)
+{
+    return createPipelineFromJson(
+        loadJsonFromFile(renderer.getResourcesPath() / "Pipelines" / path).unwrap(),
+        renderer,
+        renderPass,
+        subpassIndex);
+}
+
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const nlohmann::json& pipelineJson,
     Renderer& renderer,
@@ -332,9 +326,9 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         builder.addShaderStage(createShaderStageInfo(stageFlag, renderer.getShaderModule(fileStem)));
     }
 
-    if (shaderFiles.size() == 4)
+    if (shaderStagesMatchTessellation(shaderFiles))
     {
-        // Assume that we are dealing with tessellation for now.
+        // Assume that we are dealing with quad tessellation for now.
         builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
     }
 
@@ -359,7 +353,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     // Optional state - if no viewport information is supposed, we assume screen size.
     if (hasField<JsonType::Object>(pipelineJson, "viewport"))
     {
-        readViewportState(pipelineJson["viewport"], builder).unwrap();
+        readViewportState(pipelineJson["viewport"], renderPass, builder).unwrap();
     }
     else
     {
@@ -389,14 +383,13 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     }
 
     PipelineLayoutBuilder layoutBuilder(std::move(shaderMetadata));
-    CRISP_CHECK(hasField<JsonType::Array>(pipelineJson, "descriptorSets"));
-    readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder).unwrap();
+    if (hasField<JsonType::Array>(pipelineJson, "descriptorSets"))
+    {
+        readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder).unwrap();
+    }
 
     auto layout = layoutBuilder.create(renderer.getDevice());
-
-    auto pipeline = builder.create(renderer.getDevice(), std::move(layout), renderPass.getHandle(), subpassIndex);
-    // pipeline->setTag(m_configName);
-    return pipeline;
+    return builder.create(renderer.getDevice(), std::move(layout), renderPass.getHandle(), subpassIndex);
 }
 
 } // namespace crisp

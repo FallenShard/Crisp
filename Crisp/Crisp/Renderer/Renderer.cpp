@@ -6,12 +6,14 @@
 
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 #include <Crisp/vulkan/VulkanCommandPool.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
 #include <Crisp/Renderer/IO/LuaPipelineBuilder.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
@@ -22,7 +24,7 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 
-
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Common/Logger.hpp>
 
 namespace crisp
@@ -39,6 +41,7 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     renderTargets[0]->info.format = swapChain.getImageFormat();
     renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
     renderTargets[0]->info.isSwapChainDependent = true;
+    renderTargets[0]->info.clearValue.color = {0.0, 0.5, 0.0, 1.0};
 
     return RenderPassBuilder()
         .setAllocateAttachmentViews(false)
@@ -89,8 +92,10 @@ Renderer::Renderer(
         *m_physicalDevice,
         createDefaultQueueConfiguration(*m_context, *m_physicalDevice),
         RendererConfig::VirtualFrameCount);
-    m_swapChain = std::make_unique<VulkanSwapChain>(*m_device, *m_physicalDevice, m_context->getSurface(), false);
+    m_swapChain = std::make_unique<VulkanSwapChain>(
+        *m_device, *m_physicalDevice, m_context->getSurface(), TripleBuffering::Disabled);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
+    m_debugMarker = std::make_unique<VulkanDebugMarker>(m_device->getHandle());
 
     m_defaultViewport = m_swapChain->getViewport();
     m_defaultScissor = m_swapChain->getScissorRect();
@@ -124,7 +129,7 @@ Renderer::Renderer(
     m_fullScreenGeometry = std::make_unique<Geometry>(*this, vertices, faces);
 
     m_linearClampSampler = createLinearClampSampler(*m_device);
-    m_scenePipeline = createPipelineFromLua("Tonemapping.lua", getDefaultRenderPass(), 0);
+    m_scenePipeline = createPipelineFromJsonPath("GammaCorrect.json", *this, getDefaultRenderPass(), 0).unwrap();
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 }
 
@@ -201,18 +206,6 @@ VkRect2D Renderer::getDefaultScissor() const
 VkShaderModule Renderer::loadShaderModule(const std::string& key)
 {
     return loadSpirvShaderModule(m_assetPaths.spvShaderDir / (key + ".spv"));
-}
-
-VkShaderModule Renderer::compileGlsl(const std::filesystem::path& path, std::string id, std::string type)
-{
-    logger->info("Compiling: {}", path.string());
-    std::string command = "glslangValidator.exe -V -o ";
-    command += (m_assetPaths.spvShaderDir / (id + ".spv")).make_preferred().string();
-    command += ' ';
-    command += (m_assetPaths.shaderSourceDir / path).make_preferred().string();
-    std::system(command.c_str());
-
-    return loadShaderModule(id);
 }
 
 VkShaderModule Renderer::getShaderModule(const std::string& key) const
@@ -329,7 +322,7 @@ void Renderer::flushCoroutines()
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
     m_coroCmdBuffer = commandBuffer;
-    for (auto coro : m_cmdBufferCoroutines)
+    for (auto& coro : m_cmdBufferCoroutines)
         coro.resume();
 
     vkEndCommandBuffer(commandBuffer);
@@ -349,7 +342,7 @@ void Renderer::flushCoroutines()
     m_cmdBufferCoroutines.clear();
 }
 
-void Renderer::drawFrame()
+FrameContext Renderer::beginFrame()
 {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     // Obtain a frame that we can safely draw into
@@ -372,29 +365,43 @@ void Renderer::drawFrame()
     if (!swapImageIndex.has_value())
     {
         logger->error("Failed to acquire swap chain image!");
-        return;
+        return {};
     }
 
-    updateSwapChainRenderPass(virtualFrameIndex, m_swapChain->getImageView(swapImageIndex.value()));
+    updateSwapChainRenderPass(virtualFrameIndex, m_swapChain->getImageView(*swapImageIndex));
 
     /*for (const auto& worker : m_workers)
     {*/
-    auto* cmdBuffer = m_workers[0]->getCmdBuffer(virtualFrameIndex);
-    cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    record(cmdBuffer->getHandle());
-    cmdBuffer->end();
-    frame.addSubmission(*cmdBuffer);
-    //}
+    auto* commandBuffer = m_workers[0]->getCmdBuffer(virtualFrameIndex);
+    commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    return {m_currentFrameIndex, virtualFrameIndex, *swapImageIndex, commandBuffer};
+}
+
+void Renderer::endFrame(const FrameContext& frameContext)
+{
+    frameContext.commandBuffer->end();
+    auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
+    frame.addSubmission(*frameContext.commandBuffer);
 
     frame.submitToQueue(m_device->getGeneralQueue());
 
-    present(frame, swapImageIndex.value());
+    present(frame, frameContext.swapImageIndex);
 
     m_resourceUpdates.clear();
     m_drawCommands.clear();
     m_defaultPassDrawCommands.clear();
 
     ++m_currentFrameIndex;
+}
+
+void Renderer::drawFrame()
+{
+    const auto frameCtx{beginFrame()};
+    if (!frameCtx.commandBuffer)
+        return;
+
+    record(frameCtx.commandBuffer->getHandle());
+    endFrame(frameCtx);
 }
 
 void Renderer::finish()
@@ -460,7 +467,16 @@ Geometry* Renderer::getFullScreenGeometry() const
 std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(
     std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex)
 {
-    return LuaPipelineBuilder(getResourcesPath() / "Pipelines" / pipelineName).create(this, renderPass, subpassIndex);
+    if (pipelineName.ends_with(".json"))
+    {
+        const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
+        CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
+        return createPipelineFromJsonPath(absolutePipelinePath, *this, renderPass, subpassIndex).unwrap();
+    }
+
+    const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines/Backup" / pipelineName};
+    CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
+    return LuaPipelineBuilder(absolutePipelinePath).create(this, renderPass, subpassIndex);
 }
 
 void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass)

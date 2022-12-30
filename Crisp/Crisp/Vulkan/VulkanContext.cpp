@@ -27,10 +27,8 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
         pendingExtensions.insert(std::string(extensionName));
     }
 
-    logger->info("Supported extensions ({}):", supportedExtensions.size());
     for (const auto& ext : supportedExtensions)
     {
-        logger->info("\t{}", ext.extensionName);
         pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any
     }
 

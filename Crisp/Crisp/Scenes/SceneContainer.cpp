@@ -64,6 +64,7 @@ SceneContainer::SceneContainer(Renderer* renderer, Application* app, const uint3
     , m_application(app)
 {
     m_defaultSceneIndex = firstSceneIndex;
+    m_scene = createScene(getDefaultScene(), m_renderer, m_application);
 }
 
 SceneContainer::~SceneContainer() {}

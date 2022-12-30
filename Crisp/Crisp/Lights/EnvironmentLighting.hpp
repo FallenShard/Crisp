@@ -17,4 +17,5 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(
     Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize = SpecularEnvironmentCubeMapSize);
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer);
+
 } // namespace crisp

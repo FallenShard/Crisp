@@ -8,14 +8,10 @@
 
 namespace crisp
 {
-class Application;
-
 class FreeCameraController;
 class TransformBuffer;
 class LightSystem;
 
-class ResourceContext;
-class RenderGraph;
 struct RenderNode;
 
 class NormalMappingScene : public AbstractScene
@@ -43,15 +39,10 @@ private:
     void setupInput();
     void createGui();
 
-    Renderer* m_renderer;
-    Application* m_app;
-
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    std::unique_ptr<RenderGraph> m_renderGraph;
-    std::unique_ptr<ResourceContext> m_resourceContext;
     robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::unordered_map<std::string, std::size_t> m_renderNodeMap;

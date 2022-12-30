@@ -39,7 +39,7 @@
 #include <Crisp/GUI/Panel.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/IO/MeshLoader.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
@@ -59,9 +59,7 @@ bool animationFrozen = true;
 } // namespace
 
 NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
+    : AbstractScene(app, renderer)
 {
     setupInput();
 

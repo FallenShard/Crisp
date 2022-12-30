@@ -3,8 +3,8 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 
-#include <Crisp/IO/ImageLoader.hpp>
 #include <Crisp/Image/Image.hpp>
+#include <Crisp/Image/Io/ImageLoader.hpp>
 
 namespace crisp
 {
@@ -19,6 +19,15 @@ std::unique_ptr<VulkanImage> createVulkanImage(
 
 std::unique_ptr<VulkanImage> createEnvironmentMap(
     Renderer* renderer, const std::string& filename, VkFormat format, FlipOnLoad flipOnLoad = FlipOnLoad::None);
+std::unique_ptr<VulkanImage> createCubeMapFromHCrossImage(
+    Renderer* renderer, const std::string& filename, const VkFormat format, FlipOnLoad flipOnLoad = FlipOnLoad::None);
+std::unique_ptr<VulkanImage> createCubeMapFromHCrossImages(
+    Renderer* renderer,
+    const std::vector<std::string>& filenames,
+    const VkFormat format,
+    FlipOnLoad flipOnLoad = FlipOnLoad::None);
+
+std::unique_ptr<VulkanImage> createEnvironmentMap(Renderer* renderer, const VkFormat format);
 std::unique_ptr<VulkanImage> createMipmapCubeMap(Renderer* renderer, uint32_t w, uint32_t h, uint32_t mipLevels);
 
 std::unique_ptr<VulkanImage> createSampledStorageImage(const Renderer& renderer, VkFormat format, VkExtent3D extent);

@@ -1,7 +1,7 @@
 #include <Vesper/Shapes/Mesh.hpp>
 
-#include <Crisp/IO/MeshLoader.hpp>
 #include <Crisp/Math/Warp.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Vesper/Samplers/Sampler.hpp>
 
 namespace crisp

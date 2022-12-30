@@ -32,7 +32,11 @@ auto createPhysicalDeviceWithSurface()
 {
     struct
     {
-        Window window{0, 0, 200, 200, "unit_test", true};
+        Window window{
+            glm::ivec2{  0,   0},
+            glm::ivec2{200, 200},
+            "unit_test", WindowVisibility::Hidden
+        };
         std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(
             window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false)};
     } vulkanInit;

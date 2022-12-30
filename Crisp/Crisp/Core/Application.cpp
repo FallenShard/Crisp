@@ -9,7 +9,6 @@
 #include <Crisp/Common/Logger.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 
-
 namespace crisp
 {
 namespace
@@ -27,8 +26,6 @@ Application::Application(const ApplicationEnvironment& environment)
     , m_accumulatedFrames(0.0)
     , m_updatePeriod(1.0)
 {
-    logger->info("Initializing...");
-
     m_window = createWindow();
     logger->info("Window opened!");
 
@@ -42,11 +39,6 @@ Application::Application(const ApplicationEnvironment& environment)
         std::move(assetPaths),
         environment.getParameters().enableRayTracingExtension);
     logger->info("Renderer created!");
-
-    m_sceneContainer =
-        std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().defaultSceneIndex);
-    m_sceneContainer->onSceneSelected(m_sceneContainer->getDefaultScene());
-    logger->info("Scene created!");
 
     m_window->resized.subscribe<&Application::onResize>(this);
     m_window->minimized.subscribe<&Application::onMinimize>(this);
@@ -76,18 +68,20 @@ Application::Application(const ApplicationEnvironment& environment)
     m_guiForm->processGuiUpdates();
     m_guiForm->printGuiTree();
 
+    m_sceneContainer =
+        std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().defaultSceneIndex);
+
     auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
     cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-    logger->info("Initialized start-up scene");
 }
 
 Application::~Application() {}
 
 void Application::run()
 {
+    m_sceneContainer->update(0.0f);
     m_renderer->flushResourceUpdates(true);
 
-    logger->info("Hello world from Crisp! The application is up and running!");
     Timer<std::chrono::duration<double>> updateTimer;
     double timeSinceLastUpdate = 0.0;
     while (!m_window->shouldClose())

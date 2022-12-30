@@ -9,7 +9,7 @@ Image createDefaultAlbedoMap(const std::array<uint8_t, 4>& color)
 
 Image createDefaultNormalMap()
 {
-    return Image(std::vector<uint8_t>{128, 128, 128, 255}, 1, 1, 4, 4 * sizeof(uint8_t));
+    return Image(std::vector<uint8_t>{128, 128, 255, 255}, 1, 1, 4, 4 * sizeof(uint8_t));
 }
 
 Image createDefaultMetallicMap(const float metallic)
@@ -32,10 +32,10 @@ Image createDefaultEmissiveMap()
     return Image(std::vector<uint8_t>{0, 0, 0, 0}, 1, 1, 4, 4 * sizeof(uint8_t));
 }
 
-PbrTextureGroup createDefaultTextureGroup()
+PbrTextureGroup createDefaultPbrTextureGroup()
 {
     return {
-        .albedo = createDefaultAlbedoMap(),
+        .albedo = createDefaultAlbedoMap(std::array<uint8_t, 4>{255, 255, 255, 255}),
         .normal = createDefaultNormalMap(),
         .roughness = createDefaultRoughnessMap(),
         .metallic = createDefaultMetallicMap(),

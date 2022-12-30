@@ -13,6 +13,7 @@ namespace crisp
 class TriangleMesh
 {
 public:
+    TriangleMesh() = default;
     TriangleMesh(
         std::vector<glm::vec3> positions,
         std::vector<glm::vec3> normals,
@@ -76,7 +77,7 @@ private:
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
     std::vector<glm::vec4> m_tangents;
-    robin_hood::unordered_flat_map<std::string, VertexAttributeBuffer> m_customAttributes;
+    FlatHashMap<std::string, VertexAttributeBuffer> m_customAttributes;
 
     std::vector<glm::uvec3> m_faces;
     std::vector<TriangleMeshView> m_views;

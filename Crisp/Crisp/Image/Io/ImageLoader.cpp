@@ -1,4 +1,4 @@
-#include <Crisp/IO/ImageLoader.hpp>
+#include <Crisp/Image/Io/ImageLoader.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)

@@ -29,11 +29,12 @@ struct VulkanSwapChainData
 };
 
 template <int Width, int Height>
-auto createSwapChain(bool tripleBuffering)
+auto createSwapChain(TripleBuffering tripleBuffering)
 {
     struct
     {
-        std::unique_ptr<Window> window{std::make_unique<Window>(0, 0, Width, Height, "unit_test", true)};
+        std::unique_ptr<Window> window{std::make_unique<Window>(
+            glm::ivec2{0, 0}, glm::ivec2{Width, Height}, "unit_test", WindowVisibility::Hidden)};
         std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(
             window->createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false)};
         std::unique_ptr<VulkanPhysicalDevice> physicalDevice{std::make_unique<VulkanPhysicalDevice>(
@@ -50,7 +51,7 @@ auto createSwapChain(bool tripleBuffering)
 
 TEST_F(VulkanSwapChainTest, Constructor)
 {
-    auto [deps, swapChain] = createSwapChain<200, 300>(true);
+    auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Enabled);
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     // Self-move assign
@@ -60,7 +61,7 @@ TEST_F(VulkanSwapChainTest, Constructor)
 
 TEST_F(VulkanSwapChainTest, Bounds)
 {
-    auto [deps, swapChain] = createSwapChain<200, 300>(true);
+    auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Enabled);
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     ASSERT_EQ(swapChain.getImageFormat(), VK_FORMAT_B8G8R8A8_UNORM);
@@ -85,7 +86,7 @@ TEST_F(VulkanSwapChainTest, Bounds)
 
 TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering)
 {
-    auto [deps, swapChain] = createSwapChain<200, 300>(true);
+    auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Enabled);
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     ASSERT_EQ(swapChain.getSwapChainImageCount(), 3u);
@@ -93,7 +94,7 @@ TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering)
 
 TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
 {
-    auto [deps, swapChain] = createSwapChain<200, 300>(false);
+    auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Disabled);
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     ASSERT_EQ(swapChain.getSwapChainImageCount(), 2u);
@@ -102,7 +103,7 @@ TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
 
 TEST_F(VulkanSwapChainTest, Recreate)
 {
-    auto [deps, swapChain] = createSwapChain<100, 300>(false);
+    auto [deps, swapChain] = createSwapChain<100, 300>(TripleBuffering::Disabled);
     ASSERT_NE(swapChain.getHandle(), nullptr);
 
     for (uint32_t i = 0; i < 5; ++i)
@@ -113,7 +114,7 @@ TEST_F(VulkanSwapChainTest, Recreate)
 
 TEST_F(VulkanSwapChainTest, WindowResized)
 {
-    auto [deps, swapChain] = createSwapChain<150, 300>(false);
+    auto [deps, swapChain] = createSwapChain<150, 300>(TripleBuffering::Disabled);
     ASSERT_NE(swapChain.getHandle(), nullptr);
     EXPECT_EQ(swapChain.getExtent().width, 150u);
     EXPECT_EQ(swapChain.getExtent().height, 300u);

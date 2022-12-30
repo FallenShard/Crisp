@@ -1,9 +1,9 @@
-#include "AmbientOcclusionScene.hpp"
+#include <Crisp/Scenes/AmbientOcclusionScene.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/IO/ImageLoader.hpp>
+#include <Crisp/Image/Io/ImageLoader.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
@@ -29,8 +29,8 @@
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/IO/MeshLoader.hpp>
 #include <Crisp/Math/Warp.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 
 #include <random>
 
@@ -84,9 +84,7 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer,
 } // namespace
 
 AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
+    : AbstractScene(app, renderer)
     , m_ssaoParams{128, 0.5f}
 {
     m_cameraController = std::make_unique<FreeCameraController>(m_app->getWindow());
@@ -149,13 +147,15 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
         m_resourceContext->renderTargetCache,
         VK_FORMAT_R32G32B32A32_SFLOAT,
         m_renderer->getSwapChainExtent(),
-        true);
+        true,
+        "BlurHMap");
     auto blurVPass = createBlurPass(
         m_renderer->getDevice(),
         m_resourceContext->renderTargetCache,
         VK_FORMAT_R32G32B32A32_SFLOAT,
         m_renderer->getSwapChainExtent(),
-        true);
+        true,
+        "BlurVMap");
 
     VulkanPipeline* colorPipeline = m_resourceContext->createPipeline("color", "UniformColor.lua", *mainPass, 0);
     Material* colorMaterial = m_resourceContext->createMaterial("color", colorPipeline);
@@ -165,9 +165,9 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     Material* normalMaterial = m_resourceContext->createMaterial("normal", normalPipeline);
     normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-    const VertexLayoutDescription shadowFormat = {{VertexAttribute::Position}};
+    const VertexLayoutDescription positionFormat = {{VertexAttribute::Position}};
     m_resourceContext->addGeometry(
-        "floorPos", std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(shadowFormat)), shadowFormat));
+        "floorPos", std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(positionFormat)), positionFormat));
 
     const VertexLayoutDescription vertexFormat = {
         {VertexAttribute::Position, VertexAttribute::Normal}
@@ -182,7 +182,6 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
     m_skybox = std::make_unique<Skybox>(m_renderer, *mainPass, "Creek");
 
-    m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
     m_renderGraph->addRenderPass("mainPass", std::move(mainPass));
     m_renderGraph->addRenderPass("ssaoPass", std::move(ssaoPass));
     m_renderGraph->addRenderPass("blurHPass", std::move(blurHPass));

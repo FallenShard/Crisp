@@ -15,9 +15,6 @@
 
 namespace crisp
 {
-class Application;
-class Renderer;
-
 class RayTracer;
 class RayTracedImage;
 

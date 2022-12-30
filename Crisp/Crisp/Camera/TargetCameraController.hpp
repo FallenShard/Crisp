@@ -14,6 +14,7 @@ public:
     ~TargetCameraController();
 
     void setPanSpeed(float panSpeed);
+    void setTarget(const glm::vec3& target);
 
     void pan(float dx, float dy);
     void updateOrientation(float dYaw, float dPitch);

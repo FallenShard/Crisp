@@ -22,6 +22,9 @@ public:
     void addImage(const std::string& key, std::unique_ptr<VulkanImage> image);
     VulkanImage& getImage(const std::string& key) const;
 
+    void removeImage(const std::string& key);
+    void removeImageView(const std::string& key);
+
     void addImageView(const std::string& key, std::unique_ptr<VulkanImageView> imageView);
     VulkanImageView& getImageView(const std::string& key) const;
     VulkanImageView& getImageView(const std::string& key, const std::string& fallbackKey) const;

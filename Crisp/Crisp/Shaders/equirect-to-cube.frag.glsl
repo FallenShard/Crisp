@@ -9,7 +9,7 @@ layout(set = 0, binding = 0) uniform sampler2D equirectangularMap;
 const vec2 invAtan = vec2(0.1591, 0.3183);
 vec2 sampleSphericalMap(vec3 v)
 {
-    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    vec2 uv = vec2(atan(v.x, v.z), asin(v.y));
     uv *= invAtan;
     uv += 0.5;
     return uv;

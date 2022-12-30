@@ -1,5 +1,6 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
+#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 
 namespace crisp
@@ -82,6 +83,65 @@ std::unique_ptr<VulkanImage> convertToVulkanImage(Renderer* renderer, const Imag
     return vulkanImage;
 }
 
+std::unique_ptr<VulkanImage> convertToVulkanCubeMap(
+    Renderer* renderer, const std::vector<std::vector<Image>>& cubeMapFaceMips, VkFormat format)
+{
+    CRISP_CHECK(cubeMapFaceMips.size() > 0);
+    const uint32_t cubeMapSize{cubeMapFaceMips.front().front().getWidth()};
+    VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.format = format;
+    imageInfo.extent = {cubeMapSize, cubeMapSize, 1u};
+    imageInfo.mipLevels = static_cast<uint32_t>(cubeMapFaceMips.size());
+    imageInfo.arrayLayers = 6;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    auto vulkanImage = std::make_unique<VulkanImage>(renderer->getDevice(), imageInfo);
+
+    for (uint32_t k = 0; k < cubeMapFaceMips.size(); ++k)
+    {
+        const auto& cubeMapMipLevel{cubeMapFaceMips[k]};
+        const uint32_t mipSize{cubeMapMipLevel.front().getWidth()};
+        for (uint32_t i = 0; i < cubeMapMipLevel.size(); ++i)
+        {
+            std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(
+                renderer->getDevice(), cubeMapMipLevel[i].getByteSize(), cubeMapMipLevel[i].getData());
+            renderer->enqueueResourceUpdate(
+                [&image = *vulkanImage, layer = i, mipLevel = k, mipSize, stagingBuffer](VkCommandBuffer cmdBuffer)
+                {
+                    const VkExtent3D extent{mipSize, mipSize, 1};
+                    image.transitionLayout(
+                        cmdBuffer,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        layer,
+                        1,
+                        mipLevel,
+                        1,
+                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT);
+                    image.copyFrom(cmdBuffer, *stagingBuffer, extent, layer, 1, mipLevel);
+                    image.transitionLayout(
+                        cmdBuffer,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        layer,
+                        1,
+                        mipLevel,
+                        1,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                });
+            // fillImageLayer(*vulkanImage, *renderer, cubeMapMipLevel[i].getData(), cubeMapMipLevel[i].getByteSize(),
+            // i);
+        }
+    }
+
+    return vulkanImage;
+}
+
 std::unique_ptr<VulkanImage> createVulkanImage(
     Renderer& renderer, const VkDeviceSize size, const void* data, const VkImageCreateInfo imageCreateInfo)
 {
@@ -124,6 +184,51 @@ std::unique_ptr<VulkanImage> createEnvironmentMap(
     return convertToVulkanImage(
         renderer,
         loadImage(renderer->getResourcesPath() / "Textures/EnvironmentMaps" / filename, 4, flipOnLoad).unwrap(),
+        format);
+}
+
+std::unique_ptr<VulkanImage> createCubeMapFromHCrossImage(
+    Renderer* renderer, const std::string& filename, const VkFormat format, const FlipOnLoad flipOnLoad)
+{
+    return createCubeMapFromHCrossImages(renderer, {filename}, format, flipOnLoad);
+}
+
+std::unique_ptr<VulkanImage> createCubeMapFromHCrossImages(
+    Renderer* renderer, const std::vector<std::string>& filenames, const VkFormat format, const FlipOnLoad flipOnLoad)
+{
+    std::vector<std::vector<Image>> cubeMapFaceMipmaps;
+    for (uint32_t i = 0; i < filenames.size(); ++i)
+    {
+        const auto filename{filenames[i]};
+        const Image hcrossImage{
+            loadImage(renderer->getResourcesPath() / "Textures/EnvironmentMaps" / filename, 4, flipOnLoad).unwrap()};
+        const uint32_t cubeMapSize{hcrossImage.getWidth() / 4};
+        CRISP_CHECK(
+            cubeMapSize == hcrossImage.getHeight() / 3,
+            "{} {} {}",
+            cubeMapSize,
+            hcrossImage.getWidth(),
+            hcrossImage.getHeight());
+        std::vector<Image> cubeMapFaces;
+        // Right, Left, Top, Bottom, Front, Back.
+        cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 2 * cubeMapSize, cubeMapSize, cubeMapSize));
+        cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 0, cubeMapSize, cubeMapSize));
+        cubeMapFaces.push_back(hcrossImage.createSubImage(0, cubeMapSize, cubeMapSize, cubeMapSize));
+        cubeMapFaces.push_back(hcrossImage.createSubImage(2 * cubeMapSize, cubeMapSize, cubeMapSize, cubeMapSize));
+        cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, cubeMapSize, cubeMapSize, cubeMapSize));
+        cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 3 * cubeMapSize, cubeMapSize, cubeMapSize));
+
+        cubeMapFaceMipmaps.push_back(std::move(cubeMapFaces));
+    }
+    return convertToVulkanCubeMap(renderer, cubeMapFaceMipmaps, format);
+}
+
+std::unique_ptr<VulkanImage> createEnvironmentMap(Renderer* renderer, const VkFormat format)
+{
+    return convertToVulkanImage(
+        renderer,
+        Image(std::vector<uint8_t>{255, 255, 255, 255}, 1, 1, 4, 4),
+        // loadImage(renderer->getResourcesPath() / "Textures/EnvironmentMaps" / filename, 4, flipOnLoad).unwrap(),
         format);
 }
 

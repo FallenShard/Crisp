@@ -25,6 +25,64 @@ struct VertexLayout
 {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attributes;
+
+    bool operator==(const VertexLayout& rhs) const
+    {
+        if (rhs.bindings.size() != bindings.size() || rhs.attributes.size() != attributes.size())
+        {
+            return false;
+        }
+
+        for (uint32_t i = 0; i < bindings.size(); ++i)
+        {
+            if (bindings[i].binding != rhs.bindings[i].binding || bindings[i].inputRate != rhs.bindings[i].inputRate ||
+                bindings[i].stride != rhs.bindings[i].stride)
+            {
+                return false;
+            }
+        }
+
+        for (uint32_t i = 0; i < attributes.size(); ++i)
+        {
+            if (attributes[i].binding != rhs.attributes[i].binding ||
+                attributes[i].format != rhs.attributes[i].format ||
+                attributes[i].location != rhs.attributes[i].location ||
+                attributes[i].offset != rhs.attributes[i].offset)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool isSubsetOf(const VertexLayout& rhs) const
+    {
+        if (rhs.bindings.size() < bindings.size() || rhs.attributes.size() < attributes.size())
+        {
+            return false;
+        }
+
+        for (uint32_t i = 0; i < bindings.size(); ++i)
+        {
+            if (bindings[i].binding != rhs.bindings[i].binding || bindings[i].inputRate != rhs.bindings[i].inputRate ||
+                bindings[i].stride != rhs.bindings[i].stride)
+            {
+                return false;
+            }
+        }
+
+        for (uint32_t i = 0; i < attributes.size(); ++i)
+        {
+            if (attributes[i].binding != rhs.attributes[i].binding ||
+                attributes[i].format != rhs.attributes[i].format ||
+                attributes[i].location != rhs.attributes[i].location ||
+                attributes[i].offset != rhs.attributes[i].offset)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 class VulkanPipeline final : public VulkanResource<VkPipeline, vkDestroyPipeline>

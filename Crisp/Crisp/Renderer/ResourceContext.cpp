@@ -32,12 +32,13 @@ Material* ResourceContext::createMaterial(std::string materialId, VulkanPipeline
 
 UniformBuffer* ResourceContext::addUniformBuffer(std::string id, std::unique_ptr<UniformBuffer> uniformBuffer)
 {
+    m_renderer->getDebugMarker().setObjectName(uniformBuffer->get(), id.c_str());
     return m_uniformBuffers.emplace(std::move(id), std::move(uniformBuffer)).first->second.get();
 }
 
-void ResourceContext::addGeometry(std::string id, std::unique_ptr<Geometry> geometry)
+Geometry& ResourceContext::addGeometry(std::string id, std::unique_ptr<Geometry> geometry)
 {
-    m_geometries[id] = std::move(geometry);
+    return *m_geometries.emplace(std::move(id), std::move(geometry)).first->second;
 }
 
 RenderNode* ResourceContext::createPostProcessingEffectNode(

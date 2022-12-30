@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "Crisp/IO/WavefrontObjReader.hpp"
+#include <Crisp/Mesh/Io/WavefrontObjReader.hpp>
 
 using namespace crisp;
 

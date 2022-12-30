@@ -53,9 +53,7 @@ static constexpr const char* CsmPass = "csmPass";
 } // namespace
 
 ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
+    : AbstractScene(app, renderer)
 {
     setupInput();
 

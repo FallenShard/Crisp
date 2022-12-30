@@ -1,4 +1,4 @@
-#include "VulkanQueue.hpp"
+#include <Crisp/Vulkan/VulkanQueue.hpp>
 
 #include <Crisp/Vulkan/VulkanContext.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
@@ -7,7 +7,7 @@
 namespace crisp
 {
 VulkanQueue::VulkanQueue(
-    const VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId)
+    const VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, const QueueIdentifier queueId)
     : m_deviceHandle(deviceHandle)
     , m_familyIndex(queueId.familyIndex)
     , m_index(queueId.index)

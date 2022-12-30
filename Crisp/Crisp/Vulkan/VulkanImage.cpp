@@ -241,6 +241,27 @@ void VulkanImage::copyFrom(
     vkCmdCopyBufferToImage(commandBuffer, buffer.getHandle(), m_handle, m_layouts[baseLayer][0], 1, &copyRegion);
 }
 
+void VulkanImage::copyFrom(
+    VkCommandBuffer commandBuffer,
+    const VulkanBuffer& buffer,
+    const VkExtent3D& extent,
+    const uint32_t baseLayer,
+    const uint32_t numLayers,
+    const uint32_t mipLevel)
+{
+    VkBufferImageCopy copyRegion{};
+    copyRegion.bufferOffset = 0;
+    copyRegion.bufferImageHeight = extent.height;
+    copyRegion.bufferRowLength = extent.width;
+    copyRegion.imageExtent = extent;
+    copyRegion.imageOffset = {0, 0, 0};
+    copyRegion.imageSubresource.aspectMask = m_aspect;
+    copyRegion.imageSubresource.baseArrayLayer = baseLayer;
+    copyRegion.imageSubresource.layerCount = numLayers;
+    copyRegion.imageSubresource.mipLevel = mipLevel;
+    vkCmdCopyBufferToImage(commandBuffer, buffer.getHandle(), m_handle, m_layouts[baseLayer][mipLevel], 1, &copyRegion);
+}
+
 void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
 {
     if (m_createInfo.mipLevels > 1)
@@ -364,6 +385,10 @@ std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type)
 std::unique_ptr<VulkanImageView> VulkanImage::createView(
     VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
 {
+    if (type == VK_IMAGE_VIEW_TYPE_CUBE)
+    {
+        numLayers = 6;
+    }
     return std::make_unique<VulkanImageView>(*m_device, *this, type, baseLayer, numLayers, baseMipLevel, mipLevels);
 }
 

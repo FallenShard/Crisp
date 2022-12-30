@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-#include <Crisp/IO/OpenEXRReader.hpp>
+#include <Crisp/Image/Io/OpenEXRReader.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 namespace crisp

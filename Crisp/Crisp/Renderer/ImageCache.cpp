@@ -14,20 +14,42 @@ ImageCache::ImageCache(Renderer* renderer)
 void ImageCache::addImageWithView(
     const std::string& key, std::unique_ptr<VulkanImage> image, VkImageViewType imageViewType)
 {
-    m_imageViews[key] = image->createView(imageViewType);
-    m_images[key] = std::move(image);
+    auto& cachedView = m_imageViews[key];
+    if (!cachedView)
+    {
+        cachedView = image->createView(imageViewType);
+    }
+
+    auto& cachedImage = m_images[key];
+    if (!cachedImage)
+    {
+        cachedImage = std::move(image);
+    }
 }
 
 void ImageCache::addImageWithView(
     const std::string& key, std::unique_ptr<VulkanImage> image, std::unique_ptr<VulkanImageView> imageView)
 {
-    m_imageViews[key] = std::move(imageView);
-    m_images[key] = std::move(image);
+    auto& cachedView = m_imageViews[key];
+    if (!cachedView)
+    {
+        cachedView = std::move(imageView);
+    }
+
+    auto& cachedImage = m_images[key];
+    if (!cachedImage)
+    {
+        cachedImage = std::move(image);
+    }
 }
 
 void ImageCache::addImage(const std::string& key, std::unique_ptr<VulkanImage> image)
 {
-    m_images[key] = std::move(image);
+    auto& cachedImage = m_images[key];
+    if (!cachedImage)
+    {
+        cachedImage = std::move(image);
+    }
 }
 
 VulkanImage& ImageCache::getImage(const std::string& key) const
@@ -35,9 +57,23 @@ VulkanImage& ImageCache::getImage(const std::string& key) const
     return *m_images.at(key);
 }
 
+void ImageCache::removeImage(const std::string& key)
+{
+    m_images.erase(key);
+}
+
+void ImageCache::removeImageView(const std::string& key)
+{
+    m_imageViews.erase(key);
+}
+
 void ImageCache::addImageView(const std::string& key, std::unique_ptr<VulkanImageView> imageView)
 {
-    m_imageViews[key] = std::move(imageView);
+    auto& cachedView = m_imageViews[key];
+    if (!cachedView)
+    {
+        cachedView = std::move(imageView);
+    }
 }
 
 VulkanImageView& ImageCache::getImageView(const std::string& key) const

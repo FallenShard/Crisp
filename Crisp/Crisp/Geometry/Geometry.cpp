@@ -17,10 +17,56 @@ uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffer
 
     return static_cast<uint32_t>(vertexCount);
 }
+
+VkFormat getFormat(const VertexAttribute attribute)
+{
+    switch (attribute)
+    {
+    case VertexAttribute::Position:
+        return VK_FORMAT_R32G32B32_SFLOAT;
+    case VertexAttribute::Normal:
+        return VK_FORMAT_R32G32B32_SFLOAT;
+    case VertexAttribute::TexCoord:
+        return VK_FORMAT_R32G32_SFLOAT;
+    case VertexAttribute::Tangent:
+        return VK_FORMAT_R32G32B32A32_SFLOAT;
+    }
+    spdlog::critical("Failed to convert vulkan format!");
+    return VK_FORMAT_UNDEFINED;
+}
+
+VertexLayout createLayoutFromDescription(const VertexLayoutDescription& vertexLayoutDescription)
+{
+    VertexLayout layout{};
+    layout.bindings.resize(vertexLayoutDescription.size(), {});
+    uint32_t location{0};
+    for (uint32_t i = 0; i < vertexLayoutDescription.size(); ++i)
+    {
+        const auto& desc{vertexLayoutDescription[i]};
+        layout.bindings[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        layout.bindings[i].binding = i;
+
+        uint32_t offset{0};
+        for (const auto& attrib : desc)
+        {
+            layout.bindings[i].stride += attrib.size;
+            layout.attributes.emplace_back(
+                VkVertexInputAttributeDescription{location, i, getFormat(attrib.type), offset});
+            offset += attrib.size;
+            ++location;
+        }
+    }
+    return layout;
+}
 } // namespace
 
 Geometry::Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLayoutDescription& vertexLayoutDescription)
-    : Geometry(renderer, mesh.interleave(vertexLayoutDescription, false), mesh.getFaces(), mesh.getViews())
+    : Geometry(
+          renderer,
+          vertexLayoutDescription,
+          mesh.interleave(vertexLayoutDescription, false),
+          mesh.getFaces(),
+          mesh.getViews())
 {
 }
 
@@ -59,6 +105,7 @@ Geometry::Geometry(
 
 Geometry::Geometry(
     Renderer& renderer,
+    const VertexLayoutDescription& vertexLayoutDescription,
     std::vector<InterleavedVertexBuffer>&& vertexBuffers,
     const std::vector<glm::uvec3>& faces,
     const std::vector<TriangleMeshView>& parts)
@@ -66,6 +113,7 @@ Geometry::Geometry(
     , m_indexCount(static_cast<uint32_t>(faces.size() * 3))
     , m_instanceCount(1)
     , m_parts(parts)
+    , m_vertexLayout(createLayoutFromDescription(vertexLayoutDescription))
 {
     for (const auto& buffer : vertexBuffers)
     {
@@ -121,6 +169,15 @@ void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer) const
     if (m_bindingCount > 0)
         vkCmdBindVertexBuffers(
             cmdBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
+}
+
+void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer, uint32_t bufferCount) const
+{
+    CRISP_CHECK(firstBuffer >= m_firstBinding);
+    CRISP_CHECK(firstBuffer + bufferCount <= m_firstBinding + m_bindingCount);
+    if (m_bindingCount > 0)
+        vkCmdBindVertexBuffers(
+            cmdBuffer, firstBuffer, bufferCount, &m_vertexBufferHandles[firstBuffer], &m_offsets[firstBuffer]);
 }
 
 void Geometry::bind(VkCommandBuffer commandBuffer) const

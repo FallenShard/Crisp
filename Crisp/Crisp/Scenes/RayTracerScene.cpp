@@ -15,7 +15,7 @@
 #include <Crisp/GUI/Panel.hpp>
 #include <Crisp/GUI/Slider.hpp>
 #include <Crisp/IO/FileUtils.hpp>
-#include <Crisp/IO/OpenEXRWriter.hpp>
+#include <Crisp/Image/Io/OpenEXRWriter.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
 #include <Crisp/vulkan/VulkanImageView.hpp>
 
@@ -23,8 +23,7 @@ namespace crisp
 {
 
 RayTracerScene::RayTracerScene(Renderer* renderer, Application* app)
-    : m_renderer(renderer)
-    , m_app(app)
+    : AbstractScene(app, renderer)
     , m_progress(0.0f)
     , m_timeSpentRendering(0.0f)
 {
@@ -91,7 +90,7 @@ void RayTracerScene::render()
 
 void RayTracerScene::openSceneFileFromDialog()
 {
-    auto openedFile = openFileDialog();
+    std::string openedFile = "D:/version-control/Crisp/Resources/VesperScenes/cbox-test-mis.xml"; // openFileDialog();
     if (openedFile == "")
         return;
 

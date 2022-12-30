@@ -38,11 +38,14 @@ void ControlGroup::removeControl(const std::string& id)
     m_form->postGuiUpdate(
         [this, id]()
         {
-            m_children.erase(std::remove_if(m_children.begin(), m_children.end(),
-                                 [id](const std::unique_ptr<Control>& child)
-                                 {
-                                     return child->getId() == id;
-                                 }),
+            m_children.erase(
+                std::remove_if(
+                    m_children.begin(),
+                    m_children.end(),
+                    [id](const std::unique_ptr<Control>& child)
+                    {
+                        return child->getId() == id;
+                    }),
                 m_children.end());
             setValidationFlags(Validation::All);
         });
@@ -134,7 +137,7 @@ void ControlGroup::onMouseMoved(float x, float y)
             child->onMouseExited(x, y);
     }
 
-    m_prevMousePos = { x, y };
+    m_prevMousePos = {x, y};
 }
 
 void ControlGroup::onMouseEntered(float x, float y)
@@ -150,7 +153,7 @@ void ControlGroup::onMouseEntered(float x, float y)
             child->onMouseEntered(x, y);
     }
 
-    m_prevMousePos = { x, y };
+    m_prevMousePos = {x, y};
 }
 
 void ControlGroup::onMouseExited(float x, float y)
@@ -160,7 +163,7 @@ void ControlGroup::onMouseExited(float x, float y)
         child->onMouseExited(x, y);
     }
 
-    m_prevMousePos = { -1.0f, -1.0f };
+    m_prevMousePos = {-1.0f, -1.0f};
 }
 
 bool ControlGroup::onMousePressed(float x, float y)
@@ -190,6 +193,25 @@ bool ControlGroup::onMouseReleased(float /*x*/, float /*y*/)
 
 void ControlGroup::validate()
 {
+    if (m_layoutType == LayoutType::Vertical)
+    {
+        float y = 0.0f;
+        for (auto& child : m_children)
+        {
+            child->setPositionY(y);
+            y += child->getHeight() + m_spacing;
+        }
+    }
+    else if (m_layoutType == LayoutType::Horizontal)
+    {
+        float x = 0.0f;
+        for (auto& child : m_children)
+        {
+            child->setPositionX(x);
+            x += child->getWidth() + m_spacing;
+        }
+    }
+
     auto size = getSize();
     auto absPos = getAbsolutePosition();
     auto absDepth = getAbsoluteDepth();

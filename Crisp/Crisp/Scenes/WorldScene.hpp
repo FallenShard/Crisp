@@ -62,17 +62,12 @@ private:
     void setupInput();
     void createGui(gui::Form* form);
 
-    Renderer* m_renderer;
-    Application* m_app;
-
     std::vector<ConnectionHandler> m_connectionHandlers;
 
     std::unique_ptr<CameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    std::unique_ptr<RenderGraph> m_renderGraph;
-    std::unique_ptr<ResourceContext> m_resourceContext;
     robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     PbrUnifMaterialParams m_uniformMaterialParams;

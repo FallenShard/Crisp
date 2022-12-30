@@ -8,8 +8,8 @@
 
 namespace crisp
 {
-template <typename Key, typename Value>
-using FlatHashMap = robin_hood::unordered_flat_map<Key, Value>;
+template <typename Key, typename Value, typename Hash = robin_hood::hash<Key>>
+using FlatHashMap = robin_hood::unordered_flat_map<Key, Value, Hash>;
 
 template <typename Key>
 using FlatHashSet = robin_hood::unordered_flat_set<Key>;

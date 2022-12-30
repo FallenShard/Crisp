@@ -12,12 +12,6 @@ namespace crisp
 {
 struct RenderNode
 {
-    Geometry* geometry = nullptr;
-
-    UniformBuffer* transformBuffer = nullptr;
-    TransformPack* transformPack = nullptr;
-    int transformIndex = -1;
-    bool isVisible = true;
 
     inline void setModelMatrix(const glm::mat4& mat)
     {
@@ -48,11 +42,20 @@ struct RenderNode
         int part = -1;
 
         Geometry* geometry = nullptr;
+        int firstBuffer = -1;
+        int bufferCount = -1;
         Material* material = nullptr;
         VulkanPipeline* pipeline = nullptr;
 
         std::vector<unsigned char> pushConstantBuffer;
         PushConstantView pushConstantView;
+
+        inline void setGeometry(Geometry* newGeometry, int firstVertexBuffer, int vertexBufferCount)
+        {
+            geometry = newGeometry;
+            firstBuffer = firstVertexBuffer;
+            bufferCount = vertexBufferCount;
+        }
 
         template <typename T>
         inline void setPushConstantView(const T& data)
@@ -100,11 +103,16 @@ struct RenderNode
         return matData;
     }
 
-    robin_hood::unordered_flat_map<SubpassKey, FlatHashMap<int32_t, MaterialData>, SubpassKeyHasher> materials;
-
     RenderNode();
     RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, int transformIndex);
     RenderNode(UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, int transformIndex);
     RenderNode(TransformBuffer& transformBuffer, int transformIndex);
+
+    Geometry* geometry = nullptr;
+    UniformBuffer* transformBuffer = nullptr;
+    TransformPack* transformPack = nullptr;
+    int transformIndex = -1;
+    bool isVisible = true;
+    FlatHashMap<SubpassKey, FlatHashMap<int32_t, MaterialData>, SubpassKeyHasher> materials;
 };
 } // namespace crisp
