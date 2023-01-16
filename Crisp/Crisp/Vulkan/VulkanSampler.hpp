@@ -6,6 +6,8 @@ namespace crisp
 {
 class VulkanDevice;
 
+inline constexpr float MaxAnisotropy = 16.0f;
+
 class VulkanSampler final : public VulkanResource<VkSampler, vkDestroySampler>
 {
 public:

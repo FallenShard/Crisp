@@ -68,8 +68,7 @@ Application::Application(const ApplicationEnvironment& environment)
     m_guiForm->processGuiUpdates();
     m_guiForm->printGuiTree();
 
-    m_sceneContainer =
-        std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().defaultSceneIndex);
+    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
 
     auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
     cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());

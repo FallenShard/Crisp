@@ -19,16 +19,16 @@ namespace crisp
 namespace
 {
 std::vector<std::string> sceneNames = {
-    "Ambient Occlusion",
-    "Liquid Simulation",
-    "Shadow Mapping",
-    "Ray Tracer",
-    "Physically-based Rendering",
-    "Clustered Lighting",
-    "Normal Mapping",
-    "VulkanRayTracingScene",
-    "Ocean",
-    "Null"};
+    "ambient-occlusion",
+    "fluid-simulation",
+    "shadow-mapping",
+    "ray-tracer",
+    "pbr",
+    "clustered-lighting",
+    "normal-mapping",
+    "vulkan-ray-tracer",
+    "ocean",
+    "null"};
 
 template <typename... Args>
 std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... args)
@@ -59,12 +59,11 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
 }
 } // namespace
 
-SceneContainer::SceneContainer(Renderer* renderer, Application* app, const uint32_t firstSceneIndex)
+SceneContainer::SceneContainer(Renderer* renderer, Application* app, const std::string& sceneName)
     : m_renderer(renderer)
     , m_application(app)
 {
-    m_defaultSceneIndex = firstSceneIndex;
-    m_scene = createScene(getDefaultScene(), m_renderer, m_application);
+    m_scene = createScene(sceneName, m_renderer, m_application);
 }
 
 SceneContainer::~SceneContainer() {}
@@ -72,16 +71,6 @@ SceneContainer::~SceneContainer() {}
 std::vector<std::string> SceneContainer::getSceneNames()
 {
     return sceneNames;
-}
-
-const std::string& SceneContainer::getDefaultScene() const
-{
-    return sceneNames.at(m_defaultSceneIndex);
-}
-
-std::size_t SceneContainer::getDefaultSceneIndex() const
-{
-    return m_defaultSceneIndex;
 }
 
 void SceneContainer::update(float dt)

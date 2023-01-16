@@ -14,13 +14,39 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
+#include <Crisp/Image/Io/Utils.hpp>
+
 namespace crisp
 {
+constexpr uint32_t CubeMapFaceCount = 6;
+
+ImageBasedLightingData loadImageBasedLightingData(const std::filesystem::path& envMapDir)
+{
+    const auto envMapName{envMapDir.stem().string()};
+    ImageBasedLightingData data{};
+
+    constexpr uint32_t RequestedChannels{4};
+    data.equirectangularEnvironmentMap =
+        loadImage(envMapDir / fmt::format("{}.hdr", envMapName), RequestedChannels, FlipOnLoad::Y).unwrap();
+
+    const std::filesystem::path diffMapPath{envMapDir / fmt::format("{}_irr.hdr", envMapName)};
+    data.diffuseIrradianceCubeMap = loadCubeMapFacesFromHCrossImage(diffMapPath);
+
+    constexpr uint32_t ReflectionMipMapLevels{9};
+    for (uint32_t i = 0; i < ReflectionMipMapLevels; ++i)
+    {
+        const uint32_t width = (1 << (ReflectionMipMapLevels - i)) * 4;
+        const uint32_t height = (1 << (ReflectionMipMapLevels - i)) * 3;
+        const std::filesystem::path reflMapPath{
+            envMapDir / fmt::format("{}_rad_{}_{}x{}.hdr", envMapName, i, width, height)};
+        data.specularReflectanceMapMipLevels.emplace_back(loadCubeMapFacesFromHCrossImage(reflMapPath));
+    }
+    return data;
+}
+
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
     Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize)
 {
-    constexpr uint32_t CubeMapFaceCount = 6;
-
     cubeMapSize = equirectMapView->getImage().getHeight() / 2;
 
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
@@ -114,8 +140,6 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
     Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize)
 {
-    static constexpr uint32_t CubeMapFaceCount = 6;
-
     auto cubeMapRenderTarget =
         RenderTargetBuilder()
             .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
@@ -187,7 +211,6 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(
     Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize)
 {
-    static constexpr uint32_t CubeMapFaceCount = 6;
     constexpr uint32_t mipLevels = 5;
     // auto filteredCubeMap = createMipmapCubeMap(renderer, cubeMapSize, cubeMapSize, mipLevels);
 

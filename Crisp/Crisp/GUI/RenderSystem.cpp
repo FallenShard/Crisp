@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <Crisp/IO/FontLoader.hpp>
-#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>

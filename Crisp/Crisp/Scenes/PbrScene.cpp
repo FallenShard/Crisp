@@ -78,10 +78,8 @@ float altitude = 0.0f;
 
 const VertexLayoutDescription PbrVertexFormat = {
     {VertexAttribute::Position},
-    { VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+    {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
 };
-
-const std::vector<std::vector<VertexAttributeDescriptor>> PosVertexFormat = {{VertexAttribute::Position}};
 
 void setPbrMaterialSceneParams(
     Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem)
@@ -456,30 +454,48 @@ void PbrScene::createCommonTextures()
 
 void PbrScene::setEnvironmentMap(const std::string& envMapName)
 {
-    auto envRefMap = createEnvironmentMap(
-        m_renderer, fmt::format("{}/{}.hdr", envMapName, envMapName), VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
-    auto [cubeMap, cubeMapView] =
-        convertEquirectToCubeMap(m_renderer, envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D), 1024);
-
-    auto diffEnv = createCubeMapFromHCrossImage(
-        m_renderer, fmt::format("{}/{}_irr.hdr", envMapName, envMapName), VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto diffEnvView = diffEnv->createView(VK_IMAGE_VIEW_TYPE_CUBE);
-
-    std::vector<std::string> reflImages;
-    for (uint32_t i = 0; i < 9; ++i)
+    static bool isCreated{false};
+    if (isCreated)
     {
-        const uint32_t width = (1 << (9 - i)) * 4;
-        const uint32_t height = (1 << (9 - i)) * 3;
-        reflImages.push_back(fmt::format("{}/{}_rad_{}_{}x{}.hdr", envMapName, envMapName, i, width, height));
+        m_renderer->finish();
+        const auto iblData{
+            loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName)};
+
+        updateCubeMap(
+            m_resourceContext->imageCache.getImage("diffEnvMap"), *m_renderer, iblData.diffuseIrradianceCubeMap);
+        for (uint32_t i = 0; i < iblData.specularReflectanceMapMipLevels.size(); ++i)
+        {
+            updateCubeMap(
+                m_resourceContext->imageCache.getImage("specEnvMap"),
+                *m_renderer,
+                iblData.specularReflectanceMapMipLevels[i],
+                i);
+        }
+        return;
     }
 
-    auto reflEnv = createCubeMapFromHCrossImages(m_renderer, reflImages, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto reflEnvView = reflEnv->createView(VK_IMAGE_VIEW_TYPE_CUBE);
+    const auto iblData{
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName)};
+
+    auto equirectMap =
+        createVulkanImage(*m_renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto [cubeMap, cubeMapView] =
+        convertEquirectToCubeMap(m_renderer, equirectMap->createView(VK_IMAGE_VIEW_TYPE_2D), 1024);
+
+    auto diffEnvMap =
+        createVulkanCubeMap(*m_renderer, {iblData.diffuseIrradianceCubeMap}, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto diffEnvView = diffEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
+
+    auto specEnvMap =
+        createVulkanCubeMap(*m_renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto specEnvView = specEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
 
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
-    imageCache.addImageWithView("diffEnvMap", std::move(diffEnv), std::move(diffEnvView));
-    imageCache.addImageWithView("specEnvMap", std::move(reflEnv), std::move(reflEnvView));
+    imageCache.addImageWithView("diffEnvMap", std::move(diffEnvMap), std::move(diffEnvView));
+    imageCache.addImageWithView("specEnvMap", std::move(specEnvMap), std::move(specEnvView));
+
+    isCreated = true;
 }
 
 void PbrScene::createShaderball()
@@ -508,8 +524,7 @@ void PbrScene::createShaderball()
     }
     else
     {
-        mesh = loadTriangleMesh(
-                   m_renderer->getResourcesPath() / "Meshes/ShaderBall_FWVN_PosX.obj", flatten(PbrVertexFormat))
+        mesh = loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(PbrVertexFormat))
                    .unwrap();
 
         const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / "RustedIron"};
@@ -517,7 +532,7 @@ void PbrScene::createShaderball()
         pbrMaterial.textures = loadPbrTextureGroup(materialPath);
 
         const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-        shaderBall->transformPack->M = translation * glm::scale(glm::vec3(0.025f));
+        shaderBall->transformPack->M = translation; // * glm::scale(glm::vec3(0.025f));
     }
 
     m_shaderBallPbrMaterialKey = pbrMaterial.key;
@@ -652,6 +667,16 @@ void PbrScene::createGui(gui::Form* form)
     comboBox->setItems(materials);
     comboBox->itemSelected.subscribe<&PbrScene::onMaterialSelected>(this);
     panel->addControl(std::move(comboBox));
+
+    std::vector<std::string> envMapNames;
+    for (const auto& dir :
+         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
+        envMapNames.push_back(dir.path().stem().string());
+    auto envComboBox = std::make_unique<gui::ComboBox>(form);
+    envComboBox->setId("EnvMapComboBox");
+    envComboBox->setItems(envMapNames);
+    envComboBox->itemSelected.subscribe<&PbrScene::setEnvironmentMap>(this);
+    panel->addControl(std::move(envComboBox));
 
     auto floorCheckBox = std::make_unique<gui::CheckBox>(form);
     floorCheckBox->setChecked(true);

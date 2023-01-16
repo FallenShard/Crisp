@@ -1,5 +1,8 @@
 #pragma once
 
+#include <filesystem>
+
+#include <Crisp/Image/Image.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
@@ -9,6 +12,15 @@ class Renderer;
 
 inline constexpr uint32_t DiffuseEnvironmentCubeMapSize = 64;
 inline constexpr uint32_t SpecularEnvironmentCubeMapSize = 512;
+
+struct ImageBasedLightingData
+{
+    Image equirectangularEnvironmentMap;
+    std::vector<Image> diffuseIrradianceCubeMap;
+    std::vector<std::vector<Image>> specularReflectanceMapMipLevels;
+};
+
+ImageBasedLightingData loadImageBasedLightingData(const std::filesystem::path& path);
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
     Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize);

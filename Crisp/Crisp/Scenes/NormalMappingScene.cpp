@@ -12,6 +12,8 @@
 #include <Crisp/vulkan/VulkanDevice.hpp>
 #include <Crisp/vulkan/VulkanImage.hpp>
 
+#include <Crisp/Image/Io/Utils.hpp>
+
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
@@ -39,8 +41,8 @@
 #include <Crisp/GUI/Panel.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Math/Constants.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
 #include <thread>
@@ -158,7 +160,7 @@ void NormalMappingScene::createPlane()
     auto& imageCache = m_resourceContext->imageCache;
     const VertexLayoutDescription PbrVertexFormat = {
         {VertexAttribute::Position},
-        { VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+        {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
     };
     m_resourceContext->addGeometry(
         "floor",
@@ -170,20 +172,20 @@ void NormalMappingScene::createPlane()
             m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
     imageCache.addImageWithView(
         "normalMap",
-        convertToVulkanImage(
-            m_renderer,
+        createVulkanImage(
+            *m_renderer,
             loadImage(m_renderer->getResourcesPath() / "Textures/PbrMaterials/Hexstone/normal.png", 4).unwrap(),
             VK_FORMAT_R8G8B8A8_UNORM));
     imageCache.addImageWithView(
         "diffuseMap",
-        convertToVulkanImage(
-            m_renderer,
+        createVulkanImage(
+            *m_renderer,
             loadImage(m_renderer->getResourcesPath() / "Textures/PbrMaterials/Hexstone/diffuse.png", 4).unwrap(),
             VK_FORMAT_R8G8B8A8_SRGB));
     imageCache.addImageWithView(
         "specularMap",
-        convertToVulkanImage(
-            m_renderer,
+        createVulkanImage(
+            *m_renderer,
             loadImage(m_renderer->getResourcesPath() / "Textures/PbrMaterials/Hexstone/metallic.png", 4).unwrap(),
             VK_FORMAT_R8G8B8A8_UNORM));
 
@@ -245,22 +247,22 @@ void NormalMappingScene::createPlane()
 
         m_resourceContext->imageCache.addImageWithView(
             normalMapKey,
-            convertToVulkanImage(
-                m_renderer,
+            createVulkanImage(
+                *m_renderer,
                 loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / normalMapFilename, 4, FlipOnLoad::Y)
                     .unwrap(),
                 VK_FORMAT_R8G8B8A8_UNORM));
         m_resourceContext->imageCache.addImageWithView(
             diffuseMapKey,
-            convertToVulkanImage(
-                m_renderer,
+            createVulkanImage(
+                *m_renderer,
                 loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / diffuseMapFilename, 4, FlipOnLoad::Y)
                     .unwrap(),
                 VK_FORMAT_R8G8B8A8_SRGB));
         m_resourceContext->imageCache.addImageWithView(
             specularMapKey,
-            convertToVulkanImage(
-                m_renderer,
+            createVulkanImage(
+                *m_renderer,
                 loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / specularMapFilename, 4, FlipOnLoad::Y)
                     .unwrap(),
                 VK_FORMAT_R8G8B8A8_UNORM));

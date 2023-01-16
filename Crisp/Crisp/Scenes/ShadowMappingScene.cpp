@@ -56,6 +56,8 @@
 
 #include <Crisp/Common/Logger.hpp>
 
+#include <Crisp/Image/Io/Utils.hpp>
+
 namespace crisp
 {
 namespace
@@ -310,8 +312,8 @@ void ShadowMappingScene::onMaterialSelected(const std::string& materialName)
             std::string key = materialName + "-" + texNames[i];
             imageCache.addImageWithView(
                 key,
-                convertToVulkanImage(
-                    m_renderer,
+                createVulkanImage(
+                    *m_renderer,
                     loadImage(m_renderer->getResourcesPath() / "Textures" / filename, 4, FlipOnLoad::Y).unwrap(),
                     formats[i]));
             material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
@@ -378,7 +380,10 @@ void ShadowMappingScene::createCommonTextures()
     // Environment map
     LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
     auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
-    auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
+    auto envRefMap = createVulkanImage(
+        *m_renderer,
+        loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipOnLoad::Y).unwrap(),
+        VK_FORMAT_R32G32B32A32_SFLOAT);
     std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
 
     auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
@@ -417,8 +422,8 @@ Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type)
             std::string key = type + "-" + texNames[i];
             imageCache.addImageWithView(
                 key,
-                convertToVulkanImage(
-                    m_renderer,
+                createVulkanImage(
+                    *m_renderer,
                     loadImage(m_renderer->getResourcesPath() / "Textures" / filename, 4, FlipOnLoad::Y).unwrap(),
                     formats[i]));
             material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
@@ -570,14 +575,13 @@ void ShadowMappingScene::createTrees()
     const Image image(
         loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipOnLoad::Y)
             .unwrap());
-    imageCache.addImageWithView("leaves", convertToVulkanImage(m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
+    imageCache.addImageWithView("leaves", createVulkanImage(*m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
     alphaMaterial->writeDescriptor(1, 0, imageCache.getImageView("leaves"), imageCache.getSampler("linearClamp"));
 
     const Image normalMap(
         loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipOnLoad::Y)
             .unwrap());
-    imageCache.addImageWithView(
-        "leavesNormalMap", convertToVulkanImage(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+    imageCache.addImageWithView("leavesNormalMap", createVulkanImage(*m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
     alphaMaterial->writeDescriptor(
         1, 1, imageCache.getImageView("leavesNormalMap"), imageCache.getSampler("linearClamp"));
 
@@ -604,14 +608,14 @@ void ShadowMappingScene::createTrees()
         const Image ambientMap =
             loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipOnLoad::Y).unwrap();
         imageCache.addImageWithView(
-            diffuseMapFilename, convertToVulkanImage(m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
+            diffuseMapFilename, createVulkanImage(*m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
         material->writeDescriptor(
             1, 0, imageCache.getImageView(diffuseMapFilename), imageCache.getSampler("linearRepeat"));
 
         const Image normalMap =
             loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipOnLoad::Y).unwrap();
         imageCache.addImageWithView(
-            normalMapFilename, convertToVulkanImage(m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+            normalMapFilename, createVulkanImage(*m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
         material->writeDescriptor(
             1, 1, imageCache.getImageView(normalMapFilename), imageCache.getSampler("linearRepeat"));
 
@@ -746,7 +750,7 @@ void ShadowMappingScene::createPlane()
 
     const VertexLayoutDescription PbrVertexFormat = {
         {VertexAttribute::Position},
-        { VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+        {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
     };
     m_resourceContext->addGeometry(
         "floor",

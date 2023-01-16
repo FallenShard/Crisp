@@ -1,4 +1,6 @@
-#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
+
+#include <Crisp/Common/Checks.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)
@@ -11,6 +13,8 @@
 #include <string>
 
 namespace crisp
+{
+namespace
 {
 auto getStbComponentFormat(const int numComponents)
 {
@@ -29,6 +33,29 @@ auto getStbComponentFormat(const int numComponents)
     default:
         return STBI_default;
     }
+}
+} // namespace
+
+std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, FlipOnLoad flipOnLoad)
+{
+    const Image hcrossImage{loadImage(path, 4, flipOnLoad).unwrap()};
+    const uint32_t cubeMapSize{hcrossImage.getWidth() / 4};
+    CRISP_CHECK(
+        cubeMapSize == hcrossImage.getHeight() / 3,
+        "{} {} {}",
+        cubeMapSize,
+        hcrossImage.getWidth(),
+        hcrossImage.getHeight());
+
+    std::vector<Image> cubeMapFaces;
+    // Right, Left, Top, Bottom, Front, Back.
+    cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 2 * cubeMapSize, cubeMapSize, cubeMapSize));
+    cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 0, cubeMapSize, cubeMapSize));
+    cubeMapFaces.push_back(hcrossImage.createSubImage(0, cubeMapSize, cubeMapSize, cubeMapSize));
+    cubeMapFaces.push_back(hcrossImage.createSubImage(2 * cubeMapSize, cubeMapSize, cubeMapSize, cubeMapSize));
+    cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, cubeMapSize, cubeMapSize, cubeMapSize));
+    cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 3 * cubeMapSize, cubeMapSize, cubeMapSize));
+    return cubeMapFaces;
 }
 
 Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipOnLoad flip)

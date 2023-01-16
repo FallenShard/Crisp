@@ -18,12 +18,10 @@ class ComboBox;
 class SceneContainer
 {
 public:
-    SceneContainer(Renderer* renderer, Application* app, uint32_t firstSceneIndex);
+    SceneContainer(Renderer* renderer, Application* app, const std::string& sceneName);
     ~SceneContainer();
 
     static std::vector<std::string> getSceneNames();
-    const std::string& getDefaultScene() const;
-    std::size_t getDefaultSceneIndex() const;
 
     void resize(int width, int height);
     void update(float dt);
@@ -36,7 +34,5 @@ private:
 
     Renderer* m_renderer;
     Application* m_application;
-
-    uint32_t m_defaultSceneIndex;
 };
 } // namespace crisp

@@ -3,7 +3,7 @@
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>

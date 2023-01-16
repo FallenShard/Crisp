@@ -1,6 +1,6 @@
 add_cpp_static_library(CrispImageIo
-    "ImageLoader.cpp"
-    "ImageLoader.hpp"
+    "Utils.cpp"
+    "Utils.hpp"
     "OpenEXRReader.cpp"
     "OpenEXRReader.hpp"
     "OpenEXRWriter.cpp"

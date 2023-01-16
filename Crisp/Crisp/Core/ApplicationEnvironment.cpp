@@ -98,7 +98,7 @@ Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv)
     ApplicationEnvironment::Parameters args{};
     CommandLineParser parser{};
     parser.addOption("config", args.configPath, true);
-    parser.addOption("scene", args.defaultSceneIndex);
+    parser.addOption("scene", args.scene);
     parser.addOption("enable_ray_tracing", args.enableRayTracingExtension);
     parser.addOption("log_level", args.logLevel);
     if (!parser.parse(argc, argv).isValid())

@@ -1,7 +1,7 @@
 #include "Skybox.hpp"
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>

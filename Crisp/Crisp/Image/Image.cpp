@@ -4,6 +4,15 @@
 
 namespace crisp
 {
+Image::Image()
+    : m_data{}
+    , m_width(0)
+    , m_height(0)
+    , m_channelCount(0)
+    , m_pixelByteSize(0)
+{
+}
+
 Image::Image(
     std::vector<uint8_t> pixelData, uint32_t width, uint32_t height, uint32_t channelCount, uint32_t pixelByteSize)
     : m_data(std::move(pixelData))

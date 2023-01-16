@@ -11,6 +11,8 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
+#include <Crisp/Image/Io/Utils.hpp>
+
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
@@ -236,7 +238,10 @@ void ClusteredLightingScene::createCommonTextures()
     // Environment map
     LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
     auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
-    auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
+    auto envRefMap = createVulkanImage(
+        *m_renderer,
+        loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipOnLoad::Y).unwrap(),
+        VK_FORMAT_R32G32B32A32_SFLOAT);
     std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
 
     auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);

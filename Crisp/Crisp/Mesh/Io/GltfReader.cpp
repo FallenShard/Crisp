@@ -1,6 +1,6 @@
 #include <Crisp/Mesh/Io/GltfReader.hpp>
 
-#include <Crisp/Image/Io/ImageLoader.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE

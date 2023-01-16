@@ -49,6 +49,7 @@ void ImageCache::addImage(const std::string& key, std::unique_ptr<VulkanImage> i
     if (!cachedImage)
     {
         cachedImage = std::move(image);
+        m_renderer->getDebugMarker().setObjectName(cachedImage->getHandle(), key.c_str());
     }
 }
 

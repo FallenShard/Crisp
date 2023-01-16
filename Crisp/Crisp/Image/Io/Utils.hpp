@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <span>
-#include <vector>
 
 namespace crisp
 {
@@ -14,6 +13,9 @@ enum class FlipOnLoad
     None,
     Y,
 };
+
+std::vector<Image> loadCubeMapFacesFromHCrossImage(
+    const std::filesystem::path& path, FlipOnLoad flipOnLoad = FlipOnLoad::None);
 
 Result<Image> loadImage(
     const std::filesystem::path& filePath, int requestedChannels = 4, FlipOnLoad flip = FlipOnLoad::None);

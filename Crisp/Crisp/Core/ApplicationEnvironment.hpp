@@ -12,7 +12,7 @@ public:
     struct Parameters
     {
         std::string configPath{};
-        uint32_t defaultSceneIndex{4};
+        std::string scene{"ocean"};
         bool enableRayTracingExtension{false};
         std::string logLevel{"info"};
     };

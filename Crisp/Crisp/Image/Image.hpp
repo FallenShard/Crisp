@@ -9,6 +9,7 @@ namespace crisp
 class Image
 {
 public:
+    Image();
     Image(
         std::vector<uint8_t> pixelData, uint32_t width, uint32_t height, uint32_t channelCount, uint32_t pixelByteSize);
 

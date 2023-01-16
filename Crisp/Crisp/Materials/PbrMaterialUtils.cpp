@@ -4,8 +4,8 @@
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 
 #include <Crisp/Common/Logger.hpp>
-#include <Crisp/Image/Io/ImageLoader.hpp>
 #include <Crisp/Image/Io/OpenEXRReader.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 
 namespace crisp
 {
@@ -65,7 +65,7 @@ void addPbrTexturesToImageCache(const PbrTextureGroup& texGroup, const std::stri
         {
             const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
             imageCache.addImageWithView(
-                key, convertToVulkanImage(imageCache.getRenderer(), *texture, texInfo.defaultFormat));
+                key, createVulkanImage(*imageCache.getRenderer(), *texture, texInfo.defaultFormat));
         }
     };
 
