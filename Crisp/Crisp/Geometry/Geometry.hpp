@@ -65,9 +65,9 @@ public:
     void draw(VkCommandBuffer commandBuffer) const;
     void bindAndDraw(VkCommandBuffer commandBuffer) const;
 
-    inline VulkanBuffer* getVertexBuffer() const
+    inline VulkanBuffer* getVertexBuffer(const uint32_t index = 0) const
     {
-        return m_vertexBuffers[0].get();
+        return m_vertexBuffers[index].get();
     }
 
     inline VulkanBuffer* getIndexBuffer() const

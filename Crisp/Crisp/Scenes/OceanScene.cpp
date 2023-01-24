@@ -11,10 +11,13 @@
 #include <Crisp/Renderer/ResourceContext.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
+#include <Crisp/Image/Io/Utils.hpp>
+
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 
 #include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Models/Ocean.hpp>
 #include <Crisp/Models/Skybox.hpp>
 
 #include <Crisp/GUI/Label.hpp>
@@ -27,59 +30,23 @@
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-#include <random>
-
 namespace crisp
 {
 namespace
 {
 auto logger = spdlog::stdout_color_st("OceanScene");
 
-constexpr const char* MainPass = "mainPass";
+constexpr const char* MainPass = "forwardPass";
 constexpr const char* OscillationPass = "oscillationPass";
+constexpr const char* GeometryPass = "geometryPass";
 
-constexpr int N = 2048;
+constexpr int N = 512;
 const int logN = static_cast<int>(std::log2(N));
 constexpr float Lx = 2.0f * N;
 
-struct MainPCData
-{
-    float time;
-    int32_t numN;
-    int32_t numM;
-    float Lx;
-    float Lz;
-
-    float windSpeedX;
-    float windSpeedZ;
-    float windSpeedNormX;
-    float windSpeedNormZ;
-    float magnitude;
-    float Lw;
-    float A;
-    float smallWaves;
-};
-
-glm::vec2 getNormVector(float x, float z)
-{
-    return glm::vec2(x, z) / std::sqrt(x * x + z * z);
-}
-
-constexpr float g = 9.81f;
-MainPCData values = {
-    0.0f,
-    N,
-    N,
-    Lx,
-    Lx,
-    40.0f,
-    40.0f,
-    getNormVector(40, 40)[0],
-    getNormVector(40, 40)[1],
-    std::sqrt(40 * 40.0f + 40 * 40.0f),
-    std::sqrt(40 * 40.0f + 40 * 40.0f) * std::sqrt(40 * 40.0f + 40 * 40.0f) / g,
-    1000.0f,
-    1.0f};
+OceanParameters OceanParams = createOceanParameters(N, Lx, 40.0f, 0.0f, 4.0f, 0.5f);
+glm::vec2 WindVelocity{OceanParams.windDirection * OceanParams.windSpeed};
+float Choppiness{0.5f};
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer,
@@ -131,11 +98,31 @@ std::unique_ptr<VulkanPipeline> createOscillationPipeline(Renderer* renderer, co
             {5, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT}
     });
 
-    layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(MainPCData));
-    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "ocean-oscillate.comp");
+    layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(OceanParameters));
+    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "ocean-spectrum.comp");
 }
 
-std::unique_ptr<VulkanPipeline> createBitRevPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
+std::unique_ptr<VulkanPipeline> createGeometryPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
+{
+    PipelineLayoutBuilder layoutBuilder;
+    layoutBuilder.defineDescriptorSet(
+        0,
+        false,
+        {
+            {0,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {1,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT}
+    });
+
+    layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(OceanParameters));
+    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "ocean-geometry.comp");
+}
+
+std::unique_ptr<VulkanPipeline> createBitReversalPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
 {
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder.defineDescriptorSet(
@@ -147,10 +134,10 @@ std::unique_ptr<VulkanPipeline> createBitRevPipeline(Renderer* renderer, const g
     });
 
     layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, 2 * sizeof(uint32_t) + sizeof(float));
-    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "ocean-fft-phillips.comp");
+    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "ocean-reverse-bits.comp");
 }
 
-std::unique_ptr<VulkanPipeline> createTrueFFTPipeline(
+std::unique_ptr<VulkanPipeline> createIFFTPipeline(
     Renderer* renderer, const glm::uvec3& workGroupSize, const std::string& shaderName)
 {
     PipelineLayoutBuilder layoutBuilder;
@@ -200,13 +187,15 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-    std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {{VertexAttribute::Position}};
+    std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
+        {VertexAttribute::Position}, {VertexAttribute::Normal}};
     TriangleMesh mesh = createGridMesh(flatten(vertexFormat), 50.0, N - 1);
     m_resourceContext->addGeometry(
         "ocean",
         std::make_unique<Geometry>(*m_renderer, mesh, vertexFormat, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+    m_resourceContext->getGeometry("ocean")->setInstanceCount(64);
 
-    auto fftImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
+    auto displacementYImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
     auto displacementXImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
     auto displacementZImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
     auto normalXImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
@@ -214,63 +203,49 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     auto spectrumImage = createInitialSpectrum();
 
     m_renderer->enqueueResourceUpdate(
-        [fftImg = fftImage.get(),
-         this,
+        [dy = displacementYImage.get(),
          dx = displacementXImage.get(),
          dz = displacementZImage.get(),
          nx = normalXImage.get(),
          nz = normalZImage.get()](VkCommandBuffer cmdBuffer)
         {
-            fftImg->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            dx->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            dz->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            nx->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            nz->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            const auto transitionToGeneral = [cmdBuffer](VulkanImage& image)
+            {
+                image.transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            };
+            transitionToGeneral(*dy);
+            transitionToGeneral(*dx);
+            transitionToGeneral(*dz);
+            transitionToGeneral(*nx);
+            transitionToGeneral(*nz);
         });
 
     auto& imageCache = m_resourceContext->imageCache;
-    imageCache.addImageView("fftImageView0", fftImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    imageCache.addImageView("fftImageView1", fftImage->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
-    imageCache.addImage("fftImage", std::move(fftImage));
-
-    imageCache.addImageView("displacementXView0", displacementXImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    imageCache.addImageView("displacementXView1", displacementXImage->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
-    imageCache.addImage("displacementX", std::move(displacementXImage));
-
-    imageCache.addImageView("displacementZView0", displacementZImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    imageCache.addImageView("displacementZView1", displacementZImage->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
-    imageCache.addImage("displacementZ", std::move(displacementZImage));
-
-    imageCache.addImageView("normalXView0", normalXImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    imageCache.addImageView("normalXView1", normalXImage->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
-    imageCache.addImage("normalX", std::move(normalXImage));
-
-    imageCache.addImageView("normalZView0", normalZImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    imageCache.addImageView("normalZView1", normalZImage->createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
-    imageCache.addImage("normalZ", std::move(normalZImage));
+    const auto addImage = [&imageCache](std::unique_ptr<VulkanImage> image, const std::string& name)
+    {
+        for (uint32_t i = 0; i < 2; ++i)
+        {
+            const std::string viewName{fmt::format("{}View{}", name, i)};
+            imageCache.addImageView(viewName, image->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
+        }
+        imageCache.addImage(name, std::move(image));
+    };
+    addImage(std::move(displacementYImage), "fftImage");
+    addImage(std::move(displacementXImage), "displacementX");
+    addImage(std::move(displacementZImage), "displacementZ");
+    addImage(std::move(normalXImage), "normalX");
+    addImage(std::move(normalZImage), "normalZ");
 
     imageCache.addImageView("randImageView", spectrumImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     imageCache.addImage("randImage", std::move(spectrumImage));
+
+    imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), MaxAnisotropy));
+    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), MaxAnisotropy));
+    imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), MaxAnisotropy, 9.0f));
 
     auto& oscillationPass = m_renderGraph->addComputePass(OscillationPass);
     oscillationPass.workGroupSize = glm::ivec3(16, 16, 1);
@@ -312,7 +287,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
             0,
             nullptr);
 
-        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, values);
+        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, OceanParams);
     };
 
     int layerToRead = applyFFT("fftImage");
@@ -322,13 +297,88 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     int ln1 = applyFFT("normalX");
     int ln2 = applyFFT("normalZ");
 
+    auto& geometryPass = m_renderGraph->addComputePass(GeometryPass);
+    geometryPass.workGroupSize = glm::ivec3(16, 16, 1);
+    geometryPass.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
+    geometryPass.pipeline = createGeometryPipeline(m_renderer, geometryPass.workGroupSize);
+    geometryPass.material = std::make_unique<Material>(geometryPass.pipeline.get());
+    geometryPass.material->writeDescriptor(
+        0, 0, m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->createDescriptorInfo());
+    geometryPass.material->writeDescriptor(
+        0, 1, m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->createDescriptorInfo());
+    geometryPass.material->writeDescriptor(
+        0,
+        2,
+        imageCache.getImageView("fftImageView" + std::to_string(layerToRead))
+            .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
+    geometryPass.material->writeDescriptor(
+        0,
+        3,
+        imageCache.getImageView("displacementXView" + std::to_string(ltr1))
+            .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
+    geometryPass.material->writeDescriptor(
+        0,
+        4,
+        imageCache.getImageView("displacementZView" + std::to_string(ltr2))
+            .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
+    geometryPass.material->writeDescriptor(
+        0,
+        5,
+        imageCache.getImageView("normalXView" + std::to_string(ln1))
+            .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
+    geometryPass.material->writeDescriptor(
+        0,
+        6,
+        imageCache.getImageView("normalZView" + std::to_string(ln2))
+            .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
+
+    geometryPass.preDispatchCallback =
+        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+    {
+        std::array<VkBufferMemoryBarrier, 2> barriers{};
+        barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        barriers[0].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getHandle();
+        barriers[0].offset = 0;
+        barriers[0].size = VK_WHOLE_SIZE;
+
+        barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barriers[1].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        barriers[1].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->getHandle();
+        barriers[1].offset = 0;
+        barriers[1].size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(
+            cmdBuffer.getHandle(),
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0,
+            0,
+            nullptr,
+            2,
+            barriers.data(),
+            0,
+            nullptr);
+
+        struct GeometryUpdateParams
+        {
+            int patchSize{N};
+            float choppiness{Choppiness};
+        };
+
+        GeometryUpdateParams params{};
+        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
+    };
+
     m_renderGraph->addRenderPass(
         MainPass,
         createForwardLightingPass(
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     m_renderGraph->addDependency(
-        OscillationPass,
+        GeometryPass,
         MainPass,
         [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
@@ -340,53 +390,39 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
             barrier.size = VK_WHOLE_SIZE;
             cmdBuffer.insertBufferMemoryBarrier(
                 barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+
+            barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->getHandle();
+            barrier.offset = 0;
+            barrier.size = VK_WHOLE_SIZE;
+            cmdBuffer.insertBufferMemoryBarrier(
+                barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
         });
 
     m_renderGraph->addDependency(MainPass, "SCREEN", 0);
     m_renderGraph->sortRenderPasses().unwrap();
+    m_renderGraph->printExecutionOrder();
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 200);
 
-    imageCache.addSampler(
-        "linearRepeat",
-        std::make_unique<VulkanSampler>(
-            m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f));
-    imageCache.addSampler(
-        "linearClamp",
-        std::make_unique<VulkanSampler>(
-            m_renderer->getDevice(),
-            VK_FILTER_LINEAR,
-            VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            16.0f,
-            11.0f));
-    imageCache.addSampler(
-        "linearMipmap",
-        std::make_unique<VulkanSampler>(
-            m_renderer->getDevice(),
-            VK_FILTER_LINEAR,
-            VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            16.0f,
-            5.0f));
+    const auto iblData{
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps/TableMountain")};
 
-    // Environment map
-    LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
-    auto hdrName =
-        "satara_night_4k.hdr"; // config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
-    auto envRefMap = createEnvironmentMap(m_renderer, hdrName, VK_FORMAT_R32G32B32A32_SFLOAT, FlipOnLoad::Y);
-    std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
+    auto equirectMap =
+        createVulkanImage(*m_renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto [cubeMap, cubeMapView] =
+        convertEquirectToCubeMap(m_renderer, equirectMap->createView(VK_IMAGE_VIEW_TYPE_2D), 1024);
 
-    auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
+    auto diffEnvMap =
+        createVulkanCubeMap(*m_renderer, {iblData.diffuseIrradianceCubeMap}, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto diffEnvView = diffEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
 
-    auto [diffEnv, diffEnvView] = setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
-    imageCache.addImageWithView("envIrrMap", std::move(diffEnv), std::move(diffEnvView));
-    auto [reflEnv, reflEnvView] = setupReflectEnvMap(m_renderer, *cubeMapView, 512);
-    imageCache.addImageWithView("filteredMap", std::move(reflEnv), std::move(reflEnvView));
-
+    auto specEnvMap =
+        createVulkanCubeMap(*m_renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto specEnvView = specEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
     imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
-    imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImageWithView("diffEnvMap", std::move(diffEnvMap), std::move(diffEnvView));
+    imageCache.addImageWithView("specEnvMap", std::move(specEnvMap), std::move(specEnvView));
 
     m_renderer->flushResourceUpdates(true);
 
@@ -421,8 +457,9 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
         imageCache.getImageView("normalZView" + std::to_string(ln2))
             .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
     material->writeDescriptor(1, 0, *m_resourceContext->getUniformBuffer("camera"));
-    material->writeDescriptor(1, 1, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
-    material->writeDescriptor(1, 2, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
+    material->writeDescriptor(1, 1, imageCache.getImageView("diffEnvMap"), imageCache.getSampler("linearClamp"));
+    material->writeDescriptor(1, 2, imageCache.getImageView("specEnvMap"), imageCache.getSampler("linearMipmap"));
+    imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
     material->writeDescriptor(1, 3, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 
     m_skybox = std::make_unique<Skybox>(
@@ -438,7 +475,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
             constexpr float scale = 1.0f / 1.0f;
             const float offset = 20.0f;
             glm::mat4 translation = glm::translate(glm::vec3(i * offset, 0.0f, j * offset));
-            auto node = std::make_unique<RenderNode>(*m_transformBuffer, i * 1 + j);
+            auto node = std::make_unique<RenderNode>(*m_transformBuffer, m_transformBuffer->getNextIndex());
             node->transformPack->M = translation * glm::rotate(glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
                                      glm::scale(glm::vec3(scale));
             node->geometry = m_resourceContext->getGeometry("ocean");
@@ -482,9 +519,11 @@ void OceanScene::update(float dt)
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
 
     if (!paused)
+    {
         m_time += dt;
+    }
 
-    values.time = m_time;
+    OceanParams.time = m_time;
 }
 
 void OceanScene::render()
@@ -497,63 +536,12 @@ void OceanScene::render()
 
 std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum()
 {
-
-    struct Wind
-    {
-        glm::vec2 speed;
-        glm::vec2 speedNorm;
-        float magnitude;
-        float Lw;
-    };
-
-    Wind wind;
-    wind.speed = {40, 40};
-    wind.magnitude = std::sqrt(glm::dot(wind.speed, wind.speed));
-    wind.speedNorm = wind.speed / wind.magnitude;
-    wind.Lw = wind.magnitude * wind.magnitude / g;
-
-    auto calculatePhillipsSpectrum = [](const Wind& wind, const glm::vec2& k)
-    {
-        const float kLen2 = glm::dot(k, k) + 0.000001f;
-        const glm::vec2 kNorm = kLen2 == 0.0f ? glm::vec2(0.0f) : k / std::sqrtf(kLen2);
-
-        const float A = 1000.0f;
-        const float midterm = std::exp(-1.0f / (kLen2 * wind.Lw * wind.Lw)) / std::powf(kLen2, 2);
-        const float kDotW = glm::dot(kNorm, wind.speedNorm);
-
-        const float smallWaves = 1.0f;
-        const float tail = std::exp(-kLen2 * smallWaves * smallWaves);
-
-        return A * midterm * std::powf(kDotW, 2) * tail;
-    };
-
-    std::mt19937 gen{0};
-    std::normal_distribution<> distrib(0, 1);
-    std::vector<glm::vec4> initialSpectrum;
-    for (int i = 0; i < N; ++i)
-    {
-        for (int j = 0; j < N; ++j)
-        {
-            const glm::ivec2 idx = glm::ivec2(j, i) - glm::ivec2(N, N) / 2;
-            const glm::vec2 k = glm::vec2(idx) * 2.0f * glm::pi<float>() / glm::vec2(Lx, Lx);
-
-            const glm::vec2 eps0 = glm::vec2(distrib(gen), distrib(gen));
-            const glm::vec2 eps1 = glm::vec2(distrib(gen), distrib(gen));
-
-            const glm::vec2 h0 = eps0 * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, k));
-            glm::vec2 h0Star = eps1 * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, -k));
-            h0Star.y = -h0Star.y;
-
-            // initialSpectrum.emplace_back(h0, h0Star);
-            initialSpectrum.emplace_back(eps0, eps1);
-        }
-    }
+    const auto oceanSpectrum{createOceanSpectrum(0, N, Lx)};
 
     auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32B32A32_SFLOAT);
-    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(
-        m_renderer->getDevice(), initialSpectrum.size() * sizeof(glm::vec4), initialSpectrum.data());
+    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(m_renderer->getDevice(), oceanSpectrum);
     m_renderer->enqueueResourceUpdate(
-        [img = image.get(), this, stagingBuffer](VkCommandBuffer cmdBuffer)
+        [img = image.get(), stagingBuffer](VkCommandBuffer cmdBuffer)
         {
             img->transitionLayout(
                 cmdBuffer,
@@ -575,17 +563,29 @@ std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum()
 
 int OceanScene::applyFFT(std::string image)
 {
-    auto& imageCache = m_resourceContext->imageCache;
-    int imageLayerRead = 0;
-    int imageLayerWrite = 1;
+    struct BitReversalPushConstants
     {
-        std::string imageViewRead = image + "View" + std::to_string(imageLayerRead);
-        std::string imageViewWrite = image + "View" + std::to_string(imageLayerWrite);
+        int32_t reversalDirection; // 0 is horizontal, 1 is vertical.
+        int32_t passCount;         // Logarithm of the patch discretization size.
+    };
+
+    struct IFFTPushConstants
+    {
+        int32_t passIdx; // Index of the current pass.
+        int32_t N;       // Number of elements in the array.
+    };
+
+    auto& imageCache = m_resourceContext->imageCache;
+    int32_t imageLayerRead = 0;
+    int32_t imageLayerWrite = 1;
+    {
+        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
+        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
         auto& bitReversePass = m_renderGraph->addComputePass(image + "BitReversePass0");
         bitReversePass.workGroupSize = glm::ivec3(16, 16, 1);
         bitReversePass.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
-        bitReversePass.pipeline = createBitRevPipeline(m_renderer, bitReversePass.workGroupSize);
+        bitReversePass.pipeline = createBitReversalPipeline(m_renderer, bitReversePass.workGroupSize);
         bitReversePass.material = std::make_unique<Material>(bitReversePass.pipeline.get());
         bitReversePass.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -595,15 +595,8 @@ int OceanScene::applyFFT(std::string image)
         bitReversePass.preDispatchCallback =
             [this, image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            struct PCData
-            {
-                uint32_t horizontal;
-                int numN;
-                float time;
-            };
-
-            PCData pcValues = {1, logN, m_time};
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcValues);
+            node.pipeline->setPushConstants(
+                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{0, logN});
         };
         m_renderGraph->addDependency(
             OscillationPass,
@@ -630,17 +623,17 @@ int OceanScene::applyFFT(std::string image)
         std::swap(imageLayerRead, imageLayerWrite);
     }
 
-    // Horizontal
+    // Horizontal IFFT passes.
     for (int i = 0; i < logN; ++i)
     {
-        std::string imageViewRead = image + "View" + std::to_string(imageLayerRead);
-        std::string imageViewWrite = image + "View" + std::to_string(imageLayerWrite);
+        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
+        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
         std::string name = image + "TrueFFTPass" + std::to_string(i);
         auto& fftPass = m_renderGraph->addComputePass(name);
         fftPass.workGroupSize = glm::ivec3(16, 16, 1);
         fftPass.numWorkGroups = glm::ivec3(N / 2 / 16, N / 16, 1);
-        fftPass.pipeline = createTrueFFTPipeline(m_renderer, fftPass.workGroupSize, "ifft.comp");
+        fftPass.pipeline = createIFFTPipeline(m_renderer, fftPass.workGroupSize, "ifft-hori.comp");
         fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
         fftPass.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -650,15 +643,8 @@ int OceanScene::applyFFT(std::string image)
         fftPass.preDispatchCallback =
             [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            struct PCData
-            {
-                int32_t passId;
-                float time;
-                int32_t numN;
-            };
-
-            PCData pcvalues = {i + 1, m_time, N};
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
+            node.pipeline->setPushConstants(
+                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
         };
 
         logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
@@ -716,12 +702,12 @@ int OceanScene::applyFFT(std::string image)
     }
 
     {
-        std::string imageViewRead = image + "View" + std::to_string(imageLayerRead);
-        std::string imageViewWrite = image + "View" + std::to_string(imageLayerWrite);
+        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
+        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
         auto& bitReversePass2 = m_renderGraph->addComputePass(image + "BitReversePass1");
         bitReversePass2.workGroupSize = glm::ivec3(16, 16, 1);
         bitReversePass2.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
-        bitReversePass2.pipeline = createBitRevPipeline(m_renderer, bitReversePass2.workGroupSize);
+        bitReversePass2.pipeline = createBitReversalPipeline(m_renderer, bitReversePass2.workGroupSize);
         bitReversePass2.material = std::make_unique<Material>(bitReversePass2.pipeline.get());
         bitReversePass2.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -731,15 +717,8 @@ int OceanScene::applyFFT(std::string image)
         bitReversePass2.preDispatchCallback =
             [this, image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            struct PCData
-            {
-                uint32_t horizontal;
-                int numN;
-                float time;
-            };
-
-            PCData pcvalues = {0, logN, m_time};
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
+            node.pipeline->setPushConstants(
+                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{1, logN});
         };
 
         logger->info("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
@@ -767,18 +746,18 @@ int OceanScene::applyFFT(std::string image)
         std::swap(imageLayerRead, imageLayerWrite);
     }
 
-    // Vertical
+    // Vertical IFFT pass.
     std::string finalImageView;
     for (int i = 0; i < logN; ++i)
     {
-        std::string imageViewRead = image + "View" + std::to_string(imageLayerRead);
-        std::string imageViewWrite = image + "View" + std::to_string(imageLayerWrite);
+        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
+        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
         std::string name = image + "TrueFFTPassVert" + std::to_string(i);
         auto& fftPass = m_renderGraph->addComputePass(name);
         fftPass.workGroupSize = glm::ivec3(16, 16, 1);
         fftPass.numWorkGroups = glm::ivec3(N / 16, N / 16 / 2, 1);
-        fftPass.pipeline = createTrueFFTPipeline(m_renderer, fftPass.workGroupSize, "ifft-vert.comp");
+        fftPass.pipeline = createIFFTPipeline(m_renderer, fftPass.workGroupSize, "ifft-vert.comp");
         fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
         fftPass.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -790,15 +769,8 @@ int OceanScene::applyFFT(std::string image)
         fftPass.preDispatchCallback =
             [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            struct PCData
-            {
-                int32_t passId;
-                float time;
-                int32_t numN;
-            };
-
-            PCData pcvalues = {i + 1, m_time, N};
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, pcvalues);
+            node.pipeline->setPushConstants(
+                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
         };
 
         if (i == logN - 1)
@@ -806,7 +778,7 @@ int OceanScene::applyFFT(std::string image)
             finalImageView = imageViewWrite;
             m_renderGraph->addDependency(
                 name,
-                MainPass,
+                GeometryPass,
                 [this, image, imageLayerWrite](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
                 {
@@ -885,7 +857,7 @@ void OceanScene::createGui(gui::Form* form)
     using namespace gui;
     std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
 
-    panel->setId("shadowMappingPanel");
+    panel->setId("oceanScenePanel");
     panel->setPadding({20, 20});
     panel->setPosition({20, 40});
     panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
@@ -914,31 +886,31 @@ void OceanScene::createGui(gui::Form* form)
 
         return sliderPtr;
     };
-    addLabeledSlider("Wind Speed X", values.windSpeedX, 0.0, 100.0, 1.0)->valueChanged += [](double val)
+    addLabeledSlider("Wind Speed X", WindVelocity.x, 0.0, 100.0, 1.0)->valueChanged += [](double val)
     {
-        values.windSpeedX = static_cast<float>(val);
-
-        glm::vec2 speed = {values.windSpeedX, values.windSpeedZ};
-        values.magnitude = std::sqrt(glm::dot(speed, speed));
-        values.windSpeedNormX = values.windSpeedX / values.magnitude;
-        values.windSpeedNormZ = values.windSpeedZ / values.magnitude;
+        WindVelocity.x = static_cast<float>(val);
+        OceanParams.windSpeed = glm::length(WindVelocity);
+        OceanParams.windDirection = WindVelocity / OceanParams.windSpeed;
+        OceanParams.Lw = OceanParams.windSpeed * OceanParams.windSpeed / 9.81f;
     };
-    addLabeledSlider("Wind Speed Z", values.windSpeedZ, 0.0, 100.0, 1.0)->valueChanged += [](double val)
+    addLabeledSlider("Wind Speed Z", WindVelocity.y, 0.0, 100.0, 1.0)->valueChanged += [](double val)
     {
-        values.windSpeedZ = static_cast<float>(val);
-
-        glm::vec2 speed = {values.windSpeedX, values.windSpeedZ};
-        values.magnitude = std::sqrt(glm::dot(speed, speed));
-        values.windSpeedNormX = values.windSpeedX / values.magnitude;
-        values.windSpeedNormZ = values.windSpeedZ / values.magnitude;
+        WindVelocity.y = static_cast<float>(val);
+        OceanParams.windSpeed = glm::length(WindVelocity);
+        OceanParams.windDirection = WindVelocity / OceanParams.windSpeed;
+        OceanParams.Lw = OceanParams.windSpeed * OceanParams.windSpeed / 9.81f;
     };
-    addLabeledSlider("Amplitude", values.A, 0.0, 1000.0, 5.0)->valueChanged += [](double val)
+    addLabeledSlider("Amplitude", OceanParams.A, 0.0, 1000.0, 2.0)->valueChanged += [](double val)
     {
-        values.A = static_cast<float>(val);
+        OceanParams.A = static_cast<float>(val);
     };
-    addLabeledSlider("smallWaves", values.smallWaves, 0.0, 10.0)->valueChanged += [](double val)
+    addLabeledSlider("smallWaves", OceanParams.smallWaves, 0.0, 10.0)->valueChanged += [](double val)
     {
-        values.smallWaves = static_cast<float>(val);
+        OceanParams.smallWaves = static_cast<float>(val);
+    };
+    addLabeledSlider("Choppiness", Choppiness, 0.0, 1.0)->valueChanged += [](double val)
+    {
+        Choppiness = static_cast<float>(val);
     };
 
     form->add(std::move(panel));

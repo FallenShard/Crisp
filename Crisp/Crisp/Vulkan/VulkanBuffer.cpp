@@ -3,13 +3,16 @@
 
 namespace crisp
 {
-VulkanBuffer::VulkanBuffer(const VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags usageFlags,
+VulkanBuffer::VulkanBuffer(
+    const VulkanDevice& device,
+    const VkDeviceSize size,
+    const VkBufferUsageFlags usageFlags,
     const VkMemoryPropertyFlags memProps)
     : VulkanResource(device.getResourceDeallocator())
     , m_size(size)
 {
     // Create a buffer handle
-    VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = size;
     bufferInfo.usage = usageFlags;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -41,8 +44,12 @@ void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBu
     vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
 }
 
-void VulkanBuffer::copyFrom(const VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer,
-    const VkDeviceSize srcOffset, const VkDeviceSize dstOffset, const VkDeviceSize size)
+void VulkanBuffer::copyFrom(
+    const VkCommandBuffer cmdBuffer,
+    const VulkanBuffer& srcBuffer,
+    const VkDeviceSize srcOffset,
+    const VkDeviceSize dstOffset,
+    const VkDeviceSize size)
 {
     VkBufferCopy copyRegion = {};
     copyRegion.srcOffset = srcOffset;
@@ -53,18 +60,26 @@ void VulkanBuffer::copyFrom(const VkCommandBuffer cmdBuffer, const VulkanBuffer&
 
 VulkanBufferSpan VulkanBuffer::createSpan() const
 {
-    return { m_handle, 0, m_size };
+    return {m_handle, 0, m_size};
 }
 
 VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const
 {
-    return { m_handle, offset, size };
+    return {m_handle, offset, size};
 }
 
-StagingVulkanBuffer::StagingVulkanBuffer(VulkanDevice& device, const VkDeviceSize size,
-    const VkBufferUsageFlags usageFlags, const VkMemoryPropertyFlags memProps)
-    : VulkanBuffer(device, size, usageFlags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-          memProps | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo() const
+{
+    return {m_handle, 0, m_size};
+}
+
+StagingVulkanBuffer::StagingVulkanBuffer(
+    VulkanDevice& device,
+    const VkDeviceSize size,
+    const VkBufferUsageFlags usageFlags,
+    const VkMemoryPropertyFlags memProps)
+    : VulkanBuffer(
+          device, size, usageFlags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memProps | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     , m_device(&device)
 {
 }
@@ -83,7 +98,9 @@ void StagingVulkanBuffer::updateFromHost(const void* srcData)
 
 void StagingVulkanBuffer::updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer)
 {
-    memcpy(m_allocation.getMappedPtr(), stagingVulkanBuffer.m_allocation.getMappedPtr(),
+    memcpy(
+        m_allocation.getMappedPtr(),
+        stagingVulkanBuffer.m_allocation.getMappedPtr(),
         stagingVulkanBuffer.m_allocation.size);
     m_device->invalidateMappedRange(m_allocation.getMemory(), m_allocation.offset, m_allocation.size);
 }

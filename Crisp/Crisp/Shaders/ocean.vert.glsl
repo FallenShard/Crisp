@@ -1,6 +1,7 @@
 #version 450 core
 
 layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
 
 layout(set = 0, binding = 0) uniform TransformPack
 {
@@ -19,18 +20,19 @@ layout(set = 0, binding = 5) uniform sampler2D normalZMap;
 layout(push_constant) uniform PushConstant
 {
     layout(offset = 0) float t;
-    layout(offset = 4) uint N;
+    layout(offset = 4) uint patchSize;
 } pushConst;
 
 layout(location = 0) out vec3 eyePosition;
 layout(location = 1) out vec3 eyeNormal;
 layout(location = 2) out vec3 worldNormal;
 
+
+const float g = 9.81;
+
+const float signValue[2] = {1, -1};
 float getFactor(int i, int j) {
-    if ((i + j) % 2 == 1)
-        return -1;
-    else
-        return 1;
+    return signValue[(i + j) % 2];
 }
 
 float getHeight(int i, int j, float factor) {
@@ -45,65 +47,15 @@ float getDz(int i, int j, float factor) {
     return texelFetch(displacementZMap, ivec2(i, j), 0).r * factor;
 }
 
-const float size = 50.0;
-
-vec3 makeNormal(int i, int j, float factor) {
-    float R = getHeight(i + 1, j, factor);
-    float L = getHeight(i - 1, j, factor);
-    float T = getHeight(i, j - 1, factor);
-    float B = getHeight(i, j + 1, factor);
-
-    float delta = size / pushConst.N;
-    vec3 normal = vec3((L - R) / (2 * delta), 1, (B - T) / (2 * delta));
-    return normalize(normal);
-}
-
-vec3 makeNormal2(int i, int j, float factor) {
-    float nx = texelFetch(normalXMap, ivec2(i, j), 0).r * factor * 20;
-    float nz = texelFetch(normalZMap, ivec2(i, j), 0).r * factor * 20;
-    return normalize(vec3(-nx, 1, -nz));
-}
-
-vec3 getDisplacement(int i, int j) {
-    float factor = getFactor(i, j);
-    float lambda = 0.5;
-    return vec3(lambda * getDx(i, j, factor), 0.2 * getHeight(i, j, factor), lambda * getDz(i, j, factor));
-}
-
-vec3 makeNormal3(int i, int j, float f) {
-    const float delta = size / 2048.0;
-
-    vec3 center = getDisplacement(i, j);
-    vec3 right = vec3(+delta, 0, 0) + getDisplacement(i + 1, j) - center;
-    vec3 left = vec3(-delta, 0, 0) + getDisplacement(i - 1, j) - center;
-    vec3 top = vec3(0, 0, -delta) + getDisplacement(i, j + 1) - center;
-    vec3 bottom = vec3(0, 0, +delta) + getDisplacement(i, j - 1) - center;
-    
-    vec3 rt = cross(right, top);
-    vec3 tl = cross(top, left);
-    vec3 lb = cross(left, bottom);
-    vec3 br = cross(bottom, right);
-
-    return normalize(rt + tl + lb + br);//vec3(center, 0.0, 0.0);
-    //return vec3(0, 1, 0);
-    //return normalize(rt + tl + lb + br);
-}
-
 void main()
 {
-    int col = int(gl_VertexIndex % pushConst.N);
-    int row = int(gl_VertexIndex / pushConst.N);
-    float factor = getFactor(col, row);
-    float height = getHeight(col, row, factor);
+    const float worldPatchSize = 25.0f;
+    uint patchRow = gl_InstanceIndex / 8;
+    uint patchCol = gl_InstanceIndex % 8;
+    vec3 offset = vec3(patchCol * worldPatchSize, 0.0f, patchRow * worldPatchSize);
+    eyeNormal = (N * vec4(normal, 0.0f)).xyz;
+    worldNormal = normal;
 
-    vec3 pos = position + getDisplacement(col, row);
-    worldNormal = makeNormal3(col, row, factor);
-
-    eyePosition = (MV * vec4(pos, 1.0f)).xyz;
-    eyeNormal = (N * vec4(worldNormal, 0.0f)).xyz;
-    //float texVal = texture(displacementMap, texCoord).x;
-    //pos.y = 0.2 * sin(pushConst.t + 2 * pos.x);
-    //pos.y += 0.1 * sin(pushConst.t + 10 * pos.x);
-    //pos.y += 0.4 * sin(pushConst.t + 5 * pos.x);
-    gl_Position  = MVP * vec4(pos, 1.0f);
+    eyePosition = (MV * vec4(position + offset, 1.0f)).xyz;
+    gl_Position  = MVP * vec4(position + offset, 1.0f);
 }

@@ -11,19 +11,24 @@ class VulkanDevice;
 class VulkanBuffer : public VulkanResource<VkBuffer, vkDestroyBuffer>
 {
 public:
-    VulkanBuffer(const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags,
-        VkMemoryPropertyFlags memProps);
+    VulkanBuffer(
+        const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
     ~VulkanBuffer();
 
     VkDeviceSize getSize() const;
 
     void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer);
-    void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer, VkDeviceSize srcOffset,
-        VkDeviceSize dstOffset, VkDeviceSize size);
+    void copyFrom(
+        VkCommandBuffer cmdBuffer,
+        const VulkanBuffer& srcBuffer,
+        VkDeviceSize srcOffset,
+        VkDeviceSize dstOffset,
+        VkDeviceSize size);
 
     VulkanBufferSpan createSpan() const;
 
     VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
+    VkDescriptorBufferInfo createDescriptorInfo() const;
 
 protected:
     VulkanMemoryHeap::Allocation m_allocation;
@@ -33,7 +38,9 @@ protected:
 class StagingVulkanBuffer final : public VulkanBuffer
 {
 public:
-    StagingVulkanBuffer(VulkanDevice& device, VkDeviceSize size,
+    StagingVulkanBuffer(
+        VulkanDevice& device,
+        VkDeviceSize size,
         VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     void updateFromHost(const void* hostMemoryData, VkDeviceSize size, VkDeviceSize offset);

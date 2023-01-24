@@ -11,6 +11,8 @@ add_cpp_static_library(CrispModels
     "PositionBasedFluid.hpp"
     "Skybox.cpp"
     "Skybox.hpp"
+    "Ocean.cpp"
+    "Ocean.hpp"
     "SPH.cpp"
     "SPH.hpp")
 target_link_libraries(CrispModels

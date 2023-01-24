@@ -22,7 +22,7 @@ void main()
 {
     const int p = passIdx - 1;
     const int m = (1 << passIdx);
-    const int k = int(gl_GlobalInvocationID.y);
+    const int k = int(gl_GlobalInvocationID.x);
 
     const int j = k % (1 << p);
     int leftIdx = k / (1 << p);
@@ -41,11 +41,11 @@ void main()
     vec2 ww = vec2(1.0f, 0.0f);
     ww[0] = +cos(2.0f * PI / m * j);
     ww[1] = +sin(2.0f * PI / m * j);
-    vec4 aa1 = imageLoad(srcImg, ivec2(gl_GlobalInvocationID.x, readRightIdx)) * factor;
-    vec4 aa2 = imageLoad(srcImg, ivec2(gl_GlobalInvocationID.x, readLeftIdx)) * factor;
+    vec4 aa1 = imageLoad(srcImg, ivec2(readRightIdx, gl_GlobalInvocationID.y)) * factor;
+    vec4 aa2 = imageLoad(srcImg, ivec2(readLeftIdx, gl_GlobalInvocationID.y)) * factor;
     vec2 t = compMul(ww, aa1.xy);
     vec2 u = aa2.xy;
 
-    imageStore(dstImg, ivec2(gl_GlobalInvocationID.x, rightIdx), vec4(u - t, 0.0f, 0.0f));
-    imageStore(dstImg, ivec2(gl_GlobalInvocationID.x, leftIdx), vec4(u + t, 0.0f, 0.0f));
+    imageStore(dstImg, ivec2(rightIdx, gl_GlobalInvocationID.y), vec4(u - t, 0.0f, 0.0f));
+    imageStore(dstImg, ivec2(leftIdx, gl_GlobalInvocationID.y), vec4(u + t, 0.0f, 0.0f));
 }

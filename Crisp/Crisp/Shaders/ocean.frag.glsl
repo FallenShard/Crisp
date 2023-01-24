@@ -6,10 +6,7 @@ layout(location = 0) in vec3 eyePosition;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 worldNormal;
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
-{
-    return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
-}
+#include "Parts/microfacet.part.glsl"
 
 // ----- Camera -----
 layout(set = 1, binding = 0) uniform Camera
@@ -43,59 +40,57 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     return (kD * diffuse + specular) * ao;
 }
 
-// -----
-float distributionGGX(vec3 N, vec3 H, float roughness)
-{
-    float a      = roughness * roughness;
-    float a2     = a * a;
-    float NdotH  = max(dot(N, H), 0.0f);
-    float NdotH2 = NdotH * NdotH;
-
-    float denom  = NdotH2 * (a2 - 1.0f) + 1.0f;
-    denom        = PI * denom * denom;
-
-    return a2 / denom;
-}
-
-float geometrySchlickGGX(float NdotVec, float roughness)
-{
-    float r = roughness + 1.0f;
-    float k = r * r / 8.0f;
-    float denom = NdotVec * (1.0f - k) + k;
-    return NdotVec / denom;
-}
-
-float geometrySmith(float NdotV, float NdotL, float roughness)
-{
-    return geometrySchlickGGX(NdotV, roughness) * geometrySchlickGGX(NdotL, roughness);
-}
-
-vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
-{
-    return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
-}
-
 void main()
 {
+    // Basic shading geometry
     const vec3 eyeN = normalize(eyeNormal);
     const vec3 eyeV = normalize(-eyePosition);
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
-    const vec3 lightDir = normalize(vec3(-1.0f, -1.0f, 0.0f));
+    // Primary light source radiance
+    const vec3 lightDir = normalize(vec3(1.0f, 1.0f, 1.0f));
     const vec3 eyeL = normalize(vec3(V * vec4(lightDir, 0.0f)));
-    const float NdotL = max(dot(eyeN, -eyeL), 0.0f);
+    const vec3 Le = vec3(1.0f);
+    const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
-    vec3 ocean_color = pow(vec3(0,55,87) / 255.0, vec3(2.2));
     // Material properties
-    const vec3  albedo    = ocean_color;
-    const float roughness = 0.0;
-    const float metallic  = 0.0;
+    const vec3 albedo = pow(vec3(12,55,87) / 255.0, vec3(2.2));
+    float roughness = 0.01;
+    const float metallic = 0.0;
 
-    const vec3 F0 = mix(vec3(0.02), albedo, metallic);
+    // BRDF diffuse (Light source independent)
+    const vec3 F0 = mix(vec3(0.04), albedo, metallic);
     const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
     const vec3 kS = F;
     const vec3 kD = (1.0f - kS) * (1.0f - metallic);
     const vec3 diffuse = kD * albedo / PI;
+
+    // BRDF specularity (Light source dependent)
+    const vec3 eyeH = normalize(eyeL + eyeV);
+    const float NdotH = max(dot(eyeN, eyeH), 0.0f);
+    const float D = distributionGGX(NdotH, roughness);
+    const float G = geometrySmith(NdotV, NdotL, roughness);
+    const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
+
+    // const vec3 eyeN = normalize(eyeNormal);
+    // const vec3 eyeV = normalize(-eyePosition);
+    // const float NdotV = max(dot(eyeN, eyeV), 0.0f);
+
+    // const vec3 lightDir = normalize(vec3(-1.0f, -1.0f, -1.0f));
+    // const vec3 eyeL = normalize(vec3(V * vec4(lightDir, 0.0f)));
+    // const float NdotL = max(dot(eyeN, -eyeL), 0.0f);
+
+    // vec3 ocean_color = pow(vec3(0,55,87) / 255.0, vec3(2.2));
+    // // Material properties
+    // const vec3  albedo    = ocean_color;
+    // const float roughness = 0.5;
+    // const float metallic  = 0.2;
+
+    // const vec3 F0 = mix(vec3(0.02), albedo, metallic);
+    // const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
+    // const vec3 kS = F;
+    // const vec3 kD = (1.0f - kS) * (1.0f - metallic);
+    // const vec3 diffuse = kD * albedo / PI;
 
    
     //vec3 light_color = pow(vec3(185,240,254) / 255.0, vec3(2.2));
@@ -103,16 +98,12 @@ void main()
 
     const vec3 worldN = normalize(worldNormal);
 
-    const vec3 Le = vec3(5.0f);
-    
-    // BRDF specularity (Light source dependent)
-    const vec3 eyeH = normalize(eyeL + eyeV);
-    const float D = distributionGGX(eyeN, eyeH, roughness);
-    const float G = geometrySmith(NdotV, NdotL, roughness);
-    const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
+    //const vec3 Le = vec3(5.0f);
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
-    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, ocean_color, F, 0.0f, 1.0f);
+    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, 0.0f, 1.0f);
     
     finalColor = vec4(vec3(Lenv), 1.0f);
+    //finalColor = vec4(vec3(F), 1.0f);
+    //finalColor = vec4(vec3(Li), 1.0f);
 }
