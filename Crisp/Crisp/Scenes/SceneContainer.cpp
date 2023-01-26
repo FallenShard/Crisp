@@ -82,7 +82,10 @@ void SceneContainer::update(float dt)
 void SceneContainer::render() const
 {
     if (m_scene)
+    {
         m_scene->render();
+        m_scene->renderGui();
+    }
 }
 
 void SceneContainer::onSceneSelected(const std::string& sceneName)

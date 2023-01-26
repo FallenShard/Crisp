@@ -30,6 +30,8 @@
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
+#include <imgui.h>
+
 namespace crisp
 {
 namespace
@@ -40,7 +42,7 @@ constexpr const char* MainPass = "forwardPass";
 constexpr const char* OscillationPass = "oscillationPass";
 constexpr const char* GeometryPass = "geometryPass";
 
-constexpr int N = 512;
+constexpr int N = 256;
 const int logN = static_cast<int>(std::log2(N));
 constexpr float Lx = 2.0f * N;
 
@@ -83,7 +85,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
         device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
 }
 
-std::unique_ptr<VulkanPipeline> createOscillationPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
+std::unique_ptr<VulkanPipeline> createSpectrumPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
 {
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder.defineDescriptorSet(
@@ -250,7 +252,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     auto& oscillationPass = m_renderGraph->addComputePass(OscillationPass);
     oscillationPass.workGroupSize = glm::ivec3(16, 16, 1);
     oscillationPass.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
-    oscillationPass.pipeline = createOscillationPipeline(m_renderer, oscillationPass.workGroupSize);
+    oscillationPass.pipeline = createSpectrumPipeline(m_renderer, oscillationPass.workGroupSize);
     oscillationPass.material = std::make_unique<Material>(oscillationPass.pipeline.get());
     oscillationPass.material->writeDescriptor(
         0, 0, imageCache.getImageView("randImageView").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -494,8 +496,6 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     }
 
     m_renderer->getDevice().flushDescriptorUpdates();
-
-    createGui(m_app->getForm());
 }
 
 OceanScene::~OceanScene() {}
@@ -532,6 +532,27 @@ void OceanScene::render()
     m_renderGraph->buildCommandLists(m_renderNodes);
     m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
     m_renderGraph->executeCommandLists();
+}
+
+void OceanScene::renderGui()
+{
+    ImGui::Begin("Ocean Parameters");
+    if (ImGui::SliderFloat("Wind Speed X", &WindVelocity.x, 0.0f, 100.0f))
+    {
+        OceanParams.windSpeed = glm::length(WindVelocity);
+        OceanParams.windDirection = WindVelocity / OceanParams.windSpeed;
+        OceanParams.Lw = OceanParams.windSpeed * OceanParams.windSpeed / 9.81f;
+    }
+    if (ImGui::SliderFloat("Wind Speed Z", &WindVelocity.y, 0.0f, 100.0f))
+    {
+        OceanParams.windSpeed = glm::length(WindVelocity);
+        OceanParams.windDirection = WindVelocity / OceanParams.windSpeed;
+        OceanParams.Lw = OceanParams.windSpeed * OceanParams.windSpeed / 9.81f;
+    }
+    ImGui::SliderFloat("Amplitude", &OceanParams.A, 0.0f, 1000.0f);
+    ImGui::SliderFloat("Small Waves", &OceanParams.smallWaves, 0.0f, 10.0f);
+    ImGui::SliderFloat("Choppiness", &Choppiness, 0.0f, 1.0f);
+    ImGui::End();
 }
 
 std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum()
@@ -852,67 +873,4 @@ int OceanScene::applyFFT(std::string image)
     return imageLayerRead;
 }
 
-void OceanScene::createGui(gui::Form* form)
-{
-    using namespace gui;
-    std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
-
-    panel->setId("oceanScenePanel");
-    panel->setPadding({20, 20});
-    panel->setPosition({20, 40});
-    panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
-    panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
-
-    int y = 0;
-    auto addLabeledSlider =
-        [&](const std::string& labelText, double val, double minVal, double maxVal, double incr = 0.01)
-    {
-        auto label = std::make_unique<Label>(form, labelText);
-        label->setPosition({0, y});
-        panel->addControl(std::move(label));
-        y += 20;
-
-        auto slider = std::make_unique<DoubleSlider>(form, minVal, maxVal);
-        slider->setId(labelText + "Slider");
-        slider->setAnchor(Anchor::TopCenter);
-        slider->setOrigin(Origin::TopCenter);
-        slider->setPosition({0, y});
-        slider->setValue(val);
-        slider->setIncrement(incr);
-
-        DoubleSlider* sliderPtr = slider.get();
-        panel->addControl(std::move(slider));
-        y += 30;
-
-        return sliderPtr;
-    };
-    addLabeledSlider("Wind Speed X", WindVelocity.x, 0.0, 100.0, 1.0)->valueChanged += [](double val)
-    {
-        WindVelocity.x = static_cast<float>(val);
-        OceanParams.windSpeed = glm::length(WindVelocity);
-        OceanParams.windDirection = WindVelocity / OceanParams.windSpeed;
-        OceanParams.Lw = OceanParams.windSpeed * OceanParams.windSpeed / 9.81f;
-    };
-    addLabeledSlider("Wind Speed Z", WindVelocity.y, 0.0, 100.0, 1.0)->valueChanged += [](double val)
-    {
-        WindVelocity.y = static_cast<float>(val);
-        OceanParams.windSpeed = glm::length(WindVelocity);
-        OceanParams.windDirection = WindVelocity / OceanParams.windSpeed;
-        OceanParams.Lw = OceanParams.windSpeed * OceanParams.windSpeed / 9.81f;
-    };
-    addLabeledSlider("Amplitude", OceanParams.A, 0.0, 1000.0, 2.0)->valueChanged += [](double val)
-    {
-        OceanParams.A = static_cast<float>(val);
-    };
-    addLabeledSlider("smallWaves", OceanParams.smallWaves, 0.0, 10.0)->valueChanged += [](double val)
-    {
-        OceanParams.smallWaves = static_cast<float>(val);
-    };
-    addLabeledSlider("Choppiness", Choppiness, 0.0, 1.0)->valueChanged += [](double val)
-    {
-        Choppiness = static_cast<float>(val);
-    };
-
-    form->add(std::move(panel));
-}
 } // namespace crisp

@@ -7,6 +7,7 @@
 #include <Crisp/GUI/StatusBar.hpp>
 
 #include <Crisp/Common/Logger.hpp>
+#include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 
 namespace crisp
@@ -72,9 +73,14 @@ Application::Application(const ApplicationEnvironment& environment)
 
     auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
     cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+
+    gui::initImGui(m_window->getHandle(), *m_renderer);
 }
 
-Application::~Application() {}
+Application::~Application()
+{
+    gui::shutdownImGui(*m_renderer);
+}
 
 void Application::run()
 {
@@ -102,8 +108,12 @@ void Application::run()
             timeSinceLastUpdate -= TimePerFrame;
         }
 
+        gui::prepareImGuiFrame();
+
         m_sceneContainer->render();
         m_guiForm->draw();
+        gui::renderImGuiFrame(*m_renderer);
+
         m_renderer->drawFrame();
     }
 

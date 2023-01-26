@@ -171,4 +171,10 @@ VkSurfaceKHR VulkanContext::getSurface() const
 {
     return m_surface;
 }
+
+VkInstance VulkanContext::getInstance() const
+{
+    return m_instance;
+}
+
 } // namespace crisp

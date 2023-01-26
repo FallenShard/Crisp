@@ -102,8 +102,8 @@ void main()
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
     const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, 0.0f, 1.0f);
-    
-    finalColor = vec4(vec3(Lenv), 1.0f);
+
+    finalColor = vec4(Li + Lenv, 1.0f);
     //finalColor = vec4(vec3(F), 1.0f);
     //finalColor = vec4(vec3(Li), 1.0f);
 }

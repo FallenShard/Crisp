@@ -152,6 +152,7 @@ FetchContent_MakeAvailable(embree)
 
 # List all used third-party libraries
 add_subdirectory(Externals/lua)
+add_subdirectory(Externals/imgui)
 add_subdirectory(Externals/stb)
 add_subdirectory(Externals/vulkan)
 add_subdirectory(Externals/tinyexr)

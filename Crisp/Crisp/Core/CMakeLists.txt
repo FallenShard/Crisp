@@ -56,7 +56,8 @@ target_link_libraries(CrispApplication
     PUBLIC CrispEvent
     PUBLIC CrispUtils
     PUBLIC glfw
-    PUBLIC vulkan)
+    PUBLIC vulkan
+    PUBLIC CrispImGui)
 
 add_cpp_interface_library(CrispCoreUtils
     "ThreadPool.hpp")

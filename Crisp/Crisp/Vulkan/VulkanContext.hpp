@@ -28,6 +28,8 @@ public:
 
     VkSurfaceKHR getSurface() const;
 
+    VkInstance getInstance() const;
+
 private:
     VkInstance m_instance;
     VkDebugUtilsMessengerEXT m_debugMessenger;

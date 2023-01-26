@@ -30,11 +30,11 @@ public:
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;
     virtual void render() override;
+    virtual void renderGui() override;
 
 private:
     std::unique_ptr<VulkanImage> createInitialSpectrum();
     int applyFFT(std::string image);
-    void createGui(gui::Form* form);
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<TransformBuffer> m_transformBuffer;

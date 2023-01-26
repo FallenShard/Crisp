@@ -49,3 +49,13 @@ target_link_libraries(CrispGui
     PUBLIC glfw
     PUBLIC vulkan
     PRIVATE CrispImageIo)
+
+add_cpp_static_library(CrispImGui
+    "ImGuiUtils.cpp"
+    "ImGuiUtils.hpp"
+)
+target_link_libraries(CrispImGui
+    PUBLIC ImGui
+    PUBLIC CrispRenderer
+    PUBLIC CrispWindow
+)

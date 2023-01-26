@@ -17,6 +17,8 @@ public:
     virtual void update(float dt) = 0;
     virtual void render() = 0;
 
+    virtual void renderGui() {}
+
 protected:
     Application* m_app{nullptr};
     Renderer* m_renderer{nullptr};
