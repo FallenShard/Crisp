@@ -1,5 +1,7 @@
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
+#include <Crisp/Common/Checks.hpp>
+
 namespace crisp
 {
 namespace
@@ -41,6 +43,7 @@ TriangleMesh::TriangleMesh(
 {
     m_views.emplace_back("", 0, static_cast<uint32_t>(m_faces.size() * 3));
 
+    bool missingTexCoords{m_texCoords.empty()};
     bool missingNormals = false;
     bool missingTangents = false;
     for (const auto& attrib : vertexAttributes)
@@ -68,7 +71,16 @@ TriangleMesh::TriangleMesh(
         computeVertexNormals();
 
     if (missingTangents)
-        computeTangentVectors();
+    {
+        if (!missingTexCoords)
+        {
+            computeTangentVectors();
+        }
+        else
+        {
+            m_tangents.resize(m_positions.size(), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        }
+    }
 
     computeBoundingBox();
 }
@@ -169,6 +181,7 @@ void TriangleMesh::computeTangentVectors()
     m_tangents = std::vector<glm::vec4>(m_positions.size(), glm::vec4(0.0f));
     std::vector<glm::vec3> bitangents = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
 
+    CRISP_CHECK_EQ(m_texCoords.size(), m_positions.size(), "Missing tex coords.");
     for (const auto& face : m_faces)
     {
         const glm::vec3& v1 = m_positions[face[0]];
@@ -220,7 +233,9 @@ void TriangleMesh::computeBoundingBox()
     m_boundingBox = BoundingBox3();
 
     for (const auto& p : m_positions)
+    {
         m_boundingBox.expandBy(p);
+    }
 }
 
 const std::vector<TriangleMeshView>& TriangleMesh::getViews() const
@@ -230,23 +245,17 @@ const std::vector<TriangleMeshView>& TriangleMesh::getViews() const
 
 void TriangleMesh::normalizeToUnitBox()
 {
-    glm::vec3 minCorner(std::numeric_limits<float>::max());
-    glm::vec3 maxCorner(std::numeric_limits<float>::lowest());
+    computeBoundingBox();
 
-    for (const auto& p : m_positions)
-    {
-        minCorner = glm::min(minCorner, p);
-        maxCorner = glm::max(maxCorner, p);
-    }
-
-    float longestAxis =
-        std::max(maxCorner.x - minCorner.x, std::max(maxCorner.y - minCorner.y, maxCorner.z - minCorner.z));
+    const glm::vec3& extent{m_boundingBox.getExtents()};
+    float longestAxis = std::max(extent.x, std::max(extent.y, extent.z));
     float scalingFactor = 1.0f / longestAxis;
 
-    glm::vec3 center = (minCorner + maxCorner) * 0.5f;
-
+    const glm::vec3& center{m_boundingBox.getCenter()};
     for (auto& p : m_positions)
+    {
         p = (p - center) * scalingFactor;
+    }
 }
 
 void TriangleMesh::transform(const glm::mat4& transform)

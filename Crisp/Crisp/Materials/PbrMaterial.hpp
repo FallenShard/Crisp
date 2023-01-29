@@ -14,6 +14,7 @@ struct PbrParams
     glm::vec2 uvScale{1.0f, 1.0f};
     float metallic{1.0f};
     float roughness{1.0f};
+    float aoStrength{1.0f};
 };
 
 struct PbrTextureGroup

@@ -31,12 +31,6 @@ Result<TriangleMesh> loadTriangleMesh(
     {
         return convertToTriangleMesh(path, readWavefrontObj(path), vertexAttributes);
     }
-    /*else if (FbxImporter::isFbxFile(path))
-    {
-        FbxImporter importer(path);
-        importer.moveDataToTriangleMesh(*this, m_interleavedFormat);
-        return;
-    }*/
 
     return resultError("Failed to open an obj mesh at {}", path.string());
 }

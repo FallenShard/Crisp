@@ -44,6 +44,25 @@ void TargetCameraController::setTarget(const glm::vec3& target)
     m_camera.setOrientation(orientation);
 }
 
+void TargetCameraController::setDistance(const float distance)
+{
+    m_distance = distance;
+    const glm::dquat orientation =
+        glm::angleAxis(m_yaw, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::angleAxis(m_pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+    m_camera.setPosition(m_target + glm::quat(orientation) * glm::vec3(0.0f, 0.0f, m_distance));
+    m_camera.setOrientation(orientation);
+}
+
+void TargetCameraController::setOrientation(float yaw, float pitch)
+{
+    m_yaw = yaw;
+    m_pitch = pitch;
+    const glm::dquat orientation =
+        glm::angleAxis(m_yaw, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::angleAxis(m_pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+    m_camera.setPosition(m_target + glm::quat(orientation) * glm::vec3(0.0f, 0.0f, m_distance));
+    m_camera.setOrientation(orientation);
+}
+
 void TargetCameraController::pan(const float dx, const float dy)
 {
     m_target += -m_camera.getRightDir() * m_panSpeed * dx - m_camera.getUpDir() * m_panSpeed * dy;
@@ -118,7 +137,15 @@ void TargetCameraController::onMouseMoved(const double xPos, const double yPos)
 
 void TargetCameraController::onMouseWheelScrolled(const double offset)
 {
-    m_camera.setVerticalFov(std::clamp(m_camera.getVerticalFov() - static_cast<float>(offset) * 3.0f, 5.0f, 90.0f));
+    if (m_window->isKeyDown(Key::LeftShift))
+    {
+        const float distance = m_distance;
+        setDistance(std::clamp(distance - static_cast<float>(offset) * 3.0f, 0.01f, 100.0f));
+    }
+    else
+    {
+        m_camera.setVerticalFov(std::clamp(m_camera.getVerticalFov() - static_cast<float>(offset) * 3.0f, 5.0f, 90.0f));
+    }
 }
 
 void TargetCameraController::onViewportResized(int32_t width, int32_t height)

@@ -2,5 +2,5 @@
   "resourcesPath": "D:/Projects/Crisp/Resources",
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
   "validationLayersInRelease": true,
-  "scene": "ocean"
+  "scene": "gltf-viewer"
 }

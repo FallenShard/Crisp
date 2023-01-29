@@ -15,6 +15,8 @@ public:
 
     void setPanSpeed(float panSpeed);
     void setTarget(const glm::vec3& target);
+    void setDistance(float distance);
+    void setOrientation(float yaw, float pitch);
 
     void pan(float dx, float dy);
     void updateOrientation(float dYaw, float dPitch);

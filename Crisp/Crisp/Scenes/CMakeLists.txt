@@ -5,6 +5,8 @@ add_cpp_static_library(CrispScenes
     "AmbientOcclusionScene.hpp"
     "ClusteredLightingScene.cpp"
     "ClusteredLightingScene.hpp"
+    "GltfViewerScene.cpp"
+    "GltfViewerScene.hpp"
     "FluidSimulationScene.cpp"
     "FluidSimulationScene.hpp"
     "NormalMappingScene.cpp"

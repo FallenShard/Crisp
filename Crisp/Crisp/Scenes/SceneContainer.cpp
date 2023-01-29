@@ -4,6 +4,7 @@
 #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
 #include <Crisp/Scenes/ClusteredLightingScene.hpp>
 #include <Crisp/Scenes/FluidSimulationScene.hpp>
+#include <Crisp/Scenes/GltfViewerScene.hpp>
 #include <Crisp/Scenes/NormalMappingScene.hpp>
 #include <Crisp/Scenes/OceanScene.hpp>
 #include <Crisp/Scenes/PbrScene.hpp>
@@ -28,6 +29,7 @@ std::vector<std::string> sceneNames = {
     "normal-mapping",
     "vulkan-ray-tracer",
     "ocean",
+    "gltf-viewer",
     "null"};
 
 template <typename... Args>
@@ -51,6 +53,8 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
         return std::make_unique<VulkanRayTracingScene>(std::forward<Args>(args)...);
     else if (name == sceneNames[8])
         return std::make_unique<OceanScene>(std::forward<Args>(args)...);
+    else if (name == sceneNames[9])
+        return std::make_unique<GltfViewerScene>(std::forward<Args>(args)...);
     else
     {
         spdlog::warn("Scene with the name {} is invalid/disabled", name);

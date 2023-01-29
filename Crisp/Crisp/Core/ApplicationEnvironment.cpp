@@ -57,6 +57,7 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     const auto json{loadJsonFromFile(m_arguments.configPath).unwrap()};
     m_resourcesPath = json["resourcesPath"].get<std::string>();
     m_shaderSourcesPath = json["shaderSourcesPath"].get<std::string>();
+    m_arguments.scene = json["scene"].get<std::string>();
 }
 
 ApplicationEnvironment::~ApplicationEnvironment()
@@ -80,7 +81,7 @@ const std::filesystem::path& ApplicationEnvironment::getShaderSourceDirectory() 
 std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtensions()
 {
     std::vector<std::string> extensions;
-    unsigned int glfwExtensionCount = 0;
+    uint32_t glfwExtensionCount{0};
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     for (unsigned int i = 0; i < glfwExtensionCount; i++)
         extensions.push_back(glfwExtensions[i]);

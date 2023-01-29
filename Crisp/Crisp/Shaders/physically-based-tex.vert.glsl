@@ -22,6 +22,7 @@ layout(set = 0, binding = 0) uniform Transforms
 
 void main()
 {
+    gl_Position = MVP * vec4(position, 1.0f);
     eyeNormal    = normalize((N * vec4(normal, 0.0f)).xyz);
     eyeTangent   = normalize((N * vec4(tangent.xyz, 0.0f)).xyz);
     eyeBitangent = normalize((N * vec4(tangent.w * cross(normal, tangent.xyz), 0.0f)).xyz);
@@ -30,5 +31,5 @@ void main()
     outTexCoord  = texCoord;
     worldPos     = vec3(M * vec4(position, 1.0f));
 
-    gl_Position = MVP * vec4(position, 1.0f);
+    
 }

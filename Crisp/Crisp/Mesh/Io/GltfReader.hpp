@@ -5,12 +5,18 @@
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
 #include <filesystem>
-#include <optional>
 
 namespace crisp
 {
 
-Result<std::pair<TriangleMesh, PbrTextureGroup>> loadGltfModel(
+struct RenderObject
+{
+    TriangleMesh mesh;
+    PbrMaterial material;
+    glm::mat4 transform;
+};
+
+Result<std::vector<RenderObject>> loadGltfModel(
     const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes);
 
 } // namespace crisp

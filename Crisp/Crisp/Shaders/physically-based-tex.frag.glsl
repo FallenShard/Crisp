@@ -58,6 +58,7 @@ layout(set = 2, binding = 6) uniform Material
     vec2 uvScale;
     float metallic;
     float roughness;
+    float aoStrength;
 } material;
 
 
@@ -136,6 +137,12 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
 vec3 decodeNormal(in vec2 uv)
 {
     vec3 normal  = normalize(eyeNormal);
+    // Have to check this because without UVs, computed tangents will be NaN.
+    if (any(isnan(eyeTangent)))
+    {
+        return normal;
+    }
+    
     vec3 tangent = normalize(eyeTangent);
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
@@ -327,7 +334,7 @@ void main()
     //fragColor = vec4(Li * shadowCoeff + emission, 1.0f);
     //fragColor = vec4(Li, 1);
     //fragColor = vec4(vec3(ao), 1.0f);
-    //fragColor = vec4(Lenv, 1.0f);
+    //fragColor = vec4(vec3(metallic), 1.0f);
     //fragColor = vec4(Li, 1.0f);
     //fragColor = vec4(Lenv * 0.5f + vec3(shadowCoeff), 1.0f);
     //fragColor = vec4(inTexCoord, 0.0f, 1.0f);
@@ -336,4 +343,5 @@ void main()
     //fragColor = vec4(Lenv, 1.0f);
     //fragColor = vec4(vec3(G), 1.0f);
     //fragColor = vec4(1, 0, 0, 1);
+    //fragColor = vec4(vec3(ao), 1.0);
 }

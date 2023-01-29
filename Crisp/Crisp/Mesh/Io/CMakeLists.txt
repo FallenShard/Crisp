@@ -3,8 +3,6 @@ add_cpp_static_library(CrispMeshIo
     "GltfReader.hpp"
     "MeshLoader.cpp"
     "MeshLoader.hpp"
-    "FbxImporter.cpp"
-    "FbxImporter.hpp"
     "WavefrontObjReader.cpp"
     "WavefrontObjReader.hpp")
 target_link_libraries(CrispMeshIo

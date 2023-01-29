@@ -510,14 +510,15 @@ void PbrScene::createShaderball()
     TriangleMesh mesh{};
     if (loadHelmet)
     {
-        auto [helmetMesh, gltfTextures] =
+        auto renderObjects =
             loadGltfModel(
                 m_renderer->getResourcesPath() / "Meshes/DamagedHelmet/DamagedHelmet.gltf", flatten(PbrVertexFormat))
                 .unwrap();
-        mesh = std::move(helmetMesh);
 
+        mesh = std::move(renderObjects.at(0).mesh);
+
+        pbrMaterial = std::move(renderObjects.at(0).material);
         pbrMaterial.key = "DamagedHelmet";
-        pbrMaterial.textures = std::move(gltfTextures);
 
         const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
         shaderBall->transformPack->M = translation;
