@@ -2,7 +2,7 @@
 
 #include <Crisp/ShadingLanguage/Reflection.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <memory>
 #include <vector>

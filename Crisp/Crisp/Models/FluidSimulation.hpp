@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <Crisp/Core/Keyboard.hpp>
 

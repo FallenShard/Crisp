@@ -11,6 +11,28 @@ ResourceContext::ResourceContext(Renderer* renderer)
 {
 }
 
+UniformBuffer* ResourceContext::addUniformBuffer(std::string id, std::unique_ptr<UniformBuffer> uniformBuffer)
+{
+    m_renderer->getDebugMarker().setObjectName(uniformBuffer->get(), id.c_str());
+    return m_uniformBuffers.emplace(std::move(id), std::move(uniformBuffer)).first->second.get();
+}
+
+UniformBuffer* ResourceContext::getUniformBuffer(std::string id) const
+{
+    return m_uniformBuffers.at(id).get();
+}
+
+StorageBuffer* ResourceContext::addStorageBuffer(std::string id, std::unique_ptr<StorageBuffer> storageBuffer)
+{
+    m_renderer->getDebugMarker().setObjectName(storageBuffer->getHandle(), id.c_str());
+    return m_storageBuffers.emplace(std::move(id), std::move(storageBuffer)).first->second.get();
+}
+
+StorageBuffer* ResourceContext::getStorageBuffer(const std::string& id) const
+{
+    return m_storageBuffers.at(id).get();
+}
+
 VulkanPipeline* ResourceContext::createPipeline(
     std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex)
 {
@@ -30,15 +52,19 @@ Material* ResourceContext::createMaterial(std::string materialId, VulkanPipeline
     return m_materials.at(materialId).get();
 }
 
-UniformBuffer* ResourceContext::addUniformBuffer(std::string id, std::unique_ptr<UniformBuffer> uniformBuffer)
+Material* ResourceContext::getMaterial(std::string id) const
 {
-    m_renderer->getDebugMarker().setObjectName(uniformBuffer->get(), id.c_str());
-    return m_uniformBuffers.emplace(std::move(id), std::move(uniformBuffer)).first->second.get();
+    return m_materials.at(id).get();
 }
 
 Geometry& ResourceContext::addGeometry(std::string id, std::unique_ptr<Geometry> geometry)
 {
     return *m_geometries.emplace(std::move(id), std::move(geometry)).first->second;
+}
+
+Geometry* ResourceContext::getGeometry(std::string id) const
+{
+    return m_geometries.at(id).get();
 }
 
 RenderNode* ResourceContext::createPostProcessingEffectNode(
@@ -53,21 +79,6 @@ RenderNode* ResourceContext::createPostProcessingEffectNode(
     renderNode->pass(renderPassName).pipeline = pipeline;
     renderNode->pass(renderPassName).material = createMaterial(renderNodeId, pipeline);
     return renderNode;
-}
-
-Geometry* ResourceContext::getGeometry(std::string id)
-{
-    return m_geometries.at(id).get();
-}
-
-Material* ResourceContext::getMaterial(std::string id)
-{
-    return m_materials.at(id).get();
-}
-
-UniformBuffer* ResourceContext::getUniformBuffer(std::string id) const
-{
-    return m_uniformBuffers.at(id).get();
 }
 
 void ResourceContext::recreatePipelines()

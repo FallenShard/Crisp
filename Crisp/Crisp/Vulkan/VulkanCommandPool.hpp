@@ -7,7 +7,7 @@ namespace crisp
 class VulkanDevice;
 class VulkanQueue;
 
-class VulkanCommandPool final : public VulkanResource<VkCommandPool, vkDestroyCommandPool>
+class VulkanCommandPool final : public VulkanResource<VkCommandPool>
 {
 public:
     VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator);

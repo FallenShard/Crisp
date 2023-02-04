@@ -3,7 +3,7 @@
 #include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Common/Result.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <filesystem>
 #include <string>

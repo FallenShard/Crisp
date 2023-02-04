@@ -85,7 +85,7 @@ struct VertexLayout
     }
 };
 
-class VulkanPipeline final : public VulkanResource<VkPipeline, vkDestroyPipeline>
+class VulkanPipeline final : public VulkanResource<VkPipeline>
 {
 public:
     VulkanPipeline(

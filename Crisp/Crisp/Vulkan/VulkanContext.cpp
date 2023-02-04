@@ -72,6 +72,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
 
 VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers)
 {
+    loadVulkanLoaderFunctions();
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     appInfo.pApplicationName = "Crisp";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -111,6 +112,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     assertRequiredExtensionSupport(enabledExtensions, extensionProps).unwrap();
     assertValidationLayerSupport(enableValidationLayers).unwrap();
 
+    loadVulkanInstanceFunctions(instance);
     return instance;
 }
 
@@ -136,7 +138,7 @@ VulkanContext::~VulkanContext()
         return;
 
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-    DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+    vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
     vkDestroyInstance(m_instance, nullptr);
 }
 

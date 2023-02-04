@@ -67,7 +67,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
         foundChunkOffset + ((alignment - (foundChunkOffset & (alignment - 1))) & (alignment - 1));
 
     const Allocation allocation{allocationBlock, alignedOffset, size};
-    logger->info(
+    logger->debug(
         "[{}] Suballocating at [{}, {}] with alignment {}.", m_tag, allocation.offset, allocation.size, alignment);
 
     m_usedSize += allocation.size;
@@ -80,7 +80,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
     // Possibly add the left chunk
     if (allocation.offset > foundChunkOffset)
     {
-        logger->info(
+        logger->debug(
             "[{}] Freeing before-aligned chunk at [{}, {}].",
             m_tag,
             foundChunkOffset,
@@ -93,7 +93,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
     const uint64_t foundChunkEnd{foundChunkOffset + foundChunkSize};
     if (foundChunkEnd > allocationEnd)
     {
-        logger->info(
+        logger->debug(
             "[{}] Readding free chunk at offset {} with size {}.", m_tag, allocationEnd, foundChunkEnd - allocationEnd);
         freeChunks[allocationEnd] = foundChunkEnd - allocationEnd;
     }
@@ -105,7 +105,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
 void VulkanMemoryHeap::free(const Allocation& allocation)
 {
     AllocationBlock& block = *allocation.allocationBlock;
-    logger->info("[{}] Freeing a suballocation [{}, {}]", m_tag, allocation.offset, allocation.size);
+    logger->debug("[{}] Freeing a suballocation [{}, {}]", m_tag, allocation.offset, allocation.size);
     m_usedSize -= allocation.size;
     block.freeChunks[allocation.offset] = allocation.size;
     block.usedChunks.erase(allocation.offset);
@@ -117,7 +117,7 @@ void VulkanMemoryHeap::free(const Allocation& allocation)
 
     if (block.freeChunks.size() > 10)
     {
-        logger->info("[{}] Possible memory fragmentation - free chunks: {}", m_tag, block.freeChunks.size());
+        logger->debug("[{}] Possible memory fragmentation - free chunks: {}", m_tag, block.freeChunks.size());
     }
 
     if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == m_blockSize)
@@ -125,7 +125,7 @@ void VulkanMemoryHeap::free(const Allocation& allocation)
         freeBlock(block);
         m_allocationBlocks.remove(block);
 
-        logger->info("[{}] Freed a memory block.", m_tag);
+        logger->debug("[{}] Freed a memory block.", m_tag);
     }
 }
 

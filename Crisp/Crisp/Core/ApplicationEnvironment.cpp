@@ -4,8 +4,8 @@
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.h>
 
 namespace crisp
 {

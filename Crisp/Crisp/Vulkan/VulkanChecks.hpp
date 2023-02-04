@@ -2,7 +2,7 @@
 
 #include <Crisp/Common/Checks.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp::detail
 {

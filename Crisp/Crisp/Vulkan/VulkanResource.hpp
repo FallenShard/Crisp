@@ -4,17 +4,11 @@
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp
 {
-namespace detail
-{
 template <typename T>
-using DestroyFunc = void (*)(VkDevice, T, const VkAllocationCallbacks*);
-}
-
-template <typename T, detail::DestroyFunc<T> destroyFunc>
 class VulkanResource
 {
 public:
@@ -41,7 +35,7 @@ public:
 
     virtual ~VulkanResource()
     {
-        if constexpr (destroyFunc != nullptr)
+        if (getDestroyFunc<T>() != nullptr)
         {
             if (!m_handle || !m_deallocator)
             {
@@ -53,8 +47,12 @@ public:
                 m_handle,
                 [](void* handle, VulkanResourceDeallocator* deallocator)
                 {
-                    destroyDeferred(handle, deallocator, destroyFunc);
+                    destroyDeferred(handle, deallocator, getDestroyFunc<T>());
                 });
+        }
+        else
+        {
+            spdlog::error("Didn't destroy object of type: {}", typeid(T).name());
         }
     }
 

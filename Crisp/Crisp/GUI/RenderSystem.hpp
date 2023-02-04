@@ -4,7 +4,7 @@
 #include <set>
 #include <unordered_map>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <Crisp/IO/FontLoader.hpp>
 #include <Crisp/Math/Headers.hpp>

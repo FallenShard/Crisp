@@ -2,11 +2,13 @@
 
 #include <Crisp/Common/Result.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #define GET_DEVICE_PROC_NV(procVar) getDeviceProc(procVar, device, #procVar "NV").unwrap()
 #define GET_DEVICE_PROC_KHR(procVar) getDeviceProc(procVar, device, #procVar "KHR").unwrap()
 
+namespace crisp
+{
 template <typename T>
 inline [[nodiscard]] crisp::Result<> getDeviceProc(T& procRef, VkDevice device, const char* procName)
 {
@@ -18,3 +20,4 @@ inline [[nodiscard]] crisp::Result<> getDeviceProc(T& procRef, VkDevice device, 
 
     return {};
 }
+} // namespace crisp

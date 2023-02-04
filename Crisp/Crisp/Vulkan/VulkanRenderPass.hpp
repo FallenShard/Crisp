@@ -70,7 +70,7 @@ struct RenderPassParameters
     std::vector<RenderTarget*> renderTargets;
 };
 
-class VulkanRenderPass final : public VulkanResource<VkRenderPass, vkDestroyRenderPass>
+class VulkanRenderPass final : public VulkanResource<VkRenderPass>
 {
 public:
     VulkanRenderPass(const VulkanDevice& device, VkRenderPass handle, RenderPassParameters&& parameters);

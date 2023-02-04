@@ -40,7 +40,7 @@ target_link_libraries(CrispApplicationEnvironment
 add_cpp_test(CrispApplicationEnvironmentTest
     "Test/CommandLineParserTest.cpp")
 target_link_libraries(CrispApplicationEnvironmentTest PRIVATE CrispApplicationEnvironment)
-copy_shared_libs(CrispApplicationEnvironmentTest vulkan)
+copy_shared_libs(CrispApplicationEnvironmentTest)
 
 add_cpp_static_library(CrispApplication
     "Application.cpp"

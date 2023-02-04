@@ -62,7 +62,15 @@ target_link_libraries(CrispVulkan
     PRIVATE CrispLogger
     PUBLIC CrispUtils
     PUBLIC CrispChecks
-    PUBLIC vulkan)
+    PUBLIC CrispVulkanHeader)
+
+add_cpp_static_library(CrispVulkanHeader
+    "VulkanHeader.cpp"
+    "VulkanHeader.hpp"
+)
+target_link_libraries(CrispVulkanHeader
+    PUBLIC vulkan
+    PRIVATE CrispChecks)
 
 add_cpp_interface_library(CrispVulkanTestUtils
     "Test/ScopeCommandBufferExecutor.hpp"
@@ -80,4 +88,4 @@ add_cpp_test(CrispVulkanTest
     "Test/VulkanResourceDeallocatorTest.cpp"
     "Test/VulkanComputeTest.cpp")
 target_link_libraries(CrispVulkanTest PRIVATE CrispVulkanTestUtils CrispVulkan CrispWindow CrispApplicationEnvironment)
-copy_shared_libs(CrispVulkanTest vulkan lua)
+copy_shared_libs(CrispVulkanTest lua)

@@ -51,6 +51,12 @@ void initImGui(GLFWwindow* window, Renderer& renderer)
     initInfo.MinImageCount = RendererConfig::VirtualFrameCount;
     initInfo.ImageCount = RendererConfig::VirtualFrameCount;
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    ImGui_ImplVulkan_LoadFunctions(
+        [](const char* funcName, void* userData)
+        {
+            return vkGetInstanceProcAddr(static_cast<VkInstance>(userData), funcName);
+        },
+        initInfo.Instance);
     ImGui_ImplVulkan_Init(&initInfo, renderer.getDefaultRenderPass().getHandle());
 
     renderer.enqueueResourceUpdate(

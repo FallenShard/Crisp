@@ -17,7 +17,7 @@ enum class TripleBuffering
     Disabled
 };
 
-class VulkanSwapChain : public VulkanResource<VkSwapchainKHR, vkDestroySwapchainKHR>
+class VulkanSwapChain : public VulkanResource<VkSwapchainKHR>
 {
 public:
     VulkanSwapChain(

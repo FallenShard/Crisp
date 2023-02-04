@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan/vulkan.h"
+#include "Crisp/Vulkan/VulkanHeader.hpp"
 #include <memory>
 
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>

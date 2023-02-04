@@ -2,13 +2,10 @@
 
 #include <Crisp/Common/Logger.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp
 {
-void DestroyDebugUtilsMessengerEXT(
-    VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator);
-
 VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance);
 
 class VulkanDebugMarker

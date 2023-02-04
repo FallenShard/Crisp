@@ -28,7 +28,7 @@ Application::Application(const ApplicationEnvironment& environment)
     , m_updatePeriod(1.0)
 {
     m_window = createWindow();
-    logger->info("Window opened!");
+    logger->trace("Window opened!");
 
     AssetPaths assetPaths{};
     assetPaths.shaderSourceDir = environment.getShaderSourceDirectory();
@@ -39,7 +39,7 @@ Application::Application(const ApplicationEnvironment& environment)
         m_window->createSurfaceCallback(),
         std::move(assetPaths),
         environment.getParameters().enableRayTracingExtension);
-    logger->info("Renderer created!");
+    logger->trace("Renderer created!");
 
     m_window->resized.subscribe<&Application::onResize>(this);
     m_window->minimized.subscribe<&Application::onMinimize>(this);
@@ -47,7 +47,7 @@ Application::Application(const ApplicationEnvironment& environment)
 
     // Create and connect GUI with the mouse
     m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-    logger->info("GUI Created");
+    logger->trace("GUI created!");
     m_window->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
     m_window->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
     m_window->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());

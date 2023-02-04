@@ -243,6 +243,7 @@ VkDevice VulkanPhysicalDevice::createLogicalDevice(const VulkanQueueConfiguratio
 
     VkDevice device(VK_NULL_HANDLE);
     VK_CHECK(vkCreateDevice(m_handle, &createInfo, nullptr, &device));
+    loadVulkanDeviceFunctions(device);
     return device;
 }
 

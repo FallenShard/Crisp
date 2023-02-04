@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>

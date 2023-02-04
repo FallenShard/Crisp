@@ -48,7 +48,10 @@
 
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
+#include <Crisp/Mesh/SkinningData.hpp>
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
+#include <Crisp/Renderer/PipelineBuilder.hpp>
+#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
 namespace crisp
 {
@@ -122,35 +125,57 @@ Material* createPbrMaterial(
     return material;
 }
 
-std::unique_ptr<VulkanRenderPass> createRedChannelPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D renderArea)
+std::unique_ptr<VulkanPipeline> createComputePipeline(
+    Renderer* renderer,
+    const glm::uvec3& workGroupSize,
+    const PipelineLayoutBuilder& layoutBuilder,
+    const std::string& shaderName)
 {
-    std::vector<RenderTarget*> renderTargets(1);
-    renderTargets[0] = renderTargetCache.addRenderTarget(
-        "RedChannelColor",
-        RenderTargetBuilder()
-            .setFormat(VK_FORMAT_R16_SFLOAT)
-            .setBuffered(true)
-            .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT, {1.0f, 0.5f, 0.0f, 1.0f})
-            .setSize(renderArea, true)
-            .create(device));
+    VulkanDevice& device = renderer->getDevice();
+    auto layout = layoutBuilder.create(device);
 
-    return RenderPassBuilder()
-        .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
-        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    std::vector<VkSpecializationMapEntry> specEntries = {
+  //   id,               offset,             size
+        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
+        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
+        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}
+    };
 
-        .setNumSubpasses(1)
-        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(
-            VK_SUBPASS_EXTERNAL,
-            0,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, renderArea, renderTargets);
+    VkSpecializationInfo specInfo = {};
+    specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
+    specInfo.pMapEntries = specEntries.data();
+    specInfo.dataSize = sizeof(workGroupSize);
+    specInfo.pData = glm::value_ptr(workGroupSize);
+
+    VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
+    pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getShaderModule(shaderName));
+    pipelineInfo.stage.pSpecializationInfo = &specInfo;
+    pipelineInfo.layout = layout->getHandle();
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;
+    VkPipeline pipeline;
+    vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+
+    return std::make_unique<VulkanPipeline>(
+        device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
+}
+
+std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
+{
+    PipelineLayoutBuilder layoutBuilder;
+    layoutBuilder.defineDescriptorSet(
+        0,
+        false,
+        {
+            {0,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {1,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {2,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {4,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+    });
+
+    layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, 2 * sizeof(uint32_t));
+    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "linear-blend-skinning.comp");
 }
 
 } // namespace
@@ -358,6 +383,83 @@ void GltfViewerScene::loadGltf()
     }
 
     m_renderer->getDevice().flushDescriptorUpdates();
+
+    const bool hasSkinning{false};
+    if (hasSkinning)
+    {
+        const auto& restPositions = renderObject.mesh.getPositions();
+        const uint32_t vertexCount{123};
+        SkinningData data{};
+        auto restVertexBuffer = m_resourceContext->addStorageBuffer(
+            "restPositions",
+            std::make_unique<StorageBuffer>(
+                m_renderer,
+                restPositions.size() * sizeof(glm::vec3),
+                0,
+                BufferUpdatePolicy::Constant,
+                restPositions.data()));
+        auto weightsBuffer = m_resourceContext->addStorageBuffer(
+            "weights",
+            std::make_unique<StorageBuffer>(
+                m_renderer,
+                data.weights.size() * sizeof(glm::vec4),
+                0,
+                BufferUpdatePolicy::Constant,
+                data.weights.data()));
+        auto indicesBuffer = m_resourceContext->addStorageBuffer(
+            "indices",
+            std::make_unique<StorageBuffer>(
+                m_renderer,
+                data.indices.size() * sizeof(glm::vec4),
+                0,
+                BufferUpdatePolicy::Constant,
+                data.indices.data()));
+        auto jointMatrices = m_resourceContext->addStorageBuffer(
+            "jointMatrices",
+            std::make_unique<StorageBuffer>(m_renderer, data.jointMatrices.size() * sizeof(glm::mat4)));
+        auto& skinningPass = m_renderGraph->addComputePass("SkinningPass");
+        skinningPass.workGroupSize = glm::ivec3(256, 1, 1);
+        skinningPass.numWorkGroups = glm::ivec3((vertexCount - 1) / 256 + 1, 1, 1);
+        skinningPass.pipeline = createSkinningPipeline(m_renderer, skinningPass.workGroupSize);
+        skinningPass.material = std::make_unique<Material>(skinningPass.pipeline.get());
+        skinningPass.material->writeDescriptor(0, 0, restVertexBuffer->getDescriptorInfo());
+        skinningPass.material->writeDescriptor(0, 1, weightsBuffer->getDescriptorInfo());
+        skinningPass.material->writeDescriptor(0, 2, indicesBuffer->getDescriptorInfo());
+        skinningPass.material->writeDescriptor(0, 3, jointMatrices->getDescriptorInfo());
+        skinningPass.material->writeDescriptor(
+            0, 4, VkDescriptorBufferInfo{gltfNode->geometry->getVertexBuffer()->getHandle(), 0, VK_WHOLE_SIZE});
+
+        skinningPass.preDispatchCallback =
+            [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
+        {
+            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.buffer = gltfNode->geometry->getVertexBuffer()->getHandle();
+            barrier.offset = 0;
+            barrier.size = VK_WHOLE_SIZE;
+
+            vkCmdPipelineBarrier(
+                cmdBuffer.getHandle(),
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                0,
+                0,
+                nullptr,
+                1,
+                &barrier,
+                0,
+                nullptr);
+
+            struct SkinningParams
+            {
+                uint32_t vertexCount;
+                uint32_t jointsPerVertex;
+            };
+            SkinningParams params{vertexCount, SkinningData::JointsPerVertex};
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
+        };
+    }
 }
 
 void GltfViewerScene::setupInput()

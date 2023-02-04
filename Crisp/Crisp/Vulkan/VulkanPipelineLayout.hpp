@@ -18,7 +18,7 @@ struct DescriptorSetLayout
     bool isBuffered{false};
 };
 
-class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout, vkDestroyPipelineLayout>
+class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout>
 {
 public:
     VulkanPipelineLayout(

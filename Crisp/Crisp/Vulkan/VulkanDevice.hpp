@@ -3,7 +3,7 @@
 #include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp
 {

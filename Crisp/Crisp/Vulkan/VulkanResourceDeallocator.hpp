@@ -4,7 +4,7 @@
 
 #include <Crisp/Common/HashMap.hpp>
 
-#include <vulkan/vulkan.h>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp
 {

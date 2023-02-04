@@ -8,7 +8,7 @@ class VulkanDevice;
 
 inline constexpr float MaxAnisotropy = 16.0f;
 
-class VulkanSampler final : public VulkanResource<VkSampler, vkDestroySampler>
+class VulkanSampler final : public VulkanResource<VkSampler>
 {
 public:
     VulkanSampler(

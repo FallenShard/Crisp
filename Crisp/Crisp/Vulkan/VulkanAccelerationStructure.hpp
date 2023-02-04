@@ -11,7 +11,7 @@ class VulkanBuffer;
 class VulkanDevice;
 class VulkanCommandPool;
 
-class VulkanAccelerationStructure : public VulkanResource<VkAccelerationStructureKHR, nullptr>
+class VulkanAccelerationStructure : public VulkanResource<VkAccelerationStructureKHR>
 {
 public:
     VulkanAccelerationStructure(

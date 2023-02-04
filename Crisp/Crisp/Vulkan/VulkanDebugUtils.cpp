@@ -44,39 +44,7 @@ VkBool32 debugMessengerCallback(
     return VK_FALSE;
 }
 
-bool debugMarkerPointersRetrieved{false};
-PFN_vkSetDebugUtilsObjectTagEXT vkSetDebugUtilsObjectTag;
-PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectName;
-PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabel;
-PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabel;
-PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabel;
-
 } // namespace
-
-VkResult CreateDebugUtilsMessengerEXT(
-    VkInstance instance,
-    const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-    const VkAllocationCallbacks* allocator,
-    VkDebugUtilsMessengerEXT* messenger)
-{
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr)
-        return func(instance, createInfo, allocator, messenger);
-    else
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-}
-
-void DestroyDebugUtilsMessengerEXT(
-    VkInstance instance, VkDebugUtilsMessengerEXT messenger, const VkAllocationCallbacks* pAllocator)
-{
-    if (messenger == nullptr)
-        return;
-
-    const auto func =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr)
-        func(instance, messenger, pAllocator);
-}
 
 VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
 {
@@ -91,27 +59,13 @@ VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
     createInfo.pfnUserCallback = debugMessengerCallback;
 
     VkDebugUtilsMessengerEXT callback;
-    CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
+    vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
     return callback;
 }
 
 VulkanDebugMarker::VulkanDebugMarker(const VkDevice device)
     : m_device(device)
 {
-    if (!debugMarkerPointersRetrieved)
-    {
-        vkSetDebugUtilsObjectTag =
-            (PFN_vkSetDebugUtilsObjectTagEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectTagEXT");
-        vkSetDebugUtilsObjectName =
-            (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
-        vkCmdBeginDebugUtilsLabel =
-            (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
-        vkCmdEndDebugUtilsLabel =
-            (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
-        vkCmdInsertDebugUtilsLabel =
-            (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
-        debugMarkerPointersRetrieved = true;
-    }
 }
 
 void VulkanDebugMarker::setObjectName(
@@ -121,7 +75,7 @@ void VulkanDebugMarker::setObjectName(
     nameInfo.objectType = objectType;
     nameInfo.objectHandle = vulkanHandle;
     nameInfo.pObjectName = name;
-    vkSetDebugUtilsObjectName(m_device, &nameInfo);
+    vkSetDebugUtilsObjectNameEXT(m_device, &nameInfo);
 }
 
 } // namespace crisp

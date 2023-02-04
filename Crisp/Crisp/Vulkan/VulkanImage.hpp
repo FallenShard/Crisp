@@ -12,7 +12,7 @@ class VulkanDevice;
 class VulkanBuffer;
 class VulkanImageView;
 
-class VulkanImage : public VulkanResource<VkImage, vkDestroyImage>
+class VulkanImage : public VulkanResource<VkImage>
 {
 public:
     VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo);

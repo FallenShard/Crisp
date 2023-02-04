@@ -10,7 +10,7 @@ class VulkanDevice;
 class VulkanImage;
 class VulkanSampler;
 
-class VulkanImageView : public VulkanResource<VkImageView, vkDestroyImageView>
+class VulkanImageView : public VulkanResource<VkImageView>
 {
 public:
     VulkanImageView(
