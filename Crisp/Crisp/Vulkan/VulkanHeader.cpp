@@ -2,8 +2,6 @@
 
 #include <Crisp/Common/Checks.hpp>
 
-#include <Windows.h>
-
 #ifdef __cplusplus
 extern "C"
 {

@@ -1,6 +1,10 @@
 #pragma once
 
 #define VK_NO_PROTOTYPES
+#define VK_USE_PLATFORM_WIN32_KHR
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <vulkan/vulkan.h>
 
 #include <type_traits>
