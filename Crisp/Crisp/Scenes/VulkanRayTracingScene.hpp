@@ -50,7 +50,6 @@ private:
     void createPipeline(std::unique_ptr<VulkanPipelineLayout> pipelineLayout);
 
     void setupInput();
-    void createGui();
 
     void updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx);
 

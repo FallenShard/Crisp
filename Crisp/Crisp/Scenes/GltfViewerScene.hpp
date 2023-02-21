@@ -6,6 +6,7 @@
 #include <Crisp/Common/HashMap.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Mesh/SkinningData.hpp>
 
 namespace crisp
 {
@@ -24,12 +25,6 @@ class ResourceContext;
 class RenderGraph;
 struct RenderNode;
 
-class VulkanDevice;
-
-class VulkanImage;
-class VulkanImageView;
-class VulkanSampler;
-class BoxVisualizer;
 class Skybox;
 
 class GltfViewerScene : public AbstractScene
@@ -41,6 +36,7 @@ public:
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;
     virtual void render() override;
+    virtual void renderGui() override;
 
 private:
     RenderNode* createRenderNode(std::string nodeId, bool hasTransform);
@@ -48,7 +44,7 @@ private:
     void createCommonTextures();
     void setEnvironmentMap(const std::string& envMapName);
 
-    void loadGltf();
+    void loadGltf(const std::string& gltfAsset);
 
     void setupInput();
 
@@ -62,5 +58,8 @@ private:
 
     PbrParams m_uniformMaterialParams;
     std::unique_ptr<Skybox> m_skybox;
+
+    SkinningData m_skinningData;
+    GltfAnimation m_animation;
 };
 } // namespace crisp

@@ -55,6 +55,39 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, ui
 }
 
 template <typename T>
+Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint32_t accessorIdx)
+{
+    const auto& accessor = model.accessors.at(accessorIdx);
+
+    const auto& bufferView = model.bufferViews.at(accessor.bufferView);
+    const auto& buffer = model.buffers.at(bufferView.buffer);
+
+    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
+    const size_t attributeByteSize{componentCount * componentByteSize};
+    CRISP_CHECK_EQ(attributeByteSize, sizeof(T));
+
+    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
+    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
+    const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
+    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
+    CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
+
+    std::vector<T> attributes;
+    attributes.reserve(accessor.count);
+
+    T temp{};
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+        const size_t offset{bufferRangeStart + i * byteStride};
+        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
+        attributes.emplace_back(temp);
+    }
+
+    return attributes;
+}
+
+template <typename T>
 Result<std::vector<T>> loadVertexBuffer(
     const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string& attrib)
 {
@@ -63,36 +96,31 @@ Result<std::vector<T>> loadVertexBuffer(
         return std::vector<T>{};
     }
 
-    std::vector<T> attributes;
     const auto& accessor = model.accessors.at(primitive.attributes.at(attrib));
-    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+
+    const auto& bufferView = model.bufferViews.at(accessor.bufferView);
+    const auto& buffer = model.buffers.at(bufferView.buffer);
+
+    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
+    const size_t attributeByteSize{componentCount * componentByteSize};
+    CRISP_CHECK_EQ(attributeByteSize, sizeof(T));
+
+    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
+    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
+    const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
+    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
+    CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
+
+    std::vector<T> attributes;
+    attributes.reserve(accessor.count);
+
+    T temp{};
+    for (size_t i = 0; i < accessor.count; ++i)
     {
-        const auto& bufferView = model.bufferViews.at(accessor.bufferView);
-        const auto& buffer = model.buffers.at(bufferView.buffer);
-
-        const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
-        const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
-        const size_t attributeByteSize{componentCount * componentByteSize};
-        const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
-
-        attributes.reserve(accessor.count);
-
-        const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-        const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
-        CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-        CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
-
-        T temp{};
-        for (size_t i = 0; i < accessor.count; ++i)
-        {
-            const size_t offset{bufferRangeStart + i * byteStride};
-            std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
-            attributes.emplace_back(temp);
-        }
-    }
-    else
-    {
-        return resultError("Failed to parse vertex buffer for {}", attrib);
+        const size_t offset{bufferRangeStart + i * byteStride};
+        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
+        attributes.emplace_back(temp);
     }
 
     return attributes;
@@ -172,6 +200,21 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node)
     return transform;
 }
 
+glm::vec3 getNodeTranslation(const tinygltf::Node& node)
+{
+    return node.translation.empty() ? glm::vec3(0.0f) : toGlm<glm::vec3>(node.translation);
+}
+
+glm::quat getNodeRotation(const tinygltf::Node& node)
+{
+    return node.rotation.empty() ? glm::quat(1.0f, 0.0f, 0.0f, 0.0f) : toGlm<glm::quat>(node.rotation);
+}
+
+glm::vec3 getNodeScale(const tinygltf::Node& node)
+{
+    return node.scale.empty() ? glm::vec3(1.0f) : toGlm<glm::vec3>(node.scale);
+}
+
 PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material, GltfImageLoader& imageLoader)
 {
     PbrMaterial pbrMat{};
@@ -230,6 +273,40 @@ TriangleMesh createMeshFromPrimitive(
         std::move(positions), std::move(normals), std::move(texCoords), std::move(indices), vertexAttributes};
 }
 
+Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& model, const uint32_t accessorIdx)
+{
+    std::vector<glm::mat4> transforms{};
+    const auto& accessor{model.accessors.at(accessorIdx)};
+    if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
+    {
+        return resultError("InverseBindTransforms must be a float accessor");
+    }
+
+    const auto& bufferView{model.bufferViews.at(accessor.bufferView)};
+    const auto& buffer{model.buffers.at(bufferView.buffer)};
+
+    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
+    const size_t attributeByteSize{componentCount * componentByteSize};
+    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
+
+    transforms.reserve(accessor.count);
+
+    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
+    const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
+    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
+    CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
+
+    glm::mat4 temp{};
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+        const size_t offset{bufferRangeStart + i * byteStride};
+        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
+        transforms.emplace_back(temp);
+    }
+    return transforms;
+}
+
 void createRenderObjectsFromNode(
     const tinygltf::Model& model,
     const tinygltf::Node& node,
@@ -237,8 +314,38 @@ void createRenderObjectsFromNode(
     const std::vector<VertexAttributeDescriptor>& vertexAttributes,
     std::vector<RenderObject>& renderObjects)
 {
-    CRISP_CHECK_EQ(node.skin, GltfInvalidIdx, "Skinning is unsupported!");
+    // CRISP_CHECK_EQ(node.skin, GltfInvalidIdx, "Skinning is unsupported!");
     // CRISP_CHECK_EQ(node.camera, GltfInvalidIdx, "Camera is unsupported!");
+
+    SkinningData skinningData{};
+    if (node.skin != GltfInvalidIdx)
+    {
+        const auto& skin{model.skins.at(node.skin)};
+
+        const size_t jointCount{skin.joints.size()};
+        FlatHashMap<int32_t, int32_t> modelNodeToLocalIdx(jointCount);
+        Skeleton skeleton{};
+        skeleton.setJointCount(jointCount);
+        for (uint32_t i = 0; i < jointCount; ++i)
+        {
+            const int32_t jointNodeIdx{skin.joints.at(i)};
+            modelNodeToLocalIdx[jointNodeIdx] = i;
+            skeleton.joints[i].rotation = getNodeRotation(model.nodes.at(jointNodeIdx));
+            skeleton.joints[i].translation = getNodeTranslation(model.nodes.at(jointNodeIdx));
+            skeleton.joints[i].scale = getNodeScale(model.nodes.at(jointNodeIdx));
+        }
+        for (const auto& [modelNodeIdx, localIdx] : modelNodeToLocalIdx)
+        {
+            for (const auto& child : model.nodes.at(modelNodeIdx).children)
+            {
+                skeleton.parents[modelNodeToLocalIdx[child]] = localIdx;
+            }
+        }
+
+        skinningData.inverseBindTransforms = loadInverseBindTransforms(model, skin.inverseBindMatrices).unwrap();
+        skinningData.skeleton = std::move(skeleton);
+        skinningData.modelNodeToLinearIdx = std::move(modelNodeToLocalIdx);
+    }
 
     if (node.mesh != GltfInvalidIdx)
     {
@@ -249,11 +356,19 @@ void createRenderObjectsFromNode(
         const auto& currPrimitive{currMesh.primitives.at(0)};
 
         RenderObject renderObject{};
-        renderObject.mesh = createMeshFromPrimitive(model, currPrimitive, vertexAttributes);
-        renderObject.material =
-            createPbrMaterialFromGltfMaterial(model.materials.at(currPrimitive.material), imageLoader);
         renderObject.transform = getNodeTransform(node);
+        renderObject.mesh = createMeshFromPrimitive(model, currPrimitive, vertexAttributes);
 
+        skinningData.indices = loadVertexBuffer<glm::u16vec4>(model, currPrimitive, "JOINTS_0").unwrap();
+        skinningData.weights = loadVertexBuffer<glm::vec4>(model, currPrimitive, "WEIGHTS_0").unwrap();
+
+        if (currPrimitive.material != GltfInvalidIdx)
+        {
+            renderObject.material =
+                createPbrMaterialFromGltfMaterial(model.materials.at(currPrimitive.material), imageLoader);
+        }
+
+        renderObject.skinningData = skinningData;
         renderObjects.push_back(std::move(renderObject));
     }
 
@@ -261,6 +376,53 @@ void createRenderObjectsFromNode(
     {
         createRenderObjectsFromNode(model, model.nodes.at(childIdx), imageLoader, vertexAttributes, renderObjects);
     }
+}
+
+GltfAnimation loadGltfAnimation(const tinygltf::Model& model, const tinygltf::Animation& animation)
+{
+    GltfAnimation anim;
+    for (const auto& ch : animation.channels)
+    {
+        AnimationChannel channel{};
+        channel.targetNode = ch.target_node;
+        channel.propertyName = ch.target_path;
+
+        auto& sampler{animation.samplers.at(ch.sampler)};
+        if (sampler.interpolation == "CUBICSPLINE")
+        {
+            channel.sampler.interpolation = AnimationSampler::Interpolation::CubicSpline;
+        }
+        else if (sampler.interpolation == "STEP")
+        {
+            channel.sampler.interpolation = AnimationSampler::Interpolation::Step;
+        }
+        else
+        {
+            channel.sampler.interpolation = AnimationSampler::Interpolation::Linear;
+        }
+        channel.sampler.inputs = loadBufferFromAccessor<float>(model, sampler.input).unwrap();
+        if (channel.propertyName == "translation")
+        {
+            auto vals = loadBufferFromAccessor<glm::vec3>(model, sampler.output).unwrap();
+            channel.sampler.outputs.resize(vals.size() * sizeof(glm::vec3));
+            memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::vec3));
+        }
+        else if (channel.propertyName == "rotation")
+        {
+            auto vals = loadBufferFromAccessor<glm::quat>(model, sampler.output).unwrap();
+            channel.sampler.outputs.resize(vals.size() * sizeof(glm::quat));
+            memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::quat));
+        }
+        else
+        {
+            auto vals = loadBufferFromAccessor<glm::vec3>(model, sampler.output).unwrap();
+            channel.sampler.outputs.resize(vals.size() * sizeof(glm::vec3));
+            memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::vec3));
+        }
+        anim.channels.push_back(channel);
+    }
+
+    return anim;
 }
 
 Result<std::vector<RenderObject>> loadGltfModel(
@@ -303,6 +465,19 @@ Result<std::vector<RenderObject>> loadGltfModel(
     {
         createRenderObjectsFromNode(model, model.nodes[i], imageLoader, vertexAttributes, renderObjects);
     }
+
+    std::vector<GltfAnimation> animations{};
+    for (const auto& anim : model.animations)
+    {
+        animations.push_back(loadGltfAnimation(model, anim));
+
+        // Check if animation matches the skeleton.
+        for (auto& ch : animations.back().channels)
+        {
+            ch.targetNode = renderObjects.back().skinningData.modelNodeToLinearIdx[ch.targetNode];
+        }
+    }
+    renderObjects.back().animations = std::move(animations);
 
     return renderObjects;
 }

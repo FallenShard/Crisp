@@ -1,4 +1,4 @@
-#include "RayTracerScene.hpp"
+#include <Crisp/Scenes/RayTracerScene.hpp>
 
 #include <iostream>
 

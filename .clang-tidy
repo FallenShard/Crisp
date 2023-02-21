@@ -1,0 +1,15 @@
+---
+Checks: >
+	abseil-*,
+	bugprone-*,
+	cppcoreguidelines-*,
+	clang-*,
+	google-*,
+	llvm-namespace-comment,
+	misc-*,
+	modernize-*,
+	performance-*,
+	portability-*,
+	readability-*
+
+WarningsAsErrors: "*"

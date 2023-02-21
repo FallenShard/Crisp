@@ -9,6 +9,7 @@
 namespace crisp
 {
 std::vector<std::string> enumerateFiles(const std::filesystem::path& directoryPath, const std::string& extension);
+std::vector<std::string> enumerateDirectories(const std::filesystem::path& directoryPath);
 Result<std::string> fileToString(const std::filesystem::path& filePath);
 [[nodiscard]] Result<> stringToFile(const std::filesystem::path& outputFilePath, const std::string& str);
 

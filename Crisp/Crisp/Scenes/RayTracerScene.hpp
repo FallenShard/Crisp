@@ -39,9 +39,6 @@ private:
     void openSceneFile(const std::filesystem::path& filename);
     void createGui();
 
-    Renderer* m_renderer;
-    Application* m_app;
-
     std::string m_projectName;
     std::unique_ptr<RayTracedImage> m_image;
     tbb::concurrent_queue<RayTracerUpdate> m_updateQueue;

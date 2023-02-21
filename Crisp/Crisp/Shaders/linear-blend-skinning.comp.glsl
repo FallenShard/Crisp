@@ -12,7 +12,7 @@ layout(set = 0, binding = 1) buffer Weights
 
 layout(set = 0, binding = 2) buffer Indices
 {
-    int indices[];
+    uint indices[];
 };
 
 layout(set = 0, binding = 3) buffer JointMatrices

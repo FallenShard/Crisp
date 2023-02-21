@@ -362,7 +362,7 @@ void Control::printDebugId() const
     for (unsigned int i = 0; i < getRootDistance(); i++)
         str << "  ";
 
-    spdlog::info("{}{}", str.str(), m_id);
+    spdlog::debug("{}{}", str.str(), m_id);
 }
 
 void Control::visit(std::function<void(Control*)> func)

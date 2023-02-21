@@ -23,6 +23,21 @@ std::vector<std::string> enumerateFiles(const std::filesystem::path& directory, 
     return filenames;
 }
 
+std::vector<std::string> enumerateDirectories(const std::filesystem::path& directory)
+{
+    std::vector<std::string> dirNames;
+
+    for (const auto& entry : std::filesystem::directory_iterator(directory))
+    {
+        if (entry.is_directory())
+        {
+            dirNames.push_back(entry.path().stem().generic_string());
+        }
+    }
+
+    return dirNames;
+}
+
 Result<std::string> fileToString(const std::filesystem::path& filePath)
 {
     std::ifstream inputFile(filePath);

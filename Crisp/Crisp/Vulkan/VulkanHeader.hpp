@@ -1107,6 +1107,7 @@ inline auto getDestroyFunc()
     IF_CONSTEXPR_VK_DESTROY_FUNC(RenderPass)
     IF_CONSTEXPR_VK_DESTROY_FUNC(Sampler)
     IF_CONSTEXPR_VK_DESTROY_FUNC(SwapchainKHR)
+    IF_CONSTEXPR_VK_DESTROY_FUNC(AccelerationStructureKHR)
 
     return static_cast<VulkanDestroyFunc>(nullptr);
 }

@@ -1297,12 +1297,65 @@ VkResult loadVulkanDeviceFunctions(VkDevice device)
     VK_LOAD_DEVICE_FUNC(vkUpdateDescriptorSetWithTemplate)
 #endif
 
+#if defined(VK_VERSION_1_2)
+    VK_LOAD_DEVICE_FUNC(vkCmdBeginRenderPass2)
+    VK_LOAD_DEVICE_FUNC(vkCmdDrawIndexedIndirectCount)
+    VK_LOAD_DEVICE_FUNC(vkCmdDrawIndirectCount)
+    VK_LOAD_DEVICE_FUNC(vkCmdEndRenderPass2)
+    VK_LOAD_DEVICE_FUNC(vkCmdNextSubpass2)
+    VK_LOAD_DEVICE_FUNC(vkCreateRenderPass2)
+    VK_LOAD_DEVICE_FUNC(vkGetBufferDeviceAddress)
+    VK_LOAD_DEVICE_FUNC(vkGetBufferOpaqueCaptureAddress)
+    VK_LOAD_DEVICE_FUNC(vkGetDeviceMemoryOpaqueCaptureAddress)
+    VK_LOAD_DEVICE_FUNC(vkGetSemaphoreCounterValue)
+    VK_LOAD_DEVICE_FUNC(vkResetQueryPool)
+    VK_LOAD_DEVICE_FUNC(vkSignalSemaphore)
+    VK_LOAD_DEVICE_FUNC(vkWaitSemaphores)
+#endif
+
 #if defined(VK_KHR_swapchain)
     VK_LOAD_DEVICE_FUNC(vkAcquireNextImageKHR)
     VK_LOAD_DEVICE_FUNC(vkCreateSwapchainKHR)
     VK_LOAD_DEVICE_FUNC(vkDestroySwapchainKHR)
     VK_LOAD_DEVICE_FUNC(vkGetSwapchainImagesKHR)
     VK_LOAD_DEVICE_FUNC(vkQueuePresentKHR)
+#endif
+
+#if defined(VK_KHR_acceleration_structure)
+    VK_LOAD_DEVICE_FUNC(vkBuildAccelerationStructuresKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdBuildAccelerationStructuresIndirectKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdBuildAccelerationStructuresKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdCopyAccelerationStructureKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdCopyAccelerationStructureToMemoryKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdCopyMemoryToAccelerationStructureKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdWriteAccelerationStructuresPropertiesKHR)
+    VK_LOAD_DEVICE_FUNC(vkCopyAccelerationStructureKHR)
+    VK_LOAD_DEVICE_FUNC(vkCopyAccelerationStructureToMemoryKHR)
+    VK_LOAD_DEVICE_FUNC(vkCopyMemoryToAccelerationStructureKHR)
+    VK_LOAD_DEVICE_FUNC(vkCreateAccelerationStructureKHR)
+    VK_LOAD_DEVICE_FUNC(vkDestroyAccelerationStructureKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetAccelerationStructureBuildSizesKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetAccelerationStructureDeviceAddressKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetDeviceAccelerationStructureCompatibilityKHR)
+    VK_LOAD_DEVICE_FUNC(vkWriteAccelerationStructuresPropertiesKHR)
+#endif
+
+#if defined(VK_KHR_deferred_host_operations)
+    VK_LOAD_DEVICE_FUNC(vkCreateDeferredOperationKHR)
+    VK_LOAD_DEVICE_FUNC(vkDeferredOperationJoinKHR)
+    VK_LOAD_DEVICE_FUNC(vkDestroyDeferredOperationKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetDeferredOperationMaxConcurrencyKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetDeferredOperationResultKHR)
+#endif
+
+#if defined(VK_KHR_ray_tracing_pipeline)
+    VK_LOAD_DEVICE_FUNC(vkCmdSetRayTracingPipelineStackSizeKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdTraceRaysIndirectKHR)
+    VK_LOAD_DEVICE_FUNC(vkCmdTraceRaysKHR)
+    VK_LOAD_DEVICE_FUNC(vkCreateRayTracingPipelinesKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetRayTracingCaptureReplayShaderGroupHandlesKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetRayTracingShaderGroupHandlesKHR)
+    VK_LOAD_DEVICE_FUNC(vkGetRayTracingShaderGroupStackSizeKHR)
 #endif
 
     return VK_SUCCESS;

@@ -14,9 +14,12 @@ struct RenderObject
 {
     TriangleMesh mesh;
     PbrMaterial material;
+
     glm::mat4 transform;
 
     SkinningData skinningData;
+
+    std::vector<GltfAnimation> animations;
 };
 
 Result<std::vector<RenderObject>> loadGltfModel(

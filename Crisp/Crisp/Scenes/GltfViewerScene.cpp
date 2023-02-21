@@ -53,6 +53,8 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
+#include <imgui.h>
+
 namespace crisp
 {
 namespace
@@ -239,7 +241,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Application* app)
         csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
     }
 
-    loadGltf();
+    loadGltf("CesiumMan");
 
     m_renderGraph->sortRenderPasses().unwrap();
     m_renderGraph->printExecutionOrder();
@@ -270,6 +272,8 @@ void GltfViewerScene::resize(int width, int height)
 
 void GltfViewerScene::update(float dt)
 {
+    static float totalT = 0.0f;
+
     // Camera
     m_cameraController->update(dt);
     const auto camParams = m_cameraController->getCameraParameters();
@@ -279,6 +283,23 @@ void GltfViewerScene::update(float dt)
     m_transformBuffer->update(camParams.V, camParams.P);
     m_lightSystem->update(m_cameraController->getCamera(), dt);
     m_skybox->updateTransforms(camParams.V, camParams.P);
+
+    if (m_skinningData.skeleton.joints.empty())
+    {
+        return;
+    }
+
+    m_animation.updateJoints(m_skinningData.skeleton.joints, totalT);
+    m_skinningData.skeleton.updateJointTransforms(m_skinningData.inverseBindTransforms);
+
+    m_resourceContext->getStorageBuffer("jointMatrices")
+        ->updateStagingBuffer(
+            m_skinningData.skeleton.jointTransforms.data(),
+            m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4));
+
+    totalT += dt;
+    if (totalT >= 2.0f)
+        totalT = 0.0f;
 }
 
 void GltfViewerScene::render()
@@ -287,6 +308,34 @@ void GltfViewerScene::render()
     m_renderGraph->buildCommandLists(m_renderNodes);
     m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
     m_renderGraph->executeCommandLists();
+}
+
+void GltfViewerScene::renderGui()
+{
+    static std::vector<std::string> paths =
+        enumerateDirectories(m_renderer->getAssetPaths().resourceDir / "glTFSamples/2.0");
+    static int32_t selectedIdx{0};
+    ImGui::Begin("Hi");
+    if (ImGui::BeginListBox("GLTF Examples"))
+    {
+        for (int32_t i = 0; i < paths.size(); ++i)
+        {
+            const bool isSelected{selectedIdx == i};
+            if (ImGui::Selectable(paths[i].c_str(), isSelected))
+            {
+                selectedIdx = i;
+                m_renderer->finish();
+                loadGltf(paths.at(selectedIdx));
+            }
+
+            if (isSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndListBox();
+    }
+    ImGui::End();
 }
 
 RenderNode* GltfViewerScene::createRenderNode(std::string id, bool hasTransform)
@@ -345,9 +394,8 @@ void GltfViewerScene::setEnvironmentMap(const std::string& envMapName)
     imageCache.addImageWithView("specEnvMap", std::move(specEnvMap), std::move(specEnvView));
 }
 
-void GltfViewerScene::loadGltf()
+void GltfViewerScene::loadGltf(const std::string& gltfAsset)
 {
-    const std::string gltfAsset{"DamagedHelmet"};
     const std::string gltfRelativePath{fmt::format("glTFSamples/2.0/{}/glTF/{}.gltf", gltfAsset, gltfAsset)};
     auto renderObjects =
         loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath, flatten(PbrVertexFormat)).unwrap();
@@ -384,12 +432,16 @@ void GltfViewerScene::loadGltf()
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    const bool hasSkinning{false};
+    const bool hasSkinning{!renderObject.skinningData.weights.empty()};
     if (hasSkinning)
     {
+        m_skinningData = renderObject.skinningData;
+        if (!renderObject.animations.empty())
+            m_animation = renderObject.animations.at(0);
+
         const auto& restPositions = renderObject.mesh.getPositions();
-        const uint32_t vertexCount{123};
-        SkinningData data{};
+        const uint32_t vertexCount = static_cast<uint32_t>(restPositions.size());
+        const auto& data = renderObject.skinningData;
         auto restVertexBuffer = m_resourceContext->addStorageBuffer(
             "restPositions",
             std::make_unique<StorageBuffer>(
@@ -406,17 +458,27 @@ void GltfViewerScene::loadGltf()
                 0,
                 BufferUpdatePolicy::Constant,
                 data.weights.data()));
+        std::vector<glm::uvec4> wideIndices(data.indices.size());
+        for (uint32_t i = 0; i < wideIndices.size(); ++i)
+        {
+            wideIndices[i] = data.indices[i];
+        }
         auto indicesBuffer = m_resourceContext->addStorageBuffer(
             "indices",
             std::make_unique<StorageBuffer>(
                 m_renderer,
-                data.indices.size() * sizeof(glm::vec4),
+                wideIndices.size() * sizeof(glm::uvec4),
                 0,
                 BufferUpdatePolicy::Constant,
-                data.indices.data()));
+                wideIndices.data()));
         auto jointMatrices = m_resourceContext->addStorageBuffer(
             "jointMatrices",
-            std::make_unique<StorageBuffer>(m_renderer, data.jointMatrices.size() * sizeof(glm::mat4)));
+            std::make_unique<StorageBuffer>(
+                m_renderer,
+                data.skeleton.jointTransforms.size() * sizeof(glm::mat4),
+                0,
+                BufferUpdatePolicy::PerFrame,
+                data.skeleton.jointTransforms.data()));
         auto& skinningPass = m_renderGraph->addComputePass("SkinningPass");
         skinningPass.workGroupSize = glm::ivec3(256, 1, 1);
         skinningPass.numWorkGroups = glm::ivec3((vertexCount - 1) / 256 + 1, 1, 1);
@@ -459,6 +521,31 @@ void GltfViewerScene::loadGltf()
             SkinningParams params{vertexCount, SkinningData::JointsPerVertex};
             node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
         };
+
+        m_renderGraph->addDependency(
+            "SkinningPass",
+            ForwardLightingPass,
+            [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/)
+            {
+                VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                barrier.buffer = gltfNode->geometry->getVertexBuffer()->getHandle();
+                barrier.offset = 0;
+                barrier.size = VK_WHOLE_SIZE;
+
+                vkCmdPipelineBarrier(
+                    cmdBuffer.getHandle(),
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                    0,
+                    0,
+                    nullptr,
+                    1,
+                    &barrier,
+                    0,
+                    nullptr);
+            });
     }
 }
 

@@ -13,8 +13,8 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "enableMicrosoftCodeAnalysis": true,
-      "enableClangTidyCodeAnalysis": false,
-      "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
+      "enableClangTidyCodeAnalysis": true,
+      "clangTidyChecks": "abseil-*,bugprone-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*"
     },
     {
       "name": "x64-Release",
@@ -29,8 +29,7 @@
         "msvc_x64_x64"
       ],
       "enableMicrosoftCodeAnalysis": false,
-      "enableClangTidyCodeAnalysis": false,
-      "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
+      "enableClangTidyCodeAnalysis": false
     },
     {
       "name": "x64-RelWithDebInfo",
@@ -46,8 +45,7 @@
       ],
       "variables": [],
       "enableMicrosoftCodeAnalysis": false,
-      "enableClangTidyCodeAnalysis": false,
-      "clangTidyChecks": "abseil-*,bugprone-*,cppcoreguidelines-*,clang-*,google-*,llvm-namespace-comment,misc-*,modernize-*,performance-*,portability-*,readability-*"
+      "enableClangTidyCodeAnalysis": false
     }
   ]
 }

@@ -459,6 +459,16 @@ void Renderer::unregisterStreamingUniformBuffer(UniformBuffer* buffer)
     m_streamingUniformBuffers.erase(buffer);
 }
 
+void Renderer::registerStreamingStorageBuffer(StorageBuffer* buffer)
+{
+    m_streamingStorageBuffers.insert(buffer);
+}
+
+void Renderer::unregisterStreamingStorageBuffer(StorageBuffer* buffer)
+{
+    m_streamingStorageBuffers.erase(buffer);
+}
+
 Geometry* Renderer::getFullScreenGeometry() const
 {
     return m_fullScreenGeometry.get();
@@ -533,6 +543,8 @@ void Renderer::record(VkCommandBuffer commandBuffer)
 
     for (auto& uniformBuffer : m_streamingUniformBuffers)
         uniformBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
+    for (auto& storageBuffer : m_streamingStorageBuffers)
+        storageBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
     for (const auto& update : m_resourceUpdates)
         update(commandBuffer);
 

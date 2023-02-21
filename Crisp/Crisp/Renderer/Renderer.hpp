@@ -7,6 +7,7 @@
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
+#include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/VirtualFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
@@ -17,7 +18,6 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <unordered_set>
 #include <vector>
 
 namespace crisp
@@ -108,6 +108,9 @@ public:
     void registerStreamingUniformBuffer(UniformBuffer* buffer);
     void unregisterStreamingUniformBuffer(UniformBuffer* buffer);
 
+    void registerStreamingStorageBuffer(StorageBuffer* buffer);
+    void unregisterStreamingStorageBuffer(StorageBuffer* buffer);
+
     Geometry* getFullScreenGeometry() const;
 
     std::unique_ptr<VulkanPipeline> createPipelineFromLua(
@@ -197,6 +200,7 @@ private:
     std::unique_ptr<Geometry> m_fullScreenGeometry;
 
     FlatHashSet<UniformBuffer*> m_streamingUniformBuffers;
+    FlatHashSet<StorageBuffer*> m_streamingStorageBuffers;
 
     std::unique_ptr<VulkanPipeline> m_scenePipeline;
     std::unique_ptr<VulkanSampler> m_linearClampSampler;

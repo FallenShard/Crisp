@@ -117,7 +117,8 @@ Geometry::Geometry(
 {
     for (const auto& buffer : vertexBuffers)
     {
-        auto vertexBuffer = createVertexBuffer(renderer.getDevice(), buffer.buffer.size());
+        auto vertexBuffer =
+            createVertexBuffer(renderer.getDevice(), buffer.buffer.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
         renderer.fillDeviceBuffer(vertexBuffer.get(), buffer.buffer);
         m_vertexBuffers.push_back(std::move(vertexBuffer));
         m_vertexBufferHandles.push_back(m_vertexBuffers.back()->getHandle());
