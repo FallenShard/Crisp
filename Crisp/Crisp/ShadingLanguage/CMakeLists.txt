@@ -20,7 +20,7 @@ target_link_libraries(CrispGlslUtils
     PUBLIC CrispHashMap
     PUBLIC CrispFileUtils
     PUBLIC CrispUtils
-    PUBLIC vulkan)
+    PUBLIC Vulkan::Headers)
 
 add_cpp_test(CrispGlslUtilsTest
     "Test/LexerTest.cpp")

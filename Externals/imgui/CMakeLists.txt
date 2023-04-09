@@ -17,4 +17,4 @@ add_cpp_static_library(ImGui
 target_include_directories(ImGui PUBLIC ".")
 target_link_libraries(ImGui
     PUBLIC glfw
-    PUBLIC vulkan)
+    PUBLIC Vulkan::Headers)

@@ -10,7 +10,7 @@ target_link_libraries(CrispWindow
     PUBLIC CrispEvent
     PUBLIC CrispInput
     PUBLIC glfw
-    PUBLIC vulkan)
+    PUBLIC Vulkan::Headers)
 
 
 add_cpp_interface_library(CrispInput
@@ -35,7 +35,7 @@ target_link_libraries(CrispApplicationEnvironment
     PUBLIC CrispHashMap
     PUBLIC CrispStringUtils
     PUBLIC glfw
-    PUBLIC vulkan)
+    PUBLIC Vulkan::Headers)
 
 add_cpp_test(CrispApplicationEnvironmentTest
     "Test/CommandLineParserTest.cpp")
@@ -56,7 +56,7 @@ target_link_libraries(CrispApplication
     PUBLIC CrispEvent
     PUBLIC CrispUtils
     PUBLIC glfw
-    PUBLIC vulkan
+    PUBLIC Vulkan::Headers
     PUBLIC CrispImGui)
 
 add_cpp_interface_library(CrispCoreUtils

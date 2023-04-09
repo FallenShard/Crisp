@@ -69,7 +69,7 @@ add_cpp_static_library(CrispVulkanHeader
     "VulkanHeader.hpp"
 )
 target_link_libraries(CrispVulkanHeader
-    PUBLIC vulkan
+    PUBLIC Vulkan::Headers
     PRIVATE CrispChecks)
 
 add_cpp_interface_library(CrispVulkanTestUtils

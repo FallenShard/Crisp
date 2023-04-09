@@ -5,7 +5,7 @@ project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Creates a static library with C++ 20 standard support.
+# Enables C++23 and high amount of warnings for a C++ target.
 function(enable_default_cpp_compile_options targetName optionType)
     set_target_properties(${targetName} PROPERTIES CXX_STANDARD 23 LINKER_LANGUAGE CXX)
     if(MSVC)
@@ -143,6 +143,12 @@ set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
 set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(embree)
 
+FetchContent_Declare(vulkan
+  GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+  GIT_TAG        v1.3.246
+)
+FetchContent_MakeAvailable(vulkan)
+
 # FetchContent_Declare(tinyexr
 #   GIT_REPOSITORY https://github.com/syoyo/tinyexr.git
 #   GIT_TAG        v1.0.1
@@ -154,7 +160,6 @@ FetchContent_MakeAvailable(embree)
 add_subdirectory(Externals/lua)
 add_subdirectory(Externals/imgui)
 add_subdirectory(Externals/stb)
-add_subdirectory(Externals/vulkan)
 add_subdirectory(Externals/tinyexr)
 add_subdirectory(Externals/rapidxml)
 add_subdirectory(Externals/freetype)
