@@ -17,7 +17,7 @@ FreeCameraController::FreeCameraController(Window* window)
     m_window->mouseMoved.subscribe<&FreeCameraController::onMouseMoved>(this);
     m_window->mouseWheelScrolled.subscribe<&FreeCameraController::onMouseWheelScrolled>(this);
 
-    m_camera.translate({ 0.0f, 1.0f, 0.0f });
+    m_camera.translate({0.0f, 1.0f, 0.0f});
 }
 
 FreeCameraController::FreeCameraController(const int32_t viewportWidth, const int32_t viewportHeight)
@@ -30,7 +30,7 @@ FreeCameraController::FreeCameraController(const int32_t viewportWidth, const in
     , m_isDragging(false)
     , m_prevMousePos(0.0f)
 {
-    m_camera.translate({ 0.0f, 1.0f, 0.0f });
+    m_camera.translate({0.0f, 1.0f, 0.0f});
 }
 
 FreeCameraController::~FreeCameraController()
@@ -96,7 +96,9 @@ bool FreeCameraController::update(const float dt)
         hasMoved = true;
     }
 
-    return hasMoved;
+    const bool wasUpdated = m_hasUpdated || hasMoved;
+    m_hasUpdated = false;
+    return wasUpdated;
 }
 
 void FreeCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs)
@@ -132,6 +134,7 @@ void FreeCameraController::onMouseMoved(const double xPos, const double yPos)
         // In [-1, 1] range
         const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
         updateOrientation(-delta.x, -delta.y);
+        m_hasUpdated = true;
     }
 
     m_prevMousePos = mousePos;
@@ -152,6 +155,18 @@ CameraParameters FreeCameraController::getCameraParameters() const
     CameraParameters params{};
     params.V = m_camera.getViewMatrix();
     params.P = m_camera.getProjectionMatrix();
+    params.screenSize = glm::vec2(m_window->getSize());
+    params.nearFar = m_camera.getViewDepthRange();
+    return params;
+}
+
+ExtendedCameraParameters FreeCameraController::getExtendedCameraParameters() const
+{
+    ExtendedCameraParameters params{};
+    params.V = m_camera.getViewMatrix();
+    params.P = m_camera.getProjectionMatrix();
+    params.invV = glm::inverse(params.V);
+    params.invP = glm::inverse(params.P);
     params.screenSize = glm::vec2(m_window->getSize());
     params.nearFar = m_camera.getViewDepthRange();
     return params;

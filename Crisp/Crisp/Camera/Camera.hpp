@@ -14,6 +14,16 @@ struct CameraParameters
     glm::vec2 nearFar;
 };
 
+struct ExtendedCameraParameters
+{
+    glm::mat4 V;
+    glm::mat4 P;
+    glm::mat4 invV;
+    glm::mat4 invP;
+    glm::vec2 screenSize;
+    glm::vec2 nearFar;
+};
+
 class Camera
 {
 public:
