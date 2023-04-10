@@ -87,7 +87,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             stringToFile(tempInputPath, glslSource.sourceCode).unwrap();
 
             const std::string command = fmt::format(
-                "glslangValidator.exe --target-env vulkan1.2 -o {} -S {} {}",
+                "glslangValidator.exe --target-env vulkan1.3 -o {} -S {} {}",
                 tempOutputPath.string(),
                 shaderType,
                 tempInputPath.string());
