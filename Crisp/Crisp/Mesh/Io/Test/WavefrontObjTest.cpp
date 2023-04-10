@@ -6,7 +6,7 @@ using namespace crisp;
 
 namespace
 {
-const std::filesystem::path ResourceDir("D:/version-control/Crisp/Resources/Meshes");
+const std::filesystem::path ResourceDir("D:/Projects/Crisp/Resources/Meshes");
 }
 
 TEST(WavefrontObjTest, LoadAjax)
