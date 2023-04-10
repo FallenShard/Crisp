@@ -5,6 +5,8 @@ project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+enable_testing()
+
 # Enables C++23 and high amount of warnings for a C++ target.
 function(enable_default_cpp_compile_options targetName optionType)
     set_target_properties(${targetName} PROPERTIES CXX_STANDARD 23 LINKER_LANGUAGE CXX)
@@ -15,39 +17,41 @@ function(enable_default_cpp_compile_options targetName optionType)
     endif()
 endfunction()
 
-# Creates a static library with C++ 20 standard support.
+# Creates a C++ static library target.
 macro(add_cpp_static_library targetName)
     add_library(${targetName} STATIC ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
 endmacro()
 
-# Creates a shared library with C++ 20 standard support.
+# Creates a C++ shared library target.
 macro(add_cpp_shared_library targetName)
     add_library(${targetName} SHARED ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
 endmacro()
 
-# Creates a header-only library with C++ 20 standard support.
+# Creates a C++ header-only library target.
 macro(add_cpp_interface_library targetName)
     add_library(${targetName} INTERFACE ${ARGN})
     enable_default_cpp_compile_options(${targetName} INTERFACE)
     target_include_directories(${targetName} INTERFACE ${CRISP_INCLUDE_DIR})
 endmacro()
 
-# Creates a binary with C++ 20 standard support.
+# Creates a C++ binary target.
 macro(add_cpp_binary targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
 endmacro()
 
-# Creates a test with C++ 20 standard support.
+# Creates a C++ binary test target.
 macro(add_cpp_test targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE GTest::gtest)
     target_link_libraries(${targetName} PRIVATE GTest::gtest_main)
+
+    add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
 endmacro()
 
 # Copies a list of shared libraries into the designated target's directory. TO be used with DLL dependencies.
@@ -169,7 +173,6 @@ add_subdirectory(Externals/zlib)
 add_subdirectory(Crisp)
 
 add_subdirectory(Vesper)
-add_subdirectory(Vesper/Test)
 
 # Set the start-up project to be the main executable CrispMain
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT CrispMain)
