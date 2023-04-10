@@ -77,15 +77,38 @@ add_cpp_interface_library(CrispVulkanTestUtils
     "Test/VulkanTest.hpp")
 target_link_libraries(CrispVulkanTestUtils INTERFACE CrispVulkan CrispWindow CrispApplicationEnvironment)
 
-add_cpp_test(CrispVulkanTest
-    "Test/VulkanBufferTest.cpp"
-    "Test/VulkanContextTest.cpp"
-    "Test/VulkanDeviceTest.cpp"
-    "Test/VulkanMemoryAllocatorTest.cpp"
-    "Test/VulkanMemoryHeapTest.cpp"
-    "Test/VulkanPhysicalDeviceTest.cpp"
-    "Test/VulkanSwapChainTest.cpp"
-    "Test/VulkanResourceDeallocatorTest.cpp"
+add_cpp_test(CrispVulkanBufferTest
+    "Test/VulkanBufferTest.cpp")
+target_link_libraries(CrispVulkanBufferTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanContextTest
+    "Test/VulkanContextTest.cpp")
+target_link_libraries(CrispVulkanContextTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanDeviceTest
+    "Test/VulkanDeviceTest.cpp")
+target_link_libraries(CrispVulkanDeviceTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanMemoryAllocatorTest
+    "Test/VulkanMemoryAllocatorTest.cpp")
+target_link_libraries(CrispVulkanMemoryAllocatorTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanMemoryHeapTest
+    "Test/VulkanMemoryHeapTest.cpp")
+target_link_libraries(CrispVulkanMemoryHeapTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanPhysicalDeviceTest
+    "Test/VulkanPhysicalDeviceTest.cpp")
+target_link_libraries(CrispVulkanPhysicalDeviceTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanSwapChainTest
+    "Test/VulkanSwapChainTest.cpp")
+target_link_libraries(CrispVulkanSwapChainTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanResourceDeallocatorTest
+    "Test/VulkanResourceDeallocatorTest.cpp")
+target_link_libraries(CrispVulkanResourceDeallocatorTest PRIVATE CrispVulkanTestUtils)
+
+add_cpp_test(CrispVulkanComputeTest
     "Test/VulkanComputeTest.cpp")
-target_link_libraries(CrispVulkanTest PRIVATE CrispVulkanTestUtils CrispVulkan CrispWindow CrispApplicationEnvironment)
-copy_shared_libs(CrispVulkanTest lua)
+target_link_libraries(CrispVulkanComputeTest PRIVATE CrispVulkanTestUtils)

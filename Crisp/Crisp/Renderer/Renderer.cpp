@@ -75,16 +75,13 @@ Renderer::Renderer(
 {
     recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
 
-    // Create fundamental objects for the API
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
     if (enableRayTracingExtensions)
     {
-        deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+        addRayTracingDeviceExtensions(deviceExtensions);
     }
 
+    // Create fundamental objects for the API
     m_context = std::make_unique<VulkanContext>(surfCreatorCallback, std::move(requiredVulkanInstanceExtensions), true);
     m_physicalDevice =
         std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());

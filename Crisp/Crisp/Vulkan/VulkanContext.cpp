@@ -137,8 +137,10 @@ VulkanContext::~VulkanContext()
     if (m_instance == VK_NULL_HANDLE)
         return;
 
-    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-    vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+    if (m_surface)
+        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+    if (m_debugMessenger)
+        vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
     vkDestroyInstance(m_instance, nullptr);
 }
 

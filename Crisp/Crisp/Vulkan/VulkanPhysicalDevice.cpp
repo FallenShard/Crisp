@@ -314,4 +314,12 @@ std::vector<std::string> createDefaultDeviceExtensions()
         VK_KHR_MAINTENANCE2_EXTENSION_NAME,
     };
 }
+
+void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions)
+{
+    deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+}
 } // namespace crisp

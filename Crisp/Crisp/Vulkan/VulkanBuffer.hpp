@@ -30,9 +30,12 @@ public:
     VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
     VkDescriptorBufferInfo createDescriptorInfo() const;
 
+    VkDeviceAddress getDeviceAddress() const;
+
 protected:
     VulkanMemoryHeap::Allocation m_allocation;
     VkDeviceSize m_size;
+    VkDeviceAddress m_address;
 };
 
 class StagingVulkanBuffer final : public VulkanBuffer

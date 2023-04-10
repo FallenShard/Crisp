@@ -10,6 +10,7 @@ VulkanBuffer::VulkanBuffer(
     const VkMemoryPropertyFlags memProps)
     : VulkanResource(device.getResourceDeallocator())
     , m_size(size)
+    , m_address{}
 {
     // Create a buffer handle
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -23,6 +24,13 @@ VulkanBuffer::VulkanBuffer(
     vkGetBufferMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
     m_allocation = device.getMemoryAllocator().allocateBuffer(memProps, memRequirements).unwrap();
     vkBindBufferMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
+
+    if (usageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+    {
+        VkBufferDeviceAddressInfo getAddressInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
+        getAddressInfo.buffer = m_handle;
+        m_address = vkGetBufferDeviceAddress(device.getHandle(), &getAddressInfo);
+    }
 }
 
 VulkanBuffer::~VulkanBuffer()
@@ -71,6 +79,11 @@ VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo(VkDeviceSize offset, V
 VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo() const
 {
     return {m_handle, 0, m_size};
+}
+
+VkDeviceAddress VulkanBuffer::getDeviceAddress() const
+{
+    return m_address;
 }
 
 StagingVulkanBuffer::StagingVulkanBuffer(

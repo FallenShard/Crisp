@@ -29,7 +29,7 @@ class VulkanRayTracingScene : public AbstractScene
 {
 public:
     VulkanRayTracingScene(Renderer* renderer, Application* app);
-    ~VulkanRayTracingScene();
+    ~VulkanRayTracingScene() override = default;
 
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;
@@ -57,7 +57,7 @@ private:
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
     std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;

@@ -123,4 +123,6 @@ private:
 };
 
 std::vector<std::string> createDefaultDeviceExtensions();
+void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions);
+
 } // namespace crisp

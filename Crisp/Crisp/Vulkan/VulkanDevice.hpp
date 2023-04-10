@@ -48,13 +48,6 @@ public:
     void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo);
     void flushDescriptorUpdates();
 
-    inline VkDeviceAddress getBufferAddress(VkBuffer buffer) const
-    {
-        VkBufferDeviceAddressInfo getAddressInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
-        getAddressInfo.buffer = buffer;
-        return vkGetBufferDeviceAddress(m_handle, &getAddressInfo);
-    }
-
     VulkanResourceDeallocator& getResourceDeallocator() const
     {
         return *m_resourceDeallocator;

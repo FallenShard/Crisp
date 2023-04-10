@@ -55,6 +55,38 @@ namespace crisp
 namespace
 {
 static constexpr const char* MainPass = "mainPass";
+
+static const VertexLayoutDescription posFormat = {
+    {VertexAttribute::Position, VertexAttribute::Normal}
+};
+
+std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, const std::filesystem::path& relativePath)
+{
+    return std::make_unique<Geometry>(
+        renderer,
+        loadTriangleMesh(renderer.getResourcesPath() / relativePath, flatten(posFormat)).unwrap(),
+        posFormat,
+        /*padToVec4=*/false,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+}
+
+VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geometry& geometry)
+{
+    VkAccelerationStructureGeometryKHR geo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+    geo.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    geo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+    geo.geometry = {};
+    geo.geometry.triangles = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
+    geo.geometry.triangles.vertexData.deviceAddress = geometry.getVertexBuffer()->getDeviceAddress();
+    geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+    geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);
+    geo.geometry.triangles.maxVertex = geometry.getVertexCount() - 1;
+    geo.geometry.triangles.indexData.deviceAddress = geometry.getIndexBuffer()->getDeviceAddress();
+    geo.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+    return geo;
+}
+
 } // namespace
 
 VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* app)
@@ -64,94 +96,24 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
-    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createUniformBuffer("camera", sizeof(ExtendedCameraParameters), BufferUpdatePolicy::PerFrame);
 
-    const VertexLayoutDescription posFormat = {
-        {VertexAttribute::Position, VertexAttribute::Normal}
-    };
-    m_resourceContext->addGeometry(
-        "walls",
-        std::make_unique<Geometry>(
-            *m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/walls.obj", flatten(posFormat)).unwrap(),
-            posFormat,
-            false,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
-    m_resourceContext->addGeometry(
-        "leftwall",
-        std::make_unique<Geometry>(
-            *m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/leftwall.obj", flatten(posFormat)).unwrap(),
-            posFormat,
-            false,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
-    m_resourceContext->addGeometry(
-        "rightwall",
-        std::make_unique<Geometry>(
-            *m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/rightwall.obj", flatten(posFormat)).unwrap(),
-            posFormat,
-            false,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
-
-    m_resourceContext->addGeometry(
-        "light",
-        std::make_unique<Geometry>(
-            *m_renderer,
-            loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/light.obj", flatten(posFormat)).unwrap(),
-            posFormat,
-            false,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
-
-    const auto createGeometry = [renderer](const Geometry& geometry)
-    {
-        VkAccelerationStructureGeometryKHR geo = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-        geo.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        geo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        geo.geometry = {};
-        geo.geometry.triangles = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
-        geo.geometry.triangles.vertexData.deviceAddress =
-            renderer->getDevice().getBufferAddress(geometry.getVertexBuffer()->getHandle());
-        geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);
-        geo.geometry.triangles.maxVertex = geometry.getVertexCount() - 1;
-        geo.geometry.triangles.indexData.deviceAddress =
-            renderer->getDevice().getBufferAddress(geometry.getIndexBuffer()->getHandle());
-        geo.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-        return geo;
-    };
-
-    m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
-        m_renderer->getDevice(),
-        createGeometry(*m_resourceContext->getGeometry("walls")),
-        m_resourceContext->getGeometry("walls")->getIndexCount() / 3,
-        glm::mat4(1.0f)));
-    m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
-        m_renderer->getDevice(),
-        createGeometry(*m_resourceContext->getGeometry("leftwall")),
-        m_resourceContext->getGeometry("leftwall")->getIndexCount() / 3,
-        glm ::mat4(1.0f)));
-    m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
-        m_renderer->getDevice(),
-        createGeometry(*m_resourceContext->getGeometry("rightwall")),
-        m_resourceContext->getGeometry("rightwall")->getIndexCount() / 3,
-        glm ::mat4(1.0f)));
-    m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
-        m_renderer->getDevice(),
-        createGeometry(*m_resourceContext->getGeometry("light")),
-        m_resourceContext->getGeometry("light")->getIndexCount() / 3,
-        glm ::mat4(1.0f)));
+    std::vector<std::string> meshNames = {"walls", "leftwall", "rightwall", "light"};
 
     std::vector<VulkanAccelerationStructure*> blases;
-    for (auto& blas : m_bottomLevelAccelStructures)
+    for (const auto& meshName : meshNames)
     {
-        blases.push_back(blas.get());
-    }
+        const std::filesystem::path relativePath = std::filesystem::path("Meshes") / (meshName + ".obj");
 
+        auto& geometry = m_resourceContext->addGeometry(meshName, createRayTracingGeometry(*m_renderer, relativePath));
+        m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
+            m_renderer->getDevice(),
+            createAccelerationStructureGeometry(geometry),
+            geometry.getIndexCount() / 3,
+            glm::mat4(1.0f)));
+
+        blases.push_back(m_bottomLevelAccelStructures.back().get());
+    }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
 
     std::default_random_engine eng;
@@ -175,7 +137,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
 
             m_topLevelAccelStructure->build(m_renderer->getDevice(), cmdBuffer, blases);
         });
-    m_renderer->flushResourceUpdates(true);
 
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;
@@ -190,10 +151,12 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
 
+    std::array<VkImageView, RendererConfig::VirtualFrameCount> rtImageViewHandles;
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
+    {
         m_rtImageViews.emplace_back(m_rtImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-
-    std::array<VkImageView, 2> rtImageViewHandles = {m_rtImageViews[0]->getHandle(), m_rtImageViews[1]->getHandle()};
+        rtImageViewHandles[i] = m_rtImageViews.back()->getHandle();
+    }
 
     createPipeline(createPipelineLayout());
 
@@ -201,10 +164,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
 
     m_renderer->setSceneImageViews(m_rtImageViews);
 
-    VkDescriptorBufferInfo idxBufferInfo = {};
-    idxBufferInfo.buffer = randBuffer->get();
-    idxBufferInfo.offset = 0;
-    idxBufferInfo.range = VK_WHOLE_SIZE;
+    const VkDescriptorBufferInfo idxBufferInfo = randBuffer->getDescriptorInfo();
     VkWriteDescriptorSet writeIndexBuffer = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
     writeIndexBuffer.dstSet = m_descSets[0][1];
     writeIndexBuffer.dstBinding = 2;
@@ -222,12 +182,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("light"), 3);
 }
 
-VulkanRayTracingScene::~VulkanRayTracingScene()
-{
-    m_renderer->setSceneImageView(nullptr, 0);
-    m_app->getForm()->remove("normalMappingPanel");
-}
-
 void VulkanRayTracingScene::resize(int /*width*/, int /*height*/)
 {
     /* m_cameraController->onViewportResized(width, height);
@@ -242,28 +196,16 @@ void VulkanRayTracingScene::update(float dt)
     {
         m_frameIdx = 0;
     }
-    const CameraParameters cameraParams = m_cameraController->getCameraParameters();
-    //
 
-    // m_transformBuffer->update(cameraParams.V, cameraParams.P);
-
-    //// TODO
-    //// m_lightSystem->update(m_cameraController->getCamera(), dt);
-
+    const ExtendedCameraParameters cameraParams = m_cameraController->getExtendedCameraParameters();
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
 }
 
 void VulkanRayTracingScene::render()
 {
-    // m_renderGraph->clearCommandLists();
-    // m_renderGraph->buildCommandLists(m_renderNodes);
-    // m_renderGraph->executeCommandLists();
-
     m_renderer->enqueueDrawCommand(
         [this](VkCommandBuffer cmdBuffer)
         {
-            // m_renderer->finish();
-
             const auto virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
 
             m_rtImage->transitionLayout(
@@ -296,7 +238,6 @@ void VulkanRayTracingScene::render()
                 sizeof(uint32_t),
                 &m_frameIdx);
 
-            // const VkDeviceSize progSize = m_rayTracingMaterial->getShaderGroupHandleSize();
             const VkDeviceSize baseOffset =
                 m_renderer->getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
             const VkDeviceSize rayGenOffset = 0;
@@ -304,7 +245,7 @@ void VulkanRayTracingScene::render()
             const VkDeviceSize hitGroupOffset = 2 * baseOffset;
 
             const auto extent = m_renderer->getSwapChainExtent();
-            const auto sbtBufferAddress = m_renderer->getDevice().getBufferAddress(m_sbtBuffer->getHandle());
+            const auto sbtBufferAddress = m_sbtBuffer->getDeviceAddress();
             VkStridedDeviceAddressRegionKHR rayGen;
             rayGen.deviceAddress = sbtBufferAddress + rayGenOffset;
             rayGen.size = baseOffset;
@@ -353,7 +294,7 @@ std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayou
                 {1,              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
                 {2,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
     })
-        .addPushConstant(VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV | VK_SHADER_STAGE_RAYGEN_BIT_NV, 0, sizeof(uint32_t))
+        .addPushConstant(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, sizeof(uint32_t))
         .defineDescriptorSet(
             1,
             false,
@@ -361,15 +302,15 @@ std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayou
                 {0,
                  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                  4,
-                 VK_SHADER_STAGE_RAYGEN_BIT_NV | VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV},
+                 VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
                 {1,
                  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                  4,
-                 VK_SHADER_STAGE_RAYGEN_BIT_NV | VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV},
+                 VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
                 {2,
                  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                  1,
-                 VK_SHADER_STAGE_RAYGEN_BIT_NV | VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV},
+                 VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
             });
 
     auto pipelineLayout = builder.create(m_renderer->getDevice());

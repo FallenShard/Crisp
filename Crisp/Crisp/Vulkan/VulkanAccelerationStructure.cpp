@@ -72,7 +72,7 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     m_geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
     m_geometry.geometry = {};
     m_geometry.geometry.instances = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR};
-    m_geometry.geometry.instances.data.deviceAddress = device.getBufferAddress(m_instanceBuffer->getHandle());
+    m_geometry.geometry.instances.data.deviceAddress = m_instanceBuffer->getDeviceAddress();
     m_geometry.geometry.instances.arrayOfPointers = VK_FALSE;
 
     m_buildInfo.geometryCount = 1;
@@ -138,52 +138,6 @@ void VulkanAccelerationStructure::build(
 
         vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &m_buildInfo, rangeInfos.data());
     }
-
-    /*VkAccelerationStructureMemoryRequirementsInfoNV memReqInfo = {
-    VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV }; memReqInfo.accelerationStructure =
-    m_handle; memReqInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_NV;
-
-    VkMemoryRequirements2 scratchBufferMemReq = { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
-    vkGetAccelerationStructureMemoryRequirements(device.getHandle(), &memReqInfo, &scratchBufferMemReq);
-
-    m_scratchBuffer = std::make_unique<VulkanBuffer>(device, scratchBufferMemReq.memoryRequirements.size,
-    VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    if (m_info.type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV)
-    {
-        vkCmdBuildAccelerationStructure(cmdBuffer, &m_info, nullptr, 0, VK_FALSE, m_handle, nullptr,
-    m_scratchBuffer->getHandle(), 0);
-    }
-    else
-    {
-        struct VkGeometryInstanceNV
-        {
-            float          transform[12];
-            uint32_t       instanceId : 24;
-            uint32_t       mask : 8;
-            uint32_t       hitGroupId : 24;
-            uint32_t       flags : 8;
-            uint64_t       accelerationStructureHandle;
-        };
-
-        std::vector<VkGeometryInstanceNV> instances(bottomLevelAccelStructures.size());
-        for (uint32_t i = 0; i < instances.size(); ++i)
-        {
-            memcpy(instances[i].transform,
-    glm::value_ptr(glm::transpose(bottomLevelAccelStructures[i]->m_transform)), 12 * sizeof(float));
-    instances[i].instanceId = i; instances[i].mask = 0xFF; instances[i].hitGroupId = 0; instances[i].flags =
-    VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV; instances[i].accelerationStructureHandle =
-    bottomLevelAccelStructures[i]->m_rawHandle;
-        }
-
-        auto instanceBuffer = std::make_unique<VulkanBuffer>(device, sizeof(VkGeometryInstanceNV),
-    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_RAY_TRACING_BIT_NV, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        vkCmdUpdateBuffer(cmdBuffer, instanceBuffer->getHandle(), 0, instances.size() *
-    sizeof(VkGeometryInstanceNV), instances.data()); vkDeviceWaitIdle(device.getHandle());
-
-        vkCmdBuildAccelerationStructure(cmdBuffer, &m_info, instanceBuffer->getHandle(), 0, VK_FALSE, m_handle,
-    nullptr, m_scratchBuffer->getHandle(), 0);
-    }*/
 }
 
 VkWriteDescriptorSetAccelerationStructureKHR VulkanAccelerationStructure::getDescriptorInfo() const
@@ -221,7 +175,7 @@ void VulkanAccelerationStructure::createAccelerationStructure(const VulkanDevice
         m_buildSizesInfo.buildScratchSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    m_buildInfo.scratchData.deviceAddress = device.getBufferAddress(m_scratchBuffer->getHandle());
+    m_buildInfo.scratchData.deviceAddress = m_scratchBuffer->getDeviceAddress();
 }
 
 } // namespace crisp
