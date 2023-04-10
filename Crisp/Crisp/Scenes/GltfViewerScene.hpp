@@ -31,7 +31,7 @@ class GltfViewerScene : public AbstractScene
 {
 public:
     GltfViewerScene(Renderer* renderer, Application* app);
-    ~GltfViewerScene();
+    ~GltfViewerScene() override = default;
 
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;

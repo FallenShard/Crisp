@@ -279,7 +279,6 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
 
 PbrScene::~PbrScene()
 {
-    m_renderer->setSceneImageView(nullptr, 0);
     m_app->getForm()->remove(PbrScenePanel);
 }
 

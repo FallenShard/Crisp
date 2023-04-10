@@ -130,7 +130,6 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
 
 ClusteredLightingScene::~ClusteredLightingScene()
 {
-    m_renderer->setSceneImageView(nullptr, 0);
     m_app->getForm()->remove("shadowMappingPanel");
 }
 

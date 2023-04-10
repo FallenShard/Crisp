@@ -255,11 +255,6 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Application* app)
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-GltfViewerScene::~GltfViewerScene()
-{
-    m_renderer->setSceneImageView(nullptr, 0);
-}
-
 void GltfViewerScene::resize(int width, int height)
 {
     m_cameraController->onViewportResized(width, height);

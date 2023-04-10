@@ -103,7 +103,6 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
 
 NormalMappingScene::~NormalMappingScene()
 {
-    m_renderer->setSceneImageView(nullptr, 0);
     m_app->getForm()->remove("normalMappingPanel");
 }
 

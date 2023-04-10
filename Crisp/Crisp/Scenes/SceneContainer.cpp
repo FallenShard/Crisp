@@ -95,6 +95,7 @@ void SceneContainer::render() const
 void SceneContainer::onSceneSelected(const std::string& sceneName)
 {
     m_renderer->finish();
+    m_renderer->setSceneImageView(nullptr, 0);
     m_scene.reset();
     m_scene = createScene(sceneName, m_renderer, m_application);
 }
