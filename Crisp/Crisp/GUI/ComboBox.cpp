@@ -18,7 +18,7 @@ ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)
     , m_itemsPanel(std::make_unique<ControlGroup>(parentForm))
     , m_showPanel(false)
 {
-    setSizeHint({ 100.0f, 30.0f });
+    setSizeHint({100.0f, 30.0f});
 
     glm::vec3 color(0.5f, 0.3f, 0.3f);
     m_color = glm::vec4(color, m_opacity);
@@ -32,25 +32,25 @@ ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)
     m_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
     m_label->setParent(this);
-    m_label->setPosition({ 6.0f, 0.0f });
+    m_label->setPosition({6.0f, 0.0f});
     m_label->setOrigin(Origin::CenterLeft);
     m_label->setAnchor(Anchor::CenterLeft);
 
     m_itemsPanel->setParent(this);
     m_itemsPanel->setId("comboBoxItems");
-    m_itemsPanel->setPosition({ 0.0f, 30.0f });
+    m_itemsPanel->setPosition({0.0f, 30.0f});
     m_itemsPanel->setDepthOffset(10.0f);
     m_itemsPanel->setSizingPolicy(SizingPolicy::FillParent, SizingPolicy::WrapContent);
-    m_itemsPanel->setSizeHint({ 0.0f, 0.0f });
+    m_itemsPanel->setSizeHint({0.0f, 0.0f});
     m_itemsPanel->setAnchor(Anchor::TopLeft);
 
-    std::vector<std::string> labels = { "SSAO", "HBAO+", "SSDO" };
+    std::vector<std::string> labels = {"SSAO", "HBAO+", "SSDO"};
     for (int i = 0; i < 3; i++)
     {
         auto item = std::make_unique<ComboBoxItem>(parentForm, labels[i]);
         item->setId("Item " + std::to_string(i));
-        item->setPosition({ 0.0f, i * 20.0f });
-        item->setSizeHint({ 100.0f, 20.0f });
+        item->setPosition({0.0f, i * 20.0f});
+        item->setSizeHint({100.0f, 20.0f});
         item->setHorizontalSizingPolicy(SizingPolicy::FillParent);
         item->clicked += [this, item = item.get()]()
         {
@@ -142,7 +142,7 @@ void ComboBox::validate()
     auto absPos = getAbsolutePosition();
     auto absDepth = getAbsoluteDepth();
     auto absSize = getSize();
-    m_itemsPanel->setPosition({ 0.0f, absSize.y });
+    m_itemsPanel->setPosition({0.0f, absSize.y});
 
     m_M = glm::translate(glm::vec3(absPos, absDepth)) * glm::scale(glm::vec3(absSize, 1.0f));
     m_drawComponent.update(m_M);
@@ -170,8 +170,8 @@ void ComboBox::setItems(const std::vector<std::string>& items)
     {
         auto item = std::make_unique<ComboBoxItem>(m_form, items[i]);
         item->setId("Item " + std::to_string(i));
-        item->setPosition({ 0.0f, i * 20.0f });
-        item->setSizeHint({ 100.0f, 20.0f });
+        item->setPosition({0.0f, i * 20.0f});
+        item->setSizeHint({100.0f, 20.0f});
         item->setHorizontalSizingPolicy(SizingPolicy::FillParent);
         item->clicked += [this, item = item.get()]()
         {
@@ -190,6 +190,11 @@ void ComboBox::selectItem(std::size_t index)
     auto item = m_itemsPanel->getTypedControlById<ComboBoxItem>("Item " + std::to_string(index));
     if (item)
         item->clicked();
+}
+
+void ComboBox::setDisplayedItem(const std::string& displayedItem)
+{
+    m_label->setText(displayedItem);
 }
 
 void ComboBox::setState(State /*state*/) {}

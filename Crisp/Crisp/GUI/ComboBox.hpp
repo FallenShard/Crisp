@@ -31,6 +31,7 @@ public:
 
     void setItems(const std::vector<std::string>& items);
     void selectItem(std::size_t index);
+    void setDisplayedItem(const std::string& displayedItem);
 
 private:
     void setState(State state);

@@ -73,6 +73,7 @@ Application::Application(const ApplicationEnvironment& environment)
 
     auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
     cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+    cb->setDisplayedItem(environment.getParameters().scene);
 
     gui::initImGui(m_window->getHandle(), *m_renderer);
 }
