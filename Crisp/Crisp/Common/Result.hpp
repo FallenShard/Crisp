@@ -2,6 +2,7 @@
 
 #include <Crisp/Common/Logger.hpp>
 
+#include <expected>
 #include <source_location>
 
 namespace crisp
@@ -46,61 +47,71 @@ public:
     constexpr Result(const Result&) = delete;
     constexpr Result(Result&&) = default;
 
-    constexpr Result(const T& val)
-        : m_value(val)
+    constexpr Result(const T& value)
+        : m_expected(value)
     {
     }
 
-    constexpr Result(T&& val)
-        : m_value(std::move(val))
+    constexpr Result(T&& value)
+        : m_expected(std::move(value))
     {
     }
 
-    constexpr Result(detail::Unexpected<std::string>&& unexp)
-        : m_error(std::move(unexp.value()))
+    constexpr Result(std::unexpected<std::string>&& unexp)
+        : m_expected(std::move(unexp))
     {
     }
 
-    constexpr T unwrap()
+    constexpr T&& unwrap()
     {
-        if (!m_value)
+        if (!m_expected)
         {
-            spdlog::critical(*m_error);
+            spdlog::critical(m_expected.error());
             std::exit(1);
         }
 
-        return std::move(*m_value);
+        return std::move(m_expected).value();
     }
 
-    constexpr T extract()
+    constexpr T&& extract()
     {
-        return std::move(*m_value);
+        return std::move(m_expected).value();
     }
 
     constexpr std::string getError()
     {
-        if (!m_error)
+        if (m_expected.has_value())
         {
             spdlog::critical("Failed to extract error!");
             std::exit(1);
         }
 
-        return std::move(*m_error);
+        return std::move(m_expected.error());
+    }
+
+    constexpr const std::string& getError() const
+    {
+        if (m_expected.has_value())
+        {
+            spdlog::critical("Failed to get error!");
+            std::exit(1);
+        }
+
+        return m_expected.error();
     }
 
     constexpr bool hasValue() const
     {
-        return m_value.has_value();
+        return m_expected.has_value();
     }
 
     constexpr operator bool() const
     {
-        return m_value.has_value();
+        return m_expected.has_value();
     }
 
 private:
-    std::optional<T> m_value;
-    std::optional<std::string> m_error;
+    std::expected<T, std::string> m_expected;
 };
 
 template <>
@@ -111,23 +122,23 @@ public:
     constexpr Result(const Result&) = delete;
     constexpr Result(Result&&) = default;
 
-    constexpr Result(detail::Unexpected<std::string>&& unexp)
-        : m_error(std::move(unexp.value()))
+    constexpr Result(std::unexpected<std::string>&& unexp)
+        : m_expected(std::move(unexp))
     {
     }
 
     constexpr void unwrap()
     {
-        if (m_error)
+        if (!m_expected)
         {
-            spdlog::critical(*m_error);
+            spdlog::critical(m_expected.error());
             std::exit(1);
         }
     }
 
     constexpr bool isValid()
     {
-        return !m_error;
+        return m_expected.has_value();
     }
 
     ~Result()
@@ -136,18 +147,20 @@ public:
     }
 
 private:
-    std::optional<std::string> m_error;
+    std::expected<void, std::string> m_expected;
 };
 
 template <typename... Args>
-detail::Unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args)
+std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args)
 {
+    std::string errorMessage = fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...);
     spdlog::error(
-        "File: {}\n[Function: {}][Line {}, Column {}]",
+        "File: {}\n[Function: {}][Line {}, Column {}] Error:\n {}",
         formatString.loc.file_name(),
         formatString.loc.function_name(),
         formatString.loc.line(),
-        formatString.loc.column());
-    return detail::Unexpected<std::string>(fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...));
+        formatString.loc.column(),
+        errorMessage);
+    return std::unexpected<std::string>(std::move(errorMessage));
 }
 } // namespace crisp

@@ -1,15 +1,12 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 
-#include <condition_variable>
-#include <mutex>
-#include <queue>
-#include <thread>
+#include <Crisp/Common/Checks.hpp>
 
 namespace crisp
 {
-TransformBuffer::TransformBuffer(Renderer* renderer, std::size_t numObjects)
+TransformBuffer::TransformBuffer(Renderer* renderer, const std::size_t maxTransformCount)
     : m_activeTransforms(0)
-    , m_transforms(numObjects)
+    , m_transforms(maxTransformCount)
     , m_transformBuffer(std::make_unique<UniformBuffer>(
           renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame))
 {
@@ -25,9 +22,9 @@ UniformBuffer* TransformBuffer::getUniformBuffer()
     return m_transformBuffer.get();
 }
 
-TransformPack* TransformBuffer::getPack(int index)
+TransformPack& TransformBuffer::getPack(TransformHandle handle)
 {
-    return &m_transforms.at(index);
+    return m_transforms.at(handle.index);
 }
 
 void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P)
@@ -36,7 +33,7 @@ void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P)
     {
         m_threadPool.parallelFor(
             m_activeTransforms,
-            [this, &V, &P](std::size_t i, std::size_t /*jobIdx*/)
+            [this, &V, &P](const std::size_t i, const std::size_t /*jobIdx*/)
             {
                 auto& trans = m_transforms[i];
                 trans.MV = V * trans.M;
@@ -56,5 +53,11 @@ void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P)
     }
 
     m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_activeTransforms * sizeof(TransformPack));
+}
+
+TransformHandle TransformBuffer::getNextIndex()
+{
+    CRISP_CHECK(m_activeTransforms < m_transforms.size());
+    return TransformHandle{static_cast<uint16_t>(m_activeTransforms++), 0};
 }
 } // namespace crisp

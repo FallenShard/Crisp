@@ -40,7 +40,6 @@
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/Mesh/Io/GltfReader.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Utils/GlmFormatters.hpp>
 
@@ -50,7 +49,10 @@
 
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
+
+#include <imgui.h>
 
 namespace crisp
 {
@@ -168,7 +170,7 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
 {
     setupInput();
 
-    m_cameraController = std::make_unique<TargetCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
     m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
 
@@ -344,6 +346,86 @@ void PbrScene::render()
     m_renderGraph->executeCommandLists();
 }
 
+void PbrScene::renderGui()
+{
+    ImGui::Begin("Settings");
+    ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness, 0.0f, 1.0f);
+    ImGui::SliderFloat("Metallic", &m_uniformMaterialParams.metallic, 0.0f, 1.0f);
+    ImGui::SliderFloat("Red", &m_uniformMaterialParams.albedo.r, 0.0f, 1.0f);
+    ImGui::SliderFloat("Green", &m_uniformMaterialParams.albedo.g, 0.0f, 1.0f);
+    ImGui::SliderFloat("Blue", &m_uniformMaterialParams.albedo.b, 0.0f, 1.0f);
+    ImGui::SliderFloat("U Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
+    ImGui::SliderFloat("V Scale", &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
+    ImGui::End();
+    // if (ImGui::BeginListBox("##", ImVec2(0, 500)))
+    //{
+    //     for (int32_t i = 0; i < paths.size(); ++i)
+    //     {
+    //         const bool isSelected{selectedIdx == i};
+    //         if (ImGui::Selectable(paths[i].c_str(), isSelected))
+    //         {
+    //             selectedIdx = i;
+    //             m_renderer->finish();
+    //             loadGltf(paths.at(selectedIdx));
+    //         }
+
+    //        if (isSelected)
+    //        {
+    //            ImGui::SetItemDefaultFocus();
+    //        }
+    //    }
+    //    ImGui::EndListBox();
+    //}
+    // ImGui::End();
+
+    // auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal)
+    //{
+    //     auto label = std::make_unique<Label>(form, labelText);
+    //     panel->addControl(std::move(label));
+
+    //    auto slider = std::make_unique<DoubleSlider>(form, minVal, maxVal);
+    //    slider->setId(labelText + "Slider");
+    //    slider->setAnchor(Anchor::TopCenter);
+    //    slider->setOrigin(Origin::TopCenter);
+    //    slider->setValue(val);
+    //    slider->setIncrement(0.01f);
+
+    //    DoubleSlider* sliderPtr = slider.get();
+    //    panel->addControl(std::move(slider));
+
+    //    return sliderPtr;
+    //};
+
+    // std::vector<std::string> materials;
+    // for (const auto& dir :
+    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/PbrMaterials"))
+    //     materials.push_back(dir.path().stem().string());
+    // materials.push_back("Uniform");
+
+    // auto comboBox = std::make_unique<gui::ComboBox>(form);
+    // comboBox->setId("materialComboBox");
+    // comboBox->setItems(materials);
+    // comboBox->itemSelected.subscribe<&PbrScene::onMaterialSelected>(this);
+    // panel->addControl(std::move(comboBox));
+
+    // std::vector<std::string> envMapNames;
+    // for (const auto& dir :
+    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
+    //     envMapNames.push_back(dir.path().stem().string());
+    // auto envComboBox = std::make_unique<gui::ComboBox>(form);
+    // envComboBox->setId("EnvMapComboBox");
+    // envComboBox->setItems(envMapNames);
+    // envComboBox->itemSelected.subscribe<&PbrScene::setEnvironmentMap>(this);
+    // panel->addControl(std::move(envComboBox));
+
+    // auto floorCheckBox = std::make_unique<gui::CheckBox>(form);
+    // floorCheckBox->setChecked(true);
+    // floorCheckBox->setText("Show Floor");
+    // panel->addControl(std::move(floorCheckBox));
+
+    // form->add(std::move(panel));
+}
+
 void PbrScene::setRedAlbedo(double red)
 {
     m_uniformMaterialParams.albedo.r = static_cast<float>(red);
@@ -426,8 +508,8 @@ RenderNode* PbrScene::createRenderNode(std::string id, bool hasTransform)
     }
     else
     {
-        const uint32_t transformIndex{m_transformBuffer->getNextIndex()};
-        return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex))
+        const auto transformHandle{m_transformBuffer->getNextIndex()};
+        return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle))
             .first->second.get();
     }
 }
@@ -499,7 +581,7 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName)
 
 void PbrScene::createShaderball()
 {
-    m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
+    // m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
 
     PbrMaterial pbrMaterial{};
 
@@ -524,15 +606,22 @@ void PbrScene::createShaderball()
     }
     else
     {
-        mesh = loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(PbrVertexFormat))
-                   .unwrap();
+        auto [triMesh, materials] =
+            loadTriangleMeshAndMaterial(
+                m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(PbrVertexFormat))
+                .unwrap();
+        mesh = std::move(triMesh);
 
         const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / "RustedIron"};
         pbrMaterial.key = materialPath.stem().string();
-        pbrMaterial.textures = loadPbrTextureGroup(materialPath);
+        // pbrMaterial.textures = loadPbrTextureGroup(materialPath);
+        pbrMaterial.textures = createDefaultPbrTextureGroup();
+        pbrMaterial.textures.albedo =
+            loadImage(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.png", 4, FlipOnLoad::Y).unwrap();
 
         const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-        shaderBall->transformPack->M = translation; // * glm::scale(glm::vec3(0.025f));
+        const float maxDimLength = mesh.getBoundingBox().getMaximumExtent();
+        shaderBall->transformPack->M = translation * glm::scale(glm::vec3(10.0f / maxDimLength));
     }
 
     m_shaderBallPbrMaterialKey = pbrMaterial.key;

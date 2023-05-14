@@ -18,53 +18,13 @@ uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffer
     return static_cast<uint32_t>(vertexCount);
 }
 
-VkFormat getFormat(const VertexAttribute attribute)
-{
-    switch (attribute)
-    {
-    case VertexAttribute::Position:
-        return VK_FORMAT_R32G32B32_SFLOAT;
-    case VertexAttribute::Normal:
-        return VK_FORMAT_R32G32B32_SFLOAT;
-    case VertexAttribute::TexCoord:
-        return VK_FORMAT_R32G32_SFLOAT;
-    case VertexAttribute::Tangent:
-        return VK_FORMAT_R32G32B32A32_SFLOAT;
-    }
-    spdlog::critical("Failed to convert vulkan format!");
-    return VK_FORMAT_UNDEFINED;
-}
-
-VertexLayout createLayoutFromDescription(const VertexLayoutDescription& vertexLayoutDescription)
-{
-    VertexLayout layout{};
-    layout.bindings.resize(vertexLayoutDescription.size(), {});
-    uint32_t location{0};
-    for (uint32_t i = 0; i < vertexLayoutDescription.size(); ++i)
-    {
-        const auto& desc{vertexLayoutDescription[i]};
-        layout.bindings[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        layout.bindings[i].binding = i;
-
-        uint32_t offset{0};
-        for (const auto& attrib : desc)
-        {
-            layout.bindings[i].stride += attrib.size;
-            layout.attributes.emplace_back(
-                VkVertexInputAttributeDescription{location, i, getFormat(attrib.type), offset});
-            offset += attrib.size;
-            ++location;
-        }
-    }
-    return layout;
-}
 } // namespace
 
 Geometry::Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLayoutDescription& vertexLayoutDescription)
     : Geometry(
           renderer,
-          vertexLayoutDescription,
-          mesh.interleave(vertexLayoutDescription, false),
+          createLayoutFromDescription(vertexLayoutDescription),
+          mesh.createInterleavedVertexBuffers(vertexLayoutDescription, false),
           mesh.getFaces(),
           mesh.getViews())
 {
@@ -76,14 +36,30 @@ Geometry::Geometry(
     const VertexLayoutDescription& vertexLayoutDescription,
     const bool padToVec4,
     const VkBufferUsageFlags usageFlags)
-    : m_instanceCount(1)
+    : Geometry(
+          renderer,
+          createLayoutFromDescription(vertexLayoutDescription),
+          mesh.createInterleavedVertexBuffers(vertexLayoutDescription, padToVec4),
+          mesh.getFaces(),
+          mesh.getViews(),
+          usageFlags)
 {
-    auto interleavedBuffers = mesh.interleave(vertexLayoutDescription, padToVec4);
-    m_vertexCount = crisp::getVertexCount(interleavedBuffers);
-    m_indexCount = static_cast<uint32_t>(mesh.getFaces().size() * 3);
-    m_parts = mesh.getViews();
+}
 
-    for (const auto& buffer : interleavedBuffers)
+Geometry::Geometry(
+    Renderer& renderer,
+    const VertexLayout& vertexLayout,
+    std::vector<InterleavedVertexBuffer>&& interleavedVertexBuffers,
+    const std::vector<glm::uvec3>& faces,
+    const std::vector<TriangleMeshView>& meshViews,
+    const VkBufferUsageFlags usageFlags)
+    : m_vertexLayout(vertexLayout)
+    , m_vertexCount(crisp::getVertexCount(interleavedVertexBuffers))
+    , m_indexCount(static_cast<uint32_t>(faces.size() * 3))
+    , m_instanceCount(1)
+    , m_meshViews(meshViews)
+{
+    for (const auto& buffer : interleavedVertexBuffers)
     {
         auto vertexBuffer = createVertexBuffer(renderer.getDevice(), buffer.buffer.size(), usageFlags);
         renderer.fillDeviceBuffer(vertexBuffer.get(), buffer.buffer);
@@ -93,35 +69,6 @@ Geometry::Geometry(
     for (const auto& buffer : m_vertexBuffers)
     {
         m_vertexBufferHandles.push_back(buffer->getHandle());
-        m_offsets.push_back(0);
-    }
-
-    m_indexBuffer = createIndexBuffer(renderer.getDevice(), mesh.getFaces().size() * sizeof(glm::uvec3), usageFlags);
-    renderer.fillDeviceBuffer(m_indexBuffer.get(), mesh.getFaces());
-
-    m_firstBinding = 0;
-    m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
-}
-
-Geometry::Geometry(
-    Renderer& renderer,
-    const VertexLayoutDescription& vertexLayoutDescription,
-    std::vector<InterleavedVertexBuffer>&& vertexBuffers,
-    const std::vector<glm::uvec3>& faces,
-    const std::vector<TriangleMeshView>& parts)
-    : m_vertexCount(crisp::getVertexCount(vertexBuffers))
-    , m_indexCount(static_cast<uint32_t>(faces.size() * 3))
-    , m_instanceCount(1)
-    , m_parts(parts)
-    , m_vertexLayout(createLayoutFromDescription(vertexLayoutDescription))
-{
-    for (const auto& buffer : vertexBuffers)
-    {
-        auto vertexBuffer =
-            createVertexBuffer(renderer.getDevice(), buffer.buffer.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-        renderer.fillDeviceBuffer(vertexBuffer.get(), buffer.buffer);
-        m_vertexBuffers.push_back(std::move(vertexBuffer));
-        m_vertexBufferHandles.push_back(m_vertexBuffers.back()->getHandle());
         m_offsets.push_back(0);
     }
 
@@ -167,18 +114,25 @@ void Geometry::addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer)
 
 void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer) const
 {
-    if (m_bindingCount > 0)
-        vkCmdBindVertexBuffers(
-            cmdBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
+    if (m_bindingCount == 0)
+    {
+        return;
+    }
+
+    vkCmdBindVertexBuffers(cmdBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
 }
 
 void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer, uint32_t bufferCount) const
 {
     CRISP_CHECK(firstBuffer >= m_firstBinding);
     CRISP_CHECK(firstBuffer + bufferCount <= m_firstBinding + m_bindingCount);
-    if (m_bindingCount > 0)
-        vkCmdBindVertexBuffers(
-            cmdBuffer, firstBuffer, bufferCount, &m_vertexBufferHandles[firstBuffer], &m_offsets[firstBuffer]);
+    if (m_bindingCount == 0)
+    {
+        return;
+    }
+
+    vkCmdBindVertexBuffers(
+        cmdBuffer, firstBuffer, bufferCount, &m_vertexBufferHandles[firstBuffer], &m_offsets[firstBuffer]);
 }
 
 void Geometry::bind(VkCommandBuffer commandBuffer) const
@@ -222,7 +176,8 @@ IndexedGeometryView Geometry::createIndexedGeometryView() const
 
 IndexedGeometryView Geometry::createIndexedGeometryView(uint32_t partIndex) const
 {
-    return {m_indexBuffer->getHandle(), m_parts[partIndex].count, m_instanceCount, m_parts[partIndex].first, 0, 0};
+    return {
+        m_indexBuffer->getHandle(), m_meshViews[partIndex].count, m_instanceCount, m_meshViews[partIndex].first, 0, 0};
 }
 
 ListGeometryView Geometry::createListGeometryView() const

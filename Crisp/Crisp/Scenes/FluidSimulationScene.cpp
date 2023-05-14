@@ -64,7 +64,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_fluidGeometry->setVertexCount(m_fluidSimulation->getParticleCount());
     m_fluidGeometry->setInstanceCount(1);
 
-    m_fluidRenderNode = RenderNode(m_transformsBuffer.get(), &m_transforms, 0);
+    m_fluidRenderNode = RenderNode(m_transformsBuffer.get(), &m_transforms, {0, 0});
     m_fluidRenderNode.geometry = m_fluidGeometry.get();
     m_fluidRenderNode.pass(MainPass).material = m_pointSpriteMaterial.get();
 

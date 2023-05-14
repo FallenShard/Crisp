@@ -164,7 +164,7 @@ void RenderGraph::printExecutionOrder()
 {
     for (uint32_t i = 0; i < m_executionOrder.size(); ++i)
     {
-        logger->warn("{}. {}", i, m_executionOrder[i]->name);
+        logger->info("{}. {}", i, m_executionOrder[i]->name);
     }
 }
 

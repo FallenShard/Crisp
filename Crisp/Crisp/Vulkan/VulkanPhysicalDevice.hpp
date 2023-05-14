@@ -113,6 +113,8 @@ private:
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR m_rayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures;
 
+    VkPhysicalDeviceMaintenance4Features m_maintenanceFeatures4;
+
     VkPhysicalDeviceProperties2 m_properties;
     VkPhysicalDeviceVulkan11Properties m_properties11;
     VkPhysicalDeviceVulkan12Properties m_properties12;

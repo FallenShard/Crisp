@@ -2,5 +2,7 @@
   "resourcesPath": "D:/Projects/Crisp/Resources",
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
   "validationLayersInRelease": true,
-  "scene": "vulkan-ray-tracer"
+  "scene_": "vulkan-ray-tracer",
+  "scene": "gltf-viewer",
+  "scene_a": "pbr"
 }

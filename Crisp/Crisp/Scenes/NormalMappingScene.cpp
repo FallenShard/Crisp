@@ -149,7 +149,8 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
     // m_renderNodes.emplace(id,
     // std::move(node)); return
     // m_renderNodes.at(id).get();
-    m_renderNodeList.push_back(std::make_unique<RenderNode>(*m_transformBuffer, transformIndex));
+    const TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
+    m_renderNodeList.push_back(std::make_unique<RenderNode>(*m_transformBuffer, handle));
     m_renderNodeMap[id] = m_renderNodeList.size() - 1;
     return m_renderNodeList.back().get();
 }

@@ -1,4 +1,4 @@
-#include <Crisp/Mesh/Io/WavefrontObjReader.hpp>
+#include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
 #include <Crisp/Common/Logger.hpp>
 #include <Crisp/Utils/StringUtils.hpp>
@@ -16,6 +16,8 @@ namespace crisp
 {
 namespace
 {
+const auto logger = createLoggerMt("WavefrontObjReader");
+
 struct ObjVertex
 {
     using IndexType = int32_t;
@@ -72,6 +74,12 @@ struct ObjVertexHasher
 
 FlatHashMap<std::string, WavefrontObjMaterial> loadMaterials(const std::filesystem::path& path)
 {
+    if (!std::filesystem::exists(path))
+    {
+        logger->warn("OBJ material at {} does not exist!", path.string());
+        return {};
+    }
+
     FlatHashMap<std::string, WavefrontObjMaterial> materials;
 
     WavefrontObjMaterial* currMat = nullptr;
@@ -174,18 +182,18 @@ bool isWavefrontObjFile(const std::filesystem::path& path)
     return path.extension().string() == ".obj";
 }
 
-WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath)
+WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath)
 {
     std::ifstream file(objFilePath);
 
-    robin_hood::unordered_flat_map<ObjVertex, uint32_t, ObjVertexHasher> vertexMap;
+    FlatHashMap<ObjVertex, uint32_t, ObjVertexHasher> vertexMap;
     std::vector<glm::vec3> positionList;
     std::vector<glm::vec3> normalList;
     std::vector<glm::vec2> texCoordList;
     std::vector<glm::vec3> paramList;
     std::vector<glm::uvec3> triangles;
     std::vector<TriangleMeshView> meshViews;
-    robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> materials;
+    FlatHashMap<std::string, WavefrontObjMaterial> materials;
 
     std::string line;
     uint32_t uniqueVertexId = 0;
@@ -203,9 +211,7 @@ WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath)
         else if (prefix == "mtllib")
         {
             const auto tokens = fixedTokenize<2>(line, " ");
-            const std::filesystem::path materialFilePath = objFilePath.parent_path() / tokens[1];
-            if (std::filesystem::exists(materialFilePath))
-                materials = loadMaterials(materialFilePath);
+            materials = loadMaterials(objFilePath.parent_path() / tokens[1]);
         }
         else if (prefix == "v")
         {
@@ -226,7 +232,7 @@ WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath)
         else if (prefix == "f")
         {
             glm::uvec3 faceIndices;
-            const auto tokens = fixedTokenize<4>(line, " ");
+            const auto tokens = fixedTokenize<5>(line, " ");
 
             for (int i = 0; i < 3; i++)
             {
@@ -245,6 +251,28 @@ WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath)
             }
 
             triangles.push_back(faceIndices);
+
+            if (!tokens[4].empty())
+            {
+                constexpr std::array<uint32_t, 3> tokenIndices{0, 2, 3};
+                for (int i = 0; i < 3; i++)
+                {
+                    const ObjVertex vertex(tokens[tokenIndices[i] + 1]);
+                    const auto it = vertexMap.find(vertex);
+                    if (it == vertexMap.end())
+                    {
+                        vertexMap[vertex] = uniqueVertexId;
+                        faceIndices[i] = uniqueVertexId;
+                        ++uniqueVertexId;
+                    }
+                    else
+                    {
+                        faceIndices[i] = it->second;
+                    }
+                }
+
+                triangles.push_back(faceIndices);
+            }
         }
         else if (prefix == "usemtl")
         {
@@ -298,15 +326,13 @@ WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath)
         meshViews.back().count = static_cast<uint32_t>(3 * mesh.triangles.size() - meshViews.back().first);
     }
 
-    meshViews.erase(
-        std::remove_if(
-            meshViews.begin(),
-            meshViews.end(),
-            [](const TriangleMeshView& part)
-            {
-                return part.count == 0;
-            }),
-        meshViews.end());
+    const auto [begin, end] = std::ranges::remove_if(
+        meshViews,
+        [](const TriangleMeshView& part)
+        {
+            return part.count == 0;
+        });
+    meshViews.erase(begin, end);
 
     mesh.views = std::move(meshViews);
     mesh.materials = std::move(materials);

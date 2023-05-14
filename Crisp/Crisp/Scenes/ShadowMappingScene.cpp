@@ -330,7 +330,8 @@ void ShadowMappingScene::onMaterialSelected(const std::string& materialName)
 
 RenderNode* ShadowMappingScene::createRenderNode(std::string id, int transformIndex)
 {
-    auto node = std::make_unique<RenderNode>(*m_transformBuffer, transformIndex);
+    const TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
+    auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
     m_renderNodes.emplace(id, std::move(node));
     return m_renderNodes.at(id).get();
 }
@@ -430,7 +431,7 @@ Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type)
         }
         else
         {
-            spdlog::warn("Texture type {} is using default values for '{}'\n", type, texNames[i]);
+            spdlog::warn("Texture type {} is using default values for '{}'", type, texNames[i]);
             std::string key = "default-" + texNames[i];
             material->writeDescriptor(1, 2 + i, imageCache.getImageView(key), imageCache.getSampler("linearRepeat"));
         }

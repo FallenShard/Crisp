@@ -31,26 +31,28 @@ float getFactor(int i, int j) {
     return signValue[1 - (i + j) % 2];
 }
 
+const float texelCenterOffset = 0.0;
+
 float getHeight(int i, int j, float factor) {
     // return texelFetch(displacementMap, ivec2(i, j), 0).r * factor;
-    float u = (i + 0.5) / N;
-    float v = (j + 0.5) / N;
+    float u = (i + texelCenterOffset) / N;
+    float v = (j + texelCenterOffset) / N;
     return texture(displacementMap, vec2(u, v)).r * factor;
 }
 
 float getDx(int i, int j, float factor) {
     //return texelFetch(displacementXMap, ivec2(i, j), 0).r * factor;
 
-    float u = (i + 0.5) / N;
-    float v = (j + 0.5) / N;
+    float u = (i + texelCenterOffset) / N;
+    float v = (j + texelCenterOffset) / N;
     return texture(displacementXMap, vec2(u, v)).r * factor;
 }
 
 float getDz(int i, int j, float factor) {
     //return texelFetch(displacementZMap, ivec2(i, j), 0).r * factor;
 
-    float u = (i + 0.5) / N;
-    float v = (j + 0.5) / N;
+    float u = (i + texelCenterOffset) / N;
+    float v = (j + texelCenterOffset) / N;
     return texture(displacementZMap, vec2(u, v)).r * factor;
 }
 

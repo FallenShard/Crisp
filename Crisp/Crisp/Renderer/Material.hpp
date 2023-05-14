@@ -55,10 +55,14 @@ public:
         const VulkanSampler* sampler);
 
     void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo);
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo, uint32_t dstElement);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer);
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer, int elementSize, int elementCount);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer);
+
+    void writeDescriptor(
+        uint32_t setIndex, uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo);
 
     void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
     void bind(
@@ -80,6 +84,11 @@ public:
     inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const
     {
         return m_dynamicBufferViews;
+    }
+
+    VkDescriptorSet getDescriptorSet(const uint32_t setIndex, const uint32_t frameIndex) const
+    {
+        return m_sets.at(frameIndex).at(setIndex);
     }
 
 private:

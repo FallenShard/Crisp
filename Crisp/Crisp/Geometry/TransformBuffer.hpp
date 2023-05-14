@@ -8,16 +8,64 @@
 
 namespace crisp
 {
+
+struct TransformHandle
+{
+#pragma warning(disable : 4201)
+
+    union
+    {
+        struct
+        {
+            uint16_t index;
+            uint16_t generation;
+        };
+
+        uint32_t value;
+    };
+
+#pragma warning(default : 4201)
+
+    consteval static TransformHandle createInvalidHandle()
+    {
+        constexpr auto kMaxValue = std::numeric_limits<uint16_t>::max();
+        return {
+            {kMaxValue, kMaxValue}
+        };
+    }
+};
+
+inline bool operator==(const TransformHandle& a, const TransformHandle& b)
+{
+    return (a.value == b.value);
+}
+
+inline bool operator!=(const TransformHandle& a, const TransformHandle& b)
+{
+    return (a.value != b.value);
+}
+
+inline bool operator<(const TransformHandle& a, const TransformHandle& b)
+{
+    return (a.value < b.value);
+}
+
+inline bool operator>(const TransformHandle& a, const TransformHandle& b)
+{
+    return (a.value > b.value);
+}
+
 class TransformBuffer
 {
 public:
-    TransformBuffer(Renderer* renderer, std::size_t numObjects);
+    TransformBuffer(Renderer* renderer, std::size_t maxTransformCount);
 
     const UniformBuffer* getUniformBuffer() const;
     UniformBuffer* getUniformBuffer();
 
-    TransformPack* getPack(int index);
+    TransformPack& getPack(TransformHandle index);
 
+    // The buffer is used as UNIFORM_DYNAMIC, hence we only provide info for one transformation.
     inline VkDescriptorBufferInfo getDescriptorInfo() const
     {
         return m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack));
@@ -25,10 +73,7 @@ public:
 
     void update(const glm::mat4& V, const glm::mat4& P);
 
-    uint32_t getNextIndex()
-    {
-        return m_activeTransforms++;
-    }
+    TransformHandle getNextIndex();
 
 private:
     uint32_t m_activeTransforms;

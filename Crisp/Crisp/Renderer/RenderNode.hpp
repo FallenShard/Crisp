@@ -104,14 +104,15 @@ struct RenderNode
     }
 
     RenderNode();
-    RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, int transformIndex);
-    RenderNode(UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, int transformIndex);
-    RenderNode(TransformBuffer& transformBuffer, int transformIndex);
+    RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle);
+    RenderNode(
+        UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle);
+    RenderNode(TransformBuffer& transformBuffer, TransformHandle transformHandle);
 
     Geometry* geometry = nullptr;
     UniformBuffer* transformBuffer = nullptr;
     TransformPack* transformPack = nullptr;
-    int transformIndex = -1;
+    TransformHandle transformHandle{TransformHandle::createInvalidHandle()};
     bool isVisible = true;
     FlatHashMap<SubpassKey, FlatHashMap<int32_t, MaterialData>, SubpassKeyHasher> materials;
 };

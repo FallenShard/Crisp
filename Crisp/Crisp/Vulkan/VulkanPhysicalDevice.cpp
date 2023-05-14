@@ -293,10 +293,13 @@ void VulkanPhysicalDevice::initFeaturesAndProperties()
     m_properties12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES};
     m_rayTracingPipelineProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
 
+    m_maintenanceFeatures4 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES};
+
     m_features.pNext = &m_features11;
     m_features11.pNext = &m_features12;
     m_features12.pNext = &m_rayTracingFeatures;
     m_rayTracingFeatures.pNext = &m_accelerationStructureFeatures;
+    m_accelerationStructureFeatures.pNext = &m_maintenanceFeatures4;
     vkGetPhysicalDeviceFeatures2(m_handle, &m_features);
 
     m_properties.pNext = &m_rayTracingPipelineProperties;
@@ -312,6 +315,7 @@ std::vector<std::string> createDefaultDeviceExtensions()
     return {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_MAINTENANCE2_EXTENSION_NAME,
+        VK_KHR_MAINTENANCE_4_EXTENSION_NAME,
     };
 }
 

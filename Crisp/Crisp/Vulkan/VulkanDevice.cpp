@@ -139,6 +139,11 @@ void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescripto
     m_descriptorWrites.back().pImageInfo = &m_imageInfos.back();
 }
 
+void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write)
+{
+    m_descriptorWrites.emplace_back(write);
+}
+
 void VulkanDevice::flushDescriptorUpdates()
 {
     if (!m_descriptorWrites.empty())

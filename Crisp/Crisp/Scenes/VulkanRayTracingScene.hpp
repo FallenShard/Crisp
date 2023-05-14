@@ -14,8 +14,6 @@ class FreeCameraController;
 class TransformBuffer;
 class LightSystem;
 
-class ResourceContext;
-class RenderGraph;
 struct RenderNode;
 
 class VulkanImage;
@@ -23,7 +21,6 @@ class VulkanImageView;
 class VUlkanPipeline;
 class VulkanPipelineLayout;
 class VulkanAccelerationStructure;
-class RayTracingMaterial;
 
 class VulkanRayTracingScene : public AbstractScene
 {
@@ -45,9 +42,9 @@ private:
 
     RenderNode* createRenderNode(std::string id, int transformIndex);
 
-    void createPlane();
     std::unique_ptr<VulkanPipelineLayout> createPipelineLayout();
-    void createPipeline(std::unique_ptr<VulkanPipelineLayout> pipelineLayout);
+    std::unique_ptr<VulkanPipeline> createPipeline(std::unique_ptr<VulkanPipelineLayout> pipelineLayout);
+    void updateDescriptorSets();
 
     void setupInput();
 
@@ -66,9 +63,19 @@ private:
     std::vector<std::unique_ptr<VulkanImageView>> m_rtImageViews;
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
+    std::unique_ptr<Material> m_material;
 
-    std::vector<std::vector<VkDescriptorSet>> m_descSets;
-    std::unique_ptr<VulkanBuffer> m_sbtBuffer;
+    struct ShaderBindingTable
+    {
+        std::unique_ptr<VulkanBuffer> buffer;
+
+        VkStridedDeviceAddressRegionKHR rgen;
+        VkStridedDeviceAddressRegionKHR miss;
+        VkStridedDeviceAddressRegionKHR hit;
+        VkStridedDeviceAddressRegionKHR call;
+    };
+
+    ShaderBindingTable m_sbt;
 
     uint32_t m_frameIdx{0};
 };

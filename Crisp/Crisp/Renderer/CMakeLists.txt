@@ -110,4 +110,4 @@ add_cpp_interface_library(CrispRendererConfig
 add_cpp_test(CrispRendererTest
     "Test/PipelineLayoutBuilderTest.cpp")
 target_link_libraries(CrispRendererTest PRIVATE CrispRenderer CrispVulkanTestUtils)
-copy_shared_libs(CrispRendererTest lua freetype zlib)
+copy_shared_libs(CrispRendererTest lua freetype)

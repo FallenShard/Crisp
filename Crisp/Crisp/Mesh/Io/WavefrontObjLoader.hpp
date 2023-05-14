@@ -35,10 +35,10 @@ struct WavefrontObjMesh
 
     std::vector<TriangleMeshView> views;
 
-    robin_hood::unordered_flat_map<std::string, WavefrontObjMaterial> materials;
+    FlatHashMap<std::string, WavefrontObjMaterial> materials;
 };
 
 bool isWavefrontObjFile(const std::filesystem::path& path);
-WavefrontObjMesh readWavefrontObj(const std::filesystem::path& objFilePath);
+WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath);
 
 } // namespace crisp

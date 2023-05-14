@@ -26,12 +26,11 @@ public:
     TriangleMesh& operator=(const TriangleMesh& mesh) = delete;
     TriangleMesh& operator=(TriangleMesh&& mesh) noexcept = default;
 
-    const std::vector<glm::uvec3>& getFaces() const;
     uint32_t getFaceCount() const;
     uint32_t getIndexCount() const;
     uint32_t getVertexCount() const;
 
-    std::vector<InterleavedVertexBuffer> interleave(
+    std::vector<InterleavedVertexBuffer> createInterleavedVertexBuffers(
         const std::vector<std::vector<VertexAttributeDescriptor>>& vertexAttribs, bool padToVec4) const;
 
     static std::vector<glm::vec3> computeVertexNormals(
@@ -60,6 +59,8 @@ public:
     const std::vector<glm::vec2>& getTexCoords() const;
     const VertexAttributeBuffer& getCustomAttribute(const std::string& id) const;
 
+    const std::vector<glm::uvec3>& getFaces() const;
+
     const BoundingBox3& getBoundingBox() const;
 
     glm::vec3 interpolatePosition(uint32_t triangleId, const glm::vec3& barycentric) const;
@@ -68,6 +69,8 @@ public:
 
     glm::vec3 calculateFaceNormal(uint32_t triangleId) const;
     float calculateFaceArea(uint32_t triangleId) const;
+
+    bool hasCustomAttribute(const std::string& attributeName) const;
 
 private:
     InterleavedVertexBuffer interleave(

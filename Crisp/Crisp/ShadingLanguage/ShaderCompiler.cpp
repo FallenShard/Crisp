@@ -14,7 +14,7 @@ namespace
 {
 const std::filesystem::path GlslExtension = ".glsl";
 const robin_hood::unordered_set<std::string> ShaderExtensions = {
-    "vert", "frag", "tesc", "tese", "geom", "comp", "rgen", "rchit", "rmiss"};
+    "vert", "frag", "tesc", "tese", "geom", "comp", "rgen", "rchit", "rmiss", "rcall"};
 
 auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 } // namespace
@@ -73,7 +73,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             logger->error(maybeGlslSource.getError());
             continue;
         }
-        const auto glslSource{maybeGlslSource.unwrap()};
+        const auto glslSource{std::move(maybeGlslSource).unwrap()};
         const std::filesystem::file_time_type outputModifiedTs = std::filesystem::exists(outputPath)
                                                                      ? std::filesystem::last_write_time(outputPath)
                                                                      : std::filesystem::file_time_type{};

@@ -1,12 +1,13 @@
-#include <Crisp/Common/Logger.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Mesh/Io/WavefrontObjReader.hpp>
+
+#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
 namespace crisp
 {
 namespace
 {
-auto logger = createLoggerMt("MeshReader");
+auto logger = createLoggerMt("MeshLoader");
 
 TriangleMesh convertToTriangleMesh(
     const std::filesystem::path& path, WavefrontObjMesh&& objMesh, std::vector<VertexAttributeDescriptor> vertexAttribs)
@@ -29,7 +30,20 @@ Result<TriangleMesh> loadTriangleMesh(
 {
     if (isWavefrontObjFile(path))
     {
-        return convertToTriangleMesh(path, readWavefrontObj(path), vertexAttributes);
+        return convertToTriangleMesh(path, loadWavefrontObj(path), vertexAttributes);
+    }
+
+    return resultError("Failed to open an obj mesh at {}", path.string());
+}
+
+Result<MeshAndMaterial> loadTriangleMeshAndMaterial(
+    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
+{
+    if (isWavefrontObjFile(path))
+    {
+        auto objMesh = loadWavefrontObj(path);
+        auto materials = std::move(objMesh.materials);
+        return MeshAndMaterial{convertToTriangleMesh(path, std::move(objMesh), vertexAttributes), std::move(materials)};
     }
 
     return resultError("Failed to open an obj mesh at {}", path.string());

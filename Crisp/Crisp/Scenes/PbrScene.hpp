@@ -41,6 +41,7 @@ public:
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;
     virtual void render() override;
+    virtual void renderGui() override;
 
     void setRedAlbedo(double red);
     void setGreenAlbedo(double green);
@@ -65,7 +66,7 @@ private:
 
     std::vector<ConnectionHandler> m_connectionHandlers;
 
-    std::unique_ptr<TargetCameraController> m_cameraController;
+    std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 

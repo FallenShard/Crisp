@@ -79,11 +79,11 @@ VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geo
     geo.geometry = {};
     geo.geometry.triangles = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
     geo.geometry.triangles.vertexData.deviceAddress = geometry.getVertexBuffer()->getDeviceAddress();
-    geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-    geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);
+    geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT; // Positions format.
+    geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);      // Spacing between positions.
     geo.geometry.triangles.maxVertex = geometry.getVertexCount() - 1;
     geo.geometry.triangles.indexData.deviceAddress = geometry.getIndexBuffer()->getDeviceAddress();
-    geo.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+    geo.geometry.triangles.indexType = geometry.getIndexType();
     return geo;
 }
 
@@ -115,15 +115,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
-
-    std::default_random_engine eng;
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    std::vector<float> randData;
-    for (int i = 0; i < 65536 / sizeof(float); ++i)
-    {
-        randData.push_back(dist(eng));
-    }
-    auto randBuffer = m_resourceContext->createUniformBuffer("random", randData, BufferUpdatePolicy::Constant);
 
     m_renderer->enqueueResourceUpdate(
         [this](VkCommandBuffer cmdBuffer)
@@ -158,28 +149,19 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
         rtImageViewHandles[i] = m_rtImageViews.back()->getHandle();
     }
 
-    createPipeline(createPipelineLayout());
+    m_pipeline = createPipeline(createPipelineLayout());
 
-    m_renderer->getDevice().flushDescriptorUpdates();
+    m_material = std::make_unique<Material>(m_pipeline.get());
 
-    m_renderer->setSceneImageViews(m_rtImageViews);
-
-    const VkDescriptorBufferInfo idxBufferInfo = randBuffer->getDescriptorInfo();
-    VkWriteDescriptorSet writeIndexBuffer = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    writeIndexBuffer.dstSet = m_descSets[0][1];
-    writeIndexBuffer.dstBinding = 2;
-    writeIndexBuffer.descriptorCount = 1;
-    writeIndexBuffer.dstArrayElement = 0;
-    writeIndexBuffer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writeIndexBuffer.pBufferInfo = &idxBufferInfo;
-
-    VkWriteDescriptorSet writeSets[] = {writeIndexBuffer};
-    vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), 1, writeSets, 0, nullptr);
-
+    updateDescriptorSets();
     updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("walls"), 0);
     updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("leftwall"), 1);
     updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("rightwall"), 2);
     updateGeometryBufferDescriptors(*m_resourceContext->getGeometry("light"), 3);
+
+    m_renderer->getDevice().flushDescriptorUpdates();
+
+    m_renderer->setSceneImageViews(m_rtImageViews);
 }
 
 void VulkanRayTracingScene::resize(int /*width*/, int /*height*/)
@@ -216,51 +198,15 @@ void VulkanRayTracingScene::render()
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 
-            const auto& cameraBuffer = *m_resourceContext->getUniformBuffer("camera");
-            uint32_t offset = virtualFrameIndex * static_cast<uint32_t>(cameraBuffer.getDescriptorInfo().range);
-
             m_pipeline->bind(cmdBuffer);
-            vkCmdBindDescriptorSets(
-                cmdBuffer,
-                VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-                m_pipeline->getPipelineLayout()->getHandle(),
-                0,
-                2,
-                m_descSets[virtualFrameIndex].data(),
-                1,
-                &offset);
+            m_material->bind(virtualFrameIndex, cmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
 
-            vkCmdPushConstants(
-                cmdBuffer,
-                m_pipeline->getPipelineLayout()->getHandle(),
-                VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR,
-                0,
-                sizeof(uint32_t),
-                &m_frameIdx);
-
-            const VkDeviceSize baseOffset =
-                m_renderer->getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
-            const VkDeviceSize rayGenOffset = 0;
-            const VkDeviceSize missOffset = baseOffset;
-            const VkDeviceSize hitGroupOffset = 2 * baseOffset;
+            m_pipeline->setPushConstant(
+                cmdBuffer, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 0, m_frameIdx);
 
             const auto extent = m_renderer->getSwapChainExtent();
-            const auto sbtBufferAddress = m_sbtBuffer->getDeviceAddress();
-            VkStridedDeviceAddressRegionKHR rayGen;
-            rayGen.deviceAddress = sbtBufferAddress + rayGenOffset;
-            rayGen.size = baseOffset;
-            rayGen.stride = baseOffset;
-            VkStridedDeviceAddressRegionKHR miss;
-            miss.deviceAddress = sbtBufferAddress + missOffset;
-            miss.size = baseOffset;
-            miss.stride = baseOffset;
-            VkStridedDeviceAddressRegionKHR hit;
-            hit.deviceAddress = sbtBufferAddress + hitGroupOffset;
-            hit.size = baseOffset;
-            hit.stride = baseOffset;
-            VkStridedDeviceAddressRegionKHR call{};
-
-            vkCmdTraceRaysKHR(cmdBuffer, &rayGen, &miss, &hit, &call, extent.width, extent.height, 1);
+            vkCmdTraceRaysKHR(
+                cmdBuffer, &m_sbt.rgen, &m_sbt.miss, &m_sbt.hit, &m_sbt.call, extent.width, extent.height, 1);
 
             m_rtImage->transitionLayout(
                 cmdBuffer,
@@ -275,15 +221,14 @@ void VulkanRayTracingScene::render()
 
 RenderNode* VulkanRayTracingScene::createRenderNode(std::string id, int transformIndex)
 {
-    auto node = std::make_unique<RenderNode>(*m_transformBuffer, transformIndex);
+    const TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
+    auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
     m_renderNodes.emplace(id, std::move(node));
     return m_renderNodes.at(id).get();
 }
 
 std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayout()
 {
-    auto device = m_renderer->getDevice().getHandle();
-
     PipelineLayoutBuilder builder{};
     builder
         .defineDescriptorSet(
@@ -294,7 +239,6 @@ std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayou
                 {1,              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
                 {2,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
     })
-        .addPushConstant(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, sizeof(uint32_t))
         .defineDescriptorSet(
             1,
             false,
@@ -307,59 +251,16 @@ std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayou
                  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                  4,
                  VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
-                {2,
-                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                 1,
-                 VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
-            });
+            })
+        .addPushConstant(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, sizeof(uint32_t));
 
-    auto pipelineLayout = builder.create(m_renderer->getDevice());
-
-    m_descSets.resize(RendererConfig::VirtualFrameCount, std::vector<VkDescriptorSet>(2));
-    m_descSets[0][0] = pipelineLayout->allocateSet(0);
-    m_descSets[0][1] = pipelineLayout->allocateSet(1);
-    m_descSets[1][0] = pipelineLayout->allocateSet(0);
-    m_descSets[1][1] = m_descSets[0][1];
-
-    for (int i = 0; i < RendererConfig::VirtualFrameCount; ++i)
-    {
-        const auto tlasInfo = m_topLevelAccelStructure->getDescriptorInfo();
-        VkWriteDescriptorSet writeAsBinding = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        writeAsBinding.dstSet = m_descSets[i][0];
-        writeAsBinding.pNext = &tlasInfo;
-        writeAsBinding.dstBinding = 0;
-        writeAsBinding.descriptorCount = 1;
-        writeAsBinding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-
-        VkDescriptorImageInfo imageInfo;
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageInfo.imageView = m_rtImageViews[i]->getHandle();
-        imageInfo.sampler = nullptr;
-        VkWriteDescriptorSet writeImageBinding = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        writeImageBinding.dstSet = m_descSets[i][0];
-        writeImageBinding.dstBinding = 1;
-        writeImageBinding.descriptorCount = 1;
-        writeImageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        writeImageBinding.pImageInfo = &imageInfo;
-
-        VkDescriptorBufferInfo bufferInfo = m_resourceContext->getUniformBuffer("camera")->getDescriptorInfo();
-        VkWriteDescriptorSet writeCameraBinding = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        writeCameraBinding.dstSet = m_descSets[i][0];
-        writeCameraBinding.dstBinding = 2;
-        writeCameraBinding.descriptorCount = 1;
-        writeCameraBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        writeCameraBinding.pBufferInfo = &bufferInfo;
-
-        VkWriteDescriptorSet writeSets[] = {writeAsBinding, writeImageBinding, writeCameraBinding};
-        vkUpdateDescriptorSets(device, 3, writeSets, 0, nullptr);
-    }
-
-    return pipelineLayout;
+    return builder.create(m_renderer->getDevice());
 }
 
-void VulkanRayTracingScene::createPipeline(std::unique_ptr<VulkanPipelineLayout> pipelineLayout)
+std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
+    std::unique_ptr<VulkanPipelineLayout> pipelineLayout)
 {
-    std::vector<VkPipelineShaderStageCreateInfo> stages(3, {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO});
+    std::vector<VkPipelineShaderStageCreateInfo> stages(4, {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO});
     stages[0].stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
     stages[0].module = m_renderer->loadShaderModule("path-trace.rgen");
     stages[0].pName = "main";
@@ -369,9 +270,12 @@ void VulkanRayTracingScene::createPipeline(std::unique_ptr<VulkanPipelineLayout>
     stages[2].stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
     stages[2].module = m_renderer->loadShaderModule("path-trace.rchit");
     stages[2].pName = "main";
+    stages[3].stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+    stages[3].module = m_renderer->loadShaderModule("path-trace-lambertian.rcall");
+    stages[3].pName = "main";
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups(
-        3, {VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR});
+        4, {VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR});
     for (uint32_t i = 0; i < groups.size(); ++i)
     {
         groups[i].anyHitShader = VK_SHADER_UNUSED_KHR;
@@ -385,6 +289,8 @@ void VulkanRayTracingScene::createPipeline(std::unique_ptr<VulkanPipelineLayout>
     groups[1].generalShader = 1;
     groups[2].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
     groups[2].closestHitShader = 2;
+    groups[3].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+    groups[3].generalShader = 3;
 
     const VkDevice deviceHandle = m_renderer->getDevice().getHandle();
     VkRayTracingPipelineCreateInfoKHR raytracingCreateInfo = {VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
@@ -411,18 +317,31 @@ void VulkanRayTracingScene::createPipeline(std::unique_ptr<VulkanPipelineLayout>
         memcpy(&shaderHandleStorage[i * baseAlignment], &shaderHandleStorage[i * handleSize], handleSize);
     }
 
-    m_sbtBuffer = std::make_unique<VulkanBuffer>(
+    m_sbt.buffer = std::make_unique<VulkanBuffer>(
         m_renderer->getDevice(),
         shaderHandleStorage.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_sbt.rgen.deviceAddress = m_sbt.buffer->getDeviceAddress();
+    m_sbt.rgen.size = baseAlignment;
+    m_sbt.rgen.stride = baseAlignment;
+    m_sbt.miss.deviceAddress = m_sbt.buffer->getDeviceAddress() + baseAlignment;
+    m_sbt.miss.size = baseAlignment;
+    m_sbt.miss.stride = baseAlignment;
+    m_sbt.hit.deviceAddress = m_sbt.buffer->getDeviceAddress() + 2 * baseAlignment;
+    m_sbt.hit.size = baseAlignment;
+    m_sbt.hit.stride = baseAlignment;
+    m_sbt.call.deviceAddress = m_sbt.buffer->getDeviceAddress() + 3 * baseAlignment;
+    m_sbt.call.size = baseAlignment;
+    m_sbt.call.stride = baseAlignment;
+
     m_renderer->enqueueResourceUpdate(
-        [&, this, deviceHandle, handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer)
+        [this, deviceHandle, handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer)
         {
-            vkCmdUpdateBuffer(cmdBuffer, m_sbtBuffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
+            vkCmdUpdateBuffer(cmdBuffer, m_sbt.buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
         });
-    m_pipeline = std::make_unique<VulkanPipeline>(
+    return std::make_unique<VulkanPipeline>(
         m_renderer->getDevice(),
         pipeline,
         std::move(pipelineLayout),
@@ -430,36 +349,20 @@ void VulkanRayTracingScene::createPipeline(std::unique_ptr<VulkanPipelineLayout>
         VertexLayout{});
 }
 
+void VulkanRayTracingScene::updateDescriptorSets()
+{
+    const auto tlasInfo = m_topLevelAccelStructure->getDescriptorInfo();
+    m_material->writeDescriptor(0, 0, tlasInfo);
+    m_material->writeDescriptor(0, 1, m_rtImageViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    m_material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("camera"));
+    m_renderer->getDevice().flushDescriptorUpdates();
+}
+
 void VulkanRayTracingScene::updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx)
 {
-    auto* vtxBuffer = geometry.getVertexBuffer();
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = vtxBuffer->getHandle();
-    bufferInfo.offset = 0;
-    bufferInfo.range = VK_WHOLE_SIZE;
-    VkWriteDescriptorSet writeVertexBuffer = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    writeVertexBuffer.dstSet = m_descSets[0][1];
-    writeVertexBuffer.dstBinding = 0;
-    writeVertexBuffer.descriptorCount = 1;
-    writeVertexBuffer.dstArrayElement = idx;
-    writeVertexBuffer.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeVertexBuffer.pBufferInfo = &bufferInfo;
-
-    auto* idxBuffer = geometry.getIndexBuffer();
-    VkDescriptorBufferInfo idxBufferInfo = {};
-    idxBufferInfo.buffer = idxBuffer->getHandle();
-    idxBufferInfo.offset = 0;
-    idxBufferInfo.range = VK_WHOLE_SIZE;
-    VkWriteDescriptorSet writeIndexBuffer = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    writeIndexBuffer.dstSet = m_descSets[0][1];
-    writeIndexBuffer.dstBinding = 1;
-    writeIndexBuffer.descriptorCount = 1;
-    writeIndexBuffer.dstArrayElement = idx;
-    writeIndexBuffer.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeIndexBuffer.pBufferInfo = &idxBufferInfo;
-
-    VkWriteDescriptorSet writeSets[] = {writeVertexBuffer, writeIndexBuffer};
-    vkUpdateDescriptorSets(m_renderer->getDevice().getHandle(), 2, writeSets, 0, nullptr);
+    m_material->writeDescriptor(1, 0, geometry.getVertexBuffer()->createDescriptorInfo(), idx);
+    m_material->writeDescriptor(1, 1, geometry.getIndexBuffer()->createDescriptorInfo(), idx);
+    m_renderer->getDevice().flushDescriptorUpdates();
 }
 
 void VulkanRayTracingScene::setupInput()

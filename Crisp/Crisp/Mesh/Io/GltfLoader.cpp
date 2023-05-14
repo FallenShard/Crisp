@@ -1,4 +1,4 @@
-#include <Crisp/Mesh/Io/GltfReader.hpp>
+#include <Crisp/Mesh/Io/GltfLOader.hpp>
 
 #include <Crisp/Common/Checks.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
@@ -12,7 +12,7 @@ namespace crisp
 {
 namespace
 {
-const auto logger = createLoggerMt("GltfReader");
+const auto logger = createLoggerMt("GltfLoader");
 
 constexpr uint32_t OcclusionMapChannel{0};
 constexpr uint32_t RoughnessMapChannel{1};
@@ -69,14 +69,59 @@ Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint
 
     const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
     const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
     CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-    CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
+    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
 
     std::vector<T> attributes;
     attributes.reserve(accessor.count);
 
     T temp{};
+    for (size_t i = 0; i < accessor.count; ++i)
+    {
+        const size_t offset{bufferRangeStart + i * byteStride};
+        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
+        attributes.emplace_back(temp);
+    }
+
+    return attributes;
+}
+
+template <typename T>
+//, size_t Size, typename Scalar>
+concept GlmVec = requires(T v) {
+                     {
+                         T::length()
+                         } -> std::same_as<glm::length_t>;
+                 };
+
+template <GlmVec DstType, GlmVec SrcType = DstType>
+Result<std::vector<DstType>> loadVertexBuffer(
+    const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string& attrib)
+{
+    if (!primitive.attributes.contains(attrib))
+    {
+        return std::vector<DstType>{};
+    }
+
+    const auto& accessor = model.accessors.at(primitive.attributes.at(attrib));
+
+    const auto& bufferView = model.bufferViews.at(accessor.bufferView);
+    const auto& buffer = model.buffers.at(bufferView.buffer);
+
+    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
+    const size_t attributeByteSize{componentCount * componentByteSize};
+    CRISP_CHECK_EQ(attributeByteSize, sizeof(SrcType));
+
+    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
+    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
+    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
+    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
+
+    std::vector<DstType> attributes;
+    attributes.reserve(accessor.count);
+
+    SrcType temp{};
     for (size_t i = 0; i < accessor.count; ++i)
     {
         const size_t offset{bufferRangeStart + i * byteStride};
@@ -108,9 +153,8 @@ Result<std::vector<T>> loadVertexBuffer(
 
     const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
     const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
     CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-    CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
+    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
 
     std::vector<T> attributes;
     attributes.reserve(accessor.count);
@@ -293,9 +337,8 @@ Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& 
     transforms.reserve(accessor.count);
 
     const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    const size_t bufferRangeEnd{bufferRangeStart + accessor.count * byteStride};
     CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-    CRISP_CHECK(bufferRangeEnd <= buffer.data.size());
+    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
 
     glm::mat4 temp{};
     for (size_t i = 0; i < accessor.count; ++i)
@@ -307,15 +350,18 @@ Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& 
     return transforms;
 }
 
-void createRenderObjectsFromNode(
+void createModelDataFromNode(
     const tinygltf::Model& model,
     const tinygltf::Node& node,
     GltfImageLoader& imageLoader,
     const std::vector<VertexAttributeDescriptor>& vertexAttributes,
-    std::vector<RenderObject>& renderObjects)
+    std::vector<ModelData>& models)
 {
+    if (node.camera)
+    {
+        logger->trace("Gltf contains camera information which will be unused.");
+    }
     // CRISP_CHECK_EQ(node.skin, GltfInvalidIdx, "Skinning is unsupported!");
-    // CRISP_CHECK_EQ(node.camera, GltfInvalidIdx, "Camera is unsupported!");
 
     SkinningData skinningData{};
     if (node.skin != GltfInvalidIdx)
@@ -355,26 +401,32 @@ void createRenderObjectsFromNode(
         // We also assume the mesh has only 1 primitive.
         const auto& currPrimitive{currMesh.primitives.at(0)};
 
-        RenderObject renderObject{};
-        renderObject.transform = getNodeTransform(node);
-        renderObject.mesh = createMeshFromPrimitive(model, currPrimitive, vertexAttributes);
+        ModelData modelData{};
+        modelData.transform = getNodeTransform(node);
+        modelData.mesh = createMeshFromPrimitive(model, currPrimitive, vertexAttributes);
 
-        skinningData.indices = loadVertexBuffer<glm::u16vec4>(model, currPrimitive, "JOINTS_0").unwrap();
-        skinningData.weights = loadVertexBuffer<glm::vec4>(model, currPrimitive, "WEIGHTS_0").unwrap();
+        modelData.mesh.setCustomAttribute(
+            "weights0",
+            createCustomVertexAttributeBuffer<glm::vec4>(
+                loadVertexBuffer<glm::vec4>(model, currPrimitive, "WEIGHTS_0").unwrap()));
+        modelData.mesh.setCustomAttribute(
+            "indices0",
+            createCustomVertexAttributeBuffer<glm::uvec4>(
+                loadVertexBuffer<glm::uvec4, glm::u16vec4>(model, currPrimitive, "JOINTS_0").unwrap()));
 
         if (currPrimitive.material != GltfInvalidIdx)
         {
-            renderObject.material =
+            modelData.material =
                 createPbrMaterialFromGltfMaterial(model.materials.at(currPrimitive.material), imageLoader);
         }
 
-        renderObject.skinningData = skinningData;
-        renderObjects.push_back(std::move(renderObject));
+        modelData.skinningData = skinningData;
+        models.push_back(std::move(modelData));
     }
 
     for (const uint32_t childIdx : node.children)
     {
-        createRenderObjectsFromNode(model, model.nodes.at(childIdx), imageLoader, vertexAttributes, renderObjects);
+        createModelDataFromNode(model, model.nodes.at(childIdx), imageLoader, vertexAttributes, models);
     }
 }
 
@@ -425,9 +477,14 @@ GltfAnimation loadGltfAnimation(const tinygltf::Model& model, const tinygltf::An
     return anim;
 }
 
-Result<std::vector<RenderObject>> loadGltfModel(
+Result<std::vector<ModelData>> loadGltfModel(
     const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
 {
+    if (!std::filesystem::exists(path))
+    {
+        return resultError("GLTF Path doesn't exist! {}", path.string());
+    }
+
     tinygltf::Model model;
 
     tinygltf::TinyGLTF loader;
@@ -460,10 +517,10 @@ Result<std::vector<RenderObject>> loadGltfModel(
     CRISP_CHECK_EQ(model.defaultScene, 0);
     const auto& gltfScene{model.scenes.at(model.defaultScene)};
 
-    std::vector<RenderObject> renderObjects{};
+    std::vector<ModelData> modelData{};
     for (uint32_t i = 0; i < gltfScene.nodes.size(); ++i)
     {
-        createRenderObjectsFromNode(model, model.nodes[i], imageLoader, vertexAttributes, renderObjects);
+        createModelDataFromNode(model, model.nodes[i], imageLoader, vertexAttributes, modelData);
     }
 
     std::vector<GltfAnimation> animations{};
@@ -474,12 +531,12 @@ Result<std::vector<RenderObject>> loadGltfModel(
         // Check if animation matches the skeleton.
         for (auto& ch : animations.back().channels)
         {
-            ch.targetNode = renderObjects.back().skinningData.modelNodeToLinearIdx[ch.targetNode];
+            ch.targetNode = modelData.back().skinningData.modelNodeToLinearIdx[ch.targetNode];
         }
     }
-    renderObjects.back().animations = std::move(animations);
+    modelData.back().animations = std::move(animations);
 
-    return renderObjects;
+    return modelData;
 }
 
 } // namespace crisp

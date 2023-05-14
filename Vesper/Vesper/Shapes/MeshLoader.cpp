@@ -1,6 +1,6 @@
 #include <Vesper/Shapes/MeshLoader.hpp>
 
-#include <Crisp/Mesh/Io/WavefrontObjReader.hpp>
+#include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
 #include <Crisp/Common/Logger.hpp>
 
@@ -28,7 +28,7 @@ bool MeshLoader::load(
     if (isWavefrontObjFile(path))
     {
         spdlog::info("Loading Wavefront Obj mesh: {}", path.filename().string());
-        auto objMesh = readWavefrontObj(path);
+        auto objMesh = loadWavefrontObj(path);
         positions = std::move(objMesh.positions);
         normals = std::move(objMesh.normals);
         texCoords = std::move(objMesh.texCoords);

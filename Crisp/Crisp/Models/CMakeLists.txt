@@ -21,4 +21,4 @@ target_link_libraries(CrispModels
 add_cpp_test(CrispTest
     "Test/TransmittanceLutTest.cpp")
 target_link_libraries(CrispTest PRIVATE CrispVulkanTestUtils CrispModels)
-copy_shared_libs(CrispTest lua freetype zlib)
+copy_shared_libs(CrispTest lua freetype)

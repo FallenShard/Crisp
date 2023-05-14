@@ -13,13 +13,13 @@
 namespace crisp
 {
 template <typename T>
-concept IsArithmetic = std::integral<T> || std::floating_point<T>;
+concept ArithmeticType = std::integral<T> || std::floating_point<T>;
 
 template <typename T>
 concept StringLike = std::same_as<T, std::string> || std::same_as<T, std::filesystem::path>;
 
 template <typename T>
-concept IsCommandLineArgumentType = std::same_as<T, bool> || IsArithmetic<T> || StringLike<T>;
+concept CommandLineArgumentType = std::same_as<T, bool> || ArithmeticType<T> || StringLike<T>;
 
 class CommandLineParser
 {
@@ -32,7 +32,7 @@ public:
         bool parsed;
     };
 
-    template <IsCommandLineArgumentType T>
+    template <CommandLineArgumentType T>
     void addOption(const std::string_view name, T& variable, bool isRequired = false)
     {
         const std::string nameStr(name);
@@ -54,7 +54,7 @@ public:
                 variable = (in == "true" || in == "on");
             };
         }
-        else if constexpr (IsArithmetic<T>)
+        else if constexpr (ArithmeticType<T>)
         {
             m_argMap.at(nameStr).parser = [&variable](const std::string_view input)
             {

@@ -190,7 +190,8 @@ void ClusteredLightingScene::setRoughness(double roughness)
 
 RenderNode* ClusteredLightingScene::createRenderNode(std::string id, int transformIndex)
 {
-    auto node = std::make_unique<RenderNode>(*m_transformBuffer, transformIndex);
+    TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
+    auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
     m_renderNodes.emplace(id, std::move(node));
     return m_renderNodes.at(id).get();
 }

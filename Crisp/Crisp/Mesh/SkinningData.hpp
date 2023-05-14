@@ -71,9 +71,6 @@ struct SkinningData
 {
     static constexpr uint32_t JointsPerVertex{4};
 
-    std::vector<glm::vec4> weights;
-    std::vector<glm::u16vec4> indices;
-
     Skeleton skeleton;
 
     std::vector<glm::mat4> modelJointTransforms;

@@ -194,7 +194,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
     m_renderer->setSceneImageView(m_renderGraph->getNode("blurVPass").renderPass.get(), 0);
 
-    m_floorNode = std::make_unique<RenderNode>(*m_transformBuffer, 0);
+    m_floorNode = std::make_unique<RenderNode>(*m_transformBuffer, TransformHandle{0, 0});
     m_floorNode->transformPack->M =
         glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
     m_floorNode->geometry = m_resourceContext->getGeometry("floorPos");
@@ -202,7 +202,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     m_floorNode->pass("mainPass").pipeline = colorPipeline;
     m_floorNode->pass("mainPass").setPushConstantView(pc);
 
-    m_sponzaNode = std::make_unique<RenderNode>(*m_transformBuffer, 1);
+    m_sponzaNode = std::make_unique<RenderNode>(*m_transformBuffer, TransformHandle{1, 0});
     m_sponzaNode->transformPack->M = glm::mat4(1.0f);
     m_sponzaNode->geometry = m_resourceContext->getGeometry("sponza");
     m_sponzaNode->pass("mainPass").material = normalMaterial;

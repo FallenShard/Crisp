@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Geometry/GeometryView.hpp>
+#include <Crisp/Geometry/VertexLayout.hpp>
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
@@ -13,7 +14,6 @@
 
 namespace crisp
 {
-using VertexLayoutDescription = std::vector<std::vector<VertexAttributeDescriptor>>;
 
 class Geometry
 {
@@ -28,10 +28,11 @@ public:
         VkBufferUsageFlags usageFlags);
     Geometry(
         Renderer& renderer,
-        const VertexLayoutDescription& vertexLayoutDescription,
-        std::vector<InterleavedVertexBuffer>&& vertexBuffers,
+        const VertexLayout& vertexLayout,
+        std::vector<InterleavedVertexBuffer>&& interleavedVertexBuffers,
         const std::vector<glm::uvec3>& faces,
-        const std::vector<TriangleMeshView>& parts = {});
+        const std::vector<TriangleMeshView>& meshViews = {},
+        const VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
     Geometry(Renderer& renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
 
@@ -115,6 +116,11 @@ public:
         return m_vertexLayout;
     }
 
+    VkIndexType getIndexType() const
+    {
+        return VK_INDEX_TYPE_UINT32;
+    }
+
     IndexedGeometryView createIndexedGeometryView() const;
     IndexedGeometryView createIndexedGeometryView(uint32_t partIndex) const;
     ListGeometryView createListGeometryView() const;
@@ -134,10 +140,10 @@ private:
     // The geometry also owns the index buffer if we have indexed geometry.
     std::unique_ptr<VulkanBuffer> m_indexBuffer{nullptr};
 
-    uint32_t m_indexCount{0};
     uint32_t m_vertexCount{0};
+    uint32_t m_indexCount{0};
     uint32_t m_instanceCount{0};
 
-    std::vector<TriangleMeshView> m_parts;
+    std::vector<TriangleMeshView> m_meshViews;
 };
 } // namespace crisp

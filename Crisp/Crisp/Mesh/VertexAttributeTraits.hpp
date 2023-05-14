@@ -10,6 +10,11 @@ enum class VertexAttribute
     Normal,
     TexCoord,
     Tangent,
+    Color,
+    Weights0,
+    Weights1,
+    JointIndices0,
+    JointIndices1,
     Custom
 };
 

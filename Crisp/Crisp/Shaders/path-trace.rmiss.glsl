@@ -1,24 +1,26 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
-struct hitPayload
+struct HitInfo
 {
-    vec3 hitPos;
+    vec3 position;
     float tHit;
-    vec3 sampleDir;
-    float pdf;
+
+    vec3 sampleDirection;
+    float samplePdf;
+
     vec3 Le;
     uint bounceCount;
-    vec3 bsdf;
-    float pad2;
+
+    vec3 bsdfEval;
+    uint rngSeed;
+
     vec4 debugValue;
 };
 
-layout(location = 0) rayPayloadInEXT hitPayload prd;
+layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 
 void main()
 {
-    prd.hitPos = vec3(0.0);
-    prd.tHit = -1;
-    prd.debugValue = vec4(0.0);
+    hitInfo.tHit = -1;
 }

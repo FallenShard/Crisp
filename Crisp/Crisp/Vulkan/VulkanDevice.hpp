@@ -46,6 +46,7 @@ public:
     void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo);
     void postDescriptorWrite(VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
     void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo);
+    void postDescriptorWrite(VkWriteDescriptorSet&& write);
     void flushDescriptorUpdates();
 
     VulkanResourceDeallocator& getResourceDeallocator() const

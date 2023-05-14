@@ -7,20 +7,21 @@ namespace crisp
 {
 RenderNode::RenderNode() {}
 
-RenderNode::RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, int transformIndex)
+RenderNode::RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle)
     : transformBuffer(transformBuffer)
     , transformPack(transformPack)
-    , transformIndex(transformIndex)
+    , transformHandle(transformHandle)
 {
 }
 
-RenderNode::RenderNode(UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, int transformIndex)
-    : RenderNode(transformBuffer, &transformPacks[transformIndex], transformIndex)
+RenderNode::RenderNode(
+    UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle)
+    : RenderNode(transformBuffer, &transformPacks[transformHandle.index], transformHandle)
 {
 }
 
-RenderNode::RenderNode(TransformBuffer& transformBuffer, int transformIndex)
-    : RenderNode(transformBuffer.getUniformBuffer(), transformBuffer.getPack(transformIndex), transformIndex)
+RenderNode::RenderNode(TransformBuffer& transformBuffer, TransformHandle transformHandle)
+    : RenderNode(transformBuffer.getUniformBuffer(), &transformBuffer.getPack(transformHandle), transformHandle)
 {
 }
 
@@ -35,7 +36,8 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
 
     if (renderNode.transformBuffer)
         drawCommand.dynamicBufferViews[0] = {
-            renderNode.transformBuffer, static_cast<uint32_t>(renderNode.transformIndex * sizeof(TransformPack))};
+            renderNode.transformBuffer,
+            static_cast<uint32_t>(renderNode.transformHandle.index * sizeof(TransformPack))};
 
     drawCommand.dynamicBufferOffsets.resize(drawCommand.dynamicBufferViews.size());
     for (std::size_t i = 0; i < drawCommand.dynamicBufferOffsets.size(); ++i)

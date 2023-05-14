@@ -37,7 +37,7 @@ Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorS
         else
         {
             const VkDescriptorSetLayout setLayout = m_pipeline->getPipelineLayout()->getDescriptorSetLayout(i);
-            VkDescriptorSet set = descriptorSetAllocator->allocate(
+            const VkDescriptorSet set = descriptorSetAllocator->allocate(
                 setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(i));
             for (uint32_t j = 0; j < m_sets.size(); ++j)
             {
@@ -176,6 +176,23 @@ void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptor
     }
 }
 
+void Material::writeDescriptor(
+    uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo, uint32_t dstElement)
+{
+    const uint32_t setsToUpdate =
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+    for (uint32_t i = 0; i < setsToUpdate; ++i)
+    {
+        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        write.dstSet = m_sets[i][setIndex];
+        write.dstBinding = binding;
+        write.dstArrayElement = dstElement;
+        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
+        write.descriptorCount = 1;
+        m_device->postDescriptorWrite(std::move(write), bufferInfo);
+    }
+}
+
 void Material::writeDescriptor(uint32_t setId, uint32_t binding, const UniformBuffer& uniformBuffer)
 {
     uint32_t setsToUpdate =
@@ -221,6 +238,24 @@ void Material::writeDescriptor(
 void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer)
 {
     writeDescriptor(setIndex, binding, storageBuffer.getDescriptorInfo());
+}
+
+void Material::writeDescriptor(
+    uint32_t setIndex, uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo)
+{
+    uint32_t setsToUpdate =
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+    for (uint32_t i = 0; i < setsToUpdate; ++i)
+    {
+        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        write.dstSet = m_sets[i][setIndex];
+        write.pNext = &asInfo;
+        write.dstBinding = binding;
+        write.dstArrayElement = 0;
+        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
+        write.descriptorCount = 1;
+        m_device->postDescriptorWrite(std::move(write));
+    }
 }
 
 void Material::setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset)

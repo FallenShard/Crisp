@@ -10,7 +10,7 @@
 namespace crisp
 {
 
-struct RenderObject
+struct ModelData
 {
     TriangleMesh mesh;
     PbrMaterial material;
@@ -22,7 +22,7 @@ struct RenderObject
     std::vector<GltfAnimation> animations;
 };
 
-Result<std::vector<RenderObject>> loadGltfModel(
-    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes);
+Result<std::vector<ModelData>> loadGltfModel(
+    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes = {});
 
 } // namespace crisp

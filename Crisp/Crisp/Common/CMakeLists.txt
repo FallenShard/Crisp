@@ -22,6 +22,9 @@ add_cpp_interface_library(CrispResult
 target_link_libraries(CrispResult
     INTERFACE CrispLogger)
 
+add_cpp_test(CrispResultTest
+    "Test/ResultTest.cpp")
+target_link_libraries(CrispResultTest PRIVATE CrispResult)
 
 add_cpp_interface_library(CrispChecks
     "Checks.hpp")

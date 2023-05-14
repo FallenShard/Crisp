@@ -29,4 +29,4 @@ set_target_properties(CrispMain PROPERTIES
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
 )
 target_link_libraries(CrispMain PRIVATE CrispApplication)
-copy_shared_libs(CrispMain lua freetype zlib embree)
+copy_shared_libs(CrispMain lua freetype embree)

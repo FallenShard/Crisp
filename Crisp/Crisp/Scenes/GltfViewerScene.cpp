@@ -38,7 +38,6 @@
 #include <Crisp/GUI/Label.hpp>
 #include <Crisp/GUI/Slider.hpp>
 
-#include <Crisp/Mesh/Io/GltfReader.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Utils/GlmFormatters.hpp>
 
@@ -311,7 +310,8 @@ void GltfViewerScene::renderGui()
         enumerateDirectories(m_renderer->getAssetPaths().resourceDir / "glTFSamples/2.0");
     static int32_t selectedIdx{0};
     ImGui::Begin("Hi");
-    if (ImGui::BeginListBox("GLTF Examples"))
+    ImGui::Text("GLTF Examples");
+    if (ImGui::BeginListBox("##", ImVec2(0, 500)))
     {
         for (int32_t i = 0; i < paths.size(); ++i)
         {
@@ -341,7 +341,7 @@ RenderNode* GltfViewerScene::createRenderNode(std::string id, bool hasTransform)
     }
     else
     {
-        const uint32_t transformIndex{m_transformBuffer->getNextIndex()};
+        const auto transformIndex{m_transformBuffer->getNextIndex()};
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex))
             .first->second.get();
     }
@@ -396,11 +396,10 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
         loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath, flatten(PbrVertexFormat)).unwrap();
 
     auto& renderObject = renderObjects.at(0);
-    // renderObject.mesh.normalizeToUnitBox();
     renderObject.material.key = gltfAsset;
 
     m_cameraController->setTarget(renderObject.mesh.getBoundingBox().getCenter());
-    m_cameraController->setOrientation(glm::pi<float>() * 0.25f, -glm::pi<float>() * 0.25f);
+    // m_cameraController->setOrientation(glm::pi<float>() * 0.25f, -glm::pi<float>() * 0.25f);
     m_cameraController->setDistance(glm::length(renderObject.mesh.getBoundingBox().getExtents()) * 2.0f);
 
     const std::string entityName{"gltfNode"};
@@ -427,7 +426,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    const bool hasSkinning{!renderObject.skinningData.weights.empty()};
+    const bool hasSkinning{renderObject.mesh.hasCustomAttribute("weights0")};
     if (hasSkinning)
     {
         m_skinningData = renderObject.skinningData;
@@ -436,7 +435,6 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
 
         const auto& restPositions = renderObject.mesh.getPositions();
         const uint32_t vertexCount = static_cast<uint32_t>(restPositions.size());
-        const auto& data = renderObject.skinningData;
         auto restVertexBuffer = m_resourceContext->addStorageBuffer(
             "restPositions",
             std::make_unique<StorageBuffer>(
@@ -445,35 +443,24 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
                 0,
                 BufferUpdatePolicy::Constant,
                 restPositions.data()));
+        const auto& weightsData = renderObject.mesh.getCustomAttribute("weights0");
         auto weightsBuffer = m_resourceContext->addStorageBuffer(
             "weights",
             std::make_unique<StorageBuffer>(
-                m_renderer,
-                data.weights.size() * sizeof(glm::vec4),
-                0,
-                BufferUpdatePolicy::Constant,
-                data.weights.data()));
-        std::vector<glm::uvec4> wideIndices(data.indices.size());
-        for (uint32_t i = 0; i < wideIndices.size(); ++i)
-        {
-            wideIndices[i] = data.indices[i];
-        }
+                m_renderer, weightsData.buffer.size(), 0, BufferUpdatePolicy::Constant, weightsData.buffer.data()));
+        const auto& jointIndices = renderObject.mesh.getCustomAttribute("indices0");
         auto indicesBuffer = m_resourceContext->addStorageBuffer(
             "indices",
             std::make_unique<StorageBuffer>(
-                m_renderer,
-                wideIndices.size() * sizeof(glm::uvec4),
-                0,
-                BufferUpdatePolicy::Constant,
-                wideIndices.data()));
+                m_renderer, jointIndices.buffer.size(), 0, BufferUpdatePolicy::Constant, jointIndices.buffer.data()));
         auto jointMatrices = m_resourceContext->addStorageBuffer(
             "jointMatrices",
             std::make_unique<StorageBuffer>(
                 m_renderer,
-                data.skeleton.jointTransforms.size() * sizeof(glm::mat4),
+                m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4),
                 0,
                 BufferUpdatePolicy::PerFrame,
-                data.skeleton.jointTransforms.data()));
+                m_skinningData.skeleton.jointTransforms.data()));
         auto& skinningPass = m_renderGraph->addComputePass("SkinningPass");
         skinningPass.workGroupSize = glm::ivec3(256, 1, 1);
         skinningPass.numWorkGroups = glm::ivec3((vertexCount - 1) / 256 + 1, 1, 1);

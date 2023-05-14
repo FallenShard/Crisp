@@ -144,10 +144,11 @@ InterleavedVertexBuffer TriangleMesh::interleave(
     return interleavedBuffer;
 }
 
-std::vector<InterleavedVertexBuffer> TriangleMesh::interleave(
+std::vector<InterleavedVertexBuffer> TriangleMesh::createInterleavedVertexBuffers(
     const std::vector<std::vector<VertexAttributeDescriptor>>& vertexAttribs, bool padToVec4) const
 {
     std::vector<InterleavedVertexBuffer> buffers{};
+    buffers.reserve(vertexAttribs.size());
     for (const auto& attribGroup : vertexAttribs)
     {
         buffers.emplace_back(interleave(attribGroup, padToVec4));
@@ -337,6 +338,11 @@ const VertexAttributeBuffer& TriangleMesh::getCustomAttribute(const std::string&
 const BoundingBox3& TriangleMesh::getBoundingBox() const
 {
     return m_boundingBox;
+}
+
+bool TriangleMesh::hasCustomAttribute(const std::string& attributeName) const
+{
+    return m_customAttributes.contains(attributeName);
 }
 
 float TriangleMesh::calculateFaceArea(uint32_t triangleId) const

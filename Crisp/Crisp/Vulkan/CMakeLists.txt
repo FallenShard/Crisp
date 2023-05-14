@@ -62,6 +62,7 @@ target_link_libraries(CrispVulkan
     PRIVATE CrispLogger
     PUBLIC CrispUtils
     PUBLIC CrispChecks
+    PUBLIC CrispVertexLayout
     PUBLIC CrispVulkanHeader)
 
 add_cpp_static_library(CrispVulkanHeader

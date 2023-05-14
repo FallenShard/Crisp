@@ -88,7 +88,7 @@ void Skybox::updateRenderNode(const VulkanSampler& sampler, const VulkanImageVie
 
     m_renderNode.transformBuffer = m_transformBuffer.get();
     m_renderNode.transformPack = &m_transformPack;
-    m_renderNode.transformIndex = 0;
+    m_renderNode.transformHandle.index = 0;
     m_renderNode.geometry = m_cubeGeometry.get();
     m_renderNode.pass("forwardPass").material = m_material.get();
 }
