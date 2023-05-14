@@ -2,7 +2,7 @@
 
 #include <Crisp/Animation/Animation.hpp>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 
 #include <memory>
 #include <vector>

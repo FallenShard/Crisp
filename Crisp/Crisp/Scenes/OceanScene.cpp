@@ -26,7 +26,7 @@
 
 #include <Crisp/Utils/LuaConfig.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 

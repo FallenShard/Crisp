@@ -1,6 +1,6 @@
 #include <Crisp/Image/Io/Utils.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)
@@ -8,7 +8,7 @@
 #include <stb/stb_image.h>
 #pragma warning(pop)
 
-#include <Crisp/Common/Format.hpp>
+#include <Crisp/Core/Format.hpp>
 
 #include <string>
 

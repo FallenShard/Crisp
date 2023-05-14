@@ -2,7 +2,7 @@
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 
 #include <ranges>
 

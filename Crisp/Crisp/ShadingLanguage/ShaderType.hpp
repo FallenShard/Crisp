@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Crisp/Common/HashMap.hpp>
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Core/Result.hpp>
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 

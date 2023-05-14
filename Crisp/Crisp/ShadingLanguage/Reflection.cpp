@@ -8,7 +8,7 @@
 #include <Crisp/Utils/Enumerate.hpp>
 
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <fstream>
 #include <optional>

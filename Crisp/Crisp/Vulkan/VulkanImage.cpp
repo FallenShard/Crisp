@@ -4,8 +4,8 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-#include <Crisp/Common/Checks.hpp>
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Checks.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp
 {

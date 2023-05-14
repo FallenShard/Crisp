@@ -3,7 +3,7 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/Image/Io/OpenEXRReader.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 

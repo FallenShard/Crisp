@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/Delegate.hpp>
 

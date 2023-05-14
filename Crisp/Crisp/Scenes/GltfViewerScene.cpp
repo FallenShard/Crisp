@@ -1,7 +1,7 @@
 #include <Crisp/Scenes/GltfViewerScene.hpp>
 
-#include <Crisp/Common/Checks.hpp>
 #include <Crisp/Core/Application.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Window.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>

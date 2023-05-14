@@ -1,6 +1,6 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 

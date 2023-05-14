@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <stdexcept>
 

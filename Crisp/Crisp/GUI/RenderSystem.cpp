@@ -20,7 +20,7 @@
 
 #include <Crisp/GUI/DynamicUniformBufferResource.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp::gui
 {

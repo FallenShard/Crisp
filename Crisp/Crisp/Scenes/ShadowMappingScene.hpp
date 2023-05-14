@@ -11,7 +11,7 @@
 #include <Crisp/Lights/LightDescriptor.hpp>
 #include <Crisp/Renderer/Material.hpp>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 
 namespace crisp
 {

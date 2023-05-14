@@ -1,5 +1,5 @@
 
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Result.hpp>
 
 #include <gtest/gtest.h>
 

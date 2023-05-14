@@ -13,7 +13,7 @@
 #include <Crisp/Scenes/TestScene.hpp>
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp
 {

@@ -6,7 +6,7 @@
 #include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Result.hpp>
 #include <glfw/glfw3.h>
 
 using namespace crisp;

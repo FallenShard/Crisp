@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Result.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>

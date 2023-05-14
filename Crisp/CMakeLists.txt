@@ -3,7 +3,6 @@ set(CRISP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(Crisp/Animation)
 add_subdirectory(Crisp/Camera)
-add_subdirectory(Crisp/Common)
 add_subdirectory(Crisp/Core)
 add_subdirectory(Crisp/Geometry)
 add_subdirectory(Crisp/GUI)
@@ -30,3 +29,4 @@ set_target_properties(CrispMain PROPERTIES
 )
 target_link_libraries(CrispMain PRIVATE CrispApplication)
 copy_shared_libs(CrispMain lua freetype embree)
+target_sources(CrispMain PRIVATE Crisp.natvis)

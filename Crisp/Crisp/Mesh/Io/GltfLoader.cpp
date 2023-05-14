@@ -1,6 +1,6 @@
 #include <Crisp/Mesh/Io/GltfLOader.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
 #define TINYGLTF_IMPLEMENTATION

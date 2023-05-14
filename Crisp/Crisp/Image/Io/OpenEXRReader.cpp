@@ -17,7 +17,7 @@
 #define TINYEXR_IMPLEMENTATION
 #include <tinyexr/tinyexr.h>
 #pragma warning(pop)
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <iostream>
 #include <vector>

@@ -1,6 +1,6 @@
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 
 namespace crisp
 {

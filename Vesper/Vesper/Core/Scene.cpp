@@ -7,7 +7,7 @@
 #include "Samplers/Independent.hpp"
 #include "Shapes/Mesh.hpp"
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace
 {

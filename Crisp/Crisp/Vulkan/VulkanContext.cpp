@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>

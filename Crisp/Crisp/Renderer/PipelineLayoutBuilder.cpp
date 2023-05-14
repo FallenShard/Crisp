@@ -1,6 +1,6 @@
 #include "PipelineLayoutBuilder.hpp"
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/vulkan/VulkanDevice.hpp>

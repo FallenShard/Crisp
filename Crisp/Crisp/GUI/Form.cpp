@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <Crisp/Animation/PropertyAnimation.hpp>
 #include <Crisp/Gui/ControlGroup.hpp>

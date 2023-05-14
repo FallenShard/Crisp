@@ -48,14 +48,12 @@ private:
     };
 
     std::unique_ptr<FreeCameraController> m_cameraController;
-    std::unique_ptr<UniformBuffer> m_cameraBuffer;
 
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
     std::unique_ptr<Skybox> m_skybox;
 
     SsaoParams m_ssaoParams;
-    std::unique_ptr<UniformBuffer> m_sampleBuffer;
 
     std::unique_ptr<RenderNode> m_floorNode;
     std::unique_ptr<RenderNode> m_sponzaNode;

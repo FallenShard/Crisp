@@ -7,7 +7,7 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Utils/Enumerate.hpp>
 
 namespace crisp

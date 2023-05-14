@@ -1,6 +1,6 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
 namespace crisp

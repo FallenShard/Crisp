@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 

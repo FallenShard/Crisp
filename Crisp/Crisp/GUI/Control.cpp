@@ -2,7 +2,7 @@
 
 #include "Form.hpp"
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <sstream>
 
 namespace crisp::gui

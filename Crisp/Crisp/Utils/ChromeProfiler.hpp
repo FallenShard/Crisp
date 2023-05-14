@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-#include <Crisp/Common/Format.hpp>
+#include <Crisp/Core/Format.hpp>
 
 namespace crisp
 {

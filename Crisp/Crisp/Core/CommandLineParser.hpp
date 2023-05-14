@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/Common/Format.hpp>
-#include <Crisp/Common/HashMap.hpp>
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Format.hpp>
+#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Core/Result.hpp>
 #include <Crisp/Utils/StringUtils.hpp>
 
 #include <any>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 #include <vector>

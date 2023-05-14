@@ -1,6 +1,6 @@
 #include "RenderNode.hpp"
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
 namespace crisp

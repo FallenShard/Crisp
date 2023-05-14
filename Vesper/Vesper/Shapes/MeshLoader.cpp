@@ -2,7 +2,7 @@
 
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <fstream>
 

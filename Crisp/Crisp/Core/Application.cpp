@@ -6,7 +6,7 @@
 #include <Crisp/GUI/RenderSystem.hpp>
 #include <Crisp/GUI/StatusBar.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 

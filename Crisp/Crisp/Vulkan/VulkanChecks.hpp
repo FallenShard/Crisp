@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 

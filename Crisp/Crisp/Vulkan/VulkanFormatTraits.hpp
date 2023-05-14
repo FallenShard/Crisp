@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp

@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp
 {

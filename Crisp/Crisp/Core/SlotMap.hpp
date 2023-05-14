@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 
 namespace crisp
 {

@@ -1,6 +1,6 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 
 namespace crisp

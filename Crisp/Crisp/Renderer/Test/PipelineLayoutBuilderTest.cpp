@@ -9,7 +9,7 @@
 
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Result.hpp>
 
 #include <numeric>
 

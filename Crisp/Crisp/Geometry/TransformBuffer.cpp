@@ -1,6 +1,6 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 
 namespace crisp
 {

@@ -90,8 +90,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     m_cameraController = std::make_unique<FreeCameraController>(m_app->getWindow());
     /*m_cameraController->getCamera().setRotation(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
     m_cameraController->getCamera().setPosition(glm::vec3(0.0f, 2.0f, 1.0f));*/
-    m_cameraBuffer =
-        std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
     std::default_random_engine randomEngine(42);
     std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
@@ -134,8 +133,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     imageCache.addSampler("nearestClamp", createNearestClampSampler(m_renderer->getDevice()));
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice()));
 
-    m_sampleBuffer =
-        std::make_unique<UniformBuffer>(m_renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples);
+    m_resourceContext->createUniformBuffer("samples", sizeof(samples), BufferUpdatePolicy::Constant, samples);
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 2);
 
@@ -194,7 +192,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
     m_renderer->setSceneImageView(m_renderGraph->getNode("blurVPass").renderPass.get(), 0);
 
-    m_floorNode = std::make_unique<RenderNode>(*m_transformBuffer, TransformHandle{0, 0});
+    m_floorNode = std::make_unique<RenderNode>(*m_transformBuffer, m_transformBuffer->getNextIndex());
     m_floorNode->transformPack->M =
         glm::translate(glm::vec3(0.0f, -1.0f, 0.0f)) * glm::scale(glm::vec3(50.0f, 1.0f, 50.0f));
     m_floorNode->geometry = m_resourceContext->getGeometry("floorPos");
@@ -202,7 +200,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     m_floorNode->pass("mainPass").pipeline = colorPipeline;
     m_floorNode->pass("mainPass").setPushConstantView(pc);
 
-    m_sponzaNode = std::make_unique<RenderNode>(*m_transformBuffer, TransformHandle{1, 0});
+    m_sponzaNode = std::make_unique<RenderNode>(*m_transformBuffer, m_transformBuffer->getNextIndex());
     m_sponzaNode->transformPack->M = glm::mat4(1.0f);
     m_sponzaNode->geometry = m_resourceContext->getGeometry("sponza");
     m_sponzaNode->pass("mainPass").material = normalMaterial;
@@ -216,8 +214,8 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     ssaoNode->pass("ssaoPass")
         .material->writeDescriptor(
             0, 0, m_renderGraph->getRenderPass("mainPass"), 0, &imageCache.getSampler("nearestClamp"));
-    ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 1, *m_cameraBuffer);
-    ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 2, *m_sampleBuffer);
+    ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
+    ssaoNode->pass("ssaoPass").material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("samples"));
     ssaoNode->pass("ssaoPass")
         .material->writeDescriptor(0, 3, imageCache.getImageView("noise"), imageCache.getSampler("linearRepeat"));
     ssaoNode->pass("ssaoPass").setPushConstantView(m_ssaoParams);
@@ -262,7 +260,7 @@ void AmbientOcclusionScene::update(float dt)
 {
     m_cameraController->update(dt);
     const CameraParameters cameraParams = m_cameraController->getCameraParameters();
-    m_cameraBuffer->updateStagingBuffer(cameraParams);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
     auto pos = m_cameraController->getCamera().getPosition();
 
     m_transformBuffer->update(cameraParams.V, cameraParams.P);

@@ -1,7 +1,7 @@
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
 
-#include <Crisp/Common/Checks.hpp>
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Checks.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>

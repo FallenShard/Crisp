@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 namespace fmt

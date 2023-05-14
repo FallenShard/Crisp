@@ -54,7 +54,7 @@
 #include <Crisp/Renderer/ResourceContext.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <Crisp/Image/Io/Utils.hpp>
 

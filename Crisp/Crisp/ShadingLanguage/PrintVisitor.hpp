@@ -5,7 +5,7 @@
 #include <Crisp/ShadingLanguage/Token.hpp>
 #include <Crisp/ShadingLanguage/Visitor.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <fstream>
 #include <iostream>

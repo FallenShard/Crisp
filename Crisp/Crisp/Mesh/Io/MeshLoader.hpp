@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Result.hpp>
 #include <Crisp/Mesh/Io/GltfLoader.hpp>
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 #include <Crisp/Mesh/TriangleMesh.hpp>

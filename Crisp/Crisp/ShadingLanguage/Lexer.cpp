@@ -1,9 +1,9 @@
 #include <Crisp/ShadingLanguage/Lexer.hpp>
 
-#include <Crisp/Common/HashMap.hpp>
+#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <charconv>
 

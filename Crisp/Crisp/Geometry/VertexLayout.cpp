@@ -1,7 +1,7 @@
 #include <Crisp/Geometry/VertexLayout.hpp>
 
-#include <Crisp/Common/Logger.hpp>
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/Result.hpp>
 
 namespace crisp
 {

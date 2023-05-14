@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
-#include <Crisp/Common/Checks.hpp>
+#include <Crisp/Core/Checks.hpp>
 
 #ifdef __cplusplus
 extern "C"

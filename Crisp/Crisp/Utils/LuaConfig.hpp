@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <optional>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <lua/lua.hpp>
 
 namespace crisp

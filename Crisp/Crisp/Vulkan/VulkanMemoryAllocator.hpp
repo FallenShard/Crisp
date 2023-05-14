@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <Crisp/Common/Result.hpp>
+#include <Crisp/Core/Result.hpp>
 
 #include <cstdint>
 #include <memory>

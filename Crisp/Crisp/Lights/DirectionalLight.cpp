@@ -1,6 +1,6 @@
 #include <Crisp/Lights/DirectionalLight.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp
 {

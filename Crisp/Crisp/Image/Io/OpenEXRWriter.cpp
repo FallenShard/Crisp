@@ -1,6 +1,6 @@
 #include "OpenEXRWriter.hpp"
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 #include <tinyexr/tinyexr.h>
 

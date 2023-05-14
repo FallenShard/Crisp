@@ -1,6 +1,6 @@
 #include <Crisp/Renderer/IO/LuaPipelineBuilder.hpp>
 
-#include <Crisp/Common/Logger.hpp>
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/ShadingLanguage/Reflection.hpp>
