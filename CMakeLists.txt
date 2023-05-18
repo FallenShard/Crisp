@@ -118,38 +118,38 @@ FetchContent_Declare(googletest
 FetchContent_MakeAvailable(googletest)
 
 FetchContent_Declare(tinygltf
-  GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
-  GIT_TAG        v2.6.3
+    GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
+    GIT_TAG        v2.6.3
 )
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(tinygltf)
 
 FetchContent_Declare(MPMCQueue
-  GIT_REPOSITORY https://github.com/rigtorp/MPMCQueue.git
-  GIT_TAG        v1.0
+    GIT_REPOSITORY https://github.com/rigtorp/MPMCQueue.git
+    GIT_TAG        v1.0
 )
 FetchContent_MakeAvailable(MPMCQueue)
 
 # TODO: Configure to be dynamic.
 FetchContent_Declare(onetbb
-  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-  GIT_TAG        v2021.6.0
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+    GIT_TAG        v2021.6.0
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(onetbb)
 
 FetchContent_Declare(embree
-  GIT_REPOSITORY https://github.com/embree/embree.git
-  GIT_TAG        v3.13.5
+    GIT_REPOSITORY https://github.com/embree/embree.git
+    GIT_TAG        v3.13.5
 )
 set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
 set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(embree)
 
 FetchContent_Declare(vulkan
-  GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-  GIT_TAG        v1.3.246
+    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+    GIT_TAG        v1.3.246
 )
 FetchContent_MakeAvailable(vulkan)
 
