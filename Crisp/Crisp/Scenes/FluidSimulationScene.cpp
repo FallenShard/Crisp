@@ -56,7 +56,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
 
     m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
-    m_app->getWindow()->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+    m_app->getWindow().keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
     m_fluidGeometry = std::make_unique<Geometry>();
     m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("position"));
@@ -77,7 +77,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
 
 FluidSimulationScene::~FluidSimulationScene()
 {
-    m_app->getWindow()->keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+    m_app->getWindow().keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
     m_app->getForm()->remove("fluidSimulationPanel");
 }
 

@@ -672,7 +672,7 @@ void PbrScene::createPlane()
 
 void PbrScene::setupInput()
 {
-    m_connectionHandlers.emplace_back(m_app->getWindow()->keyPressed.subscribe(
+    m_connectionHandlers.emplace_back(m_app->getWindow().keyPressed.subscribe(
         [this](Key key, int)
         {
             switch (key)

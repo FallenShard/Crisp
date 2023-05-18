@@ -20,39 +20,46 @@ void logFps(double frameTime, double fps)
 {
     logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
 }
-} // namespace
 
-Application::Application(const ApplicationEnvironment& environment)
-    : m_accumulatedTime(0.0)
-    , m_accumulatedFrames(0.0)
-    , m_updatePeriod(1.0)
+Window createWindow(const char* title, const glm::ivec2& size)
 {
-    m_window = createWindow();
-    logger->trace("Window opened!");
+    const glm::ivec2 desktopRes = Window::getDesktopResolution();
+    return Window((desktopRes - size) / 2, size, title);
+}
 
+AssetPaths createAssetPaths(const ApplicationEnvironment& environment)
+{
     AssetPaths assetPaths{};
     assetPaths.shaderSourceDir = environment.getShaderSourceDirectory();
     assetPaths.resourceDir = environment.getResourcesPath();
     assetPaths.spvShaderDir = environment.getResourcesPath() / "Shaders";
+    return assetPaths;
+}
+
+} // namespace
+
+Application::Application(const ApplicationEnvironment& environment)
+    : m_window(createWindow(Title, DefaultWindowSize))
+{
     m_renderer = std::make_unique<Renderer>(
         environment.getRequiredVulkanInstanceExtensions(),
-        m_window->createSurfaceCallback(),
-        std::move(assetPaths),
+        m_window.createSurfaceCallback(),
+        createAssetPaths(environment),
         environment.getParameters().enableRayTracingExtension);
     logger->trace("Renderer created!");
 
-    m_window->resized.subscribe<&Application::onResize>(this);
-    m_window->minimized.subscribe<&Application::onMinimize>(this);
-    m_window->restored.subscribe<&Application::onRestore>(this);
+    m_window.resized.subscribe<&Application::onResize>(this);
+    m_window.minimized.subscribe<&Application::onMinimize>(this);
+    m_window.restored.subscribe<&Application::onRestore>(this);
 
     // Create and connect GUI with the mouse
     m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
     logger->trace("GUI created!");
-    m_window->mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
-    m_window->mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
-    m_window->mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
-    m_window->mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
-    m_window->mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
+    m_window.mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
+    m_window.mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
+    m_window.mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
+    m_window.mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
+    m_window.mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
 
     auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
     comboBox->setId("sceneComboBox");
@@ -75,7 +82,7 @@ Application::Application(const ApplicationEnvironment& environment)
     cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
     cb->setDisplayedItem(environment.getParameters().scene);
 
-    gui::initImGui(m_window->getHandle(), *m_renderer);
+    gui::initImGui(m_window.getHandle(), *m_renderer);
 }
 
 Application::~Application()
@@ -90,7 +97,7 @@ void Application::run()
 
     Timer<std::chrono::duration<double>> updateTimer;
     double timeSinceLastUpdate = 0.0;
-    while (!m_window->shouldClose())
+    while (!m_window.shouldClose())
     {
         const double timeDelta = updateTimer.restart();
         updateFrameStatistics(timeDelta);
@@ -100,7 +107,7 @@ void Application::run()
         if (m_isMinimized)
             continue;
 
-        m_guiForm->processGuiUpdates();
+        /*m_guiForm->processGuiUpdates();
 
         while (timeSinceLastUpdate > TimePerFrame)
         {
@@ -115,7 +122,7 @@ void Application::run()
         m_guiForm->draw();
         gui::renderImGuiFrame(*m_renderer);
 
-        m_renderer->drawFrame();
+        m_renderer->drawFrame();*/
     }
 
     m_renderer->finish();
@@ -123,7 +130,7 @@ void Application::run()
 
 void Application::close()
 {
-    m_window->close();
+    m_window.close();
 }
 
 void Application::onResize(int width, int height)
@@ -148,17 +155,9 @@ gui::Form* Application::getForm() const
     return m_guiForm.get();
 }
 
-Window* Application::getWindow() const
+Window& Application::getWindow()
 {
-    return m_window.get();
-}
-
-std::unique_ptr<Window> Application::createWindow()
-{
-    const glm::ivec2 desktopRes = Window::getDesktopResolution();
-    constexpr glm::ivec2 size(DefaultWindowWidth, DefaultWindowHeight);
-
-    return std::make_unique<Window>((desktopRes - size) / 2, size, Title);
+    return m_window;
 }
 
 void Application::updateFrameStatistics(double frameTime)

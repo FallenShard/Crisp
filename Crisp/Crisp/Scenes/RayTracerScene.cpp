@@ -136,7 +136,7 @@ void RayTracerScene::openSceneFile(const std::filesystem::path& filename)
     glm::ivec2 imageSize = m_rayTracer->getImageSize();
     m_image = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, m_renderer);
     m_imageData.resize(4 * imageSize.x * imageSize.y);
-    m_app->getWindow()->setTitle(filename.string());
+    m_app->getWindow().setTitle(filename.string());
 }
 
 void RayTracerScene::createGui()

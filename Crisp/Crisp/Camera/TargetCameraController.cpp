@@ -2,8 +2,8 @@
 
 namespace crisp
 {
-TargetCameraController::TargetCameraController(Window* window)
-    : m_window(window)
+TargetCameraController::TargetCameraController(Window& window)
+    : m_window(&window)
     , m_camera(m_window->getSize().x, m_window->getSize().y)
     , m_target(0.0f)
     , m_distance(10.0f)

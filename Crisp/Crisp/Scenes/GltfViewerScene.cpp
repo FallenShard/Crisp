@@ -476,24 +476,12 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
         skinningPass.preDispatchCallback =
             [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
-            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.buffer = gltfNode->geometry->getVertexBuffer()->getHandle();
-            barrier.offset = 0;
-            barrier.size = VK_WHOLE_SIZE;
-
-            vkCmdPipelineBarrier(
-                cmdBuffer.getHandle(),
+            cmdBuffer.insertBufferMemoryBarrier(
+                gltfNode->geometry->getVertexBuffer()->createSpan(),
                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                0,
-                0,
-                nullptr,
-                1,
-                &barrier,
-                0,
-                nullptr);
+                VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
             struct SkinningParams
             {
@@ -509,31 +497,19 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
             ForwardLightingPass,
             [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/)
             {
-                VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.buffer = gltfNode->geometry->getVertexBuffer()->getHandle();
-                barrier.offset = 0;
-                barrier.size = VK_WHOLE_SIZE;
-
-                vkCmdPipelineBarrier(
-                    cmdBuffer.getHandle(),
+                cmdBuffer.insertBufferMemoryBarrier(
+                    gltfNode->geometry->getVertexBuffer()->createSpan(),
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_ACCESS_SHADER_WRITE_BIT,
                     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-                    0,
-                    0,
-                    nullptr,
-                    1,
-                    &barrier,
-                    0,
-                    nullptr);
+                    VK_ACCESS_SHADER_READ_BIT);
             });
     }
 }
 
 void GltfViewerScene::setupInput()
 {
-    m_connectionHandlers.emplace_back(m_app->getWindow()->keyPressed.subscribe(
+    m_connectionHandlers.emplace_back(m_app->getWindow().keyPressed.subscribe(
         [this](Key key, int)
         {
             switch (key)

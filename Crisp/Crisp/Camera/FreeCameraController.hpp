@@ -10,7 +10,7 @@ namespace crisp
 class FreeCameraController
 {
 public:
-    FreeCameraController(Window* window);
+    FreeCameraController(Window& window);
     FreeCameraController(int32_t viewportWidth, int32_t viewportHeight);
     ~FreeCameraController();
 
@@ -34,7 +34,7 @@ public:
     ExtendedCameraParameters getExtendedCameraParameters() const;
 
 private:
-    Window* m_window;
+    Window* m_window{nullptr};
     Camera m_camera;
 
     float m_speed;

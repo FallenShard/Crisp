@@ -2,8 +2,8 @@
 
 namespace crisp
 {
-FreeCameraController::FreeCameraController(Window* window)
-    : m_window(window)
+FreeCameraController::FreeCameraController(Window& window)
+    : m_window(&window)
     , m_camera(m_window->getSize().x, m_window->getSize().y)
     , m_speed(1.5f)
     , m_angularSpeed(glm::radians(90.0f))
@@ -21,8 +21,7 @@ FreeCameraController::FreeCameraController(Window* window)
 }
 
 FreeCameraController::FreeCameraController(const int32_t viewportWidth, const int32_t viewportHeight)
-    : m_window(nullptr)
-    , m_camera(viewportWidth, viewportHeight)
+    : m_camera(viewportWidth, viewportHeight)
     , m_speed(1.5f)
     , m_angularSpeed(glm::radians(90.0f))
     , m_yaw(0.0f)

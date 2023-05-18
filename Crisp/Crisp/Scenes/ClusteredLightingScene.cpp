@@ -325,7 +325,7 @@ void ClusteredLightingScene::createPlane()
 
 void ClusteredLightingScene::setupInput()
 {
-    m_app->getWindow()->keyPressed += [this](Key key, int)
+    m_app->getWindow().keyPressed += [this](Key key, int)
     {
         switch (key)
         {

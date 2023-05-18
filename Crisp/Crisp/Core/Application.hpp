@@ -17,8 +17,9 @@ class Application
 {
 public:
     static constexpr const char* Title = "Crisp";
-    static constexpr int DefaultWindowWidth = 1280;
-    static constexpr int DefaultWindowHeight = 720;
+    static constexpr int32_t DefaultWindowWidth = 1280;
+    static constexpr int32_t DefaultWindowHeight = 720;
+    static constexpr glm::ivec2 DefaultWindowSize{DefaultWindowWidth, DefaultWindowHeight};
 
     static constexpr uint32_t DesiredFramesPerSecond = 144;
     static constexpr double TimePerFrame = 1.0 / DesiredFramesPerSecond;
@@ -37,27 +38,26 @@ public:
     void onResize(int width, int height);
 
     gui::Form* getForm() const;
-    Window* getWindow() const;
+    Window& getWindow();
     SceneContainer* getSceneContainer() const;
 
     Event<double, double> onFrameTimeUpdated;
 
 private:
-    std::unique_ptr<Window> createWindow();
     void updateFrameStatistics(double frameTime);
     void onMinimize();
     void onRestore();
 
-    std::unique_ptr<Window> m_window;
+    Window m_window;
     std::unique_ptr<Renderer> m_renderer;
 
     std::unique_ptr<gui::Form> m_guiForm;
 
     std::unique_ptr<SceneContainer> m_sceneContainer;
 
-    double m_accumulatedTime;
-    double m_accumulatedFrames;
-    double m_updatePeriod;
+    double m_accumulatedTime{0.0};
+    double m_accumulatedFrames{0.0};
+    double m_updatePeriod{1.0};
 
     bool m_isMinimized{false};
 };

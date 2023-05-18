@@ -10,7 +10,7 @@ namespace crisp
 class TargetCameraController
 {
 public:
-    TargetCameraController(Window* window);
+    TargetCameraController(Window& window);
     ~TargetCameraController();
 
     void setPanSpeed(float panSpeed);

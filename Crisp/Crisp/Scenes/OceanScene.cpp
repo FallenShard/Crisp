@@ -178,7 +178,7 @@ bool paused = false;
 OceanScene::OceanScene(Renderer* renderer, Application* app)
     : AbstractScene(app, renderer)
 {
-    m_app->getWindow()->keyPressed += [this](Key key, int /*modifiers*/)
+    m_app->getWindow().keyPressed += [this](Key key, int /*modifiers*/)
     {
         if (key == Key::Space)
             paused = !paused;
