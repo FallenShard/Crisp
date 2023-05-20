@@ -1,12 +1,10 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanQueue;
-
 class VulkanCommandPool final : public VulkanResource<VkCommandPool>
 {
 public:

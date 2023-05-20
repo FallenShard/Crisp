@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanCommandPool.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
@@ -7,10 +10,6 @@
 
 namespace crisp
 {
-class VulkanBuffer;
-class VulkanDevice;
-class VulkanCommandPool;
-
 class VulkanAccelerationStructure : public VulkanResource<VkAccelerationStructureKHR>
 {
 public:

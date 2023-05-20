@@ -1,10 +1,7 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
-
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Vulkan/VulkanChecks.hpp>
 
 namespace crisp
 {
@@ -15,7 +12,7 @@ auto logger = createLoggerMt("VulkanDevice");
 
 VulkanDevice::VulkanDevice(
     const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
-    : m_handle(physicalDevice.createLogicalDevice(queueConfig))
+    : m_handle(createLogicalDeviceHandle(physicalDevice, queueConfig))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
     , m_generalQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, queueConfig.queueIdentifiers.at(0)))
     , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, queueConfig.queueIdentifiers.at(1)))
@@ -153,5 +150,29 @@ void VulkanDevice::flushDescriptorUpdates()
     m_descriptorWrites.clear();
     m_imageInfos.clear();
     m_bufferInfos.clear();
+}
+
+VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config)
+{
+    std::vector<const char*> enabledExtensions;
+    std::ranges::transform(
+        physicalDevice.getDeviceExtensions(),
+        std::back_inserter(enabledExtensions),
+        [](const std::string& ext)
+        {
+            return ext.c_str();
+        });
+
+    VkDeviceCreateInfo createInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+    createInfo.pNext = &physicalDevice.getFeatures2();
+    createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.createInfos.size());
+    createInfo.pQueueCreateInfos = config.createInfos.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+
+    VkDevice device(VK_NULL_HANDLE);
+    VK_CHECK(vkCreateDevice(physicalDevice.getHandle(), &createInfo, nullptr, &device));
+    loadVulkanDeviceFunctions(device);
+    return device;
 }
 } // namespace crisp

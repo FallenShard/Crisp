@@ -1,12 +1,8 @@
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
 #include <Crisp/Vulkan/VulkanChecks.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-#include <algorithm>
 #include <array>
 
 namespace crisp

@@ -1,14 +1,12 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace crisp
 {
-class VulkanDevice;
-
 class DescriptorSetAllocator
 {
 public:

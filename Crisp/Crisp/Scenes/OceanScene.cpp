@@ -232,7 +232,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
         for (uint32_t i = 0; i < 2; ++i)
         {
             const std::string viewName{fmt::format("{}View{}", name, i)};
-            imageCache.addImageView(viewName, image->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
+            imageCache.addImageView(viewName, createView(*image, VK_IMAGE_VIEW_TYPE_2D, i, 1));
         }
         imageCache.addImage(name, std::move(image));
     };
@@ -242,7 +242,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     addImage(std::move(normalXImage), "normalX");
     addImage(std::move(normalZImage), "normalZ");
 
-    imageCache.addImageView("randImageView", spectrumImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+    imageCache.addImageView("randImageView", createView(*spectrumImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     imageCache.addImage("randImage", std::move(spectrumImage));
 
     imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), MaxAnisotropy));
@@ -413,15 +413,15 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     auto equirectMap =
         createVulkanImage(*m_renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
     auto [cubeMap, cubeMapView] =
-        convertEquirectToCubeMap(m_renderer, equirectMap->createView(VK_IMAGE_VIEW_TYPE_2D), 1024);
+        convertEquirectToCubeMap(m_renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D), 1024);
 
     auto diffEnvMap =
         createVulkanCubeMap(*m_renderer, {iblData.diffuseIrradianceCubeMap}, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto diffEnvView = diffEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
+    auto diffEnvView = createView(*diffEnvMap, VK_IMAGE_VIEW_TYPE_CUBE);
 
     auto specEnvMap =
         createVulkanCubeMap(*m_renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto specEnvView = specEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
+    auto specEnvView = createView(*specEnvMap, VK_IMAGE_VIEW_TYPE_CUBE);
     imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
     imageCache.addImageWithView("diffEnvMap", std::move(diffEnvMap), std::move(diffEnvView));
     imageCache.addImageWithView("specEnvMap", std::move(specEnvMap), std::move(specEnvView));

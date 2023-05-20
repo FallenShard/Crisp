@@ -58,7 +58,7 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
                     VK_PIPELINE_STAGE_TRANSFER_BIT,
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             });
-        m_imageViews.push_back(m_image->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
+        m_imageViews.push_back(createView(*m_image, VK_IMAGE_VIEW_TYPE_2D, i, 1));
     }
     renderer->flushResourceUpdates(true);
 

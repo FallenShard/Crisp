@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
@@ -13,8 +14,6 @@
 
 namespace crisp
 {
-class VulkanDevice;
-
 enum class PipelineDynamicState
 {
     None = 0x00,

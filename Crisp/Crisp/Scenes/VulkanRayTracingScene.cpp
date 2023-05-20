@@ -145,7 +145,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* ap
     std::array<VkImageView, RendererConfig::VirtualFrameCount> rtImageViewHandles;
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
     {
-        m_rtImageViews.emplace_back(m_rtImage->createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+        m_rtImageViews.emplace_back(createView(*m_rtImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
         rtImageViewHandles[i] = m_rtImageViews.back()->getHandle();
     }
 

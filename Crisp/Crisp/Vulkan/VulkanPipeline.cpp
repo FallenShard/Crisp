@@ -1,7 +1,5 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-
 namespace crisp
 {
 VulkanPipeline::VulkanPipeline(

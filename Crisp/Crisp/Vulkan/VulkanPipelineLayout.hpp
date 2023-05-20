@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 #include <memory>
@@ -7,9 +9,6 @@
 
 namespace crisp
 {
-class VulkanDevice;
-class DescriptorSetAllocator;
-
 struct DescriptorSetLayout
 {
     VkDescriptorSetLayout handle;

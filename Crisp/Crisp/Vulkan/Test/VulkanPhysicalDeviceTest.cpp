@@ -78,7 +78,7 @@ TEST_F(VulkanPhysicalDeviceTest, CreateLogicalDevice)
     const auto queueConfig = createDefaultQueueConfiguration(*deps.context, physicalDevice);
     EXPECT_EQ(queueConfig.createInfos.size(), 3);
 
-    const VkDevice device = physicalDevice.createLogicalDevice(queueConfig);
+    const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
     ASSERT_NE(device, VK_NULL_HANDLE);
     vkDestroyDevice(device, nullptr);
 }
@@ -93,7 +93,7 @@ TEST_F(VulkanPhysicalDeviceTest, MemoryTypes)
 {
     const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
     const auto queueConfig = createDefaultQueueConfiguration(*deps.context, physicalDevice);
-    const VkDevice device = physicalDevice.createLogicalDevice(queueConfig);
+    const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
 
     ASSERT_TRUE(physicalDevice.findStagingBufferMemoryType(device).hasValue());
     ASSERT_TRUE(physicalDevice.findDeviceBufferMemoryType(device).hasValue());

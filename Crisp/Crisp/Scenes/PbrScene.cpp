@@ -195,12 +195,18 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addImageView(
         "csmFrame0",
-        m_resourceContext->renderTargetCache.get("ShadowMap")
-            ->image->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, CascadeCount));
+        createView(
+            *m_resourceContext->renderTargetCache.get("ShadowMap")->image,
+            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+            0,
+            CascadeCount));
     imageCache.addImageView(
         "csmFrame1",
-        m_resourceContext->renderTargetCache.get("ShadowMap")
-            ->image->createView(VK_IMAGE_VIEW_TYPE_2D_ARRAY, CascadeCount, CascadeCount));
+        createView(
+            *m_resourceContext->renderTargetCache.get("ShadowMap")->image,
+            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+            CascadeCount,
+            CascadeCount));
 
     // 1. Define the render pass for execution of the post processing effect.
     const std::string myPostProcessName{"redChannel"};
@@ -561,15 +567,15 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName)
     auto equirectMap =
         createVulkanImage(*m_renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
     auto [cubeMap, cubeMapView] =
-        convertEquirectToCubeMap(m_renderer, equirectMap->createView(VK_IMAGE_VIEW_TYPE_2D), 1024);
+        convertEquirectToCubeMap(m_renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D), 1024);
 
     auto diffEnvMap =
         createVulkanCubeMap(*m_renderer, {iblData.diffuseIrradianceCubeMap}, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto diffEnvView = diffEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
+    auto diffEnvView = createView(*diffEnvMap, VK_IMAGE_VIEW_TYPE_CUBE);
 
     auto specEnvMap =
         createVulkanCubeMap(*m_renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto specEnvView = specEnvMap->createView(VK_IMAGE_VIEW_TYPE_CUBE);
+    auto specEnvView = createView(*specEnvMap, VK_IMAGE_VIEW_TYPE_CUBE);
 
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));

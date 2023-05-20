@@ -1,17 +1,19 @@
 #include <Crisp/vulkan/VulkanImageView.hpp>
 
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-#include <Crisp/vulkan/VulkanSampler.hpp>
-
 namespace crisp
 {
-VulkanImageView::VulkanImageView(const VulkanDevice& device, VulkanImage& image, VkImageViewType type,
-    uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
+VulkanImageView::VulkanImageView(
+    const VulkanDevice& device,
+    VulkanImage& image,
+    VkImageViewType type,
+    uint32_t baseLayer,
+    uint32_t numLayers,
+    uint32_t baseMipLevel,
+    uint32_t mipLevels)
     : VulkanResource(device.getResourceDeallocator())
     , m_image(image)
 {
-    VkImageViewCreateInfo viewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    VkImageViewCreateInfo viewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     viewInfo.image = image.getHandle();
     viewInfo.viewType = type;
     viewInfo.format = image.getFormat();
@@ -32,6 +34,29 @@ VulkanImageView::VulkanImageView(const VulkanDevice& device, VulkanImage& image,
 
 VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const
 {
-    return { sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout };
+    return {sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout};
 }
+
+std::unique_ptr<VulkanImageView> createView(VulkanImage& image, VkImageViewType type)
+{
+    return std::make_unique<VulkanImageView>(
+        image.getDevice(), image, type, 0, image.getLayerCount(), 0, image.getMipLevels());
+}
+
+std::unique_ptr<VulkanImageView> createView(
+    VulkanImage& image,
+    VkImageViewType type,
+    uint32_t baseLayer,
+    uint32_t numLayers,
+    uint32_t baseMipLevel,
+    uint32_t mipLevels)
+{
+    if (type == VK_IMAGE_VIEW_TYPE_CUBE)
+    {
+        numLayers = 6;
+    }
+    return std::make_unique<VulkanImageView>(
+        image.getDevice(), image, type, baseLayer, numLayers, baseMipLevel, mipLevels);
+}
+
 } // namespace crisp

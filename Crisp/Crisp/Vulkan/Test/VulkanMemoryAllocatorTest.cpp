@@ -30,7 +30,7 @@ auto createMemoryAllocator()
             std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false)};
         VulkanPhysicalDevice physicalDevice{context->selectPhysicalDevice({}).unwrap()};
         UniqueDeviceWrapper device{
-            physicalDevice.createLogicalDevice(createDefaultQueueConfiguration(*context, physicalDevice))};
+            createLogicalDeviceHandle(physicalDevice, createDefaultQueueConfiguration(*context, physicalDevice))};
     } dependencies;
 
     VulkanMemoryAllocator memoryAllocator(dependencies.physicalDevice, dependencies.device);

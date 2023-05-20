@@ -385,7 +385,7 @@ void ShadowMappingScene::createCommonTextures()
         *m_renderer,
         loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipOnLoad::Y).unwrap(),
         VK_FORMAT_R32G32B32A32_SFLOAT);
-    std::shared_ptr<VulkanImageView> envRefMapView = envRefMap->createView(VK_IMAGE_VIEW_TYPE_2D);
+    std::shared_ptr<VulkanImageView> envRefMapView = createView(*envRefMap, VK_IMAGE_VIEW_TYPE_2D);
 
     auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
     setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);

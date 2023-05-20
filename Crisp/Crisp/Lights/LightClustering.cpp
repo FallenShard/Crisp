@@ -152,7 +152,7 @@ void LightClustering::configure(
         VkExtent3D{static_cast<uint32_t>(m_gridSize.x), static_cast<uint32_t>(m_gridSize.y), 1u});
 
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
-        m_lightGridViews.emplace_back(m_lightGrid->createView(VK_IMAGE_VIEW_TYPE_2D, i, 1));
+        m_lightGridViews.emplace_back(createView(*m_lightGrid, VK_IMAGE_VIEW_TYPE_2D, i, 1));
 
     renderer->enqueueResourceUpdate(
         [this](VkCommandBuffer cmdBuffer)

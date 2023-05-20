@@ -1,9 +1,5 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 
@@ -376,22 +372,6 @@ void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, 
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 }
 
-std::unique_ptr<VulkanImageView> VulkanImage::createView(VkImageViewType type)
-{
-    return std::make_unique<VulkanImageView>(
-        *m_device, *this, type, 0, m_createInfo.arrayLayers, 0, m_createInfo.mipLevels);
-}
-
-std::unique_ptr<VulkanImageView> VulkanImage::createView(
-    VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels)
-{
-    if (type == VK_IMAGE_VIEW_TYPE_CUBE)
-    {
-        numLayers = 6;
-    }
-    return std::make_unique<VulkanImageView>(*m_device, *this, type, baseLayer, numLayers, baseMipLevel, mipLevels);
-}
-
 uint32_t VulkanImage::getMipLevels() const
 {
     return m_createInfo.mipLevels;
@@ -415,6 +395,16 @@ VkImageAspectFlags VulkanImage::getAspectMask() const
 VkFormat VulkanImage::getFormat() const
 {
     return m_createInfo.format;
+}
+
+uint32_t VulkanImage::getLayerCount() const
+{
+    return m_createInfo.arrayLayers;
+}
+
+const VulkanDevice& VulkanImage::getDevice() const
+{
+    return *m_device;
 }
 
 bool VulkanImage::matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const

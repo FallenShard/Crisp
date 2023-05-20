@@ -1,11 +1,10 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
 namespace crisp
 {
-class VulkanPhysicalDevice;
-
 class VulkanQueue
 {
 public:

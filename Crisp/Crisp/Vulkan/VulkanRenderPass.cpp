@@ -1,12 +1,5 @@
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanEnumToString.hpp>
-#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanSwapChain.hpp>
-
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Utils/Enumerate.hpp>
 
@@ -177,7 +170,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
                 const VkImageViewType type =
                     framebufferLayerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                 frameAttachmentViews[attachmentIdx] =
-                    renderTarget.image->createView(type, frameDepthOffset, framebufferLayerCount);
+                    createView(*renderTarget.image, type, frameDepthOffset, framebufferLayerCount);
             }
             else
             {
@@ -188,8 +181,13 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
                 const uint32_t firstLayer = frameLayerOffset + mapping.subresource.baseArrayLayer;
                 const uint32_t layerCount = mapping.subresource.layerCount;
                 const VkImageViewType type = layerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-                frameAttachmentViews[attachmentIdx] = renderTarget.image->createView(
-                    type, firstLayer, layerCount, mapping.subresource.baseMipLevel, mapping.subresource.levelCount);
+                frameAttachmentViews[attachmentIdx] = createView(
+                    *renderTarget.image,
+                    type,
+                    firstLayer,
+                    layerCount,
+                    mapping.subresource.baseMipLevel,
+                    mapping.subresource.levelCount);
             }
 
             attachmentViewHandles[attachmentIdx] = frameAttachmentViews[attachmentIdx]->getHandle();

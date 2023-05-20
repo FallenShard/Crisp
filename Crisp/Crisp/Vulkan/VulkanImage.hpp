@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
@@ -8,10 +10,6 @@
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanBuffer;
-class VulkanImageView;
-
 class VulkanImage : public VulkanResource<VkImage>
 {
 public:
@@ -64,19 +62,14 @@ public:
     void buildMipmaps(VkCommandBuffer commandBuffer);
     void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t layer);
 
-    std::unique_ptr<VulkanImageView> createView(VkImageViewType type);
-    std::unique_ptr<VulkanImageView> createView(
-        VkImageViewType type,
-        uint32_t baseLayer,
-        uint32_t numLayers,
-        uint32_t baseMipLevel = 0,
-        uint32_t mipLevels = 1);
-
     uint32_t getMipLevels() const;
     uint32_t getWidth() const;
     uint32_t getHeight() const;
     VkImageAspectFlags getAspectMask() const;
     VkFormat getFormat() const;
+    uint32_t getLayerCount() const;
+
+    const VulkanDevice& getDevice() const;
 
 private:
     bool matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const;

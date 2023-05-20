@@ -1,10 +1,8 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
-
 #include <Crisp/Core/HashMap.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
 namespace crisp
 {
@@ -18,25 +16,6 @@ struct DeferredDestructor
     void* vulkanHandle;
     VulkanDestructorCallback destructorCallback;
 };
-
-namespace detail
-{
-template <typename VulkanHandleType>
-auto selectDestroyFunc()
-{
-    if constexpr (std::is_same_v<VulkanHandleType, VkImageView>)
-        return vkDestroyImageView;
-    else if constexpr (std::is_same_v<VulkanHandleType, VkBuffer>)
-        return vkDestroyBuffer;
-    else
-    {
-        static_assert("Invalid VulkanHandle");
-        return []()
-        {
-        };
-    }
-}
-} // namespace detail
 
 class VulkanResourceDeallocator
 {
@@ -63,7 +42,7 @@ public:
              handle,
              [](void* handle, VulkanResourceDeallocator* deallocator)
              {
-                 detail::selectDestroyFunc<VulkanHandleType>()(
+                 getDestroyFunc<VulkanHandleType>()(
                      deallocator->getDeviceHandle(), static_cast<VulkanHandleType>(handle), nullptr);
              }});
     }

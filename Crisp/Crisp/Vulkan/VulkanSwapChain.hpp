@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 #include <Crisp/Core/Result.hpp>
@@ -8,9 +10,6 @@
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanPhysicalDevice;
-
 enum class TripleBuffering
 {
     Enabled,

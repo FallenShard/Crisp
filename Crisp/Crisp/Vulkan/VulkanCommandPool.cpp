@@ -1,7 +1,5 @@
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-
 namespace crisp
 {
 VulkanCommandPool::VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator)
@@ -9,10 +7,10 @@ VulkanCommandPool::VulkanCommandPool(VkCommandPool handle, VulkanResourceDealloc
 {
 }
 
-VkCommandBuffer VulkanCommandPool::allocateCommandBuffer(const VulkanDevice& device,
-    const VkCommandBufferLevel cmdBufferLevel) const
+VkCommandBuffer VulkanCommandPool::allocateCommandBuffer(
+    const VulkanDevice& device, const VkCommandBufferLevel cmdBufferLevel) const
 {
-    VkCommandBufferAllocateInfo cmdBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    VkCommandBufferAllocateInfo cmdBufferAllocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     cmdBufferAllocInfo.commandPool = m_handle;
     cmdBufferAllocInfo.level = cmdBufferLevel;
     cmdBufferAllocInfo.commandBufferCount = 1;

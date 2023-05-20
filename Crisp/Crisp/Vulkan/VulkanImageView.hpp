@@ -1,15 +1,14 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanResource.hpp>
+#include <Crisp/vulkan/VulkanDevice.hpp>
+#include <Crisp/vulkan/VulkanImage.hpp>
+#include <Crisp/vulkan/VulkanSampler.hpp>
 
 #include <memory>
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanImage;
-class VulkanSampler;
-
 class VulkanImageView : public VulkanResource<VkImageView>
 {
 public:
@@ -38,4 +37,14 @@ private:
     VulkanImage& m_image;
     VkImageSubresourceRange m_subresourceRange;
 };
+
+std::unique_ptr<VulkanImageView> createView(VulkanImage& image, VkImageViewType type);
+std::unique_ptr<VulkanImageView> createView(
+    VulkanImage& image,
+    VkImageViewType type,
+    uint32_t baseLayer,
+    uint32_t numLayers,
+    uint32_t baseMipLevel = 0,
+    uint32_t mipLevels = 1);
+
 } // namespace crisp

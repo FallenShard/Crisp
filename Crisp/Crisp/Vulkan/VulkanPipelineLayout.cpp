@@ -1,9 +1,5 @@
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
-#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
-
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-
 #include <Crisp/Utils/Enumerate.hpp>
 
 namespace crisp

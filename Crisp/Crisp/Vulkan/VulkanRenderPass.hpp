@@ -1,6 +1,9 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 #include <memory>
@@ -8,10 +11,6 @@
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanImageView;
-class VulkanFramebuffer;
-
 struct RenderTargetInfo
 {
     // Required to set correct initial layout.

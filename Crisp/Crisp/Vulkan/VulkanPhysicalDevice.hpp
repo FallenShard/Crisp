@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/Core/Result.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+
+#include <Crisp/Core/Result.hpp>
 
 #include <optional>
 #include <string>
@@ -10,8 +10,6 @@
 
 namespace crisp
 {
-struct VulkanQueueConfiguration;
-
 struct QueueFamilyIndices
 {
     std::optional<uint32_t> graphicsFamily;
@@ -87,7 +85,6 @@ public:
     std::vector<VkQueueFamilyProperties> queryQueueFamilyProperties() const;
 
     void setDeviceExtensions(std::vector<std::string>&& deviceExtensions);
-    VkDevice createLogicalDevice(const VulkanQueueConfiguration& config) const;
 
     Result<uint32_t> findMemoryType(uint32_t memoryTypeMask, VkMemoryPropertyFlags properties) const;
     Result<uint32_t> findMemoryType(VkMemoryPropertyFlags properties) const;
@@ -100,6 +97,8 @@ public:
     Result<VkFormat> findSupportedDepthFormat() const;
 
     VkFormatProperties getFormatProperties(VkFormat format) const;
+
+    const std::vector<std::string>& getDeviceExtensions() const;
 
 private:
     void initFeaturesAndProperties();

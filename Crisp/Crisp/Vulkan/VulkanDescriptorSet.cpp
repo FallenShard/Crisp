@@ -1,7 +1,5 @@
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
 
-#include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
-
 namespace crisp
 {
 VulkanDescriptorSet::VulkanDescriptorSet(uint32_t index, const VulkanPipelineLayout* pipelineLayout)

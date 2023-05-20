@@ -2,9 +2,8 @@
 
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
-#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
 namespace crisp
 {

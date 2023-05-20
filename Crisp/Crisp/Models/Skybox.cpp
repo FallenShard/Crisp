@@ -50,7 +50,7 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
     for (uint32_t i = 0; i < NumCubeMapFaces; ++i)
         fillImageLayer(*m_cubeMap, *renderer, cubeMapImages[i].getData(), width * height * 4, i);
 
-    m_cubeMapView = m_cubeMap->createView(VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
+    m_cubeMapView = createView(*m_cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
     m_sampler = createLinearClampSampler(renderer->getDevice());
     m_pipeline = renderer->createPipelineFromLua("Skybox.json", renderPass, 0);
     updateRenderNode(*m_sampler, *m_cubeMapView);

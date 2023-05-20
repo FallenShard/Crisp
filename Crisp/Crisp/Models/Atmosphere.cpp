@@ -268,9 +268,9 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageCache.addImage("multiScatTex", std::make_unique<VulkanImage>(renderer.getDevice(), createInfo));
     imageCache.addImageView(
-        "multiScatTexView0", imageCache.getImage("multiScatTex").createView(VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+        "multiScatTexView0", createView(imageCache.getImage("multiScatTex"), VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     imageCache.addImageView(
-        "multiScatTexView1", imageCache.getImage("multiScatTex").createView(VK_IMAGE_VIEW_TYPE_2D, 1, 1));
+        "multiScatTexView1", createView(imageCache.getImage("multiScatTex"), VK_IMAGE_VIEW_TYPE_2D, 1, 1));
 
     renderer.enqueueResourceUpdate(
         [tex = &imageCache.getImage("multiScatTex")](VkCommandBuffer cmdBuffer)

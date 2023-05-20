@@ -1,9 +1,5 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-
 namespace crisp
 {
 VulkanQueue::VulkanQueue(

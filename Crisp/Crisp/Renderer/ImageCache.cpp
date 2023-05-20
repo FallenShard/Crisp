@@ -17,7 +17,7 @@ void ImageCache::addImageWithView(
     auto& cachedView = m_imageViews[key];
     if (!cachedView)
     {
-        cachedView = image->createView(imageViewType);
+        cachedView = createView(*image, imageViewType);
     }
 
     auto& cachedImage = m_images[key];

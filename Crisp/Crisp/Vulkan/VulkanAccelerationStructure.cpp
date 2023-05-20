@@ -1,9 +1,5 @@
 #include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanGetDeviceProc.hpp>
-
 namespace crisp
 {
 

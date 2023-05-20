@@ -1,7 +1,7 @@
 #include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Vulkan/VulkanChecks.hpp>
 
 #include <numeric>
 
@@ -154,10 +154,7 @@ VkDescriptorSet DescriptorSetAllocator::DescriptorPool::allocate(
     descSetInfo.pSetLayouts = &setLayout;
 
     VkDescriptorSet descSet;
-    vkAllocateDescriptorSets(device, &descSetInfo, &descSet);
-    if (descSet == 0)
-        spdlog::error("Descriptor set is nullptr!");
-
+    VK_CHECK(vkAllocateDescriptorSets(device, &descSetInfo, &descSet));
     return descSet;
 }
 } // namespace crisp

@@ -3,7 +3,6 @@
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
 #include <unordered_set>
 

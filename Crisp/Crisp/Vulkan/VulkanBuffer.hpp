@@ -1,13 +1,12 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanBufferView.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp
 {
-class VulkanDevice;
-
 class VulkanBuffer : public VulkanResource<VkBuffer>
 {
 public:

@@ -1,10 +1,6 @@
 #include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
 
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-
 #include <Crisp/Core/Logger.hpp>
-
-#include <stdexcept>
 
 namespace crisp
 {

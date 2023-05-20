@@ -2,6 +2,7 @@
 
 #include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
 namespace crisp
 {

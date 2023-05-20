@@ -1,11 +1,10 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
 namespace crisp
 {
-class VulkanPipelineLayout;
-
 class VulkanDescriptorSet
 {
 public:

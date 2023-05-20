@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
 #include <Crisp/Core/Result.hpp>
 
@@ -9,8 +10,6 @@
 
 namespace crisp
 {
-class VulkanPhysicalDevice;
-
 struct DeviceMemoryMetrics
 {
     uint64_t bufferMemorySize;

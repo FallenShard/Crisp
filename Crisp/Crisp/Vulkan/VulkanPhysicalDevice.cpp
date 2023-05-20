@@ -1,8 +1,8 @@
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Vulkan/VulkanChecks.hpp>
 
 #include <ranges>
 
@@ -222,31 +222,6 @@ void VulkanPhysicalDevice::setDeviceExtensions(std::vector<std::string>&& device
     m_deviceExtensions = std::move(deviceExtensions);
 }
 
-VkDevice VulkanPhysicalDevice::createLogicalDevice(const VulkanQueueConfiguration& config) const
-{
-    std::vector<const char*> enabledExtensions;
-    std::ranges::transform(
-        m_deviceExtensions,
-        std::back_inserter(enabledExtensions),
-        [](const std::string& ext)
-        {
-            return ext.c_str();
-        });
-
-    VkDeviceCreateInfo createInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-    createInfo.pNext = &m_features;
-    // createInfo.pEnabledFeatures        = &m_features.features;
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.createInfos.size());
-    createInfo.pQueueCreateInfos = config.createInfos.data();
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-
-    VkDevice device(VK_NULL_HANDLE);
-    VK_CHECK(vkCreateDevice(m_handle, &createInfo, nullptr, &device));
-    loadVulkanDeviceFunctions(device);
-    return device;
-}
-
 Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(
     const std::vector<VkFormat>& candidates, const VkImageTiling tiling, const VkFormatFeatureFlags features) const
 {
@@ -278,6 +253,11 @@ VkFormatProperties VulkanPhysicalDevice::getFormatProperties(VkFormat format) co
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(m_handle, format, &props);
     return props;
+}
+
+const std::vector<std::string>& VulkanPhysicalDevice::getDeviceExtensions() const
+{
+    return m_deviceExtensions;
 }
 
 void VulkanPhysicalDevice::initFeaturesAndProperties()

@@ -1,19 +1,17 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanBufferView.hpp>
+#include <Crisp/Vulkan/VulkanCommandPool.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <Crisp/Math/Headers.hpp>
-
-#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <span>
 #include <vector>
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanCommandPool;
-
 struct MemoryRegion
 {
     void* ptr;

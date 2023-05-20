@@ -1,5 +1,4 @@
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp
 {

@@ -1,9 +1,8 @@
 #pragma once
 
 #include <Crisp/Core/Result.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
 #include <functional>
 #include <vector>

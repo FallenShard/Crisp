@@ -1,11 +1,10 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp
 {
-class VulkanDevice;
-
 class VulkanFramebuffer : public VulkanResource<VkFramebuffer>
 {
 public:

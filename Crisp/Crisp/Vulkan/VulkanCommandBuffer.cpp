@@ -1,7 +1,4 @@
-#include "VulkanCommandBuffer.hpp"
-
-#include "VulkanCommandPool.hpp"
-#include "VulkanDevice.hpp"
+#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 
 namespace crisp
 {

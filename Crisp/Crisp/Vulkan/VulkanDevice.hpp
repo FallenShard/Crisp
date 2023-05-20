@@ -1,16 +1,14 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
-#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/VulkanQueue.hpp>
+#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
+#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
 namespace crisp
 {
-class VulkanPhysicalDevice;
-struct VulkanQueueConfiguration;
-class VulkanQueue;
-
 class VulkanDevice
 {
 public:
@@ -91,4 +89,7 @@ private:
 
     std::unique_ptr<VulkanResourceDeallocator> m_resourceDeallocator;
 };
+
+VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config);
+
 } // namespace crisp
