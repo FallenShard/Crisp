@@ -41,7 +41,7 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     renderTargets[0]->info.format = swapChain.getImageFormat();
     renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
     renderTargets[0]->info.isSwapChainDependent = true;
-    renderTargets[0]->info.clearValue.color = {0.1f, 0.5f, 0.0f, 1.0f};
+    renderTargets[0]->info.clearValue.color = {0.5f, 0.0f, 1.0f, 1.0f};
 
     return RenderPassBuilder()
         .setAllocateAttachmentViews(false)
@@ -63,11 +63,25 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
         .create(device, swapChain.getExtent(), std::move(renderTargets));
 }
 
+std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer)
+{
+    // create vertex buffer
+    const std::vector<glm::vec2> vertices = {
+        {-1.0f, -1.0f},
+        {+3.0f, -1.0f},
+        {-1.0f, +3.0f}
+    };
+    const std::vector<glm::uvec3> faces = {
+        {0, 2, 1}
+    };
+    return std::make_unique<Geometry>(renderer, vertices, faces);
+}
+
 } // namespace
 
 Renderer::Renderer(
     std::vector<std::string>&& requiredVulkanInstanceExtensions,
-    SurfaceCreator surfCreatorCallback,
+    SurfaceCreator&& surfCreatorCallback,
     AssetPaths&& assetPaths,
     const bool enableRayTracingExtensions)
     : m_currentFrameIndex(0)
@@ -82,7 +96,8 @@ Renderer::Renderer(
     }
 
     // Create fundamental objects for the API
-    m_context = std::make_unique<VulkanContext>(surfCreatorCallback, std::move(requiredVulkanInstanceExtensions), true);
+    m_context = std::make_unique<VulkanContext>(
+        std::move(surfCreatorCallback), std::move(requiredVulkanInstanceExtensions), true);
     m_physicalDevice =
         std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(
@@ -98,11 +113,9 @@ Renderer::Renderer(
     m_defaultScissor = m_swapChain->getScissorRect();
 
     // Create frame resources, such as command buffer, fence and semaphores
-    for (auto& frame : m_virtualFrames)
+    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
     {
-        frame.completionFence = m_device->createFence(0);
-        frame.imageAvailableSemaphore = m_device->createSemaphore();
-        frame.renderFinishedSemaphore = m_device->createSemaphore();
+        m_virtualFrames.emplace_back(*m_device);
     }
 
     m_shaderCache = std::make_unique<ShaderCache>(m_device->getHandle());
@@ -114,31 +127,13 @@ Renderer::Renderer(
     // Creates a map of all shaders
     loadShaders(m_assetPaths.spvShaderDir);
 
-    // create vertex buffer
-    const std::vector<glm::vec2> vertices = {
-        {-1.0f, -1.0f},
-        {+3.0f, -1.0f},
-        {-1.0f, +3.0f}
-    };
-    const std::vector<glm::uvec3> faces = {
-        {0, 2, 1}
-    };
-    m_fullScreenGeometry = std::make_unique<Geometry>(*this, vertices, faces);
-
+    m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipelineFromJsonPath("GammaCorrect.json", *this, getDefaultRenderPass(), 0).unwrap();
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 }
 
-Renderer::~Renderer()
-{
-    for (auto& frameRes : m_virtualFrames)
-    {
-        vkDestroyFence(m_device->getHandle(), frameRes.completionFence, nullptr);
-        vkDestroySemaphore(m_device->getHandle(), frameRes.imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(m_device->getHandle(), frameRes.renderFinishedSemaphore, nullptr);
-    }
-}
+Renderer::~Renderer() {}
 
 const AssetPaths& Renderer::getAssetPaths() const
 {
@@ -509,26 +504,31 @@ VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shad
     return m_shaderCache->loadSpirvShaderModule(shaderModulePath);
 }
 
-std::optional<uint32_t> Renderer::acquireSwapImageIndex(VirtualFrame& virtualFrame)
+std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame)
 {
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(
+    const VkResult result = vkAcquireNextImageKHR(
         m_device->getHandle(),
         m_swapChain->getHandle(),
         std::numeric_limits<uint64_t>::max(),
-        virtualFrame.imageAvailableSemaphore,
+        frame.getImageAvailableSemaphoreHandle(),
         VK_NULL_HANDLE,
         &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         logger->warn("Swap chain is 'out of date'");
         recreateSwapChain();
-        return {};
+        return std::nullopt;
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    else if (result == VK_SUBOPTIMAL_KHR)
     {
         logger->warn("Unable to acquire optimal VulkanSwapChain image!");
-        return {};
+        return std::nullopt;
+    }
+    else if (result != VK_SUCCESS)
+    {
+        logger->critical("Encountered an unknown error with vkAcquireNextImageKHR!");
+        return std::nullopt;
     }
 
     return imageIndex;
@@ -568,10 +568,10 @@ void Renderer::record(VkCommandBuffer commandBuffer)
     m_defaultRenderPass->end(commandBuffer, virtualFrameIndex);
 }
 
-void Renderer::present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex)
+void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex)
 {
     const VkResult result = m_device->getGeneralQueue().present(
-        virtualFrame.renderFinishedSemaphore, m_swapChain->getHandle(), swapChainImageIndex);
+        frame.getRenderFinishedSemaphoreHandle(), m_swapChain->getHandle(), swapChainImageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
@@ -588,9 +588,9 @@ void Renderer::recreateSwapChain()
     vkDeviceWaitIdle(m_device->getHandle());
 
     m_swapChain->recreate(*m_device, *m_physicalDevice, m_context->getSurface());
-    m_defaultViewport.width = static_cast<float>(m_swapChain->getExtent().width);
-    m_defaultViewport.height = static_cast<float>(m_swapChain->getExtent().height);
     m_defaultScissor.extent = m_swapChain->getExtent();
+    m_defaultViewport.width = static_cast<float>(m_defaultScissor.extent.width);
+    m_defaultViewport.height = static_cast<float>(m_defaultScissor.extent.height);
 
     m_swapChainRenderTarget.info.size = m_swapChain->getExtent();
     m_defaultRenderPass->recreate(*m_device, m_swapChain->getExtent());

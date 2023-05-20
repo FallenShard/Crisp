@@ -116,7 +116,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     return instance;
 }
 
-VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator surfaceCreator)
+VkSurfaceKHR createSurface(const VkInstance instance, SurfaceCreator&& surfaceCreator)
 {
     VkSurfaceKHR surface;
     VK_CHECK(surfaceCreator(instance, nullptr, &surface));
@@ -125,10 +125,10 @@ VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator surfa
 } // namespace
 
 VulkanContext::VulkanContext(
-    SurfaceCreator surfaceCreator, std::vector<std::string>&& platformExtensions, const bool enableValidationLayers)
+    SurfaceCreator&& surfaceCreator, std::vector<std::string>&& platformExtensions, const bool enableValidationLayers)
     : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
     , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
-    , m_surface(surfaceCreator ? createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE)
+    , m_surface(surfaceCreator ? createSurface(m_instance, std::move(surfaceCreator)) : VK_NULL_HANDLE)
 {
 }
 

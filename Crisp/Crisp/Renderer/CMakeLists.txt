@@ -46,7 +46,8 @@ add_cpp_static_library(CrispRenderer
     "UniformMultiBuffer.hpp"
     "VertexBuffer.cpp"
     "VertexBuffer.hpp"
-    "VirtualFrame.hpp"
+    "RendererFrame.cpp"
+    "RendererFrame.hpp"
     "VulkanBufferUtils.cpp"
     "VulkanBufferUtils.hpp"
     "VulkanImageUtils.cpp"
@@ -85,7 +86,8 @@ target_link_libraries(CrispRenderer
     PRIVATE CrispFileUtils
     PUBLIC CrispGlslUtils
     PRIVATE CrispApplicationEnvironment
-    PUBLIC nlohmann_json::nlohmann_json)
+    PUBLIC nlohmann_json::nlohmann_json
+)
 
 add_cpp_static_library(CrispImageCache
     "ImageCache.hpp"

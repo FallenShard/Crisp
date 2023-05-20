@@ -52,48 +52,49 @@ Application::Application(const ApplicationEnvironment& environment)
     m_window.minimized.subscribe<&Application::onMinimize>(this);
     m_window.restored.subscribe<&Application::onRestore>(this);
 
-    // Create and connect GUI with the mouse
-    m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-    logger->trace("GUI created!");
-    m_window.mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
-    m_window.mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
-    m_window.mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
-    m_window.mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
-    m_window.mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
+    //// Create and connect GUI with the mouse
+    // m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
+    // logger->trace("GUI created!");
+    // m_window.mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
+    // m_window.mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
+    // m_window.mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
+    // m_window.mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
+    // m_window.mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
 
-    auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
-    comboBox->setId("sceneComboBox");
-    comboBox->setPosition({0, 0});
-    comboBox->setItems(SceneContainer::getSceneNames());
-    comboBox->setWidthHint(200.0f);
+    // auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
+    // comboBox->setId("sceneComboBox");
+    // comboBox->setPosition({0, 0});
+    // comboBox->setItems(SceneContainer::getSceneNames());
+    // comboBox->setWidthHint(200.0f);
 
-    auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
-    onFrameTimeUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
-    statusBar->addControl(std::move(comboBox));
-    m_guiForm->add(std::move(statusBar));
+    // auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
+    // onFrameTimeUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
+    // statusBar->addControl(std::move(comboBox));
+    // m_guiForm->add(std::move(statusBar));
 
-    m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
-    m_guiForm->processGuiUpdates();
-    m_guiForm->printGuiTree();
+    // m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
+    // m_guiForm->processGuiUpdates();
+    // m_guiForm->printGuiTree();
 
-    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
+    // m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
 
-    auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
-    cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-    cb->setDisplayedItem(environment.getParameters().scene);
+    // auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
+    // cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
+    // cb->setDisplayedItem(environment.getParameters().scene);
 
-    gui::initImGui(m_window.getHandle(), *m_renderer);
+    // gui::initImGui(m_window.getHandle(), *m_renderer);
+
+    // m_sceneContainer->update(0.0f);
+    m_renderer->flushResourceUpdates(true);
 }
 
 Application::~Application()
 {
-    gui::shutdownImGui(*m_renderer);
+    // gui::shutdownImGui(*m_renderer);
 }
 
 void Application::run()
 {
-    m_sceneContainer->update(0.0f);
-    m_renderer->flushResourceUpdates(true);
 
     Timer<std::chrono::duration<double>> updateTimer;
     double timeSinceLastUpdate = 0.0;
@@ -122,7 +123,8 @@ void Application::run()
         m_guiForm->draw();
         gui::renderImGuiFrame(*m_renderer);
 
-        m_renderer->drawFrame();*/
+        */
+        m_renderer->drawFrame();
     }
 
     m_renderer->finish();
@@ -141,8 +143,9 @@ void Application::onResize(int width, int height)
 
     m_renderer->resize(width, height);
 
+    /*
     m_sceneContainer->resize(width, height);
-    m_guiForm->resize(width, height);
+    m_guiForm->resize(width, height);*/
 }
 
 SceneContainer* Application::getSceneContainer() const

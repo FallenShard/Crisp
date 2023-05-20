@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanSampler.hpp>
 
 #include <Crisp/IO/FontLoader.hpp>
 #include <Crisp/Math/Headers.hpp>
@@ -26,7 +27,6 @@ class VulkanImageView;
 class VulkanDevice;
 
 class IndexBuffer;
-class VulkanSampler;
 class Texture;
 
 class VulkanRenderPass;

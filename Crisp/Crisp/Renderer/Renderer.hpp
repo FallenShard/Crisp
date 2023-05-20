@@ -6,9 +6,9 @@
 #include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
+#include <Crisp/Renderer/RendererFrame.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/Renderer/VirtualFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
@@ -44,10 +44,10 @@ public:
 
     Renderer(
         std::vector<std::string>&& requiredVulkanInstanceExtensions,
-        SurfaceCreator surfCreatorCallback,
+        SurfaceCreator&& surfCreatorCallback,
         AssetPaths&& assetPaths,
         bool enableRayTracingExtensions);
-    ~Renderer();
+    ~Renderer(); // Defined in .cpp due to symbol definition visibility.
 
     Renderer(const Renderer& other) = delete;
     Renderer(Renderer&& other) = delete;
@@ -167,9 +167,9 @@ public:
 private:
     void loadShaders(const std::filesystem::path& directoryPath);
     VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
-    std::optional<uint32_t> acquireSwapImageIndex(VirtualFrame& virtualFrame);
+    std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
     void record(VkCommandBuffer commandBuffer);
-    void present(VirtualFrame& virtualFrame, uint32_t swapChainImageIndex);
+    void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
 
     void recreateSwapChain();
     void updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView);
@@ -188,7 +188,7 @@ private:
     VkViewport m_defaultViewport;
     VkRect2D m_defaultScissor;
 
-    std::array<VirtualFrame, NumVirtualFrames> m_virtualFrames;
+    std::vector<RendererFrame> m_virtualFrames;
 
     std::unique_ptr<ShaderCache> m_shaderCache;
 

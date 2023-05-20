@@ -4,5 +4,6 @@
   "validationLayersInRelease": true,
   "scene_": "vulkan-ray-tracer",
   "scene": "gltf-viewer",
-  "scene_a": "pbr"
+  "scene_a": "pbr",
+  "logLevel": "trace"
 }

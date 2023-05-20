@@ -17,8 +17,8 @@ class Application
 {
 public:
     static constexpr const char* Title = "Crisp";
-    static constexpr int32_t DefaultWindowWidth = 1280;
-    static constexpr int32_t DefaultWindowHeight = 720;
+    static constexpr int32_t DefaultWindowWidth = 1920;
+    static constexpr int32_t DefaultWindowHeight = 1080;
     static constexpr glm::ivec2 DefaultWindowSize{DefaultWindowWidth, DefaultWindowHeight};
 
     static constexpr uint32_t DesiredFramesPerSecond = 144;
