@@ -77,7 +77,7 @@ VkPipelineLayout PipelineLayoutBuilder::createHandle(
 }
 
 std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
-    VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
+    const VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
 {
     return std::make_unique<VulkanPipelineLayout>(
         device,
@@ -89,7 +89,7 @@ std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
 }
 
 std::unique_ptr<DescriptorSetAllocator> PipelineLayoutBuilder::createMinimalDescriptorSetAllocator(
-    VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
+    const VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
 {
     return std::make_unique<DescriptorSetAllocator>(device, m_setLayoutBindings, getNumCopiesPerSet(numCopies), flags);
 }

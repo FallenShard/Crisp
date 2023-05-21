@@ -2,55 +2,13 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Core/Window.hpp>
-
-#include <Crisp/Camera/FreeCameraController.hpp>
-#include <Crisp/Camera/TargetCameraController.hpp>
-
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-
-#include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
-#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
-#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Renderer/VulkanBufferUtils.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
-
-#include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/TransformBuffer.hpp>
-#include <Crisp/Models/Atmosphere.hpp>
-#include <Crisp/Models/Skybox.hpp>
-
 #include <Crisp/Lights/EnvironmentLighting.hpp>
-#include <Crisp/Lights/LightSystem.hpp>
-
-#include <Crisp/GUI/Button.hpp>
-#include <Crisp/GUI/CheckBox.hpp>
-#include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Slider.hpp>
-
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Utils/GlmFormatters.hpp>
-
-#include <Crisp/Math/Constants.hpp>
-#include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Utils/Profiler.hpp>
-
-#include <Crisp/IO/FileUtils.hpp>
-#include <Crisp/IO/JsonUtils.hpp>
-#include <Crisp/Mesh/SkinningData.hpp>
-#include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
+#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #include <imgui.h>
 
@@ -132,10 +90,10 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     const PipelineLayoutBuilder& layoutBuilder,
     const std::string& shaderName)
 {
-    VulkanDevice& device = renderer->getDevice();
+    const VulkanDevice& device = renderer->getDevice();
     auto layout = layoutBuilder.create(device);
 
-    std::vector<VkSpecializationMapEntry> specEntries = {
+    const std::vector<VkSpecializationMapEntry> specEntries = {
   //   id,               offset,             size
         {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
         {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},

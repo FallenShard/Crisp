@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Core/CommandLineParser.hpp>
+#include <Crisp/IO/JsonUtils.hpp>
 
 #include <filesystem>
 
@@ -32,9 +33,12 @@ public:
 
     const Parameters& getParameters() const;
 
+    const nlohmann::json& getConfig() const;
+
 private:
     std::filesystem::path m_resourcesPath;
     std::filesystem::path m_shaderSourcesPath;
+    nlohmann::json m_config;
 
     Parameters m_arguments;
 };

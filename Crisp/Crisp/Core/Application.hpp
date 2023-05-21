@@ -12,7 +12,6 @@
 
 namespace crisp
 {
-
 class Application
 {
 public:
@@ -47,6 +46,8 @@ private:
     void updateFrameStatistics(double frameTime);
     void onMinimize();
     void onRestore();
+
+    void drawGui();
 
     Window m_window;
     std::unique_ptr<Renderer> m_renderer;

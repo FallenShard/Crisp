@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
+#include <optional>
 
 namespace crisp
 {
@@ -61,4 +62,16 @@ inline Result<nlohmann::json> loadJsonFromFile(const std::filesystem::path& file
 
     return nlohmann::json::parse(maybeString.extract());
 }
+
+template <typename T>
+std::optional<T> getIfExists(const nlohmann::json& json, const std::string_view key)
+{
+    if (!json.contains(key))
+    {
+        return std::nullopt;
+    }
+
+    return json[key];
+}
+
 } // namespace crisp

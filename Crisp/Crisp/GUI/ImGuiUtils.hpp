@@ -5,7 +5,7 @@
 
 namespace crisp::gui
 {
-void initImGui(GLFWwindow* window, Renderer& renderer);
+void initImGui(GLFWwindow* window, Renderer& renderer, std::optional<std::string> fontPath);
 void shutdownImGui(Renderer& renderer);
 void prepareImGuiFrame();
 void renderImGuiFrame(Renderer& renderer);

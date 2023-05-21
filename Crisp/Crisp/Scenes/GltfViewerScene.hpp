@@ -1,32 +1,18 @@
 #pragma once
 
-#include <Crisp/Materials/PbrMaterialUtils.hpp>
-#include <Crisp/Scenes/Scene.hpp>
-
-#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Camera/FreeCameraController.hpp>
+#include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
+#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Lights/LightSystem.hpp>
+#include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Mesh/SkinningData.hpp>
+#include <Crisp/Models/Skybox.hpp>
+#include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp
 {
-namespace gui
-{
-class Form;
-}
-
-class FreeCameraController;
-class TargetCameraController;
-
-class TransformBuffer;
-class LightSystem;
-
-class ResourceContext;
-class RenderGraph;
-struct RenderNode;
-
-class Skybox;
-
 class GltfViewerScene : public AbstractScene
 {
 public:

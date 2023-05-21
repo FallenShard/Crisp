@@ -1,6 +1,7 @@
 {
   "resourcesPath": "D:/Projects/Crisp/Resources",
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
+  "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/DinPro.ttf",
   "validationLayersInRelease": true,
   "scene_": "vulkan-ray-tracer",
   "scene": "gltf-viewer",

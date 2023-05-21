@@ -10,6 +10,8 @@
 #include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
 
+#include <imgui.h>
+
 namespace crisp
 {
 namespace
@@ -23,8 +25,7 @@ void logFps(double frameTime, double fps)
 
 Window createWindow(const char* title, const glm::ivec2& size)
 {
-    const glm::ivec2 desktopRes = Window::getDesktopResolution();
-    return Window((desktopRes - size) / 2, size, title);
+    return Window((Window::getDesktopResolution() - size) / 2, size, title);
 }
 
 AssetPaths createAssetPaths(const ApplicationEnvironment& environment)
@@ -76,26 +77,22 @@ Application::Application(const ApplicationEnvironment& environment)
     // m_guiForm->processGuiUpdates();
     // m_guiForm->printGuiTree();
 
-    // m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
+    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
+    m_sceneContainer->update(0.0f);
 
-    // auto cb = m_guiForm->getControlById<gui::ComboBox>("sceneComboBox");
-    // cb->itemSelected.subscribe<&SceneContainer::onSceneSelected>(m_sceneContainer.get());
-    // cb->setDisplayedItem(environment.getParameters().scene);
+    gui::initImGui(
+        m_window.getHandle(), *m_renderer, getIfExists<std::string>(environment.getConfig(), "imguiFontPath"));
 
-    // gui::initImGui(m_window.getHandle(), *m_renderer);
-
-    // m_sceneContainer->update(0.0f);
     m_renderer->flushResourceUpdates(true);
 }
 
 Application::~Application()
 {
-    // gui::shutdownImGui(*m_renderer);
+    gui::shutdownImGui(*m_renderer);
 }
 
 void Application::run()
 {
-
     Timer<std::chrono::duration<double>> updateTimer;
     double timeSinceLastUpdate = 0.0;
     while (!m_window.shouldClose())
@@ -108,22 +105,18 @@ void Application::run()
         if (m_isMinimized)
             continue;
 
-        /*m_guiForm->processGuiUpdates();
-
         while (timeSinceLastUpdate > TimePerFrame)
         {
             m_sceneContainer->update(static_cast<float>(TimePerFrame));
-            m_guiForm->update(TimePerFrame);
             timeSinceLastUpdate -= TimePerFrame;
         }
 
         gui::prepareImGuiFrame();
-
+        drawGui();
         m_sceneContainer->render();
-        m_guiForm->draw();
+
         gui::renderImGuiFrame(*m_renderer);
 
-        */
         m_renderer->drawFrame();
     }
 
@@ -142,10 +135,7 @@ void Application::onResize(int width, int height)
         return;
 
     m_renderer->resize(width, height);
-
-    /*
     m_sceneContainer->resize(width, height);
-    m_guiForm->resize(width, height);*/
 }
 
 SceneContainer* Application::getSceneContainer() const
@@ -191,5 +181,29 @@ void Application::onMinimize()
 void Application::onRestore()
 {
     m_isMinimized = false;
+}
+
+void Application::drawGui()
+{
+    ImGui::Begin("Crisp");
+
+    if (ImGui::BeginCombo("Scene", m_sceneContainer->getSceneName().c_str()))
+    {
+        for (const auto& scene : SceneContainer::getSceneNames())
+        {
+            const bool isSelected{scene == m_sceneContainer->getSceneName()};
+            if (ImGui::Selectable(scene.c_str(), isSelected))
+            {
+                m_sceneContainer->onSceneSelected(scene);
+            }
+            if (isSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::End();
 }
 } // namespace crisp

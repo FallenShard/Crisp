@@ -1,7 +1,7 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/IO/JsonUtils.hpp>
+
 #include <Crisp/Utils/ChromeProfiler.hpp>
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
@@ -39,8 +39,8 @@ void setSpdlogLevel(const std::string_view level)
 } // namespace
 
 ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
+    : m_arguments(std::move(parameters))
 {
-    m_arguments = std::move(parameters);
     ChromeProfiler::setThreadName("Main Thread");
 
     spdlog::set_pattern("%^[%T.%e][%n][%l][%t]:%$ %v");
@@ -54,10 +54,10 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
         std::terminate();
     }
 
-    const auto json{loadJsonFromFile(m_arguments.configPath).unwrap()};
-    m_resourcesPath = json["resourcesPath"].get<std::string>();
-    m_shaderSourcesPath = json["shaderSourcesPath"].get<std::string>();
-    m_arguments.scene = json["scene"].get<std::string>();
+    m_config = loadJsonFromFile(m_arguments.configPath).unwrap();
+    m_resourcesPath = m_config["resourcesPath"].get<std::string>();
+    m_shaderSourcesPath = m_config["shaderSourcesPath"].get<std::string>();
+    m_arguments.scene = m_config["scene"].get<std::string>();
 }
 
 ApplicationEnvironment::~ApplicationEnvironment()
@@ -92,6 +92,11 @@ std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtens
 const ApplicationEnvironment::Parameters& ApplicationEnvironment::getParameters() const
 {
     return m_arguments;
+}
+
+const nlohmann::json& ApplicationEnvironment::getConfig() const
+{
+    return m_config;
 }
 
 Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv)

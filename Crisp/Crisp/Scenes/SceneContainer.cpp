@@ -1,6 +1,5 @@
 #include <Crisp/Scenes/SceneContainer.hpp>
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
 #include <Crisp/Scenes/ClusteredLightingScene.hpp>
 #include <Crisp/Scenes/FluidSimulationScene.hpp>
@@ -66,13 +65,12 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
 SceneContainer::SceneContainer(Renderer* renderer, Application* app, const std::string& sceneName)
     : m_renderer(renderer)
     , m_application(app)
+    , m_sceneName(sceneName)
 {
     m_scene = createScene(sceneName, m_renderer, m_application);
 }
 
-SceneContainer::~SceneContainer() {}
-
-std::vector<std::string> SceneContainer::getSceneNames()
+const std::vector<std::string>& SceneContainer::getSceneNames()
 {
     return sceneNames;
 }
@@ -98,6 +96,12 @@ void SceneContainer::onSceneSelected(const std::string& sceneName)
     m_renderer->setSceneImageView(nullptr, 0);
     m_scene.reset();
     m_scene = createScene(sceneName, m_renderer, m_application);
+    m_sceneName = sceneName;
+}
+
+const std::string& SceneContainer::getSceneName() const
+{
+    return m_sceneName;
 }
 
 void SceneContainer::resize(int width, int height)

@@ -42,7 +42,7 @@ static constexpr uint32_t AllocationCount = 4;
 } // namespace
 
 DescriptorSetAllocator::DescriptorSetAllocator(
-    VulkanDevice& device,
+    const VulkanDevice& device,
     const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings,
     const std::vector<uint32_t>& numCopiesPerSet,
     VkDescriptorPoolCreateFlags flags)
@@ -99,7 +99,7 @@ VkDescriptorSet DescriptorSetAllocator::allocate(
     return m_descriptorPools.back()->allocate(m_device->getHandle(), setLayout, setBindings);
 }
 
-VulkanDevice& DescriptorSetAllocator::getDevice() const
+const VulkanDevice& DescriptorSetAllocator::getDevice() const
 {
     return *m_device;
 }

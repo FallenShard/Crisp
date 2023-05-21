@@ -14,7 +14,7 @@ namespace
 VkDescriptorPool imGuiPool{VK_NULL_HANDLE};
 }
 
-void initImGui(GLFWwindow* window, Renderer& renderer)
+void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string> fontPath)
 {
     VkDescriptorPoolSize poolSizes[] = {
         {               VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
@@ -58,6 +58,11 @@ void initImGui(GLFWwindow* window, Renderer& renderer)
         },
         initInfo.Instance);
     ImGui_ImplVulkan_Init(&initInfo, renderer.getDefaultRenderPass().getHandle());
+
+    if (fontPath)
+    {
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->c_str(), 16);
+    }
 
     renderer.enqueueResourceUpdate(
         [&](VkCommandBuffer cmd)

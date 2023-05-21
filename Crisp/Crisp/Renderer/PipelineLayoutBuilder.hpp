@@ -30,9 +30,9 @@ public:
     std::vector<VkDescriptorSetLayout> createDescriptorSetLayoutHandles(VkDevice device) const;
     VkPipelineLayout createHandle(VkDevice device, VkDescriptorSetLayout* setLayouts, uint32_t setLayoutCount);
     std::unique_ptr<VulkanPipelineLayout> create(
-        VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
+        const VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
     std::unique_ptr<DescriptorSetAllocator> createMinimalDescriptorSetAllocator(
-        VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
+        const VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
 
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> getDescriptorSetLayoutBindings() const;
     std::vector<bool> getDescriptorSetBufferedStatuses() const;

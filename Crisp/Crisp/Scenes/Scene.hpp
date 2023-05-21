@@ -1,12 +1,13 @@
 #pragma once
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 
 namespace crisp
 {
+class Application;
+
 class AbstractScene
 {
 public:
