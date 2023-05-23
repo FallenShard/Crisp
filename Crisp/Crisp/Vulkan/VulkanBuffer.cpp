@@ -42,6 +42,11 @@ VkDeviceSize VulkanBuffer::getSize() const
     return m_size;
 }
 
+VkDeviceAddress VulkanBuffer::getDeviceAddress() const
+{
+    return m_address;
+}
+
 void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer)
 {
     VkBufferCopy copyRegion = {};
@@ -65,11 +70,6 @@ void VulkanBuffer::copyFrom(
     vkCmdCopyBuffer(cmdBuffer, srcBuffer.m_handle, m_handle, 1, &copyRegion);
 }
 
-VulkanBufferSpan VulkanBuffer::createSpan() const
-{
-    return {m_handle, 0, m_size};
-}
-
 VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const
 {
     return {m_handle, offset, size};
@@ -78,11 +78,6 @@ VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo(VkDeviceSize offset, V
 VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo() const
 {
     return {m_handle, 0, m_size};
-}
-
-VkDeviceAddress VulkanBuffer::getDeviceAddress() const
-{
-    return m_address;
 }
 
 StagingVulkanBuffer::StagingVulkanBuffer(

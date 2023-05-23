@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanBufferView.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
@@ -15,6 +14,7 @@ public:
     ~VulkanBuffer();
 
     VkDeviceSize getSize() const;
+    VkDeviceAddress getDeviceAddress() const;
 
     void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer);
     void copyFrom(
@@ -24,12 +24,8 @@ public:
         VkDeviceSize dstOffset,
         VkDeviceSize size);
 
-    VulkanBufferSpan createSpan() const;
-
     VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
     VkDescriptorBufferInfo createDescriptorInfo() const;
-
-    VkDeviceAddress getDeviceAddress() const;
 
 protected:
     VulkanMemoryHeap::Allocation m_allocation;

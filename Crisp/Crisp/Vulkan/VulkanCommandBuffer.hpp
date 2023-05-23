@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanBufferView.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
@@ -36,7 +35,7 @@ public:
 
     void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
     void insertBufferMemoryBarrier(
-        const VulkanBufferSpan& bufferSpan,
+        const VkDescriptorBufferInfo& bufferInfo,
         VkPipelineStageFlags srcStage,
         VkAccessFlags srcAccess,
         VkPipelineStageFlags dstStage,
@@ -54,8 +53,8 @@ public:
 
     void executeSecondaryBuffers(const std::vector<VkCommandBuffer>& commandBuffers) const;
 
-    void updateBuffer(const VulkanBufferSpan& bufferSpan, const MemoryRegion& memoryRegion) const;
-    void copyBuffer(const VulkanBufferSpan& srcBufferSpan, VkBuffer dstBuffer) const;
+    void updateBuffer(const VkDescriptorBufferInfo& bufferInfo, const MemoryRegion& memoryRegion) const;
+    void copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo, VkBuffer dstBuffer) const;
 
     void dispatchCompute(const glm::ivec3& workGroupCount) const;
 

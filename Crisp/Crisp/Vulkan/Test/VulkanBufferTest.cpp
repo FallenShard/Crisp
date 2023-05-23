@@ -5,9 +5,7 @@
 
 using namespace crisp;
 
-class VulkanBufferTest : public VulkanTest
-{
-};
+using VulkanBufferTest = VulkanTest;
 
 TEST_F(VulkanBufferTest, StagingVulkanBuffer)
 {
@@ -55,7 +53,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            deviceBuffer.createSpan(),
+            deviceBuffer.createDescriptorInfo(),
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -63,7 +61,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            downloadBuffer.createSpan(),
+            downloadBuffer.createDescriptorInfo(),
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_HOST_BIT,
@@ -104,7 +102,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     // Copy and sync
     deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
     cmdBuffer.insertBufferMemoryBarrier(
-        deviceBuffer.createSpan(),
+        deviceBuffer.createDescriptorInfo(),
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -128,7 +126,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     downloadBuffer.copyFrom(transferCmdBuffer.getHandle(), deviceBuffer);
     transferCmdBuffer.insertBufferMemoryBarrier(
-        downloadBuffer.createSpan(),
+        downloadBuffer.createDescriptorInfo(),
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
         VK_PIPELINE_STAGE_HOST_BIT,
@@ -140,7 +138,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     StagingVulkanBuffer downloadBuffer2(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
     cmdBuffer.insertBufferMemoryBarrier(
-        downloadBuffer2.createSpan(),
+        downloadBuffer2.createDescriptorInfo(),
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
         VK_PIPELINE_STAGE_HOST_BIT,

@@ -47,8 +47,7 @@ public:
     uint32_t getDynamicOffset(uint32_t currentFrameIndex) const;
     VkDescriptorBufferInfo getDescriptorInfo() const;
     VkDescriptorBufferInfo getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const;
-
-    VulkanBufferSpan createSpanFromSection(uint32_t sectionIndex);
+    VkDescriptorBufferInfo createDescriptorInfoFromSection(uint32_t sectionIndex);
 
 private:
     Renderer* m_renderer;

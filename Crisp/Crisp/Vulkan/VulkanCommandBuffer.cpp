@@ -58,16 +58,16 @@ void VulkanCommandBuffer::transferOwnership(
 }
 
 void VulkanCommandBuffer::insertBufferMemoryBarrier(
-    const VulkanBufferSpan& bufferSpan,
+    const VkDescriptorBufferInfo& bufferInfo,
     VkPipelineStageFlags srcStage,
     VkAccessFlags srcAccess,
     VkPipelineStageFlags dstStage,
     VkAccessFlags dstAccess) const
 {
     VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-    barrier.buffer = bufferSpan.handle;
-    barrier.offset = bufferSpan.offset;
-    barrier.size = bufferSpan.size;
+    barrier.buffer = bufferInfo.buffer;
+    barrier.offset = bufferInfo.offset;
+    barrier.size = bufferInfo.range;
     barrier.srcAccessMask = srcAccess;
     barrier.dstAccessMask = dstAccess;
     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
@@ -122,18 +122,18 @@ void VulkanCommandBuffer::executeSecondaryBuffers(const std::vector<VkCommandBuf
     vkCmdExecuteCommands(m_handle, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 }
 
-void VulkanCommandBuffer::updateBuffer(const VulkanBufferSpan& bufferSpan, const MemoryRegion& memoryRegion) const
+void VulkanCommandBuffer::updateBuffer(const VkDescriptorBufferInfo& bufferInfo, const MemoryRegion& memoryRegion) const
 {
-    vkCmdUpdateBuffer(m_handle, bufferSpan.handle, bufferSpan.offset, bufferSpan.size, memoryRegion.ptr);
+    vkCmdUpdateBuffer(m_handle, bufferInfo.buffer, bufferInfo.offset, bufferInfo.range, memoryRegion.ptr);
 }
 
-void VulkanCommandBuffer::copyBuffer(const VulkanBufferSpan& srcBufferSpan, VkBuffer dstBuffer) const
+void VulkanCommandBuffer::copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo, VkBuffer dstBuffer) const
 {
     VkBufferCopy copyRegion = {};
-    copyRegion.srcOffset = srcBufferSpan.offset;
+    copyRegion.srcOffset = srcBufferInfo.offset;
     copyRegion.dstOffset = 0;
-    copyRegion.size = srcBufferSpan.size;
-    vkCmdCopyBuffer(m_handle, srcBufferSpan.handle, dstBuffer, 1, &copyRegion);
+    copyRegion.size = srcBufferInfo.range;
+    vkCmdCopyBuffer(m_handle, srcBufferInfo.buffer, dstBuffer, 1, &copyRegion);
 }
 
 void VulkanCommandBuffer::dispatchCompute(const glm::ivec3& workGroupCount) const

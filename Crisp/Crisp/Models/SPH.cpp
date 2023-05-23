@@ -111,7 +111,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             cmdBuffer.insertBufferMemoryBarrier(
-                m_cellCountBuffer->createSpanFromSection(m_currentSection),
+                m_cellCountBuffer->createDescriptorInfoFromSection(m_currentSection),
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_ACCESS_SHADER_WRITE_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -198,7 +198,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             cmdBuffer.insertBufferMemoryBarrier(
-                m_blockSumBuffer->createSpanFromSection(m_currentSection),
+                m_blockSumBuffer->createDescriptorInfoFromSection(m_currentSection),
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_ACCESS_SHADER_WRITE_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -443,7 +443,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
          vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             cmdBuffer.insertBufferMemoryBarrier(
-                m_forcesBuffer->createSpanFromSection(m_currentSection),
+                m_forcesBuffer->createDescriptorInfoFromSection(m_currentSection),
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                 VK_ACCESS_SHADER_WRITE_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,

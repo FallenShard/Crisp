@@ -55,7 +55,7 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            deviceBuffer.createSpan(),
+            deviceBuffer.createDescriptorInfo(),
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -63,7 +63,7 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            downloadBuffer.createSpan(),
+            downloadBuffer.createDescriptorInfo(),
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_HOST_BIT,

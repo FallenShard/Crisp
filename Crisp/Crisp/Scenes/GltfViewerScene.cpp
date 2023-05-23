@@ -441,7 +441,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
             [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
         {
             cmdBuffer.insertBufferMemoryBarrier(
-                gltfNode->geometry->getVertexBuffer()->createSpan(),
+                gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
                 VK_ACCESS_SHADER_READ_BIT,
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -462,7 +462,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
             [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/)
             {
                 cmdBuffer.insertBufferMemoryBarrier(
-                    gltfNode->geometry->getVertexBuffer()->createSpan(),
+                    gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                     VK_ACCESS_SHADER_WRITE_BIT,
                     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,

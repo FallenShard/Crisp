@@ -90,7 +90,7 @@ VkDescriptorBufferInfo StorageBuffer::getDescriptorInfo(VkDeviceSize offset, VkD
     return {m_buffer->getHandle(), offset, range};
 }
 
-VulkanBufferSpan StorageBuffer::createSpanFromSection(uint32_t sectionIndex)
+VkDescriptorBufferInfo StorageBuffer::createDescriptorInfoFromSection(uint32_t sectionIndex)
 {
     return {m_buffer->getHandle(), sectionIndex * m_singleRegionSize, m_singleRegionSize};
 }
