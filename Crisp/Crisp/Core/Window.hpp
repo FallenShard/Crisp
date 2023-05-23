@@ -27,6 +27,37 @@ enum class WindowVisibility
     Shown
 };
 
+enum class EventType : uint32_t
+{
+    None = 0,
+    MouseMoved = 1 << 0,
+    MouseButtonPressed = 1 << 1,
+    MouseButtonReleased = 1 << 2,
+    MouseWheelScrolled = 1 << 3,
+    MouseEntered = 1 << 4,
+    MouseExited = 1 << 5,
+
+    WindowResized = 1 << 6,
+    WindowClosed = 1 << 7,
+    WindowFocusGained = 1 << 8,
+    WindowFocusLost = 1 << 9,
+    WindowMinimized = 1 << 10,
+    WindowRestored = 1 << 11,
+
+    KeyPressed = 1 << 12,
+
+    AllMouseEvents =
+        MouseMoved | MouseButtonPressed | MouseButtonReleased | MouseWheelScrolled | MouseEntered | MouseExited,
+
+    AllWindowEvents =
+        WindowResized | WindowClosed | WindowFocusGained | WindowFocusLost | WindowMinimized | WindowRestored,
+
+    AllKeyEvents = KeyPressed,
+
+    AllEvents = AllMouseEvents | AllWindowEvents | AllKeyEvents
+};
+DECLARE_BITFLAG(EventType)
+
 class Window
 {
 public:
@@ -68,6 +99,10 @@ public:
 
     void clearAllEvents();
 
+    void enableEvents(BitFlags<EventType> eventMask);
+    void disableEvents(BitFlags<EventType> eventMask);
+    bool isEventEnabled(EventType eventType) const;
+
     Event<int, int> resized;
     Event<Key, int> keyPressed;
     Event<double, double> mouseMoved;
@@ -93,5 +128,25 @@ private:
     static void focusCallback(GLFWwindow* window, int isFocused);
     static void iconifyCallback(GLFWwindow* window, int isIconified);
     GLFWwindow* m_window;
+
+    BitFlags<EventType> m_activeEventMask{EventType::AllEvents};
+};
+
+class WindowEventGuard
+{
+public:
+    WindowEventGuard(Window& window, BitFlags<EventType> eventMask)
+        : window(window)
+    {
+        window.disableEvents(eventMask);
+    }
+
+    ~WindowEventGuard()
+    {
+        window.enableEvents(EventType::AllEvents);
+    }
+
+private:
+    Window& window;
 };
 } // namespace crisp

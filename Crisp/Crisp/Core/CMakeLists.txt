@@ -65,7 +65,7 @@ target_link_libraries(CrispApplicationEnvironment
     PUBLIC CrispUtils
     PRIVATE CrispLogger
     PRIVATE CrispFormat
-    PRIVATE CrispJsonUtils
+    PUBLIC CrispJsonUtils
     PUBLIC CrispHashMap
     PUBLIC CrispStringUtils
     PUBLIC glfw

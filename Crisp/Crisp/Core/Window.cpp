@@ -160,10 +160,25 @@ void Window::clearAllEvents()
     focusLost.clear();
 }
 
+void Window::enableEvents(BitFlags<EventType> eventMask)
+{
+    m_activeEventMask |= eventMask;
+}
+
+void Window::disableEvents(BitFlags<EventType> eventMask)
+{
+    m_activeEventMask.disable(eventMask);
+}
+
+bool Window::isEventEnabled(EventType eventType) const
+{
+    return m_activeEventMask & eventType;
+}
+
 void Window::resizeCallback(GLFWwindow* window, int width, int height)
 {
     auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    if (dispatcher)
+    if (dispatcher && dispatcher->isEventEnabled(EventType::WindowResized))
         dispatcher->resized(width, height);
 }
 
@@ -172,7 +187,7 @@ void Window::keyboardCallback(GLFWwindow* window, int key, int /*scanCode*/, int
     if (action == GLFW_PRESS)
     {
         auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-        if (dispatcher)
+        if (dispatcher && dispatcher->isEventEnabled(EventType::KeyPressed))
             dispatcher->keyPressed(translateGlfwToKey(key), mode);
     }
 }
@@ -180,7 +195,7 @@ void Window::keyboardCallback(GLFWwindow* window, int key, int /*scanCode*/, int
 void Window::mouseMoveCallback(GLFWwindow* window, double xPos, double yPos)
 {
     auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    if (dispatcher)
+    if (dispatcher && dispatcher->isEventEnabled(EventType::MouseMoved))
         dispatcher->mouseMoved(xPos, yPos);
 }
 
@@ -189,7 +204,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
     if (action == GLFW_PRESS)
     {
         auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-        if (dispatcher)
+        if (dispatcher && dispatcher->isEventEnabled(EventType::MouseButtonPressed))
         {
             double xPos, yPos;
             glfwGetCursorPos(window, &xPos, &yPos);
@@ -199,7 +214,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
     else if (action == GLFW_RELEASE)
     {
         auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-        if (dispatcher)
+        if (dispatcher && dispatcher->isEventEnabled(EventType::MouseButtonReleased))
         {
             double xPos, yPos;
             glfwGetCursorPos(window, &xPos, &yPos);
@@ -211,7 +226,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
 void Window::mouseWheelCallback(GLFWwindow* window, double /*xOffset*/, double yOffset)
 {
     auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    if (dispatcher)
+    if (dispatcher && dispatcher->isEventEnabled(EventType::MouseWheelScrolled))
         dispatcher->mouseWheelScrolled(yOffset);
 }
 
@@ -223,16 +238,22 @@ void Window::mouseEnterCallback(GLFWwindow* window, int entered)
         double xPos, yPos;
         glfwGetCursorPos(window, &xPos, &yPos);
         if (entered)
-            dispatcher->mouseEntered(xPos, yPos);
+        {
+            if (dispatcher->isEventEnabled(EventType::MouseEntered))
+                dispatcher->mouseEntered(xPos, yPos);
+        }
         else
-            dispatcher->mouseExited(xPos, yPos);
+        {
+            if (dispatcher->isEventEnabled(EventType::MouseExited))
+                dispatcher->mouseExited(xPos, yPos);
+        }
     }
 }
 
 void Window::closeCallback(GLFWwindow* window)
 {
     auto dispatcher = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-    if (dispatcher)
+    if (dispatcher && dispatcher->isEventEnabled(EventType::WindowClosed))
         dispatcher->closed();
 }
 
@@ -242,9 +263,16 @@ void Window::focusCallback(GLFWwindow* window, int isFocused)
     if (dispatcher)
     {
         if (isFocused)
-            dispatcher->focusGained();
+        {
+            if (dispatcher->isEventEnabled(EventType::WindowFocusGained))
+                dispatcher->focusGained();
+        }
+
         else
-            dispatcher->focusLost();
+        {
+            if (dispatcher->isEventEnabled(EventType::WindowFocusLost))
+                dispatcher->focusLost();
+        }
     }
 }
 
@@ -254,9 +282,15 @@ void Window::iconifyCallback(GLFWwindow* window, int isIconified)
     if (dispatcher)
     {
         if (isIconified)
-            dispatcher->minimized();
+        {
+            if (dispatcher->isEventEnabled(EventType::WindowMinimized))
+                dispatcher->minimized();
+        }
         else
-            dispatcher->restored();
+        {
+            if (dispatcher->isEventEnabled(EventType::WindowRestored))
+                dispatcher->restored();
+        }
     }
 }
 } // namespace crisp
