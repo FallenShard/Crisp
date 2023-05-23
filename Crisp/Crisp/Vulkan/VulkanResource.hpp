@@ -23,15 +23,6 @@ public:
     {
     }
 
-    VulkanResource(const VulkanResource& other) = delete;
-
-    VulkanResource(VulkanResource&& other) noexcept
-        : m_deallocator(std::exchange(other.m_deallocator, nullptr))
-        , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
-        , m_framesToLive(std::exchange(other.m_framesToLive, 0))
-    {
-    }
-
     virtual ~VulkanResource()
     {
         if (getDestroyFunc<T>() != nullptr)
@@ -55,15 +46,15 @@ public:
         }
     }
 
-    template <typename DestroyFunc>
-    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, DestroyFunc&& func)
-    {
-        spdlog::debug("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
-        func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
-        deallocator->removeTag(handle);
-    }
-
+    VulkanResource(const VulkanResource& other) = delete;
     VulkanResource& operator=(const VulkanResource& other) = delete;
+
+    VulkanResource(VulkanResource&& other) noexcept
+        : m_deallocator(std::exchange(other.m_deallocator, nullptr))
+        , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
+        , m_framesToLive(std::exchange(other.m_framesToLive, 0))
+    {
+    }
 
     VulkanResource& operator=(VulkanResource&& other) noexcept
     {
@@ -71,6 +62,14 @@ public:
         m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
         m_framesToLive = std::exchange(other.m_framesToLive, 0);
         return *this;
+    }
+
+    template <typename DestroyFunc>
+    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, DestroyFunc&& func)
+    {
+        spdlog::debug("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
+        func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
+        deallocator->removeTag(handle);
     }
 
     inline T getHandle() const

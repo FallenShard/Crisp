@@ -34,7 +34,30 @@ VulkanBuffer::VulkanBuffer(
 
 VulkanBuffer::~VulkanBuffer()
 {
-    m_deallocator->deferMemoryDeallocation(m_framesToLive, m_allocation);
+    if (m_allocation.isValid())
+        m_deallocator->deferMemoryDeallocation(m_framesToLive, m_allocation);
+}
+
+VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept
+    : VulkanResource(std::move(other))
+    , m_allocation(std::exchange(other.m_allocation, {}))
+    , m_size(other.m_size)
+    , m_address(other.m_address)
+{
+}
+
+VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept
+{
+    if (this == &other)
+    {
+        return *this;
+    }
+
+    VulkanResource::operator=(std::move(other));
+    m_allocation = std::exchange(other.m_allocation, {});
+    m_size = other.m_size;
+    m_address = other.m_address;
+    return *this;
 }
 
 VkDeviceSize VulkanBuffer::getSize() const

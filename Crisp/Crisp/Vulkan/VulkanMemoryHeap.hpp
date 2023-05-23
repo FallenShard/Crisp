@@ -57,6 +57,11 @@ public:
         {
             return allocationBlock->memory;
         }
+
+        inline bool isValid() const
+        {
+            return allocationBlock != nullptr;
+        }
     };
 
     VulkanMemoryHeap(

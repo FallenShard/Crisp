@@ -13,6 +13,12 @@ public:
         const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
     ~VulkanBuffer();
 
+    VulkanBuffer(const VulkanBuffer&) = delete;
+    VulkanBuffer& operator=(const VulkanBuffer&) = delete;
+
+    VulkanBuffer(VulkanBuffer&& other) noexcept;
+    VulkanBuffer& operator=(VulkanBuffer&& other) noexcept;
+
     VkDeviceSize getSize() const;
     VkDeviceAddress getDeviceAddress() const;
 

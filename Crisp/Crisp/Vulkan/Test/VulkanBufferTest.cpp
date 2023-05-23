@@ -25,6 +25,25 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer)
         ASSERT_EQ(ptr[i], data[i]);
 }
 
+TEST_F(VulkanBufferTest, MoveConstruction)
+{
+    const auto& [deps, device] = createDevice();
+
+    std::array<float, 100> data;
+    std::iota(data.begin(), data.end(), 0.0f);
+
+    constexpr VkDeviceSize size = data.size() * sizeof(float);
+    StagingVulkanBuffer stagingBuffer(*device, size);
+    ASSERT_NE(stagingBuffer.getHandle(), VK_NULL_HANDLE);
+    ASSERT_EQ(stagingBuffer.getSize(), size);
+
+    const StagingVulkanBuffer another(std::move(stagingBuffer));
+    EXPECT_NE(another.getHandle(), VK_NULL_HANDLE);
+    EXPECT_EQ(another.getSize(), size);
+
+    EXPECT_EQ(stagingBuffer.getHandle(), VK_NULL_HANDLE);
+}
+
 TEST_F(VulkanBufferTest, VulkanBuffer)
 {
     const auto& [deps, device] = createDevice();
