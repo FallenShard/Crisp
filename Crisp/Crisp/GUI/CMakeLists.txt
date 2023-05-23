@@ -13,8 +13,6 @@ add_cpp_static_library(CrispGui
     "Control.hpp"
     "ControlGroup.cpp"
     "ControlGroup.hpp"
-    "CrispGui.cpp"
-    "CrispGui.hpp"
     "DebugRect.cpp"
     "DebugRect.hpp"
     "DynamicUniformBufferResource.cpp"

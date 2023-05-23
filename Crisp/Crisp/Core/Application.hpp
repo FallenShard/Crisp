@@ -51,14 +51,14 @@ private:
 
     Window m_window;
     std::unique_ptr<Renderer> m_renderer;
-
-    std::unique_ptr<gui::Form> m_guiForm;
-
     std::unique_ptr<SceneContainer> m_sceneContainer;
 
     double m_accumulatedTime{0.0};
     double m_accumulatedFrames{0.0};
     double m_updatePeriod{1.0};
+
+    double m_avgFrameTimeMs{0.0};
+    double m_avgFps{0.0};
 
     bool m_isMinimized{false};
 };

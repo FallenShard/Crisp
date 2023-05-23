@@ -1,11 +1,5 @@
 #include <Crisp/Core/Application.hpp>
 
-#include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/MemoryUsageBar.hpp>
-#include <Crisp/GUI/RenderSystem.hpp>
-#include <Crisp/GUI/StatusBar.hpp>
-
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
@@ -21,6 +15,13 @@ const auto logger = createLoggerMt("Application");
 void logFps(double frameTime, double fps)
 {
     logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
+}
+
+ImVec4 interpolateColor(const float t)
+{
+    const glm::vec4 color =
+        t > 0.5 ? glm::vec4{1.0f, 2.0f * (1.0f - t), 0.0f, 1.0f} : glm::vec4{t / 0.5f, 1.0f, 0.0f, 1.0f};
+    return ImVec4(color.r, color.g, color.b, color.a);
 }
 
 Window createWindow(const char* title, const glm::ivec2& size)
@@ -53,30 +54,6 @@ Application::Application(const ApplicationEnvironment& environment)
     m_window.minimized.subscribe<&Application::onMinimize>(this);
     m_window.restored.subscribe<&Application::onRestore>(this);
 
-    //// Create and connect GUI with the mouse
-    // m_guiForm = std::make_unique<gui::Form>(std::make_unique<gui::RenderSystem>(m_renderer.get()));
-    // logger->trace("GUI created!");
-    // m_window.mouseMoved.subscribe<&gui::Form::onMouseMoved>(m_guiForm.get());
-    // m_window.mouseButtonPressed.subscribe<&gui::Form::onMousePressed>(m_guiForm.get());
-    // m_window.mouseButtonReleased.subscribe<&gui::Form::onMouseReleased>(m_guiForm.get());
-    // m_window.mouseEntered.subscribe<&gui::Form::onMouseEntered>(m_guiForm.get());
-    // m_window.mouseExited.subscribe<&gui::Form::onMouseExited>(m_guiForm.get());
-
-    // auto comboBox = std::make_unique<gui::ComboBox>(m_guiForm.get());
-    // comboBox->setId("sceneComboBox");
-    // comboBox->setPosition({0, 0});
-    // comboBox->setItems(SceneContainer::getSceneNames());
-    // comboBox->setWidthHint(200.0f);
-
-    // auto statusBar = std::make_unique<gui::StatusBar>(m_guiForm.get());
-    // onFrameTimeUpdated.subscribe<&gui::StatusBar::setFrameTimeAndFps>(statusBar.get());
-    // statusBar->addControl(std::move(comboBox));
-    // m_guiForm->add(std::move(statusBar));
-
-    // m_guiForm->add(std::make_unique<gui::MemoryUsageBar>(m_guiForm.get()));
-    // m_guiForm->processGuiUpdates();
-    // m_guiForm->printGuiTree();
-
     m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
     m_sceneContainer->update(0.0f);
 
@@ -101,7 +78,11 @@ void Application::run()
         updateFrameStatistics(timeDelta);
         timeSinceLastUpdate += timeDelta;
 
+        WindowEventGuard eventGuard(
+            m_window, ImGui::GetIO().WantCaptureMouse ? EventType::AllMouseEvents : EventType::None);
+
         Window::pollEvents();
+
         if (m_isMinimized)
             continue;
 
@@ -145,7 +126,7 @@ SceneContainer* Application::getSceneContainer() const
 
 gui::Form* Application::getForm() const
 {
-    return m_guiForm.get();
+    return nullptr;
 }
 
 Window& Application::getWindow()
@@ -168,6 +149,9 @@ void Application::updateFrameStatistics(double frameTime)
 
         onFrameTimeUpdated(avgTime, avgFrames);
 
+        m_avgFrameTimeMs = avgTime * 1000.0;
+        m_avgFps = avgFrames;
+
         m_accumulatedTime = spillOver;
         m_accumulatedFrames = spillOverFrac;
     }
@@ -185,7 +169,28 @@ void Application::onRestore()
 
 void Application::drawGui()
 {
-    ImGui::Begin("Crisp");
+    ImGui::Begin("Application Settings");
+    ImGui::LabelText("Frame Time", "%.2f ms, %.2f FPS", m_avgFrameTimeMs, m_avgFps);
+
+    const auto metrics = m_renderer->getDevice().getMemoryAllocator().getDeviceMemoryUsage();
+
+    const auto drawMemoryLabel = [](const char* label, const uint64_t bytesUsed, const uint64_t bytesAllocated)
+    {
+        const auto transformToMb = [](const uint64_t bytes)
+        {
+            const uint64_t megaBytes = bytes >> 20;
+            const uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0;
+            return megaBytes + remainder;
+        };
+        ImGui::PushStyleColor(
+            ImGuiCol_Text, interpolateColor(static_cast<float>(bytesUsed) / static_cast<float>(bytesAllocated)));
+        ImGui::LabelText(label, "%d / %d MB", transformToMb(bytesUsed), transformToMb(bytesAllocated));
+        ImGui::PopStyleColor();
+    };
+
+    drawMemoryLabel("Buffer Memory", metrics.bufferMemoryUsed, metrics.bufferMemorySize);
+    drawMemoryLabel("Image Memory", metrics.imageMemoryUsed, metrics.imageMemorySize);
+    drawMemoryLabel("Staging Memory", metrics.stagingMemoryUsed, metrics.stagingMemorySize);
 
     if (ImGui::BeginCombo("Scene", m_sceneContainer->getSceneName().c_str()))
     {
