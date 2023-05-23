@@ -103,6 +103,18 @@ public:
         return m_mask == 0;
     }
 
+    inline BitFlags& operator&=(const BitFlags& rhs)
+    {
+        m_mask &= rhs.m_mask;
+        return *this;
+    }
+
+    inline BitFlags& operator&=(const EnumType bits)
+    {
+        m_mask &= static_cast<MaskType>(bits);
+        return *this;
+    }
+
     inline BitFlags operator&(const EnumType bits) const
     {
         return BitFlags(m_mask & static_cast<MaskType>(bits));
@@ -131,6 +143,11 @@ public:
     void disable(const EnumType bit)
     {
         m_mask &= ~(static_cast<MaskType>(bit));
+    }
+
+    void disable(const BitFlags& rhs)
+    {
+        m_mask &= ~rhs.m_mask;
     }
 
 private:
