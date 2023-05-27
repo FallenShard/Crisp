@@ -18,9 +18,7 @@ class VulkanSwapChainTest : public VulkanTestWithSurface
 protected:
     VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled)
     {
-        VulkanSwapChain swapChain(*device_, *physicalDevice_, context_->getSurface(), buffering);
-        swapChain.setDeferredDestruction(false);
-        return swapChain;
+        return VulkanSwapChain(*device_, *physicalDevice_, context_->getSurface(), buffering);
     }
 };
 

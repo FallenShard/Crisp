@@ -83,6 +83,13 @@ protected:
         glfwTerminate();
     }
 
+    void SetUp() override {}
+
+    void TearDown() override
+    {
+        device_->getResourceDeallocator().freeAllResources();
+    }
+
     inline static constexpr uint32_t kDefaultWidth = 200;
     inline static constexpr uint32_t kDefaultHeight = 200;
 
