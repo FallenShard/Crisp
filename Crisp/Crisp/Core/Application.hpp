@@ -15,13 +15,13 @@ namespace crisp
 class Application
 {
 public:
-    static constexpr const char* Title = "Crisp";
-    static constexpr int32_t DefaultWindowWidth = 1920;
-    static constexpr int32_t DefaultWindowHeight = 1080;
-    static constexpr glm::ivec2 DefaultWindowSize{DefaultWindowWidth, DefaultWindowHeight};
+    static constexpr const char* kTitle = "Crisp";
+    static constexpr int32_t kDefaultWindowWidth = 1920;
+    static constexpr int32_t kDefaultWindowHeight = 1080;
+    static constexpr glm::ivec2 kDefaultWindowSize{kDefaultWindowWidth, kDefaultWindowHeight};
 
-    static constexpr uint32_t DesiredFramesPerSecond = 144;
-    static constexpr double TimePerFrame = 1.0 / DesiredFramesPerSecond;
+    static constexpr uint32_t kDesiredFramesPerSecond = 144;
+    static constexpr double kTimePerFrame = 1.0 / kDesiredFramesPerSecond;
 
     Application(const ApplicationEnvironment& environment);
     ~Application();

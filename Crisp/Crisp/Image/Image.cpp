@@ -25,9 +25,9 @@ Image::Image(
 
 Image Image::createFromChannel(uint32_t channelIndex) const
 {
-    constexpr uint32_t dstChannelCount = 1;
+    constexpr uint32_t kDstChannelCount = 1;
     const uint32_t channelByteSize{m_pixelByteSize / m_channelCount};
-    std::vector<uint8_t> pixelData(m_width * m_height * dstChannelCount * channelByteSize);
+    std::vector<uint8_t> pixelData(m_width * m_height * kDstChannelCount * channelByteSize);
     for (uint32_t i = 0; i < m_height; ++i)
     {
         for (uint32_t j = 0; j < m_width; ++j)
@@ -38,7 +38,7 @@ Image Image::createFromChannel(uint32_t channelIndex) const
         }
     }
 
-    return Image(std::move(pixelData), m_width, m_height, dstChannelCount, channelByteSize);
+    return Image(std::move(pixelData), m_width, m_height, kDstChannelCount, channelByteSize);
 }
 
 Image Image::createSubImage(uint32_t row, uint32_t col, uint32_t width, uint32_t height) const

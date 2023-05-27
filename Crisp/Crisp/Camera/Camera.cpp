@@ -10,23 +10,38 @@ glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float 
 {
     const glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
     const float f = 1.0f / std::tan(fovY / 2.0f);
-    const auto a = glm::mat4(f / aspectRatio, 0.0f, 0.0f, 0.0f, 0.0f, f, 0.0f, 0.0f, 0.0f, 0.0f,
-        -zFar / (zNear - zFar) - 1, -1.0f, 0.0f, 0.0f, -zNear * zFar / (zNear - zFar), 0.0f);
+    const auto a = glm::mat4(
+        f / aspectRatio,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        -zFar / (zNear - zFar) - 1,
+        -1.0f,
+        0.0f,
+        0.0f,
+        -zNear * zFar / (zNear - zFar),
+        0.0f);
 
     const auto b = glm::infinitePerspective(fovY, aspectRatio, zNear);
 
     // Infinite projection with z value projected into [0, 1].
-    const auto c = glm::mat4(f / aspectRatio, 0.0f, 0.0f, 0.0f, 0.0f, f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-        0.0f, zNear, 0.0f);
+    const auto c = glm::mat4(
+        f / aspectRatio, 0.0f, 0.0f, 0.0f, 0.0f, f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, zNear, 0.0f);
     return c;
 }
 
 template <typename ScalarType>
-constexpr glm::vec<3, ScalarType> AxisX = { ScalarType(1.0), ScalarType(0.0), ScalarType(0.0) };
+constexpr glm::vec<3, ScalarType> kAxisX = {ScalarType(1.0), ScalarType(0.0), ScalarType(0.0)};
 template <typename ScalarType>
-constexpr glm::vec<3, ScalarType> AxisY = { ScalarType(0.0), ScalarType(1.0), ScalarType(0.0) };
+constexpr glm::vec<3, ScalarType> kAxisY = {ScalarType(0.0), ScalarType(1.0), ScalarType(0.0)};
 template <typename ScalarType>
-constexpr glm::vec<3, ScalarType> AxisZ = { ScalarType(0.0), ScalarType(0.0), ScalarType(1.0) };
+constexpr glm::vec<3, ScalarType> kAxisZ = {ScalarType(0.0), ScalarType(0.0), ScalarType(1.0)};
 } // namespace
 
 namespace crisp
@@ -42,7 +57,7 @@ Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight, const 
     , m_zNear(zNear)
     , m_zFar(zFar)
     , m_position(0.0f, 0.0f, 10.0f)
-    , m_orientation(glm::angleAxis(glm::radians(0.0), AxisY<double>))
+    , m_orientation(glm::angleAxis(glm::radians(0.0), kAxisY<double>))
 {
     updateProjectionMatrix();
     updateViewMatrix();
@@ -110,17 +125,17 @@ glm::mat4 Camera::getInvViewMatrix() const
 
 glm::vec3 Camera::getRightDir() const
 {
-    return m_invV * glm::vec4(AxisX<float>, 0.0f);
+    return m_invV * glm::vec4(kAxisX<float>, 0.0f);
 }
 
 glm::vec3 Camera::getLookDir() const
 {
-    return m_invV * glm::vec4(-AxisZ<float>, 0.0f);
+    return m_invV * glm::vec4(-kAxisZ<float>, 0.0f);
 }
 
 glm::vec3 Camera::getUpDir() const
 {
-    return m_invV * glm::vec4(AxisY<float>, 0.0f);
+    return m_invV * glm::vec4(kAxisY<float>, 0.0f);
 }
 
 glm::vec2 Camera::getViewDepthRange() const
@@ -128,7 +143,8 @@ glm::vec2 Camera::getViewDepthRange() const
     return glm::vec2(m_zNear, m_zFar);
 }
 
-std::array<glm::vec3, Camera::FrustumPointCount> Camera::computeFrustumPoints(const float zNear, const float zFar) const
+std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints(
+    const float zNear, const float zFar) const
 {
     const float tanFovHalf = std::tan(m_verticalFov * 0.5f);
 
@@ -138,11 +154,15 @@ std::array<glm::vec3, Camera::FrustumPointCount> Camera::computeFrustumPoints(co
     const float halfFarH = zFar * tanFovHalf;
     const float halfFarW = halfFarH * m_aspectRatio;
 
-    std::array<glm::vec3, FrustumPointCount> frustumPoints = { glm::vec3(-halfNearW, -halfNearH, -zNear),
-        glm::vec3(+halfNearW, -halfNearH, -zNear), glm::vec3(+halfNearW, +halfNearH, -zNear),
-        glm::vec3(-halfNearW, +halfNearH, -zNear), glm::vec3(-halfFarW, -halfFarH, -zFar),
-        glm::vec3(+halfFarW, -halfFarH, -zFar), glm::vec3(+halfFarW, +halfFarH, -zFar),
-        glm::vec3(-halfFarW, +halfFarH, -zFar) };
+    std::array<glm::vec3, kFrustumPointCount> frustumPoints = {
+        glm::vec3(-halfNearW, -halfNearH, -zNear),
+        glm::vec3(+halfNearW, -halfNearH, -zNear),
+        glm::vec3(+halfNearW, +halfNearH, -zNear),
+        glm::vec3(-halfNearW, +halfNearH, -zNear),
+        glm::vec3(-halfFarW, -halfFarH, -zFar),
+        glm::vec3(+halfFarW, -halfFarH, -zFar),
+        glm::vec3(+halfFarW, +halfFarH, -zFar),
+        glm::vec3(-halfFarW, +halfFarH, -zFar)};
 
     for (auto& p : frustumPoints)
         p = glm::vec3(m_invV * glm::vec4(p, 1.0f));
@@ -150,7 +170,7 @@ std::array<glm::vec3, Camera::FrustumPointCount> Camera::computeFrustumPoints(co
     return frustumPoints;
 }
 
-std::array<glm::vec3, Camera::FrustumPointCount> Camera::computeFrustumPoints() const
+std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints() const
 {
     return computeFrustumPoints(m_zNear, m_zFar);
 }
@@ -166,9 +186,9 @@ glm::vec4 Camera::computeFrustumBoundingSphere(const float zNear, const float zF
     else
     {
         const glm::vec3 center = m_invV * glm::vec4(0.0f, 0.0f, -0.5f * (zFar + zNear) * (1 + k * k), 1.0f);
-        const float radius =
-            0.5f * std::sqrt((zFar - zNear) * (zFar - zNear) + 2.0f * (zFar * zFar + zNear * zNear) * k * k +
-                             (zFar + zNear) * (zFar + zNear) * k * k * k * k);
+        const float radius = 0.5f * std::sqrt(
+                                        (zFar - zNear) * (zFar - zNear) + 2.0f * (zFar * zFar + zNear * zNear) * k * k +
+                                        (zFar + zNear) * (zFar + zNear) * k * k * k * k);
         return glm::vec4(center, radius);
     }
 }

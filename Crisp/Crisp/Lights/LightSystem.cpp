@@ -72,7 +72,7 @@ UniformBuffer* LightSystem::getCascadedDirectionalLightBuffer(uint32_t index) co
     return m_cascadedShadowMapping.cascades.at(index).buffer.get();
 }
 
-std::array<glm::vec3, 8> LightSystem::getCascadeFrustumPoints(uint32_t cascadeIndex) const
+std::array<glm::vec3, Camera::kFrustumPointCount> LightSystem::getCascadeFrustumPoints(uint32_t cascadeIndex) const
 {
     return m_cascadedShadowMapping.getFrustumPoints(cascadeIndex);
 }
@@ -133,10 +133,10 @@ const std::vector<std::unique_ptr<VulkanImageView>>& LightSystem::getTileGridVie
 
 std::vector<PointLight> createRandomPointLights(const uint32_t count)
 {
-    constexpr float width = 32.0f * 5.0f;
-    constexpr float depth = 15.0f * 5.0f;
-    constexpr float height = 15.0f * 5.0f;
-    constexpr glm::vec3 domainExtent{width, height, depth};
+    constexpr float kWidth = 32.0f * 5.0f;
+    constexpr float kDepth = 15.0f * 5.0f;
+    constexpr float kHeight = 15.0f * 5.0f;
+    constexpr glm::vec3 kDomainExtent{kWidth, kHeight, kDepth};
     const int32_t gridX = 16;
     const int32_t gridZ = 8;
     const int32_t gridY = count / gridX / gridZ;
@@ -159,7 +159,8 @@ std::vector<PointLight> createRandomPointLights(const uint32_t count)
                 /*const glm::vec3 position =
                     glm::vec3((normJ - 0.5f) * width, 1.0f + normK * height, (normI - 0.5f) * depth);*/
 
-                const glm::vec3 stratifiedPos = glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * domainExtent;
+                const glm::vec3 stratifiedPos =
+                    glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * kDomainExtent;
                 pointLights.emplace_back(spectrum, stratifiedPos, glm::vec3(0.0f, 1.0f, 0.0f)).calculateRadius();
             }
         }

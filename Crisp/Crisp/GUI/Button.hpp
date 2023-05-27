@@ -55,14 +55,14 @@ private:
     glm::vec4 m_borderColor;
     float m_borderOpacity;
 
-    static constexpr Easing easing = Easing::SlowOut;
+    static constexpr Easing kEasing = Easing::SlowOut;
 
-    std::shared_ptr<PropertyAnimation<glm::vec4, easing>> m_colorAnim;
+    std::shared_ptr<PropertyAnimation<glm::vec4, kEasing>> m_colorAnim;
 
-    std::shared_ptr<PropertyAnimation<glm::vec4, easing>> m_labelColorAnim;
+    std::shared_ptr<PropertyAnimation<glm::vec4, kEasing>> m_labelColorAnim;
     std::unique_ptr<Label> m_label;
 
-    std::shared_ptr<PropertyAnimation<glm::vec4, easing>> m_borderColorAnim;
+    std::shared_ptr<PropertyAnimation<glm::vec4, kEasing>> m_borderColorAnim;
 
     RectDrawComponent m_drawComponent;
 };

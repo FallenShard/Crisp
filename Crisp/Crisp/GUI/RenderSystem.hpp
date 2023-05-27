@@ -135,7 +135,7 @@ private:
     // Text Resources
     struct TextGeometryResource
     {
-        static constexpr uint32_t NumInitialAllocatedCharacters = 32;
+        static constexpr uint32_t kNumInitialAllocatedCharacters = 32;
 
         uint32_t allocatedVertexCount;
         uint32_t vertexCount;
@@ -161,7 +161,7 @@ private:
         void drawIndexed(VkCommandBuffer cmdBuffer) const;
     };
 
-    static constexpr uint32_t TextResourceIncrement = 10;
+    static constexpr uint32_t kTextResourceIncrement = 10;
     std::vector<std::unique_ptr<TextGeometryResource>> m_textResources;
     std::set<unsigned int> m_textResourceIdPool;
 

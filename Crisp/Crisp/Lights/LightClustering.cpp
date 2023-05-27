@@ -10,7 +10,7 @@ namespace crisp
 {
 namespace
 {
-constexpr const char* LightCullingPass = "lightCullingPass";
+constexpr const char* kLightCullingPass = "lightCullingPass";
 
 struct Tile
 {
@@ -78,7 +78,7 @@ void addToRenderGraph(
     const UniformBuffer& cameraBuffer,
     const UniformBuffer& pointLightBuffer)
 {
-    auto& cullingPass = renderGraph.addComputePass(LightCullingPass);
+    auto& cullingPass = renderGraph.addComputePass(kLightCullingPass);
     cullingPass.workGroupSize = glm::ivec3(lightClustering.m_tileSize, 1);
     cullingPass.numWorkGroups = glm::ivec3(lightClustering.m_gridSize, 1);
     cullingPass.pipeline = createLightCullingComputePipeline(renderer, cullingPass.workGroupSize);
@@ -114,7 +114,7 @@ void addToRenderGraph(
 
     // m_renderGraph->addDependency(DepthPrePass, LightCullingPass, 0);
     renderGraph.addDependency(
-        LightCullingPass,
+        kLightCullingPass,
         "MainPass",
         [lightIndexBuffer = lightClustering.m_lightIndexListBuffer.get()](
             const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)

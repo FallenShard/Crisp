@@ -54,7 +54,7 @@ void CascadedShadowMapping::updateTransforms(const Camera& viewCamera, const uin
     }
 }
 
-std::array<glm::vec3, Camera::FrustumPointCount> CascadedShadowMapping::getFrustumPoints(uint32_t cascadeIndex) const
+std::array<glm::vec3, Camera::kFrustumPointCount> CascadedShadowMapping::getFrustumPoints(uint32_t cascadeIndex) const
 {
     std::array<glm::vec3, 8> frustumPoints = {
         glm::vec3(-1.0f, -1.0f, 0.0f),

@@ -41,7 +41,7 @@ AssetPaths createAssetPaths(const ApplicationEnvironment& environment)
 } // namespace
 
 Application::Application(const ApplicationEnvironment& environment)
-    : m_window(createWindow(Title, DefaultWindowSize))
+    : m_window(createWindow(kTitle, kDefaultWindowSize))
 {
     m_renderer = std::make_unique<Renderer>(
         environment.getRequiredVulkanInstanceExtensions(),
@@ -86,10 +86,10 @@ void Application::run()
         if (m_isMinimized)
             continue;
 
-        while (timeSinceLastUpdate > TimePerFrame)
+        while (timeSinceLastUpdate > kTimePerFrame)
         {
-            m_sceneContainer->update(static_cast<float>(TimePerFrame));
-            timeSinceLastUpdate -= TimePerFrame;
+            m_sceneContainer->update(static_cast<float>(kTimePerFrame));
+            timeSinceLastUpdate -= kTimePerFrame;
         }
 
         gui::prepareImGuiFrame();

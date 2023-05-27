@@ -27,8 +27,8 @@ struct ExtendedCameraParameters
 class Camera
 {
 public:
-    static constexpr uint32_t FrustumPlaneCount = 6;
-    static constexpr uint32_t FrustumPointCount = 8;
+    static constexpr uint32_t kFrustumPlaneCount = 6;
+    static constexpr uint32_t kFrustumPointCount = 8;
 
     Camera(int32_t viewportWidth, int32_t viewportHeight);
     Camera(int32_t viewportWidth, int32_t viewportHeight, float zNear, float zFar);
@@ -54,8 +54,8 @@ public:
 
     glm::vec2 getViewDepthRange() const;
 
-    std::array<glm::vec3, FrustumPointCount> computeFrustumPoints(float zNear, float zFar) const;
-    std::array<glm::vec3, FrustumPointCount> computeFrustumPoints() const;
+    std::array<glm::vec3, kFrustumPointCount> computeFrustumPoints(float zNear, float zFar) const;
+    std::array<glm::vec3, kFrustumPointCount> computeFrustumPoints() const;
 
     glm::vec4 computeFrustumBoundingSphere(float zNear, float zFar) const;
 
@@ -74,6 +74,6 @@ private:
     glm::mat4 m_V;
     glm::mat4 m_invV;
 
-    std::array<glm::vec4, FrustumPlaneCount> m_frustumPlanes;
+    std::array<glm::vec4, kFrustumPlaneCount> m_frustumPlanes;
 };
 } // namespace crisp

@@ -29,7 +29,7 @@ struct CascadedShadowMapping
     void updateSplitIntervals(float zNear, float zFar);
     void updateTransforms(const Camera& viewCamera, const uint32_t shadowMapSize);
 
-    std::array<glm::vec3, Camera::FrustumPointCount> getFrustumPoints(uint32_t cascadeIndex) const;
+    std::array<glm::vec3, Camera::kFrustumPointCount> getFrustumPoints(uint32_t cascadeIndex) const;
 };
 
 } // namespace crisp

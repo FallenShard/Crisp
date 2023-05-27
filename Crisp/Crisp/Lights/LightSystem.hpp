@@ -33,7 +33,7 @@ public:
     }
 
     // Cascaded shadow mapping for directional light.
-    std::array<glm::vec3, Camera::FrustumPointCount> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
+    std::array<glm::vec3, Camera::kFrustumPointCount> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
     void setSplitLambda(float splitLambda);
     float getCascadeSplitLo(uint32_t cascadeIndex) const;
     float getCascadeSplitHi(uint32_t cascadeIndex) const;

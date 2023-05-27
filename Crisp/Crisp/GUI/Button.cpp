@@ -9,7 +9,7 @@ namespace crisp::gui
 {
 namespace
 {
-static constexpr double AnimationDuration = 0.5;
+static constexpr double kAnimationDuration = 0.5;
 }
 
 Button::Button(Form* parentForm, std::string text)
@@ -19,7 +19,7 @@ Button::Button(Form* parentForm, std::string text)
     , m_label(std::make_unique<Label>(parentForm, text))
     , m_drawComponent(parentForm->getRenderSystem())
 {
-    setSizeHint({ 100, 30 });
+    setSizeHint({100, 30});
     m_stateColors[static_cast<std::size_t>(State::Idle)].border = glm::vec3(0.0f);
     m_stateColors[static_cast<std::size_t>(State::Hover)].border = glm::vec3(0.3f, 0.8f, 1.0f);
     m_stateColors[static_cast<std::size_t>(State::Pressed)].border = glm::vec3(0.2f, 0.7f, 0.9f);
@@ -36,26 +36,33 @@ Button::Button(Form* parentForm, std::string text)
 
     glm::vec4 color = glm::vec4(m_color.r, m_color.g, m_color.b, m_opacity);
     m_borderColor = glm::vec4(glm::vec3(0.0f), 1.0f);
-    m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, easing>>(AnimationDuration, color, color,
+    m_colorAnim = std::make_shared<PropertyAnimation<glm::vec4, kEasing>>(
+        kAnimationDuration,
+        color,
+        color,
         [this](const glm::vec4& t)
         {
             setColor(t);
         });
 
-    m_labelColorAnim =
-        std::make_shared<PropertyAnimation<glm::vec4, easing>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f),
-            [this](const glm::vec4& t)
-            {
-                m_label->setColor(t);
-            });
+    m_labelColorAnim = std::make_shared<PropertyAnimation<glm::vec4, kEasing>>(
+        kAnimationDuration,
+        glm::vec4(1.0f),
+        glm::vec4(1.0f),
+        [this](const glm::vec4& t)
+        {
+            m_label->setColor(t);
+        });
 
-    m_borderColorAnim =
-        std::make_shared<PropertyAnimation<glm::vec4, easing>>(AnimationDuration, glm::vec4(1.0f), glm::vec4(1.0f),
-            [this](const glm::vec4& t)
-            {
-                m_borderColor = t;
-                setValidationFlags(Validation::Color);
-            });
+    m_borderColorAnim = std::make_shared<PropertyAnimation<glm::vec4, kEasing>>(
+        kAnimationDuration,
+        glm::vec4(1.0f),
+        glm::vec4(1.0f),
+        [this](const glm::vec4& t)
+        {
+            m_borderColor = t;
+            setValidationFlags(Validation::Color);
+        });
 
     m_label->setParent(this);
     m_label->setAnchor(Anchor::Center);
@@ -81,7 +88,7 @@ void Button::setText(const std::string& text)
 
 void Button::setTextColor(const glm::vec3& color)
 {
-    m_label->setColor({ color, 1.0f });
+    m_label->setColor({color, 1.0f});
     m_stateColors[static_cast<std::size_t>(State::Idle)].text = color;
     m_stateColors[static_cast<std::size_t>(State::Hover)].text =
         glm::clamp(color * 1.25f, glm::vec3(0.0f), glm::vec3(1.0f));
@@ -92,7 +99,7 @@ void Button::setTextColor(const glm::vec3& color)
 void Button::setTextColor(const glm::vec3& color, State state)
 {
     if (state == State::Idle)
-        m_label->setColor({ color, 1.0f });
+        m_label->setColor({color, 1.0f});
 
     m_stateColors[static_cast<std::size_t>(state)].text = color;
     setValidationFlags(Validation::Color);
@@ -124,7 +131,7 @@ void Button::setBackgroundColor(const glm::vec3& color)
 void Button::setBackgroundColor(const glm::vec3& color, State state)
 {
     if (state == State::Idle)
-        m_color = glm::vec4({ color, m_opacity });
+        m_color = glm::vec4({color, m_opacity});
 
     m_stateColors[static_cast<std::size_t>(state)].background = color;
     setValidationFlags(Validation::Color);
@@ -212,12 +219,13 @@ void Button::setState(State state)
     if (!m_colorAnim->isActive())
         m_form->getAnimator()->add(m_colorAnim);
 
-    m_labelColorAnim->reset(m_label->getColor(),
-        glm::vec4(m_stateColors[static_cast<std::size_t>(m_state)].text, m_opacity));
+    m_labelColorAnim->reset(
+        m_label->getColor(), glm::vec4(m_stateColors[static_cast<std::size_t>(m_state)].text, m_opacity));
     if (!m_labelColorAnim->isActive())
         m_form->getAnimator()->add(m_labelColorAnim);
 
-    m_borderColorAnim->reset(glm::vec4(m_borderColor.r, m_borderColor.g, m_borderColor.b, m_opacity),
+    m_borderColorAnim->reset(
+        glm::vec4(m_borderColor.r, m_borderColor.g, m_borderColor.b, m_opacity),
         glm::vec4(m_stateColors[static_cast<std::size_t>(m_state)].border, m_opacity));
     if (!m_borderColorAnim->isActive())
         m_form->getAnimator()->add(m_borderColorAnim);

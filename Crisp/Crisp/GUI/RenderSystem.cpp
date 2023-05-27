@@ -26,7 +26,7 @@ namespace crisp::gui
 {
 namespace
 {
-static constexpr float DepthLayers = 32.0f;
+static constexpr float kDepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
 
@@ -81,7 +81,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
 {
     float width = static_cast<float>(m_renderer->getSwapChainExtent().width);
     float height = static_cast<float>(m_renderer->getSwapChainExtent().height);
-    m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + DepthLayers);
+    m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + kDepthLayers);
 
     // Create the render pass where all GUI controls will be drawn
     m_guiPass = createGuiRenderPass(m_renderer->getDevice(), m_renderTargetCache, m_renderer->getSwapChainExtent());
@@ -196,7 +196,7 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
 {
     if (m_textResourceIdPool.empty())
     {
-        for (uint32_t i = 0; i < TextResourceIncrement; ++i)
+        for (uint32_t i = 0; i < kTextResourceIncrement; ++i)
             m_textResourceIdPool.insert(static_cast<uint32_t>(m_textResources.size()) + i);
     }
 
@@ -204,8 +204,8 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
     m_textResourceIdPool.erase(freeTextResourceId);
 
     auto textRes = std::make_unique<TextGeometryResource>();
-    textRes->allocatedVertexCount = TextGeometryResource::NumInitialAllocatedCharacters * 4; // 4 Vertices per letter
-    textRes->allocatedFaceCount = TextGeometryResource::NumInitialAllocatedCharacters * 2;   // 2 Triangles per letter
+    textRes->allocatedVertexCount = TextGeometryResource::kNumInitialAllocatedCharacters * 4; // 4 Vertices per letter
+    textRes->allocatedFaceCount = TextGeometryResource::kNumInitialAllocatedCharacters * 2;   // 2 Triangles per letter
     textRes->updatedBufferIndex = 0;
     textRes->isUpdatedOnDevice = false;
     textRes->vertexBuffer = std::make_unique<VertexBuffer>(
@@ -248,7 +248,7 @@ glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) c
     auto font = m_fonts.at(fontId)->font.get();
     for (auto& character : text)
     {
-        auto& gInfo = font->glyphs[character - FontLoader::CharBegin];
+        auto& gInfo = font->glyphs[character - FontLoader::kCharBegin];
         extent.x += gInfo.advanceX;
         extent.y = std::max(extent.y, gInfo.bmpHeight);
     }
@@ -370,7 +370,7 @@ void RenderSystem::resize(int /*width*/, int /*height*/)
         0.0f,
         static_cast<float>(m_renderer->getSwapChainExtent().height),
         0.5f,
-        0.5f + DepthLayers);
+        0.5f + kDepthLayers);
 
     m_renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_guiPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
@@ -638,7 +638,7 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
     extent = glm::vec2(0.0f, 0.0f);
     for (auto& character : text)
     {
-        auto& gInfo = font.glyphs[character - FontLoader::CharBegin];
+        auto& gInfo = font.glyphs[character - FontLoader::kCharBegin];
         float x1 = currentX + gInfo.bmpLeft;
         float y1 = currentY - gInfo.bmpTop;
         float x2 = x1 + gInfo.bmpWidth;

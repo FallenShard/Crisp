@@ -10,7 +10,7 @@ namespace crisp
 {
 namespace
 {
-constexpr int padding = 0;
+constexpr int kPadding = 0;
 
 uint32_t ceilPowerOf2(uint32_t value)
 {
@@ -72,7 +72,7 @@ std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) con
     uint32_t width = 0;
     uint32_t height = 0;
 
-    for (unsigned int i = CharBegin; i < CharEnd; i++)
+    for (unsigned int i = kCharBegin; i < kCharEnd; i++)
     {
         if (FT_Load_Char(fontFace, i, FT_LOAD_RENDER))
         {
@@ -80,7 +80,7 @@ std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) con
             continue;
         }
 
-        width += glyph->bitmap.width + padding;
+        width += glyph->bitmap.width + kPadding;
         height = std::max(height, glyph->bitmap.rows);
     }
 
@@ -94,7 +94,7 @@ void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint
 
     float xOffsetScale = static_cast<float>(font.width) / static_cast<float>(paddedWidth);
 
-    for (int i = CharBegin; i < CharEnd; i++)
+    for (int i = kCharBegin; i < kCharEnd; i++)
     {
         if (FT_Load_Char(face, i, FT_LOAD_RENDER))
         {
@@ -105,16 +105,16 @@ void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint
         updateTexData(
             font.textureData, glyph->bitmap.buffer, currX, paddedWidth, glyph->bitmap.width, glyph->bitmap.rows);
 
-        font.glyphs[i - CharBegin].atlasOffsetX =
+        font.glyphs[i - kCharBegin].atlasOffsetX =
             static_cast<float>(currX) / static_cast<float>(font.width) * xOffsetScale;
-        font.glyphs[i - CharBegin].advanceX = static_cast<float>(glyph->advance.x >> 6);
-        font.glyphs[i - CharBegin].advanceY = static_cast<float>(glyph->advance.y >> 6);
-        font.glyphs[i - CharBegin].bmpWidth = static_cast<float>(glyph->bitmap.width);
-        font.glyphs[i - CharBegin].bmpHeight = static_cast<float>(glyph->bitmap.rows);
-        font.glyphs[i - CharBegin].bmpLeft = static_cast<float>(glyph->bitmap_left);
-        font.glyphs[i - CharBegin].bmpTop = static_cast<float>(glyph->bitmap_top);
+        font.glyphs[i - kCharBegin].advanceX = static_cast<float>(glyph->advance.x >> 6);
+        font.glyphs[i - kCharBegin].advanceY = static_cast<float>(glyph->advance.y >> 6);
+        font.glyphs[i - kCharBegin].bmpWidth = static_cast<float>(glyph->bitmap.width);
+        font.glyphs[i - kCharBegin].bmpHeight = static_cast<float>(glyph->bitmap.rows);
+        font.glyphs[i - kCharBegin].bmpLeft = static_cast<float>(glyph->bitmap_left);
+        font.glyphs[i - kCharBegin].bmpTop = static_cast<float>(glyph->bitmap_top);
 
-        currX += glyph->bitmap.width + padding;
+        currX += glyph->bitmap.width + kPadding;
     }
 
     font.width = paddedWidth;

@@ -19,12 +19,12 @@ struct TexInfo
     VkFormat defaultFormat;
 };
 
-constexpr TexInfo AlbedoTex = {"diffuse", VK_FORMAT_R8G8B8A8_SRGB};
-constexpr TexInfo NormalTex = {"normal", VK_FORMAT_R8G8B8A8_UNORM};
-constexpr TexInfo MetallicTex = {"metallic", VK_FORMAT_R8_UNORM};
-constexpr TexInfo RoughnessTex = {"roughness", VK_FORMAT_R8_UNORM};
-constexpr TexInfo OcclusionTex = {"ao", VK_FORMAT_R8_UNORM};
-constexpr TexInfo EmissionTex = {"emissive", VK_FORMAT_R8G8B8A8_UNORM};
+constexpr TexInfo kAlbedoTex = {"diffuse", VK_FORMAT_R8G8B8A8_SRGB};
+constexpr TexInfo kNormalTex = {"normal", VK_FORMAT_R8G8B8A8_UNORM};
+constexpr TexInfo kMetallicTex = {"metallic", VK_FORMAT_R8_UNORM};
+constexpr TexInfo kRoughnessTex = {"roughness", VK_FORMAT_R8_UNORM};
+constexpr TexInfo kOcclusionTex = {"ao", VK_FORMAT_R8_UNORM};
+constexpr TexInfo kEmissionTex = {"emissive", VK_FORMAT_R8G8B8A8_UNORM};
 
 } // namespace
 
@@ -47,12 +47,12 @@ PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
     };
 
     PbrTextureGroup textureGroup{};
-    textureGroup.albedo = loadTextureOpt(AlbedoTex.name, getNumChannels(AlbedoTex.defaultFormat));
-    textureGroup.normal = loadTextureOpt(NormalTex.name, getNumChannels(NormalTex.defaultFormat));
-    textureGroup.roughness = loadTextureOpt(RoughnessTex.name, getNumChannels(RoughnessTex.defaultFormat));
-    textureGroup.metallic = loadTextureOpt(MetallicTex.name, getNumChannels(MetallicTex.defaultFormat));
-    textureGroup.occlusion = loadTextureOpt(OcclusionTex.name, getNumChannels(OcclusionTex.defaultFormat));
-    textureGroup.emissive = loadTextureOpt(EmissionTex.name, getNumChannels(EmissionTex.defaultFormat));
+    textureGroup.albedo = loadTextureOpt(kAlbedoTex.name, getNumChannels(kAlbedoTex.defaultFormat));
+    textureGroup.normal = loadTextureOpt(kNormalTex.name, getNumChannels(kNormalTex.defaultFormat));
+    textureGroup.roughness = loadTextureOpt(kRoughnessTex.name, getNumChannels(kRoughnessTex.defaultFormat));
+    textureGroup.metallic = loadTextureOpt(kMetallicTex.name, getNumChannels(kMetallicTex.defaultFormat));
+    textureGroup.occlusion = loadTextureOpt(kOcclusionTex.name, getNumChannels(kOcclusionTex.defaultFormat));
+    textureGroup.emissive = loadTextureOpt(kEmissionTex.name, getNumChannels(kEmissionTex.defaultFormat));
     return textureGroup;
 }
 
@@ -69,12 +69,12 @@ void addPbrTexturesToImageCache(const PbrTextureGroup& texGroup, const std::stri
         }
     };
 
-    addTex(texGroup.albedo, AlbedoTex);
-    addTex(texGroup.normal, NormalTex);
-    addTex(texGroup.roughness, RoughnessTex);
-    addTex(texGroup.metallic, MetallicTex);
-    addTex(texGroup.occlusion, OcclusionTex);
-    addTex(texGroup.emissive, EmissionTex);
+    addTex(texGroup.albedo, kAlbedoTex);
+    addTex(texGroup.normal, kNormalTex);
+    addTex(texGroup.roughness, kRoughnessTex);
+    addTex(texGroup.metallic, kMetallicTex);
+    addTex(texGroup.occlusion, kOcclusionTex);
+    addTex(texGroup.emissive, kEmissionTex);
 }
 
 void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache& imageCache)
@@ -87,12 +87,12 @@ void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache&
         imageCache.removeImageView(key);
     };
 
-    removeTexAndView(AlbedoTex);
-    removeTexAndView(NormalTex);
-    removeTexAndView(RoughnessTex);
-    removeTexAndView(MetallicTex);
-    removeTexAndView(OcclusionTex);
-    removeTexAndView(EmissionTex);
+    removeTexAndView(kAlbedoTex);
+    removeTexAndView(kNormalTex);
+    removeTexAndView(kRoughnessTex);
+    removeTexAndView(kMetallicTex);
+    removeTexAndView(kOcclusionTex);
+    removeTexAndView(kEmissionTex);
 }
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir)

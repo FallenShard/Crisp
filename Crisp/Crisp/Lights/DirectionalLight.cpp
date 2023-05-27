@@ -163,10 +163,10 @@ void DirectionalLight::fitProjectionToFrustum(
     float y = std::ceil(glm::dot(center, right) / texelWorldScale) * texelWorldScale;
     glm::vec3 adjCenter = up * x + right * y + m_direction * glm::dot(center, m_direction);
 
-    static constexpr float zOffset = 0.0f;
-    m_projection = glm::ortho(-radius, radius, -radius, radius, zOffset, 2 * radius + zOffset);
+    static constexpr float kZOffset = 0.0f;
+    m_projection = glm::ortho(-radius, radius, -radius, radius, kZOffset, 2 * radius + kZOffset);
 
-    glm::vec3 origin = adjCenter - m_direction * (radius + zOffset);
+    glm::vec3 origin = adjCenter - m_direction * (radius + kZOffset);
     glm::vec3 target = adjCenter;
 
     m_view = glm::lookAt(origin, target, up);

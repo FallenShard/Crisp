@@ -48,8 +48,8 @@ struct BlurParams
     int radius;
 };
 
-BlurParams blurH = {0.0f, 1.0f / Application::DefaultWindowWidth, 1.0f, 3};
-BlurParams blurV = {1.0f / Application::DefaultWindowHeight, 0.0f, 1.0f, 3};
+constexpr BlurParams kBlurH = {0.0f, 1.0f / Application::kDefaultWindowWidth, 1.0f, 3};
+constexpr BlurParams kBlurV = {1.0f / Application::kDefaultWindowHeight, 0.0f, 1.0f, 3};
 
 std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer, RenderTargetCache& renderTargetCache)
 {
@@ -225,14 +225,14 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
     blurHNode->pass("blurHPass")
         .material->writeDescriptor(
             0, 0, m_renderGraph->getRenderPass("ssaoPass"), 0, &imageCache.getSampler("linearClamp"));
-    blurHNode->pass("blurHPass").setPushConstantView(blurH);
+    blurHNode->pass("blurHPass").setPushConstantView(kBlurH);
 
     auto blurVNode = m_resourceContext->createPostProcessingEffectNode(
         "blurV", "GaussianBlur.lua", m_renderGraph->getRenderPass("blurVPass"), "blurVPass");
     blurVNode->pass("blurVPass")
         .material->writeDescriptor(
             0, 0, m_renderGraph->getRenderPass("blurHPass"), 0, &imageCache.getSampler("linearClamp"));
-    blurVNode->pass("blurVPass").setPushConstantView(blurV);
+    blurVNode->pass("blurVPass").setPushConstantView(kBlurV);
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
