@@ -39,7 +39,14 @@ MATCHER_P(HandleIs, rhs, "Checks whether the handle is equal to another object's
     return arg.getHandle() == rhs.getHandle();
 }
 
-class VulkanTest : public ::testing::Test
+enum class SurfacePolicy
+{
+    Headless,
+    HiddenWindow
+};
+
+template <SurfacePolicy surfacePolicy = SurfacePolicy::Headless>
+class VulkanTestBase : public ::testing::Test
 {
 protected:
     static void SetUpTestCase()
@@ -47,16 +54,24 @@ protected:
         spdlog::set_level(spdlog::level::warn);
         glfwInit();
 
-        static constexpr uint32_t virtualFrameCount = 2;
+        if constexpr (surfacePolicy == SurfacePolicy::HiddenWindow)
+        {
+            window_ = std::make_unique<Window>(
+                glm::ivec2{0, 0}, glm::ivec2{kDefaultWidth, kDefaultHeight}, "unit_test", WindowVisibility::Hidden);
+        }
 
         context_ = std::make_unique<VulkanContext>(
-            nullptr, ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), true);
+            surfacePolicy == SurfacePolicy::HiddenWindow ? window_->createSurfaceCallback() : nullptr,
+            ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
+            true);
         physicalDevice_ = std::make_unique<VulkanPhysicalDevice>(
             context_->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap());
         device_ = std::make_unique<VulkanDevice>(
             *physicalDevice_,
-            createQueueConfiguration({QueueType::General}, *context_, *physicalDevice_),
-            virtualFrameCount);
+            surfacePolicy == SurfacePolicy::HiddenWindow
+                ? createDefaultQueueConfiguration(*context_, *physicalDevice_)
+                : createQueueConfiguration({QueueType::General}, *context_, *physicalDevice_),
+            RendererConfig::VirtualFrameCount);
     }
 
     static void TearDownTestCase()
@@ -68,15 +83,21 @@ protected:
         glfwTerminate();
     }
 
+    inline static constexpr uint32_t kDefaultWidth = 200;
+    inline static constexpr uint32_t kDefaultHeight = 200;
+
+    inline static std::unique_ptr<Window> window_;
     inline static std::unique_ptr<VulkanContext> context_;
     inline static std::unique_ptr<VulkanPhysicalDevice> physicalDevice_;
     inline static std::unique_ptr<VulkanDevice> device_;
 };
 
-class ScopeCommandExecutor
+using VulkanTest = VulkanTestBase<SurfacePolicy::Headless>;
+using VulkanTestWithSurface = VulkanTestBase<SurfacePolicy::HiddenWindow>;
+
+struct ScopeCommandExecutor
 {
-public:
-    inline ScopeCommandExecutor(const VulkanDevice& device)
+    inline explicit ScopeCommandExecutor(const VulkanDevice& device)
         : device(device)
         , commandPool(device.getGeneralQueue().createCommandPool(), device.getResourceDeallocator())
         , cmdBuffer(commandPool.allocateCommandBuffer(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY))

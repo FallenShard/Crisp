@@ -32,13 +32,18 @@ public:
                 return;
             }
 
-            m_deallocator->deferDestruction(
-                m_framesToLive,
-                m_handle,
-                [](void* handle, VulkanResourceDeallocator* deallocator)
-                {
-                    destroyDeferred(handle, deallocator, getDestroyFunc<T>());
-                });
+            if (m_framesToLive == 0)
+            {
+                destroyDeferred(m_handle, m_deallocator, getDestroyFunc<T>());
+            }
+            else
+                m_deallocator->deferDestruction(
+                    m_framesToLive,
+                    m_handle,
+                    [](void* handle, VulkanResourceDeallocator* deallocator)
+                    {
+                        destroyDeferred(handle, deallocator, getDestroyFunc<T>());
+                    });
         }
         else
         {
@@ -86,7 +91,7 @@ public:
 
     inline void setDeferredDestruction(bool isEnabled)
     {
-        m_framesToLive = isEnabled ? RendererConfig::VirtualFrameCount : 1;
+        m_framesToLive = isEnabled ? RendererConfig::VirtualFrameCount : 0;
     }
 
     inline void setTag(std::string tag) const
