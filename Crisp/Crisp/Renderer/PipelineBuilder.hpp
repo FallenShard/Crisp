@@ -1,16 +1,15 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #include <Crisp/Utils/BitFlags.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
+#include <memory>
+#include <vector>
+
 namespace crisp
 {
-class VulkanDevice;
-
 enum class PipelineState
 {
     VertexInput = 0x001,

@@ -2,55 +2,17 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
-
-#include <Crisp/Camera/FreeCameraController.hpp>
-#include <Crisp/Camera/TargetCameraController.hpp>
-
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-
-#include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
-#include <Crisp/Renderer/RenderPasses/DepthPass.hpp>
-#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
-#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Renderer/VulkanBufferUtils.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
-
-#include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/TransformBuffer.hpp>
-#include <Crisp/Models/Atmosphere.hpp>
-#include <Crisp/Models/Skybox.hpp>
-
-#include <Crisp/Lights/EnvironmentLighting.hpp>
-#include <Crisp/Lights/LightSystem.hpp>
-
-#include <Crisp/GUI/Button.hpp>
-#include <Crisp/GUI/CheckBox.hpp>
-#include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Slider.hpp>
-
-#include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Utils/GlmFormatters.hpp>
-
-#include <Crisp/Math/Constants.hpp>
-#include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Utils/Profiler.hpp>
-
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
-#include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
+#include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Renderer/RenderPassBuilder.hpp>
+#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
+#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <imgui.h>
 
@@ -282,7 +244,7 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    createGui(m_app->getForm());
+    // createGui(m_app->getForm());
 }
 
 PbrScene::~PbrScene()
@@ -690,126 +652,128 @@ void PbrScene::setupInput()
         }));
 }
 
-void PbrScene::createGui(gui::Form* form)
-{
-    using namespace gui;
-    std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
-
-    panel->setId(PbrScenePanel);
-    panel->setPadding({20, 20});
-    panel->setPosition({20, 40});
-    panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
-    panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
-    panel->setLayoutType(LayoutType::Vertical);
-    panel->setLayoutSpacing(5.0f);
-
-    auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal)
-    {
-        auto label = std::make_unique<Label>(form, labelText);
-        panel->addControl(std::move(label));
-
-        auto slider = std::make_unique<DoubleSlider>(form, minVal, maxVal);
-        slider->setId(labelText + "Slider");
-        slider->setAnchor(Anchor::TopCenter);
-        slider->setOrigin(Origin::TopCenter);
-        slider->setValue(val);
-        slider->setIncrement(0.01f);
-
-        DoubleSlider* sliderPtr = slider.get();
-        panel->addControl(std::move(slider));
-
-        return sliderPtr;
-    };
-
-    addLabeledSlider("Azimuth", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v)
-    {
-        azimuth = static_cast<float>(v);
-        /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
-        atmosphere.sun_direction.y = std::sin(altitude);
-        atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
-    };
-    addLabeledSlider("Altitude", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v)
-    {
-        altitude = static_cast<float>(v);
-        /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
-        atmosphere.sun_direction.y = std::sin(altitude);
-        atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
-    };
-
-    addLabeledSlider("Roughness", m_uniformMaterialParams.roughness, 0.0, 1.0)
-        ->valueChanged.subscribe<&PbrScene::setRoughness>(this);
-    addLabeledSlider("Metallic", m_uniformMaterialParams.metallic, 0.0, 1.0)
-        ->valueChanged.subscribe<&PbrScene::setMetallic>(this);
-    addLabeledSlider("Red", m_uniformMaterialParams.albedo.r, 0.0, 1.0)
-        ->valueChanged.subscribe<&PbrScene::setRedAlbedo>(this);
-    addLabeledSlider("Green", m_uniformMaterialParams.albedo.g, 0.0, 1.0)
-        ->valueChanged.subscribe<&PbrScene::setGreenAlbedo>(this);
-    addLabeledSlider("Blue", m_uniformMaterialParams.albedo.b, 0.0, 1.0)
-        ->valueChanged.subscribe<&PbrScene::setBlueAlbedo>(this);
-    addLabeledSlider("U scale", m_uniformMaterialParams.uvScale.s, 1.0, 20.0)
-        ->valueChanged.subscribe<&PbrScene::setUScale>(this);
-    addLabeledSlider("V scale", m_uniformMaterialParams.uvScale.t, 1.0, 20.0)
-        ->valueChanged.subscribe<&PbrScene::setVScale>(this);
-
-    std::vector<std::string> materials;
-    for (const auto& dir :
-         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/PbrMaterials"))
-        materials.push_back(dir.path().stem().string());
-    materials.push_back("Uniform");
-
-    auto comboBox = std::make_unique<gui::ComboBox>(form);
-    comboBox->setId("materialComboBox");
-    comboBox->setItems(materials);
-    comboBox->itemSelected.subscribe<&PbrScene::onMaterialSelected>(this);
-    panel->addControl(std::move(comboBox));
-
-    std::vector<std::string> envMapNames;
-    for (const auto& dir :
-         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
-        envMapNames.push_back(dir.path().stem().string());
-    auto envComboBox = std::make_unique<gui::ComboBox>(form);
-    envComboBox->setId("EnvMapComboBox");
-    envComboBox->setItems(envMapNames);
-    envComboBox->itemSelected.subscribe<&PbrScene::setEnvironmentMap>(this);
-    panel->addControl(std::move(envComboBox));
-
-    auto floorCheckBox = std::make_unique<gui::CheckBox>(form);
-    floorCheckBox->setChecked(true);
-    floorCheckBox->setText("Show Floor");
-    panel->addControl(std::move(floorCheckBox));
-
-    form->add(std::move(panel));
-
-    /*auto memoryUsageBg = std::make_unique<Panel>(form);
-    memoryUsageBg->setSizingPolicy(SizingPolicy::FillParent, SizingPolicy::Fixed);
-    memoryUsageBg->setSizeHint({ 0.0f, 20.0f });
-    memoryUsageBg->setPosition({ 0, 20 });
-    memoryUsageBg->setColor(glm::vec3(0.2f, 0.4f, 0.2f));
-
-    auto device = m_renderer->getDevice();
-    auto memAlloc = device->getMemoryAllocator();
-    auto heap = memAlloc->getDeviceImageHeap();
-
-    int i = 0;
-    for (const auto& block : heap->memoryBlocks)
-    {
-        for (const auto [off, size] : block.usedChunks)
-        {
-            auto alloc = std::make_unique<Panel>(form);
-            alloc->setAnchor(Anchor::CenterLeft);
-            alloc->setOrigin(Origin::CenterLeft);
-            alloc->setSizingPolicy(SizingPolicy::Fixed, SizingPolicy::Fixed);
-            float s = static_cast<double>(size) / (heap->memoryBlocks.size() * heap->blockSize) * 1920;
-            float x = static_cast<double>(off + i * heap->blockSize) / (heap->memoryBlocks.size() * heap->blockSize) *
-    1920; alloc->setSizeHint({ s, 18.0f }); alloc->setPosition({ x, 0 }); alloc->setColor(glm::vec3(0.2f, 1.0f, 0.2f));
-            memoryUsageBg->addControl(std::move(alloc));
-
-            spdlog::info("Block {}: [{}, {}]", i, off, size);
-        }
-
-        ++i;
-    }
-
-    form->add(std::move(memoryUsageBg));*/
-}
+// void PbrScene::createGui(gui::Form* form)
+//{
+//     using namespace gui;
+//     std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
+//
+//     panel->setId(PbrScenePanel);
+//     panel->setPadding({20, 20});
+//     panel->setPosition({20, 40});
+//     panel->setVerticalSizingPolicy(SizingPolicy::WrapContent);
+//     panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
+//     panel->setLayoutType(LayoutType::Vertical);
+//     panel->setLayoutSpacing(5.0f);
+//
+//     auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal)
+//     {
+//         auto label = std::make_unique<Label>(form, labelText);
+//         panel->addControl(std::move(label));
+//
+//         auto slider = std::make_unique<DoubleSlider>(form, minVal, maxVal);
+//         slider->setId(labelText + "Slider");
+//         slider->setAnchor(Anchor::TopCenter);
+//         slider->setOrigin(Origin::TopCenter);
+//         slider->setValue(val);
+//         slider->setIncrement(0.01f);
+//
+//         DoubleSlider* sliderPtr = slider.get();
+//         panel->addControl(std::move(slider));
+//
+//         return sliderPtr;
+//     };
+//
+//     addLabeledSlider("Azimuth", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v)
+//     {
+//         azimuth = static_cast<float>(v);
+//         /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
+//         atmosphere.sun_direction.y = std::sin(altitude);
+//         atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
+//     };
+//     addLabeledSlider("Altitude", 0.0, 0.0, glm::pi<double>() * 2.0)->valueChanged += [](const double& v)
+//     {
+//         altitude = static_cast<float>(v);
+//         /*atmosphere.sun_direction.x = std::cos(azimuth) * std::cos(altitude);
+//         atmosphere.sun_direction.y = std::sin(altitude);
+//         atmosphere.sun_direction.z = std::sin(azimuth) * std::cos(altitude);*/
+//     };
+//
+//     addLabeledSlider("Roughness", m_uniformMaterialParams.roughness, 0.0, 1.0)
+//         ->valueChanged.subscribe<&PbrScene::setRoughness>(this);
+//     addLabeledSlider("Metallic", m_uniformMaterialParams.metallic, 0.0, 1.0)
+//         ->valueChanged.subscribe<&PbrScene::setMetallic>(this);
+//     addLabeledSlider("Red", m_uniformMaterialParams.albedo.r, 0.0, 1.0)
+//         ->valueChanged.subscribe<&PbrScene::setRedAlbedo>(this);
+//     addLabeledSlider("Green", m_uniformMaterialParams.albedo.g, 0.0, 1.0)
+//         ->valueChanged.subscribe<&PbrScene::setGreenAlbedo>(this);
+//     addLabeledSlider("Blue", m_uniformMaterialParams.albedo.b, 0.0, 1.0)
+//         ->valueChanged.subscribe<&PbrScene::setBlueAlbedo>(this);
+//     addLabeledSlider("U scale", m_uniformMaterialParams.uvScale.s, 1.0, 20.0)
+//         ->valueChanged.subscribe<&PbrScene::setUScale>(this);
+//     addLabeledSlider("V scale", m_uniformMaterialParams.uvScale.t, 1.0, 20.0)
+//         ->valueChanged.subscribe<&PbrScene::setVScale>(this);
+//
+//     std::vector<std::string> materials;
+//     for (const auto& dir :
+//          std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/PbrMaterials"))
+//         materials.push_back(dir.path().stem().string());
+//     materials.push_back("Uniform");
+//
+//     auto comboBox = std::make_unique<gui::ComboBox>(form);
+//     comboBox->setId("materialComboBox");
+//     comboBox->setItems(materials);
+//     comboBox->itemSelected.subscribe<&PbrScene::onMaterialSelected>(this);
+//     panel->addControl(std::move(comboBox));
+//
+//     std::vector<std::string> envMapNames;
+//     for (const auto& dir :
+//          std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
+//         envMapNames.push_back(dir.path().stem().string());
+//     auto envComboBox = std::make_unique<gui::ComboBox>(form);
+//     envComboBox->setId("EnvMapComboBox");
+//     envComboBox->setItems(envMapNames);
+//     envComboBox->itemSelected.subscribe<&PbrScene::setEnvironmentMap>(this);
+//     panel->addControl(std::move(envComboBox));
+//
+//     auto floorCheckBox = std::make_unique<gui::CheckBox>(form);
+//     floorCheckBox->setChecked(true);
+//     floorCheckBox->setText("Show Floor");
+//     panel->addControl(std::move(floorCheckBox));
+//
+//     form->add(std::move(panel));
+//
+//     /*auto memoryUsageBg = std::make_unique<Panel>(form);
+//     memoryUsageBg->setSizingPolicy(SizingPolicy::FillParent, SizingPolicy::Fixed);
+//     memoryUsageBg->setSizeHint({ 0.0f, 20.0f });
+//     memoryUsageBg->setPosition({ 0, 20 });
+//     memoryUsageBg->setColor(glm::vec3(0.2f, 0.4f, 0.2f));
+//
+//     auto device = m_renderer->getDevice();
+//     auto memAlloc = device->getMemoryAllocator();
+//     auto heap = memAlloc->getDeviceImageHeap();
+//
+//     int i = 0;
+//     for (const auto& block : heap->memoryBlocks)
+//     {
+//         for (const auto [off, size] : block.usedChunks)
+//         {
+//             auto alloc = std::make_unique<Panel>(form);
+//             alloc->setAnchor(Anchor::CenterLeft);
+//             alloc->setOrigin(Origin::CenterLeft);
+//             alloc->setSizingPolicy(SizingPolicy::Fixed, SizingPolicy::Fixed);
+//             float s = static_cast<double>(size) / (heap->memoryBlocks.size() * heap->blockSize) * 1920;
+//             float x = static_cast<double>(off + i * heap->blockSize) / (heap->memoryBlocks.size() * heap->blockSize)
+//             *
+//     1920; alloc->setSizeHint({ s, 18.0f }); alloc->setPosition({ x, 0 }); alloc->setColor(glm::vec3(0.2f, 1.0f,
+//     0.2f));
+//             memoryUsageBg->addControl(std::move(alloc));
+//
+//             spdlog::info("Block {}: [{}, {}]", i, off, size);
+//         }
+//
+//         ++i;
+//     }
+//
+//     form->add(std::move(memoryUsageBg));*/
+// }
 } // namespace crisp

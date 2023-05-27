@@ -1,11 +1,4 @@
-#include "Material.hpp"
-
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanPipeline.hpp>
-#include <Crisp/vulkan/VulkanRenderPass.hpp>
-
-#include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Renderer/Material.hpp>
 
 namespace crisp
 {

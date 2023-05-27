@@ -1,16 +1,14 @@
 #pragma once
 
 #include <Crisp/ShadingLanguage/Reflection.hpp>
+#include <Crisp/vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/vulkan/VulkanDevice.hpp>
+#include <Crisp/vulkan/VulkanPipelineLayout.hpp>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <memory>
 #include <vector>
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanPipelineLayout;
 class DescriptorSetAllocator;
 
 class PipelineLayoutBuilder

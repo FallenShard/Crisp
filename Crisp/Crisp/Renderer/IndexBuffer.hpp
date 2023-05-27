@@ -1,13 +1,12 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #include <Crisp/Math/Headers.hpp>
-
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+
+#include <memory>
+#include <vector>
 
 namespace crisp
 {

@@ -38,7 +38,7 @@ private:
     VkFence m_completionFence;
     VkSemaphore m_imageAvailableSemaphore;
     VkSemaphore m_renderFinishedSemaphore;
-    Status status{Status::Idle};
+    Status m_status{Status::Idle};
     VkDevice m_deviceHandle; // Non-owning.
 
     struct Submission

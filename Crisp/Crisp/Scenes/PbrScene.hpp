@@ -1,37 +1,17 @@
 #pragma once
 
-#include <Crisp/Materials/PbrMaterialUtils.hpp>
-#include <Crisp/Scenes/Scene.hpp>
-
+#include <Crisp/Camera/FreeCameraController.hpp>
+#include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Lights/LightSystem.hpp>
+#include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Models/Skybox.hpp>
+#include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp
 {
-namespace gui
-{
-class Form;
-}
-
-class FreeCameraController;
-class TargetCameraController;
-
-class TransformBuffer;
-class LightSystem;
-
-class ResourceContext;
-class RenderGraph;
-struct RenderNode;
-
-class VulkanDevice;
-
-class VulkanImage;
-class VulkanImageView;
-class VulkanSampler;
-class BoxVisualizer;
-class Skybox;
-
 class PbrScene : public AbstractScene
 {
 public:
@@ -62,7 +42,6 @@ private:
     void createPlane();
 
     void setupInput();
-    void createGui(gui::Form* form);
 
     std::vector<ConnectionHandler> m_connectionHandlers;
 

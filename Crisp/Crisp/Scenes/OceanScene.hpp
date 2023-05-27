@@ -1,26 +1,14 @@
 #pragma once
 
-#include "Scene.hpp"
+#include <Crisp/Camera/FreeCameraController.hpp>
+#include <Crisp/Geometry/TransformBuffer.hpp>
+#include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-
-#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Scenes/Scene.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 
 namespace crisp
 {
-class FreeCameraController;
-
-class TransformBuffer;
-
-struct RenderNode;
-class Skybox;
-
-namespace gui
-{
-class Form;
-}
-
-class VulkanImage;
-
 class OceanScene : public AbstractScene
 {
 public:

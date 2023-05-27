@@ -30,7 +30,7 @@ RendererFrame::RendererFrame(RendererFrame&& other) noexcept
     : m_completionFence(std::exchange(other.m_completionFence, VK_NULL_HANDLE))
     , m_imageAvailableSemaphore(std::exchange(other.m_imageAvailableSemaphore, VK_NULL_HANDLE))
     , m_renderFinishedSemaphore(std::exchange(other.m_renderFinishedSemaphore, VK_NULL_HANDLE))
-    , status(other.status)
+    , m_status(other.m_status)
     , m_deviceHandle(other.m_deviceHandle)
     , m_submissions(std::move(other.m_submissions))
 {
@@ -45,7 +45,7 @@ RendererFrame& RendererFrame::operator=(RendererFrame&& other) noexcept
     m_completionFence = std::exchange(other.m_completionFence, VK_NULL_HANDLE);
     m_imageAvailableSemaphore = std::exchange(other.m_imageAvailableSemaphore, VK_NULL_HANDLE);
     m_renderFinishedSemaphore = std::exchange(other.m_renderFinishedSemaphore, VK_NULL_HANDLE);
-    status = other.status;
+    m_status = other.m_status;
     m_deviceHandle = other.m_deviceHandle;
     m_submissions = std::move(other.m_submissions);
     return *this;
@@ -53,14 +53,14 @@ RendererFrame& RendererFrame::operator=(RendererFrame&& other) noexcept
 
 void RendererFrame::waitCompletion(VkDevice device)
 {
-    if (status == Status::Idle)
+    if (m_status == Status::Idle)
     {
         return;
     }
 
     vkWaitForFences(device, 1, &m_completionFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     vkResetFences(device, 1, &m_completionFence);
-    status = Status::Idle;
+    m_status = Status::Idle;
 }
 
 void RendererFrame::addSubmission(const VulkanCommandBuffer& cmdBuffer)
@@ -91,7 +91,7 @@ void RendererFrame::submitToQueue(const VulkanQueue& queue)
     }
     vkQueueSubmit(queue.getHandle(), static_cast<uint32_t>(submitInfos.size()), submitInfos.data(), m_completionFence);
     m_submissions.clear();
-    status = Status::Submitted;
+    m_status = Status::Submitted;
 }
 
 VkSemaphore RendererFrame::getImageAvailableSemaphoreHandle() const

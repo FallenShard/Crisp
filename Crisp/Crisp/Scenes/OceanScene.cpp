@@ -1,34 +1,13 @@
-#include "OceanScene.hpp"
+#include <Crisp/Scenes/OceanScene.hpp>
 
 #include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/Window.hpp>
-
-#include <Crisp/Camera/FreeCameraController.hpp>
+#include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Models/Ocean.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
-#include <Crisp/Renderer/ResourceContext.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-
-#include <Crisp/Image/Io/Utils.hpp>
-
-#include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Mesh/TriangleMeshUtils.hpp>
-
-#include <Crisp/Lights/EnvironmentLighting.hpp>
-#include <Crisp/Models/Ocean.hpp>
-#include <Crisp/Models/Skybox.hpp>
-
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Panel.hpp>
-#include <Crisp/GUI/Slider.hpp>
-
-#include <Crisp/Utils/LuaConfig.hpp>
-
-#include <Crisp/Core/Logger.hpp>
-
-#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 #include <imgui.h>
 

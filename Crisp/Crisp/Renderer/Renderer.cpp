@@ -1,31 +1,13 @@
 #include <Crisp/Renderer/Renderer.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
-#include <Crisp/Vulkan/VulkanSwapChain.hpp>
-
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
-#include <Crisp/Vulkan/VulkanDebugUtils.hpp>
-#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
-#include <Crisp/vulkan/VulkanCommandPool.hpp>
-
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
 #include <Crisp/Renderer/IO/LuaPipelineBuilder.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
-
-#include <Crisp/IO/FileUtils.hpp>
-#include <Crisp/Math/Headers.hpp>
-#include <Crisp/Utils/ChromeProfiler.hpp>
-
-#include <Crisp/Core/Checks.hpp>
-#include <Crisp/Core/Logger.hpp>
 
 namespace crisp
 {

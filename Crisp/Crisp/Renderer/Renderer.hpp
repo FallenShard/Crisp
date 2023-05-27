@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Crisp/Core/ThreadPool.hpp>
-
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
@@ -10,8 +9,16 @@
 #include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
 #include <array>
 #include <coroutine>
@@ -22,17 +29,6 @@
 
 namespace crisp
 {
-class VulkanDevice;
-class VulkanSwapChain;
-class VulkanFramebuffer;
-class VulkanRenderPass;
-class VulkanPipeline;
-class VulkanSampler;
-class VulkanImageView;
-class VulkanBuffer;
-class VulkanCommandPool;
-class VulkanCommandBuffer;
-
 class UniformBuffer;
 class Geometry;
 class Material;

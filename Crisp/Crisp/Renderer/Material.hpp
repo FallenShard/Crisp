@@ -1,22 +1,18 @@
 #pragma once
 
+#include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
+#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <list>
 #include <vector>
 
 namespace crisp
 {
-class VulkanPipeline;
-class VulkanDevice;
-class UniformBuffer;
-class StorageBuffer;
-class DescriptorSetAllocator;
-
 class Material
 {
 public:
