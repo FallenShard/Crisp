@@ -29,9 +29,6 @@ TEST_F(VulkanMemoryHeapTest, StagingMemoryHeap)
     EXPECT_EQ(heap->getAllocatedSize(), 2048);
     EXPECT_EQ(heap->getUsedSize(), 1536);
 
-    const auto allocation3 = heap->allocate(1025, 0);
-    EXPECT_THAT(allocation3, HasError());
-
     allocation.free();
     EXPECT_EQ(heap->getAllocatedSize(), 1024);
     EXPECT_EQ(heap->getUsedSize(), 512);
@@ -39,6 +36,8 @@ TEST_F(VulkanMemoryHeapTest, StagingMemoryHeap)
     allocation2.free();
     EXPECT_EQ(heap->getAllocatedSize(), 0);
     EXPECT_EQ(heap->getUsedSize(), 0);
+
+    EXPECT_THAT(heap->allocate(1025, 0), HasError());
 }
 
 TEST_F(VulkanMemoryHeapTest, DeviceMemoryHeap)

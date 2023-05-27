@@ -1,13 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-#include <Crisp/Core/ApplicationEnvironment.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
-
-#include <Crisp/Core/Result.hpp>
 
 namespace crisp::test
 {
@@ -24,27 +17,6 @@ protected:
 
 using ::testing::IsNull;
 using ::testing::Not;
-
-// template <int Width, int Height>
-// auto createSwapChain(TripleBuffering tripleBuffering)
-//{
-//     struct
-//     {
-//         std::unique_ptr<Window> window{std::make_unique<Window>(
-//             glm::ivec2{0, 0}, glm::ivec2{Width, Height}, "unit_test", WindowVisibility::Hidden)};
-//         std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(
-//             window->createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false)};
-//         std::unique_ptr<VulkanPhysicalDevice> physicalDevice{std::make_unique<VulkanPhysicalDevice>(
-//             context->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap())};
-//         std::unique_ptr<VulkanDevice> device{std::make_unique<VulkanDevice>(
-//             *physicalDevice,
-//             createDefaultQueueConfiguration(*context, *physicalDevice),
-//             RendererConfig::VirtualFrameCount)};
-//     } deps;
-//
-//     VulkanSwapChain swapChain(*deps.device, *deps.physicalDevice, deps.context->getSurface(), tripleBuffering);
-//     return VulkanSwapChainData(std::move(deps), std::move(swapChain));
-// }
 
 TEST_F(VulkanSwapChainTest, Constructor)
 {

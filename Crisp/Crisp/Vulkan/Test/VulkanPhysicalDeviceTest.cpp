@@ -4,6 +4,7 @@ namespace crisp::test
 {
 namespace
 {
+using VulkanPhysicalDeviceWithSurfaceTest = VulkanTestWithSurface;
 using VulkanPhysicalDeviceTest = VulkanTest;
 
 using ::testing::IsEmpty;
@@ -11,33 +12,25 @@ using ::testing::IsNull;
 using ::testing::Not;
 using ::testing::SizeIs;
 
-TEST(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCaps)
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCapabilities)
 {
-    glfwInit();
-    const Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
-    const VulkanContext context(
-        window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false);
-    const VulkanPhysicalDevice physicalDevice(context.selectPhysicalDevice({}).unwrap());
-    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(context.getSurface());
+    const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
+    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(context_->getSurface());
     EXPECT_TRUE(queueFamilies.presentFamily.has_value());
     EXPECT_TRUE(queueFamilies.graphicsFamily.has_value());
     EXPECT_TRUE(queueFamilies.computeFamily.has_value());
     EXPECT_TRUE(queueFamilies.transferFamily.has_value());
 
-    const auto surfaceSupport = physicalDevice.querySurfaceSupport(context.getSurface());
+    const auto surfaceSupport = physicalDevice.querySurfaceSupport(context_->getSurface());
     EXPECT_THAT(surfaceSupport.formats, Not(IsEmpty()));
     EXPECT_THAT(surfaceSupport.presentModes, SizeIs(4));
 }
 
-TEST(VulkanPhysicalDeviceWithSurfaceTest, CreateDevice)
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDevice)
 {
-    glfwInit();
-    const Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
-    const VulkanContext context(
-        window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false);
-    const VulkanPhysicalDevice physicalDevice(context.selectPhysicalDevice({}).unwrap());
-    const auto queueConfig = createDefaultQueueConfiguration(context, physicalDevice);
-    EXPECT_THAT(createDefaultQueueConfiguration(context, physicalDevice).createInfos, SizeIs(3));
+    const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
+    const auto queueConfig = createDefaultQueueConfiguration(*context_, physicalDevice);
+    EXPECT_THAT(createDefaultQueueConfiguration(*context_, physicalDevice).createInfos, SizeIs(3));
 
     const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
     EXPECT_THAT(device, Not(IsNull()));
