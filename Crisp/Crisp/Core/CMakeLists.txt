@@ -22,6 +22,10 @@ add_cpp_interface_library(CrispResult
 target_link_libraries(CrispResult
     INTERFACE CrispLogger)
 
+add_cpp_interface_library(CrispResultTestUtils
+    "Test/ResultTest.cpp")
+target_link_libraries(CrispResultTestUtils INTERFACE CrispResult GTest::gmock)
+
 add_cpp_test(CrispResultTest
     "Test/ResultTest.cpp")
 target_link_libraries(CrispResultTest PRIVATE CrispResult)
@@ -111,3 +115,10 @@ add_cpp_test(CrispEventTest
     "Test/DelegateTest.cpp"
     "Test/EventTest.cpp")
 target_link_libraries(CrispEventTest PRIVATE CrispEvent)
+
+add_cpp_interface_library(CrispNotNull
+    "NotNull.hpp"
+)
+target_link_libraries(CrispNotNull
+    INTERFACE CrispChecks
+)

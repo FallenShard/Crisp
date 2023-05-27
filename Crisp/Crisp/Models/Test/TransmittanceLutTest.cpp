@@ -1,45 +1,27 @@
-#include <Crisp/Vulkan/Test/ScopeCommandBufferExecutor.hpp>
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
 #include <numeric>
 
-using namespace crisp;
-
-class TransmittanceLutTest : public VulkanTest
+namespace crisp::test
 {
-};
-
-TEST_F(TransmittanceLutTest, StagingVulkanBuffer)
+namespace
 {
-    const auto& [deps, device] = createDevice();
+using TransmittanceLutTest = VulkanTest;
 
-    std::array<float, 100> data;
-    std::iota(data.begin(), data.end(), 0.0f);
-
-    constexpr VkDeviceSize size = data.size() * sizeof(float);
-    StagingVulkanBuffer stagingBuffer(*device, size);
-    ASSERT_NE(stagingBuffer.getHandle(), VK_NULL_HANDLE);
-    ASSERT_EQ(stagingBuffer.getSize(), size);
-
-    stagingBuffer.updateFromHost(data);
-    const float* ptr = stagingBuffer.getHostVisibleData<float>();
-    for (uint32_t i = 0; i < data.size(); ++i)
-        ASSERT_EQ(ptr[i], data[i]);
-}
+using ::testing::IsNull;
+using ::testing::Not;
 
 TEST_F(TransmittanceLutTest, VulkanBuffer)
 {
-    const auto& [deps, device] = createDevice();
-
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
     VulkanBuffer deviceBuffer(
-        *device,
+        *device_,
         size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    StagingVulkanBuffer stagingBuffer(*device, size);
+    StagingVulkanBuffer stagingBuffer(*device_, size);
     std::vector<float> data(size / sizeof(float));
     std::iota(data.begin(), data.end(), 0.0f);
     const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
@@ -47,10 +29,10 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
     for (uint32_t i = 0; i < data.size(); ++i)
         ASSERT_EQ(stagingPtr[i], data[i]);
 
-    StagingVulkanBuffer downloadBuffer(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    StagingVulkanBuffer downloadBuffer(*device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
     {
-        ScopeCommandBufferExecutor executor(*device);
+        const ScopeCommandExecutor executor(*device_);
         auto& cmdBuffer = executor.cmdBuffer;
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
@@ -74,3 +56,5 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
     for (uint32_t i = 0; i < elementCount; ++i)
         ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i;
 }
+} // namespace
+} // namespace crisp::test

@@ -1,20 +1,16 @@
-#include <Crisp/Vulkan/Test/ScopeCommandBufferExecutor.hpp>
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-#include <numeric>
-
-using namespace crisp;
-
-class VulkanResourceDeallocatorTest : public VulkanTest
+namespace crisp::test
 {
-};
+namespace
+{
+using VulkanResourceDeallocatorTest = VulkanTest;
 
 TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation)
 {
-    const auto& [deps, device] = createDevice();
+    const auto& device = device_;
     constexpr VkDeviceSize size = 100;
 
-    // Create a buffer handle
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = size;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -41,3 +37,5 @@ TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation)
     device->getResourceDeallocator().decrementLifetimes();
     EXPECT_EQ(device->getResourceDeallocator().getDeferredDestructorCount(), 0);
 }
+} // namespace
+} // namespace crisp::test

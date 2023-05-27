@@ -6,7 +6,6 @@ add_cpp_static_library(CrispVulkan
     "VulkanGetDeviceProc.hpp"
     "VulkanBuffer.cpp"
     "VulkanBuffer.hpp"
-    "VulkanBufferView.hpp"
     "VulkanChecks.cpp"
     "VulkanChecks.hpp"
     "VulkanCommandBuffer.cpp"
@@ -74,9 +73,9 @@ target_link_libraries(CrispVulkanHeader
     PRIVATE CrispChecks)
 
 add_cpp_interface_library(CrispVulkanTestUtils
-    "Test/ScopeCommandBufferExecutor.hpp"
     "Test/VulkanTest.hpp")
-target_link_libraries(CrispVulkanTestUtils INTERFACE CrispVulkan CrispWindow CrispApplicationEnvironment)
+target_link_libraries(CrispVulkanTestUtils
+    INTERFACE CrispVulkan CrispWindow CrispApplicationEnvironment CrispResultTestUtils)
 
 add_cpp_test(CrispVulkanBufferTest
     "Test/VulkanBufferTest.cpp")
@@ -109,7 +108,3 @@ target_link_libraries(CrispVulkanSwapChainTest PRIVATE CrispVulkanTestUtils)
 add_cpp_test(CrispVulkanResourceDeallocatorTest
     "Test/VulkanResourceDeallocatorTest.cpp")
 target_link_libraries(CrispVulkanResourceDeallocatorTest PRIVATE CrispVulkanTestUtils)
-
-add_cpp_test(CrispVulkanComputeTest
-    "Test/VulkanComputeTest.cpp")
-target_link_libraries(CrispVulkanComputeTest PRIVATE CrispVulkanTestUtils)

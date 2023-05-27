@@ -13,9 +13,9 @@ struct MoveOnlyType
     ~MoveOnlyType() = default;
 
     MoveOnlyType(const MoveOnlyType&) = delete;
-    MoveOnlyType(MoveOnlyType&&) noexcept = default;
-
     MoveOnlyType& operator=(const MoveOnlyType&) = delete;
+
+    MoveOnlyType(MoveOnlyType&&) noexcept = default;
     MoveOnlyType& operator=(MoveOnlyType&&) noexcept = default;
 
     std::unique_ptr<int> x{std::make_unique<int>(10)};

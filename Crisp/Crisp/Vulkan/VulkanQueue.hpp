@@ -21,7 +21,7 @@ public:
 
     void waitIdle() const;
 
-    VkCommandPool createCommandPool(VkCommandPoolCreateFlags flags) const;
+    VkCommandPool createCommandPool(VkCommandPoolCreateFlags flags = 0) const;
     uint32_t getFamilyIndex() const;
 
     bool supportsOperations(VkQueueFlags queueFlags) const;

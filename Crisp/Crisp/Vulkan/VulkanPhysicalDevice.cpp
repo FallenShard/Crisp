@@ -50,6 +50,11 @@ bool VulkanPhysicalDevice::isSuitable(
 
 bool VulkanPhysicalDevice::supportsPresentation(const uint32_t queueFamilyIndex, const VkSurfaceKHR surface) const
 {
+    if (surface == VK_NULL_HANDLE)
+    {
+        return false;
+    }
+
     VkBool32 presentSupport = false;
     vkGetPhysicalDeviceSurfaceSupportKHR(m_handle, queueFamilyIndex, surface, &presentSupport);
     return static_cast<bool>(presentSupport);

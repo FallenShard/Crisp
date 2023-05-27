@@ -9,11 +9,14 @@
 
 #include <Crisp/Core/Result.hpp>
 
-using namespace crisp;
-
-class VulkanSwapChainTest : public VulkanTest
+namespace crisp::test
 {
-};
+namespace
+{
+using VulkanSwapChainTest = VulkanTest;
+
+using ::testing::IsNull;
+using ::testing::Not;
 
 template <typename T>
 struct VulkanSwapChainData
@@ -52,77 +55,78 @@ auto createSwapChain(TripleBuffering tripleBuffering)
 TEST_F(VulkanSwapChainTest, Constructor)
 {
     auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Enabled);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
 
     // Self-move assign
     swapChain = std::move(swapChain);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
 }
 
 TEST_F(VulkanSwapChainTest, Bounds)
 {
     auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Enabled);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
 
-    ASSERT_EQ(swapChain.getImageFormat(), VK_FORMAT_B8G8R8A8_UNORM);
-    ASSERT_EQ(swapChain.getExtent().width, 200u);
-    ASSERT_EQ(swapChain.getExtent().height, 300u);
+    EXPECT_EQ(swapChain.getImageFormat(), VK_FORMAT_B8G8R8A8_UNORM);
+    EXPECT_EQ(swapChain.getExtent().width, 200u);
+    EXPECT_EQ(swapChain.getExtent().height, 300u);
 
     const auto extent = swapChain.getExtent();
     const auto viewport = swapChain.getViewport();
-    ASSERT_EQ(extent.width, viewport.width);
-    ASSERT_EQ(extent.height, viewport.height);
-    ASSERT_EQ(viewport.x, 0);
-    ASSERT_EQ(viewport.y, 0);
-    ASSERT_EQ(viewport.minDepth, 0);
-    ASSERT_EQ(viewport.maxDepth, 1);
+    EXPECT_EQ(extent.width, viewport.width);
+    EXPECT_EQ(extent.height, viewport.height);
+    EXPECT_EQ(viewport.x, 0);
+    EXPECT_EQ(viewport.y, 0);
+    EXPECT_EQ(viewport.minDepth, 0);
+    EXPECT_EQ(viewport.maxDepth, 1);
 
     const auto scissor = swapChain.getScissorRect();
-    ASSERT_EQ(extent.width, scissor.extent.width);
-    ASSERT_EQ(extent.height, scissor.extent.height);
-    ASSERT_EQ(scissor.offset.x, 0);
-    ASSERT_EQ(scissor.offset.y, 0);
+    EXPECT_EQ(extent.width, scissor.extent.width);
+    EXPECT_EQ(extent.height, scissor.extent.height);
+    EXPECT_EQ(scissor.offset.x, 0);
+    EXPECT_EQ(scissor.offset.y, 0);
 }
 
 TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering)
 {
     auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Enabled);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
-
-    ASSERT_EQ(swapChain.getSwapChainImageCount(), 3u);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
+    EXPECT_EQ(swapChain.getSwapChainImageCount(), 3u);
 }
 
 TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
 {
     auto [deps, swapChain] = createSwapChain<200, 300>(TripleBuffering::Disabled);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
 
-    ASSERT_EQ(swapChain.getSwapChainImageCount(), 2u);
-    ASSERT_NE(swapChain.getImageView(0), swapChain.getImageView(1));
+    EXPECT_EQ(swapChain.getSwapChainImageCount(), 2u);
+    EXPECT_NE(swapChain.getImageView(0), swapChain.getImageView(1));
 }
 
 TEST_F(VulkanSwapChainTest, Recreate)
 {
     auto [deps, swapChain] = createSwapChain<100, 300>(TripleBuffering::Disabled);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
 
     for (uint32_t i = 0; i < 5; ++i)
         swapChain.recreate(*deps.device, *deps.physicalDevice, deps.context->getSurface());
-    ASSERT_NE(swapChain.getHandle(), nullptr);
-    ASSERT_EQ(swapChain.getSwapChainImageCount(), 2u);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
+    EXPECT_EQ(swapChain.getSwapChainImageCount(), 2u);
 }
 
 TEST_F(VulkanSwapChainTest, WindowResized)
 {
     auto [deps, swapChain] = createSwapChain<150, 300>(TripleBuffering::Disabled);
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
     EXPECT_EQ(swapChain.getExtent().width, 150u);
     EXPECT_EQ(swapChain.getExtent().height, 300u);
 
     deps.window->setSize(512, 1024);
     swapChain.recreate(*deps.device, *deps.physicalDevice, deps.context->getSurface());
 
-    ASSERT_NE(swapChain.getHandle(), nullptr);
+    EXPECT_THAT(swapChain.getHandle(), Not(IsNull()));
     EXPECT_EQ(swapChain.getExtent().width, 512);
     EXPECT_EQ(swapChain.getExtent().height, 1024);
 }
+} // namespace
+} // namespace crisp::test

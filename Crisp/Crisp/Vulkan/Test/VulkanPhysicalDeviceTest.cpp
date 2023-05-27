@@ -1,114 +1,77 @@
-
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-#include <Crisp/Core/ApplicationEnvironment.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
-
-#include <Crisp/Core/Result.hpp>
-
-using namespace crisp;
-
-class VulkanPhysicalDeviceTest : public VulkanTest
+namespace crisp::test
 {
-};
-
-struct VulkanSetupData
+namespace
 {
-    std::unique_ptr<Window> window;
-    std::unique_ptr<VulkanContext> context;
-};
+using VulkanPhysicalDeviceTest = VulkanTest;
 
-auto createPhysicalDevice()
+using ::testing::IsEmpty;
+using ::testing::IsNull;
+using ::testing::Not;
+using ::testing::SizeIs;
+
+TEST(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCaps)
 {
-    std::unique_ptr<VulkanContext> context(std::make_unique<VulkanContext>(nullptr, std::vector<std::string>{}, false));
-    VulkanPhysicalDevice physicalDevice(context->selectPhysicalDevice({}).unwrap());
-    return std::make_pair(std::move(physicalDevice), std::move(context));
+    glfwInit();
+    const Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
+    const VulkanContext context(
+        window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false);
+    const VulkanPhysicalDevice physicalDevice(context.selectPhysicalDevice({}).unwrap());
+    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(context.getSurface());
+    EXPECT_TRUE(queueFamilies.presentFamily.has_value());
+    EXPECT_TRUE(queueFamilies.graphicsFamily.has_value());
+    EXPECT_TRUE(queueFamilies.computeFamily.has_value());
+    EXPECT_TRUE(queueFamilies.transferFamily.has_value());
+
+    const auto surfaceSupport = physicalDevice.querySurfaceSupport(context.getSurface());
+    EXPECT_THAT(surfaceSupport.formats, Not(IsEmpty()));
+    EXPECT_THAT(surfaceSupport.presentModes, SizeIs(4));
 }
 
-auto createPhysicalDeviceWithSurface()
+TEST(VulkanPhysicalDeviceWithSurfaceTest, CreateDevice)
 {
-    struct
-    {
-        Window window{
-            glm::ivec2{  0,   0},
-            glm::ivec2{200, 200},
-            "unit_test", WindowVisibility::Hidden
-        };
-        std::unique_ptr<VulkanContext> context{std::make_unique<VulkanContext>(
-            window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false)};
-    } vulkanInit;
+    glfwInit();
+    const Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
+    const VulkanContext context(
+        window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false);
+    const VulkanPhysicalDevice physicalDevice(context.selectPhysicalDevice({}).unwrap());
+    const auto queueConfig = createDefaultQueueConfiguration(context, physicalDevice);
+    EXPECT_THAT(createDefaultQueueConfiguration(context, physicalDevice).createInfos, SizeIs(3));
 
-    VulkanPhysicalDevice physicalDevice(vulkanInit.context->selectPhysicalDevice({}).unwrap());
-    return std::make_pair(std::move(physicalDevice), std::move(vulkanInit));
-}
-
-TEST_F(VulkanPhysicalDeviceTest, ValidHandle)
-{
-    const auto& [physicalDevice, context] = createPhysicalDevice();
-    ASSERT_NE(physicalDevice.getHandle(), nullptr);
+    const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
+    EXPECT_THAT(device, Not(IsNull()));
+    vkDestroyDevice(device, nullptr);
 }
 
 TEST_F(VulkanPhysicalDeviceTest, Features)
 {
-    const auto& [physicalDevice, context] = createPhysicalDevice();
-    const auto& features = physicalDevice.getFeatures();
-    ASSERT_TRUE(features.tessellationShader);
-}
-
-TEST_F(VulkanPhysicalDeviceTest, SurfaceCaps)
-{
-    const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(deps.context->getSurface());
-    ASSERT_TRUE(queueFamilies.presentFamily.has_value());
-    ASSERT_TRUE(queueFamilies.graphicsFamily.has_value());
-    ASSERT_TRUE(queueFamilies.computeFamily.has_value());
-    ASSERT_TRUE(queueFamilies.transferFamily.has_value());
-
-    const auto surfaceSupport = physicalDevice.querySurfaceSupport(deps.context->getSurface());
-    ASSERT_FALSE(surfaceSupport.formats.empty());
-    ASSERT_EQ(surfaceSupport.presentModes.size(), 4);
-}
-
-TEST_F(VulkanPhysicalDeviceTest, CreateLogicalDevice)
-{
-    const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto queueConfig = createDefaultQueueConfiguration(*deps.context, physicalDevice);
-    EXPECT_EQ(queueConfig.createInfos.size(), 3);
-
-    const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
-    ASSERT_NE(device, VK_NULL_HANDLE);
-    vkDestroyDevice(device, nullptr);
+    const auto& features = physicalDevice_->getFeatures();
+    EXPECT_TRUE(features.tessellationShader);
 }
 
 TEST_F(VulkanPhysicalDeviceTest, FindDepthFormat)
 {
-    const auto& [physicalDevice, vulkanInit] = createPhysicalDeviceWithSurface();
-    ASSERT_EQ(physicalDevice.findSupportedDepthFormat().unwrap(), VK_FORMAT_D32_SFLOAT);
+    ASSERT_EQ(physicalDevice_->findSupportedDepthFormat().unwrap(), VK_FORMAT_D32_SFLOAT);
 }
 
 TEST_F(VulkanPhysicalDeviceTest, MemoryTypes)
 {
-    const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto queueConfig = createDefaultQueueConfiguration(*deps.context, physicalDevice);
-    const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
+    const auto device = device_->getHandle();
+    EXPECT_TRUE(physicalDevice_->findStagingBufferMemoryType(device).hasValue());
+    EXPECT_TRUE(physicalDevice_->findDeviceBufferMemoryType(device).hasValue());
+    EXPECT_TRUE(physicalDevice_->findDeviceImageMemoryType(device).hasValue());
 
-    ASSERT_TRUE(physicalDevice.findStagingBufferMemoryType(device).hasValue());
-    ASSERT_TRUE(physicalDevice.findDeviceBufferMemoryType(device).hasValue());
-    ASSERT_TRUE(physicalDevice.findDeviceImageMemoryType(device).hasValue());
-
-    const uint32_t stagingHeap = physicalDevice.findStagingBufferMemoryType(device).unwrap();
-    ASSERT_EQ(stagingHeap, physicalDevice.findMemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT).unwrap());
-
-    vkDestroyDevice(device, nullptr);
+    EXPECT_EQ(
+        physicalDevice_->findStagingBufferMemoryType(device).unwrap(),
+        physicalDevice_->findMemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT).unwrap());
 }
 
 TEST_F(VulkanPhysicalDeviceTest, FormatProperties)
 {
-    const auto& [physicalDevice, deps] = createPhysicalDeviceWithSurface();
-    const auto props = physicalDevice.getFormatProperties(VK_FORMAT_D32_SFLOAT);
-    ASSERT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
-    ASSERT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    const auto props = physicalDevice_->getFormatProperties(VK_FORMAT_D32_SFLOAT);
+    EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+    EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
+} // namespace
+} // namespace crisp::test

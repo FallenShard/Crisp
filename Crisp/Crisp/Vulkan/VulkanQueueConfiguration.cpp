@@ -109,26 +109,27 @@ VulkanQueueConfiguration createQueueConfiguration(
     const VulkanPhysicalDevice& physicalDevice)
 {
     VulkanQueueConfiguration config;
-    config.queueIdentifiers = findQueueIds(requestedQueueTypes, context, physicalDevice).unwrap();
+    config.types = requestedQueueTypes;
+    config.identifiers = findQueueIds(requestedQueueTypes, context, physicalDevice).unwrap();
 
     const auto queueFamilies = physicalDevice.queryQueueFamilyProperties();
     std::vector<uint32_t> familyQueueCounts(queueFamilies.size(), 0);
-    for (auto& queueId : config.queueIdentifiers)
+    for (auto& queueId : config.identifiers)
         familyQueueCounts[queueId.familyIndex]++;
 
-    config.queuePriorities.resize(queueFamilies.size());
+    config.priorities.resize(queueFamilies.size());
     config.createInfos.clear();
 
     for (uint32_t idx = 0; idx < familyQueueCounts.size(); ++idx)
     {
         if (familyQueueCounts[idx] != 0)
         {
-            config.queuePriorities[idx].resize(familyQueueCounts[idx], 1.0f);
+            config.priorities[idx].resize(familyQueueCounts[idx], 1.0f);
 
             VkDeviceQueueCreateInfo queueCreateInfo = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
             queueCreateInfo.queueFamilyIndex = idx;
             queueCreateInfo.queueCount = familyQueueCounts[idx];
-            queueCreateInfo.pQueuePriorities = config.queuePriorities[idx].data();
+            queueCreateInfo.pQueuePriorities = config.priorities[idx].data();
             config.createInfos.push_back(queueCreateInfo);
         }
     }
@@ -141,9 +142,9 @@ VulkanQueueConfiguration createDefaultQueueConfiguration(
 {
     return createQueueConfiguration(
         {
-            QueueTypeFlags(QueueType::GeneralWithPresent),
-            QueueTypeFlags(QueueType::AsyncCompute),
-            QueueTypeFlags(QueueType::Transfer),
+            QueueType::GeneralWithPresent,
+            QueueType::AsyncCompute,
+            QueueType::Transfer,
         },
         context,
         physicalDevice);

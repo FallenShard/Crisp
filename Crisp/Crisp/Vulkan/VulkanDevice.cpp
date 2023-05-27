@@ -8,15 +8,53 @@ namespace crisp
 namespace
 {
 auto logger = createLoggerMt("VulkanDevice");
+
+QueueIdentifier getGeneralQueue(const VulkanQueueConfiguration& queueConfig)
+{
+    return queueConfig.identifiers.at(0);
 }
+
+QueueIdentifier getComputeQueue(const VulkanQueueConfiguration& queueConfig)
+{
+    if (queueConfig.identifiers.size() == 1)
+    {
+        return queueConfig.identifiers.at(0);
+    }
+
+    for (uint32_t i = 0; i < queueConfig.types.size(); ++i)
+    {
+        if (queueConfig.types[i] == QueueType::AsyncCompute)
+            return queueConfig.identifiers.at(i);
+    }
+
+    return queueConfig.identifiers.at(1);
+}
+
+QueueIdentifier getTransferQueue(const VulkanQueueConfiguration& queueConfig)
+{
+    if (queueConfig.identifiers.size() == 1)
+    {
+        return queueConfig.identifiers.at(0);
+    }
+
+    for (uint32_t i = 0; i < queueConfig.types.size(); ++i)
+    {
+        if (queueConfig.types[i] == QueueType::Transfer)
+            return queueConfig.identifiers.at(i);
+    }
+
+    return queueConfig.identifiers.at(2);
+}
+
+} // namespace
 
 VulkanDevice::VulkanDevice(
     const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
     : m_handle(createLogicalDeviceHandle(physicalDevice, queueConfig))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
-    , m_generalQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, queueConfig.queueIdentifiers.at(0)))
-    , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, queueConfig.queueIdentifiers.at(1)))
-    , m_transferQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, queueConfig.queueIdentifiers.at(2)))
+    , m_generalQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getGeneralQueue(queueConfig)))
+    , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getComputeQueue(queueConfig)))
+    , m_transferQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getTransferQueue(queueConfig)))
     , m_memoryAllocator(std::make_unique<VulkanMemoryAllocator>(physicalDevice, m_handle))
     , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, virtualFrameCount))
 {

@@ -26,9 +26,10 @@ struct QueueIdentifier
 
 struct VulkanQueueConfiguration
 {
-    std::vector<std::vector<float>> queuePriorities;
+    std::vector<std::vector<float>> priorities;
     std::vector<VkDeviceQueueCreateInfo> createInfos;
-    std::vector<QueueIdentifier> queueIdentifiers;
+    std::vector<QueueIdentifier> identifiers;
+    std::vector<BitFlags<QueueType>> types;
 };
 
 VulkanQueueConfiguration createQueueConfiguration(

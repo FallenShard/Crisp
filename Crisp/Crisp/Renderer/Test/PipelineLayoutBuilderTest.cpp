@@ -1,28 +1,16 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
-
-#include <Crisp/Core/ApplicationEnvironment.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
 
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
-#include <Crisp/Core/Result.hpp>
-
-#include <numeric>
-
-using namespace crisp;
-
-class PipelineLayoutBuilderTest : public VulkanTest
+namespace crisp::test
 {
-};
+namespace
+{
+using PipelineLayoutBuilderTest = VulkanTest;
 
 TEST_F(PipelineLayoutBuilderTest, BasicUsage)
 {
-    const auto& [deps, device] = createDevice();
-
     PipelineLayoutBuilder builder{};
     builder.defineDescriptorSet(
         0,
@@ -34,11 +22,10 @@ TEST_F(PipelineLayoutBuilderTest, BasicUsage)
     const auto bindings = builder.getDescriptorSetLayoutBindings();
     ASSERT_EQ(bindings.size(), 1);
 
-    auto layoutHandles = builder.createDescriptorSetLayoutHandles(device->getHandle());
+    auto layoutHandles = builder.createDescriptorSetLayoutHandles(device_->getHandle());
     ASSERT_EQ(layoutHandles.size(), 1);
     for (auto layout : layoutHandles)
-        vkDestroyDescriptorSetLayout(device->getHandle(), layout, nullptr);
-
-    /*auto descriptorSetAllocator = builder.createMinimalDescriptorSetAllocator(*device);
-    descriptorSetAllocator->*/
+        vkDestroyDescriptorSetLayout(device_->getHandle(), layout, nullptr);
 }
+} // namespace
+} // namespace crisp::test

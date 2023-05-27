@@ -1,39 +1,39 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-#include <Crisp/Core/ApplicationEnvironment.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-
-using namespace crisp;
-
-class VulkanContextTest : public VulkanTest
+namespace crisp::test
 {
-};
-
-std::pair<std::unique_ptr<VulkanContext>, Window> createContextWithSurface()
+namespace
 {
-    Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
-    return {
-        std::make_unique<VulkanContext>(
-            window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false),
-        std::move(window)};
+
+using ::testing::IsNull;
+using ::testing::Not;
+
+TEST(VulkanContextTest, WithoutSurface)
+{
+    const VulkanContext context(nullptr, {}, false);
+    EXPECT_THAT(context.getSurface(), IsNull());
 }
 
-TEST_F(VulkanContextTest, WithoutSurface)
+TEST(VulkanContextTest, WithoutSurface_WithValidation)
 {
-    VulkanContext context(nullptr, {}, false);
-    ASSERT_EQ(context.getSurface(), VK_NULL_HANDLE);
+    const VulkanContext context(nullptr, {}, true);
+    EXPECT_THAT(context.getSurface(), IsNull());
 }
 
-TEST_F(VulkanContextTest, WithSurface)
+TEST(VulkanContextTest, WithSurface)
 {
-    auto [context, window] = createContextWithSurface();
-    ASSERT_NE(context->getSurface(), VK_NULL_HANDLE);
+    glfwInit();
+    const Window window(glm::ivec2{0, 0}, glm::ivec2{200, 200}, "unit_test", WindowVisibility::Hidden);
+    const VulkanContext context(
+        window.createSurfaceCallback(), ApplicationEnvironment::getRequiredVulkanInstanceExtensions(), false);
+    EXPECT_THAT(context.getSurface(), Not(IsNull()));
 }
 
-TEST_F(VulkanContextTest, DeviceSelection)
+TEST(VulkanContextTest, DeviceSelection)
 {
-    VulkanContext context(nullptr, {}, false);
-    ASSERT_EQ(context.getSurface(), VK_NULL_HANDLE);
-    EXPECT_TRUE(context.selectPhysicalDevice({}).hasValue());
+    const VulkanContext context(nullptr, {}, false);
+    EXPECT_THAT(context.getSurface(), IsNull());
+    EXPECT_THAT(context.selectPhysicalDevice({}), Not(HasError()));
 }
+} // namespace
+} // namespace crisp::test

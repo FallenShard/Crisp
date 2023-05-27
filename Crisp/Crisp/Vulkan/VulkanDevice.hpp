@@ -32,7 +32,7 @@ public:
     void flushMappedRanges();
 
     VkSemaphore createSemaphore() const;
-    VkFence createFence(VkFenceCreateFlags flags) const;
+    VkFence createFence(VkFenceCreateFlags flags = 0) const;
     VkBuffer createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const;
     VkImage createImage(const VkImageCreateInfo& imageCreateInfo) const;
 
