@@ -29,7 +29,7 @@ struct PbrTextureGroup
 
 struct PbrMaterial
 {
-    std::string key;
+    std::string name;
     PbrTextureGroup textures;
     PbrParams params;
 };

@@ -1,7 +1,7 @@
 #include <Crisp/Scenes/OceanScene.hpp>
 
 #include <Crisp/Core/Application.hpp>
-#include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Models/Ocean.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
@@ -387,7 +387,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 200);
 
     const auto iblData{
-        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps/TableMountain")};
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps/TableMountain").unwrap()};
 
     auto equirectMap =
         createVulkanImage(*m_renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);

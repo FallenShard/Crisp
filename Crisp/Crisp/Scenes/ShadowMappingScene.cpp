@@ -25,7 +25,7 @@
 #include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 
 #include <Crisp/Lights/DirectionalLight.hpp>
-#include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Lights/PointLight.hpp>
 
 #include <Crisp/Lights/LightClustering.hpp>

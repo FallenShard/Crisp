@@ -3,6 +3,7 @@
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Lights/CascadedShadowMapping.hpp>
 #include <Crisp/Lights/DirectionalLight.hpp>
+#include <Crisp/Lights/EnvironmentLight.hpp>
 #include <Crisp/Lights/LightClustering.hpp>
 #include <Crisp/Lights/LightDescriptor.hpp>
 #include <Crisp/Lights/PointLight.hpp>
@@ -50,6 +51,13 @@ public:
     UniformBuffer* getLightIndexBuffer() const;
     const std::vector<std::unique_ptr<VulkanImageView>>& getTileGridViews() const;
 
+    EnvironmentLight* getEnvironmentLight() const
+    {
+        return m_environmentLight.get();
+    }
+
+    void setEnvironmentMap(ImageBasedLightingData&& iblData, const std::string& name);
+
 private:
     Renderer* m_renderer;
 
@@ -65,6 +73,8 @@ private:
 
     // TODO: Implement omnidirectional shadow maps for select point lights.
     // std::vector<ConeLight> m_coneLights;
+
+    std::unique_ptr<EnvironmentLight> m_environmentLight;
 };
 
 std::vector<PointLight> createRandomPointLights(uint32_t count);

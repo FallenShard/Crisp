@@ -131,6 +131,22 @@ const std::vector<std::unique_ptr<VulkanImageView>>& LightSystem::getTileGridVie
     return m_lightClustering.m_lightGridViews;
 }
 
+void LightSystem::setEnvironmentMap(ImageBasedLightingData&& iblData, const std::string& name)
+{
+    if (!m_environmentLight)
+    {
+        m_environmentLight = std::make_unique<EnvironmentLight>(*m_renderer, std::move(iblData));
+    }
+    else
+    {
+        // Update the map, but make sure that all rendering tha touched it so far has finished.
+        m_renderer->finish();
+        m_environmentLight->update(*m_renderer, std::move(iblData));
+    }
+
+    m_environmentLight->setName(name);
+}
+
 std::vector<PointLight> createRandomPointLights(const uint32_t count)
 {
     constexpr float kWidth = 32.0f * 5.0f;

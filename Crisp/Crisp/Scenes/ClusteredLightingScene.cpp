@@ -29,7 +29,7 @@
 #include <Crisp/Models/Skybox.hpp>
 
 #include <Crisp/Lights/DirectionalLight.hpp>
-#include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 
 #include <Crisp/GUI/Button.hpp>

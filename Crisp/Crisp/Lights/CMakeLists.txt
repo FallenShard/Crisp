@@ -3,8 +3,10 @@ add_cpp_static_library(CrispLights
     "CascadedShadowMapping.hpp"
     "DirectionalLight.cpp"
     "DirectionalLight.hpp"
-    "EnvironmentLighting.cpp"
-    "EnvironmentLighting.hpp"
+    "EnvironmentLight.cpp"
+    "EnvironmentLight.hpp"
+    "EnvironmentLightIo.cpp"
+    "EnvironmentLightIo.hpp"
     "LightClustering.cpp"
     "LightClustering.hpp"
     "LightDescriptor.hpp"
@@ -13,10 +15,11 @@ add_cpp_static_library(CrispLights
     "PointLight.cpp"
     "PointLight.hpp"
     "ShadowMapper.cpp"
-    "ShadowMapper.hpp")
+    "ShadowMapper.hpp"
+)
 target_link_libraries(CrispLights
     PUBLIC CrispRenderer
     PUBLIC CrispGeometry
     PUBLIC CrispUtils
     PRIVATE CrispLogger
-    PUBLIC robin_hood)
+)

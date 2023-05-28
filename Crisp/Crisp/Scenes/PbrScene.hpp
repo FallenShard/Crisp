@@ -6,7 +6,6 @@
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
-#include <Crisp/Math/Headers.hpp>
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
@@ -16,7 +15,6 @@ class PbrScene : public AbstractScene
 {
 public:
     PbrScene(Renderer* renderer, Application* app);
-    ~PbrScene();
 
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;
@@ -38,7 +36,7 @@ private:
     void createCommonTextures();
     void setEnvironmentMap(const std::string& envMapName);
 
-    void createShaderball();
+    void createSceneObject();
     void createPlane();
 
     void setupInput();
@@ -47,6 +45,7 @@ private:
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
+
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
     FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
@@ -55,5 +54,7 @@ private:
     std::unique_ptr<Skybox> m_skybox;
 
     std::string m_shaderBallPbrMaterialKey;
+
+    bool m_showFloor{true};
 };
 } // namespace crisp

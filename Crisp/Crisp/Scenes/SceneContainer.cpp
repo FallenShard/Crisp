@@ -85,8 +85,8 @@ void SceneContainer::render() const
 {
     if (m_scene)
     {
-        m_scene->render();
         m_scene->renderGui();
+        m_scene->render();
     }
 }
 

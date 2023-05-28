@@ -1,17 +1,9 @@
-#include "Skybox.hpp"
+#include <Crisp/Models/Skybox.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-#include <Crisp/vulkan/VulkanImageView.hpp>
-#include <Crisp/vulkan/VulkanSampler.hpp>
 
 namespace crisp
 {
@@ -77,8 +69,6 @@ Skybox::Skybox(
 
     renderer->getDevice().flushDescriptorUpdates();
 }
-
-Skybox::~Skybox() {}
 
 void Skybox::updateRenderNode(const VulkanSampler& sampler, const VulkanImageView& cubeMapView)
 {

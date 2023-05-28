@@ -4,7 +4,7 @@
   "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/DinPro.ttf",
   "validationLayersInRelease": true,
   "scene_": "vulkan-ray-tracer",
-  "scene": "gltf-viewer",
-  "scene_a": "pbr",
+  "scene__": "gltf-viewer",
+  "scene": "pbr",
   "logLevel": "trace"
 }

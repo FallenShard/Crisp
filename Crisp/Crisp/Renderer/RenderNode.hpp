@@ -12,7 +12,6 @@ namespace crisp
 {
 struct RenderNode
 {
-
     inline void setModelMatrix(const glm::mat4& mat)
     {
         transformPack->M = mat;

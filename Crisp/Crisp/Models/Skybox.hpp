@@ -1,25 +1,10 @@
 #pragma once
 
-#include <memory>
-
-#include <Crisp/Math/Headers.hpp>
-
-#include <Crisp/Geometry/TransformPack.hpp>
-#include <Crisp/Renderer/DrawCommand.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp
 {
-class Renderer;
-class VulkanRenderPass;
-class VulkanPipeline;
-class VulkanDevice;
-class VulkanImageView;
-class VulkanSampler;
-
-class Material;
-class UniformBuffer;
-class Geometry;
 
 class Skybox
 {
@@ -30,7 +15,6 @@ public:
         const VulkanRenderPass& renderPass,
         const VulkanImageView& cubeMapView,
         const VulkanSampler& sampler);
-    ~Skybox();
 
     void updateTransforms(const glm::mat4& V, const glm::mat4& P);
 

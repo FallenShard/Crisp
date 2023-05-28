@@ -1,15 +1,13 @@
 #pragma once
 
-#include <Crisp/Renderer/ImageCache.hpp>
-
 #include <Crisp/Materials/PbrMaterial.hpp>
+#include <Crisp/Renderer/ImageCache.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
 
 #include <filesystem>
 
 namespace crisp
 {
-class Renderer;
-
 PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir);
 
 void addPbrTexturesToImageCache(

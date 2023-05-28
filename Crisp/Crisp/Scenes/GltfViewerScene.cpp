@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Lights/EnvironmentLighting.hpp>
+#include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
@@ -38,11 +38,12 @@ const VertexLayoutDescription kPbrVertexFormat = {
 void setPbrMaterialSceneParams(
     Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem)
 {
-    auto& imageCache = resourceContext.imageCache;
+    const auto& imageCache = resourceContext.imageCache;
+    const auto& envLight = *lightSystem.getEnvironmentLight();
     material.writeDescriptor(1, 0, *resourceContext.getUniformBuffer("camera"));
     material.writeDescriptor(1, 1, *lightSystem.getCascadedDirectionalLightBuffer());
-    material.writeDescriptor(1, 2, imageCache.getImageView("diffEnvMap"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 3, imageCache.getImageView("specEnvMap"), imageCache.getSampler("linearMipmap"));
+    material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(1, 5, 0, imageCache.getImageView("csmFrame0"), &imageCache.getSampler("nearestNeighbor"));
     material.writeDescriptor(1, 5, 1, imageCache.getImageView("csmFrame1"), &imageCache.getSampler("nearestNeighbor"));
@@ -209,11 +210,8 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Application* app)
     m_renderGraph->sortRenderPasses().unwrap();
     m_renderGraph->printExecutionOrder();
 
-    m_skybox = std::make_unique<Skybox>(
-        m_renderer,
-        m_renderGraph->getRenderPass(kForwardLightingPass),
-        imageCache.getImageView("cubeMap"),
-        imageCache.getSampler("linearClamp"));
+    m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
+        *m_renderer, m_renderGraph->getRenderPass(kForwardLightingPass), imageCache.getSampler("linearClamp"));
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }
@@ -331,26 +329,9 @@ void GltfViewerScene::createCommonTextures()
 
 void GltfViewerScene::setEnvironmentMap(const std::string& envMapName)
 {
-    const auto iblData{
-        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName)};
-
-    auto equirectMap =
-        createVulkanImage(*m_renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto [cubeMap, cubeMapView] =
-        convertEquirectToCubeMap(m_renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D), 1024);
-
-    auto diffEnvMap =
-        createVulkanCubeMap(*m_renderer, {iblData.diffuseIrradianceCubeMap}, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto diffEnvView = createView(*diffEnvMap, VK_IMAGE_VIEW_TYPE_CUBE);
-
-    auto specEnvMap =
-        createVulkanCubeMap(*m_renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto specEnvView = createView(*specEnvMap, VK_IMAGE_VIEW_TYPE_CUBE);
-
-    auto& imageCache = m_resourceContext->imageCache;
-    imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
-    imageCache.addImageWithView("diffEnvMap", std::move(diffEnvMap), std::move(diffEnvView));
-    imageCache.addImageWithView("specEnvMap", std::move(specEnvMap), std::move(specEnvView));
+    m_lightSystem->setEnvironmentMap(
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName).unwrap(),
+        envMapName);
 }
 
 void GltfViewerScene::loadGltf(const std::string& gltfAsset)
@@ -360,7 +341,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
         loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath, flatten(kPbrVertexFormat)).unwrap();
 
     auto& renderObject = renderObjects.at(0);
-    renderObject.material.key = gltfAsset;
+    renderObject.material.name = gltfAsset;
 
     m_cameraController->setTarget(renderObject.mesh.getBoundingBox().getCenter());
     // m_cameraController->setOrientation(glm::pi<float>() * 0.25f, -glm::pi<float>() * 0.25f);
@@ -371,13 +352,13 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
     gltfNode->transformPack->M = renderObject.transform;
 
     addPbrTexturesToImageCache(
-        renderObject.material.textures, renderObject.material.key, m_resourceContext->imageCache);
+        renderObject.material.textures, renderObject.material.name, m_resourceContext->imageCache);
 
     m_resourceContext->addGeometry(
         entityName, std::make_unique<Geometry>(*m_renderer, renderObject.mesh, kPbrVertexFormat));
     gltfNode->geometry = m_resourceContext->getGeometry(entityName);
     gltfNode->pass(kForwardLightingPass).material = createPbrMaterial(
-        entityName, renderObject.material.key, *m_resourceContext, renderObject.material.params, *m_transformBuffer);
+        entityName, renderObject.material.name, *m_resourceContext, renderObject.material.params, *m_transformBuffer);
     setPbrMaterialSceneParams(*gltfNode->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem);
 
     for (uint32_t c = 0; c < kCascadeCount; ++c)
