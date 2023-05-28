@@ -23,7 +23,7 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     renderTargets[0]->info.format = swapChain.getImageFormat();
     renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
     renderTargets[0]->info.isSwapChainDependent = true;
-    renderTargets[0]->info.clearValue.color = {0.5f, 0.0f, 1.0f, 1.0f};
+    renderTargets[0]->info.clearValue.color = {0.0, 0.0f, 0.0f, 1.0f};
 
     return RenderPassBuilder()
         .setAllocateAttachmentViews(false)

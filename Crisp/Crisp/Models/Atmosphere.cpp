@@ -219,7 +219,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 {
     ImageCache& imageCache = resourceContext.imageCache;
     const VulkanDevice& device = renderer.getDevice();
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> renderNodes;
     const auto createPostProcessingRenderNode =
         [&renderNodes, &renderer](const std::string& renderPassName, Material* material, VulkanPipeline* pipeline)
     {
@@ -227,7 +227,6 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         node->geometry = renderer.getFullScreenGeometry();
         node->pass(renderPassName).material = material;
         node->pass(renderPassName).pipeline = pipeline;
-        return node;
     };
     const auto createPostProcessingRenderNode2 = [&renderNodes, &renderer, &renderGraph, &resourceContext](
                                                      const std::string& renderPassName,
@@ -242,16 +241,15 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
             renderPassName + "Pipeline", luaPipelineFile, renderGraph.getRenderPass(renderPassName), 0);
         node->pass(renderPassName).material =
             resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
-
-        return node;
     };
 
     resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParameters), BufferUpdatePolicy::PerFrame);
 
     // Transmittance lookup
-    auto transLutNode = createPostProcessingRenderNode2(
+    createPostProcessingRenderNode2(
         TransmittanceLutPass, createTransmittanceLutPass(renderer.getDevice(), renderTargetCache), "SkyTransLut.json");
-    transLutNode->pass(TransmittanceLutPass)
+    renderNodes[TransmittanceLutPass + std::string("Node")]
+        ->pass(TransmittanceLutPass)
         .material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
 
     // Multiscattering
@@ -353,8 +351,10 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         };
         resourceContext.addGeometry("fullScreenInstanced", std::make_unique<Geometry>(renderer, vertices, faces));
         resourceContext.getGeometry("fullScreenInstanced")->setInstanceCount(32);
-        auto skyCameraVolumesNode = createPostProcessingRenderNode(ViewVolumePass, material, pipeline);
-        skyCameraVolumesNode->geometry = resourceContext.getGeometry("fullScreenInstanced");
+
+        createPostProcessingRenderNode(ViewVolumePass, material, pipeline);
+        renderNodes[ViewVolumePass + std::string("Node")]->geometry =
+            resourceContext.getGeometry("fullScreenInstanced");
     }
 
     {
@@ -363,7 +363,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
             RayMarchingPass,
             createRayMarchingPass(renderer.getDevice(), renderTargetCache, renderer.getSwapChainExtent()));
         renderGraph.addDependency(ViewVolumePass, RayMarchingPass, 0);
-        renderGraph.addDependency(DepthPrePass, RayMarchingPass, 0);
+        // renderGraph.addDependency(DepthPrePass, RayMarchingPass, 0);
         auto pipeline = resourceContext.createPipeline(
             "rayMarching", "SkyRayMarching.json", renderGraph.getRenderPass(RayMarchingPass), 0);
         auto material = resourceContext.createMaterial("rayMarching", pipeline);
@@ -375,8 +375,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
             1, 2, renderGraph.getRenderPass(SkyViewLutPass), 0, &imageCache.getSampler("linearClamp"));
         material->writeDescriptor(
             1, 3, renderGraph.getRenderPass(ViewVolumePass), 0, &imageCache.getSampler("linearClamp"));
-        material->writeDescriptor(
-            1, 4, renderGraph.getRenderPass(DepthPrePass), 0, &imageCache.getSampler("nearestNeighbor"));
+        /*material->writeDescriptor(
+            1, 4, renderGraph.getRenderPass(DepthPrePass), 0, &imageCache.getSampler("nearestNeighbor"));*/
 
         createPostProcessingRenderNode(RayMarchingPass, material, pipeline);
 

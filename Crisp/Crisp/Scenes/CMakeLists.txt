@@ -3,6 +3,8 @@ add_cpp_static_library(CrispScenes
     "SceneContainer.hpp"
     "AmbientOcclusionScene.cpp"
     "AmbientOcclusionScene.hpp"
+    "AtmosphereScene.cpp"
+    "AtmosphereScene.hpp"
     "ClusteredLightingScene.cpp"
     "ClusteredLightingScene.hpp"
     "GltfViewerScene.cpp"
