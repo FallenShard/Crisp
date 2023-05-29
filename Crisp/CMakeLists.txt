@@ -21,6 +21,8 @@ add_subdirectory(Crisp/Spectra)
 add_subdirectory(Crisp/Vulkan)
 add_subdirectory(Crisp/Utils)
 
+add_subdirectory(Crisp/Vesper)
+
 add_cpp_binary(CrispMain main.cpp)
 set_target_properties(CrispMain PROPERTIES
     LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"

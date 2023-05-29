@@ -38,7 +38,7 @@ VkBool32 debugMessengerCallback(
     else
     {
         logger->error("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
-        std::terminate();
+        // std::terminate();
     }
 
     return VK_FALSE;
