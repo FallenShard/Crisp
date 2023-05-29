@@ -54,13 +54,13 @@ static constexpr const char* MainPass = "mainPass";
 static constexpr const char* CsmPass = "csmPass";
 } // namespace
 
-ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
     // Camera
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
     m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
@@ -125,12 +125,12 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Application* 
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    createGui(m_app->getForm());
+    // createGui(m_app->getForm());
 }
 
 ClusteredLightingScene::~ClusteredLightingScene()
 {
-    m_app->getForm()->remove("shadowMappingPanel");
+    // m_app->getForm()->remove("shadowMappingPanel");
 }
 
 void ClusteredLightingScene::resize(int width, int height)
@@ -325,7 +325,7 @@ void ClusteredLightingScene::createPlane()
 
 void ClusteredLightingScene::setupInput()
 {
-    m_app->getWindow().keyPressed += [this](Key key, int)
+    m_window->keyPressed += [this](Key key, int)
     {
         switch (key)
         {

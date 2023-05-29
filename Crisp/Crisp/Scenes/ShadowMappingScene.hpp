@@ -62,7 +62,7 @@ class RayTracingMaterial;
 class ShadowMappingScene : public AbstractScene
 {
 public:
-    ShadowMappingScene(Renderer* renderer, Application* app);
+    ShadowMappingScene(Renderer* renderer, Window* window);
     ~ShadowMappingScene();
 
     virtual void resize(int width, int height) override;

@@ -140,12 +140,12 @@ std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const
 
 } // namespace
 
-GltfViewerScene::GltfViewerScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
-    m_cameraController = std::make_unique<TargetCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<TargetCameraController>(*m_window);
     m_cameraController->setDistance(3.0f);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
     m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
@@ -322,16 +322,13 @@ void GltfViewerScene::createCommonTextures()
 
     m_resourceContext->createPipeline("pbrTex", "PbrTex.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
 
-    setEnvironmentMap("TableMountain");
+    const std::string environmentMap = "TableMountain";
+    m_lightSystem->setEnvironmentMap(
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMap)
+            .unwrap(),
+        environmentMap);
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
     imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
-}
-
-void GltfViewerScene::setEnvironmentMap(const std::string& envMapName)
-{
-    m_lightSystem->setEnvironmentMap(
-        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName).unwrap(),
-        envMapName);
 }
 
 void GltfViewerScene::loadGltf(const std::string& gltfAsset)
@@ -454,7 +451,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
 
 void GltfViewerScene::setupInput()
 {
-    m_connectionHandlers.emplace_back(m_app->getWindow().keyPressed.subscribe(
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe(
         [this](Key key, int)
         {
             switch (key)

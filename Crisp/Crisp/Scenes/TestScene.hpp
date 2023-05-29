@@ -7,7 +7,7 @@ namespace crisp
 class TestScene : public AbstractScene
 {
 public:
-    TestScene(Renderer* renderer, Application* app);
+    TestScene(Renderer* renderer, Window* window);
     ~TestScene() override;
 
     void resize(int width, int height) override;

@@ -3,7 +3,6 @@
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-#include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 

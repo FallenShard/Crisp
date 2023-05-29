@@ -14,7 +14,7 @@ namespace crisp
 class PbrScene : public AbstractScene
 {
 public:
-    PbrScene(Renderer* renderer, Application* app);
+    PbrScene(Renderer* renderer, Window* window);
 
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;
@@ -41,8 +41,6 @@ private:
 
     void setupInput();
 
-    std::vector<ConnectionHandler> m_connectionHandlers;
-
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
 
@@ -54,6 +52,8 @@ private:
     std::unique_ptr<Skybox> m_skybox;
 
     std::string m_shaderBallPbrMaterialKey;
+
+    std::vector<std::string> m_environmentMapNames;
 
     bool m_showFloor{true};
 };

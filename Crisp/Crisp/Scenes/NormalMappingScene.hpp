@@ -17,7 +17,7 @@ struct RenderNode;
 class NormalMappingScene : public AbstractScene
 {
 public:
-    NormalMappingScene(Renderer* renderer, Application* app);
+    NormalMappingScene(Renderer* renderer, Window* window);
     ~NormalMappingScene();
 
     virtual void resize(int width, int height) override;

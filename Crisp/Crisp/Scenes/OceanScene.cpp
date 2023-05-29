@@ -154,10 +154,10 @@ std::unique_ptr<VulkanImage> createStorageImage(
 bool paused = false;
 } // namespace
 
-OceanScene::OceanScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+OceanScene::OceanScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
-    m_app->getWindow().keyPressed += [this](Key key, int /*modifiers*/)
+    m_window->keyPressed += [this](Key key, int /*modifiers*/)
     {
         if (key == Key::Space)
             paused = !paused;
@@ -165,7 +165,7 @@ OceanScene::OceanScene(Renderer* renderer, Application* app)
             m_resourceContext->recreatePipelines();
     };
 
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
     std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {

@@ -60,13 +60,13 @@ static constexpr const char* CsmPass = "csmPass";
 bool animationFrozen = true;
 } // namespace
 
-NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+NormalMappingScene::NormalMappingScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
     // Camera
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
     // m_cameraController->getCamera().setPosition(glm::vec3(5.0f,
     // 5.0f, 5.0f));
@@ -101,10 +101,7 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Application* app)
     createGui();
 }
 
-NormalMappingScene::~NormalMappingScene()
-{
-    m_app->getForm()->remove("normalMappingPanel");
-}
+NormalMappingScene::~NormalMappingScene() {}
 
 void NormalMappingScene::resize(int width, int height)
 {
@@ -313,7 +310,7 @@ void NormalMappingScene::createPlane()
 
 void NormalMappingScene::setupInput()
 {
-    m_app->getWindow().keyPressed += [this](Key key, int)
+    m_window->keyPressed += [this](Key key, int)
     {
         switch (key)
         {
@@ -329,7 +326,7 @@ void NormalMappingScene::setupInput()
 void NormalMappingScene::createGui()
 {
     using namespace gui;
-    Form* form = m_app->getForm();
+    Form* form = nullptr; // m_app->getForm();
 
     auto panel = std::make_unique<Panel>(form);
     panel->setSizeHint({200.0f, 200.0f});

@@ -12,7 +12,7 @@ namespace crisp
 class OceanScene : public AbstractScene
 {
 public:
-    OceanScene(Renderer* renderer, Application* app);
+    OceanScene(Renderer* renderer, Window* window);
     ~OceanScene();
 
     virtual void resize(int width, int height) override;

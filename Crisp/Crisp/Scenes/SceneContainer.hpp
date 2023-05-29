@@ -4,17 +4,16 @@
 #include <string>
 #include <vector>
 
+#include <Crisp/Core/Window.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp
 {
-class Application;
-
 class SceneContainer
 {
 public:
-    SceneContainer(Renderer* renderer, Application* app, const std::string& sceneName);
+    SceneContainer(Renderer* renderer, Window* window, const std::string& sceneName);
 
     static const std::vector<std::string>& getSceneNames();
 
@@ -31,6 +30,6 @@ private:
     std::string m_sceneName;
 
     Renderer* m_renderer;
-    Application* m_application;
+    Window* m_window;
 };
 } // namespace crisp

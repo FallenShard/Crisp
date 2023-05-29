@@ -31,10 +31,10 @@ namespace
 static constexpr const char* MainPass = "mainPass";
 }
 
-FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_uniformBuffers.emplace(
         "camera", std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
 
@@ -56,7 +56,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
     m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
 
     m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
-    m_app->getWindow().keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+    m_window->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
     m_fluidGeometry = std::make_unique<Geometry>();
     m_fluidGeometry->addNonOwningVertexBuffer(m_fluidSimulation->getVertexBuffer("position"));
@@ -77,8 +77,8 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Application* app)
 
 FluidSimulationScene::~FluidSimulationScene()
 {
-    m_app->getWindow().keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
-    m_app->getForm()->remove("fluidSimulationPanel");
+    m_window->keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
+    // m_app->getForm()->remove("fluidSimulationPanel");
 }
 
 void FluidSimulationScene::resize(int width, int height)
@@ -123,7 +123,8 @@ void FluidSimulationScene::render()
 void FluidSimulationScene::createGui()
 {
     using namespace gui;
-    std::unique_ptr<Panel> panel = std::make_unique<Panel>(m_app->getForm());
+    gui::Form* form = {};
+    std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
 
     panel->setId("fluidSimulationPanel");
     panel->setPadding({20, 20});
@@ -134,12 +135,12 @@ void FluidSimulationScene::createGui()
     int y = 0;
     auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal)
     {
-        auto label = std::make_unique<Label>(m_app->getForm(), labelText);
+        auto label = std::make_unique<Label>(form, labelText);
         label->setPosition({0, y});
         panel->addControl(std::move(label));
         y += 20;
 
-        auto slider = std::make_unique<DoubleSlider>(m_app->getForm(), minVal, maxVal);
+        auto slider = std::make_unique<DoubleSlider>(form, minVal, maxVal);
         slider->setId(labelText + "Slider");
         slider->setAnchor(Anchor::TopCenter);
         slider->setOrigin(Origin::TopCenter);
@@ -168,12 +169,12 @@ void FluidSimulationScene::createGui()
         m_fluidSimulation->setGravityZ(static_cast<float>(val));
     };
 
-    auto viscoLabel = std::make_unique<Label>(m_app->getForm(), "Viscosity");
+    auto viscoLabel = std::make_unique<Label>(form, "Viscosity");
     viscoLabel->setPosition({0, y});
     panel->addControl(std::move(viscoLabel));
     y += 20;
 
-    auto viscositySlider = std::make_unique<IntSlider>(m_app->getForm());
+    auto viscositySlider = std::make_unique<IntSlider>(form);
     viscositySlider->setId("viscositySlider");
     viscositySlider->setAnchor(Anchor::TopCenter);
     viscositySlider->setOrigin(Origin::TopCenter);
@@ -188,12 +189,12 @@ void FluidSimulationScene::createGui()
     panel->addControl(std::move(viscositySlider));
     y += 30;
 
-    auto surfaceTensionLabel = std::make_unique<Label>(m_app->getForm(), "Surface Tension");
+    auto surfaceTensionLabel = std::make_unique<Label>(form, "Surface Tension");
     surfaceTensionLabel->setPosition({0, y});
     panel->addControl(std::move(surfaceTensionLabel));
     y += 20;
 
-    auto surfaceTensionSlider = std::make_unique<IntSlider>(m_app->getForm());
+    auto surfaceTensionSlider = std::make_unique<IntSlider>(form);
     surfaceTensionSlider->setId("surfaceTensionSlider");
     surfaceTensionSlider->setAnchor(Anchor::TopCenter);
     surfaceTensionSlider->setOrigin(Origin::TopCenter);
@@ -208,7 +209,7 @@ void FluidSimulationScene::createGui()
     panel->addControl(std::move(surfaceTensionSlider));
     y += 30;
 
-    auto resetButton = std::make_unique<Button>(m_app->getForm());
+    auto resetButton = std::make_unique<Button>(form);
     resetButton->setId("resetButton");
     resetButton->setPosition({0, y});
     resetButton->setSizeHint({0, 30});
@@ -220,6 +221,6 @@ void FluidSimulationScene::createGui()
     };
     panel->addControl(std::move(resetButton));
 
-    m_app->getForm()->add(std::move(panel));
+    form->add(std::move(panel));
 }
 } // namespace crisp

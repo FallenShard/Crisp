@@ -94,8 +94,8 @@ glm::vec4 color = glm::vec4(10, 0, 0, 1);
 glm::vec2 terrainPushConstants = glm::vec2(1.0f, 15.0f);
 } // namespace
 
-ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
@@ -174,10 +174,7 @@ ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Application* app)
     // m_app->getForm()->add(gui::createShadowMappingSceneGui(m_app->getForm(), this));
 }
 
-ShadowMappingScene::~ShadowMappingScene()
-{
-    m_app->getForm()->remove("shadowMappingPanel");
-}
+ShadowMappingScene::~ShadowMappingScene() {}
 
 void ShadowMappingScene::resize(int, int)
 {
@@ -791,7 +788,7 @@ void ShadowMappingScene::createBox()
 
 void ShadowMappingScene::setupInput()
 {
-    m_app->getWindow().keyPressed += [this](Key key, int)
+    m_window->keyPressed += [this](Key key, int)
     {
         switch (key)
         {

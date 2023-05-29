@@ -21,7 +21,7 @@ class RayTracedImage;
 class RayTracerScene : public AbstractScene
 {
 public:
-    RayTracerScene(Renderer* renderer, Application* app);
+    RayTracerScene(Renderer* renderer, Window* window);
     ~RayTracerScene();
 
     virtual void resize(int width, int height) override;

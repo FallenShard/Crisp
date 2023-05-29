@@ -54,7 +54,7 @@ Application::Application(const ApplicationEnvironment& environment)
     m_window.minimized.subscribe<&Application::onMinimize>(this);
     m_window.restored.subscribe<&Application::onRestore>(this);
 
-    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), this, environment.getParameters().scene);
+    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), &m_window, environment.getParameters().scene);
     m_sceneContainer->update(0.0f);
 
     gui::initImGui(
@@ -192,22 +192,14 @@ void Application::drawGui()
     drawMemoryLabel("Image Memory", metrics.imageMemoryUsed, metrics.imageMemorySize);
     drawMemoryLabel("Staging Memory", metrics.stagingMemoryUsed, metrics.stagingMemorySize);
 
-    if (ImGui::BeginCombo("Scene", m_sceneContainer->getSceneName().c_str()))
-    {
-        for (const auto& scene : SceneContainer::getSceneNames())
+    gui::drawComboBox(
+        "Scene",
+        m_sceneContainer->getSceneName(),
+        SceneContainer::getSceneNames(),
+        [this](const std::string& selectedItem)
         {
-            const bool isSelected{scene == m_sceneContainer->getSceneName()};
-            if (ImGui::Selectable(scene.c_str(), isSelected))
-            {
-                m_sceneContainer->onSceneSelected(scene);
-            }
-            if (isSelected)
-            {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
+            m_sceneContainer->onSceneSelected(selectedItem);
+        });
 
     ImGui::End();
 }

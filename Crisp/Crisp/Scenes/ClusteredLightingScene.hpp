@@ -13,7 +13,6 @@ namespace gui
 class Form;
 }
 
-class Application;
 class FreeCameraController;
 
 class TransformBuffer;
@@ -32,7 +31,7 @@ class Skybox;
 class ClusteredLightingScene : public AbstractScene
 {
 public:
-    ClusteredLightingScene(Renderer* renderer, Application* app);
+    ClusteredLightingScene(Renderer* renderer, Window* window);
     ~ClusteredLightingScene();
 
     virtual void resize(int width, int height) override;

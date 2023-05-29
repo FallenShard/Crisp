@@ -89,13 +89,13 @@ VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geo
 
 } // namespace
 
-VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
     // Camera
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(ExtendedCameraParameters), BufferUpdatePolicy::PerFrame);
 
     std::vector<std::string> meshNames = {"walls", "leftwall", "rightwall", "light"};
@@ -367,7 +367,7 @@ void VulkanRayTracingScene::updateGeometryBufferDescriptors(const Geometry& geom
 
 void VulkanRayTracingScene::setupInput()
 {
-    m_app->getWindow().keyPressed += [this](Key key, int)
+    m_window->keyPressed += [this](Key key, int)
     {
         switch (key)
         {

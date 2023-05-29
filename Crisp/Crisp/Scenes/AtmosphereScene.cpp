@@ -1,19 +1,5 @@
 #include <Crisp/Scenes/AtmosphereScene.hpp>
 
-#include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/Checks.hpp>
-#include <Crisp/IO/FileUtils.hpp>
-#include <Crisp/IO/JsonUtils.hpp>
-#include <Crisp/Image/Io/Utils.hpp>
-#include <Crisp/Lights/EnvironmentLightIo.hpp>
-#include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
-#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
-#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
-
 #include <imgui.h>
 
 namespace crisp
@@ -31,12 +17,12 @@ const VertexLayoutDescription PbrVertexFormat = {
 };
 } // namespace
 
-AtmosphereScene::AtmosphereScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
     m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
 
@@ -160,7 +146,7 @@ void AtmosphereScene::createCommonTextures()
 
 void AtmosphereScene::setupInput()
 {
-    m_connectionHandlers.emplace_back(m_app->getWindow().keyPressed.subscribe(
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe(
         [this](Key key, int)
         {
             switch (key)

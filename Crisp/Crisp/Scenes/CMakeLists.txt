@@ -29,8 +29,7 @@ add_cpp_static_library(CrispScenes
     "TestScene.hpp"
     "VulkanRayTracingScene.cpp"
     "VulkanRayTracingScene.hpp"
-    "WorldScene.cpp"
-    "WorldScene.hpp")
+)
 target_link_libraries(CrispScenes
     PUBLIC CrispRenderer
     PUBLIC CrispCamera
@@ -40,4 +39,5 @@ target_link_libraries(CrispScenes
     PUBLIC CrispMaterialUtils
     PUBLIC CrispJsonUtils
     PUBLIC Vesper
-    PRIVATE CrispApplication)
+    PRIVATE CrispApplication
+)

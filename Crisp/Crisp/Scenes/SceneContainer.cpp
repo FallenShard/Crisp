@@ -66,12 +66,12 @@ std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... ar
 }
 } // namespace
 
-SceneContainer::SceneContainer(Renderer* renderer, Application* app, const std::string& sceneName)
+SceneContainer::SceneContainer(Renderer* renderer, Window* window, const std::string& sceneName)
     : m_renderer(renderer)
-    , m_application(app)
+    , m_window(window)
     , m_sceneName(sceneName)
 {
-    m_scene = createScene(sceneName, m_renderer, m_application);
+    m_scene = createScene(sceneName, m_renderer, m_window);
 }
 
 const std::vector<std::string>& SceneContainer::getSceneNames()
@@ -99,7 +99,7 @@ void SceneContainer::onSceneSelected(const std::string& sceneName)
     m_renderer->finish();
     m_renderer->setSceneImageView(nullptr, 0);
     m_scene.reset();
-    m_scene = createScene(sceneName, m_renderer, m_application);
+    m_scene = createScene(sceneName, m_renderer, m_window);
     m_sceneName = sceneName;
 }
 

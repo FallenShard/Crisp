@@ -2,6 +2,7 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
@@ -13,8 +14,6 @@
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Utils/LuaConfig.hpp>
-
-#include <imgui.h>
 
 namespace crisp
 {
@@ -128,12 +127,12 @@ std::unique_ptr<VulkanRenderPass> createRedChannelPass(
 
 } // namespace
 
-PbrScene::PbrScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+PbrScene::PbrScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
     setupInput();
 
-    m_cameraController = std::make_unique<FreeCameraController>(app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
     m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
 
@@ -241,6 +240,10 @@ PbrScene::PbrScene(Renderer* renderer, Application* app)
         *m_renderer, m_renderGraph->getRenderPass(ForwardLightingPass), imageCache.getSampler("linearClamp"));
 
     m_renderer->getDevice().flushDescriptorUpdates();
+
+    for (const auto& dir :
+         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
+        m_environmentMapNames.push_back(dir.path().stem().string());
 }
 
 void PbrScene::resize(int width, int height)
@@ -316,27 +319,14 @@ void PbrScene::renderGui()
     ImGui::SliderFloat("U Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
     ImGui::SliderFloat("V Scale", &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
 
-    std::vector<std::string> envMapNames;
-    for (const auto& dir :
-         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
-        envMapNames.push_back(dir.path().stem().string());
-
-    if (ImGui::BeginCombo("Environment Light", m_lightSystem->getEnvironmentLight()->getName().c_str()))
-    {
-        for (const auto& envMap : envMapNames)
+    gui::drawComboBox(
+        "Environment Light",
+        m_lightSystem->getEnvironmentLight()->getName(),
+        m_environmentMapNames,
+        [this](const std::string& selectedItem)
         {
-            const bool isSelected{envMap == m_lightSystem->getEnvironmentLight()->getName()};
-            if (ImGui::Selectable(envMap.c_str(), isSelected))
-            {
-                setEnvironmentMap(envMap);
-            }
-            if (isSelected)
-            {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
+            setEnvironmentMap(selectedItem);
+        });
 
     if (ImGui::Checkbox("Show Floor", &m_showFloor))
     {
@@ -565,7 +555,7 @@ void PbrScene::createPlane()
 
 void PbrScene::setupInput()
 {
-    m_connectionHandlers.emplace_back(m_app->getWindow().keyPressed.subscribe(
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe(
         [this](Key key, int)
         {
             switch (key)

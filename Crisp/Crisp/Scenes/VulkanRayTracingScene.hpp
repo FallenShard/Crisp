@@ -8,8 +8,6 @@
 
 namespace crisp
 {
-class Application;
-
 class FreeCameraController;
 class TransformBuffer;
 class LightSystem;
@@ -25,8 +23,7 @@ class VulkanAccelerationStructure;
 class VulkanRayTracingScene : public AbstractScene
 {
 public:
-    VulkanRayTracingScene(Renderer* renderer, Application* app);
-    ~VulkanRayTracingScene() override = default;
+    VulkanRayTracingScene(Renderer* renderer, Window* window);
 
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;

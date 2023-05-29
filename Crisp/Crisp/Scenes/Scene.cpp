@@ -2,10 +2,10 @@
 
 namespace crisp
 {
-AbstractScene::AbstractScene(Application* application, Renderer* renderer)
-    : m_app(application)
+AbstractScene::AbstractScene(Renderer* renderer, Window* window)
+    : m_window(window)
     , m_renderer(renderer)
-    , m_resourceContext(std::make_unique<ResourceContext>(renderer))
+    , m_resourceContext(std::make_unique<ResourceContext>(m_renderer))
     , m_renderGraph{std::make_unique<RenderGraph>(m_renderer)}
 {
 }

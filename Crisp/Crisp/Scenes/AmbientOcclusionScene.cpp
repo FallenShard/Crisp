@@ -83,11 +83,11 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer,
 
 } // namespace
 
-AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
     , m_ssaoParams{128, 0.5f}
 {
-    m_cameraController = std::make_unique<FreeCameraController>(m_app->getWindow());
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     /*m_cameraController->getCamera().setRotation(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
     m_cameraController->getCamera().setPosition(glm::vec3(0.0f, 2.0f, 1.0f));*/
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
@@ -241,7 +241,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Application* ap
 
 AmbientOcclusionScene::~AmbientOcclusionScene()
 {
-    m_app->getForm()->remove("ambientOcclusionPanel");
+    // m_app->getForm()->remove("ambientOcclusionPanel");
 }
 
 void AmbientOcclusionScene::resize(int width, int height)
@@ -288,7 +288,7 @@ void AmbientOcclusionScene::setRadius(double radius)
 
 void AmbientOcclusionScene::createGui()
 {
-    using namespace gui;
+    /*using namespace gui;
     auto panel = std::make_unique<Panel>(m_app->getForm());
     panel->setId("ambientOcclusionPanel");
     panel->setPadding({20, 20});
@@ -328,6 +328,6 @@ void AmbientOcclusionScene::createGui()
     panel->addControl(std::move(radiusSlider));
     y += 30;
 
-    m_app->getForm()->add(std::move(panel));
+    m_app->getForm()->add(std::move(panel));*/
 }
 } // namespace crisp

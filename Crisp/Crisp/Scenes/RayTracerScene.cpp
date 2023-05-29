@@ -22,8 +22,8 @@
 namespace crisp
 {
 
-RayTracerScene::RayTracerScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+RayTracerScene::RayTracerScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
     , m_progress(0.0f)
     , m_timeSpentRendering(0.0f)
 {
@@ -45,8 +45,8 @@ RayTracerScene::RayTracerScene(Renderer* renderer, Application* app)
 
 RayTracerScene::~RayTracerScene()
 {
-    m_app->getForm()->remove("vesperOptionsPanel");
-    m_app->getForm()->remove("progressBarBg");
+    // m_app->getForm()->remove("vesperOptionsPanel");
+    // m_app->getForm()->remove("progressBarBg");
 }
 
 void RayTracerScene::resize(int width, int height)
@@ -136,12 +136,12 @@ void RayTracerScene::openSceneFile(const std::filesystem::path& filename)
     glm::ivec2 imageSize = m_rayTracer->getImageSize();
     m_image = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, m_renderer);
     m_imageData.resize(4 * imageSize.x * imageSize.y);
-    m_app->getWindow().setTitle(filename.string());
+    // m_app->getWindow().setTitle(filename.string());
 }
 
 void RayTracerScene::createGui()
 {
-    gui::Form* form = m_app->getForm();
+    gui::Form* form = nullptr; // m_app->getForm();
 
     auto panel = std::make_unique<gui::Panel>(form);
     panel->setId("vesperOptionsPanel");

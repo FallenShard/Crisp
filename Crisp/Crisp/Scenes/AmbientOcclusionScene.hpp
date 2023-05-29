@@ -28,7 +28,7 @@ class Skybox;
 class AmbientOcclusionScene : public AbstractScene
 {
 public:
-    AmbientOcclusionScene(Renderer* renderer, Application* app);
+    AmbientOcclusionScene(Renderer* renderer, Window* window);
     ~AmbientOcclusionScene();
 
     virtual void resize(int width, int height) override;

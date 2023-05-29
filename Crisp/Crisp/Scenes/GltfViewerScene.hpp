@@ -16,7 +16,7 @@ namespace crisp
 class GltfViewerScene : public AbstractScene
 {
 public:
-    GltfViewerScene(Renderer* renderer, Application* app);
+    GltfViewerScene(Renderer* renderer, Window* window);
     ~GltfViewerScene() override = default;
 
     virtual void resize(int width, int height) override;
@@ -28,7 +28,6 @@ private:
     RenderNode* createRenderNode(std::string nodeId, bool hasTransform);
 
     void createCommonTextures();
-    void setEnvironmentMap(const std::string& envMapName);
 
     void loadGltf(const std::string& gltfAsset);
 

@@ -1,9 +1,9 @@
-#include "TestScene.hpp"
+#include <Crisp/Scenes/TestScene.hpp>
 
 namespace crisp
 {
-TestScene::TestScene(Renderer* renderer, Application* app)
-    : AbstractScene(app, renderer)
+TestScene::TestScene(Renderer* renderer, Window* window)
+    : AbstractScene(renderer, window)
 {
 }
 

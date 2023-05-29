@@ -24,7 +24,7 @@ class VulkanSampler;
 class FluidSimulationScene : public AbstractScene
 {
 public:
-    FluidSimulationScene(Renderer* renderer, Application* app);
+    FluidSimulationScene(Renderer* renderer, Window* window);
     ~FluidSimulationScene();
 
     virtual void resize(int width, int height) override;
