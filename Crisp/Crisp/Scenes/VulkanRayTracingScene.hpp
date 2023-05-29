@@ -1,25 +1,18 @@
 #pragma once
 
-#include "Scene.hpp"
-#include <Crisp/Renderer/Renderer.hpp>
-
+#include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Geometry/TransformBuffer.hpp>
+#include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/Scene.hpp>
+
+#include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 
 namespace crisp
 {
-class FreeCameraController;
-class TransformBuffer;
-class LightSystem;
-
-struct RenderNode;
-
-class VulkanImage;
-class VulkanImageView;
-class VUlkanPipeline;
-class VulkanPipelineLayout;
-class VulkanAccelerationStructure;
-
 class VulkanRayTracingScene : public AbstractScene
 {
 public:

@@ -1,52 +1,7 @@
-#include "VulkanRayTracingScene.hpp"
-
-#include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
-
-#include <Crisp/Camera/FreeCameraController.hpp>
-
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
-
-#include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
-#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
-#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Renderer/VulkanBufferUtils.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
-
-#include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Geometry/TransformBuffer.hpp>
-#include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Models/Skybox.hpp>
-
-#include <Crisp/Lights/DirectionalLight.hpp>
-#include <Crisp/Lights/EnvironmentLightIo.hpp>
-#include <Crisp/Lights/LightSystem.hpp>
-
-#include <Crisp/GUI/Button.hpp>
-#include <Crisp/GUI/CheckBox.hpp>
-#include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Slider.hpp>
-
-#include <Crisp/Math/Constants.hpp>
-#include <Crisp/Utils/Profiler.hpp>
-
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-
-#include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
-#include <Crisp/Vulkan/VulkanGetDeviceProc.hpp>
+#include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
+#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
 #include <random>
 
