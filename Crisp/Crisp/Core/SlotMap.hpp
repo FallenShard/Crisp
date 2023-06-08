@@ -1,22 +1,43 @@
 #pragma once
 
-#include <vector>
-
 #include <Crisp/Core/HashMap.hpp>
+
+#include <vector>
 
 namespace crisp
 {
-template <typename H, typename V>
+template <typename IntegerType, size_t IdBits, size_t GenerationBits>
+struct HandleType
+{
+    IntegerType id : IdBits;
+    IntegerType generation : GenerationBits;
+    // static_assert(sizeof(HandleType) == sizeof(IntegerType));
+};
+
+using Handle = HandleType<uint32_t, 20, 12>;
+
+template <typename ValueType>
 class SlotMap
 {
 public:
-    using ValueVector = std::vector<V>;
+    using HandleType = HandleType<uint32_t, 20, 12>;
 
-    explicit SlotMap(const size_t reserveCount)
+    using ValueVector = std::vector<ValueType>;
+    using HandleVector = std::vector<HandleType>;
+
+    explicit SlotMap(const size_t reserveCount = 1024)
     {
         m_values.reserve(reserveCount);
-        m_valueIdxToHandleIdx.reserve(reserveCount);
-        m_handles.reserve(reserveCount);
+    }
+
+    size_t size() const
+    {
+        return m_values.size();
+    }
+
+    bool empty() const
+    {
+        return m_values.empty();
     }
 
     ValueVector::iterator begin()
@@ -39,91 +60,133 @@ public:
         return m_values.cend();
     }
 
-    V& at(HandleType handle);
-    const V& at(HandleType handle) const;
+    bool contains(HandleType handle) const
+    {
+        if (handle.id >= m_denseToSparseIndexMapping.size())
+        {
+            return false;
+        }
 
-    V& operator[](HandleType handle);
-    const V& operator[](HandleType handle) const;
+        const auto handleIdx = m_denseToSparseIndexMapping[handle.id];
+        if (m_handles[handleIdx].generation != handle.generation)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    ValueType& at(HandleType handle)
+    {
+        return m_values.at(handle.id);
+    }
+
+    const ValueType& at(HandleType handle) const
+    {
+        return m_values.at(handle.id);
+    }
+
+    ValueType& operator[](HandleType handle)
+    {
+        return m_values[handle.id];
+    }
+
+    const ValueType& operator[](HandleType handle) const
+    {
+        return m_values[handle.id];
+    }
 
     template <typename... Args>
     HandleType emplace(Args... args)
     {
-        return insert(V{std::forward<Args>(args...)});
-    }
-
-    bool freeListEmpty() const
-    {
-        return true;
+        return insert(ValueType{std::forward<Args>(args...)});
     }
 
     template <typename ValueT>
-    H insert(ValueT&& value)
+    HandleType insert(ValueT&& value)
     {
-        H handle{};
-
-        if (freeListEmpty())
+        if (m_freeListStart == kInvalidFreeListIndex)
         {
-            handle.index = static_cast<uint16_t>(m_handles.size());
-            handle.generation = 1;
+            HandleType handle;
+            handle.id = static_cast<uint32_t>(m_values.size());
+            handle.generation = 0;
+
             m_handles.push_back(handle);
+            m_values.push_back(std::forward<ValueT>(value));
+            m_denseToSparseIndexMapping.push_back(handle.id);
+
+            return handle;
         }
         else
         {
-            const uint32_t firstFreeIndex = m_handleListFront;
-            HandleType& freeHandle = m_handles.at(firstFreeIndex);
-            m_handleListFront = freeHandle.index;
+            HandleType handle;
 
-            if (freeListEmpty())
+            // Retrieve the next free list start before we lose it.
+            const auto nextFreeIndex = m_handles[m_freeListStart].id;
+
+            handle.id = static_cast<uint32_t>(m_values.size());
+            handle.generation = m_handles[m_freeListStart].generation;
+
+            // Assign the new handle at the slot.
+            m_handles[m_freeListStart] = handle;
+            m_values.push_back(std::forward<ValueT>(value));
+            m_denseToSparseIndexMapping.push_back(m_freeListStart);
+
+            handle.id = m_freeListStart;
+
+            if (m_handles.size() == m_values.size())
             {
-                m_handleListBack = m_handleListFront;
+                m_freeListStart = kInvalidFreeListIndex;
+            }
+            else
+            {
+                m_freeListStart = nextFreeIndex;
             }
 
-            // freeHandle.free = 0;
-            freeHandle.index = m_values.size();
-            handle = freeHandle;
-            handle.index = firstFreeIndex;
-            handle.generation = freeHandle.generation;
+            return handle;
         }
-
-        m_values.push_back(std::forward<ValueT>(value));
-        m_valueToSparseIndex.push_back(handle.index);
-        return handle;
     }
 
-    size_t erase(const H handle)
+    bool erase(const HandleType handle)
     {
-        if (!isValid(handle))
+        const auto handleIdx = handle.id;
+        if (m_handles[handleIdx].generation != handle.generation)
         {
-            return 0;
+            return false;
         }
 
-        H innerIdx = m_handles[handle.index];
-        uint16_t innerIndex = innerIdx.index;
+        const auto innerIdx = m_handles[handleIdx].id;
+        const auto lastItemHandleIdx = m_denseToSparseIndexMapping.back();
 
-        ++innerIdx.generation;
-        innerIdx.index = 0xFFFFFFFF;
+        std::swap(m_denseToSparseIndexMapping.back(), m_denseToSparseIndexMapping.at(innerIdx));
+        std::swap(m_values.back(), m_values.at(innerIdx));
 
-        m_handles[handle.index] = innerIdx;
+        // Update the last item's inner index.
+        m_handles[lastItemHandleIdx].id = innerIdx;
 
-        if (innerIndex != m_values.size() - 1)
+        // Enlist the handle slot as free.
+        m_handles[handleIdx].generation++;
+        if (m_freeListStart == kInvalidFreeListIndex)
         {
-            std::swap(m_values[innerIndex], m_values.back());
-            std::swap(m_valueIdxToHandleIdx[innerIndex], m_valueIdxToHandleIdx.back());
-
-            m_handles[m_valueIdxToHandleIdx[innerIndex]].index = innerIndex;
+            m_freeListStart = handleIdx;
+        }
+        else
+        {
+            m_handles[handleIdx].id = m_freeListStart;
+            m_freeListStart = handleIdx;
         }
 
+        m_denseToSparseIndexMapping.pop_back();
         m_values.pop_back();
-        m_valueIdxToHandleIdx.pop_back();
-        return 1;
+
+        return true;
     }
 
 private:
-    std::vector<V> m_values;
-    std::vector<uint32_t> m_valueIdxToHandleIdx;
-    std::vector<HandleType> m_handles;
+    ValueVector m_values;
+    HandleVector m_handles;
+    std::vector<uint32_t> m_denseToSparseIndexMapping;
 
-    uint16_t m_handleListFront;
-    uint16_t m_handleListBack;
+    static constexpr uint32_t kInvalidFreeListIndex{~0u};
+    uint32_t m_freeListStart{kInvalidFreeListIndex};
 };
 } // namespace crisp
