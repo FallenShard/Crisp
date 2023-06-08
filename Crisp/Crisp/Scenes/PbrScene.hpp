@@ -21,13 +21,6 @@ public:
     virtual void render() override;
     virtual void renderGui() override;
 
-    void setRedAlbedo(double red);
-    void setGreenAlbedo(double green);
-    void setBlueAlbedo(double blue);
-    void setMetallic(double metallic);
-    void setRoughness(double roughness);
-    void setUScale(double uScale);
-    void setVScale(double vScale);
     void onMaterialSelected(const std::string& material);
 
 private:
