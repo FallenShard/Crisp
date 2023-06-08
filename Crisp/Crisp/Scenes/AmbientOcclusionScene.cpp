@@ -1,37 +1,14 @@
 #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
 
-#include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Image/Io/Utils.hpp>
-
-#include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
+#include <Crisp/Math/Warp.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-
-#include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Mesh/TriangleMeshUtils.hpp>
-
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-#include <Crisp/vulkan/VulkanSampler.hpp>
-
-#include <Crisp/Models/Skybox.hpp>
-
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Slider.hpp>
-
-#include <Crisp/Math/Warp.hpp>
-#include <Crisp/Mesh/Io/MeshLoader.hpp>
-
+//
 #include <random>
 
 namespace crisp

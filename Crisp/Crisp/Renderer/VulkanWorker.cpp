@@ -1,7 +1,5 @@
 #include <Crisp/Renderer/VulkanWorker.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-
 namespace crisp
 {
 VulkanWorker::VulkanWorker(VulkanDevice& device, const VulkanQueue& queue, uint32_t virtualFrameCount)

@@ -71,7 +71,8 @@ public:
 
     void clearCommandLists();
     void addToCommandLists(const RenderNode& renderNode);
-    void buildCommandLists(const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& renderNodes);
+    void buildCommandLists(const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& renderNodes);
+    void buildCommandLists(const FlatHashMap<std::string, RenderNode>& renderNodes);
     void buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes);
     void executeCommandLists() const;
 

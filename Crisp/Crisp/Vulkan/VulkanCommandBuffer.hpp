@@ -61,4 +61,5 @@ public:
 private:
     VkCommandBuffer m_handle;
 };
+
 } // namespace crisp

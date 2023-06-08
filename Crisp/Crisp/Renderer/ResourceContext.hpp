@@ -1,23 +1,18 @@
 #pragma once
 
+#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/ImageCache.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/PipelineCache.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
-#include <Crisp/Core/HashMap.hpp>
-
-#include <memory>
-
 namespace crisp
 {
-class Renderer;
-class DescriptorSetAllocator;
-
 class ResourceContext
 {
 public:

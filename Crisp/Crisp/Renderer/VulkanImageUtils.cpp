@@ -249,32 +249,21 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
     return std::make_unique<VulkanImage>(renderer.getDevice(), createInfo);
 }
 
-// void transitionComputeWriteToFragmentShading(VulkanImage& image, const VkImageSubresourceRange range) {
-//     VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-//     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-//     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//     barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-//     barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-//     barrier.image = tex->getHandle();
-//     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//     barrier.subresourceRange.baseMipLevel = 0;
-//     barrier.subresourceRange.levelCount = 1;
-//     barrier.subresourceRange.baseArrayLayer = frameIndex;
-//     barrier.subresourceRange.layerCount = 1;
-//
-//     image.transitionLayout
-//
-//     vkCmdPipelineBarrier(
-//         cmdBuffer.getHandle(),
-//         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-//         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-//         0,
-//         0,
-//         nullptr,
-//         0,
-//         nullptr,
-//         0,
-//         &barrier);
-// }
+std::unique_ptr<VulkanImage> createStorageImage(
+    VulkanDevice& device, uint32_t layerCount, uint32_t width, uint32_t height, VkFormat format)
+{
+    VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    createInfo.flags = 0;
+    createInfo.imageType = VK_IMAGE_TYPE_2D;
+    createInfo.format = format;
+    createInfo.extent = {width, height, 1u};
+    createInfo.mipLevels = 1;
+    createInfo.arrayLayers = layerCount;
+    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    return std::make_unique<VulkanImage>(device, createInfo);
+}
 
 } // namespace crisp

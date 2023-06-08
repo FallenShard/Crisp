@@ -4,8 +4,6 @@
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
 #include <thread>
 #include <vector>
 

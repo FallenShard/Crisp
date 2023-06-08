@@ -1,9 +1,8 @@
 #pragma once
 
+#include <Crisp/Image/Image.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
-
-#include <Crisp/Image/Image.hpp>
 
 namespace crisp
 {
@@ -23,7 +22,5 @@ void updateCubeMap(
 std::unique_ptr<VulkanImage> createMipmapCubeMap(Renderer* renderer, uint32_t w, uint32_t h, uint32_t mipLevels);
 
 std::unique_ptr<VulkanImage> createSampledStorageImage(const Renderer& renderer, VkFormat format, VkExtent3D extent);
-
-void transitionComputeWriteToFragmentShading();
 
 } // namespace crisp

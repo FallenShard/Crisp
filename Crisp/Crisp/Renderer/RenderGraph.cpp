@@ -187,8 +187,7 @@ void RenderGraph::addToCommandLists(const RenderNode& renderNode)
                 ->addCommand(material.createDrawCommand(virtualFrameIndex, renderNode), key.subpassIndex);
 }
 
-void RenderGraph::buildCommandLists(
-    const robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>>& renderNodes)
+void RenderGraph::buildCommandLists(const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& renderNodes)
 {
     for (const auto& [id, renderNode] : renderNodes)
     {
@@ -206,6 +205,14 @@ void RenderGraph::buildCommandLists(const std::vector<std::unique_ptr<RenderNode
             for (std::size_t k = start; k < end; ++k)
                 addToCommandLists(*renderNodes.at(k));
         });
+}
+
+void RenderGraph::buildCommandLists(const FlatHashMap<std::string, RenderNode>& renderNodes)
+{
+    for (const auto& [id, renderNode] : renderNodes)
+    {
+        addToCommandLists(renderNode);
+    }
 }
 
 void RenderGraph::executeCommandLists() const

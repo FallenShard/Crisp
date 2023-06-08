@@ -1,29 +1,12 @@
 #pragma once
 
-#include <Crisp/Geometry/TransformPack.hpp>
+#include <Crisp/Camera/FreeCameraController.hpp>
+#include <Crisp/Geometry/TransformBuffer.hpp>
+#include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Scenes/Scene.hpp>
-
-#include <memory>
-#include <string>
-#include <vector>
 
 namespace crisp
 {
-class FreeCameraController;
-
-class TransformBuffer;
-
-class UniformBuffer;
-class Material;
-class Geometry;
-
-class VulkanPipeline;
-class VulkanImage;
-class VulkanImageView;
-class VulkanSampler;
-struct RenderNode;
-
-class Skybox;
 
 class AmbientOcclusionScene : public AbstractScene
 {

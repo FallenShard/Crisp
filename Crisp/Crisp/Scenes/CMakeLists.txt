@@ -38,6 +38,6 @@ target_link_libraries(CrispScenes
     PUBLIC CrispMeshIo
     PUBLIC CrispMaterialUtils
     PUBLIC CrispJsonUtils
-    PUBLIC Vesper
+    PUBLIC CrispPathTracer
     PRIVATE CrispApplication
 )

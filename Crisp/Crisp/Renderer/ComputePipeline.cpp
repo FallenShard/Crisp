@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-std::unordered_map<VkPipeline, glm::uvec3> workGroupSizes;
+FlatHashMap<VkPipeline, glm::uvec3> workGroupSizes;
 
 glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline)
 {
