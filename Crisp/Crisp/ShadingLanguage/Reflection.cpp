@@ -7,7 +7,6 @@
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Utils/Enumerate.hpp>
 
-
 #include <Crisp/Core/Logger.hpp>
 
 #include <fstream>
@@ -238,5 +237,28 @@ void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs)
     }
 
     pushConstants.insert(pushConstants.end(), rhs.pushConstants.begin(), rhs.pushConstants.end());
+}
+
+Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath)
+{
+    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open())
+    {
+        return resultError("Failed to open spirv file: {}!", filePath.string());
+    }
+
+    const size_t fileSize = static_cast<size_t>(file.tellg());
+    if (fileSize % sizeof(uint32_t) != 0)
+    {
+        return resultError(
+            "File size of {} is not divisible by 4. SPIRV code is a stream of uint32_t tokens.", filePath.string());
+    }
+
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    return buffer;
 }
 } // namespace crisp::sl

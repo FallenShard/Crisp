@@ -20,8 +20,18 @@ target_link_libraries(CrispGlslUtils
     PUBLIC CrispHashMap
     PUBLIC CrispFileUtils
     PUBLIC CrispUtils
-    PUBLIC Vulkan::Headers)
+    PUBLIC Vulkan::Headers
+    PUBLIC spirv-reflect-static
+)
 
 add_cpp_test(CrispGlslUtilsTest
     "Test/LexerTest.cpp")
 target_link_libraries(CrispGlslUtilsTest PRIVATE CrispGlslUtils)
+
+add_cpp_test(CrispGlslReflectionTest
+    "Test/ReflectionTest.cpp")
+target_link_libraries(CrispGlslReflectionTest PRIVATE CrispGlslUtils)
+
+add_cpp_test(CrispShaderCompilerTest
+    "Test/ShaderCompilerTest.cpp")
+target_link_libraries(CrispShaderCompilerTest PRIVATE CrispGlslUtils)

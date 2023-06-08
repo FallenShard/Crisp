@@ -19,4 +19,6 @@ struct ShaderUniformInputMetadata
 };
 
 Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::filesystem::path& sourcePath);
+
+Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath);
 } // namespace crisp::sl

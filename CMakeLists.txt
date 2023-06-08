@@ -136,7 +136,9 @@ FetchContent_Declare(onetbb
     GIT_TAG        v2021.6.0
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS ON)
 FetchContent_MakeAvailable(onetbb)
+set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(embree
     GIT_REPOSITORY https://github.com/embree/embree.git
@@ -148,9 +150,18 @@ FetchContent_MakeAvailable(embree)
 
 FetchContent_Declare(vulkan
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG        v1.3.246
+    GIT_TAG        v1.3.250
 )
 FetchContent_MakeAvailable(vulkan)
+
+FetchContent_Declare(SPIRV-Reflect
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
+    GIT_TAG        sdk-1.3.250.0
+)
+set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(SPIRV-Reflect)
 
 # FetchContent_Declare(tinyexr
 #   GIT_REPOSITORY https://github.com/syoyo/tinyexr.git
