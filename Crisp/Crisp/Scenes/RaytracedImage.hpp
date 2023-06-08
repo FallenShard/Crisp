@@ -5,7 +5,7 @@
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
-#include <Vesper/RayTracerUpdate.hpp>
+#include <Crisp/PathTracer/RayTracerUpdate.hpp>
 
 namespace crisp
 {

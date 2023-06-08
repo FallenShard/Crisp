@@ -2,8 +2,6 @@
 
 #include <iostream>
 
-#include <Vesper/RayTracer.hpp>
-
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/GUI/Button.hpp>

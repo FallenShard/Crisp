@@ -14,14 +14,13 @@ add_subdirectory(Crisp/Math)
 add_subdirectory(Crisp/Mesh)
 add_subdirectory(Crisp/Models)
 add_subdirectory(Crisp/Optics)
+add_subdirectory(Crisp/PathTracer)
 add_subdirectory(Crisp/Renderer)
 add_subdirectory(Crisp/Scenes)
 add_subdirectory(Crisp/ShadingLanguage)
 add_subdirectory(Crisp/Spectra)
 add_subdirectory(Crisp/Vulkan)
 add_subdirectory(Crisp/Utils)
-
-add_subdirectory(Crisp/Vesper)
 
 add_cpp_binary(CrispMain main.cpp)
 set_target_properties(CrispMain PROPERTIES
@@ -30,5 +29,5 @@ set_target_properties(CrispMain PROPERTIES
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
 )
 target_link_libraries(CrispMain PRIVATE CrispApplication)
-copy_shared_libs(CrispMain lua freetype embree)
+copy_shared_libs(CrispMain lua freetype embree TBB::tbb)
 target_sources(CrispMain PRIVATE Crisp.natvis)

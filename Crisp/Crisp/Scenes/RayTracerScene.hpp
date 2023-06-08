@@ -3,7 +3,8 @@
 #include <Crisp/Scenes/Scene.hpp>
 
 #include <Crisp/Core/Event.hpp>
-#include <Vesper/RayTracerUpdate.hpp>
+#include <Crisp/PathTracer/RayTracer.hpp>
+#include <Crisp/Scenes/RaytracedImage.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -15,9 +16,6 @@
 
 namespace crisp
 {
-class RayTracer;
-class RayTracedImage;
-
 class RayTracerScene : public AbstractScene
 {
 public:
