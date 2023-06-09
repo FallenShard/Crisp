@@ -61,7 +61,7 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer,
 } // namespace
 
 AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
     , m_ssaoParams{128, 0.5f}
 {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);

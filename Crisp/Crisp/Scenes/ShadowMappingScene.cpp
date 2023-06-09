@@ -95,7 +95,7 @@ glm::vec2 terrainPushConstants = glm::vec2(1.0f, 15.0f);
 } // namespace
 
 ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     setupInput();
 

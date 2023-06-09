@@ -34,7 +34,7 @@ std::vector<std::string> sceneNames = {
     "null"};
 
 template <typename... Args>
-std::unique_ptr<AbstractScene> createScene(const std::string& name, Args&&... args)
+std::unique_ptr<Scene> createScene(const std::string& name, Args&&... args)
 {
     if (name == sceneNames[0])
         return std::make_unique<AmbientOcclusionScene>(std::forward<Args>(args)...);

@@ -4,7 +4,7 @@
 
 namespace crisp
 {
-class TestScene : public AbstractScene
+class TestScene : public Scene
 {
 public:
     TestScene(Renderer* renderer, Window* window);

@@ -8,7 +8,7 @@
 namespace crisp
 {
 
-class AmbientOcclusionScene : public AbstractScene
+class AmbientOcclusionScene : public Scene
 {
 public:
     AmbientOcclusionScene(Renderer* renderer, Window* window);

@@ -14,7 +14,7 @@ class LightSystem;
 
 struct RenderNode;
 
-class NormalMappingScene : public AbstractScene
+class NormalMappingScene : public Scene
 {
 public:
     NormalMappingScene(Renderer* renderer, Window* window);

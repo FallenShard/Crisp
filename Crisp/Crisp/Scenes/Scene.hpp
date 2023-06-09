@@ -8,11 +8,11 @@
 
 namespace crisp
 {
-class AbstractScene
+class Scene
 {
 public:
-    AbstractScene(Renderer* renderer, Window* window);
-    virtual ~AbstractScene() = default;
+    Scene(Renderer* renderer, Window* window);
+    virtual ~Scene() = default;
 
     virtual void resize(int width, int height) = 0;
     virtual void update(float dt) = 0;

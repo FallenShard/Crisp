@@ -11,7 +11,7 @@
 
 namespace crisp
 {
-class PbrScene : public AbstractScene
+class PbrScene : public Scene
 {
 public:
     PbrScene(Renderer* renderer, Window* window);

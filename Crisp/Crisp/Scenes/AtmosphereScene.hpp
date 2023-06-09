@@ -9,7 +9,7 @@
 
 namespace crisp
 {
-class AtmosphereScene : public AbstractScene
+class AtmosphereScene : public Scene
 {
 public:
     AtmosphereScene(Renderer* renderer, Window* window);

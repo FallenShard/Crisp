@@ -59,7 +59,7 @@ class Skybox;
 class Grass;
 class RayTracingMaterial;
 
-class ShadowMappingScene : public AbstractScene
+class ShadowMappingScene : public Scene
 {
 public:
     ShadowMappingScene(Renderer* renderer, Window* window);

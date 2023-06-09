@@ -3,7 +3,7 @@
 namespace crisp
 {
 TestScene::TestScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
 }
 

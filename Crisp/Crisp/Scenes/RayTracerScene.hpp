@@ -16,7 +16,7 @@
 
 namespace crisp
 {
-class RayTracerScene : public AbstractScene
+class RayTracerScene : public Scene
 {
 public:
     RayTracerScene(Renderer* renderer, Window* window);

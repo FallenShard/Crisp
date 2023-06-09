@@ -61,7 +61,7 @@ bool animationFrozen = true;
 } // namespace
 
 NormalMappingScene::NormalMappingScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     setupInput();
 

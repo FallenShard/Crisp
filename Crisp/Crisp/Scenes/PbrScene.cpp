@@ -122,7 +122,7 @@ std::unique_ptr<VulkanRenderPass> createRedChannelPass(
 } // namespace
 
 PbrScene::PbrScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     setupInput();
 

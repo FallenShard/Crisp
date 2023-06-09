@@ -21,7 +21,7 @@ class UniformBuffer;
 class VulkanDevice;
 class VulkanSampler;
 
-class FluidSimulationScene : public AbstractScene
+class FluidSimulationScene : public Scene
 {
 public:
     FluidSimulationScene(Renderer* renderer, Window* window);

@@ -32,7 +32,7 @@ static constexpr const char* MainPass = "mainPass";
 }
 
 FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_uniformBuffers.emplace(

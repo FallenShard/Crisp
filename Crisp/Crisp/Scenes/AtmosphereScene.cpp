@@ -18,7 +18,7 @@ const VertexLayoutDescription PbrVertexFormat = {
 } // namespace
 
 AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     setupInput();
 

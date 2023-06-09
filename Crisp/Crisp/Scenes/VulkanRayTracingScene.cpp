@@ -45,7 +45,7 @@ VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geo
 } // namespace
 
 VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     setupInput();
 

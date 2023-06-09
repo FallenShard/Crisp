@@ -28,7 +28,7 @@ class VulkanSampler;
 class BoxVisualizer;
 class Skybox;
 
-class ClusteredLightingScene : public AbstractScene
+class ClusteredLightingScene : public Scene
 {
 public:
     ClusteredLightingScene(Renderer* renderer, Window* window);

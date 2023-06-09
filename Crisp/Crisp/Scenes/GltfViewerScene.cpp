@@ -141,7 +141,7 @@ std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const
 } // namespace
 
 GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
 {
     setupInput();
 

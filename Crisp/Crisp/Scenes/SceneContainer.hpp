@@ -26,7 +26,7 @@ public:
     const std::string& getSceneName() const;
 
 private:
-    std::unique_ptr<AbstractScene> m_scene;
+    std::unique_ptr<Scene> m_scene;
     std::string m_sceneName;
 
     Renderer* m_renderer;

@@ -21,7 +21,7 @@ namespace crisp
 {
 
 RayTracerScene::RayTracerScene(Renderer* renderer, Window* window)
-    : AbstractScene(renderer, window)
+    : Scene(renderer, window)
     , m_progress(0.0f)
     , m_timeSpentRendering(0.0f)
 {

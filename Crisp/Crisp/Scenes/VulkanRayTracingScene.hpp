@@ -13,7 +13,7 @@
 
 namespace crisp
 {
-class VulkanRayTracingScene : public AbstractScene
+class VulkanRayTracingScene : public Scene
 {
 public:
     VulkanRayTracingScene(Renderer* renderer, Window* window);

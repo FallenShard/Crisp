@@ -13,7 +13,7 @@
 
 namespace crisp
 {
-class GltfViewerScene : public AbstractScene
+class GltfViewerScene : public Scene
 {
 public:
     GltfViewerScene(Renderer* renderer, Window* window);
