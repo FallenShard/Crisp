@@ -1,6 +1,5 @@
 #include "Isotropic.hpp"
 
-#include "Samplers/Sampler.hpp"
 #include <Crisp/Math/Warp.hpp>
 
 namespace crisp

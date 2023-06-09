@@ -147,6 +147,10 @@ add_cpp_static_library(PathTracerParticipatingMedia
     "PhaseFunctions/PhaseFunctionFactory.cpp"
     "PhaseFunctions/PhaseFunctionFactory.hpp"
 )
+target_link_libraries(PathTracerParticipatingMedia
+    PUBLIC PathTracerUtils
+    PRIVATE PathTracerSamplers
+)
 
 add_cpp_static_library(PathTracerFilters
     "ReconstructionFilters/GaussianFilter.cpp"
