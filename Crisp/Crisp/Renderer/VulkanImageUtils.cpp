@@ -233,7 +233,7 @@ std::unique_ptr<VulkanImage> createMipmapCubeMap(
 }
 
 std::unique_ptr<VulkanImage> createSampledStorageImage(
-    const Renderer& renderer, VkFormat format, const VkExtent3D extent)
+    const Renderer& renderer, const VkFormat format, const VkExtent3D extent)
 {
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;
@@ -250,7 +250,7 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
 }
 
 std::unique_ptr<VulkanImage> createStorageImage(
-    VulkanDevice& device, uint32_t layerCount, uint32_t width, uint32_t height, VkFormat format)
+    VulkanDevice& device, const uint32_t layerCount, const uint32_t width, const uint32_t height, const VkFormat format)
 {
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;

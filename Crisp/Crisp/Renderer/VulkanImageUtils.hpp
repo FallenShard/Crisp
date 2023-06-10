@@ -22,5 +22,6 @@ void updateCubeMap(
 std::unique_ptr<VulkanImage> createMipmapCubeMap(Renderer* renderer, uint32_t w, uint32_t h, uint32_t mipLevels);
 
 std::unique_ptr<VulkanImage> createSampledStorageImage(const Renderer& renderer, VkFormat format, VkExtent3D extent);
-
+std::unique_ptr<VulkanImage> createStorageImage(
+    VulkanDevice& device, uint32_t layerCount, uint32_t width, uint32_t height, VkFormat format);
 } // namespace crisp
