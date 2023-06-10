@@ -1,7 +1,6 @@
 #include <Crisp/ShadingLanguage/Reflection.hpp>
 
 #include <gmock/gmock.h>
-
 #include <spirv_reflect.h>
 
 namespace crisp::sl::test
@@ -79,8 +78,7 @@ TEST(ReflectionTest, SpirvReflect)
     result = spvReflectEnumerateDescriptorSets(&module, &descSetCount, descSets.data());
     EXPECT_THAT(result, SPV_REFLECT_RESULT_SUCCESS);
 
-    spv_reflect::ShaderModule shaderModule(spirv.size(), spirv.data());
-    // shaderModule.
+    spvReflectDestroyShaderModule(&module);
 }
 
 } // namespace

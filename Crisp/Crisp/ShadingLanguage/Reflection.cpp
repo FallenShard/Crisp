@@ -1,13 +1,13 @@
 #include <Crisp/ShadingLanguage/Reflection.hpp>
 
+#include <Crisp/Core/Logger.hpp>
+#include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/ShadingLanguage/Lexer.hpp>
 #include <Crisp/ShadingLanguage/Parser.hpp>
 #include <Crisp/ShadingLanguage/ShaderType.hpp>
-
-#include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Utils/Enumerate.hpp>
 
-#include <Crisp/Core/Logger.hpp>
+#include <spirv_reflect.h>
 
 #include <fstream>
 #include <optional>
@@ -261,4 +261,127 @@ Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath)
     file.read(buffer.data(), fileSize);
     return buffer;
 }
+
+namespace
+{
+#define SPV_TO_VK_CASE_RETURN(enumEntry)                                                                               \
+    case SPV_REFLECT_##enumEntry:                                                                                      \
+        return VK_##enumEntry;
+
+#define CRISP_SPV_TRY(spvFunctionCall)                                                                                 \
+    if (spvFunctionCall != SPV_REFLECT_RESULT_SUCCESS)                                                                 \
+    {                                                                                                                  \
+        return resultError("Error while calling {}", #spvFunctionCall);                                                \
+    }
+
+Result<VkShaderStageFlagBits> toVulkanShaderStage(const SpvReflectShaderStageFlagBits stageBit)
+{
+    switch (stageBit)
+    {
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_RAYGEN_BIT_KHR)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_CLOSEST_HIT_BIT_KHR)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_MISS_BIT_KHR)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_ANY_HIT_BIT_KHR)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_CALLABLE_BIT_KHR)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_INTERSECTION_BIT_KHR)
+
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_COMPUTE_BIT)
+
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_VERTEX_BIT)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_FRAGMENT_BIT)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_TESSELLATION_CONTROL_BIT)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_GEOMETRY_BIT)
+
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_MESH_BIT_EXT)
+        SPV_TO_VK_CASE_RETURN(SHADER_STAGE_TASK_BIT_EXT)
+    default:
+        return resultError("Failed to convert SPV Reflect shader stage {} to Vulkan!", static_cast<uint32_t>(stageBit));
+    }
+}
+
+Result<VkDescriptorType> toVulkanDescriptorType(const SpvReflectDescriptorType type)
+{
+    switch (type)
+    {
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_SAMPLER)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_STORAGE_IMAGE)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_STORAGE_BUFFER)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+        SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+    default:
+        return resultError("Failed to convert SPV Reflect descriptor type {} to Vulkan!", static_cast<uint32_t>(type));
+    }
+}
+
+class SpirvShaderReflectionModuleGuard
+{
+public:
+    SpirvShaderReflectionModuleGuard(SpvReflectShaderModule& module)
+        : m_module(module)
+    {
+    }
+
+    ~SpirvShaderReflectionModuleGuard()
+    {
+        spvReflectDestroyShaderModule(&m_module);
+    }
+
+    SpirvShaderReflectionModuleGuard(const SpirvShaderReflectionModuleGuard&) = delete;
+    SpirvShaderReflectionModuleGuard& operator=(const SpirvShaderReflectionModuleGuard&) = delete;
+
+    SpirvShaderReflectionModuleGuard(SpirvShaderReflectionModuleGuard&& rhs) = delete;
+    SpirvShaderReflectionModuleGuard& operator=(SpirvShaderReflectionModuleGuard&& rhs) = delete;
+
+private:
+    SpvReflectShaderModule& m_module;
+};
+
+} // namespace
+
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(std::span<const char> spirvShader)
+{
+    SpvReflectShaderModule module;
+    CRISP_SPV_TRY(spvReflectCreateShaderModule(spirvShader.size(), spirvShader.data(), &module));
+    SpirvShaderReflectionModuleGuard moduleGuard(module);
+
+    const auto stageFlags = toVulkanShaderStage(module.shader_stage).unwrap();
+
+    ShaderUniformInputMetadata metadata{};
+    metadata.descriptorSetLayoutBindings.resize(module.descriptor_set_count);
+
+    for (uint32_t setIdx = 0; setIdx < module.descriptor_set_count; ++setIdx)
+    {
+        metadata.descriptorSetLayoutBindings[setIdx].resize(module.descriptor_sets[setIdx].binding_count);
+
+        for (uint32_t bIdx = 0; bIdx < module.descriptor_sets[setIdx].binding_count; ++bIdx)
+        {
+            const auto& spvBinding = module.descriptor_sets[setIdx].bindings[bIdx];
+            auto& binding = metadata.descriptorSetLayoutBindings[setIdx][bIdx];
+            binding.binding = spvBinding->binding;
+            binding.descriptorCount = spvBinding->count;
+            binding.descriptorType = toVulkanDescriptorType(spvBinding->descriptor_type).unwrap();
+            binding.stageFlags = stageFlags;
+            binding.pImmutableSamplers = nullptr;
+        }
+    }
+
+    metadata.pushConstants.resize(module.push_constant_block_count);
+    for (uint32_t i = 0; i < module.push_constant_block_count; ++i)
+    {
+        metadata.pushConstants[i].offset = module.push_constant_blocks[i].offset;
+        metadata.pushConstants[i].size = module.push_constant_blocks[i].size;
+        metadata.pushConstants[i].stageFlags = stageFlags;
+    }
+
+    return metadata;
+}
+
 } // namespace crisp::sl

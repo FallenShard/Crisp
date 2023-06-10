@@ -5,6 +5,7 @@
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <filesystem>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -21,4 +22,6 @@ struct ShaderUniformInputMetadata
 Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::filesystem::path& sourcePath);
 
 Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath);
+
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(std::span<const char> spirvShader);
 } // namespace crisp::sl
