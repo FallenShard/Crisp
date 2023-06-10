@@ -21,6 +21,7 @@ layout(set = 0, binding = 6) uniform sampler2D normalZMap;
 layout(push_constant) uniform PushConstant
 {
     int N;
+    float patchWorldSize;
     float choppiness;
 };
 
@@ -31,13 +32,13 @@ float getFactor(int i, int j) {
     return signValue[1 - (i + j) % 2];
 }
 
-const float texelCenterOffset = 0.0;
+const float texelCenterOffset = 0.5;
 
 float getHeight(int i, int j, float factor) {
-    // return texelFetch(displacementMap, ivec2(i, j), 0).r * factor;
-    float u = (i + texelCenterOffset) / N;
-    float v = (j + texelCenterOffset) / N;
-    return texture(displacementMap, vec2(u, v)).r * factor;
+    return texelFetch(displacementMap, ivec2(i, j), 0).r * factor;
+    //float u = (i + texelCenterOffset) / N;
+    //float v = (j + texelCenterOffset) / N;
+    //return texture(displacementMap, vec2(u, v)).r * factor;
 }
 
 float getDx(int i, int j, float factor) {
@@ -56,23 +57,25 @@ float getDz(int i, int j, float factor) {
     return texture(displacementZMap, vec2(u, v)).r * factor;
 }
 
-const float size = 25.0f;
-
 vec3 makeNormal2(int i, int j, float factor) {
-    float nx = texelFetch(normalXMap, ivec2(i, j), 0).r * factor * size * 2;
-    float nz = texelFetch(normalZMap, ivec2(i, j), 0).r * factor * size * 2;
+    float nx = texelFetch(normalXMap, ivec2(i, j), 0).r * factor * patchWorldSize;
+    float nz = texelFetch(normalZMap, ivec2(i, j), 0).r * factor * patchWorldSize;
     return normalize(vec3(-nx, 1, -nz));
 }
 
 vec3 getDisplacement(int i, int j) {
     float factor = getFactor(i, j);
-    return vec3(-choppiness * getDx(i, j, factor), getHeight(i, j, factor), -choppiness * getDz(i, j, factor));
+    float chop = -choppiness;
+    float x = chop * getDx(i, j, factor);
+    float y = getHeight(i, j, factor);
+    float z = chop * getDz(i, j, factor);
+    return vec3(x, y, z);
 }
 
 // Cannot apply standard heightmap -> normal map computation because there are
 // displacements in X and Z as well.
 vec3 makeNormal3(int i, int j, float f) {
-    const float delta = size / N;
+    const float delta = patchWorldSize / N;
 
     const vec3 center = getDisplacement(i, j);
     const vec3 right = vec3(+delta, 0, 0) + getDisplacement(i + 1, j) - center;
@@ -106,15 +109,22 @@ void writeNormal(int linIdx, vec3 newNormal) {
 
 void main()
 {
+    // There are N + 1 vertices in X and Z axis.
     const ivec2 idx = ivec2(gl_GlobalInvocationID.xy);
-    const int linIdx = idx.y * N + idx.x;
-    const int col = idx.x;
-    const int row = idx.y;
-    const float factor = getFactor(col, row);
-    const float height = getHeight(col, row, factor);
+    if (idx.x > N || idx.y > N) {
+        return;
+    }
 
-    vec3 startPos = vec3(col, 0.0, row) / (N - 1) * size - vec3(size * 0.5, 0, size * 0.5);
-    vec3 pos = startPos + getDisplacement(col, row);
+    const float cellSize = patchWorldSize / N;
+
+    const int col = idx.x % N;
+    const int row = idx.y % N;
+    const float factor = getFactor(col, row);
+
+    const vec3 startPos = vec3(idx.x, 0.0, idx.y) * cellSize - vec3(patchWorldSize * 0.5, 0, patchWorldSize * 0.5);
+    const vec3 pos = startPos + getDisplacement(col, row);
+    
+    const int linIdx = idx.y * (N + 1) + idx.x;
     writePosition(linIdx, pos);
 
     vec3 startNormal = vec3(0, 1, 0);//makeNormal3(col, row, factor);

@@ -14,7 +14,7 @@ class DescriptorSetAllocator;
 class PipelineLayoutBuilder
 {
 public:
-    PipelineLayoutBuilder() {}
+    PipelineLayoutBuilder() = default;
 
     PipelineLayoutBuilder(sl::ShaderUniformInputMetadata&& metadata);
 

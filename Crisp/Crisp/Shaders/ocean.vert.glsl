@@ -19,9 +19,8 @@ layout(set = 0, binding = 5) uniform sampler2D normalZMap;
 
 layout(push_constant) uniform PushConstant
 {
-    layout(offset = 0) float t;
-    layout(offset = 4) uint patchSize;
-} pushConst;
+    layout(offset = 0) float patchWorldSize;
+};
 
 layout(location = 0) out vec3 eyePosition;
 layout(location = 1) out vec3 eyeNormal;
@@ -49,10 +48,9 @@ float getDz(int i, int j, float factor) {
 
 void main()
 {
-    const float worldPatchSize = 25.0f;
     uint patchRow = gl_InstanceIndex / 8;
     uint patchCol = gl_InstanceIndex % 8;
-    vec3 offset = vec3(patchCol * worldPatchSize, 0.0f, patchRow * worldPatchSize);
+    vec3 offset = vec3(patchCol * patchWorldSize, 0.0f, patchRow * patchWorldSize);
     eyeNormal = (N * vec4(normal, 0.0f)).xyz;
     worldNormal = normal;
 

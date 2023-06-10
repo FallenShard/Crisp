@@ -17,4 +17,8 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
 std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize);
 
 glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline);
+
+glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline);
+glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const glm::uvec3& workGroupSize);
+
 } // namespace crisp

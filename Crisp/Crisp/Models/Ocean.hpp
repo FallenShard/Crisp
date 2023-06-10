@@ -38,11 +38,11 @@ struct OceanParameters
     float pad0;
 };
 
-OceanParameters createOceanParameters(int32_t patchSize, float worldSize, float windX, float windZ, float A, float l);
+OceanParameters createOceanParameters(
+    int32_t patchGridSize, float patchWorldSize, float windX, float windZ, float A, float l);
 
 std::vector<glm::vec4> createOceanSpectrum(
     uint32_t seed,
-    uint32_t patchGridSize,
-    float patchWorldSize,
+    const OceanParameters& oceanParams,
     OceanSpectrumData spectrumData = OceanSpectrumData::UniformGaussian);
 } // namespace crisp

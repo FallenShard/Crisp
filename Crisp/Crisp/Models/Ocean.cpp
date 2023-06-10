@@ -27,14 +27,19 @@ float calculatePhillipsSpectrum(const WindParameters& wind, const glm::vec2& k)
 } // namespace
 
 OceanParameters createOceanParameters(
-    const int32_t patchSize, const float worldSize, const float windX, const float windZ, const float A, const float l)
+    const int32_t patchGridSize,
+    const float patchWorldSize,
+    const float windX,
+    const float windZ,
+    const float A,
+    const float l)
 {
     const glm::vec2 windVelocity{windX, windZ};
     return {
-        .N = patchSize,
-        .M = patchSize,
-        .Lx = worldSize,
-        .Lz = worldSize,
+        .N = patchGridSize,
+        .M = patchGridSize,
+        .Lx = patchWorldSize,
+        .Lz = patchWorldSize,
         .windDirection = glm::normalize(windVelocity),
         .windSpeed = glm::length(windVelocity),
         .Lw = glm::dot(windVelocity, windVelocity) / g,
@@ -44,7 +49,7 @@ OceanParameters createOceanParameters(
 }
 
 std::vector<glm::vec4> createOceanSpectrum(
-    const uint32_t seed, const uint32_t patchGridSize, const float patchWorldSize, const OceanSpectrumData spectrumData)
+    const uint32_t seed, const OceanParameters& oceanParams, const OceanSpectrumData spectrumData)
 {
     WindParameters wind;
     wind.speed = {40, 40};
@@ -55,9 +60,9 @@ std::vector<glm::vec4> createOceanSpectrum(
     std::mt19937 gen{seed};
     std::normal_distribution<> distrib(0, 1);
     std::vector<glm::vec4> spectrum;
-    for (uint32_t i = 0; i < patchGridSize; ++i)
+    for (int32_t i = 0; i < oceanParams.N; ++i)
     {
-        for (uint32_t j = 0; j < patchGridSize; ++j)
+        for (int32_t j = 0; j < oceanParams.M; ++j)
         {
 
             const glm::vec2 eps0 = glm::vec2(distrib(gen), distrib(gen));
@@ -68,9 +73,9 @@ std::vector<glm::vec4> createOceanSpectrum(
             }
             else
             {
-                const glm::ivec2 idx = glm::ivec2(j, i) - glm::ivec2(patchGridSize, patchGridSize) / 2;
+                const glm::ivec2 idx = glm::ivec2(j, i) - glm::ivec2(oceanParams.N, oceanParams.M) / 2;
                 const glm::vec2 k =
-                    glm::vec2(idx) * 2.0f * glm::pi<float>() / glm::vec2(patchWorldSize, patchWorldSize);
+                    glm::vec2(idx) * 2.0f * glm::pi<float>() / glm::vec2(oceanParams.Lx, oceanParams.Lz);
                 const glm::vec2 h0 = eps0 * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, k));
                 glm::vec2 h0Star = eps1 * 1.0f / std::sqrtf(2.0f) * std::sqrt(calculatePhillipsSpectrum(wind, -k));
                 h0Star.y = -h0Star.y;
