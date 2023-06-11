@@ -280,3 +280,6 @@ Intermediate/
 # VS Code stuff
 .vscode/
 *.code-workspace
+
+# Clang stuff
+.cache/
