@@ -54,8 +54,8 @@ void main()
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     // Material properties
-    const vec3 albedo = pow(vec3(12,55,87) / 255.0, vec3(2.2));
-    float roughness = 0.01;
+    const vec3 albedo = pow(vec3(12,120,167) / 255.0, vec3(2.2));
+    float roughness = 0.0;
     const float metallic = 0.0;
 
     // BRDF diffuse (Light source independent)
@@ -72,38 +72,14 @@ void main()
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
-    // const vec3 eyeN = normalize(eyeNormal);
-    // const vec3 eyeV = normalize(-eyePosition);
-    // const float NdotV = max(dot(eyeN, eyeV), 0.0f);
-
-    // const vec3 lightDir = normalize(vec3(-1.0f, -1.0f, -1.0f));
-    // const vec3 eyeL = normalize(vec3(V * vec4(lightDir, 0.0f)));
-    // const float NdotL = max(dot(eyeN, -eyeL), 0.0f);
-
-    // vec3 ocean_color = pow(vec3(0,55,87) / 255.0, vec3(2.2));
-    // // Material properties
-    // const vec3  albedo    = ocean_color;
-    // const float roughness = 0.5;
-    // const float metallic  = 0.2;
-
-    // const vec3 F0 = mix(vec3(0.02), albedo, metallic);
-    // const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
-    // const vec3 kS = F;
-    // const vec3 kD = (1.0f - kS) * (1.0f - metallic);
-    // const vec3 diffuse = kD * albedo / PI;
-
-   
-    //vec3 light_color = pow(vec3(185,240,254) / 255.0, vec3(2.2));
-    //vec3 color = mix(ocean_color, light_color, fresnel * fresnel);////
-
     const vec3 worldN = normalize(worldNormal);
 
     //const vec3 Le = vec3(5.0f);
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
-    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, 0.0f, 1.0f);
+    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, 1.0f);
 
-    finalColor = vec4(Li + Lenv, 1.0f);
-    //finalColor = vec4(vec3(F), 1.0f);
+    finalColor = vec4(Lenv, 1.0f);
+    //finalColor = vec4(vec3(D), 1.0f);
     //finalColor = vec4(vec3(Li), 1.0f);
 }

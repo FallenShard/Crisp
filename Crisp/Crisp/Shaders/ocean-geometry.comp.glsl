@@ -36,25 +36,14 @@ const float texelCenterOffset = 0.5;
 
 float getHeight(int i, int j, float factor) {
     return texelFetch(displacementMap, ivec2(i, j), 0).r * factor;
-    //float u = (i + texelCenterOffset) / N;
-    //float v = (j + texelCenterOffset) / N;
-    //return texture(displacementMap, vec2(u, v)).r * factor;
 }
 
 float getDx(int i, int j, float factor) {
-    //return texelFetch(displacementXMap, ivec2(i, j), 0).r * factor;
-
-    float u = (i + texelCenterOffset) / N;
-    float v = (j + texelCenterOffset) / N;
-    return texture(displacementXMap, vec2(u, v)).r * factor;
+    return texelFetch(displacementXMap, ivec2(i, j), 0).r * factor;
 }
 
 float getDz(int i, int j, float factor) {
-    //return texelFetch(displacementZMap, ivec2(i, j), 0).r * factor;
-
-    float u = (i + texelCenterOffset) / N;
-    float v = (j + texelCenterOffset) / N;
-    return texture(displacementZMap, vec2(u, v)).r * factor;
+    return texelFetch(displacementZMap, ivec2(i, j), 0).r * factor;
 }
 
 vec3 makeNormal2(int i, int j, float factor) {
@@ -75,13 +64,13 @@ vec3 getDisplacement(int i, int j) {
 // Cannot apply standard heightmap -> normal map computation because there are
 // displacements in X and Z as well.
 vec3 makeNormal3(int i, int j, float f) {
-    const float delta = patchWorldSize / N;
+    const float cellSize = patchWorldSize / N;
 
     const vec3 center = getDisplacement(i, j);
-    const vec3 right = vec3(+delta, 0, 0) + getDisplacement(i + 1, j) - center;
-    const vec3 left = vec3(-delta, 0, 0) + getDisplacement(i - 1, j) - center;
-    const vec3 top = vec3(0, 0, -delta) + getDisplacement(i, j + 1) - center;
-    const vec3 bottom = vec3(0, 0, +delta) + getDisplacement(i, j - 1) - center;
+    const vec3 right = vec3(+cellSize, 0, 0) + getDisplacement((i + 1) % N, j) - center;
+    const vec3 left = vec3(-cellSize, 0, 0) + getDisplacement((i + N - 1) % N, j) - center;
+    const vec3 top = vec3(0, 0, -cellSize) + getDisplacement(i, (j + 1) % N) - center;
+    const vec3 bottom = vec3(0, 0, +cellSize) + getDisplacement(i, (j + N - 1) % N) - center;
     
     const vec3 rt = cross(right, top);
     const vec3 tl = cross(top, left);
@@ -128,6 +117,6 @@ void main()
     writePosition(linIdx, pos);
 
     vec3 startNormal = vec3(0, 1, 0);//makeNormal3(col, row, factor);
-    startNormal = makeNormal2(col, row, factor);
+    startNormal = makeNormal3(col, row, factor);
     writeNormal(linIdx, startNormal);
 }
