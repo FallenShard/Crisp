@@ -1,15 +1,21 @@
 ---
 Checks: >
-	abseil-*,
-	bugprone-*,
-	cppcoreguidelines-*,
-	clang-*,
-	google-*,
-	llvm-namespace-comment,
-	misc-*,
-	modernize-*,
-	performance-*,
-	portability-*,
-	readability-*
+    bugprone-*,
+    cppcoreguidelines-*,
+    -cppcoreguidelines-owning-memory,
+    -cppcoreguidelines-avoid-non-const-global-variables,
+    -cppcoreguidelines-pro-type-union-access,
+    clang-*,
+    google-*,
+    llvm-namespace-comment,
+    misc-*,
+    modernize-*,
+    -modernize-use-trailing-return-type,
+    performance-*,
+    portability-*,
+    readability-*,
+    -readability-named-parameter,
+    -readability-uppercase-literal-suffix,
+    -readability-identifier-length,
 
 WarningsAsErrors: "*"
