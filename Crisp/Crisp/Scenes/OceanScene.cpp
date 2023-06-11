@@ -23,7 +23,7 @@ constexpr const char* kSpectrumPass = "oscillationPass";
 constexpr const char* kGeometryPass = "geometryPass";
 
 constexpr int32_t N = 512;
-const int logN = static_cast<int>(std::log2(N));
+const int32_t logN = static_cast<int32_t>(std::log2(N));
 constexpr float Lx = 2.0f * N;
 constexpr float kGravity = 9.81f;
 
