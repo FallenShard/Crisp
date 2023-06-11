@@ -13,7 +13,8 @@ using ::testing::Not;
 
 TEST_F(VulkanBufferTest, StagingVulkanBuffer)
 {
-    std::array<float, 100> data;
+    constexpr uint32_t kElementCount{100};
+    std::array<float, kElementCount> data{};
     std::iota(data.begin(), data.end(), 0.0f);
 
     constexpr VkDeviceSize size = data.size() * sizeof(float);
@@ -23,14 +24,17 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer)
     ASSERT_EQ(stagingBuffer.getSize(), size);
     stagingBuffer.updateFromHost(data);
 
-    const float* ptr = stagingBuffer.getHostVisibleData<float>();
+    const auto* ptr = stagingBuffer.getHostVisibleData<float>();
     for (uint32_t i = 0; i < data.size(); ++i)
+    {
         EXPECT_EQ(ptr[i], data[i]);
+    }
 }
 
 TEST_F(VulkanBufferTest, MoveConstruction)
 {
-    std::array<float, 100> data;
+    constexpr uint32_t kElementCount{100};
+    std::array<float, kElementCount> data{};
     std::iota(data.begin(), data.end(), 0.0f);
 
     constexpr VkDeviceSize size = data.size() * sizeof(float);
@@ -42,7 +46,7 @@ TEST_F(VulkanBufferTest, MoveConstruction)
     EXPECT_THAT(another, HandleIsValid());
     EXPECT_EQ(another.getSize(), size);
 
-    EXPECT_THAT(stagingBuffer, HandleIsNull());
+    EXPECT_THAT(stagingBuffer, HandleIsNull()); // NOLINT
 }
 
 TEST_F(VulkanBufferTest, VulkanBuffer)
@@ -59,14 +63,14 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     StagingVulkanBuffer stagingBuffer(*device_, size);
-    const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
+    const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i)
         EXPECT_EQ(stagingPtr[i], data[i]);
 
     StagingVulkanBuffer downloadBuffer(*device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     {
-        ScopeCommandExecutor executor(*device_);
+        const ScopeCommandExecutor executor(*device_);
         const auto& cmdBuffer = executor.cmdBuffer;
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
@@ -117,7 +121,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     const VulkanQueue& generalQueue = device->getGeneralQueue();
     const VulkanCommandPool commandPool(generalQueue.createCommandPool(), device->getResourceDeallocator());
-    VulkanCommandBuffer cmdBuffer(commandPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    const VulkanCommandBuffer cmdBuffer(commandPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
     VkFence fence = device->createFence();
     cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
@@ -140,7 +144,8 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     // Create the transfer execution context
     const VulkanCommandPool transferPool(transferQueue.createCommandPool(), device->getResourceDeallocator());
-    VulkanCommandBuffer transferCmdBuffer(transferPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    const VulkanCommandBuffer transferCmdBuffer(
+        transferPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
     VkFence transferFence = device->createFence();
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 

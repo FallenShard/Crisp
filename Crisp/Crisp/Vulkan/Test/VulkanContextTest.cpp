@@ -14,7 +14,7 @@ TEST(VulkanContextTest, WithoutSurface)
     EXPECT_THAT(context.getSurface(), IsNull());
 }
 
-TEST(VulkanContextTest, WithoutSurface_WithValidation)
+TEST(VulkanContextTest, WithoutSurfaceWithValidation)
 {
     const VulkanContext context(nullptr, {}, true);
     EXPECT_THAT(context.getSurface(), IsNull());
