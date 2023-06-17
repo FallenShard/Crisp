@@ -5,6 +5,6 @@
   "validationLayersInRelease": true,
   "scene_": "vulkan-ray-tracer",
   "scene__": "gltf-viewer",
-  "scene": "atmosphere",
+  "scene": "ocean",
   "logLevel": "trace"
 }
