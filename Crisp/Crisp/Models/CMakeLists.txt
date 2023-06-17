@@ -18,7 +18,10 @@ add_cpp_static_library(CrispModels
 target_link_libraries(CrispModels
     PUBLIC CrispRenderer)
 
-add_cpp_test(CrispTest
-    "Test/TransmittanceLutTest.cpp")
-target_link_libraries(CrispTest PRIVATE CrispVulkanTestUtils CrispModels)
-copy_shared_libs(CrispTest lua freetype)
+add_cpp_test(CrispOceanTest
+    "Test/OceanTest.cpp"
+)
+target_link_libraries(CrispOceanTest
+    PRIVATE CrispVulkanTestUtils
+    PRIVATE CrispModels
+)

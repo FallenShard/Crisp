@@ -68,11 +68,7 @@ public:
         }
 
         const auto handleIdx = m_denseToSparseIndexMapping[handle.id];
-        if (m_handles[handleIdx].generation != handle.generation)
-        {
-            return false;
-        }
-        return true;
+        return m_handles[handleIdx].generation == handle.generation;
     }
 
     ValueType& at(HandleType handle)
@@ -98,7 +94,7 @@ public:
     template <typename... Args>
     HandleType emplace(Args... args)
     {
-        return insert(ValueType{std::forward<Args>(args...)});
+        return insert(ValueType{std::forward<Args>(args)...});
     }
 
     template <typename ValueT>
@@ -116,34 +112,32 @@ public:
 
             return handle;
         }
+
+        HandleType handle;
+
+        // Retrieve the next free list start before we lose it.
+        const auto nextFreeIndex = m_handles[m_freeListStart].id;
+
+        handle.id = static_cast<uint32_t>(m_values.size());
+        handle.generation = m_handles[m_freeListStart].generation;
+
+        // Assign the new handle at the slot.
+        m_handles[m_freeListStart] = handle;
+        m_values.push_back(std::forward<ValueT>(value));
+        m_denseToSparseIndexMapping.push_back(m_freeListStart);
+
+        handle.id = m_freeListStart;
+
+        if (m_handles.size() == m_values.size())
+        {
+            m_freeListStart = kInvalidFreeListIndex;
+        }
         else
         {
-            HandleType handle;
-
-            // Retrieve the next free list start before we lose it.
-            const auto nextFreeIndex = m_handles[m_freeListStart].id;
-
-            handle.id = static_cast<uint32_t>(m_values.size());
-            handle.generation = m_handles[m_freeListStart].generation;
-
-            // Assign the new handle at the slot.
-            m_handles[m_freeListStart] = handle;
-            m_values.push_back(std::forward<ValueT>(value));
-            m_denseToSparseIndexMapping.push_back(m_freeListStart);
-
-            handle.id = m_freeListStart;
-
-            if (m_handles.size() == m_values.size())
-            {
-                m_freeListStart = kInvalidFreeListIndex;
-            }
-            else
-            {
-                m_freeListStart = nextFreeIndex;
-            }
-
-            return handle;
+            m_freeListStart = nextFreeIndex;
         }
+
+        return handle;
     }
 
     bool erase(const HandleType handle)

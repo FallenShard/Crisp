@@ -113,3 +113,10 @@ add_cpp_test(CrispPipelineLayoutBuilderTest
     "Test/PipelineLayoutBuilderTest.cpp")
 target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE CrispRenderer CrispVulkanTestUtils)
 copy_shared_libs(CrispPipelineLayoutBuilderTest lua)
+
+add_cpp_test(CrispRenderGraphTest
+    "Test/RenderGraphTest.cpp"
+)
+target_link_libraries(CrispRenderGraphTest
+    PRIVATE CrispVulkanTestUtils
+)

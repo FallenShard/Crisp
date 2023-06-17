@@ -37,7 +37,7 @@ add_cpp_test(CrispResultTest
     "Test/ResultTest.cpp"
 )
 target_link_libraries(CrispResultTest
-    PRIVATE CrispResult
+    PRIVATE Crisp::Result
 )
 
 add_cpp_interface_library(CrispChecks
@@ -46,7 +46,6 @@ add_cpp_interface_library(CrispChecks
 target_link_libraries(CrispChecks
     INTERFACE CrispResult
 )
-
 
 add_cpp_static_library(CrispWindow
     "Window.cpp"
@@ -64,7 +63,6 @@ target_link_libraries(CrispWindow
     PUBLIC Vulkan::Headers
 )
 
-
 add_cpp_interface_library(CrispInput
     "Mouse.hpp"
     "Keyboard.hpp"
@@ -75,17 +73,15 @@ target_link_libraries(CrispInput
     INTERFACE glfw
 )
 
-
 add_cpp_static_library(CrispApplicationEnvironment
     "ApplicationEnvironment.cpp"
     "ApplicationEnvironment.hpp"
-    "CommandLineParser.cpp"
-    "CommandLineParser.hpp"
 )
 target_link_libraries(CrispApplicationEnvironment
     PUBLIC CrispUtils
     PRIVATE CrispLogger
     PRIVATE CrispFormat
+    PRIVATE CrispCommandLineParser
     PUBLIC CrispJsonUtils
     PUBLIC CrispHashMap
     PUBLIC CrispStringUtils
@@ -93,11 +89,22 @@ target_link_libraries(CrispApplicationEnvironment
     PUBLIC Vulkan::Headers
 )
 
-add_cpp_test(CrispApplicationEnvironmentTest
+add_cpp_static_library(CrispCommandLineParser
+    "CommandLineParser.cpp"
+    "CommandLineParser.hpp"
+)
+target_link_libraries(CrispCommandLineParser
+    PUBLIC CrispFormat
+    PUBLIC CrispHashMap
+    PUBLIC CrispStringUtils
+    PUBLIC CrispLogger
+)
+
+add_cpp_test(CrispCommandLineParserTest
     "Test/CommandLineParserTest.cpp"
 )
-target_link_libraries(CrispApplicationEnvironmentTest
-    PRIVATE CrispApplicationEnvironment
+target_link_libraries(CrispCommandLineParserTest
+    PRIVATE CrispCommandLineParser
 )
 
 add_cpp_static_library(CrispApplication
@@ -151,10 +158,10 @@ target_link_libraries(CrispNotNull
     INTERFACE CrispChecks
 )
 
-add_cpp_interface_library(CrispSlotMapSpecial
+add_cpp_interface_library(CrispSlotMap
     "SlotMap.hpp"
 )
-target_link_libraries(CrispSlotMapSpecial
+target_link_libraries(CrispSlotMap
     INTERFACE CrispHashMap
 )
 
@@ -162,5 +169,5 @@ add_cpp_test(CrispSlotMapTest
     "Test/SlotMapTest.cpp"
 )
 target_link_libraries(CrispSlotMapTest
-    PRIVATE CrispSlotMapSpecial
+    PRIVATE CrispSlotMap
 )

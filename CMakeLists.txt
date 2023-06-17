@@ -20,9 +20,19 @@ function(enable_default_cpp_compile_options targetName optionType)
     endif()
 endfunction()
 
+function(add_crisp_alias_target targetName)
+    string(SUBSTRING "${targetName}" 0 5 targetPrefix)
+
+    if(targetPrefix STREQUAL "Crisp")
+        string(SUBSTRING "${targetName}" 5 -1 subTargetName)
+        add_library("Crisp::${subTargetName}" ALIAS ${targetName})
+    endif()
+endfunction()
+
 # Creates a C++ static library target.
 macro(add_cpp_static_library targetName)
     add_library(${targetName} STATIC ${ARGN})
+    add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
 endmacro()
@@ -30,6 +40,7 @@ endmacro()
 # Creates a C++ shared library target.
 macro(add_cpp_shared_library targetName)
     add_library(${targetName} SHARED ${ARGN})
+    add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
 endmacro()
@@ -37,6 +48,7 @@ endmacro()
 # Creates a C++ header-only library target.
 macro(add_cpp_interface_library targetName)
     add_library(${targetName} INTERFACE ${ARGN})
+    add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} INTERFACE)
     target_include_directories(${targetName} INTERFACE ${CRISP_INCLUDE_DIR})
 endmacro()
@@ -109,6 +121,7 @@ FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG v1.10.0
 )
+set(SPDLOG_FMT_EXTERNAL_HO ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 FetchContent_Declare(googletest

@@ -1,3 +1,6 @@
+#include <Crisp/Models/Ocean.hpp>
+
+#include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
 #include <numeric>
@@ -6,15 +9,52 @@ namespace crisp::test
 {
 namespace
 {
-using TransmittanceLutTest = VulkanTest;
+using OceanTest = VulkanTest;
 
 using ::testing::IsNull;
 using ::testing::Not;
 
-TEST_F(TransmittanceLutTest, VulkanBuffer)
+TEST_F(OceanTest, PatchConstruction)
+{
+    constexpr float kSize = 5.0;
+    const std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
+        {VertexAttribute::Position}, {VertexAttribute::Normal}};
+
+    for (const int32_t N : {64, 128, 256})
+    {
+        const TriangleMesh mesh = createGridMesh(flatten(vertexFormat), kSize, N - 1);
+        EXPECT_EQ(mesh.getVertexCount(), N * N);
+
+        const auto boundingBox = mesh.getBoundingBox();
+        EXPECT_NEAR(boundingBox.getExtents().x, kSize, 1e-8);
+        EXPECT_NEAR(boundingBox.getExtents().y, 0.0, 1e-8);
+        EXPECT_NEAR(boundingBox.getExtents().z, kSize, 1e-8);
+    }
+}
+
+// TEST_F(OceanTest, PatchConstruction)
+//{
+//     constexpr int32_t N = 512;
+//     constexpr float kSize = 5.0;
+//     const std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
+//         {VertexAttribute::Position}, {VertexAttribute::Normal}};
+//
+//     TriangleMesh mesh = createGridMesh(flatten(vertexFormat), kSize, N - 1);
+//     EXPECT_EQ(mesh.getVertexCount(), N * N);
+//
+//     const auto boundingBox = mesh.getBoundingBox();
+//     EXPECT_NEAR(boundingBox.getExtents().x, kSize, 1e-8);
+//     EXPECT_NEAR(boundingBox.getExtents().y, 0.0, 1e-8);
+//     EXPECT_NEAR(boundingBox.getExtents().z, kSize, 1e-8);
+// }
+
+TEST_F(OceanTest, VulkanBuffer)
 {
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
+    std::vector<float> data(elementCount);
+    std::iota(data.begin(), data.end(), 0.0f);
+
     VulkanBuffer deviceBuffer(
         *device_,
         size,
@@ -22,18 +62,15 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     StagingVulkanBuffer stagingBuffer(*device_, size);
-    std::vector<float> data(size / sizeof(float));
-    std::iota(data.begin(), data.end(), 0.0f);
     const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i)
-        ASSERT_EQ(stagingPtr[i], data[i]);
+        EXPECT_EQ(stagingPtr[i], data[i]);
 
     StagingVulkanBuffer downloadBuffer(*device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-
     {
-        const ScopeCommandExecutor executor(*device_);
-        auto& cmdBuffer = executor.cmdBuffer;
+        ScopeCommandExecutor executor(*device_);
+        const auto& cmdBuffer = executor.cmdBuffer;
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
@@ -56,5 +93,6 @@ TEST_F(TransmittanceLutTest, VulkanBuffer)
     for (uint32_t i = 0; i < elementCount; ++i)
         ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i;
 }
+
 } // namespace
 } // namespace crisp::test
