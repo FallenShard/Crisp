@@ -1,10 +1,10 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
+#include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
-
 #include <Crisp/Utils/ChromeProfiler.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
+
 #include <GLFW/glfw3.h>
 
 namespace crisp
@@ -21,19 +21,29 @@ void glfwErrorHandler(int errorCode, const char* message)
 void setSpdlogLevel(const std::string_view level)
 {
     if (level == "critical")
+    {
         spdlog::set_level(spdlog::level::critical);
+    }
     else if (level == "error")
+    {
         spdlog::set_level(spdlog::level::err);
+    }
     else if (level == "warning")
+    {
         spdlog::set_level(spdlog::level::warn);
-    else if (level == "info")
-        spdlog::set_level(spdlog::level::info);
+    }
     else if (level == "debug")
+    {
         spdlog::set_level(spdlog::level::debug);
+    }
     else if (level == "trace")
+    {
         spdlog::set_level(spdlog::level::trace);
+    }
     else
+    {
         spdlog::set_level(spdlog::level::info);
+    }
 }
 
 } // namespace
@@ -83,8 +93,11 @@ std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtens
     std::vector<std::string> extensions;
     uint32_t glfwExtensionCount{0};
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    extensions.reserve(glfwExtensionCount);
     for (unsigned int i = 0; i < glfwExtensionCount; i++)
-        extensions.push_back(glfwExtensions[i]);
+    {
+        extensions.emplace_back(glfwExtensions[i]); // NOLINT
+    }
 
     return extensions;
 }
@@ -99,7 +112,7 @@ const nlohmann::json& ApplicationEnvironment::getConfig() const
     return m_config;
 }
 
-Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv)
+Result<ApplicationEnvironment::Parameters> parse(const int32_t argc, char** argv)
 {
     ApplicationEnvironment::Parameters args{};
     CommandLineParser parser{};
@@ -108,7 +121,9 @@ Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv)
     parser.addOption("enable_ray_tracing", args.enableRayTracingExtension);
     parser.addOption("log_level", args.logLevel);
     if (!parser.parse(argc, argv).isValid())
+    {
         return resultError("Failed to parse input arguments!");
+    }
 
     return args;
 }

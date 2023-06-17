@@ -1,9 +1,10 @@
 #include <Crisp/Core/CommandLineParser.hpp>
+
 #include <span>
 
 namespace crisp
 {
-Result<> CommandLineParser::parse(int argc, char** argv)
+Result<> CommandLineParser::parse(const int32_t argc, char** argv)
 {
     const std::span<char*> args(argv, static_cast<size_t>(argc));
 
@@ -58,8 +59,12 @@ Result<> CommandLineParser::parse(const std::vector<std::string_view>& tokens)
     }
 
     for (const auto& arg : m_argMap)
+    {
         if (arg.second.required && !arg.second.parsed)
+        {
             return resultError("Missing argument: {}", arg.second.name);
+        }
+    }
 
     return {};
 }

@@ -12,7 +12,7 @@ namespace
 {
 const auto logger = createLoggerMt("Application");
 
-void logFps(double frameTime, double fps)
+[[maybe_unused]] void logFps(double frameTime, double fps)
 {
     logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
 }
@@ -21,12 +21,12 @@ ImVec4 interpolateColor(const float t)
 {
     const glm::vec4 color =
         t > 0.5 ? glm::vec4{1.0f, 2.0f * (1.0f - t), 0.0f, 1.0f} : glm::vec4{t / 0.5f, 1.0f, 0.0f, 1.0f};
-    return ImVec4(color.r, color.g, color.b, color.a);
+    return {color.r, color.g, color.b, color.a};
 }
 
 Window createWindow(const char* title, const glm::ivec2& size)
 {
-    return Window((Window::getDesktopResolution() - size) / 2, size, title);
+    return {(Window::getDesktopResolution() - size) / 2, size, title};
 }
 
 AssetPaths createAssetPaths(const ApplicationEnvironment& environment)
@@ -44,7 +44,7 @@ Application::Application(const ApplicationEnvironment& environment)
     : m_window(createWindow(kTitle, kDefaultWindowSize))
 {
     m_renderer = std::make_unique<Renderer>(
-        environment.getRequiredVulkanInstanceExtensions(),
+        ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
         m_window.createSurfaceCallback(),
         createAssetPaths(environment),
         environment.getParameters().enableRayTracingExtension);
@@ -84,7 +84,9 @@ void Application::run()
         Window::pollEvents();
 
         if (m_isMinimized)
+        {
             continue;
+        }
 
         while (timeSinceLastUpdate > kTimePerFrame)
         {
@@ -113,7 +115,9 @@ void Application::onResize(int width, int height)
 {
     logger->info("New window dims: [{}, {}]", width, height);
     if (width == 0 || height == 0)
+    {
         return;
+    }
 
     m_renderer->resize(width, height);
     m_sceneContainer->resize(width, height);
@@ -124,7 +128,7 @@ SceneContainer* Application::getSceneContainer() const
     return m_sceneContainer.get();
 }
 
-gui::Form* Application::getForm() const
+gui::Form* Application::getForm() const // NOLINT
 {
     return nullptr;
 }
@@ -136,6 +140,8 @@ Window& Application::getWindow()
 
 void Application::updateFrameStatistics(double frameTime)
 {
+    constexpr double kSecToMsec = 1000.0;
+
     m_accumulatedTime += frameTime;
     m_accumulatedFrames++;
 
@@ -149,7 +155,7 @@ void Application::updateFrameStatistics(double frameTime)
 
         onFrameTimeUpdated(avgTime, avgFrames);
 
-        m_avgFrameTimeMs = avgTime * 1000.0;
+        m_avgFrameTimeMs = avgTime * kSecToMsec;
         m_avgFps = avgFrames;
 
         m_accumulatedTime = spillOver;
@@ -170,21 +176,21 @@ void Application::onRestore()
 void Application::drawGui()
 {
     ImGui::Begin("Application Settings");
-    ImGui::LabelText("Frame Time", "%.2f ms, %.2f FPS", m_avgFrameTimeMs, m_avgFps);
+    ImGui::LabelText("Frame Time", "%.2f ms, %.2f FPS", m_avgFrameTimeMs, m_avgFps); // NOLINT
 
     const auto metrics = m_renderer->getDevice().getMemoryAllocator().getDeviceMemoryUsage();
 
     const auto drawMemoryLabel = [](const char* label, const uint64_t bytesUsed, const uint64_t bytesAllocated)
     {
-        const auto transformToMb = [](const uint64_t bytes)
+        const auto toMegabytes = [](const uint64_t bytes)
         {
             const uint64_t megaBytes = bytes >> 20;
-            const uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0;
+            const uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0; // NOLINT
             return megaBytes + remainder;
         };
         ImGui::PushStyleColor(
             ImGuiCol_Text, interpolateColor(static_cast<float>(bytesUsed) / static_cast<float>(bytesAllocated)));
-        ImGui::LabelText(label, "%d / %d MB", transformToMb(bytesUsed), transformToMb(bytesAllocated));
+        ImGui::LabelText(label, "%llu / %llu MB", toMegabytes(bytesUsed), toMegabytes(bytesAllocated)); // NOLINT
         ImGui::PopStyleColor();
     };
 

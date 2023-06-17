@@ -13,11 +13,6 @@ static constexpr uint32_t ScanBlockSize = 256;
 static constexpr uint32_t ScanElementsPerThread = 2;
 static constexpr uint32_t ScanElementsPerBlock = ScanBlockSize * ScanElementsPerThread;
 
-inline glm::uvec3 getNumWorkGroups(const glm::uvec3& dataDims, const VulkanPipeline& pipeline)
-{
-    return (dataDims - glm::uvec3(1)) / getWorkGroupSize(pipeline) + glm::uvec3(1);
-}
-
 void setDispatchLayout(RenderGraph::Node& computeNode, const glm::ivec3& workGroupSize, const glm::ivec3& items)
 {
     computeNode.workGroupSize = workGroupSize;

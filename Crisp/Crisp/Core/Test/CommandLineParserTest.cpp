@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "Crisp/Core/CommandLineParser.hpp"
+#include <Crisp/Core/CommandLineParser.hpp>
 
 TEST(CommandLineParserTest, Basic)
 {
@@ -8,7 +8,7 @@ TEST(CommandLineParserTest, Basic)
 
     int32_t width = 0;
     int16_t height = 0;
-    std::string path = "";
+    std::string path;
     std::string findAllEnemies = "not";
 
     crisp::CommandLineParser clp;

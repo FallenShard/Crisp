@@ -23,7 +23,7 @@ public:
     static constexpr uint32_t kDesiredFramesPerSecond = 144;
     static constexpr double kTimePerFrame = 1.0 / kDesiredFramesPerSecond;
 
-    Application(const ApplicationEnvironment& environment);
+    explicit Application(const ApplicationEnvironment& environment);
     ~Application();
 
     Application(const Application& other) = delete;

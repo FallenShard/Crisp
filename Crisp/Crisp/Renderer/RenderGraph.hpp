@@ -3,6 +3,7 @@
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/DrawCommand.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
@@ -13,8 +14,6 @@
 
 namespace crisp
 {
-class Renderer;
-
 class RenderGraph
 {
 public:
@@ -55,7 +54,6 @@ public:
     };
 
     RenderGraph(Renderer* renderer);
-    ~RenderGraph();
 
     Node& addRenderPass(const std::string& renderPassName, std::unique_ptr<VulkanRenderPass> renderPass);
     Node& addComputePass(const std::string& computePassName);

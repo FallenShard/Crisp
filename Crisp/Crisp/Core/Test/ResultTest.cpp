@@ -5,8 +5,8 @@
 
 #include <numeric>
 
-using namespace crisp;
-
+namespace crisp::test
+{
 struct MoveOnlyType
 {
     MoveOnlyType() = default;
@@ -46,3 +46,4 @@ TEST(ResultTest, ValueWithMoveOnly)
     const auto value = std::move(result).unwrap();
     EXPECT_EQ(*value.x, 10);
 }
+} // namespace crisp::test

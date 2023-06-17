@@ -13,7 +13,6 @@
 #include <Crisp/Utils/ChromeProfiler.hpp>
 #include <Crisp/Utils/Enumerate.hpp>
 
-#include <exception>
 #include <stack>
 #include <string_view>
 
@@ -22,7 +21,7 @@ namespace crisp
 namespace
 {
 auto logger = createLoggerMt("RenderGraph");
-}
+} // namespace
 
 RenderGraph::RenderGraph(Renderer* renderer)
     : m_renderer(renderer)
@@ -43,8 +42,6 @@ RenderGraph::RenderGraph(Renderer* renderer)
     }
 }
 
-RenderGraph::~RenderGraph() {}
-
 RenderGraph::Node& RenderGraph::addRenderPass(const std::string& name, std::unique_ptr<VulkanRenderPass> renderPass)
 {
     CRISP_CHECK(m_nodes.find(name) == m_nodes.end(), "Render graph already contains a node named {}", name);
@@ -64,7 +61,7 @@ RenderGraph::Node& RenderGraph::addComputePass(const std::string& name)
     CRISP_CHECK(m_nodes.find(name) == m_nodes.end(), "Render graph already contains a node named {}", name);
 
     const auto& [iter, inserted] = m_nodes.emplace(name, std::make_unique<Node>());
-    iter->second->name = std::move(name);
+    iter->second->name = name;
     iter->second->type = NodeType::Compute;
     return *iter->second;
 }
@@ -128,11 +125,17 @@ Result<> RenderGraph::sortRenderPasses()
     for (auto& [srcPass, node] : m_nodes)
     {
         if (fanIn.count(srcPass) == 0)
+        {
             fanIn.emplace(srcPass, 0);
+        }
 
         for (auto& [dstPass, callback] : node->dependencies)
+        {
             if (m_nodes.count(dstPass) > 0)
+            {
                 fanIn[dstPass]++;
+            }
+        }
     }
 
     std::stack<std::string> stack;

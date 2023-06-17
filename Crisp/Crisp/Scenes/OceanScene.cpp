@@ -34,7 +34,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer, const glm::uvec3& workGroupSize, const std::string& shaderName)
 {
     const auto spirvContents =
-        sl::readSpirvFile(renderer->getResourcesPath() / "Shaders" / (shaderName + ".spv")).unwrap();
+        sl::readSpirvFile(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
     PipelineLayoutBuilder layoutBuilder(sl::reflectUniformMetadataFromSpirvShader(spirvContents).unwrap());
 
     auto layout = layoutBuilder.create(renderer->getDevice());

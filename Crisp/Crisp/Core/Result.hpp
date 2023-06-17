@@ -9,30 +9,14 @@ namespace crisp
 {
 namespace detail
 {
-template <typename T>
-class Unexpected
-{
-public:
-    constexpr explicit Unexpected(T&& val)
-        : m_value(val)
-    {
-    }
-
-    std::string&& value()
-    {
-        return std::move(m_value);
-    }
-
-private:
-    T m_value;
-};
-
 struct LocationFormatString
 {
     fmt::string_view str;
     std::source_location loc;
 
-    LocationFormatString(const char* str = "", const std::source_location& loc = std::source_location::current())
+    LocationFormatString( // NOLINT
+        const char* str = "",
+        const std::source_location& loc = std::source_location::current())
         : str(str)
         , loc(loc)
     {
@@ -44,20 +28,17 @@ template <typename T = void>
 class Result
 {
 public:
-    constexpr Result(const Result&) = delete;
-    constexpr Result(Result&&) = default;
-
-    constexpr Result(const T& value)
+    constexpr Result(const T& value) // NOLINT
         : m_expected(value)
     {
     }
 
-    constexpr Result(T&& value)
+    constexpr Result(T&& value) // NOLINT
         : m_expected(std::move(value))
     {
     }
 
-    constexpr Result(std::unexpected<std::string>&& unexp)
+    constexpr Result(std::unexpected<std::string>&& unexp) // NOLINT
         : m_expected(std::move(unexp))
     {
     }
@@ -105,7 +86,7 @@ public:
         return m_expected.has_value();
     }
 
-    constexpr operator bool() const
+    constexpr operator bool() const // NOLINT
     {
         return m_expected.has_value();
     }
@@ -115,14 +96,12 @@ private:
 };
 
 template <>
-class Result<void>
+class [[nodiscard]] Result<void> // NOLINT
 {
 public:
-    constexpr Result() = default;
-    constexpr Result(const Result&) = delete;
-    constexpr Result(Result&&) = default;
+    constexpr Result() {} // NOLINT
 
-    constexpr Result(std::unexpected<std::string>&& unexp)
+    constexpr Result(std::unexpected<std::string>&& unexp) // NOLINT
         : m_expected(std::move(unexp))
     {
     }
@@ -141,14 +120,11 @@ public:
         return m_expected.has_value();
     }
 
-    ~Result()
-    {
-        unwrap();
-    }
-
 private:
     std::expected<void, std::string> m_expected;
 };
+
+inline constexpr Result<void> kResultSuccess;
 
 template <typename... Args>
 std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args)

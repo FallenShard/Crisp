@@ -11,10 +11,10 @@ public:
     Animation(double startDelay, double duration, bool isLooped = false, int loopCount = 1);
     virtual ~Animation() = default;
 
-    Animation(const Animation&) = default;
+    Animation(const Animation&) = delete;
     Animation(Animation&&) = default;
 
-    Animation& operator=(const Animation&) = default;
+    Animation& operator=(const Animation&) = delete;
     Animation& operator=(Animation&&) = default;
 
     double getDuration() const;

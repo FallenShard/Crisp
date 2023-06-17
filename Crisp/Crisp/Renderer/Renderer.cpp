@@ -68,6 +68,9 @@ Renderer::Renderer(
     const bool enableRayTracingExtensions)
     : m_currentFrameIndex(0)
     , m_assetPaths(std::move(assetPaths))
+    , m_defaultViewport()
+    , m_defaultScissor()
+    , m_coroCmdBuffer(VK_NULL_HANDLE)
 {
     recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
 
@@ -104,7 +107,9 @@ Renderer::Renderer(
 
     m_workers.resize(1);
     for (auto& w : m_workers)
+    {
         w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
+    }
 
     // Creates a map of all shaders
     loadShaders(m_assetPaths.spvShaderDir);
@@ -115,7 +120,7 @@ Renderer::Renderer(
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 }
 
-Renderer::~Renderer() {}
+Renderer::~Renderer() {} // NOLINT
 
 const AssetPaths& Renderer::getAssetPaths() const
 {
@@ -237,7 +242,9 @@ void Renderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawActio
 void Renderer::flushResourceUpdates(bool waitOnAllQueues)
 {
     if (m_resourceUpdates.empty())
+    {
         return;
+    }
 
     const VulkanQueue& generalQueue = m_device->getGeneralQueue();
     auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -255,7 +262,9 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
     for (const auto& update : m_resourceUpdates)
+    {
         update(commandBuffer);
+    }
 
     vkEndCommandBuffer(commandBuffer);
 
@@ -264,7 +273,9 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     m_device->wait(tempFence);
 
     if (waitOnAllQueues)
+    {
         finish();
+    }
 
     vkDestroyFence(m_device->getHandle(), tempFence, nullptr);
 
@@ -278,7 +289,9 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
 void Renderer::flushCoroutines()
 {
     if (m_cmdBufferCoroutines.empty())
+    {
         return;
+    }
 
     const VulkanQueue& generalQueue = m_device->getGeneralQueue();
     auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -297,7 +310,9 @@ void Renderer::flushCoroutines()
 
     m_coroCmdBuffer = commandBuffer;
     for (auto& coro : m_cmdBufferCoroutines)
+    {
         coro.resume();
+    }
 
     vkEndCommandBuffer(commandBuffer);
 
@@ -372,7 +387,9 @@ void Renderer::drawFrame()
 {
     const auto frameCtx{beginFrame()};
     if (!frameCtx.commandBuffer)
+    {
         return;
+    }
 
     record(frameCtx.commandBuffer->getHandle());
     endFrame(frameCtx);
@@ -401,7 +418,9 @@ void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t re
     {
         m_sceneImageViews = renderPass->getAttachmentViews(renderTargetIndex);
         for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
+        {
             m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
+        }
 
         m_device->flushDescriptorUpdates();
     }
@@ -415,7 +434,9 @@ void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageV
 {
     m_sceneImageViews.clear();
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
+    {
         m_sceneImageViews.push_back(imageViews[i].get());
+    }
 
     m_sceneMaterial->writeDescriptor(
         0, 0, imageViews, m_linearClampSampler.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -476,7 +497,9 @@ void Renderer::loadShaders(const std::filesystem::path& directoryPath)
 {
     auto files = enumerateFiles(directoryPath, "spv");
     for (auto& file : files)
+    {
         loadSpirvShaderModule(directoryPath / file);
+    }
 
     logger->info("Loaded all {} shaders", files.size());
 }
@@ -521,19 +544,29 @@ void Renderer::record(VkCommandBuffer commandBuffer)
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
 
     for (auto& uniformBuffer : m_streamingUniformBuffers)
+    {
         uniformBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
+    }
     for (auto& storageBuffer : m_streamingStorageBuffers)
+    {
         storageBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
+    }
     for (const auto& update : m_resourceUpdates)
+    {
         update(commandBuffer);
+    }
 
     m_coroCmdBuffer = commandBuffer;
     for (auto h : m_cmdBufferCoroutines)
+    {
         h.resume();
+    }
     m_cmdBufferCoroutines.clear();
 
     for (const auto& drawCommand : m_drawCommands)
+    {
         drawCommand(commandBuffer);
+    }
 
     m_defaultRenderPass->begin(commandBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
     if (!m_sceneImageViews.empty())
@@ -546,7 +579,9 @@ void Renderer::record(VkCommandBuffer commandBuffer)
     }
 
     for (const auto& drawCommand : m_defaultPassDrawCommands)
+    {
         drawCommand(commandBuffer);
+    }
     m_defaultRenderPass->end(commandBuffer, virtualFrameIndex);
 }
 
@@ -582,7 +617,9 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
 {
     auto& framebuffer = m_defaultRenderPass->getFramebuffer(virtualFrameIndex);
     if (framebuffer && framebuffer->getAttachment(0) == swapChainImageView)
+    {
         return;
+    }
 
     if (!m_swapChainFramebuffers.contains(swapChainImageView))
     {
@@ -595,7 +632,9 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
 
     // Release ownership of the framebuffer into the pool of swap chain framebuffers.
     if (framebuffer)
+    {
         framebuffer.swap(m_swapChainFramebuffers.at(framebuffer->getAttachment(0)));
+    }
 
     // Acquire ownership of the framebuffer used for the current image to be rendered.
     framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));

@@ -1,13 +1,12 @@
 #pragma once
 
-#include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 
 #include <filesystem>
 
 namespace crisp
 {
-class ApplicationEnvironment
+class ApplicationEnvironment // NOLINT
 {
 public:
     struct Parameters
@@ -43,6 +42,6 @@ private:
     Parameters m_arguments;
 };
 
-Result<ApplicationEnvironment::Parameters> parse(int argc, char** argv);
+Result<ApplicationEnvironment::Parameters> parse(int32_t argc, char** argv);
 
 } // namespace crisp

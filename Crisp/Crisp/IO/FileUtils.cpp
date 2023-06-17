@@ -60,7 +60,7 @@ Result<> stringToFile(const std::filesystem::path& outputFilePath, const std::st
     }
 
     outputFile << str;
-    return {};
+    return kResultSuccess;
 }
 
 Result<std::vector<char>> readBinaryFile(const std::filesystem::path& filePath)

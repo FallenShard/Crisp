@@ -8,9 +8,9 @@ const glm::mat4 InvertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
 
 glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar)
 {
-    const glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
+    [[maybe_unused]] const glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
     const float f = 1.0f / std::tan(fovY / 2.0f);
-    const auto a = glm::mat4(
+    [[maybe_unused]] const auto a = glm::mat4(
         f / aspectRatio,
         0.0f,
         0.0f,
@@ -28,7 +28,7 @@ glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float 
         -zNear * zFar / (zNear - zFar),
         0.0f);
 
-    const auto b = glm::infinitePerspective(fovY, aspectRatio, zNear);
+    [[maybe_unused]] const auto b = glm::infinitePerspective(fovY, aspectRatio, zNear);
 
     // Infinite projection with z value projected into [0, 1].
     const auto c = glm::mat4(
@@ -37,11 +37,14 @@ glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float 
 }
 
 template <typename ScalarType>
-constexpr glm::vec<3, ScalarType> kAxisX = {ScalarType(1.0), ScalarType(0.0), ScalarType(0.0)};
+constexpr glm::vec<3, ScalarType> kAxisX = {
+    static_cast<ScalarType>(1.0), static_cast<ScalarType>(0.0), static_cast<ScalarType>(0.0)};
 template <typename ScalarType>
-constexpr glm::vec<3, ScalarType> kAxisY = {ScalarType(0.0), ScalarType(1.0), ScalarType(0.0)};
+constexpr glm::vec<3, ScalarType> kAxisY = {
+    static_cast<ScalarType>(0.0), static_cast<ScalarType>(1.0), static_cast<ScalarType>(0.0)};
 template <typename ScalarType>
-constexpr glm::vec<3, ScalarType> kAxisZ = {ScalarType(0.0), ScalarType(0.0), ScalarType(1.0)};
+constexpr glm::vec<3, ScalarType> kAxisZ = {
+    static_cast<ScalarType>(0.0), static_cast<ScalarType>(0.0), static_cast<ScalarType>(1.0)};
 } // namespace
 
 namespace crisp
@@ -56,8 +59,12 @@ Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight, const 
     , m_aspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight))
     , m_zNear(zNear)
     , m_zFar(zFar)
+    , m_P(1.0f)
     , m_position(0.0f, 0.0f, 10.0f)
     , m_orientation(glm::angleAxis(glm::radians(0.0), kAxisY<double>))
+    , m_V(1.0f)
+    , m_invV(1.0f)
+    , m_frustumPlanes{}
 {
     updateProjectionMatrix();
     updateViewMatrix();
@@ -140,7 +147,7 @@ glm::vec3 Camera::getUpDir() const
 
 glm::vec2 Camera::getViewDepthRange() const
 {
-    return glm::vec2(m_zNear, m_zFar);
+    return {m_zNear, m_zFar};
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints(
@@ -165,7 +172,9 @@ std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints(
         glm::vec3(-halfFarW, +halfFarH, -zFar)};
 
     for (auto& p : frustumPoints)
+    {
         p = glm::vec3(m_invV * glm::vec4(p, 1.0f));
+    }
 
     return frustumPoints;
 }
@@ -181,16 +190,14 @@ glm::vec4 Camera::computeFrustumBoundingSphere(const float zNear, const float zF
     if (k * k >= (zFar - zNear) / (zFar + zNear))
     {
         const glm::vec3 center = m_invV * glm::vec4(0.0f, 0.0f, -zFar, 1.0f);
-        return glm::vec4(center, zFar * k);
+        return {center, zFar * k};
     }
-    else
-    {
-        const glm::vec3 center = m_invV * glm::vec4(0.0f, 0.0f, -0.5f * (zFar + zNear) * (1 + k * k), 1.0f);
-        const float radius = 0.5f * std::sqrt(
-                                        (zFar - zNear) * (zFar - zNear) + 2.0f * (zFar * zFar + zNear * zNear) * k * k +
-                                        (zFar + zNear) * (zFar + zNear) * k * k * k * k);
-        return glm::vec4(center, radius);
-    }
+
+    const glm::vec3 center = m_invV * glm::vec4(0.0f, 0.0f, -0.5f * (zFar + zNear) * (1 + k * k), 1.0f);
+    const float radius = 0.5f * std::sqrt(
+                                    (zFar - zNear) * (zFar - zNear) + 2.0f * (zFar * zFar + zNear * zNear) * k * k +
+                                    (zFar + zNear) * (zFar + zNear) * k * k * k * k);
+    return {center, radius};
 }
 
 void Camera::updateProjectionMatrix()

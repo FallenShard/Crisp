@@ -29,7 +29,7 @@ public:
         std::string name;
         std::function<void(const std::string_view)> parser;
         bool required;
-        bool parsed;
+        bool parsed{false};
     };
 
     template <CommandLineArgumentType T>
@@ -70,11 +70,11 @@ public:
         }
     }
 
-    [[nodiscard]] Result<> parse(int argc, char** argv);
-    [[nodiscard]] Result<> parse(const std::string_view commandLine);
-    [[nodiscard]] Result<> parse(const std::vector<std::string_view>& tokens);
+    Result<> parse(int argc, char** argv);
+    Result<> parse(std::string_view commandLine);
+    Result<> parse(const std::vector<std::string_view>& tokens);
 
 private:
-    robin_hood::unordered_flat_map<std::string, Argument> m_argMap{};
+    FlatHashMap<std::string, Argument> m_argMap{};
 };
 } // namespace crisp
