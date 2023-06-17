@@ -28,3 +28,4 @@ SpacesInContainerLiterals: true
 TabWidth: 4
 UseTab: Never
 SeparateDefinitionBlocks: Always
+InsertBraces: true
