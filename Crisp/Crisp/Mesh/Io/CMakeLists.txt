@@ -3,12 +3,12 @@ add_cpp_static_library(CrispGltfLoader
     "GltfLoader.hpp"
 )
 target_link_libraries(CrispGltfLoader
-    PUBLIC CrispResult
-    PUBLIC CrispHashMap
-    PUBLIC CrispMaterial
-    PUBLIC CrispMesh
-    PRIVATE CrispLogger
-    PRIVATE CrispImageIo
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Material
+    PUBLIC Crisp::Mesh
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::ImageIo
     PRIVATE tinygltf
 )
 
@@ -17,13 +17,13 @@ add_cpp_static_library(CrispWavefrontObjLoader
     "WavefrontObjLoader.hpp"
 )
 target_link_libraries(CrispWavefrontObjLoader
-    PUBLIC CrispResult
-    PUBLIC CrispHashMap
-    PUBLIC CrispMaterial
-    PUBLIC CrispMesh
-    PRIVATE CrispLogger
-    PRIVATE CrispStringUtils
-    PRIVATE CrispImageIo
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Material
+    PUBLIC Crisp::Mesh
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::StringUtils
+    PRIVATE Crisp::ImageIo
 )
 
 add_cpp_static_library(CrispMeshIo
@@ -31,13 +31,13 @@ add_cpp_static_library(CrispMeshIo
     "MeshLoader.hpp"
 )
 target_link_libraries(CrispMeshIo
-    PUBLIC CrispGltfLoader
-    PUBLIC CrispWavefrontObjLoader
-    PRIVATE CrispLogger
+    PUBLIC Crisp::GltfLoader
+    PUBLIC Crisp::WavefrontObjLoader
+    PRIVATE Crisp::Logger
 )
 
 add_cpp_test(CrispWavefrontObjLoaderTest "Test/WavefrontObjLoaderTest.cpp")
-target_link_libraries(CrispWavefrontObjLoaderTest PRIVATE CrispWavefrontObjLoader)
+target_link_libraries(CrispWavefrontObjLoaderTest PRIVATE Crisp::WavefrontObjLoader)
 
 add_cpp_test(CrispGltfLoaderTest "Test/GltfLoaderTest.cpp")
-target_link_libraries(CrispGltfLoaderTest PRIVATE CrispGltfLoader)
+target_link_libraries(CrispGltfLoaderTest PRIVATE Crisp::GltfLoader)

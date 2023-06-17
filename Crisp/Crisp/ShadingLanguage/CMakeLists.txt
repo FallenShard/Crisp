@@ -15,23 +15,23 @@ add_cpp_static_library(CrispGlslUtils
     "Token.hpp"
     "Visitor.hpp")
 target_link_libraries(CrispGlslUtils
-    PUBLIC CrispMath
-    PUBLIC CrispResult
-    PUBLIC CrispHashMap
-    PUBLIC CrispFileUtils
-    PUBLIC CrispUtils
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::FileUtils
+    PUBLIC Crisp::Utils
     PUBLIC Vulkan::Headers
     PUBLIC spirv-reflect-static
 )
 
 add_cpp_test(CrispGlslUtilsTest
     "Test/LexerTest.cpp")
-target_link_libraries(CrispGlslUtilsTest PRIVATE CrispGlslUtils)
+target_link_libraries(CrispGlslUtilsTest PRIVATE Crisp::GlslUtils)
 
 add_cpp_test(CrispGlslReflectionTest
     "Test/ReflectionTest.cpp")
-target_link_libraries(CrispGlslReflectionTest PRIVATE CrispGlslUtils)
+target_link_libraries(CrispGlslReflectionTest PRIVATE Crisp::GlslUtils)
 
 add_cpp_test(CrispShaderCompilerTest
     "Test/ShaderCompilerTest.cpp")
-target_link_libraries(CrispShaderCompilerTest PRIVATE CrispGlslUtils)
+target_link_libraries(CrispShaderCompilerTest PRIVATE Crisp::GlslUtils)

@@ -6,9 +6,9 @@ add_cpp_static_library(CrispImageIo
     "OpenEXRWriter.cpp"
     "OpenEXRWriter.hpp")
 target_link_libraries(CrispImageIo
-    PUBLIC CrispResult
-    PUBLIC CrispImage
-    PRIVATE CrispLogger
-    PRIVATE CrispFormat
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::Image
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::Format
     PRIVATE tinyexr
     PRIVATE stb)

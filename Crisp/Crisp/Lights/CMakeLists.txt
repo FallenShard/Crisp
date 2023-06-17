@@ -18,8 +18,8 @@ add_cpp_static_library(CrispLights
     "ShadowMapper.hpp"
 )
 target_link_libraries(CrispLights
-    PUBLIC CrispRenderer
-    PUBLIC CrispGeometry
-    PUBLIC CrispUtils
-    PRIVATE CrispLogger
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Geometry
+    PUBLIC Crisp::Utils
+    PRIVATE Crisp::Logger
 )

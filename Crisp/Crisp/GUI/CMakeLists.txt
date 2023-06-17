@@ -36,17 +36,17 @@ add_cpp_static_library(CrispGui
     "StatusBar.hpp"
     "StopWatch.hpp")
 target_link_libraries(CrispGui
-    PUBLIC CrispEvent
-    PUBLIC CrispAnimation
-    PUBLIC CrispMath
-    PUBLIC CrispRenderer
-    PUBLIC CrispInput
-    PUBLIC CrispBitFlags
-    PUBLIC CrispFontIo
-    PUBLIC CrispGeometry
+    PUBLIC Crisp::Event
+    PUBLIC Crisp::Animation
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Input
+    PUBLIC Crisp::BitFlags
+    PUBLIC Crisp::FontIo
+    PUBLIC Crisp::Geometry
     PUBLIC glfw
     PUBLIC Vulkan::Headers
-    PRIVATE CrispImageIo)
+    PRIVATE Crisp::ImageIo)
 
 add_cpp_static_library(CrispImGui
     "ImGuiUtils.cpp"
@@ -54,6 +54,6 @@ add_cpp_static_library(CrispImGui
 )
 target_link_libraries(CrispImGui
     PUBLIC ImGui
-    PUBLIC CrispRenderer
-    PUBLIC CrispWindow
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Window
 )

@@ -71,21 +71,21 @@ add_cpp_static_library(CrispRenderer
     "ShaderCache.cpp"
 )
 target_link_libraries(CrispRenderer
-    PUBLIC CrispBitFlags
-    PUBLIC CrispVulkan
-    PUBLIC CrispImageIo
-    PUBLIC CrispMath
-    PUBLIC CrispUtils
-    PUBLIC CrispGeometry
-    PUBLIC CrispHashMap
-    PUBLIC CrispResult
-    PUBLIC CrispCoreUtils
-    PUBLIC CrispRendererConfig
-    PUBLIC CrispFrameContext
+    PUBLIC Crisp::BitFlags
+    PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::ImageIo
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::Utils
+    PUBLIC Crisp::Geometry
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::CoreUtils
+    PUBLIC Crisp::RendererConfig
+    PUBLIC Crisp::FrameContext
     PUBLIC tbb
-    PRIVATE CrispFileUtils
-    PUBLIC CrispGlslUtils
-    PRIVATE CrispApplicationEnvironment
+    PRIVATE Crisp::FileUtils
+    PUBLIC Crisp::GlslUtils
+    PRIVATE Crisp::ApplicationEnvironment
     PUBLIC nlohmann_json::nlohmann_json
 )
 
@@ -94,15 +94,15 @@ add_cpp_static_library(CrispImageCache
     "ImageCache.cpp"
 )
 target_link_libraries(CrispImageCache
-    PUBLIC CrispVulkan
-    PRIVATE CrispRenderer
+    PUBLIC Crisp::Vulkan
+    PRIVATE Crisp::Renderer
 )
 
 add_cpp_interface_library(CrispFrameContext
     "FrameContext.hpp"
 )
 target_link_libraries(CrispFrameContext
-    INTERFACE CrispVulkan
+    INTERFACE Crisp::Vulkan
 )
 
 add_cpp_interface_library(CrispRendererConfig
@@ -111,12 +111,12 @@ add_cpp_interface_library(CrispRendererConfig
 
 add_cpp_test(CrispPipelineLayoutBuilderTest
     "Test/PipelineLayoutBuilderTest.cpp")
-target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE CrispRenderer CrispVulkanTestUtils)
+target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
 copy_shared_libs(CrispPipelineLayoutBuilderTest lua)
 
 add_cpp_test(CrispRenderGraphTest
     "Test/RenderGraphTest.cpp"
 )
 target_link_libraries(CrispRenderGraphTest
-    PRIVATE CrispVulkanTestUtils
+    PRIVATE Crisp::VulkanTestUtils
 )

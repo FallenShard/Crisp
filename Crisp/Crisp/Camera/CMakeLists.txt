@@ -4,14 +4,19 @@ add_cpp_static_library(CrispCamera
     "FreeCameraController.cpp"
     "FreeCameraController.hpp"
     "TargetCameraController.cpp"
-    "TargetCameraController.hpp")
+    "TargetCameraController.hpp"
+)
 target_link_libraries(CrispCamera
-    PUBLIC CrispMath
-    PUBLIC CrispHashMap
-    PUBLIC CrispEvent
-    PUBLIC CrispWindow)
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Event
+    PUBLIC Crisp::Window
+)
 
 add_cpp_test(CrispCameraTest
     "Test/CameraTest.cpp"
-    "Test/FreeCameraControllerTest.cpp")
-target_link_libraries(CrispCameraTest PRIVATE CrispCamera)
+    "Test/FreeCameraControllerTest.cpp"
+)
+target_link_libraries(CrispCameraTest
+    PRIVATE Crisp::Camera
+)

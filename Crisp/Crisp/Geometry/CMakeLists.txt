@@ -7,19 +7,19 @@ add_cpp_static_library(CrispGeometry
     "TransformPack.hpp"
 )
 target_link_libraries(CrispGeometry
-    PUBLIC CrispMath
-    PUBLIC CrispMesh
-    PUBLIC CrispRenderer
-    PUBLIC CrispCoreUtils
-    PUBLIC CrispVertexLayout)
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::Mesh
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::CoreUtils
+    PUBLIC Crisp::VertexLayout)
 
 add_cpp_static_library(CrispVertexLayout
     "VertexLayout.cpp"
     "VertexLayout.hpp"
 )
 target_link_libraries(CrispVertexLayout
-    PUBLIC CrispVulkanHeader
-    PUBLIC CrispMesh
-    PRIVATE CrispLogger
-    PRIVATE CrispResult
+    PUBLIC Crisp::VulkanHeader
+    PUBLIC Crisp::Mesh
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::Result
 )

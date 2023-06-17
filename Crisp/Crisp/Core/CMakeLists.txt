@@ -17,20 +17,20 @@ add_cpp_interface_library(CrispLogger
 )
 target_link_libraries(CrispLogger
     INTERFACE spdlog::spdlog_header_only
-    INTERFACE CrispFormat
+    INTERFACE Crisp::Format
 )
 
 add_cpp_interface_library(CrispResult
     "Result.hpp"
 )
 target_link_libraries(CrispResult
-    INTERFACE CrispLogger
+    INTERFACE Crisp::Logger
 )
 
 add_cpp_interface_library(CrispResultTestUtils
     "Test/ResultTest.cpp")
 target_link_libraries(CrispResultTestUtils
-    INTERFACE CrispResult GTest::gmock
+    INTERFACE Crisp::Result GTest::gmock
 )
 
 add_cpp_test(CrispResultTest
@@ -44,7 +44,7 @@ add_cpp_interface_library(CrispChecks
     "Checks.hpp"
 )
 target_link_libraries(CrispChecks
-    INTERFACE CrispResult
+    INTERFACE Crisp::Result
 )
 
 add_cpp_static_library(CrispWindow
@@ -55,10 +55,10 @@ add_cpp_static_library(CrispWindow
     "InputTranslator.hpp"
 )
 target_link_libraries(CrispWindow
-    PUBLIC CrispBitFlags
-    PUBLIC CrispMath
-    PUBLIC CrispEvent
-    PUBLIC CrispInput
+    PUBLIC Crisp::BitFlags
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::Event
+    PUBLIC Crisp::Input
     PUBLIC glfw
     PUBLIC Vulkan::Headers
 )
@@ -69,7 +69,7 @@ add_cpp_interface_library(CrispInput
     "InputTranslator.hpp"
 )
 target_link_libraries(CrispInput
-    INTERFACE CrispBitFlags
+    INTERFACE Crisp::BitFlags
     INTERFACE glfw
 )
 
@@ -78,13 +78,13 @@ add_cpp_static_library(CrispApplicationEnvironment
     "ApplicationEnvironment.hpp"
 )
 target_link_libraries(CrispApplicationEnvironment
-    PUBLIC CrispUtils
-    PRIVATE CrispLogger
-    PRIVATE CrispFormat
-    PRIVATE CrispCommandLineParser
-    PUBLIC CrispJsonUtils
-    PUBLIC CrispHashMap
-    PUBLIC CrispStringUtils
+    PUBLIC Crisp::Utils
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::Format
+    PRIVATE Crisp::CommandLineParser
+    PUBLIC Crisp::JsonUtils
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::StringUtils
     PUBLIC glfw
     PUBLIC Vulkan::Headers
 )
@@ -94,17 +94,17 @@ add_cpp_static_library(CrispCommandLineParser
     "CommandLineParser.hpp"
 )
 target_link_libraries(CrispCommandLineParser
-    PUBLIC CrispFormat
-    PUBLIC CrispHashMap
-    PUBLIC CrispStringUtils
-    PUBLIC CrispLogger
+    PUBLIC Crisp::Format
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::StringUtils
+    PUBLIC Crisp::Logger
 )
 
 add_cpp_test(CrispCommandLineParserTest
     "Test/CommandLineParserTest.cpp"
 )
 target_link_libraries(CrispCommandLineParserTest
-    PRIVATE CrispCommandLineParser
+    PRIVATE Crisp::CommandLineParser
 )
 
 add_cpp_static_library(CrispApplication
@@ -112,25 +112,25 @@ add_cpp_static_library(CrispApplication
     "Application.hpp"
 )
 target_link_libraries(CrispApplication
-    PUBLIC CrispBitFlags
-    PUBLIC CrispMath
-    PUBLIC CrispGui
-    PUBLIC CrispWindow
-    PUBLIC CrispApplicationEnvironment
-    PUBLIC CrispRenderer
-    PUBLIC CrispScenes
-    PUBLIC CrispEvent
-    PUBLIC CrispUtils
+    PUBLIC Crisp::BitFlags
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::Gui
+    PUBLIC Crisp::Window
+    PUBLIC Crisp::ApplicationEnvironment
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Scenes
+    PUBLIC Crisp::Event
+    PUBLIC Crisp::Utils
     PUBLIC glfw
     PUBLIC Vulkan::Headers
-    PUBLIC CrispImGui
+    PUBLIC Crisp::ImGui
 )
 
 add_cpp_interface_library(CrispCoreUtils
     "ThreadPool.hpp"
 )
 target_link_libraries(CrispCoreUtils
-    INTERFACE CrispUtils
+    INTERFACE Crisp::Utils
     INTERFACE MPMCQueue
 )
 
@@ -140,7 +140,7 @@ add_cpp_interface_library(CrispEvent
     "ConnectionHandler.hpp"
 )
 target_link_libraries(CrispEvent
-    INTERFACE CrispHashMap
+    INTERFACE Crisp::HashMap
 )
 
 add_cpp_test(CrispEventTest
@@ -148,26 +148,23 @@ add_cpp_test(CrispEventTest
     "Test/EventTest.cpp"
 )
 target_link_libraries(CrispEventTest
-    PRIVATE CrispEvent
+    PRIVATE Crisp::Event
 )
 
 add_cpp_interface_library(CrispNotNull
     "NotNull.hpp"
 )
 target_link_libraries(CrispNotNull
-    INTERFACE CrispChecks
+    INTERFACE Crisp::Checks
 )
 
 add_cpp_interface_library(CrispSlotMap
     "SlotMap.hpp"
-)
-target_link_libraries(CrispSlotMap
-    INTERFACE CrispHashMap
 )
 
 add_cpp_test(CrispSlotMapTest
     "Test/SlotMapTest.cpp"
 )
 target_link_libraries(CrispSlotMapTest
-    PRIVATE CrispSlotMap
+    PRIVATE Crisp::SlotMap
 )

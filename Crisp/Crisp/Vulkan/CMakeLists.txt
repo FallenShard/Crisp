@@ -54,15 +54,15 @@ add_cpp_static_library(CrispVulkan
     "VulkanEnumToString.cpp"
 )
 target_link_libraries(CrispVulkan
-    PUBLIC CrispBitFlags
-    PUBLIC CrispRendererConfig
-    PUBLIC CrispResult
-    PUBLIC CrispHashMap
-    PRIVATE CrispLogger
-    PUBLIC CrispUtils
-    PUBLIC CrispChecks
-    PUBLIC CrispVertexLayout
-    PUBLIC CrispVulkanHeader)
+    PUBLIC Crisp::BitFlags
+    PUBLIC Crisp::RendererConfig
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::HashMap
+    PRIVATE Crisp::Logger
+    PUBLIC Crisp::Utils
+    PUBLIC Crisp::Checks
+    PUBLIC Crisp::VertexLayout
+    PUBLIC Crisp::VulkanHeader)
 
 add_cpp_static_library(CrispVulkanHeader
     "VulkanHeader.cpp"
@@ -70,41 +70,41 @@ add_cpp_static_library(CrispVulkanHeader
 )
 target_link_libraries(CrispVulkanHeader
     PUBLIC Vulkan::Headers
-    PRIVATE CrispChecks)
+    PRIVATE Crisp::Checks)
 
 add_cpp_interface_library(CrispVulkanTestUtils
     "Test/VulkanTest.hpp")
 target_link_libraries(CrispVulkanTestUtils
-    INTERFACE CrispVulkan CrispWindow CrispApplicationEnvironment CrispResultTestUtils)
+    INTERFACE Crisp::Vulkan CrispWindow CrispApplicationEnvironment CrispResultTestUtils)
 
 add_cpp_test(CrispVulkanBufferTest
     "Test/VulkanBufferTest.cpp")
-target_link_libraries(CrispVulkanBufferTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanBufferTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanContextTest
     "Test/VulkanContextTest.cpp")
-target_link_libraries(CrispVulkanContextTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanContextTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanDeviceTest
     "Test/VulkanDeviceTest.cpp")
-target_link_libraries(CrispVulkanDeviceTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanDeviceTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanMemoryAllocatorTest
     "Test/VulkanMemoryAllocatorTest.cpp")
-target_link_libraries(CrispVulkanMemoryAllocatorTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanMemoryAllocatorTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanMemoryHeapTest
     "Test/VulkanMemoryHeapTest.cpp")
-target_link_libraries(CrispVulkanMemoryHeapTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanMemoryHeapTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanPhysicalDeviceTest
     "Test/VulkanPhysicalDeviceTest.cpp")
-target_link_libraries(CrispVulkanPhysicalDeviceTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanPhysicalDeviceTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanSwapChainTest
     "Test/VulkanSwapChainTest.cpp")
-target_link_libraries(CrispVulkanSwapChainTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanSwapChainTest PRIVATE Crisp::VulkanTestUtils)
 
 add_cpp_test(CrispVulkanResourceDeallocatorTest
     "Test/VulkanResourceDeallocatorTest.cpp")
-target_link_libraries(CrispVulkanResourceDeallocatorTest PRIVATE CrispVulkanTestUtils)
+target_link_libraries(CrispVulkanResourceDeallocatorTest PRIVATE Crisp::VulkanTestUtils)

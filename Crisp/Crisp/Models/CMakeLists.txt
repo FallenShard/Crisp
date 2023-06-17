@@ -16,12 +16,12 @@ add_cpp_static_library(CrispModels
     "SPH.cpp"
     "SPH.hpp")
 target_link_libraries(CrispModels
-    PUBLIC CrispRenderer)
+    PUBLIC Crisp::Renderer)
 
 add_cpp_test(CrispOceanTest
     "Test/OceanTest.cpp"
 )
 target_link_libraries(CrispOceanTest
-    PRIVATE CrispVulkanTestUtils
-    PRIVATE CrispModels
+    PRIVATE Crisp::VulkanTestUtils
+    PRIVATE Crisp::Models
 )

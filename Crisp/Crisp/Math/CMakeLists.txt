@@ -17,8 +17,7 @@ add_cpp_static_library(CrispMath
 target_link_libraries(CrispMath
     PUBLIC glm)
 
-
 add_cpp_test(CrispIFFTTest
     "Test/IFFTTest.cpp")
 target_link_libraries(CrispIFFTTest
-    PRIVATE CrispMath)
+    PRIVATE Crisp::Math)

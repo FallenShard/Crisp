@@ -5,4 +5,4 @@ add_cpp_static_library(CrispSpectrum
     "WeightedRgbSpectrum.hpp"
 )
 target_link_libraries(CrispSpectrum
-    PUBLIC CrispMath)
+    PUBLIC Crisp::Math)

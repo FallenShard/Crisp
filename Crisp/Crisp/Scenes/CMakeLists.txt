@@ -31,13 +31,13 @@ add_cpp_static_library(CrispScenes
     "VulkanRayTracingScene.hpp"
 )
 target_link_libraries(CrispScenes
-    PUBLIC CrispRenderer
-    PUBLIC CrispCamera
-    PUBLIC CrispLights
-    PUBLIC CrispModels
-    PUBLIC CrispMeshIo
-    PUBLIC CrispMaterialUtils
-    PUBLIC CrispJsonUtils
-    PUBLIC CrispPathTracer
-    PRIVATE CrispApplication
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Camera
+    PUBLIC Crisp::Lights
+    PUBLIC Crisp::Models
+    PUBLIC Crisp::MeshIo
+    PUBLIC Crisp::MaterialUtils
+    PUBLIC Crisp::JsonUtils
+    PUBLIC Crisp::PathTracer
+    PRIVATE Crisp::Application
 )

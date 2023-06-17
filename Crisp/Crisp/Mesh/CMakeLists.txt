@@ -10,8 +10,8 @@ add_cpp_static_library(CrispMesh
     "VertexAttributeTraits.hpp"
     "SkinningData.hpp")
 target_link_libraries(CrispMesh
-    PUBLIC CrispMath
-    PRIVATE CrispLogger
-    PUBLIC CrispHashMap)
+    PUBLIC Crisp::Math
+    PRIVATE Crisp::Logger
+    PUBLIC Crisp::HashMap)
 
- add_subdirectory(IO)
+add_subdirectory(IO)

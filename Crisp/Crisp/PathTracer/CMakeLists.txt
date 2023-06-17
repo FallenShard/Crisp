@@ -32,7 +32,7 @@ add_cpp_static_library(PathTracerBSDF
 target_link_libraries(PathTracerBSDF
     PUBLIC PathTracerUtils
     PUBLIC PathTracerTextures
-    PUBLIC CrispOptics
+    PUBLIC Crisp::Optics
     PRIVATE PathTracerSamplers
 )
 
@@ -47,7 +47,7 @@ add_cpp_static_library(PathTracerBSSRDF
 target_link_libraries(PathTracerBSSRDF
     PUBLIC PathTracerUtils
     PUBLIC PathTracerTextures
-    PUBLIC CrispOptics
+    PUBLIC Crisp::Optics
     PUBLIC embree
     PRIVATE PathTracerSamplers
 )
@@ -73,10 +73,10 @@ add_cpp_static_library(PathTracerUtils
     "Core/MipMap.hpp"
 )
 target_link_libraries(PathTracerUtils
-    PUBLIC CrispMath
-    PUBLIC CrispHashMap
-    PUBLIC CrispSpectrum
-    PRIVATE CrispImageIo
+    PUBLIC Crisp::Math
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Spectrum
+    PRIVATE Crisp::ImageIo
 )
 
 add_cpp_static_library(PathTracerIntegrator
@@ -105,15 +105,14 @@ add_cpp_static_library(PathTracerIntegrator
 )
 target_link_libraries(PathTracerIntegrator
     PUBLIC PathTracerUtils
-    PUBLIC CrispUtils
-    PUBLIC CrispHashMap
-    PUBLIC CrispSpectrum
-    PRIVATE CrispPathTracer
+    PUBLIC Crisp::Utils
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Spectrum
+    PRIVATE Crisp::PathTracer
     PRIVATE PathTracerLights
     PRIVATE PathTracerBSDF
     PRIVATE PathTracerSamplers
 )
-
 
 add_cpp_static_library(PathTracerLights
     "Lights/AreaLight.cpp"
@@ -187,7 +186,7 @@ add_cpp_static_library(PathTracerShapes
 )
 target_link_libraries(PathTracerShapes
     PUBLIC PathTracerUtils
-    PRIVATE CrispLogger
+    PRIVATE Crisp::Logger
     PUBLIC embree
 )
 
@@ -226,7 +225,6 @@ target_link_libraries(CrispPathTracer
     PUBLIC embree
     PUBLIC tbb
     PUBLIC rapidxml
-    PRIVATE CrispLogger
-    PRIVATE CrispImageIo
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::ImageIo
 )
-

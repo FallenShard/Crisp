@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Crisp/Core/HashMap.hpp>
-
 #include <vector>
 
 namespace crisp
