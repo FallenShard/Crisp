@@ -1,6 +1,12 @@
 ---
 CompileFlags:
-    Add: ["-x c++", "/std:c++latest", "-D_HAS_CXX23=1", "-D__cpp_consteval"]
+    Add: [
+      "-x c++",
+      "/std:c++latest",
+      "-D_HAS_CXX23=1",
+      "-D__cpp_consteval",
+      "-Wno-missing-field-initializers"
+    ]
     Compiler: clang-cl
 
 InlayHints:
