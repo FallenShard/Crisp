@@ -7,7 +7,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
 
 #include "FluidSimulation.hpp"
 

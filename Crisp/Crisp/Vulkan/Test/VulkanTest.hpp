@@ -49,7 +49,7 @@ template <SurfacePolicy surfacePolicy = SurfacePolicy::Headless>
 class VulkanTestBase : public ::testing::Test
 {
 protected:
-    static void SetUpTestCase()
+    static void SetUpTestSuite()
     {
         spdlog::set_level(spdlog::level::warn);
         glfwInit();
@@ -74,7 +74,7 @@ protected:
             RendererConfig::VirtualFrameCount);
     }
 
-    static void TearDownTestCase()
+    static void TearDownTestSuite()
     {
         device_.reset();
         physicalDevice_.reset();

@@ -74,6 +74,7 @@ void adaptSubresouceRange(VkImageType type, VkImageSubresourceRange& subresouceR
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)
     : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
+    , m_allocation{}
     , m_device(&device)
     , m_createInfo(createInfo)
     , m_aspect(determineImageAspect(m_createInfo.format))
@@ -89,13 +90,14 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& cr
 
 VulkanImage::VulkanImage(
     const VulkanDevice& device,
-    VkExtent3D extent,
-    uint32_t numLayers,
-    uint32_t numMipmaps,
-    VkFormat format,
-    VkImageUsageFlags usage,
-    VkImageCreateFlags createFlags)
+    const VkExtent3D extent,
+    const uint32_t numLayers,
+    const uint32_t numMipmaps,
+    const VkFormat format,
+    const VkImageUsageFlags usage,
+    const VkImageCreateFlags createFlags)
     : VulkanResource(device.getResourceDeallocator())
+    , m_allocation{}
     , m_device(&device)
     , m_createInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO}
     , m_aspect(determineImageAspect(format))
@@ -135,7 +137,9 @@ void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRang
     {
         CRISP_CHECK(range.baseMipLevel >= 0 && range.baseMipLevel + range.levelCount <= m_layouts[i].size());
         for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j)
+        {
             m_layouts[i][j] = newLayout;
+        }
     }
 }
 
@@ -198,7 +202,9 @@ void VulkanImage::transitionLayout(
     subresRange.layerCount = m_createInfo.imageType == VK_IMAGE_TYPE_3D ? 1 : subresRange.layerCount;
 
     if (matchesLayout(newLayout, subresRange))
+    {
         return;
+    }
 
     CRISP_CHECK(isSameLayoutInRange(subresRange), "Attempting to transition an image across different layouts!");
 
@@ -284,16 +290,16 @@ void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer)
             imageBlit.srcSubresource.baseArrayLayer = 0;
             imageBlit.srcSubresource.layerCount = m_createInfo.arrayLayers;
             imageBlit.srcSubresource.mipLevel = i - 1;
-            imageBlit.srcOffsets[1].x = std::max(int32_t(m_createInfo.extent.width >> (i - 1)), 1);
-            imageBlit.srcOffsets[1].y = std::max(int32_t(m_createInfo.extent.height >> (i - 1)), 1);
+            imageBlit.srcOffsets[1].x = std::max(static_cast<int32_t>(m_createInfo.extent.width >> (i - 1)), 1);
+            imageBlit.srcOffsets[1].y = std::max(static_cast<int32_t>(m_createInfo.extent.height >> (i - 1)), 1);
             imageBlit.srcOffsets[1].z = 1;
 
             imageBlit.dstSubresource.aspectMask = m_aspect;
             imageBlit.dstSubresource.baseArrayLayer = 0;
             imageBlit.dstSubresource.layerCount = m_createInfo.arrayLayers;
             imageBlit.dstSubresource.mipLevel = i;
-            imageBlit.dstOffsets[1].x = std::max(int32_t(m_createInfo.extent.width >> i), 1);
-            imageBlit.dstOffsets[1].y = std::max(int32_t(m_createInfo.extent.height >> i), 1);
+            imageBlit.dstOffsets[1].x = std::max(static_cast<int32_t>(m_createInfo.extent.width >> i), 1);
+            imageBlit.dstOffsets[1].y = std::max(static_cast<int32_t>(m_createInfo.extent.height >> i), 1);
             imageBlit.dstOffsets[1].z = 1;
 
             currSubresource.baseMipLevel = i;
@@ -330,16 +336,16 @@ void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, 
     imageBlit.srcSubresource.baseArrayLayer = 0;
     imageBlit.srcSubresource.layerCount = 6;
     imageBlit.srcSubresource.mipLevel = 0;
-    imageBlit.srcOffsets[1].x = image.m_createInfo.extent.width;
-    imageBlit.srcOffsets[1].y = image.m_createInfo.extent.height;
+    imageBlit.srcOffsets[1].x = static_cast<int32_t>(image.m_createInfo.extent.width);
+    imageBlit.srcOffsets[1].y = static_cast<int32_t>(image.m_createInfo.extent.height);
     imageBlit.srcOffsets[1].z = 1;
 
     imageBlit.dstSubresource.aspectMask = m_aspect;
     imageBlit.dstSubresource.baseArrayLayer = 0;
     imageBlit.dstSubresource.layerCount = 6;
     imageBlit.dstSubresource.mipLevel = mipLevel;
-    imageBlit.dstOffsets[1].x = image.m_createInfo.extent.width;
-    imageBlit.dstOffsets[1].y = image.m_createInfo.extent.height;
+    imageBlit.dstOffsets[1].x = static_cast<int32_t>(image.m_createInfo.extent.width);
+    imageBlit.dstOffsets[1].y = static_cast<int32_t>(image.m_createInfo.extent.height);
     imageBlit.dstOffsets[1].z = 1;
 
     VkImageSubresourceRange mipRange = {};
@@ -416,7 +422,9 @@ bool VulkanImage::matchesLayout(VkImageLayout imageLayout, const VkImageSubresou
         for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j)
         {
             if (m_layouts[i][j] != imageLayout)
+            {
                 return false;
+            }
         }
     }
 
@@ -541,6 +549,21 @@ VkImageAspectFlags determineImageAspect(VkFormat format)
         return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
     default:
         return VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+}
+
+bool isDepthFormat(const VkFormat format)
+{
+    switch (format)
+    {
+    case VK_FORMAT_D32_SFLOAT:
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        return true;
+    default:
+        return false;
     }
 }
 } // namespace crisp

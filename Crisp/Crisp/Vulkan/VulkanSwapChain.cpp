@@ -13,6 +13,8 @@ VulkanSwapChain::VulkanSwapChain(
     const VkSurfaceKHR surface,
     const TripleBuffering tripleBuffering)
     : VulkanResource(device.getResourceDeallocator())
+    , m_imageFormat{}
+    , m_extent{}
     , m_presentationMode(
           tripleBuffering == TripleBuffering::Enabled ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR)
 {
@@ -22,7 +24,7 @@ VulkanSwapChain::VulkanSwapChain(
 
 VulkanSwapChain::~VulkanSwapChain()
 {
-    for (auto imageView : m_imageViews)
+    for (auto* imageView : m_imageViews)
     {
         m_deallocator->deferDestruction(m_framesToLive, imageView);
     }
@@ -32,9 +34,9 @@ VulkanSwapChain::VulkanSwapChain(VulkanSwapChain&& other) noexcept
     : VulkanResource(std::move(other))
     , m_images(std::move(other.m_images))
     , m_imageViews(std::move(other.m_imageViews))
-    , m_imageFormat(std::move(other.m_imageFormat))
-    , m_extent(std::move(other.m_extent))
-    , m_presentationMode(std::move(other.m_presentationMode))
+    , m_imageFormat(other.m_imageFormat)
+    , m_extent(other.m_extent)
+    , m_presentationMode(other.m_presentationMode)
 {
 }
 
@@ -43,9 +45,9 @@ VulkanSwapChain& VulkanSwapChain::operator=(VulkanSwapChain&& other) noexcept
     VulkanResource::operator=(std::move(other));
     m_images = std::move(other.m_images);
     m_imageViews = std::move(other.m_imageViews);
-    m_imageFormat = std::move(other.m_imageFormat);
-    m_extent = std::move(other.m_extent);
-    m_presentationMode = std::move(other.m_presentationMode);
+    m_imageFormat = other.m_imageFormat;
+    m_extent = other.m_extent;
+    m_presentationMode = other.m_presentationMode;
     return *this;
 }
 
@@ -85,8 +87,10 @@ uint32_t VulkanSwapChain::getSwapChainImageCount() const
 void VulkanSwapChain::recreate(
     const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, const VkSurfaceKHR surface)
 {
-    for (auto imageView : m_imageViews)
+    for (auto* imageView : m_imageViews)
+    {
         vkDestroyImageView(device.getHandle(), imageView, nullptr);
+    }
     createSwapChain(device, physicalDevice, surface);
     createSwapChainImageViews(device.getHandle());
 }
@@ -102,7 +106,9 @@ void VulkanSwapChain::createSwapChain(
 
     uint32_t imageCount = m_presentationMode == VK_PRESENT_MODE_MAILBOX_KHR ? 3 : 2;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
+    {
         imageCount = swapChainSupport.capabilities.maxImageCount;
+    }
 
     VkSwapchainCreateInfoKHR createInfo = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
     createInfo.surface = surface;
@@ -138,7 +144,9 @@ void VulkanSwapChain::createSwapChain(
     VK_CHECK(vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle));
 
     if (createInfo.oldSwapchain != VK_NULL_HANDLE)
+    {
         vkDestroySwapchainKHR(deviceHandle, createInfo.oldSwapchain, nullptr);
+    }
 
     VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, nullptr));
     m_images.resize(imageCount);
@@ -173,44 +181,52 @@ void VulkanSwapChain::createSwapChainImageViews(const VkDevice deviceHandle)
 }
 
 Result<VkSurfaceFormatKHR> VulkanSwapChain::chooseSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat) const
+    const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat)
 {
     if (availableFormats.empty())
+    {
         return resultError("No surface formats available for this swap chain!");
+    }
 
     if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED)
+    {
         return VkSurfaceFormatKHR{VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    }
 
     for (const auto& format : availableFormats)
     {
         if (format.format == surfaceFormat.format && format.colorSpace == surfaceFormat.colorSpace)
+        {
             return format;
+        }
     }
 
     return resultError("Requested surface format was not found!");
 }
 
 Result<VkPresentModeKHR> VulkanSwapChain::choosePresentMode(
-    const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode) const
+    const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode)
 {
     for (const auto& availablePresentMode : availablePresentModes)
+    {
         if (availablePresentMode == requestedPresentMode)
+        {
             return availablePresentMode;
+        }
+    }
 
     return resultError("Unavailable present mode requested!");
 }
 
-VkExtent2D VulkanSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const
+VkExtent2D VulkanSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {
         return capabilities.currentExtent;
     }
-    else
-    {
-        return {
-            std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, 960u)),
-            std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, 540u))};
-    }
+
+    return {
+        std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, 960u)),
+        std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, 540u))};
 }
 } // namespace crisp

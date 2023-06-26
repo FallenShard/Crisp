@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Crisp/ShadingLanguage/Reflection.hpp>
-#include <Crisp/vulkan/DescriptorSetAllocator.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanPipelineLayout.hpp>
+#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
 #include <vector>
 

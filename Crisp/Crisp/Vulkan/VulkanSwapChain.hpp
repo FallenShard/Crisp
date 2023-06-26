@@ -24,7 +24,7 @@ public:
         const VulkanPhysicalDevice& physicalDevice,
         VkSurfaceKHR surface,
         TripleBuffering tripleBuffering);
-    ~VulkanSwapChain();
+    ~VulkanSwapChain() override;
 
     VulkanSwapChain(const VulkanSwapChain& other) = delete;
     VulkanSwapChain(VulkanSwapChain&& other) noexcept;
@@ -45,11 +45,11 @@ private:
     void createSwapChain(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
     void createSwapChainImageViews(VkDevice deviceHandle);
 
-    Result<VkSurfaceFormatKHR> chooseSurfaceFormat(
-        const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat) const;
-    Result<VkPresentModeKHR> choosePresentMode(
-        const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode) const;
-    VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
+    static Result<VkSurfaceFormatKHR> chooseSurfaceFormat(
+        const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat);
+    static Result<VkPresentModeKHR> choosePresentMode(
+        const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode);
+    static VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
     std::vector<VkImage> m_images;
     std::vector<VkImageView> m_imageViews;

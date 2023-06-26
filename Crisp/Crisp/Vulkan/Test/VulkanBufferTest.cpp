@@ -8,7 +8,6 @@ namespace
 {
 using VulkanBufferTest = VulkanTest;
 
-using ::testing::IsNull;
 using ::testing::Not;
 
 TEST_F(VulkanBufferTest, StagingVulkanBuffer)
@@ -27,7 +26,7 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer)
     const auto* ptr = stagingBuffer.getHostVisibleData<float>();
     for (uint32_t i = 0; i < data.size(); ++i)
     {
-        EXPECT_EQ(ptr[i], data[i]);
+        EXPECT_EQ(ptr[i], data[i]); // NOLINT
     }
 }
 
@@ -66,7 +65,9 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
     const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i)
-        EXPECT_EQ(stagingPtr[i], data[i]);
+    {
+        EXPECT_EQ(stagingPtr[i], data[i]); // NOLINT
+    }
 
     StagingVulkanBuffer downloadBuffer(*device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     {
@@ -90,9 +91,11 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
             VK_ACCESS_HOST_READ_BIT);
     }
 
-    const float* ptr = downloadBuffer.getHostVisibleData<float>();
+    const auto* ptr = downloadBuffer.getHostVisibleData<float>();
     for (uint32_t i = 0; i < elementCount; ++i)
-        ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i;
+    {
+        ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i; // NOLINT
+    }
 }
 
 TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
@@ -114,10 +117,12 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     StagingVulkanBuffer stagingBuffer(*device, kSize);
     std::vector<float> data(kSize / sizeof(float));
     std::iota(data.begin(), data.end(), 0.0f);
-    const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
+    const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i)
-        ASSERT_EQ(stagingPtr[i], data[i]);
+    {
+        ASSERT_EQ(stagingPtr[i], data[i]); // NOLINT
+    }
 
     const VulkanQueue& generalQueue = device->getGeneralQueue();
     const VulkanCommandPool commandPool(generalQueue.createCommandPool(), device->getResourceDeallocator());
@@ -184,12 +189,12 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     vkDestroyFence(device->getHandle(), transferFence, nullptr);
     vkDestroySemaphore(device->getHandle(), semaphore, nullptr);
 
-    const float* ptr = downloadBuffer.getHostVisibleData<float>();
-    const float* ptr2 = downloadBuffer2.getHostVisibleData<float>();
+    const auto* ptr = downloadBuffer.getHostVisibleData<float>();
+    const auto* ptr2 = downloadBuffer2.getHostVisibleData<float>();
     for (uint32_t i = 0; i < kElementCount; ++i)
     {
-        EXPECT_EQ(ptr[i], data[i]) << " not equal at index " << i;
-        EXPECT_EQ(ptr2[i], data[i]) << " not equal at index " << i;
+        EXPECT_EQ(ptr[i], data[i]) << " not equal at index " << i;  // NOLINT
+        EXPECT_EQ(ptr2[i], data[i]) << " not equal at index " << i; // NOLINT
     }
 }
 } // namespace

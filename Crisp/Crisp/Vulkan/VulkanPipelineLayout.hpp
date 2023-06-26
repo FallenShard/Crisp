@@ -27,7 +27,7 @@ public:
         std::vector<VkPushConstantRange>&& pushConstants,
         std::vector<bool> descriptorSetBufferedStatus,
         std::unique_ptr<DescriptorSetAllocator> setAllocator);
-    virtual ~VulkanPipelineLayout();
+    ~VulkanPipelineLayout() override;
 
     inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
     {
@@ -39,13 +39,15 @@ public:
     inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const
     {
         for (const auto& pushConstant : m_pushConstants)
+        {
             vkCmdPushConstants(
                 cmdBuffer,
                 m_handle,
                 pushConstant.stageFlags,
                 pushConstant.offset,
                 pushConstant.size,
-                data + pushConstant.offset);
+                data + pushConstant.offset); // NOLINT
+        }
     }
 
     inline std::size_t getDescriptorSetLayoutCount() const

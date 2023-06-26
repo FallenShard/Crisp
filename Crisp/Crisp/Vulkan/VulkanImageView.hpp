@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-#include <Crisp/vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/VulkanSampler.hpp>
 
 #include <memory>
 

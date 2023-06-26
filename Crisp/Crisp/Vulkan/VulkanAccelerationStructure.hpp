@@ -1,12 +1,11 @@
 #pragma once
 
+#include <Crisp/Math/Headers.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-
-#include <Crisp/Math/Headers.hpp>
 
 namespace crisp
 {
@@ -18,10 +17,8 @@ public:
         const VkAccelerationStructureGeometryKHR& geometry,
         uint32_t primitiveCount,
         const glm::mat4& transform);
-    VulkanAccelerationStructure(
+    explicit VulkanAccelerationStructure(
         const VulkanDevice& device, const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures = {});
-
-    ~VulkanAccelerationStructure();
 
     void build(
         const VulkanDevice& device,
@@ -38,7 +35,7 @@ private:
     VulkanMemoryHeap::Allocation m_allocation;
     VkAccelerationStructureInfoNV m_info;
 
-    VkTransformMatrixKHR m_transformMatrx;
+    VkTransformMatrixKHR m_transformMatrix;
     VkAccelerationStructureGeometryKHR m_geometry;
     std::vector<VkAccelerationStructureInstanceKHR> m_instances;
     VkAccelerationStructureBuildGeometryInfoKHR m_buildInfo;

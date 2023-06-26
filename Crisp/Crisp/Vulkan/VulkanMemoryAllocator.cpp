@@ -6,8 +6,8 @@ namespace crisp
 {
 namespace
 {
-static constexpr VkDeviceSize DeviceHeapSize = 512 << 20;  // 512 MB
-static constexpr VkDeviceSize StagingHeapSize = 512 << 20; // 512 MB
+constexpr VkDeviceSize kDeviceHeapSize = 512 << 20;  // 512 MB
+constexpr VkDeviceSize kStagingHeapSize = 512 << 20; // 512 MB
 
 auto logger = spdlog::stdout_color_mt("VulkanMemoryAllocator");
 } // namespace
@@ -18,18 +18,22 @@ VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanPhysicalDevice& physica
     // Device buffer memory
     const uint32_t deviceBufferHeapIndex = m_physicalDevice->findDeviceBufferMemoryType(deviceHandle).unwrap();
     m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, deviceBufferHeapIndex, deviceHandle, "Device Buffer Heap");
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        kDeviceHeapSize,
+        deviceBufferHeapIndex,
+        deviceHandle,
+        "Device Buffer Heap");
 
     // Device image memory
     const uint32_t deviceImageHeapIndex = m_physicalDevice->findDeviceImageMemoryType(deviceHandle).unwrap();
     m_deviceImageHeap = std::make_unique<VulkanMemoryHeap>(
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, DeviceHeapSize, deviceImageHeapIndex, deviceHandle, "Device Image Heap");
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, kDeviceHeapSize, deviceImageHeapIndex, deviceHandle, "Device Image Heap");
 
     // Staging memory
     const uint32_t stagingBufferHeapIndex = m_physicalDevice->findStagingBufferMemoryType(deviceHandle).unwrap();
     m_stagingBufferHeap = std::make_unique<VulkanMemoryHeap>(
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-        StagingHeapSize,
+        kStagingHeapSize,
         stagingBufferHeapIndex,
         deviceHandle,
         "Staging Buffer Heap");
@@ -72,7 +76,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(
     {
         return m_deviceBufferHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
     }
-    else if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
+    if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
     {
         return m_stagingBufferHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
     }

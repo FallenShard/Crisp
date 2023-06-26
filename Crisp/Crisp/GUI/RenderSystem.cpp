@@ -7,12 +7,13 @@
 #include <Crisp/IO/FontLoader.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
+#include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
-#include <Crisp/vulkan/VulkanDescriptorSet.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-#include <Crisp/vulkan/VulkanImageView.hpp>
+
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -107,7 +108,9 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets;
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
+    {
         transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
+    }
     m_transforms = std::make_unique<DynamicUniformBufferResource>(
         m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::mat4)), 0);
 
@@ -118,7 +121,9 @@ RenderSystem::RenderSystem(Renderer* renderer)
     // Initialize resources to support dynamic addition of textured controls
     std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets;
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
+    {
         tcSets[i] = m_texQuadPipeline->allocateDescriptorSet(1).getHandle();
+    }
 
     for (auto& set : tcSets)
     {
@@ -197,7 +202,9 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
     if (m_textResourceIdPool.empty())
     {
         for (uint32_t i = 0; i < kTextResourceIncrement; ++i)
+        {
             m_textResourceIdPool.insert(static_cast<uint32_t>(m_textResources.size()) + i);
+        }
     }
 
     auto freeTextResourceId = *m_textResourceIdPool.begin(); // Smallest element in a set is at .begin()
@@ -313,10 +320,7 @@ void RenderSystem::submitDrawCommands()
             std::sort(
                 m_drawCommands.begin(),
                 m_drawCommands.end(),
-                [](const GuiDrawCommand& a, const GuiDrawCommand& b)
-                {
-                    return a.depth < b.depth;
-                });
+                [](const GuiDrawCommand& a, const GuiDrawCommand& b) { return a.depth < b.depth; });
 
             auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
@@ -394,7 +398,9 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
     {
         auto& font = m_fonts[i]->font;
         if (font->name == name && font->pixelSize == pixelSize)
+        {
             return i;
+        }
     }
 
     auto font = m_fontLoader.load(m_renderer->getResourcesPath() / "Fonts" / name, pixelSize);

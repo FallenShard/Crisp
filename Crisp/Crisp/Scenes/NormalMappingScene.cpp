@@ -6,11 +6,12 @@
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
+
 
 #include <Crisp/Image/Io/Utils.hpp>
 
@@ -118,7 +119,9 @@ void NormalMappingScene::update(float dt)
 
     static float angle = 0.0f;
     if (!animationFrozen)
+    {
         angle += dt;
+    }
 
     m_renderNodeList[m_renderNodeMap["nanosuit"]]->transformPack->M = glm::rotate(angle, glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -298,10 +301,12 @@ void NormalMappingScene::createPlane()
             smallNano->setModelMatrix(
                 glm::translate(glm::vec3(-10.0f + j * 0.2f, 0.0f, -10.0f + i * 0.2f)) * glm::scale(glm::vec3(0.2f)));
             for (int k = 1; k < mesh.getViews().size(); ++k)
+            {
                 smallNano->pass(k, MainPass).material = m_resourceContext->getMaterial(
                     "normalMapP"
                     "art" +
                     std::to_string(k));
+            }
         }
     }
 
@@ -333,19 +338,11 @@ void NormalMappingScene::createGui()
     panel->setPosition({-200.0f, 40.0f});
 
     auto fadeIn = std::make_shared<PropertyAnimation<float, Easing::Linear>>(1.0, 0.0f, 1.0f, 3.0);
-    fadeIn->setUpdater(
-        [p = panel.get()](float v)
-        {
-            p->setOpacity(v);
-        });
+    fadeIn->setUpdater([p = panel.get()](float v) { p->setOpacity(v); });
     form->getAnimator()->add(fadeIn, panel.get());
 
     auto slideIn = std::make_shared<PropertyAnimation<float, Easing::SlowOut>>(1.0, -200.0f, 20.0f, 3.0);
-    slideIn->setUpdater(
-        [p = panel.get()](float v)
-        {
-            p->setPositionX(v);
-        });
+    slideIn->setUpdater([p = panel.get()](float v) { p->setPositionX(v); });
     form->getAnimator()->add(slideIn, panel.get());
 
     form->getAnimator()->clearObjectAnimations(panel.get());

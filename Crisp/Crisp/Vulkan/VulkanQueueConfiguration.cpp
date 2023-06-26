@@ -17,16 +17,24 @@ QueueTypeFlags getQueueFamilyType(
     QueueTypeFlags familyType;
 
     if (physicalDevice.supportsPresentation(familyIndex, context.getSurface()))
+    {
         familyType |= QueueType::Present;
+    }
 
     if (queueFlags & VK_QUEUE_GRAPHICS_BIT)
+    {
         familyType |= QueueType::Graphics;
+    }
 
     if (queueFlags & VK_QUEUE_COMPUTE_BIT)
+    {
         familyType |= QueueType::Compute;
+    }
 
     if (queueFlags & VK_QUEUE_TRANSFER_BIT)
+    {
         familyType |= QueueType::Transfer;
+    }
 
     return familyType;
 }
@@ -48,7 +56,9 @@ Result<uint32_t> findQueueFamilyIndex(
                 getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
             if (((familyType & QueueType::AsyncCompute) == QueueType::AsyncCompute) &&
                 !(familyType & QueueType::Graphics))
+            {
                 return i;
+            }
         }
     }
 
@@ -59,7 +69,9 @@ Result<uint32_t> findQueueFamilyIndex(
         const auto familyType =
             getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
         if (familyType == queueType && family.queueCount > usedQueueFamilyCounts[i])
+        {
             return i;
+        }
     }
 
     // Find a more general family for the queueType
@@ -69,7 +81,9 @@ Result<uint32_t> findQueueFamilyIndex(
         const auto familyType =
             getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
         if ((familyType & queueType) && family.queueCount > usedQueueFamilyCounts[i])
+        {
             return i;
+        }
     }
 
     return resultError("Failed to find a queue family for queue type! {}", queueType.getMask());
@@ -115,7 +129,9 @@ VulkanQueueConfiguration createQueueConfiguration(
     const auto queueFamilies = physicalDevice.queryQueueFamilyProperties();
     std::vector<uint32_t> familyQueueCounts(queueFamilies.size(), 0);
     for (auto& queueId : config.identifiers)
+    {
         familyQueueCounts[queueId.familyIndex]++;
+    }
 
     config.priorities.resize(queueFamilies.size());
     config.createInfos.clear();

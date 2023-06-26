@@ -1,10 +1,9 @@
 #pragma once
 
+#include <Crisp/Math/Headers.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <Crisp/Math/Headers.hpp>
 
 #include <span>
 #include <vector>
@@ -21,7 +20,6 @@ class VulkanCommandBuffer
 {
 public:
     explicit VulkanCommandBuffer(VkCommandBuffer commandBuffer);
-    ~VulkanCommandBuffer();
 
     void begin(VkCommandBufferUsageFlags commandBufferUsage) const;
     void begin(VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance) const;

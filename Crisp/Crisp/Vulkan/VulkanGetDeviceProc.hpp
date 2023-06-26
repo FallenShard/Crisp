@@ -10,12 +10,12 @@
 namespace crisp
 {
 template <typename T>
-inline [[nodiscard]] crisp::Result<> getDeviceProc(T& procRef, VkDevice device, const char* procName)
+inline Result<> getDeviceProc(T& procRef, VkDevice device, const char* procName)
 {
-    procRef = reinterpret_cast<T>(vkGetDeviceProcAddr(device, procName));
+    procRef = reinterpret_cast<T>(vkGetDeviceProcAddr(device, procName)); // NOLINT
     if (!procRef)
     {
-        return crisp::resultError("Failed to get function: {}", procName);
+        return resultError("Failed to get function: {}", procName);
     }
 
     return {};

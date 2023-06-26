@@ -1,17 +1,17 @@
 #include <Crisp/Renderer/RenderPasses/DepthPass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanFramebuffer.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
 
 #include <Crisp/Utils/Enumerate.hpp>
 
 namespace crisp
 {
 std::unique_ptr<VulkanRenderPass> createDepthPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D swapChainExtent)
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D renderArea)
 {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
@@ -21,7 +21,7 @@ std::unique_ptr<VulkanRenderPass> createDepthPass(
             .setLayerAndMipLevelCount(1)
             .setBuffered(true)
             .configureDepthRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT, {1.0f, 0})
-            .setSize(swapChainExtent, true)
+            .setSize(renderArea, true)
             .create(device));
 
     return RenderPassBuilder()
@@ -42,7 +42,7 @@ std::unique_ptr<VulkanRenderPass> createDepthPass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-        .create(device, swapChainExtent, renderTargets);
+        .create(device, renderArea, renderTargets);
 }
 
 } // namespace crisp

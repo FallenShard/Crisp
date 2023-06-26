@@ -75,7 +75,9 @@ TEST_F(VulkanSwapChainTest, Recreate)
     EXPECT_THAT(swapChain, HandleIsValid());
 
     for (uint32_t i = 0; i < 5; ++i)
+    {
         swapChain.recreate(*device_, *physicalDevice_, context_->getSurface());
+    }
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getSwapChainImageCount(), 2u);
 }

@@ -22,7 +22,13 @@ public:
         VkFormat format,
         VkImageUsageFlags usage,
         VkImageCreateFlags createFlags);
-    virtual ~VulkanImage();
+    ~VulkanImage() override;
+
+    VulkanImage(const VulkanImage&) = delete;
+    VulkanImage& operator=(const VulkanImage&) = delete;
+
+    VulkanImage(VulkanImage&&) noexcept = default;
+    VulkanImage& operator=(VulkanImage&&) noexcept = default;
 
     void setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range);
     void transitionLayout(
@@ -60,7 +66,7 @@ public:
         uint32_t numLayers,
         uint32_t mipLevel);
     void buildMipmaps(VkCommandBuffer commandBuffer);
-    void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t layer);
+    void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t mipLevel);
 
     uint32_t getMipLevels() const;
     uint32_t getWidth() const;
@@ -88,5 +94,7 @@ private:
 };
 
 VkImageAspectFlags determineImageAspect(VkFormat format);
+
+bool isDepthFormat(VkFormat format);
 
 } // namespace crisp

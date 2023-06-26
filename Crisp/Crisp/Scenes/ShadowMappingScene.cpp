@@ -16,11 +16,12 @@
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
+
 
 #include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 

@@ -61,7 +61,9 @@ public:
     inline const std::string& getTag(void* handle) const
     {
         if (const auto iter = m_handleTagMap.find(handle); iter != m_handleTagMap.end())
+        {
             return iter->second;
+        }
 
         return m_handleTagMap.at(VK_NULL_HANDLE);
     }

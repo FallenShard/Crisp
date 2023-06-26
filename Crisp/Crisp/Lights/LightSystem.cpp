@@ -1,7 +1,7 @@
 #include "LightSystem.hpp"
 
 #include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 
 #include <Crisp/Camera/Camera.hpp>
 
@@ -39,7 +39,9 @@ void LightSystem::update(const Camera& camera, float /*dt*/)
         std::vector<LightDescriptor> lightDescriptors;
         lightDescriptors.reserve(m_pointLights.size());
         for (const auto& pl : m_pointLights)
+        {
             lightDescriptors.push_back(pl.createDescriptorData());
+        }
 
         m_pointLightBuffer->updateStagingBuffer(
             lightDescriptors.data(), lightDescriptors.size() * sizeof(LightDescriptor));

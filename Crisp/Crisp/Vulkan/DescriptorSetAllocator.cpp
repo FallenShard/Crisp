@@ -13,7 +13,9 @@ std::vector<VkDescriptorPoolSize> calculateMinimumPoolSizes(
     const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings, std::vector<uint32_t> numCopies)
 {
     if (numCopies.empty())
+    {
         numCopies.resize(setBindings.size(), 1);
+    }
 
     std::vector<VkDescriptorPoolSize> poolSizes;
     for (uint32_t i = 0; i < setBindings.size(); i++)
@@ -25,12 +27,16 @@ std::vector<VkDescriptorPoolSize> calculateMinimumPoolSizes(
             while (k < poolSizes.size())
             {
                 if (poolSizes[k].type == descriptorBinding.descriptorType)
+                {
                     break;
+                }
                 k++;
             }
 
             if (k == poolSizes.size())
+            {
                 poolSizes.push_back({descriptorBinding.descriptorType, 0});
+            }
 
             poolSizes[k].descriptorCount += descriptorBinding.descriptorCount * numCopies.at(i);
         }
@@ -38,7 +44,7 @@ std::vector<VkDescriptorPoolSize> calculateMinimumPoolSizes(
     return poolSizes;
 }
 
-static constexpr uint32_t AllocationCount = 4;
+constexpr uint32_t kAllocationCount = 4;
 } // namespace
 
 DescriptorSetAllocator::DescriptorSetAllocator(
@@ -68,7 +74,9 @@ DescriptorSetAllocator::DescriptorSetAllocator(
 DescriptorSetAllocator::~DescriptorSetAllocator()
 {
     for (auto& pool : m_descriptorPools)
+    {
         vkDestroyDescriptorPool(m_device->getHandle(), pool->handle, nullptr);
+    }
 }
 
 VkDescriptorSet DescriptorSetAllocator::allocate(
@@ -77,15 +85,17 @@ VkDescriptorSet DescriptorSetAllocator::allocate(
     for (auto& pool : m_descriptorPools)
     {
         if (pool->currentAllocations >= pool->maxAllocations || !pool->canAllocateSet(setBindings))
+        {
             continue;
+        }
 
         return pool->allocate(m_device->getHandle(), setLayout, setBindings);
     }
 
     auto pool = std::make_unique<DescriptorPool>();
     pool->currentAllocations = 0;
-    pool->maxAllocations = AllocationCount;
-    pool->freeSizes = calculateMinimumPoolSizes({setBindings}, {AllocationCount});
+    pool->maxAllocations = kAllocationCount;
+    pool->freeSizes = calculateMinimumPoolSizes({setBindings}, {kAllocationCount});
 
     VkDescriptorPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
     poolInfo.flags = 0;
@@ -121,13 +131,15 @@ bool DescriptorSetAllocator::DescriptorPool::canAllocateSet(
                     canAllocateBinding = true;
                     break;
                 }
-                else
-                    return false;
+
+                return false;
             }
         }
 
         if (!canAllocateBinding)
+        {
             return false;
+        }
     }
 
     return true;
@@ -137,9 +149,15 @@ void DescriptorSetAllocator::DescriptorPool::deductPoolSizes(
     const std::vector<VkDescriptorSetLayoutBinding>& setBindings)
 {
     for (const auto& binding : setBindings)
+    {
         for (auto& size : freeSizes)
+        {
             if (size.type == binding.descriptorType)
+            {
                 size.descriptorCount -= binding.descriptorCount;
+            }
+        }
+    }
 }
 
 VkDescriptorSet DescriptorSetAllocator::DescriptorPool::allocate(
@@ -153,7 +171,7 @@ VkDescriptorSet DescriptorSetAllocator::DescriptorPool::allocate(
     descSetInfo.descriptorSetCount = 1;
     descSetInfo.pSetLayouts = &setLayout;
 
-    VkDescriptorSet descSet;
+    VkDescriptorSet descSet{VK_NULL_HANDLE};
     VK_CHECK(vkAllocateDescriptorSets(device, &descSetInfo, &descSet));
     return descSet;
 }

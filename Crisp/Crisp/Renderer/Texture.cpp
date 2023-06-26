@@ -1,10 +1,10 @@
 #include "Texture.hpp"
 
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/vulkan/VulkanBuffer.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
-#include <Crisp/vulkan/VulkanImage.hpp>
-#include <Crisp/vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
 
 namespace crisp
 {
@@ -76,6 +76,7 @@ void Texture::fill(const void* data, VkDeviceSize size)
             m_image->copyFrom(cmdBuffer, *buffer, 0, 1);
 
             if (m_image->getMipLevels() > 1)
+            {
                 m_image->transitionLayout(
                     cmdBuffer,
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -83,6 +84,7 @@ void Texture::fill(const void* data, VkDeviceSize size)
                     1,
                     VK_PIPELINE_STAGE_TRANSFER_BIT,
                     VK_PIPELINE_STAGE_TRANSFER_BIT);
+            }
 
             for (uint32_t i = 1; i < m_image->getMipLevels(); i++)
             {

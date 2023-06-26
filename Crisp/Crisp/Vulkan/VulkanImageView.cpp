@@ -1,4 +1,4 @@
-#include <Crisp/vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
 
 namespace crisp
 {
@@ -12,6 +12,7 @@ VulkanImageView::VulkanImageView(
     uint32_t mipLevels)
     : VulkanResource(device.getResourceDeallocator())
     , m_image(image)
+    , m_subresourceRange{}
 {
     VkImageViewCreateInfo viewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     viewInfo.image = image.getHandle();

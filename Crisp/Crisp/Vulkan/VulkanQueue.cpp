@@ -4,7 +4,8 @@ namespace crisp
 {
 VulkanQueue::VulkanQueue(
     const VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, const QueueIdentifier queueId)
-    : m_deviceHandle(deviceHandle)
+    : m_handle{VK_NULL_HANDLE}
+    , m_deviceHandle(deviceHandle)
     , m_familyIndex(queueId.familyIndex)
     , m_index(queueId.index)
     , m_familyProperties(physicalDevice.queryQueueFamilyProperties().at(m_familyIndex))
@@ -22,14 +23,14 @@ VkResult VulkanQueue::submit(
     VkFence fence,
     VkPipelineStageFlags waitPipelineStage) const
 {
-    const VkPipelineStageFlags waitStage[] = {waitPipelineStage};
+    const std::array<VkPipelineStageFlags, 1> waitStages{waitPipelineStage};
 
     VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     if (waitSemaphore != VK_NULL_HANDLE)
     {
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = &waitSemaphore;
-        submitInfo.pWaitDstStageMask = waitStage;
+        submitInfo.pWaitDstStageMask = waitStages.data();
     }
     if (signalSemaphore != VK_NULL_HANDLE)
     {
@@ -74,7 +75,7 @@ VkCommandPool VulkanQueue::createCommandPool(VkCommandPoolCreateFlags flags) con
     poolInfo.queueFamilyIndex = m_familyIndex;
     poolInfo.flags = flags;
 
-    VkCommandPool pool;
+    VkCommandPool pool{VK_NULL_HANDLE};
     vkCreateCommandPool(m_deviceHandle, &poolInfo, nullptr, &pool);
     return pool;
 }

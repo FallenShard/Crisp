@@ -1,16 +1,15 @@
 #pragma once
 
+#include <Crisp/Geometry/VertexLayout.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <Crisp/Geometry/VertexLayout.hpp>
-
-#include <Crisp/Utils/BitFlags.hpp>
-
 #include <filesystem>
+#include <utility>
 
 namespace crisp
 {
@@ -61,7 +60,8 @@ public:
         uint32_t size,
         const char* value) const
     {
-        vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset);
+        vkCmdPushConstants(
+            cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset); // NOLINT
     }
 
     template <typename T, typename... Ts>
@@ -83,7 +83,7 @@ public:
 
     inline void setConfigPath(std::filesystem::path path)
     {
-        m_configPath = path;
+        m_configPath = std::move(path);
     }
 
     void swapAll(VulkanPipeline& other);
@@ -96,7 +96,9 @@ protected:
         setPushConstant(cmdBuffer, shaderStages, offset, std::forward<T>(arg));
 
         if constexpr (sizeof...(Ts) > 0)
+        {
             setPushConstantsWithOffset(cmdBuffer, shaderStages, offset + sizeof(T), std::forward<Ts>(args)...);
+        }
     }
 
     std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;

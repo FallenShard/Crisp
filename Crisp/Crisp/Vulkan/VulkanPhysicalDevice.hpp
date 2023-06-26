@@ -36,6 +36,7 @@ class VulkanPhysicalDevice
 {
 public:
     explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
+    ~VulkanPhysicalDevice() = default;
 
     VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
     VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept;

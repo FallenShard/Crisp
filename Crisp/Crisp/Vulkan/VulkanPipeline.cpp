@@ -12,8 +12,8 @@ VulkanPipeline::VulkanPipeline(
     : VulkanResource(pipelineHandle, device.getResourceDeallocator())
     , m_pipelineLayout(std::move(pipelineLayout))
     , m_dynamicStateFlags(dynamicStateFlags)
-    , m_bindPoint(bindPoint)
     , m_vertexLayout(std::move(vertexLayout))
+    , m_bindPoint(bindPoint)
 {
 }
 
@@ -24,7 +24,7 @@ void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const
 
 VulkanDescriptorSet VulkanPipeline::allocateDescriptorSet(uint32_t setId) const
 {
-    return VulkanDescriptorSet(setId, m_pipelineLayout.get());
+    return {setId, m_pipelineLayout.get()};
 }
 
 void VulkanPipeline::swapAll(VulkanPipeline& other)

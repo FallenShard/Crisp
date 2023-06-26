@@ -4,7 +4,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/UniformMultiBuffer.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp::gui
 {
@@ -62,7 +62,9 @@ uint32_t DynamicUniformBufferResource::registerResource()
 
         m_buffer->resize(m_bufferGranularity * multiplier);
         for (auto& v : m_isSetUpdated)
+        {
             v = false;
+        }
     }
 
     return freeId;

@@ -9,6 +9,11 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     uint32_t primitiveCount,
     const glm::mat4& transform)
     : VulkanResource(device.getResourceDeallocator())
+    , m_rawHandle{}
+    , m_address{}
+    , m_allocation{}
+    , m_info{}
+    , m_transformMatrix{}
     , m_geometry(geometry)
     , m_buildInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR}
     , m_buildSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR}
@@ -19,7 +24,7 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     m_buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     m_buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
 
-    memcpy(&m_transformMatrx, glm::value_ptr(glm::transpose(transform)), 12 * sizeof(float));
+    memcpy(&m_transformMatrix, glm::value_ptr(glm::transpose(transform)), 12 * sizeof(float));
     m_geometry.geometry.triangles.transformData = {0};
 
     m_buildInfo.geometryCount = 1;
@@ -38,10 +43,15 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
 VulkanAccelerationStructure::VulkanAccelerationStructure(
     const VulkanDevice& device, const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures)
     : VulkanResource(device.getResourceDeallocator())
-    , m_buildInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR}
-    , m_primitiveCount(static_cast<uint32_t>(bottomLevelAccelStructures.size()))
+    , m_rawHandle{}
+    , m_address{}
+    , m_allocation{}
+    , m_info{}
+    , m_transformMatrix{}
     , m_geometry{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR}
+    , m_buildInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR}
     , m_buildSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR}
+    , m_primitiveCount(static_cast<uint32_t>(bottomLevelAccelStructures.size()))
 {
     m_buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     m_buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
@@ -51,7 +61,7 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     m_instances.resize(m_primitiveCount, VkAccelerationStructureInstanceKHR{});
     for (uint32_t i = 0; i < m_primitiveCount; ++i)
     {
-        m_instances[i].transform = bottomLevelAccelStructures[i]->m_transformMatrx;
+        m_instances[i].transform = bottomLevelAccelStructures[i]->m_transformMatrix;
         m_instances[i].instanceCustomIndex = i;
         m_instances[i].mask = 0xFF;
         m_instances[i].flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
@@ -83,8 +93,6 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     createAccelerationStructure(device);
 }
 
-VulkanAccelerationStructure::~VulkanAccelerationStructure() {}
-
 void VulkanAccelerationStructure::build(
     const VulkanDevice& /*device*/,
     VkCommandBuffer cmdBuffer,
@@ -99,7 +107,6 @@ void VulkanAccelerationStructure::build(
         rangeInfo.transformOffset = 0;
         std::vector<VkAccelerationStructureBuildRangeInfoKHR*> rangeInfos{&rangeInfo};
 
-        (void)(cmdBuffer);
         vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &m_buildInfo, rangeInfos.data());
     }
     else

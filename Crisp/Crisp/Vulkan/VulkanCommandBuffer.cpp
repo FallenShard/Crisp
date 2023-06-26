@@ -7,8 +7,6 @@ VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer commandBuffer)
 {
 }
 
-VulkanCommandBuffer::~VulkanCommandBuffer() {}
-
 void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage) const
 {
     VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};

@@ -11,7 +11,7 @@ class VulkanBuffer : public VulkanResource<VkBuffer>
 public:
     VulkanBuffer(
         const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
-    ~VulkanBuffer();
+    ~VulkanBuffer() override;
 
     VulkanBuffer(const VulkanBuffer&) = delete;
     VulkanBuffer& operator=(const VulkanBuffer&) = delete;
@@ -67,7 +67,7 @@ public:
     template <typename T>
     inline const T* getHostVisibleData() const
     {
-        return reinterpret_cast<const T*>(m_allocation.getMappedPtr());
+        return reinterpret_cast<const T*>(m_allocation.getMappedPtr()); // NOLINT
     }
 
 private:

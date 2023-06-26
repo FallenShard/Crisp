@@ -8,6 +8,7 @@ VulkanBuffer::VulkanBuffer(
     const VkBufferUsageFlags usageFlags,
     const VkMemoryPropertyFlags memProps)
     : VulkanResource(device.getResourceDeallocator())
+    , m_allocation{}
     , m_size(size)
     , m_address{}
 {
@@ -35,7 +36,9 @@ VulkanBuffer::VulkanBuffer(
 VulkanBuffer::~VulkanBuffer()
 {
     if (m_allocation.isValid())
+    {
         m_deallocator->deferMemoryDeallocation(m_framesToLive, m_allocation);
+    }
 }
 
 VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept
@@ -114,15 +117,15 @@ StagingVulkanBuffer::StagingVulkanBuffer(
 {
 }
 
-void StagingVulkanBuffer::updateFromHost(const void* srcData, const VkDeviceSize size, const VkDeviceSize offset)
+void StagingVulkanBuffer::updateFromHost(const void* hostMemoryData, const VkDeviceSize size, const VkDeviceSize offset)
 {
-    memcpy(m_allocation.getMappedPtr() + offset, srcData, static_cast<size_t>(size));
+    memcpy(m_allocation.getMappedPtr() + offset, hostMemoryData, static_cast<size_t>(size)); // NOLINT
     m_device->invalidateMappedRange(m_allocation.getMemory(), m_allocation.offset + offset, size);
 }
 
-void StagingVulkanBuffer::updateFromHost(const void* srcData)
+void StagingVulkanBuffer::updateFromHost(const void* hostMemoryData)
 {
-    memcpy(m_allocation.getMappedPtr(), srcData, m_size);
+    memcpy(m_allocation.getMappedPtr(), hostMemoryData, m_size);
     m_device->invalidateMappedRange(m_allocation.getMemory(), m_allocation.offset, VK_WHOLE_SIZE);
 }
 

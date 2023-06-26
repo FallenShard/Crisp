@@ -84,7 +84,9 @@ void VulkanRenderPass::end(const VkCommandBuffer cmdBuffer, const uint32_t frame
     vkCmdEndRenderPass(cmdBuffer);
 
     if (m_attachmentViews.empty())
+    {
         return;
+    }
 
     for (const auto& [i, attachmentView] : enumerate(m_attachmentViews.at(frameIndex)))
     {
@@ -122,7 +124,9 @@ std::vector<VulkanImageView*> VulkanRenderPass::getAttachmentViews(uint32_t rend
 {
     std::vector<VulkanImageView*> perFrameAttachmentViews(m_attachmentViews.size());
     for (uint32_t i = 0; i < perFrameAttachmentViews.size(); ++i)
+    {
         perFrameAttachmentViews[i] = m_attachmentViews[i].at(renderTargetIndex).get();
+    }
     return perFrameAttachmentViews;
 }
 

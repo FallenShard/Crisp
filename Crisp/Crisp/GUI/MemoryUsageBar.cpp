@@ -7,7 +7,7 @@
 #include <Crisp/Gui/Label.hpp>
 #include <Crisp/Gui/StopWatch.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 
 namespace crisp::gui
 {
@@ -17,11 +17,11 @@ glm::vec4 interpolateColor(float t)
 {
     if (t > 0.5f)
     {
-        return { 1.0f, 2.0f * (1.0f - t), 0.0f, 1.0f };
+        return {1.0f, 2.0f * (1.0f - t), 0.0f, 1.0f};
     }
     else
     {
-        return { t / 0.5f, 1.0f, 0.0f, 1.0f };
+        return {t / 0.5f, 1.0f, 0.0f, 1.0f};
     }
 }
 } // namespace
@@ -32,9 +32,9 @@ MemoryUsageBar::MemoryUsageBar(Form* parentForm)
     setId("memoryUsageBar");
     setAnchor(Anchor::BottomLeft);
     setOrigin(Origin::BottomLeft);
-    setPosition({ 0, 0 });
-    setSizeHint({ 0, 20 });
-    setPadding({ 3, 3 });
+    setPosition({0, 0});
+    setSizeHint({0, 20});
+    setPadding({3, 3});
     setColor(glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
     setHorizontalSizingPolicy(SizingPolicy::FillParent);
 
@@ -49,7 +49,7 @@ MemoryUsageBar::MemoryUsageBar(Form* parentForm)
     imageLabel->setId("imageMemoryLabel");
     imageLabel->setAnchor(Anchor::CenterLeft);
     imageLabel->setOrigin(Origin::CenterLeft);
-    imageLabel->setPosition({ 200, 0 });
+    imageLabel->setPosition({200, 0});
     m_imageMemoryUsageLabel = imageLabel.get();
     addControl(std::move(imageLabel));
 
@@ -57,7 +57,7 @@ MemoryUsageBar::MemoryUsageBar(Form* parentForm)
     stagingLabel->setId("stagingMemoryLabel");
     stagingLabel->setAnchor(Anchor::CenterLeft);
     stagingLabel->setOrigin(Origin::CenterLeft);
-    stagingLabel->setPosition({ 400, 0 });
+    stagingLabel->setPosition({400, 0});
     m_stagingMemoryUsageLabel = stagingLabel.get();
     addControl(std::move(stagingLabel));
 

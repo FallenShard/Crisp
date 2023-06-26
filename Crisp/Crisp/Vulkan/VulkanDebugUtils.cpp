@@ -15,13 +15,21 @@ VkBool32 debugMessengerCallback(
 {
     const char* typeStr = "Unknown";
     if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+    {
         typeStr = "General";
+    }
     if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+    {
         typeStr = "Performance";
+    }
     if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+    {
         typeStr = "Validation";
+    }
     if (strcmp(typeStr, "General") == 0 && !printAllDebugMessages)
+    {
         return VK_FALSE;
+    }
 
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {
@@ -58,7 +66,7 @@ VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance)
                              VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
     createInfo.pfnUserCallback = debugMessengerCallback;
 
-    VkDebugUtilsMessengerEXT callback;
+    VkDebugUtilsMessengerEXT callback{VK_NULL_HANDLE};
     vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
     return callback;
 }

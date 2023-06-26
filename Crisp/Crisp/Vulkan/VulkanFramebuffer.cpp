@@ -6,11 +6,11 @@ VulkanFramebuffer::VulkanFramebuffer(
     const VulkanDevice& device,
     const VkRenderPass renderPass,
     const VkExtent2D extent,
-    const std::vector<VkImageView>& attachments,
+    const std::vector<VkImageView>& attachmentList,
     const uint32_t layers,
     const VkFramebufferCreateFlags flags)
     : VulkanResource(device.getResourceDeallocator())
-    , m_attachments(attachments)
+    , m_attachments(attachmentList)
 {
     VkFramebufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
     createInfo.renderPass = renderPass;

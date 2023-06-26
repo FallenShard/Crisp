@@ -15,7 +15,7 @@
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Image/Io/OpenEXRWriter.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
-#include <Crisp/vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanImageView.hpp>
 
 namespace crisp
 {
@@ -83,14 +83,18 @@ void RayTracerScene::update(float)
 void RayTracerScene::render()
 {
     if (m_image)
+    {
         m_image->draw(m_renderer);
+    }
 }
 
 void RayTracerScene::openSceneFileFromDialog()
 {
     std::string openedFile = "D:/version-control/Crisp/Resources/VesperScenes/cbox-test-mis.xml"; // openFileDialog();
     if (openedFile == "")
+    {
         return;
+    }
 
     openSceneFile(openedFile);
 }
@@ -118,7 +122,9 @@ void RayTracerScene::writeImageToExr()
     // Avoid overwriting by providing a new filepath with an index
     int i = 0;
     while (std::filesystem::exists(filepath))
+    {
         filepath = fmt::format("{}/{}_{}.exr", outputDirectory, ++i, m_projectName);
+    }
 
     std::cout << "Writing EXR image..." << std::endl;
     writer.write(filepath.string(), m_imageData.data(), imageSize.x, imageSize.y, true);
@@ -154,10 +160,7 @@ void RayTracerScene::createGui()
     button->setText("Open XML Scene");
     button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
-    button->clicked += [this]()
-    {
-        openSceneFileFromDialog();
-    };
+    button->clicked += [this]() { openSceneFileFromDialog(); };
     panel->addControl(std::move(button));
 
     button = std::make_unique<gui::Button>(form);
@@ -166,10 +169,7 @@ void RayTracerScene::createGui()
     button->setPosition({0, 40});
     button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
-    button->clicked += [this]()
-    {
-        startRendering();
-    };
+    button->clicked += [this]() { startRendering(); };
     panel->addControl(std::move(button));
 
     button = std::make_unique<gui::Button>(form);
@@ -178,10 +178,7 @@ void RayTracerScene::createGui()
     button->setPosition({0, 80});
     button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
-    button->clicked += [this]()
-    {
-        stopRendering();
-    };
+    button->clicked += [this]() { stopRendering(); };
     panel->addControl(std::move(button));
 
     button = std::make_unique<gui::Button>(form);
@@ -190,10 +187,7 @@ void RayTracerScene::createGui()
     button->setPosition({0, 120});
     button->setSizeHint({100, 30});
     button->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent);
-    button->clicked += [this]()
-    {
-        writeImageToExr();
-    };
+    button->clicked += [this]() { writeImageToExr(); };
     panel->addControl(std::move(button));
     form->add(std::move(panel));
 

@@ -1,19 +1,20 @@
 #pragma once
 
 #include <Crisp/Core/Checks.hpp>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp::detail
 {
-const char* toString(const VkResult result) noexcept;
+const char* toString(VkResult result) noexcept;
 
 template <typename... Args>
 void doAssert(
     const VkResult result, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept
 {
     if (result == VK_SUCCESS)
+    {
         return;
+    }
 
     const auto argsFormat = fmt::format(formatString.str, std::forward<Args>(args)...);
     spdlog::critical(
@@ -31,7 +32,9 @@ void doAssert(
 inline void doAssert(const VkResult result, LocationFormatString&& formatString) noexcept
 {
     if (result == VK_SUCCESS)
+    {
         return;
+    }
 
     spdlog::critical(
         "File: {}\n({}:{}) -- Function: `{}`, Vulkan call '{}' returned '{}'",

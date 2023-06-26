@@ -1071,10 +1071,10 @@ extern "C"
 }
 #endif
 
-#define VK_LOAD_GLOBAL_FUNC(module, funcName) funcName = (PFN_##funcName)GetProcAddress(module, #funcName);
-#define VK_LOAD_LOADER_FUNC(funcName) funcName = (PFN_##funcName)vkGetInstanceProcAddr(nullptr, #funcName);
-#define VK_LOAD_INSTANCE_FUNC(funcName) funcName = (PFN_##funcName)vkGetInstanceProcAddr(instance, #funcName);
-#define VK_LOAD_DEVICE_FUNC(funcName) funcName = (PFN_##funcName)vkGetDeviceProcAddr(device, #funcName);
+#define VK_LOAD_GLOBAL_FUNC(module, funcName) funcName = (PFN_##funcName)GetProcAddress(module, #funcName);    // NOLINT
+#define VK_LOAD_LOADER_FUNC(funcName) funcName = (PFN_##funcName)vkGetInstanceProcAddr(nullptr, #funcName);    // NOLINT
+#define VK_LOAD_INSTANCE_FUNC(funcName) funcName = (PFN_##funcName)vkGetInstanceProcAddr(instance, #funcName); // NOLINT
+#define VK_LOAD_DEVICE_FUNC(funcName) funcName = (PFN_##funcName)vkGetDeviceProcAddr(device, #funcName);       // NOLINT
 
 namespace crisp
 {

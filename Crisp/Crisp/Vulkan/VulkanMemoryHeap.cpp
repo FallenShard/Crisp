@@ -1,6 +1,7 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
 #include <Crisp/Core/Logger.hpp>
+#include <utility>
 
 namespace crisp
 {
@@ -16,14 +17,16 @@ VulkanMemoryHeap::VulkanMemoryHeap(
     , m_memoryTypeIndex(memTypeIdx)
     , m_usedSize(0)
     , m_blockSize(blockSize)
-    , m_tag(tag)
+    , m_tag(std::move(tag))
 {
 }
 
 VulkanMemoryHeap::~VulkanMemoryHeap()
 {
     for (const auto& block : m_allocationBlocks)
+    {
         freeBlock(block);
+    }
 }
 
 Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, uint64_t alignment)
@@ -144,7 +147,7 @@ VulkanMemoryHeap::AllocationBlock VulkanMemoryHeap::allocateBlock(uint64_t size)
     devAllocInfo.allocationSize = size;
     devAllocInfo.memoryTypeIndex = m_memoryTypeIndex;
 
-    VkDeviceMemory memory;
+    VkDeviceMemory memory{VK_NULL_HANDLE};
     vkAllocateMemory(m_device, &devAllocInfo, nullptr, &memory);
 
     AllocationBlock block{};

@@ -45,8 +45,8 @@ struct RenderTarget
 
 struct AttachmentMapping
 {
-    uint32_t renderTargetIndex;
-    VkImageSubresourceRange subresource;
+    uint32_t renderTargetIndex{};
+    VkImageSubresourceRange subresource{};
     bool bufferOverDepthSlices{false};
 };
 
@@ -73,7 +73,7 @@ class VulkanRenderPass final : public VulkanResource<VkRenderPass>
 {
 public:
     VulkanRenderPass(const VulkanDevice& device, VkRenderPass handle, RenderPassParameters&& parameters);
-    ~VulkanRenderPass();
+    ~VulkanRenderPass() override;
 
     void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
 

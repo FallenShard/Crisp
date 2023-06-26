@@ -61,7 +61,9 @@ public:
     void wait(const std::array<VkFence, N>& fences) const
     {
         if constexpr (N == 0)
+        {
             return;
+        }
 
         vkWaitForFences(
             m_handle,

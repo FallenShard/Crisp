@@ -20,7 +20,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     std::unordered_set<std::string> pendingExtensions;
 
     logger->info("Platform-required Vulkan extensions ({}):", requiredExtensions.size());
-    for (auto extensionName : requiredExtensions)
+    for (const auto* const extensionName : requiredExtensions)
     {
         logger->info("\t{}", extensionName);
         pendingExtensions.insert(std::string(extensionName));
@@ -28,7 +28,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
 
     for (const auto& ext : supportedExtensions)
     {
-        pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any
+        pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any. // NOLINT
     }
 
     const size_t numSupportedReqExts{requiredExtensions.size() - pendingExtensions.size()};
@@ -38,7 +38,9 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     {
         logger->error("The following required extensions are not supported:");
         for (const auto& ext : pendingExtensions)
+        {
             logger->error("{}", ext);
+        }
 
         return resultError("Failed to support required extensions. Aborting the application.");
     }
@@ -49,7 +51,9 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
 [[nodiscard]] Result<> assertValidationLayerSupport(const bool validationLayersEnabled)
 {
     if (!validationLayersEnabled)
+    {
         return {};
+    }
 
     uint32_t layerCount{0};
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
@@ -59,11 +63,17 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
 
     std::unordered_set<std::string> availableLayersSet;
     for (const auto& layer : availableLayers)
-        availableLayersSet.insert(layer.layerName);
+    {
+        availableLayersSet.insert(layer.layerName); // NOLINT
+    }
 
     for (const auto& validationLayer : ValidationLayers)
+    {
         if (availableLayersSet.find(validationLayer) == availableLayersSet.end())
+        {
             return resultError("Validation layer {} is requested, but not supported!", validationLayer);
+        }
+    }
 
     logger->info("Validation layers are supported!");
     return {};
@@ -80,17 +90,16 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
     if (enableValidationLayers)
-        reqPlatformExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    {
+        reqPlatformExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
 
     std::vector<const char*> enabledExtensions;
     std::transform(
         reqPlatformExtensions.begin(),
         reqPlatformExtensions.end(),
         std::back_inserter(enabledExtensions),
-        [](const auto& ext)
-        {
-            return ext.c_str();
-        });
+        [](const auto& ext) { return ext.c_str(); });
 
     VkInstanceCreateInfo createInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     createInfo.pApplicationInfo = &appInfo;
@@ -99,7 +108,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     createInfo.enabledLayerCount = enableValidationLayers ? static_cast<uint32_t>(ValidationLayers.size()) : 0;
     createInfo.ppEnabledLayerNames = enableValidationLayers ? ValidationLayers.data() : nullptr;
 
-    VkInstance instance;
+    VkInstance instance{VK_NULL_HANDLE};
     VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
 
     uint32_t extensionCount = 0;
@@ -117,7 +126,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
 
 VkSurfaceKHR createSurface(const VkInstance instance, SurfaceCreator&& surfaceCreator)
 {
-    VkSurfaceKHR surface;
+    VkSurfaceKHR surface{VK_NULL_HANDLE};
     VK_CHECK(surfaceCreator(instance, nullptr, &surface));
     return surface;
 }
@@ -134,12 +143,18 @@ VulkanContext::VulkanContext(
 VulkanContext::~VulkanContext()
 {
     if (m_instance == VK_NULL_HANDLE)
+    {
         return;
+    }
 
     if (m_surface)
+    {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+    }
     if (m_debugMessenger)
+    {
         vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+    }
     vkDestroyInstance(m_instance, nullptr);
 }
 

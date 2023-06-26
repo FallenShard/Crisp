@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Result.hpp>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <list>
 #include <map>
@@ -50,7 +49,7 @@ public:
 
         inline char* getMappedPtr() const
         {
-            return static_cast<char*>(allocationBlock->mappedPtr) + offset;
+            return static_cast<char*>(allocationBlock->mappedPtr) + offset; // NOLINT
         }
 
         inline VkDeviceMemory getMemory() const

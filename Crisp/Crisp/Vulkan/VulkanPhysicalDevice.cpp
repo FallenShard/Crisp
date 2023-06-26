@@ -33,19 +33,22 @@ bool VulkanPhysicalDevice::isSuitable(
     const VkSurfaceKHR surface, const std::vector<std::string>& deviceExtensions) const
 {
     if (!queryQueueFamilyIndices(surface).isComplete())
+    {
         return false;
+    }
 
     if (!supportsDeviceExtensions(deviceExtensions))
+    {
         return false;
+    }
 
     if (getProperties().deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+    {
         return false;
+    }
 
     const SurfaceSupport surfaceSupport = querySurfaceSupport(surface);
-    if (surfaceSupport.formats.empty() || surfaceSupport.presentModes.empty())
-        return false;
-
-    return true;
+    return !surfaceSupport.formats.empty() && !surfaceSupport.presentModes.empty();
 }
 
 bool VulkanPhysicalDevice::supportsPresentation(const uint32_t queueFamilyIndex, const VkSurfaceKHR surface) const
@@ -70,19 +73,29 @@ QueueFamilyIndices VulkanPhysicalDevice::queryQueueFamilyIndices(const VkSurface
         const auto& queueFamily = queueFamilies[i];
 
         if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
             indices.graphicsFamily = i;
+        }
 
         if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+        {
             indices.computeFamily = i;
+        }
 
         if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+        {
             indices.transferFamily = i;
+        }
 
         if (queueFamily.queueCount > 0 && supportsPresentation(i, surface))
+        {
             indices.presentFamily = i;
+        }
 
         if (indices.isComplete())
+        {
             return indices;
+        }
     }
 
     return indices;
@@ -131,7 +144,9 @@ Result<uint32_t> VulkanPhysicalDevice::findMemoryType(
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
     {
         if ((memoryTypeMask & (1 << i)) && ((memProperties.memoryTypes[i].propertyFlags & properties) == properties))
+        {
             return i;
+        }
     }
 
     return resultError("Unable to find memory type with filter {} and props {}!", memoryTypeMask, properties);
@@ -143,7 +158,9 @@ Result<uint32_t> VulkanPhysicalDevice::findMemoryType(const VkMemoryPropertyFlag
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
     {
         if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
             return i;
+        }
     }
 
     return resultError("Unable to find memory type with props {}!", properties);
@@ -217,7 +234,9 @@ bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<std::strin
 
     FlatHashSet<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
     for (const auto& ext : availableExtensions)
-        requiredExtensions.erase(ext.extensionName);
+    {
+        requiredExtensions.erase(ext.extensionName); // NOLINT
+    }
 
     return requiredExtensions.empty();
 }
@@ -236,10 +255,14 @@ Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(
         vkGetPhysicalDeviceFormatProperties(m_handle, format, &props);
 
         if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+        {
             return format;
+        }
 
         if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+        {
             return format;
+        }
     }
 
     return resultError("Could not find a supported format!");
@@ -306,9 +329,9 @@ std::vector<std::string> createDefaultDeviceExtensions()
 
 void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions)
 {
-    deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-    deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 }
 } // namespace crisp

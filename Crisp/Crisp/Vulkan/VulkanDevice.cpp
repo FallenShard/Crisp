@@ -24,7 +24,9 @@ QueueIdentifier getComputeQueue(const VulkanQueueConfiguration& queueConfig)
     for (uint32_t i = 0; i < queueConfig.types.size(); ++i)
     {
         if (queueConfig.types[i] == QueueType::AsyncCompute)
+        {
             return queueConfig.identifiers.at(i);
+        }
     }
 
     return queueConfig.identifiers.at(1);
@@ -40,7 +42,9 @@ QueueIdentifier getTransferQueue(const VulkanQueueConfiguration& queueConfig)
     for (uint32_t i = 0; i < queueConfig.types.size(); ++i)
     {
         if (queueConfig.types[i] == QueueType::Transfer)
+        {
             return queueConfig.identifiers.at(i);
+        }
     }
 
     return queueConfig.identifiers.at(2);
@@ -110,7 +114,9 @@ void VulkanDevice::flushMappedRanges()
         for (auto& range : m_unflushedRanges)
         {
             if (range.size != VK_WHOLE_SIZE)
+            {
                 range.size = ((range.size - 1) / m_nonCoherentAtomSize + 1) * m_nonCoherentAtomSize;
+            }
 
             range.offset = (range.offset / m_nonCoherentAtomSize) * m_nonCoherentAtomSize;
         }
@@ -124,7 +130,7 @@ VkSemaphore VulkanDevice::createSemaphore() const
 {
     VkSemaphoreCreateInfo semInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 
-    VkSemaphore semaphore;
+    VkSemaphore semaphore{VK_NULL_HANDLE};
     vkCreateSemaphore(m_handle, &semInfo, nullptr, &semaphore);
     return semaphore;
 }
@@ -134,28 +140,28 @@ VkFence VulkanDevice::createFence(VkFenceCreateFlags flags) const
     VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fenceInfo.flags = flags;
 
-    VkFence fence;
+    VkFence fence{VK_NULL_HANDLE};
     vkCreateFence(m_handle, &fenceInfo, nullptr, &fence);
     return fence;
 }
 
 VkBuffer VulkanDevice::createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const
 {
-    VkBuffer buffer;
+    VkBuffer buffer{VK_NULL_HANDLE};
     vkCreateBuffer(m_handle, &bufferCreateInfo, nullptr, &buffer);
     return buffer;
 }
 
 VkImage VulkanDevice::createImage(const VkImageCreateInfo& imageCreateInfo) const
 {
-    VkImage image;
+    VkImage image{VK_NULL_HANDLE};
     vkCreateImage(m_handle, &imageCreateInfo, nullptr, &image);
     return image;
 }
 
 void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo)
 {
-    m_bufferInfos.emplace_back(std::vector<VkDescriptorBufferInfo>(1, bufferInfo));
+    m_bufferInfos.emplace_back(1, bufferInfo);
     m_descriptorWrites.emplace_back(write);
     m_descriptorWrites.back().pBufferInfo = m_bufferInfos.back().data();
 }
@@ -182,8 +188,10 @@ void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write)
 void VulkanDevice::flushDescriptorUpdates()
 {
     if (!m_descriptorWrites.empty())
+    {
         vkUpdateDescriptorSets(
             m_handle, static_cast<uint32_t>(m_descriptorWrites.size()), m_descriptorWrites.data(), 0, nullptr);
+    }
 
     m_descriptorWrites.clear();
     m_imageInfos.clear();
@@ -196,10 +204,7 @@ VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, c
     std::ranges::transform(
         physicalDevice.getDeviceExtensions(),
         std::back_inserter(enabledExtensions),
-        [](const std::string& ext)
-        {
-            return ext.c_str();
-        });
+        [](const std::string& ext) { return ext.c_str(); });
 
     VkDeviceCreateInfo createInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     createInfo.pNext = &physicalDevice.getFeatures2();

@@ -15,7 +15,7 @@ VkCommandBuffer VulkanCommandPool::allocateCommandBuffer(
     cmdBufferAllocInfo.level = cmdBufferLevel;
     cmdBufferAllocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer bufferHandle;
+    VkCommandBuffer bufferHandle{VK_NULL_HANDLE};
     vkAllocateCommandBuffers(device.getHandle(), &cmdBufferAllocInfo, &bufferHandle);
     return bufferHandle;
 }
