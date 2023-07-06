@@ -29,3 +29,4 @@ TabWidth: 4
 UseTab: Never
 SeparateDefinitionBlocks: Always
 InsertBraces: true
+AllowShortLambdasOnASingleLine: All
