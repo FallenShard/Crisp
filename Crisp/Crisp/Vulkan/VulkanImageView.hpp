@@ -33,6 +33,11 @@ public:
         return m_image;
     }
 
+    VulkanImage& getImage()
+    {
+        return m_image;
+    }
+
 private:
     VulkanImage& m_image;
     VkImageSubresourceRange m_subresourceRange;

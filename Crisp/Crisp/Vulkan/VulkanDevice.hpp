@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
@@ -73,10 +74,17 @@ public:
             std::numeric_limits<uint64_t>::max());
     }
 
+    const VulkanDebugMarker& getDebugMarker() const
+    {
+        return *m_debugMarker;
+    }
+
 private:
     VkDevice m_handle;
 
     VkDeviceSize m_nonCoherentAtomSize;
+
+    std::unique_ptr<VulkanDebugMarker> m_debugMarker;
 
     std::unique_ptr<VulkanQueue> m_generalQueue;
     std::unique_ptr<VulkanQueue> m_computeQueue;

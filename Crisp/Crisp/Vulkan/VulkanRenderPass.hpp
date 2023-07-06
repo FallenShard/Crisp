@@ -66,14 +66,19 @@ struct RenderPassParameters
     std::vector<VkAttachmentDescription> attachmentDescriptions;
     std::vector<AttachmentMapping> attachmentMappings;
 
-    std::vector<RenderTarget*> renderTargets;
+    std::vector<RenderTargetInfo> renderTargetInfos;
+    std::vector<VulkanImage*> renderTargets;
 };
 
 class VulkanRenderPass final : public VulkanResource<VkRenderPass>
 {
 public:
     VulkanRenderPass(const VulkanDevice& device, VkRenderPass handle, RenderPassParameters&& parameters);
-    ~VulkanRenderPass() override;
+    VulkanRenderPass(
+        const VulkanDevice& device,
+        VkRenderPass handle,
+        RenderPassParameters&& parameters,
+        std::vector<VkClearValue>&& clearValues);
 
     void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
 

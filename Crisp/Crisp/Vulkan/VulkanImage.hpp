@@ -75,6 +75,8 @@ public:
     VkFormat getFormat() const;
     uint32_t getLayerCount() const;
 
+    VkImageSubresourceRange getFullRange() const;
+
     const VulkanDevice& getDevice() const;
 
 private:
@@ -96,5 +98,7 @@ private:
 VkImageAspectFlags determineImageAspect(VkFormat format);
 
 bool isDepthFormat(VkFormat format);
+
+const char* toString(VkImageLayout layout);
 
 } // namespace crisp

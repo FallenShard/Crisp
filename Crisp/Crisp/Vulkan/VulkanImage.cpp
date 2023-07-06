@@ -9,6 +9,17 @@ namespace
 {
 auto logger = createLoggerMt("VulkanImage");
 
+void adaptSubresouceRange(VkImageType type, VkImageSubresourceRange& subresouceRange)
+{
+    if (type == VK_IMAGE_TYPE_3D)
+    {
+        subresouceRange.baseArrayLayer = 0;
+        subresouceRange.layerCount = 1;
+    }
+}
+
+} // namespace
+
 const char* toString(const VkImageLayout layout)
 {
     switch (layout)
@@ -60,17 +71,6 @@ const char* toString(const VkImageLayout layout)
         return "Unknown";
     }
 }
-
-void adaptSubresouceRange(VkImageType type, VkImageSubresourceRange& subresouceRange)
-{
-    if (type == VK_IMAGE_TYPE_3D)
-    {
-        subresouceRange.baseArrayLayer = 0;
-        subresouceRange.layerCount = 1;
-    }
-}
-
-} // namespace
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)
     : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
@@ -406,6 +406,17 @@ VkFormat VulkanImage::getFormat() const
 uint32_t VulkanImage::getLayerCount() const
 {
     return m_createInfo.arrayLayers;
+}
+
+VkImageSubresourceRange VulkanImage::getFullRange() const
+{
+    return {
+        .aspectMask = getAspectMask(),
+        .baseMipLevel = 0,
+        .levelCount = getMipLevels(),
+        .baseArrayLayer = 0,
+        .layerCount = getLayerCount(),
+    };
 }
 
 const VulkanDevice& VulkanImage::getDevice() const

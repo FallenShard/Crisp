@@ -8,7 +8,9 @@ template <typename... Args>
 void doAssert(const bool expr, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept
 {
     if (expr)
+    {
         return;
+    }
 
     const auto argsFormat = fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...);
     spdlog::critical(
@@ -25,7 +27,9 @@ void doAssert(const bool expr, const char* exprString, LocationFormatString&& fo
 inline void doAssert(const bool expr, LocationFormatString&& formatString) noexcept
 {
     if (expr)
+    {
         return;
+    }
 
     spdlog::critical(
         "File: {}\n({}:{}) -- Function: `{}`, Condition: {}",
@@ -59,3 +63,9 @@ inline void doAssert(const bool expr, LocationFormatString&& formatString) noexc
 #define CRISP_CHECK_GT(expr, right, ...)
 #define CRISP_CHECK_LT(expr, right, ...)
 #endif
+
+#define CRISP_FATAL(...)                                                                                               \
+    {                                                                                                                  \
+        spdlog::critical(__VA_ARGS__);                                                                                 \
+        std::terminate();                                                                                              \
+    }

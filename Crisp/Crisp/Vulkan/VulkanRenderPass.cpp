@@ -21,15 +21,29 @@ VulkanRenderPass::VulkanRenderPass(
     for (const auto& [i, clearValue] : enumerate(m_attachmentClearValues))
     {
         const auto& mapping = m_params.attachmentMappings.at(i);
-        clearValue = m_params.renderTargets.at(mapping.renderTargetIndex)->info.clearValue;
+        clearValue = m_params.renderTargetInfos.at(mapping.renderTargetIndex).clearValue;
     }
 
     createResources(device);
 }
 
-VulkanRenderPass::~VulkanRenderPass()
+VulkanRenderPass::VulkanRenderPass(
+    const VulkanDevice& device,
+    const VkRenderPass handle,
+    RenderPassParameters&& parameters,
+    std::vector<VkClearValue>&& clearValues)
+    : VulkanResource(handle, device.getResourceDeallocator())
+    , m_params(std::move(parameters))
+    , m_attachmentClearValues(std::move(clearValues))
 {
-    freeResources();
+    CRISP_CHECK(m_params.renderArea.width > 0, "Render area has non-positive width!");
+    CRISP_CHECK(m_params.renderArea.height > 0, "Render area has non-positive height!");
+    CRISP_CHECK_EQ(
+        m_params.attachmentMappings.size(),
+        m_params.attachmentDescriptions.size(),
+        "Attachment mapping and description size mismatch!");
+
+    createResources(device);
 }
 
 void VulkanRenderPass::recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent)
@@ -91,7 +105,7 @@ void VulkanRenderPass::end(const VkCommandBuffer cmdBuffer, const uint32_t frame
     for (const auto& [i, attachmentView] : enumerate(m_attachmentViews.at(frameIndex)))
     {
         const uint32_t renderTargetIndex{m_params.attachmentMappings.at(i).renderTargetIndex};
-        auto& image = *m_params.renderTargets.at(renderTargetIndex)->image;
+        auto& image = *m_params.renderTargets.at(renderTargetIndex);
 
         // We unconditionally set the layout here because the render pass did an automatic layout transition.
         image.setImageLayout(m_params.attachmentDescriptions.at(i).finalLayout, attachmentView->getSubresourceRange());
@@ -105,13 +119,13 @@ void VulkanRenderPass::nextSubpass(const VkCommandBuffer cmdBuffer, const VkSubp
 
 VulkanImage& VulkanRenderPass::getRenderTarget(const uint32_t index) const
 {
-    return *m_params.renderTargets.at(index)->image;
+    return *m_params.renderTargets.at(index);
 }
 
 VulkanImage& VulkanRenderPass::getRenderTargetFromAttachmentIndex(const uint32_t attachmentIndex) const
 {
     const uint32_t renderTargetIndex{m_params.attachmentMappings.at(attachmentIndex).renderTargetIndex};
-    return *m_params.renderTargets.at(renderTargetIndex)->image;
+    return *m_params.renderTargets.at(renderTargetIndex);
 }
 
 const VulkanImageView& VulkanRenderPass::getAttachmentView(
@@ -138,8 +152,8 @@ void VulkanRenderPass::updateInitialLayouts(VkCommandBuffer cmdBuffer)
         {
             const auto renderTargetIndex{m_params.attachmentMappings.at(i).renderTargetIndex};
             const auto initialLayout{m_params.attachmentDescriptions.at(i).initialLayout};
-            auto& info = m_params.renderTargets.at(renderTargetIndex)->info;
-            auto& image = *m_params.renderTargets.at(renderTargetIndex)->image;
+            auto& info = m_params.renderTargetInfos.at(renderTargetIndex);
+            auto& image = *m_params.renderTargets.at(renderTargetIndex);
 
             image.transitionLayout(
                 cmdBuffer,
@@ -162,31 +176,32 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
         std::vector<VkImageView> attachmentViewHandles(frameAttachmentViews.size());
         for (const auto& [attachmentIdx, mapping] : enumerate(m_params.attachmentMappings))
         {
+            const auto& renderTargetInfo = m_params.renderTargetInfos.at(mapping.renderTargetIndex);
             auto& renderTarget = *m_params.renderTargets.at(mapping.renderTargetIndex);
             if (mapping.bufferOverDepthSlices)
             {
-                // TODO: fix this to have similar interface to layer-based buffering.
-                framebufferLayerCount = renderTarget.info.buffered
-                                            ? renderTarget.info.depthSlices / RendererConfig::VirtualFrameCount
-                                            : renderTarget.info.depthSlices;
+                // TODO(nemanjab): fix this to have similar interface to layer-based buffering.
+                framebufferLayerCount = renderTargetInfo.buffered
+                                            ? renderTargetInfo.depthSlices / RendererConfig::VirtualFrameCount
+                                            : renderTargetInfo.depthSlices;
                 const uint32_t frameDepthOffset =
-                    renderTarget.info.buffered ? static_cast<uint32_t>(frameIdx) * framebufferLayerCount : 0;
+                    renderTargetInfo.buffered ? static_cast<uint32_t>(frameIdx) * framebufferLayerCount : 0;
                 const VkImageViewType type =
                     framebufferLayerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                 frameAttachmentViews[attachmentIdx] =
-                    createView(*renderTarget.image, type, frameDepthOffset, framebufferLayerCount);
+                    createView(renderTarget, type, frameDepthOffset, framebufferLayerCount);
             }
             else
             {
                 // This handles the case where the render target isn't buffered. In that case, we create another
                 // image view that essentially points to the same region as the virtual frame 0.
                 const uint32_t frameLayerOffset =
-                    renderTarget.info.buffered ? static_cast<uint32_t>(frameIdx) * renderTarget.info.layerCount : 0;
+                    renderTargetInfo.buffered ? static_cast<uint32_t>(frameIdx) * renderTargetInfo.layerCount : 0;
                 const uint32_t firstLayer = frameLayerOffset + mapping.subresource.baseArrayLayer;
                 const uint32_t layerCount = mapping.subresource.layerCount;
                 const VkImageViewType type = layerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                 frameAttachmentViews[attachmentIdx] = createView(
-                    *renderTarget.image,
+                    renderTarget,
                     type,
                     firstLayer,
                     layerCount,

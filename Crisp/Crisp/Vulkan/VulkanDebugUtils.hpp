@@ -7,15 +7,69 @@ namespace crisp
 {
 VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance);
 
+template <typename T>
+concept VulkanWrapperType = requires(T t) { t.getHandle(); };
+
+template <typename T, typename... U>
+concept IsAnyOf = (std::same_as<T, U> || ...);
+
+template <typename T>
+concept VulkanHandle = IsAnyOf<
+    T,
+    VkInstance,
+    VkPhysicalDevice,
+    VkDevice,
+    VkQueue,
+    VkSemaphore,
+    VkCommandBuffer,
+    VkFence,
+    VkDeviceMemory,
+    VkBuffer,
+    VkImage,
+    VkEvent,
+    VkQueryPool,
+    VkBufferView,
+    VkImageView,
+    VkShaderModule,
+    VkPipelineCache,
+    VkPipelineLayout,
+    VkRenderPass,
+    VkPipeline,
+    VkDescriptorSetLayout,
+    VkSampler,
+    VkDescriptorPool,
+    VkDescriptorSet,
+    VkFramebuffer,
+    VkCommandPool,
+    VkSamplerYcbcrConversion,
+    VkDescriptorUpdateTemplate,
+    VkPrivateDataSlot,
+    VkSurfaceKHR,
+    VkSwapchainKHR,
+    VkDebugReportCallbackEXT,
+    VkDisplayKHR,
+    VkDisplayModeKHR,
+    VkValidationCacheEXT,
+    VkAccelerationStructureKHR>;
+
 class VulkanDebugMarker
 {
 public:
     explicit VulkanDebugMarker(VkDevice device);
 
-    template <typename T>
+    template <VulkanHandle T>
     void setObjectName(const T vulkanHandle, const char* name) const
     {
         setObjectName(reinterpret_cast<uint64_t>(vulkanHandle), name, getDebugReportObjectType<T>()); // NOLINT
+    }
+
+    template <VulkanWrapperType T>
+    void setObjectName(const T& wrapperType, const char* name) const
+    {
+        setObjectName(
+            reinterpret_cast<uint64_t>(wrapperType.getHandle()), // NOLINT
+            name,
+            getDebugReportObjectType<decltype(wrapperType.getHandle())>());
     }
 
 private:
@@ -168,8 +222,7 @@ private:
         }
         else
         {
-            spdlog::critical("Received unknown type in debug marker: {}.", typeid(VkHandle).name());
-            std::terminate();
+            CRISP_FATAL("Received unknown type in debug marker: {}.", typeid(VkHandle).name());
         }
     }
 };
