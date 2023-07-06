@@ -140,8 +140,12 @@ Result<> RenderGraph::sortRenderPasses()
 
     std::stack<std::string> stack;
     for (auto& entry : fanIn)
+    {
         if (entry.second == 0)
+        {
             stack.push(entry.first);
+        }
+    }
 
     m_executionOrder.clear();
     while (!stack.empty())
@@ -153,12 +157,16 @@ Result<> RenderGraph::sortRenderPasses()
         for (auto& entry : node->dependencies)
         {
             if (--fanIn[entry.first] == 0)
+            {
                 stack.push(entry.first);
+            }
         }
     }
 
     if (m_executionOrder.size() != m_nodes.size())
+    {
         return resultError("Render graph contains a cycle!");
+    }
 
     return {};
 }
@@ -174,20 +182,30 @@ void RenderGraph::printExecutionOrder()
 void RenderGraph::clearCommandLists()
 {
     for (auto& node : m_nodes)
+    {
         for (auto& subpassCommandList : node.second->commands)
+        {
             subpassCommandList.clear();
+        }
+    }
 }
 
 void RenderGraph::addToCommandLists(const RenderNode& renderNode)
 {
     if (!renderNode.isVisible)
+    {
         return;
+    }
 
     const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
     for (const auto& [key, materialMap] : renderNode.materials)
+    {
         for (const auto& [part, material] : materialMap)
+        {
             m_nodes.at(key.renderPassName)
                 ->addCommand(material.createDrawCommand(virtualFrameIndex, renderNode), key.subpassIndex);
+        }
+    }
 }
 
 void RenderGraph::buildCommandLists(const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& renderNodes)
@@ -206,7 +224,9 @@ void RenderGraph::buildCommandLists(const std::vector<std::unique_ptr<RenderNode
         [this, &renderNodes](size_t start, size_t end, size_t /*jobIdx*/)
         {
             for (std::size_t k = start; k < end; ++k)
+            {
                 addToCommandLists(*renderNodes.at(k));
+            }
         });
 }
 
@@ -228,9 +248,13 @@ void RenderGraph::executeCommandLists() const
             for (auto node : m_executionOrder)
             {
                 if (node->type == NodeType::Compute)
+                {
                     executeComputePass(commandBuffer, frameIndex, *node);
+                }
                 else
+                {
                     executeRenderPass(commandBuffer, frameIndex, *node);
+                }
             }
         });
 }
@@ -251,31 +275,41 @@ const VulkanRenderPass& RenderGraph::getRenderPass(std::string name)
 }
 
 void RenderGraph::executeDrawCommand(
-    const DrawCommand& command, Renderer& renderer, VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex)
+    const DrawCommand& command, Renderer& renderer, const VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex)
 {
     command.pipeline->bind(cmdBuffer.getHandle());
     const auto dynamicState = command.pipeline->getDynamicStateFlags();
     if (dynamicState & PipelineDynamicState::Viewport)
     {
         if (command.viewport.width != 0.0f)
+        {
             vkCmdSetViewport(cmdBuffer.getHandle(), 0, 1, &command.viewport);
+        }
         else
+        {
             renderer.setDefaultViewport(cmdBuffer.getHandle());
+        }
     }
 
     if (dynamicState & PipelineDynamicState::Scissor)
     {
         if (command.scissor.extent.width != 0)
+        {
             vkCmdSetScissor(cmdBuffer.getHandle(), 0, 1, &command.scissor);
+        }
         else
+        {
             renderer.setDefaultScissor(cmdBuffer.getHandle());
+        }
     }
 
     command.pipeline->getPipelineLayout()->setPushConstants(
         cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
 
     if (command.material)
+    {
         command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
+    }
 
     command.geometry->bindVertexBuffers(cmdBuffer.getHandle(), command.firstBuffer, command.bufferCount);
     command.drawFunc(cmdBuffer.getHandle(), command.geometryView);
@@ -315,27 +349,35 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
                     cmdCtx.cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance);
 
                     for (std::size_t k = start; k < end; ++k)
+                    {
                         executeDrawCommand(node.commands[subpassIndex][k], *m_renderer, *cmdCtx.cmdBuffer, frameIdx);
+                    }
 
                     cmdCtx.cmdBuffer->end();
                 });
 
             std::vector<VkCommandBuffer> secondaryBuffers;
             for (auto& cmdCtx : m_secondaryCommandBuffers[virtualFrameIndex])
+            {
                 secondaryBuffers.push_back(cmdCtx.cmdBuffer->getHandle());
+            }
 
             cmdBuffer.executeSecondaryBuffers(secondaryBuffers);
         }
         else
         {
             for (const auto& command : node.commands[subpassIndex])
+            {
                 executeDrawCommand(command, *m_renderer, cmdBuffer, virtualFrameIndex);
+            }
         }
     }
 
     node.renderPass->end(cmdBuffer.getHandle(), virtualFrameIndex);
     for (const auto& dep : node.dependencies)
+    {
         dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);
+    }
 }
 
 void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, Node& node) const
@@ -346,11 +388,15 @@ void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t vi
     node.pipeline->bind(cmdBuffer.getHandle());
     node.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), VK_PIPELINE_BIND_POINT_COMPUTE);
     if (node.preDispatchCallback)
+    {
         node.preDispatchCallback(node, cmdBuffer, virtualFrameIndex);
+    }
     cmdBuffer.dispatchCompute(node.numWorkGroups);
 
     for (const auto& dep : node.dependencies)
+    {
         dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);
+    }
 }
 
 RenderGraph::Node::Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)

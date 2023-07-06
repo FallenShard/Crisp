@@ -80,7 +80,10 @@ public:
     const VulkanRenderPass& getRenderPass(std::string name);
 
     static void executeDrawCommand(
-        const DrawCommand& command, Renderer& renderer, VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex);
+        const DrawCommand& command,
+        Renderer& renderer,
+        const VulkanCommandBuffer& cmdBuffer,
+        uint32_t virtualFrameIndex);
 
 private:
     void executeRenderPass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;

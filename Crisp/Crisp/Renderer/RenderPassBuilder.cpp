@@ -12,19 +12,10 @@ namespace
 {
 bool checkSwapChainDependency(const std::vector<RenderTarget*>& renderTargets)
 {
-    for (const auto& renderTarget : renderTargets)
-    {
-        if (renderTarget->info.isSwapChainDependent)
-        {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(renderTargets, [](const auto& rt) { return rt->info.isSwapChainDependent; });
 }
 
 } // namespace
-
-RenderPassBuilder::RenderPassBuilder() {}
 
 RenderPassBuilder& RenderPassBuilder::setAllocateAttachmentViews(bool allocateAttachmentViews)
 {
@@ -40,12 +31,12 @@ RenderPassBuilder& RenderPassBuilder::setAttachmentCount(uint32_t count)
 }
 
 RenderPassBuilder& RenderPassBuilder::setAttachmentMapping(
-    uint32_t attachmentIdx,
-    uint32_t renderTargetIdx,
-    uint32_t firstLayer,
-    uint32_t layerCount,
-    uint32_t firstMipLevel,
-    uint32_t mipLevelCount)
+    const uint32_t attachmentIdx,
+    const uint32_t renderTargetIdx,
+    const uint32_t firstLayer,
+    const uint32_t layerCount,
+    const uint32_t firstMipLevel,
+    const uint32_t mipLevelCount)
 {
     m_attachmentMappings.at(attachmentIdx).renderTargetIndex = renderTargetIdx;
     m_attachmentMappings.at(attachmentIdx).subresource.baseArrayLayer = firstLayer;
@@ -176,13 +167,13 @@ std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder:
     renderPassInfo.dependencyCount = static_cast<uint32_t>(m_dependencies.size());
     renderPassInfo.pDependencies = m_dependencies.data();
 
-    VkRenderPass renderPass;
+    VkRenderPass renderPass{VK_NULL_HANDLE};
     VK_CHECK(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
     return std::make_pair(renderPass, std::move(attachments));
 }
 
 std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(
-    const VulkanDevice& device, VkExtent2D renderArea, std::vector<RenderTarget*> renderTargets) const
+    const VulkanDevice& device, VkExtent2D renderArea, const std::vector<RenderTarget*>& renderTargets) const
 {
     auto [handle, attachments] = create(device.getHandle(), renderTargets);
 
@@ -195,7 +186,11 @@ std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(
     params.attachmentDescriptions = std::move(attachments);
     params.attachmentMappings = m_attachmentMappings;
 
-    params.renderTargets = renderTargets;
+    for (const auto& rt : renderTargets)
+    {
+        params.renderTargetInfos.push_back(rt->info);
+        params.renderTargets.push_back(rt->image.get());
+    }
 
     return std::make_unique<VulkanRenderPass>(device, handle, std::move(params));
 }

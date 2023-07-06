@@ -1,5 +1,9 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
+#include <Crisp/Renderer/RenderGraphExperimental.hpp>
+#include <Crisp/Vulkan/VulkanSwapChain.hpp>
+
+#include <fstream>
 #include <stack>
 
 namespace crisp::test
@@ -8,195 +12,218 @@ namespace
 {
 
 using ::testing::SizeIs;
+using namespace rg;
 
-enum class ResourceType
+struct FluidSimulationData
 {
-    Buffer,
-    Image,
+    RenderGraphResourceHandle positionBuffer;
 };
 
-struct ResourceHandle
+struct DepthPrePassData
 {
-    uint32_t id;
+    RenderGraphResourceHandle depthImage;
 };
 
-struct PassHandle
+struct ForwardLightingData
 {
-    uint32_t id;
+    RenderGraphResourceHandle hdrImage;
 };
 
-struct RGResource
+class RenderGraphTest : public VulkanTestWithSurface
 {
-    ResourceType type;
-    uint32_t version{0};
-
-    uint32_t size;
-
-    PassHandle producerPass{~0u};
-    ResourceHandle outputResource;
-
-    int32_t refCount = 0;
-
-    std::string name;
-};
-
-struct RGPass
-{
-    uint32_t technique;
-
-    std::vector<ResourceHandle> inputs;
-    std::vector<ResourceHandle> outputs;
-
-    std::vector<PassHandle> edges;
-
-    std::string name;
-};
-
-struct RenderGraph
-{
-    std::map<std::string, ResourceHandle> resourceMap;
-    std::vector<RGResource> resources;
-    std::vector<RGPass> passes;
-};
-
-ResourceHandle addImageResource(RenderGraph& rg, uint32_t size = 400)
-{
-    static uint32_t nextId = 0;
-    rg.resources.push_back({ResourceType::Image, nextId++, size});
-    return {static_cast<uint32_t>(rg.resources.size()) - 1};
-}
-
-ResourceHandle addBufferResource(RenderGraph& rg, uint32_t size = 100)
-{
-    static uint32_t nextId = 0;
-    rg.resources.push_back({ResourceType::Buffer, nextId++, size});
-    return {static_cast<uint32_t>(rg.resources.size()) - 1};
-}
-
-PassHandle addRenderPass(RenderGraph& rg, std::string name)
-{
-    static uint32_t nextId = 0;
-    rg.passes.emplace_back();
-    rg.passes.back().name = std::move(name);
-    return {nextId++};
-}
-
-ResourceHandle declareOutput(RenderGraph& rg, PassHandle pass, ResourceHandle res)
-{
-    rg.resources[res.id].producerPass = pass;
-    rg.passes[pass.id].outputs.push_back(res);
-    return res;
-}
-
-ResourceHandle declareInputOutput(RenderGraph& rg, PassHandle pass, ResourceHandle res)
-{
-    auto modifiedResource = addImageResource(rg);
-    rg.resources[modifiedResource.id] = rg.resources[res.id];
-    rg.resources[modifiedResource.id].version++;
-
-    rg.resources[modifiedResource.id].producerPass = pass;
-    rg.passes[pass.id].outputs.push_back(modifiedResource);
-
-    return modifiedResource;
-}
-
-void declareInput(RenderGraph& rg, PassHandle pass, ResourceHandle res)
-{
-    rg.passes[pass.id].inputs.push_back(res);
-}
-
-std::vector<std::string> topoSort(RenderGraph& graph)
-{
-    const auto nodeCount = graph.passes.size();
-    for (uint32_t i = 0; i < nodeCount; ++i)
+protected:
+    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled)
     {
-        auto& pass = graph.passes[i];
-        pass.edges.clear();
+        return {*device_, *physicalDevice_, context_->getSurface(), buffering};
     }
+};
 
-    std::vector<int32_t> fanIn(nodeCount, 0);
-    for (uint32_t i = 0; i < nodeCount; ++i)
-    {
-        auto& pass = graph.passes[i];
-        for (const auto& input : pass.inputs)
-        {
-            const auto& res = graph.resources[input.id];
-            if (res.producerPass.id != ~0u)
-            {
-                fanIn[i]++;
-                graph.passes[res.producerPass.id].edges.push_back({i});
-                fmt::print("Adding edge from {} to {}\n", graph.passes[res.producerPass.id].name, pass.name);
-            }
-        }
-    }
-
-    std::stack<uint32_t> st;
-    for (uint32_t i = 0; i < nodeCount; ++i)
-    {
-        if (fanIn[i] == 0)
-        {
-            st.push(i);
-        }
-    }
-
-    std::vector<std::string> execOrder;
-    while (!st.empty())
-    {
-        auto node = st.top();
-        st.pop();
-
-        execOrder.push_back(graph.passes[node].name);
-        for (auto nbr : graph.passes[node].edges)
-        {
-            if (--fanIn[nbr.id] == 0)
-            {
-                st.push(nbr.id);
-            }
-        }
-    }
-
-    std::cout << "Done" << std::endl;
-
-    return execOrder;
+VkClearValue createDepthClearValue(const float depthValue, const uint8_t stencilValue)
+{
+    VkClearValue v{};
+    v.depthStencil = {depthValue, stencilValue};
+    return v;
 }
 
-TEST(RenderGraphTest, BasicUsage)
+TEST(RenderGraphTest2, DISABLED_BasicUsage)
 {
     RenderGraph rg;
-    auto fluidPass = addRenderPass(rg, "fluidPass");
-    const auto b0 = declareOutput(rg, fluidPass, addBufferResource(rg));
+    rg.addPass(
+        "fluid-pass",
+        [](RenderGraph::Builder& builder)
+        {
+            auto& data = builder.getBlackboard().insert<FluidSimulationData>();
+            data.positionBuffer = builder.createBuffer({}, "fluid-position-buffer");
+        },
+        [](const RenderPassExecutionContext&) {});
 
-    auto depthPrePass = addRenderPass(rg, "depthPrePass");
-    const auto depthBuffer = declareOutput(rg, depthPrePass, addImageResource(rg));
-    declareInput(rg, depthPrePass, b0);
+    rg.addPass(
+        "depth-pre-pass",
+        [](RenderGraph::Builder& builder)
+        {
+            builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
 
-    auto forwardPass = addRenderPass(rg, "forwardPass");
-    declareInput(rg, forwardPass, depthBuffer);
-    declareInput(rg, forwardPass, b0);
-    const auto hdrImage = declareOutput(rg, forwardPass, addImageResource(rg));
+            auto& data = builder.getBlackboard().insert<DepthPrePassData>();
+            data.depthImage = builder.createAttachment(
+                {.sizePolicy = SizePolicy::SwapChainRelative, .format = VK_FORMAT_D24_UNORM_S8_UINT},
+                "depth-buffer",
+                createDepthClearValue(1.0f, 0));
+        },
+        [](const RenderPassExecutionContext&) {});
 
-    auto transparentPass = addRenderPass(rg, "transparentPass");
-    declareInput(rg, transparentPass, hdrImage);
-    declareInput(rg, transparentPass, depthBuffer);
-    auto modifiedHdrImage = declareInputOutput(rg, transparentPass, hdrImage);
+    RenderGraphResourceHandle output{};
+    rg.addPass(
+        "spectrum-pass",
+        [&output](RenderGraph::Builder& builder)
+        { output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image"); },
+        [](const RenderPassExecutionContext&) {});
 
-    auto bloomPass = addRenderPass(rg, "bloomPass");
-    declareInput(rg, bloomPass, modifiedHdrImage);
-    const auto bloomImage = declareOutput(rg, bloomPass, addImageResource(rg));
-
-    auto postprocessingPass = addRenderPass(rg, "tonemappingPass");
-    declareInput(rg, postprocessingPass, bloomImage);
-    const auto ldrImage = declareOutput(rg, bloomPass, addImageResource(rg));
-
-    const auto order = topoSort(rg);
-
-    for (const auto o : order)
+    for (uint32_t i = 0; i < 10; ++i)
     {
-        std::cout << o << std::endl;
+        rg.addPass(
+            fmt::format("fft-pass-{}", i),
+            [&output, i](RenderGraph::Builder& builder)
+            {
+                builder.readStorageImage(output);
+                output = builder.createStorageImage(
+                    {.format = VK_FORMAT_R32G32_SFLOAT}, fmt::format("fft-pass-image-{}", i));
+            },
+            [](const RenderPassExecutionContext&) {});
     }
 
-    EXPECT_THAT(rg.passes, SizeIs(6));
-    EXPECT_THAT(rg.resources, SizeIs(6));
+    rg.addPass(
+        "forward-pass",
+        [&output](RenderGraph::Builder& builder)
+        {
+            builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
+            builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
+            builder.readStorageImage(output);
+            auto& data = builder.getBlackboard().insert<ForwardLightingData>();
+            data.hdrImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "hdr-image");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    RenderGraphResourceHandle modifiedHdrImage{};
+    rg.addPass(
+        "transparent-pass",
+        [&modifiedHdrImage](RenderGraph::Builder& builder)
+        {
+            builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
+            modifiedHdrImage = builder.writeAttachment(builder.getBlackboard().get<ForwardLightingData>().hdrImage);
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    RenderGraphResourceHandle bloomImage{};
+    rg.addPass(
+        "bloom-pass",
+        [modifiedHdrImage, &bloomImage](RenderGraph::Builder& builder)
+        {
+            builder.readTexture(modifiedHdrImage);
+            bloomImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "bloom-image");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    rg.addPass(
+        "tonemapping-pass",
+        [bloomImage](RenderGraph::Builder& builder)
+        {
+            builder.readTexture(bloomImage);
+            builder.createAttachment({.format = VK_FORMAT_R8G8B8A8_UNORM}, "ldr-image");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    rg.toGraphViz("D:/graph.dot").unwrap();
+
+    EXPECT_THAT(rg.getPassCount(), 17);
+    EXPECT_THAT(rg.getResourceCount(), 17);
 }
+
+TEST_F(RenderGraphTest, BasicUsage)
+{
+    RenderGraph rg;
+
+    rg.addPass(
+        "forward-pass",
+        [](RenderGraph::Builder& builder)
+        {
+            builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::SwapChainRelative,
+                    .format = VK_FORMAT_D24_UNORM_S8_UINT,
+                },
+                "depth-buffer",
+                createDepthClearValue(1.0f, 0));
+            auto& data = builder.getBlackboard().insert<ForwardLightingData>();
+            data.hdrImage = builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::SwapChainRelative,
+                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                },
+                "hdr-image");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    RenderGraphResourceHandle bloomImage{};
+    rg.addPass(
+        "bloom-pass",
+        [&bloomImage](RenderGraph::Builder& builder)
+        {
+            const auto& forwardData = builder.getBlackboard().get<ForwardLightingData>();
+            builder.readTexture(forwardData.hdrImage);
+            bloomImage = builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::SwapChainRelative,
+                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                },
+                "bloom-image");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    constexpr VkExtent2D kSwapChainExtent{1600, 900};
+    {
+        ScopeCommandExecutor executor(*device_);
+        rg.compile(*device_, kSwapChainExtent, executor.cmdBuffer.getHandle());
+    }
+
+    {
+        ScopeCommandExecutor executor(*device_);
+        rg.execute(executor.cmdBuffer.getHandle());
+    }
+
+    rg.toGraphViz("D:/graph.dot").unwrap();
+
+    EXPECT_THAT(rg.getPassCount(), 2);
+    EXPECT_THAT(rg.getResourceCount(), 3);
+}
+
+TEST(RenderGraphTest2, Blackboard)
+{
+    RenderGraphBlackboard bb{};
+
+    struct MyStuff
+    {
+        RenderGraphResourceHandle img0{};
+        RenderGraphResourceHandle img1{};
+    };
+
+    struct MyStuff1
+    {
+    };
+
+    auto& s1 = bb.insert<MyStuff>();
+    s1.img0 = {123};
+    s1.img1 = {111};
+
+    bb.insert<MyStuff1>();
+    EXPECT_THAT(bb, SizeIs(2));
+
+    const auto& s2 = bb.get<MyStuff>();
+    EXPECT_EQ(s2.img0.id, 123);
+    EXPECT_EQ(s2.img1.id, 111);
+
+    // Attempting to add another struct results in termination.
+    EXPECT_DEATH_IF_SUPPORTED(bb.insert<MyStuff1>(), "");
+}
+
 } // namespace
 } // namespace crisp::test

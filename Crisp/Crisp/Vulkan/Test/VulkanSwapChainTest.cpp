@@ -9,14 +9,11 @@ namespace
 class VulkanSwapChainTest : public VulkanTestWithSurface
 {
 protected:
-    VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled)
+    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled)
     {
-        return VulkanSwapChain(*device_, *physicalDevice_, context_->getSurface(), buffering);
+        return {*device_, *physicalDevice_, context_->getSurface(), buffering};
     }
 };
-
-using ::testing::IsNull;
-using ::testing::Not;
 
 TEST_F(VulkanSwapChainTest, Constructor)
 {
@@ -24,7 +21,7 @@ TEST_F(VulkanSwapChainTest, Constructor)
     EXPECT_THAT(swapChain, HandleIsValid());
 
     // Self-move assign
-    swapChain = std::move(swapChain);
+    swapChain = std::move(swapChain); // NOLINT
     EXPECT_THAT(swapChain, HandleIsValid());
 }
 

@@ -12,15 +12,13 @@ namespace crisp
 class RenderPassBuilder
 {
 public:
-    RenderPassBuilder();
-
     RenderPassBuilder& setAllocateAttachmentViews(bool allocateAttachmentViews);
 
     // Attachment configuration
     RenderPassBuilder& setAttachmentCount(uint32_t count);
     RenderPassBuilder& setAttachmentMapping(
-        uint32_t attachmentIndex,
-        uint32_t renderTargetIndex,
+        uint32_t attachmentIdx,
+        uint32_t renderTargetIdx,
         uint32_t firstLayer = 0,
         uint32_t layerCount = 1,
         uint32_t firstMipLevel = 0,
@@ -58,7 +56,7 @@ public:
         VkDevice device, std::vector<RenderTarget*> renderTargets) const;
 
     std::unique_ptr<VulkanRenderPass> create(
-        const VulkanDevice& device, VkExtent2D renderArea, std::vector<RenderTarget*> renderTargets) const;
+        const VulkanDevice& device, VkExtent2D renderArea, const std::vector<RenderTarget*>& renderTargets) const;
 
 private:
     std::vector<VkAttachmentDescription> m_attachments;

@@ -111,7 +111,9 @@ struct Task
     ~Task()
     {
         if (handle)
+        {
             handle.destroy();
+        }
     }
 };
 
@@ -138,7 +140,9 @@ struct SyncWaitTask
                 {
                     FireOnceEvent* const event = coro.promise().event;
                     if (event)
+                    {
                         event->set();
+                    }
                 }
 
                 void await_resume() noexcept {}
@@ -170,7 +174,9 @@ struct SyncWaitTask
     ~SyncWaitTask()
     {
         if (m_handle)
+        {
             m_handle.destroy();
+        }
     }
 
     void run(FireOnceEvent& ev)
