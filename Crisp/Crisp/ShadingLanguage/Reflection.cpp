@@ -24,14 +24,18 @@ uint32_t getPushConstantFieldOffset(const StructFieldDeclaration& field)
         {
             auto layoutQualifier = dynamic_cast<crisp::sl::LayoutQualifier*>(qualif.get());
             if (!layoutQualifier || layoutQualifier->ids.empty())
+            {
                 return 0;
+            }
 
             if (auto bin = dynamic_cast<BinaryExpr*>(layoutQualifier->ids[0].get()))
             {
                 auto* left = dynamic_cast<Variable*>(bin->left.get());
                 auto* right = dynamic_cast<Literal*>(bin->right.get());
                 if (left && right && left->name.lexeme == "offset")
+                {
                     return std::any_cast<int>(right->value);
+                }
             }
         }
     }
@@ -42,7 +46,9 @@ uint32_t getPushConstantFieldOffset(const StructFieldDeclaration& field)
 uint32_t getPushConstantFieldArraySize(const StructFieldDeclaration& field)
 {
     if (field.variable->arraySpecifiers.empty())
+    {
         return 1;
+    }
     else if (auto e = dynamic_cast<Literal*>(field.variable->arraySpecifiers[0]->expr.get()))
     {
         return std::any_cast<int>(e->value);
@@ -135,15 +141,21 @@ Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::fi
                     if (left && right)
                     {
                         if (left->name.lexeme == "set")
+                        {
                             setId = std::any_cast<int32_t>(right->value);
+                        }
                         else if (left->name.lexeme == "binding")
+                        {
                             binding.binding = std::any_cast<int32_t>(right->value);
+                        }
                     }
                 }
                 else if (const auto identifier = dynamic_cast<sl::Variable*>(id.get()))
                 {
                     if (identifier->name.lexeme == "push_constant")
+                    {
                         metadata.pushConstants.push_back(parsePushConstant(statement.get(), binding.stageFlags));
+                    }
                 }
             }
         };
@@ -153,27 +165,45 @@ Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::fi
             for (auto& qualifier : initList->fullType->qualifiers)
             {
                 if (qualifier->qualifier.type == sl::TokenType::Layout)
+                {
                     parseLayoutQualifier(*dynamic_cast<sl::LayoutQualifier*>(qualifier.get()));
+                }
             }
 
             if (!initList->fullType->specifier)
+            {
                 continue;
+            }
 
             auto typeLexeme = initList->fullType->specifier->type.lexeme;
             if (typeLexeme == "sampler" || typeLexeme == "samplerShadow")
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+            }
             else if (typeLexeme.find("sampler") != std::string::npos)
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            }
             else if (typeLexeme.find("texture") != std::string::npos)
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            }
             else if (typeLexeme.find("image") != std::string::npos)
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            }
             else if (typeLexeme.find("textureBuffer") != std::string::npos)
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+            }
             else if (typeLexeme.find("imageBuffer") != std::string::npos)
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+            }
             else if (typeLexeme.find("subpassInput") != std::string::npos)
+            {
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+            }
         }
         else if (auto block = dynamic_cast<sl::BlockDeclaration*>(statement.get()))
         {
@@ -187,9 +217,13 @@ Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::fi
                     parseLayoutQualifier(*layoutQualifier);
                 }
                 else if (qualifier->qualifier.type == sl::TokenType::Uniform)
+                {
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                }
                 else if (qualifier->qualifier.type == sl::TokenType::Buffer)
+                {
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                }
             }
         }
 
@@ -197,10 +231,14 @@ Result<ShaderUniformInputMetadata> parseShaderUniformInputMetadata(const std::fi
         {
             const size_t index = setId.value();
             if (metadata.descriptorSetLayoutBindings.size() <= index)
+            {
                 metadata.descriptorSetLayoutBindings.resize(index + 1, {});
+            }
 
             if (metadata.descriptorSetLayoutBindings.at(index).size() <= binding.binding)
+            {
                 metadata.descriptorSetLayoutBindings.at(index).resize(binding.binding + 1, {});
+            }
 
             metadata.descriptorSetLayoutBindings[index][binding.binding] = binding;
         }
@@ -213,13 +251,17 @@ void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs)
 {
     // Resize current, if necessary
     if (rhs.descriptorSetLayoutBindings.size() > descriptorSetLayoutBindings.size())
+    {
         descriptorSetLayoutBindings.resize(rhs.descriptorSetLayoutBindings.size());
+    }
 
     for (const auto& [setIdx, rhsLayout] : enumerate(rhs.descriptorSetLayoutBindings))
     {
         // Resize layout[i], if ncessary
         if (rhsLayout.size() > descriptorSetLayoutBindings[setIdx].size())
+        {
             descriptorSetLayoutBindings[setIdx].resize(rhsLayout.size());
+        }
 
         for (const auto& [bindingIdx, rhsBinding] : enumerate(rhsLayout))
         {
@@ -324,7 +366,7 @@ Result<VkDescriptorType> toVulkanDescriptorType(const SpvReflectDescriptorType t
 class SpirvShaderReflectionModuleGuard
 {
 public:
-    SpirvShaderReflectionModuleGuard(SpvReflectShaderModule& module)
+    explicit SpirvShaderReflectionModuleGuard(SpvReflectShaderModule& module)
         : m_module(module)
     {
     }
@@ -354,17 +396,29 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(std::sp
 
     const auto stageFlags = toVulkanShaderStage(module.shader_stage).unwrap();
 
-    ShaderUniformInputMetadata metadata{};
-    metadata.descriptorSetLayoutBindings.resize(module.descriptor_set_count);
-
-    for (uint32_t setIdx = 0; setIdx < module.descriptor_set_count; ++setIdx)
+    uint32_t totalSetCount = module.descriptor_set_count;
+    for (uint32_t i = 0; i < module.descriptor_set_count; ++i)
     {
-        metadata.descriptorSetLayoutBindings[setIdx].resize(module.descriptor_sets[setIdx].binding_count);
+        totalSetCount = std::max(totalSetCount, module.descriptor_sets[i].set + 1);
+    }
 
-        for (uint32_t bIdx = 0; bIdx < module.descriptor_sets[setIdx].binding_count; ++bIdx)
+    ShaderUniformInputMetadata metadata{};
+    metadata.descriptorSetLayoutBindings.resize(totalSetCount);
+    for (uint32_t i = 0; i < module.descriptor_set_count; ++i)
+    {
+        const auto& descSet = module.descriptor_sets[i];
+
+        uint32_t totalBindingCount = descSet.binding_count;
+        for (uint32_t j = 0; j < descSet.binding_count; ++j)
         {
-            const auto& spvBinding = module.descriptor_sets[setIdx].bindings[bIdx];
-            auto& binding = metadata.descriptorSetLayoutBindings[setIdx][bIdx];
+            totalBindingCount = std::max(totalBindingCount, descSet.bindings[j]->binding + 1); // NOLINT
+        }
+        metadata.descriptorSetLayoutBindings[descSet.set].resize(totalBindingCount);
+
+        for (uint32_t j = 0; j < descSet.binding_count; ++j)
+        {
+            const auto& spvBinding = descSet.bindings[j]; // NOLINT
+            auto& binding = metadata.descriptorSetLayoutBindings[descSet.set][spvBinding->binding];
             binding.binding = spvBinding->binding;
             binding.descriptorCount = spvBinding->count;
             binding.descriptorType = toVulkanDescriptorType(spvBinding->descriptor_type).unwrap();
@@ -376,8 +430,8 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(std::sp
     metadata.pushConstants.resize(module.push_constant_block_count);
     for (uint32_t i = 0; i < module.push_constant_block_count; ++i)
     {
-        metadata.pushConstants[i].offset = module.push_constant_blocks[i].offset;
-        metadata.pushConstants[i].size = module.push_constant_blocks[i].size;
+        metadata.pushConstants[i].offset = module.push_constant_blocks[i].offset; // NOLINT
+        metadata.pushConstants[i].size = module.push_constant_blocks[i].size;     // NOLINT
         metadata.pushConstants[i].stageFlags = stageFlags;
     }
 
