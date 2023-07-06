@@ -30,6 +30,4 @@ void main()
 
     outTexCoord  = texCoord;
     worldPos     = vec3(M * vec4(position, 1.0f));
-
-    
 }

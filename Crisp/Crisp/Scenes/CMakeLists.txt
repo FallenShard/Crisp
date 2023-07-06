@@ -40,4 +40,5 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::JsonUtils
     PUBLIC Crisp::PathTracer
     PRIVATE Crisp::Application
+    PRIVATE Crisp::RenderGraph
 )

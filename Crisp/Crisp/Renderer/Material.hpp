@@ -16,7 +16,7 @@ namespace crisp
 class Material
 {
 public:
-    Material(VulkanPipeline* pipeline);
+    explicit Material(VulkanPipeline* pipeline);
     Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator);
 
     // Methods to update a descriptor referencing an image.
@@ -47,6 +47,13 @@ public:
         uint32_t setIndex,
         uint32_t binding,
         uint32_t frameIdx,
+        const VulkanImageView& imageView,
+        const VulkanSampler* sampler);
+    void writeDescriptor(
+        uint32_t setIndex,
+        uint32_t binding,
+        uint32_t frameIndex,
+        uint32_t arrayIndex,
         const VulkanImageView& imageView,
         const VulkanSampler* sampler);
 

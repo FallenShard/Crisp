@@ -23,7 +23,9 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     renderTargets[0]->info.format = swapChain.getImageFormat();
     renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
     renderTargets[0]->info.isSwapChainDependent = true;
-    renderTargets[0]->info.clearValue.color = {0.0, 0.0f, 0.0f, 1.0f};
+    renderTargets[0]->info.clearValue.color = {
+        {0.0, 0.0f, 0.0f, 1.0f}
+    };
 
     return RenderPassBuilder()
         .setAllocateAttachmentViews(false)
@@ -92,7 +94,6 @@ Renderer::Renderer(
     m_swapChain = std::make_unique<VulkanSwapChain>(
         *m_device, *m_physicalDevice, m_context->getSurface(), TripleBuffering::Disabled);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
-    m_debugMarker = std::make_unique<VulkanDebugMarker>(m_device->getHandle());
 
     m_defaultViewport = m_swapChain->getViewport();
     m_defaultScissor = m_swapChain->getScissorRect();
@@ -253,7 +254,7 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     allocInfo.commandPool = cmdPool;
     allocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer commandBuffer;
+    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
     vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
@@ -294,13 +295,13 @@ void Renderer::flushCoroutines()
     }
 
     const VulkanQueue& generalQueue = m_device->getGeneralQueue();
-    auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    const auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT); // NOLINT
     VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandPool = cmdPool;
     allocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer commandBuffer;
+    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
     vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
@@ -405,11 +406,8 @@ void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDevice
 {
     auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(*m_device, size);
     stagingBuffer->updateFromHost(data);
-    m_resourceUpdates.emplace_back(
-        [this, stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
-        {
-            buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
-        });
+    m_resourceUpdates.emplace_back([stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
+                                   { buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size); });
 }
 
 void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex)
@@ -433,9 +431,17 @@ void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t re
 void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews)
 {
     m_sceneImageViews.clear();
+
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
     {
-        m_sceneImageViews.push_back(imageViews[i].get());
+        if (imageViews.size() == RendererConfig::VirtualFrameCount)
+        {
+            m_sceneImageViews.push_back(imageViews[i].get());
+        }
+        else
+        {
+            m_sceneImageViews.push_back(imageViews.front().get());
+        }
     }
 
     m_sceneMaterial->writeDescriptor(
@@ -486,11 +492,7 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(
 
 void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass)
 {
-    enqueueResourceUpdate(
-        [&renderPass](VkCommandBuffer cmdBuffer)
-        {
-            renderPass.updateInitialLayouts(cmdBuffer);
-        });
+    enqueueResourceUpdate([&renderPass](VkCommandBuffer cmdBuffer) { renderPass.updateInitialLayouts(cmdBuffer); });
 }
 
 void Renderer::loadShaders(const std::filesystem::path& directoryPath)
@@ -511,7 +513,7 @@ VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shad
 
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame)
 {
-    uint32_t imageIndex;
+    uint32_t imageIndex{};
     const VkResult result = vkAcquireNextImageKHR(
         m_device->getHandle(),
         m_swapChain->getHandle(),
@@ -525,12 +527,12 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame)
         recreateSwapChain();
         return std::nullopt;
     }
-    else if (result == VK_SUBOPTIMAL_KHR)
+    if (result == VK_SUBOPTIMAL_KHR)
     {
         logger->warn("Unable to acquire optimal VulkanSwapChain image!");
         return std::nullopt;
     }
-    else if (result != VK_SUCCESS)
+    if (result != VK_SUCCESS)
     {
         logger->critical("Encountered an unknown error with vkAcquireNextImageKHR!");
         return std::nullopt;
@@ -568,6 +570,15 @@ void Renderer::record(VkCommandBuffer commandBuffer)
         drawCommand(commandBuffer);
     }
 
+    if (!m_sceneImageViews.empty())
+    {
+        m_sceneImageViews[virtualFrameIndex]->getImage().transitionLayout(
+            commandBuffer,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+
     m_defaultRenderPass->begin(commandBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
     if (!m_sceneImageViews.empty())
     {
@@ -596,7 +607,7 @@ void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex)
     }
     else if (result != VK_SUCCESS)
     {
-        throw std::runtime_error("Failed to present swap chain image!");
+        CRISP_FATAL("Failed to present swap chain image!");
     }
 }
 

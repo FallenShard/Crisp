@@ -3,6 +3,7 @@
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
+#include <Crisp/Renderer/RenderGraphExperimental.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
@@ -157,7 +158,7 @@ public:
 
     const VulkanDebugMarker& getDebugMarker() const
     {
-        return *m_debugMarker;
+        return m_device->getDebugMarker();
     }
 
 private:
@@ -178,7 +179,7 @@ private:
     std::unique_ptr<VulkanDevice> m_device;
     std::unique_ptr<VulkanSwapChain> m_swapChain;
     std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
-    std::unique_ptr<VulkanDebugMarker> m_debugMarker;
+
     FlatHashMap<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_swapChainFramebuffers;
 
     VkViewport m_defaultViewport;
@@ -213,5 +214,8 @@ private:
 
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
+
+    std::unique_ptr<rg::RenderGraph> m_rg;
+    std::vector<std::unique_ptr<VulkanImageView>> m_rgSceneImageViews;
 };
 } // namespace crisp

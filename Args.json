@@ -3,8 +3,8 @@
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
   "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/DinPro.ttf",
   "validationLayersInRelease": true,
-  "scene_": "vulkan-ray-tracer",
-  "scene__": "gltf-viewer",
-  "scene": "ocean",
+  "scene__": "vulkan-ray-tracer",
+  "scene": "pbr",
+  "scene_": "ocean",
   "logLevel": "trace"
 }

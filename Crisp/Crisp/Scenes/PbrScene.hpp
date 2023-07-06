@@ -7,6 +7,7 @@
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Models/Skybox.hpp>
+#include <Crisp/Renderer/RenderGraphExperimental.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp
@@ -16,10 +17,10 @@ class PbrScene : public Scene
 public:
     PbrScene(Renderer* renderer, Window* window);
 
-    virtual void resize(int width, int height) override;
-    virtual void update(float dt) override;
-    virtual void render() override;
-    virtual void renderGui() override;
+    void resize(int width, int height) override;
+    void update(float dt) override;
+    void render() override;
+    void renderGui() override;
 
     void onMaterialSelected(const std::string& material);
 
@@ -33,6 +34,9 @@ private:
     void createPlane();
 
     void setupInput();
+
+    std::unique_ptr<rg::RenderGraph> m_rg;
+    std::vector<std::unique_ptr<VulkanImageView>> m_sceneImageViews;
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;

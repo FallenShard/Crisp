@@ -42,8 +42,8 @@ layout(set = 1, binding = 1) uniform CascadedLight
 layout(set = 1, binding = 2) uniform samplerCube diffuseIrradianceMap;
 layout(set = 1, binding = 3) uniform samplerCube specularReflectanceMap;
 layout(set = 1, binding = 4) uniform sampler2D brdfLut;
-layout(set = 1, binding = 5) uniform sampler2DArray cascadedShadowMapArray;
-layout(set = 1, binding = 6) uniform sampler2D sheenLut;
+layout(set = 1, binding = 5) uniform sampler2D sheenLut;
+layout(set = 1, binding = 6) uniform sampler2D cascadedShadowMaps[4];
 
 // Material-specific parameters.
 layout(set = 2, binding = 0) uniform sampler2D diffuseTex;
@@ -96,7 +96,7 @@ float evalCascadedShadow(vec3 worldPos, float bias)
 
     vec3 texCoord = vec3(ndcPos.xy * 0.5f + 0.5f, cascadeIndex);
 
-    ivec2 size = textureSize(cascadedShadowMapArray, 0).xy;
+    ivec2 size = textureSize(cascadedShadowMaps[cascadeIndex], 0).xy;
     vec2 texelSize = vec2(1) / size;
 
     const int pcfRadius = 5;
@@ -108,7 +108,7 @@ float evalCascadedShadow(vec3 worldPos, float bias)
         for (int j = -pcfRadius; j <= pcfRadius; j++)
         {
             vec2 tc = texCoord.xy + vec2(i, j) * texelSize;
-            float shadowMapDepth = texture(cascadedShadowMapArray, vec3(tc, cascadeIndex)).r;
+            float shadowMapDepth = texture(cascadedShadowMaps[cascadeIndex], tc).r;
             amount += shadowMapDepth < (lightSpacePos.z - bias) / lightSpacePos.w ? 0.0f : 1.0f;
         }
     }
