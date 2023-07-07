@@ -36,13 +36,10 @@ PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
         const auto& path = materialDir / fmt::format("{}.png", name);
         if (std::filesystem::exists(path))
         {
-            return loadImage(path, requestedChannels, FlipOnLoad::Y).unwrap();
-        }
-        else
-        {
-            logger->warn("Failed to load texture from {}.", path.string());
+            return loadImage(path, static_cast<int32_t>(requestedChannels), FlipOnLoad::Y).unwrap();
         }
 
+        logger->warn("Failed to load texture from {}.", path.string());
         return std::nullopt;
     };
 
@@ -58,8 +55,7 @@ PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
 
 void addPbrTexturesToImageCache(const PbrTextureGroup& texGroup, const std::string& materialKey, ImageCache& imageCache)
 {
-    const auto addTex =
-        [&imageCache, &texGroup, &materialKey](const std::optional<Image>& texture, const TexInfo& texInfo)
+    const auto addTex = [&imageCache, &materialKey](const std::optional<Image>& texture, const TexInfo& texInfo)
     {
         if (texture)
         {
@@ -99,7 +95,8 @@ std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::fi
 {
     OpenEXRReader reader;
     std::vector<float> buffer;
-    uint32_t w, h;
+    uint32_t w{};
+    uint32_t h{};
     reader.read(assetDir / "Textures/Sheen_E.exr", buffer, w, h);
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;

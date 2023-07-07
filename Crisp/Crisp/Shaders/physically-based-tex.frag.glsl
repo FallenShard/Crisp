@@ -134,6 +134,25 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     return (kD * diffuse + specular) * ao;
 }
 
+vec3 computeEnvRadianceShadow(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow)
+{
+    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
+    const vec3 diffuse = irradiance * albedo;
+    
+    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
+    const vec3 eyeR = reflect(-eyeV, eyeN);
+    const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+   
+    const float MaxReflectionLod = 8.0f;
+    const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * MaxReflectionLod).rgb;
+    const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
+    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
+
+    //return vec3(F);
+    return (kD * diffuse + specular * shadow) * ao;
+}
+
 vec3 decodeNormal(in vec2 uv)
 {
     vec3 normal  = normalize(eyeNormal);
@@ -325,12 +344,13 @@ void main()
     float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
     // float shadowCoeff = 1.0f;
 
-    const vec3 Li = (diffuse + specularity) * Le * NdotL * 0.0;
+    const vec3 Li = (diffuse + specularity) * Le * NdotL;
     
 
-    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
-
+    const vec3 Lenv = computeEnvRadianceShadow(eyeN, eyeV, kD, albedo, F, roughness, ao, shadowCoeff);
+    //  * (0.5 + 0.5 * sqrt(shadowCoeff))
     fragColor = vec4(Lenv + Li * shadowCoeff + emission, 1.0f);
+    //fragColor = vec4(vec3(specularity), 1.0f);
     //fragColor = vec4(Li * shadowCoeff + emission, 1.0f);
     //fragColor = vec4(Li, 1);
     //fragColor = vec4(vec3(ao), 1.0f);

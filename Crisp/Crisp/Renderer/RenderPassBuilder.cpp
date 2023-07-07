@@ -137,13 +137,13 @@ RenderPassBuilder& RenderPassBuilder::addPreserveAttachmentRef(uint32_t subpass,
 }
 
 RenderPassBuilder& RenderPassBuilder::addDependency(
-    uint32_t srcSubpass,
-    uint32_t dstSubpass,
-    VkPipelineStageFlags srcStageMask,
-    VkAccessFlags srcAccessMask,
-    VkPipelineStageFlags dstStageMask,
-    VkAccessFlags dstAccessMask,
-    VkDependencyFlags flags)
+    const uint32_t srcSubpass,
+    const uint32_t dstSubpass,
+    const VkPipelineStageFlags srcStageMask,
+    const VkAccessFlags srcAccessMask,
+    const VkPipelineStageFlags dstStageMask,
+    const VkAccessFlags dstAccessMask,
+    const VkDependencyFlags flags)
 {
     m_dependencies.push_back({srcSubpass, dstSubpass, srcStageMask, dstStageMask, srcAccessMask, dstAccessMask, flags});
     return *this;

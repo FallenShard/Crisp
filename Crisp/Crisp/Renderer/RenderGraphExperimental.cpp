@@ -521,9 +521,6 @@ void RenderGraph::compile(
                 .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                 .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-            // physicalPass.attachments.push_back(
-            //     createView(*m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D));
-            // physicalPass.clearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
             auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
             rtInfo.usage = res.imageUsageFlags;
             rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
@@ -548,7 +545,6 @@ void RenderGraph::compile(
 
         renderPassParams.subpassCount = 1;
         renderPassParams.renderArea = getRenderArea(pass, swapChainExtent);
-        // const auto framebufferSize{getRenderArea(pass, swapChainExtent)};
 
         auto [passHandle, vkAttachments] = builder.create(device.getHandle());
         renderPassParams.attachmentDescriptions = std::move(vkAttachments);
@@ -569,7 +565,6 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
         for (const auto& [inIdx, inputAccess] : enumerate(pass.inputAccesses))
         {
             const auto& res = getResource(pass.inputs[inIdx]);
-            fmt::print("{}, usage: {}\n", res.name, toString(res.imageUsageFlags));
 
             if (inputAccess.usageType == ResourceUsageType::Texture)
             {
@@ -581,18 +576,14 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
                     isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
                                       : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                     inputAccess.pipelineStage);
-                fmt::print("Transitioned {} to {}\n", res.name, toString(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
             }
         }
-        fmt::print("  beginRenderPass(...)\n");
+
         auto& physPass = *m_physicalPasses.at(idx);
         physPass.begin(executionCtx.cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-        // m_physicalPasses.at(idx).begin(cmdBuffer);
 
-        fmt::print("  Executing pass: {}\n", pass.name);
         pass.executeFunc(executionCtx);
 
-        fmt::print("  endRenderPass(...)\n");
         physPass.end(executionCtx.cmdBuffer, 0);
     }
 }
