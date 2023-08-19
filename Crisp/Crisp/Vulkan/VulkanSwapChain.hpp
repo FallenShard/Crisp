@@ -37,19 +37,19 @@ public:
     VkRect2D getScissorRect() const;
 
     VkImageView getImageView(size_t index) const;
-    uint32_t getSwapChainImageCount() const;
+    uint32_t getImageCount() const;
 
     void recreate(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
 
 private:
     void createSwapChain(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
-    void createSwapChainImageViews(VkDevice deviceHandle);
+    void createImageViews(VkDevice deviceHandle);
 
-    static Result<VkSurfaceFormatKHR> chooseSurfaceFormat(
+    static Result<VkSurfaceFormatKHR> selectSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat);
-    static Result<VkPresentModeKHR> choosePresentMode(
+    static Result<VkPresentModeKHR> selectPresentMode(
         const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR presentMode);
-    static VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+    static VkExtent2D determineExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
     std::vector<VkImage> m_images;
     std::vector<VkImageView> m_imageViews;

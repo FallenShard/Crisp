@@ -19,7 +19,7 @@ VulkanSwapChain::VulkanSwapChain(
           tripleBuffering == TripleBuffering::Enabled ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR)
 {
     createSwapChain(device, physicalDevice, surface);
-    createSwapChainImageViews(device.getHandle());
+    createImageViews(device.getHandle());
 }
 
 VulkanSwapChain::~VulkanSwapChain()
@@ -79,7 +79,7 @@ VkImageView VulkanSwapChain::getImageView(size_t index) const
     return m_imageViews.at(index);
 }
 
-uint32_t VulkanSwapChain::getSwapChainImageCount() const
+uint32_t VulkanSwapChain::getImageCount() const
 {
     return static_cast<uint32_t>(m_imageViews.size());
 }
@@ -92,7 +92,7 @@ void VulkanSwapChain::recreate(
         vkDestroyImageView(device.getHandle(), imageView, nullptr);
     }
     createSwapChain(device, physicalDevice, surface);
-    createSwapChainImageViews(device.getHandle());
+    createImageViews(device.getHandle());
 }
 
 void VulkanSwapChain::createSwapChain(
@@ -100,9 +100,9 @@ void VulkanSwapChain::createSwapChain(
 {
     const SurfaceSupport swapChainSupport = physicalDevice.querySurfaceSupport(surface);
     const VkSurfaceFormatKHR surfaceFormat =
-        chooseSurfaceFormat(swapChainSupport.formats, {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
+        selectSurfaceFormat(swapChainSupport.formats, {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
             .unwrap();
-    const VkExtent2D extent = chooseExtent(swapChainSupport.capabilities);
+    const VkExtent2D extent = determineExtent(swapChainSupport.capabilities);
 
     uint32_t imageCount = m_presentationMode == VK_PRESENT_MODE_MAILBOX_KHR ? 3 : 2;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
@@ -136,7 +136,7 @@ void VulkanSwapChain::createSwapChain(
 
     createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = choosePresentMode(swapChainSupport.presentModes, m_presentationMode).unwrap();
+    createInfo.presentMode = selectPresentMode(swapChainSupport.presentModes, m_presentationMode).unwrap();
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = m_handle;
 
@@ -156,7 +156,7 @@ void VulkanSwapChain::createSwapChain(
     m_extent = extent;
 }
 
-void VulkanSwapChain::createSwapChainImageViews(const VkDevice deviceHandle)
+void VulkanSwapChain::createImageViews(const VkDevice deviceHandle)
 {
     m_imageViews.resize(m_images.size(), VK_NULL_HANDLE);
 
@@ -180,7 +180,7 @@ void VulkanSwapChain::createSwapChainImageViews(const VkDevice deviceHandle)
     }
 }
 
-Result<VkSurfaceFormatKHR> VulkanSwapChain::chooseSurfaceFormat(
+Result<VkSurfaceFormatKHR> VulkanSwapChain::selectSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat)
 {
     if (availableFormats.empty())
@@ -204,7 +204,7 @@ Result<VkSurfaceFormatKHR> VulkanSwapChain::chooseSurfaceFormat(
     return resultError("Requested surface format was not found!");
 }
 
-Result<VkPresentModeKHR> VulkanSwapChain::choosePresentMode(
+Result<VkPresentModeKHR> VulkanSwapChain::selectPresentMode(
     const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR requestedPresentMode)
 {
     for (const auto& availablePresentMode : availablePresentModes)
@@ -218,7 +218,7 @@ Result<VkPresentModeKHR> VulkanSwapChain::choosePresentMode(
     return resultError("Unavailable present mode requested!");
 }
 
-VkExtent2D VulkanSwapChain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D VulkanSwapChain::determineExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {

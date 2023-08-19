@@ -54,7 +54,7 @@ TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering)
 {
     const VulkanSwapChain swapChain(createSwapChain());
     EXPECT_THAT(swapChain, HandleIsValid());
-    EXPECT_EQ(swapChain.getSwapChainImageCount(), 3u);
+    EXPECT_EQ(swapChain.getImageCount(), 3u);
 }
 
 TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
@@ -62,7 +62,7 @@ TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
     const VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
     EXPECT_THAT(swapChain, HandleIsValid());
 
-    EXPECT_EQ(swapChain.getSwapChainImageCount(), 2u);
+    EXPECT_EQ(swapChain.getImageCount(), 2u);
     EXPECT_NE(swapChain.getImageView(0), swapChain.getImageView(1));
 }
 
@@ -76,7 +76,7 @@ TEST_F(VulkanSwapChainTest, Recreate)
         swapChain.recreate(*device_, *physicalDevice_, context_->getSurface());
     }
     EXPECT_THAT(swapChain, HandleIsValid());
-    EXPECT_EQ(swapChain.getSwapChainImageCount(), 2u);
+    EXPECT_EQ(swapChain.getImageCount(), 2u);
 }
 
 TEST_F(VulkanSwapChainTest, WindowResized)
