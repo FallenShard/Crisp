@@ -36,7 +36,7 @@ public:
     {
     }
 
-    BitFlags(EnumType bits)
+    BitFlags(EnumType bits) // NOLINT
         : m_mask(static_cast<MaskType>(bits))
     {
     }
@@ -125,7 +125,7 @@ public:
         return BitFlags(m_mask & rhs.m_mask);
     }
 
-    inline operator bool() const
+    inline operator bool() const // NOLINT
     {
         return m_mask != 0;
     }

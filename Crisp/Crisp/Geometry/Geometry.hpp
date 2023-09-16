@@ -31,14 +31,14 @@ public:
         std::vector<InterleavedVertexBuffer>&& interleavedVertexBuffers,
         const std::vector<glm::uvec3>& faces,
         const std::vector<TriangleMeshView>& meshViews = {},
-        const VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
     Geometry(Renderer& renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
 
     template <typename VertexType, typename IndexType>
     Geometry(Renderer& renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
-        : m_indexCount(static_cast<uint32_t>(faces.size() * IndexType::length()))
-        , m_vertexCount(static_cast<uint32_t>(vertices.size()))
+        : m_vertexCount(static_cast<uint32_t>(vertices.size()))
+        , m_indexCount(static_cast<uint32_t>(faces.size() * IndexType::length()))
         , m_instanceCount(1)
     {
         if (!vertices.empty())
@@ -117,7 +117,7 @@ public:
 
     VkIndexType getIndexType() const
     {
-        return VK_INDEX_TYPE_UINT32;
+        return m_indexType;
     }
 
     IndexedGeometryView createIndexedGeometryView() const;
@@ -138,6 +138,7 @@ private:
 
     // The geometry also owns the index buffer if we have indexed geometry.
     std::unique_ptr<VulkanBuffer> m_indexBuffer{nullptr};
+    VkIndexType m_indexType{VK_INDEX_TYPE_UINT32};
 
     uint32_t m_vertexCount{0};
     uint32_t m_indexCount{0};

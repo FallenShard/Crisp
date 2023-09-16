@@ -34,8 +34,6 @@ public:
     void run();
     void close();
 
-    void onResize(int width, int height);
-
     gui::Form* getForm() const;
     Window& getWindow();
     SceneContainer* getSceneContainer() const;
@@ -46,6 +44,8 @@ private:
     void updateFrameStatistics(double frameTime);
     void onMinimize();
     void onRestore();
+    void onResize(int width, int height);
+    void onMouseButtonRelease(const MouseEventArgs& args);
 
     void drawGui();
 
@@ -61,5 +61,6 @@ private:
     double m_avgFps{0.0};
 
     bool m_isMinimized{false};
+    bool m_isResizing{false};
 };
 } // namespace crisp

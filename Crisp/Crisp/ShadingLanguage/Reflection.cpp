@@ -311,7 +311,7 @@ namespace
         return VK_##enumEntry;
 
 #define CRISP_SPV_TRY(spvFunctionCall)                                                                                 \
-    if (spvFunctionCall != SPV_REFLECT_RESULT_SUCCESS)                                                                 \
+    if ((spvFunctionCall) != SPV_REFLECT_RESULT_SUCCESS)                                                               \
     {                                                                                                                  \
         return resultError("Error while calling {}", #spvFunctionCall);                                                \
     }

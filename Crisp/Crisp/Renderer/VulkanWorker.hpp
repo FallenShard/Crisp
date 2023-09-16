@@ -13,7 +13,13 @@ class VulkanWorker
 {
 public:
     VulkanWorker(VulkanDevice& device, const VulkanQueue& queue, uint32_t virtualFrameCount);
-    ~VulkanWorker();
+    ~VulkanWorker() = default;
+
+    VulkanWorker(const VulkanWorker&) = delete;
+    VulkanWorker& operator=(const VulkanWorker&) = delete;
+
+    VulkanWorker(VulkanWorker&&) noexcept = delete;
+    VulkanWorker& operator=(VulkanWorker&&) noexcept = delete;
 
     inline VulkanCommandBuffer* getCmdBuffer(uint32_t virtualFrameIndex) const
     {

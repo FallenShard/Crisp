@@ -1,4 +1,4 @@
-#include <Crisp/Mesh/Io/GltfLOader.hpp>
+#include <Crisp/Mesh/Io/GltfLoader.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
@@ -89,10 +89,10 @@ Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint
 template <typename T>
 //, size_t Size, typename Scalar>
 concept GlmVec = requires(T v) {
-                     {
-                         T::length()
-                         } -> std::same_as<glm::length_t>;
-                 };
+    {
+        T::length()
+    } -> std::same_as<glm::length_t>;
+};
 
 template <GlmVec DstType, GlmVec SrcType = DstType>
 Result<std::vector<DstType>> loadVertexBuffer(
@@ -122,44 +122,6 @@ Result<std::vector<DstType>> loadVertexBuffer(
     attributes.reserve(accessor.count);
 
     SrcType temp{};
-    for (size_t i = 0; i < accessor.count; ++i)
-    {
-        const size_t offset{bufferRangeStart + i * byteStride};
-        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
-        attributes.emplace_back(temp);
-    }
-
-    return attributes;
-}
-
-template <typename T>
-Result<std::vector<T>> loadVertexBuffer(
-    const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string& attrib)
-{
-    if (!primitive.attributes.contains(attrib))
-    {
-        return std::vector<T>{};
-    }
-
-    const auto& accessor = model.accessors.at(primitive.attributes.at(attrib));
-
-    const auto& bufferView = model.bufferViews.at(accessor.bufferView);
-    const auto& buffer = model.buffers.at(bufferView.buffer);
-
-    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
-    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
-    const size_t attributeByteSize{componentCount * componentByteSize};
-    CRISP_CHECK_EQ(attributeByteSize, sizeof(T));
-
-    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
-    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
-
-    std::vector<T> attributes;
-    attributes.reserve(accessor.count);
-
-    T temp{};
     for (size_t i = 0; i < accessor.count; ++i)
     {
         const size_t offset{bufferRangeStart + i * byteStride};

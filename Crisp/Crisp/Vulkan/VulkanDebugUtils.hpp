@@ -63,6 +63,12 @@ public:
         setObjectName(reinterpret_cast<uint64_t>(vulkanHandle), name, getDebugReportObjectType<T>()); // NOLINT
     }
 
+    template <VulkanHandle T>
+    void setObjectName(const T vulkanHandle, const std::string& name) const
+    {
+        setObjectName(reinterpret_cast<uint64_t>(vulkanHandle), name.c_str(), getDebugReportObjectType<T>()); // NOLINT
+    }
+
     template <VulkanWrapperType T>
     void setObjectName(const T& wrapperType, const char* name) const
     {

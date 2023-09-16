@@ -14,9 +14,9 @@ enum class MouseButton
 
 struct MouseEventArgs
 {
-    MouseButton button;
+    MouseButton button{MouseButton::Unknown};
     ModifierFlags modifiers;
-    double x;
-    double y;
+    double x{0.0};
+    double y{0.0};
 };
 } // namespace crisp

@@ -71,6 +71,11 @@ public:
         std::string tag);
     ~VulkanMemoryHeap();
 
+    VulkanMemoryHeap(const VulkanMemoryHeap&) = delete;
+    VulkanMemoryHeap& operator=(const VulkanMemoryHeap&) = delete;
+    VulkanMemoryHeap(VulkanMemoryHeap&&) noexcept = delete;
+    VulkanMemoryHeap& operator=(VulkanMemoryHeap&&) noexcept = delete;
+
     Result<Allocation> allocate(uint64_t size, uint64_t alignment);
     void free(const Allocation& allocation);
 

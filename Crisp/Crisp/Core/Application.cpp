@@ -50,6 +50,7 @@ Application::Application(const ApplicationEnvironment& environment)
         environment.getParameters().enableRayTracingExtension);
     logger->trace("Renderer created!");
 
+    m_window.mouseButtonReleased.subscribe<&Application::onMouseButtonRelease>(this);
     m_window.resized.subscribe<&Application::onResize>(this);
     m_window.minimized.subscribe<&Application::onMinimize>(this);
     m_window.restored.subscribe<&Application::onRestore>(this);
@@ -83,20 +84,20 @@ void Application::run()
 
         Window::pollEvents();
 
+        while (timeSinceLastUpdate > kTimePerFrame)
+        {
+            // m_sceneContainer->update(static_cast<float>(kTimePerFrame));
+            timeSinceLastUpdate -= kTimePerFrame;
+        }
+
         if (m_isMinimized)
         {
             continue;
         }
 
-        while (timeSinceLastUpdate > kTimePerFrame)
-        {
-            m_sceneContainer->update(static_cast<float>(kTimePerFrame));
-            timeSinceLastUpdate -= kTimePerFrame;
-        }
-
         gui::prepareImGuiFrame();
         drawGui();
-        m_sceneContainer->render();
+        // m_sceneContainer->render();
 
         gui::renderImGuiFrame(*m_renderer);
 
@@ -113,14 +114,12 @@ void Application::close()
 
 void Application::onResize(int width, int height)
 {
-    logger->info("New window dims: [{}, {}]", width, height);
     if (width == 0 || height == 0)
     {
         return;
     }
 
-    m_renderer->resize(width, height);
-    m_sceneContainer->resize(width, height);
+    m_isResizing = true;
 }
 
 SceneContainer* Application::getSceneContainer() const
@@ -173,6 +172,20 @@ void Application::onRestore()
     m_isMinimized = false;
 }
 
+void Application::onMouseButtonRelease(const MouseEventArgs&)
+{
+    if (m_isResizing)
+    {
+        if (const auto size = m_window.getSize(); size.x != 0 && size.y != 0)
+        {
+            m_renderer->resize(size.x, size.y);
+            m_sceneContainer->resize(size.x, size.y);
+        }
+
+        m_isResizing = false;
+    }
+}
+
 void Application::drawGui()
 {
     ImGui::Begin("Application Settings");
@@ -198,14 +211,11 @@ void Application::drawGui()
     drawMemoryLabel("Image Memory", metrics.imageMemoryUsed, metrics.imageMemorySize);
     drawMemoryLabel("Staging Memory", metrics.stagingMemoryUsed, metrics.stagingMemorySize);
 
-    gui::drawComboBox(
-        "Scene",
-        m_sceneContainer->getSceneName(),
-        SceneContainer::getSceneNames(),
-        [this](const std::string& selectedItem)
-        {
-            m_sceneContainer->onSceneSelected(selectedItem);
-        });
+    // gui::drawComboBox(
+    //     "Scene",
+    //     m_sceneContainer->getSceneName(),
+    //     SceneContainer::getSceneNames(),
+    //     [this](const std::string& selectedItem) { m_sceneContainer->onSceneSelected(selectedItem); });
 
     ImGui::End();
 }

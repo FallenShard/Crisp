@@ -19,7 +19,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
 {
     std::unordered_set<std::string> pendingExtensions;
 
-    logger->info("Platform-required Vulkan extensions ({}):", requiredExtensions.size());
+    logger->info("Identified {} required Vulkan extensions:", requiredExtensions.size());
     for (const auto* const extensionName : requiredExtensions)
     {
         logger->info("\t{}", extensionName);

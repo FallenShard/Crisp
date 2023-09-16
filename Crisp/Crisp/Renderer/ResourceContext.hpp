@@ -16,7 +16,7 @@ namespace crisp
 class ResourceContext
 {
 public:
-    ResourceContext(Renderer* renderer);
+    explicit ResourceContext(Renderer* renderer);
 
     template <typename T>
     UniformBuffer* createUniformBuffer(std::string id, const std::vector<T>& data, BufferUpdatePolicy updatePolicy)

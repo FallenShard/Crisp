@@ -449,111 +449,7 @@ void RenderGraph::compile(
 {
     determineAliasedResurces();
     createPhysicalResources(device, swapChainExtent, cmdBuffer);
-
-    m_physicalPasses.clear();
-    m_physicalPasses.reserve(m_passes.size());
-    for (const auto& pass : m_passes)
-    {
-        fmt::print("Building render pass: {}\n", pass.name);
-        auto& physicalPass = m_physicalPasses.emplace_back();
-
-        RenderPassBuilder builder{};
-        builder.setSubpassCount(1)
-            .configureSubpass(0, VK_PIPELINE_BIND_POINT_GRAPHICS)
-            .setAttachmentCount(static_cast<uint32_t>(
-                pass.colorAttachments.size() + (pass.depthStencilAttachment.has_value() ? 1 : 0)));
-
-        std::vector<VkAttachmentReference> colorAttachmentRefs{};
-        uint32_t attachmentIndex = 0;
-        RenderPassParameters renderPassParams{};
-        std::vector<VkClearValue> attachmentClearValues{};
-        for (const RenderGraphResourceHandle colorAttachment : pass.colorAttachments)
-        {
-            const auto& res{getResource(colorAttachment)};
-            const VkImageLayout initialLayout = res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                                                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                                                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            builder
-                .setAttachmentFormat(
-                    attachmentIndex,
-                    m_imageDescriptions[res.descriptionIndex].format,
-                    m_imageDescriptions[res.descriptionIndex].sampleCount)
-                .setAttachmentStencilOps(
-                    attachmentIndex, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-                .setAttachmentOps(
-                    attachmentIndex,
-                    res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE)
-                .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-                .addColorAttachmentRef(0, attachmentIndex);
-
-            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
-            rtInfo.usage = res.imageUsageFlags;
-            rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            rtInfo.buffered = false;
-
-            renderPassParams.renderTargetInfos.push_back(rtInfo);
-            renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
-            renderPassParams.attachmentMappings.push_back(
-                {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
-            ++attachmentIndex;
-        }
-
-        if (pass.depthStencilAttachment)
-        {
-            const auto& res{getResource(*pass.depthStencilAttachment)};
-            const VkImageLayout initialLayout = res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                                                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                                                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-            builder
-                .setAttachmentFormat(
-                    attachmentIndex,
-                    m_imageDescriptions[res.descriptionIndex].format,
-                    m_imageDescriptions[res.descriptionIndex].sampleCount)
-                .setAttachmentStencilOps(
-                    attachmentIndex, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-                .setAttachmentOps(
-                    attachmentIndex,
-                    res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE)
-                .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-                .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
-            rtInfo.usage = res.imageUsageFlags;
-            rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            rtInfo.buffered = false;
-
-            renderPassParams.renderTargetInfos.push_back(rtInfo);
-            renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
-            renderPassParams.attachmentMappings.push_back(
-                {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
-
-            ++attachmentIndex;
-        }
-
-        builder.addDependency(
-            VK_SUBPASS_EXTERNAL,
-            0,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-
-        renderPassParams.subpassCount = 1;
-        renderPassParams.renderArea = getRenderArea(pass, swapChainExtent);
-
-        auto [passHandle, vkAttachments] = builder.create(device.getHandle());
-        renderPassParams.attachmentDescriptions = std::move(vkAttachments);
-
-        physicalPass = std::make_unique<VulkanRenderPass>(
-            device, passHandle, std::move(renderPassParams), std::move(attachmentClearValues));
-
-        device.getDebugMarker().setObjectName(physicalPass->getHandle(), pass.name.c_str());
-    }
+    createPhysicalPasses(device, swapChainExtent);
 }
 
 void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
@@ -588,139 +484,6 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
     }
 }
 
-void RenderGraph::determineAliasedResurces()
-{
-    const auto timelines{calculateResourceTimelines()};
-    std::vector<bool> processed(m_resources.size(), false);
-    uint16_t currPhysBufferIdx{0};
-    uint16_t currPhysImageIdx{0};
-    for (auto&& [idx, resource] : enumerate(m_resources))
-    {
-        if (processed[idx])
-        {
-            continue;
-        }
-
-        processed[idx] = true;
-
-        const auto findResourcesToAlias = [&](const auto& descriptions, auto& physicalResource)
-        {
-            uint32_t lastReadPassIdx = timelines[idx].lastRead;
-            for (uint32_t j = static_cast<uint32_t>(idx) + 1; j < m_resources.size(); ++j)
-            {
-                if (lastReadPassIdx >= timelines[j].firstWrite)
-                {
-                    continue;
-                }
-                if (resource.type == m_resources[j].type)
-                {
-                    if (descriptions[resource.descriptionIndex].canAlias(descriptions[m_resources[j].descriptionIndex]))
-                    {
-                        lastReadPassIdx = timelines[j].lastRead;
-                        m_resources[j].physicalResourceIndex = resource.physicalResourceIndex;
-                        processed[j] = true;
-                        spdlog::info("Aliasing {} with {}", m_resources[idx].name, m_resources[j].name);
-                        physicalResource.aliasedResourceIndices.push_back(j);
-                    }
-                }
-            }
-        };
-
-        if (resource.type == ResourceType::Buffer)
-        {
-            resource.physicalResourceIndex = currPhysBufferIdx++;
-            auto& desc = m_physicalBuffers.emplace_back();
-            desc.descriptionIndex = resource.descriptionIndex;
-            desc.aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
-            findResourcesToAlias(m_bufferDescriptions, desc);
-        }
-        else
-        {
-            resource.physicalResourceIndex = currPhysImageIdx++;
-            auto& desc = m_physicalImages.emplace_back();
-            desc.descriptionIndex = resource.descriptionIndex;
-            desc.aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
-            findResourcesToAlias(m_imageDescriptions, desc);
-        }
-    }
-
-    spdlog::info("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
-}
-
-void RenderGraph::createPhysicalResources(
-    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer)
-{
-    const auto determineUsageFlags = [this](const std::vector<uint32_t>& imageResourceIndices) -> VkImageUsageFlags
-    {
-        VkImageUsageFlags flags{0};
-        for (uint32_t idx : imageResourceIndices)
-        {
-            flags = flags | m_resources[idx].imageUsageFlags;
-        }
-        return flags;
-    };
-
-    const auto determineCreateFlags = [this](const std::vector<uint32_t>& imageResourceIndices) -> VkImageUsageFlags
-    {
-        VkImageCreateFlags flags{0};
-        for (uint32_t idx : imageResourceIndices)
-        {
-            flags = flags | m_imageDescriptions[m_resources[idx].descriptionIndex].createFlags;
-        }
-        return flags;
-    };
-
-    const auto determineInitialLayout = [this](const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags)
-        -> std::tuple<VkImageLayout, VkPipelineStageFlagBits>
-    {
-        if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT)
-        {
-            return {VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
-        }
-        if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT)
-        {
-            return {VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
-        }
-
-        if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format))
-        {
-            return {VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT};
-        }
-
-        return {VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    };
-
-    for (auto& res : m_physicalImages)
-    {
-        const auto& desc = m_imageDescriptions[res.descriptionIndex];
-        const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
-
-        const uint32_t layerMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
-        res.image = std::make_unique<VulkanImage>(
-            device,
-            calculateImageExtent(desc, swapChainExtent),
-            desc.layerCount * layerMultiplier,
-            desc.mipLevelCount,
-            desc.format,
-            usageFlags,
-            determineCreateFlags(res.aliasedResourceIndices));
-
-        const auto [initialLayout, pipelineStage] = determineInitialLayout(res, usageFlags);
-        res.image->transitionLayout(cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, pipelineStage);
-        device.getDebugMarker().setObjectName(
-            res.image->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
-    }
-
-    for (auto& res : m_physicalBuffers)
-    {
-        const auto& desc = m_bufferDescriptions[res.descriptionIndex];
-
-        const uint32_t sizeMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
-        res.buffer = std::make_unique<VulkanBuffer>(
-            device, desc.size * sizeMultiplier, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    }
-}
-
 RenderGraphBlackboard& RenderGraph::getBlackboard()
 {
     return m_blackboard;
@@ -731,9 +494,39 @@ const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) cons
     return *m_physicalPasses[m_passMap.at(name).id];
 }
 
-void RenderGraph::resize(const uint32_t width, const uint32_t height) const // NOLINT
+void RenderGraph::resize(
+    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) // NOLINT
 {
-    spdlog::critical("Not yet implemented! New size: {} x {}", width, height);
+    for (auto& image : m_physicalImages)
+    {
+        const auto& desc = m_imageDescriptions.at(image.descriptionIndex);
+        if (desc.sizePolicy == SizePolicy::Absolute)
+        {
+            continue;
+        }
+
+        const auto usageFlags = determineUsageFlags(image.aliasedResourceIndices);
+        const uint32_t layerMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
+        image.image = std::make_unique<VulkanImage>(
+            device,
+            calculateImageExtent(desc, swapChainExtent),
+            desc.layerCount * layerMultiplier,
+            desc.mipLevelCount,
+            desc.format,
+            usageFlags,
+            determineCreateFlags(image.aliasedResourceIndices));
+
+        const auto [initialLayout, pipelineStage] = determineInitialLayout(image, usageFlags);
+        image.image->transitionLayout(cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, pipelineStage);
+        device.getDebugMarker().setObjectName(
+            image.image->getHandle(), m_resources[image.aliasedResourceIndices[0]].name.c_str());
+    }
+
+    createPhysicalPasses(device, swapChainExtent);
+    // for (auto& pass : m_physicalPasses)
+    // {
+    //     pass->recreate(device, swapChainExtent);
+    // }
 }
 
 std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines()
@@ -831,4 +624,248 @@ const RenderGraphImageDescription& RenderGraph::getImageDescription(const Render
 {
     return m_imageDescriptions[getResource(handle).physicalResourceIndex];
 }
+
+VkImageUsageFlags RenderGraph::determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const
+{
+    VkImageUsageFlags flags{0};
+    for (uint32_t idx : imageResourceIndices)
+    {
+        flags = flags | m_resources[idx].imageUsageFlags;
+    }
+    return flags;
+}
+
+VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const
+{
+    VkImageCreateFlags flags{0};
+    for (uint32_t idx : imageResourceIndices)
+    {
+        flags = flags | m_imageDescriptions[m_resources[idx].descriptionIndex].createFlags;
+    }
+    return flags;
+};
+
+std::tuple<VkImageLayout, VkPipelineStageFlagBits> RenderGraph::determineInitialLayout(
+    const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags)
+{
+    if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT)
+    {
+        return {VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
+    }
+    if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT)
+    {
+        return {VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+    }
+
+    if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format))
+    {
+        return {VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT};
+    }
+
+    return {VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+};
+
+void RenderGraph::determineAliasedResurces()
+{
+    const auto timelines{calculateResourceTimelines()};
+    std::vector<bool> processed(m_resources.size(), false);
+    uint16_t currPhysBufferIdx{0};
+    uint16_t currPhysImageIdx{0};
+    for (auto&& [idx, resource] : enumerate(m_resources))
+    {
+        if (processed[idx])
+        {
+            continue;
+        }
+
+        processed[idx] = true;
+
+        const auto findResourcesToAlias = [&](const auto& descriptions, auto& physicalResource)
+        {
+            uint32_t lastReadPassIdx = timelines[idx].lastRead;
+            for (uint32_t j = static_cast<uint32_t>(idx) + 1; j < m_resources.size(); ++j)
+            {
+                if (lastReadPassIdx >= timelines[j].firstWrite)
+                {
+                    continue;
+                }
+                if (resource.type == m_resources[j].type)
+                {
+                    if (descriptions[resource.descriptionIndex].canAlias(descriptions[m_resources[j].descriptionIndex]))
+                    {
+                        lastReadPassIdx = timelines[j].lastRead;
+                        m_resources[j].physicalResourceIndex = resource.physicalResourceIndex;
+                        processed[j] = true;
+                        spdlog::info("Aliasing {} with {}", m_resources[idx].name, m_resources[j].name);
+                        physicalResource.aliasedResourceIndices.push_back(j);
+                    }
+                }
+            }
+        };
+
+        if (resource.type == ResourceType::Buffer)
+        {
+            resource.physicalResourceIndex = currPhysBufferIdx++;
+            auto& desc = m_physicalBuffers.emplace_back();
+            desc.descriptionIndex = resource.descriptionIndex;
+            desc.aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
+            findResourcesToAlias(m_bufferDescriptions, desc);
+        }
+        else
+        {
+            resource.physicalResourceIndex = currPhysImageIdx++;
+            auto& desc = m_physicalImages.emplace_back();
+            desc.descriptionIndex = resource.descriptionIndex;
+            desc.aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
+            findResourcesToAlias(m_imageDescriptions, desc);
+        }
+    }
+
+    spdlog::info("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
+}
+
+void RenderGraph::createPhysicalResources(
+    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer)
+{
+    for (auto& res : m_physicalImages)
+    {
+        const auto& desc = m_imageDescriptions[res.descriptionIndex];
+        const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
+
+        const uint32_t layerMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
+        res.image = std::make_unique<VulkanImage>(
+            device,
+            calculateImageExtent(desc, swapChainExtent),
+            desc.layerCount * layerMultiplier,
+            desc.mipLevelCount,
+            desc.format,
+            usageFlags,
+            determineCreateFlags(res.aliasedResourceIndices));
+
+        const auto [initialLayout, pipelineStage] = determineInitialLayout(res, usageFlags);
+        res.image->transitionLayout(cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, pipelineStage);
+        device.getDebugMarker().setObjectName(
+            res.image->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
+    }
+
+    for (auto& res : m_physicalBuffers)
+    {
+        const auto& desc = m_bufferDescriptions[res.descriptionIndex];
+
+        const uint32_t sizeMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
+        res.buffer = std::make_unique<VulkanBuffer>(
+            device, desc.size * sizeMultiplier, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    }
+}
+
+void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent)
+{
+    m_physicalPasses.clear();
+    m_physicalPasses.reserve(m_passes.size());
+    for (const auto& pass : m_passes)
+    {
+        fmt::print("Building render pass: {}\n", pass.name);
+        auto& physicalPass = m_physicalPasses.emplace_back();
+
+        RenderPassBuilder builder{};
+        builder.setSubpassCount(1)
+            .configureSubpass(0, VK_PIPELINE_BIND_POINT_GRAPHICS)
+            .setAttachmentCount(static_cast<uint32_t>(
+                pass.colorAttachments.size() + (pass.depthStencilAttachment.has_value() ? 1 : 0)));
+
+        std::vector<VkAttachmentReference> colorAttachmentRefs{};
+        uint32_t attachmentIndex = 0;
+        RenderPassParameters renderPassParams{};
+        std::vector<VkClearValue> attachmentClearValues{};
+        for (const RenderGraphResourceHandle colorAttachment : pass.colorAttachments)
+        {
+            const auto& res{getResource(colorAttachment)};
+            const VkImageLayout initialLayout =
+                res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            builder
+                .setAttachmentFormat(
+                    attachmentIndex,
+                    m_imageDescriptions[res.descriptionIndex].format,
+                    m_imageDescriptions[res.descriptionIndex].sampleCount)
+                .setAttachmentStencilOps(
+                    attachmentIndex, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+                .setAttachmentOps(
+                    attachmentIndex,
+                    res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE)
+                .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+                .addColorAttachmentRef(0, attachmentIndex);
+
+            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
+            rtInfo.usage = res.imageUsageFlags;
+            rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            rtInfo.buffered = false;
+
+            renderPassParams.renderTargetInfos.push_back(rtInfo);
+            renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
+            renderPassParams.attachmentMappings.push_back(
+                {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
+            attachmentClearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
+            ++attachmentIndex;
+        }
+
+        if (pass.depthStencilAttachment)
+        {
+            const auto& res{getResource(*pass.depthStencilAttachment)};
+            const VkImageLayout initialLayout =
+                res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+            builder
+                .setAttachmentFormat(
+                    attachmentIndex,
+                    m_imageDescriptions[res.descriptionIndex].format,
+                    m_imageDescriptions[res.descriptionIndex].sampleCount)
+                .setAttachmentStencilOps(
+                    attachmentIndex, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+                .setAttachmentOps(
+                    attachmentIndex,
+                    res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE)
+                .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+                .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
+            rtInfo.usage = res.imageUsageFlags;
+            rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            rtInfo.buffered = false;
+
+            renderPassParams.renderTargetInfos.push_back(rtInfo);
+            renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
+            renderPassParams.attachmentMappings.push_back(
+                {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
+            attachmentClearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
+
+            ++attachmentIndex;
+        }
+
+        builder.addDependency(
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+        renderPassParams.subpassCount = 1;
+        renderPassParams.renderArea = getRenderArea(pass, swapChainExtent);
+
+        auto [passHandle, vkAttachments] = builder.create(device.getHandle());
+        renderPassParams.attachmentDescriptions = std::move(vkAttachments);
+
+        physicalPass = std::make_unique<VulkanRenderPass>(
+            device, passHandle, std::move(renderPassParams), std::move(attachmentClearValues));
+
+        device.getDebugMarker().setObjectName(physicalPass->getHandle(), pass.name.c_str());
+    }
+}
+
 } // namespace crisp::rg

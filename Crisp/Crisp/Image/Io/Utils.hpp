@@ -20,6 +20,6 @@ std::vector<Image> loadCubeMapFacesFromHCrossImage(
 Result<Image> loadImage(
     const std::filesystem::path& filePath, int requestedChannels = 4, FlipOnLoad flip = FlipOnLoad::None);
 Result<Image> loadImage(
-    const std::span<const uint8_t> imageFileContent, int requestedChannels = 4, FlipOnLoad flip = FlipOnLoad::None);
+    std::span<const uint8_t> imageFileContent, int requestedChannels = 4, FlipOnLoad flip = FlipOnLoad::None);
 
 } // namespace crisp

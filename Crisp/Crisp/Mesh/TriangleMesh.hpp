@@ -21,11 +21,6 @@ public:
         std::vector<glm::uvec3> faces,
         std::vector<VertexAttributeDescriptor> vertexAttributes);
 
-    TriangleMesh(const TriangleMesh& mesh) = delete;
-    TriangleMesh(TriangleMesh&& mesh) noexcept = default;
-    TriangleMesh& operator=(const TriangleMesh& mesh) = delete;
-    TriangleMesh& operator=(TriangleMesh&& mesh) noexcept = default;
-
     uint32_t getFaceCount() const;
     uint32_t getIndexCount() const;
     uint32_t getVertexCount() const;

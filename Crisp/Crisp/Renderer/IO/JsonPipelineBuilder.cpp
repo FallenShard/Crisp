@@ -170,17 +170,17 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
     if (json.contains("viewports"))
     {
         CRISP_CHECK(json["viewports"].is_array());
-        for (uint32_t i = 0; i < json["viewports"].size(); ++i)
+        for (const auto& viewport : json["viewports"])
         {
-            if (json["viewports"][i] == "pass")
+            if (viewport == "pass")
             {
                 builder.setViewport(renderPass.createViewport());
             }
         }
         CRISP_CHECK(json["scissors"].is_array());
-        for (uint32_t i = 0; i < json["scissors"].size(); ++i)
+        for (const auto& scissor : json["scissors"])
         {
-            if (json["scissors"][i] == "pass")
+            if (scissor == "pass")
             {
                 builder.setScissor(renderPass.createScissor());
             }
@@ -259,18 +259,15 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
         {
             return VK_BLEND_FACTOR_ONE;
         }
-        else if (json == "oneMinusSrcAlpha")
+        if (json == "oneMinusSrcAlpha")
         {
             return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         }
-        else if (json == "zero")
+        if (json == "zero")
         {
             return VK_BLEND_FACTOR_ZERO;
         }
-        else
-        {
-            return VK_BLEND_FACTOR_MAX_ENUM;
-        }
+        return VK_BLEND_FACTOR_MAX_ENUM;
     };
 
     if (json.contains("enabled"))
@@ -319,7 +316,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
 
 [[nodiscard]] Result<> readDescriptorSetMetadata(const nlohmann::json& json, PipelineLayoutBuilder& layoutBuilder)
 {
-    for (uint32_t i = 0; i < json.size(); ++i)
+    for (int32_t i = 0; i < static_cast<int32_t>(json.size()); ++i)
     {
         CRISP_CHECK(json[i].is_object());
         CRISP_CHECK(hasField<JsonType::Boolean>(json[i], "buffered"));
@@ -327,10 +324,10 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
 
         if (hasField<JsonType::Array>(json[i], "dynamicBuffers"))
         {
-            for (uint32_t j = 0; j < json[i]["dynamicBuffers"].size(); ++j)
+            for (int32_t j = 0; j < static_cast<int32_t>(json[i]["dynamicBuffers"].size()); ++j)
             {
                 CRISP_CHECK(json[i]["dynamicBuffers"][j].is_number_unsigned());
-                layoutBuilder.setDescriptorDynamic(i, json[i]["dynamicBuffers"][j].get<uint32_t>(), true);
+                layoutBuilder.setDescriptorDynamic(i, json[i]["dynamicBuffers"][j].get<int32_t>(), true);
             }
         }
     }
@@ -345,11 +342,14 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJsonPath(
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex)
 {
-    return createPipelineFromJson(
-        loadJsonFromFile(renderer.getResourcesPath() / "Pipelines" / path).unwrap(),
-        renderer,
-        renderPass,
-        subpassIndex);
+    const auto absolutePath{renderer.getResourcesPath() / "Pipelines" / path};
+    auto result = createPipelineFromJson(loadJsonFromFile(absolutePath).unwrap(), renderer, renderPass, subpassIndex);
+    if (result)
+    {
+        renderer.getDevice().getDebugMarker().setObjectName(
+            (*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));
+    }
+    return result;
 }
 
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
@@ -359,12 +359,12 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const uint32_t subpassIndex)
 {
     CRISP_CHECK(pipelineJson.is_object());
-    PipelineBuilder builder{};
 
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
     const auto shaderFiles{readShaderFiles(pipelineJson["shaders"]).unwrap()};
 
     sl::ShaderUniformInputMetadata shaderMetadata{};
+    PipelineBuilder builder{};
     for (const auto& [stageFlag, fileStem] : shaderFiles)
     {
         renderer.loadShaderModule(fileStem);
@@ -435,8 +435,8 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder).unwrap();
     }
 
-    auto layout = layoutBuilder.create(renderer.getDevice());
-    return builder.create(renderer.getDevice(), std::move(layout), renderPass.getHandle(), subpassIndex);
+    return builder.create(
+        renderer.getDevice(), layoutBuilder.create(renderer.getDevice()), renderPass.getHandle(), subpassIndex);
 }
 
 } // namespace crisp

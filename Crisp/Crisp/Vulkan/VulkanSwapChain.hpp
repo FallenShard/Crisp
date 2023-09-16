@@ -43,7 +43,7 @@ public:
 
 private:
     void createSwapChain(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
-    void createImageViews(VkDevice deviceHandle);
+    void createImageViews(const VulkanDevice& device);
 
     static Result<VkSurfaceFormatKHR> selectSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat);

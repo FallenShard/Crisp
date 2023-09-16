@@ -13,8 +13,14 @@ namespace crisp
 class ShaderCache
 {
 public:
-    ShaderCache(VkDevice deviceHandle);
+    explicit ShaderCache(VkDevice deviceHandle);
     ~ShaderCache();
+
+    ShaderCache(const ShaderCache&) = delete;
+    ShaderCache& operator=(const ShaderCache&) = delete;
+
+    ShaderCache(ShaderCache&&) noexcept = delete;
+    ShaderCache& operator=(ShaderCache&&) noexcept = delete;
 
     inline VkShaderModule getShaderModuleHandle(const std::string& key) const
     {
@@ -26,7 +32,7 @@ public:
 private:
     struct ShaderModule
     {
-        VkShaderModule handle;
+        VkShaderModule handle{VK_NULL_HANDLE};
         std::filesystem::file_time_type lastModifiedTimestamp;
     };
 

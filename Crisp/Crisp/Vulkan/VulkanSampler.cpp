@@ -33,21 +33,27 @@ VulkanSampler::VulkanSampler(
 std::unique_ptr<VulkanSampler> createLinearClampSampler(
     const VulkanDevice& device, const float anisotropy, const float maxLod)
 {
-    return std::make_unique<VulkanSampler>(
+    auto sampler = std::make_unique<VulkanSampler>(
         device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, anisotropy, maxLod);
+    device.getDebugMarker().setObjectName(*sampler, "Linear Clamp Sampler");
+    return sampler;
 }
 
 std::unique_ptr<VulkanSampler> createNearestClampSampler(const VulkanDevice& device)
 {
-    return std::make_unique<VulkanSampler>(
+    auto sampler = std::make_unique<VulkanSampler>(
         device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    device.getDebugMarker().setObjectName(*sampler, "Nearest Clamp Sampler");
+    return sampler;
 }
 
 std::unique_ptr<VulkanSampler> createLinearRepeatSampler(
     const VulkanDevice& device, const float anisotropy, const float maxLod)
 {
-    return std::make_unique<VulkanSampler>(
+    auto sampler = std::make_unique<VulkanSampler>(
         device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, anisotropy, maxLod);
+    device.getDebugMarker().setObjectName(*sampler, "Linear Repeat Sampler");
+    return sampler;
 }
 
 } // namespace crisp

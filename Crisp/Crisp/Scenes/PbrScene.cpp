@@ -22,7 +22,6 @@ namespace
 const auto logger = createLoggerMt("PbrScene");
 
 constexpr const char* kForwardLightingPass = "forwardPass";
-constexpr const char* kOutputPass = kForwardLightingPass;
 
 constexpr uint32_t kShadowMapSize = 1024;
 constexpr uint32_t kCascadeCount = 4;
@@ -283,10 +282,27 @@ void PbrScene::resize(int width, int height)
 {
     m_cameraController->onViewportResized(width, height);
 
-    m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    // m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(),
+    // m_renderer->getSwapChainExtent());
 
-    m_rg->resize(width, height);
-    // TODO(nemanjab): Set new scene image views.
+    // m_renderGraph->resize(width, height);
+
+    m_renderer->enqueueResourceUpdate(
+        [this](const VkCommandBuffer cmdBuffer)
+        {
+            m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
+            updateMaterialsWithRenderGraphResources();
+
+            const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
+            m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+            for (auto& sv : m_sceneImageViews)
+            {
+                sv = m_rg->createViewFromResource(data.hdrImage);
+            }
+
+            m_renderer->setSceneImageViews(m_sceneImageViews);
+        });
+    m_renderer->flushResourceUpdates(true);
 }
 
 void PbrScene::update(float dt)
@@ -524,9 +540,32 @@ void PbrScene::setupInput()
             switch (key) // NOLINT
             {
             case Key::F5:
+            {
                 m_resourceContext->recreatePipelines();
                 break;
             }
+            default:
+            {
+            }
+            }
         }));
+}
+
+void PbrScene::updateMaterialsWithRenderGraphResources()
+{
+    const auto& imageCache = m_resourceContext->imageCache;
+    for (auto&& [name, node] : m_renderNodes)
+    {
+        auto& material = node->pass(kForwardLightingPass).material;
+        for (uint32_t i = 0; i < kCascadeCount; ++i)
+        {
+            for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k)
+            {
+                const auto& shadowMapView{m_rg->getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
+                material->writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
+            }
+        }
+    }
+    //*sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg
 }
 } // namespace crisp

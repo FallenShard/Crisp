@@ -6,6 +6,8 @@ namespace crisp::test
 {
 namespace
 {
+using ::testing::Each;
+
 class VulkanSwapChainTest : public VulkanTestWithSurface
 {
 protected:
@@ -21,8 +23,20 @@ TEST_F(VulkanSwapChainTest, Constructor)
     EXPECT_THAT(swapChain, HandleIsValid());
 
     // Self-move assign
-    swapChain = std::move(swapChain); // NOLINT
-    EXPECT_THAT(swapChain, HandleIsValid());
+    const auto anotherSwapChain = std::move(swapChain);
+    EXPECT_THAT(anotherSwapChain, HandleIsValid());
+}
+
+TEST_F(VulkanSwapChainTest, MultipleSwapChainsCanExist)
+{
+    std::vector<VulkanSwapChain> swapChains;
+    swapChains.reserve(5);
+    for (uint32_t i = 0; i < swapChains.size(); ++i)
+    {
+        swapChains.push_back(createSwapChain());
+    }
+
+    EXPECT_THAT(swapChains, Each(HandleIsValid()));
 }
 
 TEST_F(VulkanSwapChainTest, Bounds)

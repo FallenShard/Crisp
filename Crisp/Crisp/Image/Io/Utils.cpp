@@ -63,6 +63,7 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
     stbi_set_flip_vertically_on_load(flip == FlipOnLoad::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
+
     void* dataPtr = nullptr;
     int32_t width = 0;
     int32_t height = 0;

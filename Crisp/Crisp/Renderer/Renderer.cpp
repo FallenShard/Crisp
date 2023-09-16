@@ -27,29 +27,31 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
         {0.0, 0.0f, 0.0f, 1.0f}
     };
 
-    return RenderPassBuilder()
-        .setAllocateAttachmentViews(false)
+    auto renderPass =
+        RenderPassBuilder()
+            .setAllocateAttachmentViews(false)
 
-        .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
-        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+            .setAttachmentCount(1)
+            .setAttachmentMapping(0, 0)
+            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 
-        .setNumSubpasses(1)
-        .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-        .addDependency(
-            VK_SUBPASS_EXTERNAL,
-            0,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            0,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, swapChain.getExtent(), std::move(renderTargets));
+            .setNumSubpasses(1)
+            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            .addDependency(
+                VK_SUBPASS_EXTERNAL,
+                0,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                0,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+            .create(device, swapChain.getExtent(), renderTargets);
+    device.getDebugMarker().setObjectName(*renderPass, "Default Render Pass");
+    return renderPass;
 }
 
 std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer)
 {
-    // create vertex buffer
     const std::vector<glm::vec2> vertices = {
         {-1.0f, -1.0f},
         {+3.0f, -1.0f},
@@ -99,9 +101,10 @@ Renderer::Renderer(
     m_defaultScissor = m_swapChain->getScissorRect();
 
     // Create frame resources, such as command buffer, fence and semaphores
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
+    m_virtualFrames.reserve(RendererConfig::VirtualFrameCount);
+    for (int32_t i = 0; i < static_cast<int32_t>(RendererConfig::VirtualFrameCount); ++i)
     {
-        m_virtualFrames.emplace_back(*m_device);
+        m_virtualFrames.emplace_back(*m_device, i);
     }
 
     m_shaderCache = std::make_unique<ShaderCache>(m_device->getHandle());
@@ -227,17 +230,17 @@ void Renderer::resize(int /*width*/, int /*height*/)
 
 void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
 {
-    m_resourceUpdates.emplace_back(resourceUpdate);
+    m_resourceUpdates.emplace_back(std::move(resourceUpdate));
 }
 
 void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
 {
-    m_defaultPassDrawCommands.emplace_back(drawAction);
+    m_defaultPassDrawCommands.emplace_back(std::move(drawAction));
 }
 
 void Renderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
 {
-    m_drawCommands.emplace_back(drawAction);
+    m_drawCommands.emplace_back(std::move(drawAction));
 }
 
 void Renderer::flushResourceUpdates(bool waitOnAllQueues)
@@ -497,10 +500,11 @@ void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass)
 
 void Renderer::loadShaders(const std::filesystem::path& directoryPath)
 {
-    auto files = enumerateFiles(directoryPath, "spv");
-    for (auto& file : files)
+    const auto files = enumerateFiles(directoryPath, "spv");
+    for (const auto& file : files)
     {
-        loadSpirvShaderModule(directoryPath / file);
+        const auto shaderModule = loadSpirvShaderModule(directoryPath / file);
+        m_device->getDebugMarker().setObjectName(shaderModule, file);
     }
 
     logger->info("Loaded all {} shaders", files.size());

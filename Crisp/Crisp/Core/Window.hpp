@@ -146,6 +146,12 @@ public:
         window.enableEvents(EventType::AllEvents);
     }
 
+    WindowEventGuard(const WindowEventGuard&) = delete;
+    WindowEventGuard& operator=(const WindowEventGuard&) = delete;
+
+    WindowEventGuard(WindowEventGuard&&) = delete;
+    WindowEventGuard& operator=(WindowEventGuard&&) = delete;
+
 private:
     Window& window;
 };

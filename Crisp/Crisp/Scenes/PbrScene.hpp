@@ -35,6 +35,8 @@ private:
 
     void setupInput();
 
+    void updateMaterialsWithRenderGraphResources();
+
     std::unique_ptr<rg::RenderGraph> m_rg;
     std::vector<std::unique_ptr<VulkanImageView>> m_sceneImageViews;
 

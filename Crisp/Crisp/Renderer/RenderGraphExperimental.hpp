@@ -136,15 +136,11 @@ public:
 
     void execute(VkCommandBuffer cmdBuffer);
 
-    void determineAliasedResurces();
-
-    void createPhysicalResources(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
-
     RenderGraphBlackboard& getBlackboard();
 
     const VulkanRenderPass& getRenderPass(const std::string& name) const;
 
-    void resize(uint32_t width, uint32_t height) const;
+    void resize(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
 
 private:
     struct ResourceTimeline
@@ -163,6 +159,15 @@ private:
     RenderGraphResource& getResource(RenderGraphResourceHandle handle);
     const RenderGraphResource& getResource(RenderGraphResourceHandle handle) const;
     const RenderGraphImageDescription& getImageDescription(RenderGraphResourceHandle handle);
+
+    VkImageUsageFlags determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const;
+    VkImageCreateFlags determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const;
+    std::tuple<VkImageLayout, VkPipelineStageFlagBits> determineInitialLayout(
+        const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags);
+
+    void determineAliasedResurces();
+    void createPhysicalResources(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
+    void createPhysicalPasses(const VulkanDevice& device, VkExtent2D swapChainExtent);
 
     // The list of resources used by the render graph.
     std::vector<RenderGraphResource> m_resources;

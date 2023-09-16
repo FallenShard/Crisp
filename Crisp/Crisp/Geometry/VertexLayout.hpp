@@ -16,8 +16,8 @@ struct VertexLayout
 
     bool operator==(const VertexLayout& rhs) const;
     bool isSubsetOf(const VertexLayout& rhs) const;
-};
 
-VertexLayout createLayoutFromDescription(const VertexLayoutDescription& vertexLayoutDescription);
+    static VertexLayout create(const VertexLayoutDescription& vertexLayoutDescription);
+};
 
 } // namespace crisp

@@ -19,7 +19,9 @@ namespace crisp
 {
 namespace
 {
-std::vector<std::string> sceneNames = {
+const auto logger = createLoggerSt("SceneContainer");
+
+const std::vector<std::string> kSceneNames = {
     "ambient-occlusion",
     "fluid-simulation",
     "shadow-mapping",
@@ -36,53 +38,76 @@ std::vector<std::string> sceneNames = {
 template <typename... Args>
 std::unique_ptr<Scene> createScene(const std::string& name, Args&&... args)
 {
-    if (name == sceneNames[0])
-        return std::make_unique<AmbientOcclusionScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[1])
-        return std::make_unique<FluidSimulationScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[2])
-        return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[3])
-        return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[4])
-        return std::make_unique<PbrScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[5])
-        return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[6])
-        return std::make_unique<NormalMappingScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[7])
-        return std::make_unique<VulkanRayTracingScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[8])
-        return std::make_unique<OceanScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[9])
-        return std::make_unique<GltfViewerScene>(std::forward<Args>(args)...);
-    else if (name == sceneNames[10])
-        return std::make_unique<AtmosphereScene>(std::forward<Args>(args)...);
-    else
+    logger->info("Creating Scene: {}", name);
+    if (name == kSceneNames[0])
     {
-        spdlog::warn("Scene with the name {} is invalid/disabled", name);
-        return std::make_unique<TestScene>(std::forward<Args>(args)...);
+        return std::make_unique<AmbientOcclusionScene>(std::forward<Args>(args)...);
     }
+    if (name == kSceneNames[1])
+    {
+        return std::make_unique<FluidSimulationScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[2])
+    {
+        return std::make_unique<ShadowMappingScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[3])
+    {
+        return std::make_unique<RayTracerScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[4])
+    {
+        return std::make_unique<PbrScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[5])
+    {
+        return std::make_unique<ClusteredLightingScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[6])
+    {
+        return std::make_unique<NormalMappingScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[7])
+    {
+        return std::make_unique<VulkanRayTracingScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[8])
+    {
+        return std::make_unique<OceanScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[9])
+    {
+        return std::make_unique<GltfViewerScene>(std::forward<Args>(args)...);
+    }
+    if (name == kSceneNames[10])
+    {
+        return std::make_unique<AtmosphereScene>(std::forward<Args>(args)...);
+    }
+
+    spdlog::warn("Scene with the name {} is invalid/disabled", name);
+    return std::make_unique<TestScene>(std::forward<Args>(args)...);
 }
 } // namespace
 
 SceneContainer::SceneContainer(Renderer* renderer, Window* window, const std::string& sceneName)
-    : m_renderer(renderer)
+    : m_sceneName(sceneName)
+    , m_renderer(renderer)
     , m_window(window)
-    , m_sceneName(sceneName)
 {
     m_scene = createScene(sceneName, m_renderer, m_window);
 }
 
 const std::vector<std::string>& SceneContainer::getSceneNames()
 {
-    return sceneNames;
+    return kSceneNames;
 }
 
 void SceneContainer::update(float dt)
 {
     if (m_scene)
+    {
         m_scene->update(dt);
+    }
 }
 
 void SceneContainer::render() const
@@ -111,6 +136,8 @@ const std::string& SceneContainer::getSceneName() const
 void SceneContainer::resize(int width, int height)
 {
     if (m_scene)
+    {
         m_scene->resize(width, height);
+    }
 }
 } // namespace crisp

@@ -2,12 +2,19 @@
 
 namespace crisp
 {
-RendererFrame::RendererFrame(const VulkanDevice& device)
+RendererFrame::RendererFrame(const VulkanDevice& device, const int32_t logicalIndex)
     : m_completionFence(device.createFence(0))
     , m_imageAvailableSemaphore(device.createSemaphore())
     , m_renderFinishedSemaphore(device.createSemaphore())
     , m_deviceHandle(device.getHandle())
+    , m_logicalIndex(logicalIndex)
 {
+    device.getDebugMarker().setObjectName(
+        m_completionFence, fmt::format("[Frame {}] Frame Completion Fence", m_logicalIndex));
+    device.getDebugMarker().setObjectName(
+        m_imageAvailableSemaphore, fmt::format("[Frame {}] Image Available Sem", m_logicalIndex));
+    device.getDebugMarker().setObjectName(
+        m_renderFinishedSemaphore, fmt::format("[Frame {}] Render Finished Sem", m_logicalIndex));
 }
 
 RendererFrame::~RendererFrame()
@@ -32,6 +39,7 @@ RendererFrame::RendererFrame(RendererFrame&& other) noexcept
     , m_renderFinishedSemaphore(std::exchange(other.m_renderFinishedSemaphore, VK_NULL_HANDLE))
     , m_status(other.m_status)
     , m_deviceHandle(other.m_deviceHandle)
+    , m_logicalIndex(other.m_logicalIndex)
     , m_submissions(std::move(other.m_submissions))
 {
 }
@@ -47,6 +55,7 @@ RendererFrame& RendererFrame::operator=(RendererFrame&& other) noexcept
     m_renderFinishedSemaphore = std::exchange(other.m_renderFinishedSemaphore, VK_NULL_HANDLE);
     m_status = other.m_status;
     m_deviceHandle = other.m_deviceHandle;
+    m_logicalIndex = other.m_logicalIndex;
     m_submissions = std::move(other.m_submissions);
     return *this;
 }

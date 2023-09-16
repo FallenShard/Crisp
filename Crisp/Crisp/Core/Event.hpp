@@ -7,9 +7,9 @@
 #include <variant>
 #include <vector>
 
-#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/Delegate.hpp>
+#include <Crisp/Core/HashMap.hpp>
 
 namespace crisp
 {
@@ -70,11 +70,7 @@ public:
     {
         ConnectionToken token = m_tokenCounter++;
         m_connections.emplace_back(token, std::forward<FuncType>(func));
-        return ConnectionHandler(
-            [this, token]
-            {
-                unsubscribe(token);
-            });
+        return ConnectionHandler([this, token] { unsubscribe(token); });
     }
 
     void operator+=(Connection connection)
@@ -109,9 +105,13 @@ public:
         while (it != m_delegates.end())
         {
             if (it->isFromObject(obj))
+            {
                 it = m_delegates.erase(it);
+            }
             else
+            {
                 ++it;
+            }
         }
 
         m_connections.erase(
@@ -125,9 +125,13 @@ public:
                         {
                             using T = std::decay_t<decltype(arg)>;
                             if constexpr (std::is_same_v<T, void*>)
+                            {
                                 return arg == obj;
+                            }
                             else
+                            {
                                 return false;
+                            }
                         },
                         conn.key);
                 }),
@@ -140,20 +144,21 @@ public:
             std::remove_if(
                 m_connections.begin(),
                 m_connections.end(),
-                [&connectionKey](const Connection& conn)
-                {
-                    return conn.key == connectionKey;
-                }),
+                [&connectionKey](const Connection& conn) { return conn.key == connectionKey; }),
             m_connections.end());
     }
 
     void operator()(const ParamTypes&... args) const
     {
         for (auto& delegate : m_delegates)
+        {
             delegate(args...);
+        }
 
         for (auto& conn : m_connections)
+        {
             conn.callback(args...);
+        }
     }
 
     void clear()

@@ -8,7 +8,7 @@ namespace crisp
 namespace
 {
 auto logger = createLoggerSt("VulkanMemoryHeap");
-}
+} // namespace
 
 VulkanMemoryHeap::VulkanMemoryHeap(
     VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memTypeIdx, VkDevice device, std::string tag)

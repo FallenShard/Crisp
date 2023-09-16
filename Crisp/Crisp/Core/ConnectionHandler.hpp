@@ -5,33 +5,32 @@
 
 namespace crisp
 {
-    struct ConnectionHandler
+struct ConnectionHandler
+{
+public:
+    ~ConnectionHandler()
     {
-    public:
-        inline ~ConnectionHandler()
+        if (disconnectCallback)
         {
-            if (disconnectCallback)
-                (*disconnectCallback)();
+            disconnectCallback();
         }
+    }
 
-        inline ConnectionHandler(ConnectionHandler&& other) noexcept : disconnectCallback(std::move(other.disconnectCallback)) {}
+    ConnectionHandler(const ConnectionHandler&) = delete;
+    ConnectionHandler& operator=(const ConnectionHandler&) = delete;
 
-        inline ConnectionHandler& operator=(ConnectionHandler&& other) noexcept
-        {
-            if (this == &other)
-                return *this;
+    ConnectionHandler(ConnectionHandler&& other) noexcept = default;
+    ConnectionHandler& operator=(ConnectionHandler&& other) noexcept = default;
 
-            disconnectCallback = std::move(other.disconnectCallback);
-            other.disconnectCallback = nullptr;
-            return *this;
-        }
+private:
+    template <typename... ParamTypes>
+    friend class Event;
 
-    private:
-        template <typename ...ParamTypes> friend class Event;
+    explicit ConnectionHandler(std::function<void()> disconnectCallback)
+        : disconnectCallback(std::move(disconnectCallback))
+    {
+    }
 
-        inline ConnectionHandler(std::function<void()> disconnectCallback) : disconnectCallback(
-            std::make_unique<std::function<void()>>(disconnectCallback)) {}
-
-        std::unique_ptr<std::function<void()>> disconnectCallback;
-    };
-}
+    std::function<void()> disconnectCallback;
+};
+} // namespace crisp

@@ -50,16 +50,13 @@ target_link_libraries(CrispChecks
 add_cpp_static_library(CrispWindow
     "Window.cpp"
     "Window.hpp"
-    "Mouse.hpp"
-    "Keyboard.hpp"
-    "InputTranslator.hpp"
 )
 target_link_libraries(CrispWindow
     PUBLIC Crisp::BitFlags
     PUBLIC Crisp::Math
     PUBLIC Crisp::Event
     PUBLIC Crisp::Input
-    PUBLIC glfw
+    PRIVATE glfw
     PUBLIC Vulkan::Headers
 )
 
@@ -112,17 +109,12 @@ add_cpp_static_library(CrispApplication
     "Application.hpp"
 )
 target_link_libraries(CrispApplication
-    PUBLIC Crisp::BitFlags
-    PUBLIC Crisp::Math
-    PUBLIC Crisp::Gui
     PUBLIC Crisp::Window
     PUBLIC Crisp::ApplicationEnvironment
+    PUBLIC Crisp::Event
+    PUBLIC Crisp::Gui
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Scenes
-    PUBLIC Crisp::Event
-    PUBLIC Crisp::Utils
-    PUBLIC glfw
-    PUBLIC Vulkan::Headers
     PUBLIC Crisp::ImGui
 )
 

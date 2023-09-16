@@ -18,7 +18,7 @@ public:
         Submitted
     };
 
-    explicit RendererFrame(const VulkanDevice& device);
+    explicit RendererFrame(const VulkanDevice& device, int32_t logicalIndex);
     ~RendererFrame();
 
     RendererFrame(const RendererFrame&) = delete;
@@ -40,6 +40,7 @@ private:
     VkSemaphore m_renderFinishedSemaphore;
     Status m_status{Status::Idle};
     VkDevice m_deviceHandle; // Non-owning.
+    int32_t m_logicalIndex;
 
     struct Submission
     {

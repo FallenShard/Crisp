@@ -19,7 +19,7 @@ VulkanSwapChain::VulkanSwapChain(
           tripleBuffering == TripleBuffering::Enabled ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR)
 {
     createSwapChain(device, physicalDevice, surface);
-    createImageViews(device.getHandle());
+    createImageViews(device);
 }
 
 VulkanSwapChain::~VulkanSwapChain()
@@ -92,7 +92,7 @@ void VulkanSwapChain::recreate(
         vkDestroyImageView(device.getHandle(), imageView, nullptr);
     }
     createSwapChain(device, physicalDevice, surface);
-    createImageViews(device.getHandle());
+    createImageViews(device);
 }
 
 void VulkanSwapChain::createSwapChain(
@@ -142,6 +142,7 @@ void VulkanSwapChain::createSwapChain(
 
     VkDevice deviceHandle = device.getHandle();
     VK_CHECK(vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle));
+    device.getDebugMarker().setObjectName(m_handle, "Main Swap Chain");
 
     if (createInfo.oldSwapchain != VK_NULL_HANDLE)
     {
@@ -151,12 +152,16 @@ void VulkanSwapChain::createSwapChain(
     VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, nullptr));
     m_images.resize(imageCount);
     VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data()));
+    for (uint32_t i = 0; i < m_images.size(); ++i)
+    {
+        device.getDebugMarker().setObjectName(m_handle, fmt::format("Swap Chain Image {}", i));
+    }
 
     m_imageFormat = surfaceFormat.format;
     m_extent = extent;
 }
 
-void VulkanSwapChain::createImageViews(const VkDevice deviceHandle)
+void VulkanSwapChain::createImageViews(const VulkanDevice& device)
 {
     m_imageViews.resize(m_images.size(), VK_NULL_HANDLE);
 
@@ -176,7 +181,8 @@ void VulkanSwapChain::createImageViews(const VkDevice deviceHandle)
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        VK_CHECK(vkCreateImageView(deviceHandle, &viewInfo, nullptr, &m_imageViews[i]));
+        VK_CHECK(vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_imageViews[i]));
+        device.getDebugMarker().setObjectName(m_handle, fmt::format("Swap Chain Image View {}", i));
     }
 }
 

@@ -30,3 +30,4 @@ UseTab: Never
 SeparateDefinitionBlocks: Always
 InsertBraces: true
 AllowShortLambdasOnASingleLine: All
+PenaltyIndentedWhitespace: 1

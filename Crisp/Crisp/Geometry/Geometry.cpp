@@ -1,6 +1,7 @@
 #include <Crisp/Geometry/Geometry.hpp>
 
 #include <Crisp/Core/Checks.hpp>
+#include <cstddef>
 
 namespace crisp
 {
@@ -9,11 +10,15 @@ namespace
 uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffers)
 {
     if (vertexBuffers.empty())
+    {
         return 0;
+    }
 
     const uint64_t vertexCount{vertexBuffers[0].buffer.size() / vertexBuffers[0].vertexSize};
     for (uint32_t i = 1; i < vertexBuffers.size(); ++i)
+    {
         CRISP_CHECK(vertexBuffers[i].buffer.size() / vertexBuffers[i].vertexSize == vertexCount);
+    }
 
     return static_cast<uint32_t>(vertexCount);
 }
@@ -23,7 +28,7 @@ uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffer
 Geometry::Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLayoutDescription& vertexLayoutDescription)
     : Geometry(
           renderer,
-          createLayoutFromDescription(vertexLayoutDescription),
+          VertexLayout::create(vertexLayoutDescription),
           mesh.createInterleavedVertexBuffers(vertexLayoutDescription, false),
           mesh.getFaces(),
           mesh.getViews())
@@ -38,7 +43,7 @@ Geometry::Geometry(
     const VkBufferUsageFlags usageFlags)
     : Geometry(
           renderer,
-          createLayoutFromDescription(vertexLayoutDescription),
+          VertexLayout::create(vertexLayoutDescription),
           mesh.createInterleavedVertexBuffers(vertexLayoutDescription, padToVec4),
           mesh.getFaces(),
           mesh.getViews(),
@@ -54,7 +59,7 @@ Geometry::Geometry(
     const std::vector<TriangleMeshView>& meshViews,
     const VkBufferUsageFlags usageFlags)
     : m_vertexLayout(vertexLayout)
-    , m_vertexCount(crisp::getVertexCount(interleavedVertexBuffers))
+    , m_vertexCount(::crisp::getVertexCount(interleavedVertexBuffers))
     , m_indexCount(static_cast<uint32_t>(faces.size() * 3))
     , m_instanceCount(1)
     , m_meshViews(meshViews)
@@ -75,26 +80,25 @@ Geometry::Geometry(
     m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(glm::uvec3));
     renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
 
-    m_firstBinding = 0;
-    m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
+    m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size()); // NOLINT
 }
 
 Geometry::Geometry(Renderer& renderer, const uint32_t vertexCount, const std::vector<glm::uvec2>& faces)
     : m_vertexCount(vertexCount)
+    , m_indexCount(static_cast<uint32_t>(faces.size()) * 2)
     , m_instanceCount(1)
 {
-    auto vertexBuffer =
-        createVertexBuffer(renderer.getDevice(), RendererConfig::VirtualFrameCount * vertexCount * sizeof(glm::vec3));
+    auto vertexBuffer = createVertexBuffer(
+        renderer.getDevice(),
+        static_cast<VkDeviceSize>(RendererConfig::VirtualFrameCount * vertexCount) * sizeof(glm::vec3));
     m_vertexBuffers.push_back(std::move(vertexBuffer));
     m_vertexBufferHandles.push_back(m_vertexBuffers.back()->getHandle());
     m_offsets.push_back(0);
 
     m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(glm::uvec2));
     renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
-    m_indexCount = static_cast<uint32_t>(faces.size()) * 2;
 
-    m_firstBinding = 0;
-    m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
+    m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size()); // NOLINT
 }
 
 void Geometry::addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer)
@@ -138,25 +142,35 @@ void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer
 void Geometry::bind(VkCommandBuffer commandBuffer) const
 {
     if (m_bindingCount > 0)
+    {
         vkCmdBindVertexBuffers(
             commandBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
+    }
     if (m_indexBuffer)
+    {
         vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
+    }
 }
 
 void Geometry::draw(VkCommandBuffer commandBuffer) const
 {
     if (m_indexBuffer)
+    {
         vkCmdDrawIndexed(commandBuffer, m_indexCount, 1, 0, 0, 0);
+    }
     else
+    {
         vkCmdDraw(commandBuffer, m_vertexCount, 1, 0, 0);
+    }
 }
 
 void Geometry::bindAndDraw(VkCommandBuffer commandBuffer) const
 {
     if (m_bindingCount > 0)
+    {
         vkCmdBindVertexBuffers(
             commandBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
+    }
 
     if (m_indexBuffer)
     {

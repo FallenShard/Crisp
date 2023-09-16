@@ -86,6 +86,11 @@ public:
         return m_expected.has_value();
     }
 
+    constexpr const T& operator*() const
+    {
+        return *m_expected;
+    }
+
     constexpr operator bool() const // NOLINT
     {
         return m_expected.has_value();

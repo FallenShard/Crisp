@@ -12,13 +12,15 @@ Result<VkFormat> getFormat(const VertexAttribute attribute)
     switch (attribute)
     {
     case VertexAttribute::Position:
-        return VK_FORMAT_R32G32B32_SFLOAT;
     case VertexAttribute::Normal:
         return VK_FORMAT_R32G32B32_SFLOAT;
     case VertexAttribute::TexCoord:
         return VK_FORMAT_R32G32_SFLOAT;
     case VertexAttribute::Tangent:
         return VK_FORMAT_R32G32B32A32_SFLOAT;
+    default:
+    {
+    }
     }
     return resultError("Failed to convert attribute {} into vulkan format!", static_cast<uint32_t>(attribute));
 }
@@ -78,7 +80,7 @@ bool VertexLayout::isSubsetOf(const VertexLayout& rhs) const
     return true;
 }
 
-VertexLayout createLayoutFromDescription(const VertexLayoutDescription& vertexLayoutDescription)
+VertexLayout VertexLayout::create(const VertexLayoutDescription& vertexLayoutDescription)
 {
     VertexLayout layout{};
     layout.bindings.resize(vertexLayoutDescription.size(), {});

@@ -12,8 +12,10 @@ VulkanWorker::VulkanWorker(VulkanDevice& device, const VulkanQueue& queue, uint3
             queue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), device.getResourceDeallocator());
         m_cmdBuffers[i] = std::make_unique<VulkanCommandBuffer>(
             m_cmdPools[i]->allocateCommandBuffer(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+
+        device.getDebugMarker().setObjectName(m_cmdPools[i]->getHandle(), fmt::format("[Frame {}] Command Pool", i));
+        device.getDebugMarker().setObjectName(
+            m_cmdBuffers[i]->getHandle(), fmt::format("[Frame {}] Primary Command Buffer", i));
     }
 }
-
-VulkanWorker::~VulkanWorker() {}
 } // namespace crisp

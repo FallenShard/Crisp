@@ -63,6 +63,9 @@ VulkanDevice::VulkanDevice(
     , m_memoryAllocator(std::make_unique<VulkanMemoryAllocator>(physicalDevice, m_handle))
     , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, virtualFrameCount))
 {
+    m_debugMarker->setObjectName(m_generalQueue->getHandle(), "General Queue");
+    m_debugMarker->setObjectName(m_computeQueue->getHandle(), "Compute Queue");
+    m_debugMarker->setObjectName(m_transferQueue->getHandle(), "Transfer Queue");
 }
 
 VulkanDevice::~VulkanDevice()
