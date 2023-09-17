@@ -11,8 +11,8 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
-#include <Crisp/Utils/Enumerate.hpp>
 
+#include <ranges>
 #include <stack>
 #include <string_view>
 
@@ -81,7 +81,7 @@ void RenderGraph::resize(int /*width*/, int /*height*/)
 void RenderGraph::addDependency(
     const std::string& srcPass, const std::string& dstPass, RenderGraph::DependencyCallback callback)
 {
-    m_nodes.at(srcPass)->dependencies[dstPass] = callback;
+    m_nodes.at(srcPass)->dependencies[dstPass] = std::move(callback);
 }
 
 void RenderGraph::addDependencyToPresentation(const std::string& srcPass, const uint32_t srcAttachmentIndex)

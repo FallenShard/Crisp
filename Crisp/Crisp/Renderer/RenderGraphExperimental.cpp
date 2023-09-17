@@ -1,10 +1,10 @@
 #include <Crisp/Renderer/RenderGraphExperimental.hpp>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Utils/Enumerate.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 
 #include <fstream>
+#include <ranges>
 
 namespace crisp::rg
 {
@@ -182,7 +182,7 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
     // Write the Graphviz header
     outputFile << "digraph FrameGraph {" << std::endl;
 
-    for (auto&& [idx, res] : enumerate(m_resources))
+    for (auto&& [idx, res] : std::views::enumerate(m_resources))
     {
         if (res.type == ResourceType::Image)
         {
@@ -456,9 +456,9 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
 {
     RenderPassExecutionContext executionCtx{};
     executionCtx.cmdBuffer = cmdBuffer;
-    for (const auto&& [idx, pass] : enumerate(m_passes))
+    for (const auto&& [idx, pass] : std::views::enumerate(m_passes))
     {
-        for (const auto& [inIdx, inputAccess] : enumerate(pass.inputAccesses))
+        for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses))
         {
             const auto& res = getResource(pass.inputs[inIdx]);
 
@@ -537,7 +537,7 @@ std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelin
         unversionedTimelines[res.name] = {};
     }
 
-    for (auto&& [passIdx, pass] : enumerate(m_passes))
+    for (auto&& [passIdx, pass] : std::views::enumerate(m_passes))
     {
         for (const auto& in : pass.inputs)
         {
@@ -553,12 +553,12 @@ std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelin
     }
 
     std::vector<ResourceTimeline> timelines(m_resources.size());
-    for (auto&& [idx, t] : enumerate(timelines))
+    for (auto&& [idx, t] : std::views::enumerate(timelines))
     {
         t = unversionedTimelines[m_resources[idx].name];
     }
 
-    for (auto&& [idx, t] : enumerate(timelines))
+    for (auto&& [idx, t] : std::views::enumerate(timelines))
     {
         spdlog::warn(
             "{}. {}-{}: W: {} ({}), R: {} ({})",
@@ -671,7 +671,7 @@ void RenderGraph::determineAliasedResurces()
     std::vector<bool> processed(m_resources.size(), false);
     uint16_t currPhysBufferIdx{0};
     uint16_t currPhysImageIdx{0};
-    for (auto&& [idx, resource] : enumerate(m_resources))
+    for (auto&& [idx, resource] : std::views::enumerate(m_resources))
     {
         if (processed[idx])
         {

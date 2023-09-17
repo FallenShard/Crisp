@@ -4,7 +4,8 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Utils/Enumerate.hpp>
+
+#include <ranges>
 
 namespace crisp
 {
@@ -153,7 +154,7 @@ std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder:
     VkDevice device, std::vector<RenderTarget*> renderTargets) const
 {
     std::vector<VkAttachmentDescription> attachments(m_attachments);
-    for (const auto& [i, attachment] : enumerate(attachments))
+    for (const auto& [i, attachment] : std::views::enumerate(attachments))
     {
         attachment.format = renderTargets.at(m_attachmentMappings[i].renderTargetIndex)->info.format;
         attachment.samples = renderTargets.at(m_attachmentMappings[i].renderTargetIndex)->info.sampleCount;

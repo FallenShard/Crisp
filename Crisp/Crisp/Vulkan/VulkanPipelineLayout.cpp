@@ -1,7 +1,5 @@
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
-#include <Crisp/Utils/Enumerate.hpp>
-
 namespace crisp
 {
 namespace
@@ -17,7 +15,7 @@ VkPipelineLayout createHandle(
     pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstants.size());
     pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
 
-    VkPipelineLayout layout;
+    VkPipelineLayout layout{VK_NULL_HANDLE};
     vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
     return layout;
 }
@@ -58,7 +56,7 @@ VulkanPipelineLayout::VulkanPipelineLayout(
 
 VulkanPipelineLayout::~VulkanPipelineLayout()
 {
-    for (auto setLayout : m_descriptorSetLayouts)
+    for (const auto& setLayout : m_descriptorSetLayouts)
     {
         m_deallocator->deferDestruction(
             m_framesToLive,
@@ -91,6 +89,7 @@ std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSe
     auto getNumCopiesPerSet = [this](uint32_t numCopies)
     {
         std::vector<uint32_t> numCopiesPerSet;
+        numCopiesPerSet.reserve(m_descriptorSetLayouts.size());
         for (const auto& layout : m_descriptorSetLayouts)
         {
             numCopiesPerSet.push_back(layout.isBuffered ? numCopies * RendererConfig::VirtualFrameCount : numCopies);

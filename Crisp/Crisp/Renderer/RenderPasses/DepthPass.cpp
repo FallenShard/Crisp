@@ -6,8 +6,6 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-#include <Crisp/Utils/Enumerate.hpp>
-
 namespace crisp
 {
 std::unique_ptr<VulkanRenderPass> createDepthPass(

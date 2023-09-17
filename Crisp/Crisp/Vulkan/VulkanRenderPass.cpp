@@ -1,7 +1,8 @@
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Utils/Enumerate.hpp>
+
+#include <ranges>
 
 namespace crisp
 {
@@ -18,7 +19,7 @@ VulkanRenderPass::VulkanRenderPass(
         "Attachment mapping and description size mismatch!");
 
     m_attachmentClearValues.resize(m_params.attachmentDescriptions.size());
-    for (const auto& [i, clearValue] : enumerate(m_attachmentClearValues))
+    for (const auto& [i, clearValue] : std::views::enumerate(m_attachmentClearValues))
     {
         const auto& mapping = m_params.attachmentMappings.at(i);
         clearValue = m_params.renderTargetInfos.at(mapping.renderTargetIndex).clearValue;
@@ -102,7 +103,7 @@ void VulkanRenderPass::end(const VkCommandBuffer cmdBuffer, const uint32_t frame
         return;
     }
 
-    for (const auto& [i, attachmentView] : enumerate(m_attachmentViews.at(frameIndex)))
+    for (const auto& [i, attachmentView] : std::views::enumerate(m_attachmentViews.at(frameIndex)))
     {
         const uint32_t renderTargetIndex{m_params.attachmentMappings.at(i).renderTargetIndex};
         auto& image = *m_params.renderTargets.at(renderTargetIndex);
@@ -148,7 +149,7 @@ void VulkanRenderPass::updateInitialLayouts(VkCommandBuffer cmdBuffer)
 {
     for (const auto& frameAttachmentViews : m_attachmentViews)
     {
-        for (const auto& [i, attachmentView] : enumerate(frameAttachmentViews))
+        for (const auto& [i, attachmentView] : std::views::enumerate(frameAttachmentViews))
         {
             const auto renderTargetIndex{m_params.attachmentMappings.at(i).renderTargetIndex};
             const auto initialLayout{m_params.attachmentDescriptions.at(i).initialLayout};
@@ -168,22 +169,22 @@ void VulkanRenderPass::updateInitialLayouts(VkCommandBuffer cmdBuffer)
 void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice& device)
 {
     m_attachmentViews.resize(RendererConfig::VirtualFrameCount);
-    for (const auto& [frameIdx, frameAttachmentViews] : enumerate(m_attachmentViews))
+    for (const auto& [frameIdx, frameAttachmentViews] : std::views::enumerate(m_attachmentViews))
     {
         // Typically 1, but for depth slice rendering, we need to modify it.
         uint32_t framebufferLayerCount{1};
         frameAttachmentViews.resize(m_params.attachmentDescriptions.size());
         std::vector<VkImageView> attachmentViewHandles(frameAttachmentViews.size());
-        for (const auto& [attachmentIdx, mapping] : enumerate(m_params.attachmentMappings))
+        for (const auto& [attachmentIdx, mapping] : std::views::enumerate(m_params.attachmentMappings))
         {
             const auto& renderTargetInfo = m_params.renderTargetInfos.at(mapping.renderTargetIndex);
             auto& renderTarget = *m_params.renderTargets.at(mapping.renderTargetIndex);
             if (mapping.bufferOverDepthSlices)
             {
                 // TODO(nemanjab): fix this to have similar interface to layer-based buffering.
-                framebufferLayerCount = renderTargetInfo.buffered
-                                            ? renderTargetInfo.depthSlices / RendererConfig::VirtualFrameCount
-                                            : renderTargetInfo.depthSlices;
+                framebufferLayerCount =
+                    renderTargetInfo.buffered ? renderTargetInfo.depthSlices / RendererConfig::VirtualFrameCount
+                                              : renderTargetInfo.depthSlices;
                 const uint32_t frameDepthOffset =
                     renderTargetInfo.buffered ? static_cast<uint32_t>(frameIdx) * framebufferLayerCount : 0;
                 const VkImageViewType type =

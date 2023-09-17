@@ -16,7 +16,6 @@ target_link_libraries(CrispBitFlagsTest PRIVATE Crisp::BitFlags)
 
 add_cpp_interface_library(CrispUtils
     "ChromeProfiler.hpp"
-    "Enumerate.hpp"
     "GlmFormatters.hpp"
     "LuaConfig.hpp"
     "Profiler.hpp"
