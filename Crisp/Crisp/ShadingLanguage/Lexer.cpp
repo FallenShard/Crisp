@@ -316,20 +316,32 @@ void Lexer::scanToken()
         break;
     case '-':
         if (match('-'))
+        {
             addToken(TokenType::MinusMinus);
+        }
         else if (match('='))
+        {
             addToken(TokenType::MinusEqual);
+        }
         else
+        {
             addToken(TokenType::Minus);
+        }
         break;
 
     case '+':
         if (match('+'))
+        {
             addToken(TokenType::PlusPlus);
+        }
         else if (match('='))
+        {
             addToken(TokenType::PlusEqual);
+        }
         else
+        {
             addToken(TokenType::Plus);
+        }
         break;
 
     case '*':
@@ -352,7 +364,9 @@ void Lexer::scanToken()
         break;
     case '#':
         while (peek() != '\n' && !isAtEnd())
+        {
             advance();
+        }
         break;
     case '&':
         addToken(match('&') ? TokenType::LogicalAnd : TokenType::BitwiseAnd);
@@ -371,39 +385,61 @@ void Lexer::scanToken()
         break;
     case '<':
         if (match('='))
+        {
             addToken(TokenType::LessThanEqual);
+        }
         else if (match('<'))
+        {
             addToken(TokenType::BitShiftLeft);
+        }
         else
+        {
             addToken(TokenType::LessThan);
+        }
         break;
 
     case '>':
         if (match('='))
+        {
             addToken(TokenType::GreaterThanEqual);
+        }
         else if (match('>'))
+        {
             addToken(TokenType::BitShiftRight);
+        }
         else
+        {
             addToken(TokenType::GreaterThan);
+        }
         break;
 
     case '/':
         if (match('/'))
         {
             while (peek() != '\n' && !isAtEnd())
+            {
                 advance();
+            }
         }
         else if (match('*'))
         {
             while (peek() != '*' || peekNext() != '/')
+            {
                 advance();
+            }
             while (peek() != '\n')
+            {
                 advance();
+            }
         }
         else if (match('='))
+        {
             addToken(TokenType::SlashEqual);
+        }
         else
+        {
             addToken(TokenType::Slash);
+        }
         break;
 
     case '"':
@@ -437,17 +473,25 @@ void Lexer::scanToken()
 char Lexer::peek() const
 {
     if (isAtEnd())
+    {
         return '\0';
+    }
     else
+    {
         return m_source[m_current];
+    }
 }
 
 char Lexer::peekNext() const
 {
     if (m_current + 1 >= m_source.size())
+    {
         return '\0';
+    }
     else
+    {
         return m_source[m_current + 1];
+    }
 }
 
 char Lexer::advance()
@@ -458,10 +502,14 @@ char Lexer::advance()
 bool Lexer::match(char expected)
 {
     if (isAtEnd())
+    {
         return false;
+    }
 
     if (m_source[m_current] != expected)
+    {
         return false;
+    }
 
     m_current++;
     return true;
@@ -503,7 +551,9 @@ void Lexer::addString()
     while (peek() != '"' && !isAtEnd())
     {
         if (peek() == '\n')
+        {
             m_line++;
+        }
 
         advance();
     }
@@ -536,12 +586,16 @@ void Lexer::addNumber()
         base = 16;
 
         while (isHexadecimalDigit(peek()))
+        {
             advance();
+        }
     }
     else
     {
         while (isDigit(peek()))
+        {
             advance();
+        }
     }
 
     if (peek() == '.' && isDigit(peekNext()))
@@ -549,17 +603,23 @@ void Lexer::addNumber()
         advance();
 
         while (isDigit(peek()))
+        {
             advance();
+        }
 
         if (peek() == 'e' || peek() == 'E')
         {
             advance();
 
             if (peek() == '+' || peek() == '-')
+            {
                 advance();
+            }
 
             while (isDigit(peek()))
+            {
                 advance();
+            }
         }
 
         if (peek() == 'f' || peek() == 'F')
@@ -598,19 +658,27 @@ void Lexer::addNumber()
 void Lexer::addIdentifier()
 {
     while (isAlphaNumeric(peek()))
+    {
         advance();
+    }
 
     std::string text = m_source.substr(m_start, m_current - m_start);
     TokenType type = TokenType::Identifier;
     auto iter = Keywords.find(text);
     if (iter != Keywords.end())
+    {
         type = iter->second;
+    }
 
     std::any literal;
     if (text == "true")
+    {
         literal = true;
+    }
     else if (text == "false")
+    {
         literal = false;
+    }
 
     addToken(type, literal);
 }

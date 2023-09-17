@@ -3,18 +3,14 @@
 #include <gmock/gmock.h>
 #include <spirv_reflect.h>
 
-namespace crisp::sl::test
+namespace crisp::test
 {
 namespace
 {
+using ::testing::AllOf;
+using ::testing::ElementsAre;
+using ::testing::Field;
 using ::testing::SizeIs;
-
-const std::filesystem::path kAssetPath = "D:/Projects/Crisp/Crisp/Crisp/Shaders";
-
-std::filesystem::path getShaderPath(const std::string& shaderName)
-{
-    return kAssetPath / (shaderName + ".glsl");
-}
 
 std::filesystem::path getSpirvShaderPath(const std::string& shaderName)
 {
@@ -24,35 +20,42 @@ std::filesystem::path getSpirvShaderPath(const std::string& shaderName)
 
 TEST(ReflectionTest, VertexShader)
 {
-    const auto reflection = parseShaderUniformInputMetadata(getShaderPath("ocean-spectrum.comp")).unwrap();
+    const auto reflection = reflectUniformMetadataFromSpirvPath(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
     ASSERT_THAT(reflection.descriptorSetLayoutBindings, SizeIs(1));
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0], SizeIs(6));
+    EXPECT_THAT(
+        reflection.descriptorSetLayoutBindings[0],
+        ElementsAre(
+            AllOf(
+                Field(&VkDescriptorSetLayoutBinding::binding, 0),
+                Field(&VkDescriptorSetLayoutBinding::descriptorCount, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)),
+            AllOf(
+                Field(&VkDescriptorSetLayoutBinding::binding, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorCount, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)),
+            AllOf(
+                Field(&VkDescriptorSetLayoutBinding::binding, 2),
+                Field(&VkDescriptorSetLayoutBinding::descriptorCount, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)),
+            AllOf(
+                Field(&VkDescriptorSetLayoutBinding::binding, 3),
+                Field(&VkDescriptorSetLayoutBinding::descriptorCount, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)),
+            AllOf(
+                Field(&VkDescriptorSetLayoutBinding::binding, 4),
+                Field(&VkDescriptorSetLayoutBinding::descriptorCount, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)),
+            AllOf(
+                Field(&VkDescriptorSetLayoutBinding::binding, 5),
+                Field(&VkDescriptorSetLayoutBinding::descriptorCount, 1),
+                Field(&VkDescriptorSetLayoutBinding::descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE))));
 
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][0].binding, 0);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][1].binding, 1);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][2].binding, 2);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][3].binding, 3);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][4].binding, 4);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][5].binding, 5);
-
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][0].descriptorCount, 1);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][1].descriptorCount, 1);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][2].descriptorCount, 1);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][3].descriptorCount, 1);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][4].descriptorCount, 1);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][5].descriptorCount, 1);
-
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][0].descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][1].descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][2].descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][3].descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][4].descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    EXPECT_THAT(reflection.descriptorSetLayoutBindings[0][5].descriptorType, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-
-    ASSERT_THAT(reflection.pushConstants, SizeIs(1));
-    EXPECT_THAT(reflection.pushConstants[0].offset, 0);
-    EXPECT_THAT(reflection.pushConstants[0].size, 48);
-    EXPECT_THAT(reflection.pushConstants[0].stageFlags, VK_SHADER_STAGE_COMPUTE_BIT);
+    EXPECT_THAT(
+        reflection.pushConstants,
+        ElementsAre(AllOf(
+            Field(&VkPushConstantRange::offset, 0),
+            Field(&VkPushConstantRange::size, 48),
+            Field(&VkPushConstantRange::stageFlags, VK_SHADER_STAGE_COMPUTE_BIT))));
 }
 
 TEST(ReflectionTest, SpirvReflect)
@@ -82,4 +85,4 @@ TEST(ReflectionTest, SpirvReflect)
 }
 
 } // namespace
-} // namespace crisp::sl::test
+} // namespace crisp::test

@@ -33,9 +33,8 @@ constexpr uint32_t kInstanceCount = 64;
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer, const glm::uvec3& workGroupSize, const std::string& shaderName)
 {
-    const auto spirvContents =
-        sl::readSpirvFile(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
-    PipelineLayoutBuilder layoutBuilder(sl::reflectUniformMetadataFromSpirvShader(spirvContents).unwrap());
+    const auto spirvContents = readSpirvFile(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
+    PipelineLayoutBuilder layoutBuilder(reflectUniformMetadataFromSpirvShader(spirvContents).unwrap());
 
     auto layout = layoutBuilder.create(renderer->getDevice());
 
@@ -91,9 +90,13 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     m_window->keyPressed += [this](Key key, int /*modifiers*/)
     {
         if (key == Key::Space)
+        {
             m_paused = !m_paused;
+        }
         else if (key == Key::F5)
+        {
             m_resourceContext->recreatePipelines();
+        }
     };
 
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
@@ -529,11 +532,10 @@ int OceanScene::applyFFT(std::string image)
             0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
         fftPass.preDispatchCallback =
-            [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-        {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
-        };
+            [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+                node.pipeline->setPushConstants(
+                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
+            };
 
         logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
@@ -632,11 +634,10 @@ int OceanScene::applyFFT(std::string image)
         logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
         fftPass.preDispatchCallback =
-            [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-        {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
-        };
+            [this, i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+                node.pipeline->setPushConstants(
+                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
+            };
 
         if (i == logN - 1)
         {

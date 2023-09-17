@@ -7,7 +7,7 @@
 
 namespace crisp
 {
-PipelineLayoutBuilder::PipelineLayoutBuilder(sl::ShaderUniformInputMetadata&& metadata)
+PipelineLayoutBuilder::PipelineLayoutBuilder(ShaderUniformInputMetadata&& metadata)
     : m_setLayoutBindings(std::move(metadata.descriptorSetLayoutBindings))
     , m_setBuffered(m_setLayoutBindings.size(), false)
     , m_createFlags(m_setLayoutBindings.size(), 0)
@@ -124,9 +124,13 @@ void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex,
             binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
         if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        }
         else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+        {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        }
     }
     else
     {
@@ -135,9 +139,13 @@ void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex,
             binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
 
         if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+        {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        }
         else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+        {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        }
     }
 }
 
@@ -145,7 +153,9 @@ std::vector<uint32_t> PipelineLayoutBuilder::getNumCopiesPerSet(uint32_t numCopi
 {
     std::vector<uint32_t> numCopiesPerSet;
     for (uint32_t i = 0; i < m_setBuffered.size(); ++i)
+    {
         numCopiesPerSet.push_back(m_setBuffered[i] ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
+    }
     return numCopiesPerSet;
 }
 } // namespace crisp

@@ -30,11 +30,14 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     uint32_t /*numDescriptorSets*/,
     const glm::uvec3& workGroupSize)
 {
-    auto refl = crisp::sl::parseShaderUniformInputMetadata(renderer->getShaderSourcePath(shaderName)).unwrap();
+    auto refl =
+        reflectUniformMetadataFromSpirvPath(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     for (uint32_t i = 0; i < numDynamicStorageBuffers; i++)
+    {
         bindings.push_back({i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT});
+    }
 
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder.defineDescriptorSet(0, false, std::move(bindings));

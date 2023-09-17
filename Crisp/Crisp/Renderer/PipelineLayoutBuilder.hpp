@@ -16,7 +16,7 @@ class PipelineLayoutBuilder
 public:
     PipelineLayoutBuilder() = default;
 
-    PipelineLayoutBuilder(sl::ShaderUniformInputMetadata&& metadata);
+    PipelineLayoutBuilder(ShaderUniformInputMetadata&& metadata);
 
     PipelineLayoutBuilder& defineDescriptorSet(
         uint32_t set,

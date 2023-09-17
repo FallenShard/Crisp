@@ -26,16 +26,18 @@ std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(
 {
     const auto& assetPaths{renderer->getAssetPaths()};
     const auto shaderFileMap = getShaderFileMap();
-    sl::ShaderUniformInputMetadata metadata{};
+    ShaderUniformInputMetadata metadata{};
     for (const auto& [stageFlag, fileStem] : shaderFileMap)
     {
         renderer->loadShaderModule(fileStem);
-        metadata.merge(sl::parseShaderUniformInputMetadata(assetPaths.shaderSourceDir / (fileStem + ".glsl")).unwrap());
+        metadata.merge(reflectUniformMetadataFromSpirvPath(assetPaths.spvShaderDir / (fileStem + ".spv")).unwrap());
         m_builder.addShaderStage(createShaderStageInfo(stageFlag, renderer->getShaderModule(fileStem)));
     }
 
     if (shaderFileMap.size() == 4)
+    {
         m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
+    }
 
     readVertexInputState();
     readInputAssemblyState();
@@ -49,11 +51,15 @@ std::unique_ptr<VulkanPipeline> LuaPipelineBuilder::create(
     PipelineLayoutBuilder layoutBuilder(std::move(metadata));
     const auto buffered = readDescriptorSetBufferedStatus();
     for (uint32_t i = 0; i < buffered.size(); ++i)
+    {
         layoutBuilder.setDescriptorSetBuffering(i, buffered[i]);
+    }
 
     const auto dynamicDescriptors = readDynamicBufferDescriptorIds();
     for (const auto& [setId, descId] : dynamicDescriptors)
+    {
         layoutBuilder.setDescriptorDynamic(setId, descId, true);
+    }
 
     auto layout = layoutBuilder.create(renderer->getDevice());
 
@@ -67,22 +73,34 @@ std::unordered_map<VkShaderStageFlagBits, std::string> LuaPipelineBuilder::getSh
     std::unordered_map<VkShaderStageFlagBits, std::string> shaderFiles;
 
     if (auto shaderFilename = m_config["shaders"].get<std::string>("vert"))
+    {
         shaderFiles.emplace(VK_SHADER_STAGE_VERTEX_BIT, shaderFilename.value());
+    }
 
     if (auto shaderFilename = m_config["shaders"].get<std::string>("frag"))
+    {
         shaderFiles.emplace(VK_SHADER_STAGE_FRAGMENT_BIT, shaderFilename.value());
+    }
 
     if (auto shaderFilename = m_config["shaders"].get<std::string>("geom"))
+    {
         shaderFiles.emplace(VK_SHADER_STAGE_GEOMETRY_BIT, shaderFilename.value());
+    }
 
     if (auto shaderFilename = m_config["shaders"].get<std::string>("tesc"))
+    {
         shaderFiles.emplace(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shaderFilename.value());
+    }
 
     if (auto shaderFilename = m_config["shaders"].get<std::string>("tese"))
+    {
         shaderFiles.emplace(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shaderFilename.value());
+    }
 
     if (auto shaderFilename = m_config["shaders"].get<std::string>("comp"))
+    {
         shaderFiles.emplace(VK_SHADER_STAGE_COMPUTE_BIT, shaderFilename.value());
+    }
 
     return shaderFiles;
 }
@@ -105,17 +123,29 @@ void LuaPipelineBuilder::readVertexInputBindings()
         for (const auto& f : inputBinding)
         {
             if (f == "vec3")
+            {
                 bindingFormats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
+            }
             else if (f == "vec2")
+            {
                 bindingFormats.push_back(VK_FORMAT_R32G32_SFLOAT);
+            }
             else if (f == "vec4")
+            {
                 bindingFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+            }
             else if (f == "instance")
+            {
                 inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+            }
             else if (f == "vertex")
+            {
                 inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            }
             else
+            {
                 logger->error("Unknown format: {}", f);
+            }
         }
         m_builder.addVertexInputBinding(i, inputRate, bindingFormats);
     }
@@ -131,13 +161,21 @@ void LuaPipelineBuilder::readVertexAttributes()
         for (const auto& format : strFormats)
         {
             if (format == "vec3")
+            {
                 vulkanFormats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
+            }
             else if (format == "vec2")
+            {
                 vulkanFormats.push_back(VK_FORMAT_R32G32_SFLOAT);
+            }
             else if (format == "vec4")
+            {
                 vulkanFormats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+            }
             else
+            {
                 logger->error("Unknown format: {}", format);
+            }
         }
         m_builder.addVertexAttributes(i, vulkanFormats);
     }
@@ -146,28 +184,38 @@ void LuaPipelineBuilder::readVertexAttributes()
 void LuaPipelineBuilder::readInputAssemblyState()
 {
     if (!m_config.hasVariable("inputAssembly"))
+    {
         return;
+    }
 
     const auto& inputAssembly = m_config["inputAssembly"];
     if (auto topology = inputAssembly.get<std::string>("primitiveTopology"))
     {
         if (topology == "lineList")
+        {
             m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+        }
         else if (topology == "pointList")
+        {
             m_builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+        }
     }
 }
 
 void LuaPipelineBuilder::readTessellationState()
 {
     if (!m_config.hasVariable("tessellation"))
+    {
         return;
+    }
 
     const auto& tessellation = m_config["tessellation"];
     if (auto controlPointCount = tessellation.get<int>("controlPointCount"))
     {
         if (controlPointCount.has_value())
+        {
             m_builder.setTessellationControlPoints(controlPointCount.value());
+        }
     }
 }
 
@@ -187,7 +235,9 @@ void LuaPipelineBuilder::readViewportState(Renderer* renderer, const VulkanRende
         {
             auto vp = viewports[0];
             if (vp.convertTo<std::string>() == "pass")
+            {
                 m_builder.setViewport(renderPass.createViewport());
+            }
         }
     }
 
@@ -197,7 +247,9 @@ void LuaPipelineBuilder::readViewportState(Renderer* renderer, const VulkanRende
         {
             const auto& scissor = scissors[0];
             if (scissor.convertTo<std::string>() == "pass")
+            {
                 m_builder.setScissor(renderPass.createScissor());
+            }
         }
     }
     /*if (auto viewports = viewport[)
@@ -227,23 +279,33 @@ void LuaPipelineBuilder::readViewportState(Renderer* renderer, const VulkanRende
 void LuaPipelineBuilder::readRasterizationState()
 {
     if (!m_config.hasVariable("rasterization"))
+    {
         return;
+    }
 
     const auto& rasterization = m_config["rasterization"];
     if (auto cullMode = rasterization.get<std::string>("cullMode"))
     {
         if (cullMode == "front")
+        {
             m_builder.setCullMode(VK_CULL_MODE_FRONT_BIT);
+        }
         else if (cullMode == "none")
+        {
             m_builder.setCullMode(VK_CULL_MODE_NONE);
+        }
     }
 
     if (auto polygonMode = rasterization.get<std::string>("polygonMode"))
     {
         if (polygonMode == "line")
+        {
             m_builder.setPolygonMode(VK_POLYGON_MODE_LINE);
+        }
         else if (polygonMode == "fill")
+        {
             m_builder.setPolygonMode(VK_POLYGON_MODE_FILL);
+        }
     }
 
     if (auto lineWidth = rasterization.get<float>("lineWidth"))
@@ -256,7 +318,9 @@ void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& /*renderPa
 {
     // m_builder.setSampleCount(renderPass.getDefaultSampleCount());
     if (!m_config.hasVariable("multisample"))
+    {
         return;
+    }
 
     const auto& multisample = m_config["multisample"];
 
@@ -269,7 +333,9 @@ void LuaPipelineBuilder::readMultisampleState(const VulkanRenderPass& /*renderPa
 void LuaPipelineBuilder::readBlendState()
 {
     if (!m_config.hasVariable("colorBlend"))
+    {
         return;
+    }
 
     const auto& blend = m_config["colorBlend"];
     if (auto enabled = blend.get<bool>("enabled"); enabled.has_value())
@@ -305,34 +371,46 @@ void LuaPipelineBuilder::readBlendState()
 void LuaPipelineBuilder::readDepthStencilState()
 {
     if (!m_config.hasVariable("depthStencil"))
+    {
         return;
+    }
 
     const auto& depthStencil = m_config["depthStencil"];
     if (auto reverseDepth = depthStencil.get<bool>("reverseDepth"); reverseDepth.has_value())
     {
         if (reverseDepth.value())
+        {
             m_builder.setDepthTestOperation(VK_COMPARE_OP_GREATER_OR_EQUAL);
+        }
     }
 
     if (auto depthWrite = depthStencil.get<bool>("depthWriteEnabled"); depthWrite.has_value())
     {
         if (depthWrite.value())
+        {
             m_builder.setDepthWrite(VK_TRUE);
+        }
         else
+        {
             m_builder.setDepthWrite(VK_FALSE);
+        }
     }
 
     if (auto depthTest = depthStencil.get<bool>("depthTest"); depthTest.has_value())
     {
         if (depthTest.value())
+        {
             m_builder.setDepthTest(depthTest.value());
+        }
     }
 }
 
 std::vector<bool> LuaPipelineBuilder::readDescriptorSetBufferedStatus()
 {
     if (!m_config.hasVariable("setBuffering"))
+    {
         return {};
+    }
 
     return m_config.get<std::vector<bool>>("setBuffering").value();
 }
@@ -340,7 +418,9 @@ std::vector<bool> LuaPipelineBuilder::readDescriptorSetBufferedStatus()
 std::vector<std::pair<uint32_t, uint32_t>> LuaPipelineBuilder::readDynamicBufferDescriptorIds()
 {
     if (!m_config.hasVariable("dynamicBuffers"))
+    {
         return {};
+    }
 
     std::vector<std::pair<uint32_t, uint32_t>> result;
     std::size_t numDescriptorSets = m_config["dynamicBuffers"].getLength();
@@ -348,7 +428,9 @@ std::vector<std::pair<uint32_t, uint32_t>> LuaPipelineBuilder::readDynamicBuffer
     {
         auto bindings = m_config["dynamicBuffers"][i].convertTo<std::vector<uint32_t>>().value();
         for (const uint32_t binding : bindings)
+        {
             result.emplace_back(i, binding);
+        }
     }
 
     return result;

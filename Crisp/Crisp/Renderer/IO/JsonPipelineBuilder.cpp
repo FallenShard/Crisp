@@ -363,13 +363,13 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
     const auto shaderFiles{readShaderFiles(pipelineJson["shaders"]).unwrap()};
 
-    sl::ShaderUniformInputMetadata shaderMetadata{};
+    ShaderUniformInputMetadata shaderMetadata{};
     PipelineBuilder builder{};
     for (const auto& [stageFlag, fileStem] : shaderFiles)
     {
         renderer.loadShaderModule(fileStem);
-        const auto spvFile = sl::readSpirvFile(renderer.getAssetPaths().spvShaderDir / (fileStem + ".spv")).unwrap();
-        shaderMetadata.merge(sl::reflectUniformMetadataFromSpirvShader(spvFile).unwrap());
+        const auto spvFile = readSpirvFile(renderer.getAssetPaths().spvShaderDir / (fileStem + ".spv")).unwrap();
+        shaderMetadata.merge(reflectUniformMetadataFromSpirvShader(spvFile).unwrap());
         builder.addShaderStage(createShaderStageInfo(stageFlag, renderer.getShaderModule(fileStem)));
     }
 
