@@ -11,7 +11,7 @@ namespace
 {
 robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordMap()
 {
-    using namespace crisp::sl;
+    using crisp::sl::TokenType;
     robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> map;
 
     // Execution Control
@@ -246,24 +246,24 @@ robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordM
     return map;
 }
 
-static robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
+robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
 } // namespace
 
 namespace crisp::sl
 {
 Lexer::Lexer(const std::string& source)
-    : m_start(0)
+    : m_source(source)
+    , m_start(0)
     , m_current(0)
     , m_line(1)
-    , m_source(source)
 {
 }
 
 Lexer::Lexer(std::string&& source)
-    : m_start(0)
+    : m_source(std::move(source))
+    , m_start(0)
     , m_current(0)
     , m_line(1)
-    , m_source(std::move(source))
 {
 }
 
@@ -275,7 +275,7 @@ std::vector<Token> Lexer::scanTokens()
         scanToken();
     }
 
-    m_tokens.push_back(Token(TokenType::EndOfFile, "", nullptr, m_line));
+    m_tokens.emplace_back(TokenType::EndOfFile, "", nullptr, m_line);
 
     return std::move(m_tokens);
 }
@@ -476,22 +476,16 @@ char Lexer::peek() const
     {
         return '\0';
     }
-    else
-    {
-        return m_source[m_current];
-    }
+    return m_source[m_current];
 }
 
 char Lexer::peekNext() const
 {
-    if (m_current + 1 >= m_source.size())
+    if (m_current + 1 >= static_cast<int32_t>(m_source.size()))
     {
         return '\0';
     }
-    else
-    {
-        return m_source[m_current + 1];
-    }
+    return m_source[m_current + 1];
 }
 
 char Lexer::advance()
@@ -515,24 +509,24 @@ bool Lexer::match(char expected)
     return true;
 }
 
-bool Lexer::isAlpha(char c) const
+bool Lexer::isAlpha(char c)
 {
-    return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_';
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-bool Lexer::isAlphaNumeric(char c) const
+bool Lexer::isAlphaNumeric(char c)
 {
     return isAlpha(c) || isDigit(c);
 }
 
-bool Lexer::isDigit(char c) const
+bool Lexer::isDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-bool Lexer::isHexadecimalDigit(char c) const
+bool Lexer::isHexadecimalDigit(char c)
 {
-    return isDigit(c) || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F';
+    return isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
 void Lexer::addToken(TokenType type)
@@ -543,7 +537,7 @@ void Lexer::addToken(TokenType type)
 void Lexer::addToken(TokenType type, std::any literal)
 {
     std::string lexeme = m_source.substr(m_start, m_current - m_start);
-    m_tokens.push_back(Token(type, lexeme, literal, m_line));
+    m_tokens.emplace_back(type, lexeme, std::move(literal), m_line);
 }
 
 void Lexer::addString()

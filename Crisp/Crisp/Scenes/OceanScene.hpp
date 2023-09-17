@@ -14,12 +14,11 @@ class OceanScene : public Scene
 {
 public:
     OceanScene(Renderer* renderer, Window* window);
-    ~OceanScene();
 
-    virtual void resize(int width, int height) override;
-    virtual void update(float dt) override;
-    virtual void render() override;
-    virtual void renderGui() override;
+    void resize(int width, int height) override;
+    void update(float dt) override;
+    void render() override;
+    void renderGui() override;
 
 private:
     std::unique_ptr<VulkanImage> createInitialSpectrum();

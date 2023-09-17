@@ -1,5 +1,7 @@
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
+#include <Crisp/ShadingLanguage/ShaderType.hpp>
+
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 
@@ -13,8 +15,6 @@ namespace crisp
 namespace
 {
 const std::filesystem::path GlslExtension = ".glsl";
-const robin_hood::unordered_set<std::string> ShaderExtensions = {
-    "vert", "frag", "tesc", "tese", "geom", "comp", "rgen", "rchit", "rmiss", "rcall"};
 
 auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 } // namespace
@@ -41,13 +41,15 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
     uint32_t shadersSkipped{0};
     uint32_t shadersRecompiled{0};
-    std::array<char, 4096> lineBuffer;
+    std::array<char, 4096> lineBuffer; // NOLINT
     for (const auto& inputEntry : std::filesystem::directory_iterator(inputDir))
     {
         if (inputEntry.is_directory())
+        {
             continue;
+        }
 
-        const std::filesystem::path inputPath = inputEntry.path();
+        const std::filesystem::path& inputPath = inputEntry.path();
         if (inputPath.extension() != GlslExtension)
         {
             logger->warn("{} has no .glsl extension!", inputPath.string());
@@ -58,7 +60,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         // First getting the stem and then its "extension" will give us the stage name
         const std::string shaderType =
             inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
-        if (!ShaderExtensions.contains(shaderType))
+        if (!isGlslShaderExtension(shaderType))
         {
             logger->warn("{} is not a valid glsl shader type!", shaderType);
             continue;
@@ -74,9 +76,10 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             continue;
         }
         const auto glslSource{std::move(maybeGlslSource).unwrap()};
-        const std::filesystem::file_time_type outputModifiedTs = std::filesystem::exists(outputPath)
-                                                                     ? std::filesystem::last_write_time(outputPath)
-                                                                     : std::filesystem::file_time_type{};
+        const std::filesystem::file_time_type outputModifiedTs =
+            std::filesystem::exists(outputPath)
+                ? std::filesystem::last_write_time(outputPath)
+                : std::filesystem::file_time_type{};
         if (glslSource.lastModifiedRecursive > outputModifiedTs)
         {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
@@ -113,7 +116,9 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
                     ++errorCount;
                 }
                 else if (view.substr(0, 7) == "WARNING")
+                {
                     logger->warn("{}", view);
+                }
             }
             if (errorCount > 0)
             {
@@ -131,7 +136,9 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
                     // On success, we remove the older version of the compiled shader and rename the temp file
                     // appropriately
                     if (std::filesystem::exists(outputPath))
+                    {
                         std::filesystem::remove(outputPath);
+                    }
 
                     std::filesystem::rename(tempOutputPath, outputPath);
                 }

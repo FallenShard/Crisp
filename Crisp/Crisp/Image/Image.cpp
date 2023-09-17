@@ -5,8 +5,7 @@
 namespace crisp
 {
 Image::Image()
-    : m_data{}
-    , m_width(0)
+    : m_width(0)
     , m_height(0)
     , m_channelCount(0)
     , m_pixelByteSize(0)

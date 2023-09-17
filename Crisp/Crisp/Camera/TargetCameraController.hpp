@@ -10,8 +10,14 @@ namespace crisp
 class TargetCameraController
 {
 public:
-    TargetCameraController(Window& window);
+    explicit TargetCameraController(Window& window);
     ~TargetCameraController();
+
+    TargetCameraController(const TargetCameraController&) = default;
+    TargetCameraController& operator=(const TargetCameraController&) = default;
+
+    TargetCameraController(TargetCameraController&&) = default;
+    TargetCameraController& operator=(TargetCameraController&&) = default;
 
     void setPanSpeed(float panSpeed);
     void setTarget(const glm::vec3& target);

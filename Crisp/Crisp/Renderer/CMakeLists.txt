@@ -84,9 +84,10 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::FrameContext
     PUBLIC tbb
     PRIVATE Crisp::FileUtils
-    PUBLIC Crisp::GlslUtils
+    PUBLIC Crisp::SpvReflection
     PRIVATE Crisp::ApplicationEnvironment
     PUBLIC nlohmann_json::nlohmann_json
+    PRIVATE Crisp::ShaderCompiler
 )
 
 add_cpp_static_library(CrispImageCache
