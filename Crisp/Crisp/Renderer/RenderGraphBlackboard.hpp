@@ -25,7 +25,7 @@ public:
     T& insert()
     {
         const auto typeIdx{std::type_index(typeid(T))}; // NOLINT
-        if (m_resourceGroups.find(typeIdx) != m_resourceGroups.end())
+        if (m_resourceGroups.contains(typeIdx))
         {
             CRISP_FATAL("Blackboard '{}' already contains type '{}'.", m_name, typeid(T).name());
         }

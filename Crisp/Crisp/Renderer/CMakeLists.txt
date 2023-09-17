@@ -115,6 +115,14 @@ add_cpp_test(CrispPipelineLayoutBuilderTest
 target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
 copy_shared_libs(CrispPipelineLayoutBuilderTest lua)
 
+add_cpp_static_library(CrispVulkanRenderPassBuilder
+    "VulkanRenderPassBuilder.hpp"
+    "VulkanRenderPassBuilder.cpp"
+)
+target_link_libraries(CrispVulkanRenderPassBuilder
+    PUBLIC Crisp::Vulkan
+)
+
 add_cpp_static_library(CrispRenderGraph
     "RenderGraphBlackboard.hpp"
     "RenderGraphExperimental.cpp"
@@ -123,6 +131,7 @@ add_cpp_static_library(CrispRenderGraph
 )
 target_link_libraries(CrispRenderGraph
     PUBLIC Crisp::Vulkan
+    PRIVATE Crisp::VulkanRenderPassBuilder
     PRIVATE Crisp::Renderer
 )
 

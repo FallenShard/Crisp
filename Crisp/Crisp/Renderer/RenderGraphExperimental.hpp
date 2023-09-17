@@ -71,63 +71,6 @@ public:
 
     const RenderGraphBlackboard& getBlackboard() const;
 
-    class RenderPassBuilder
-    {
-    public:
-        // Attachment configuration
-        RenderPassBuilder& setAttachmentCount(uint32_t count);
-        RenderPassBuilder& setAttachmentOps(
-            uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp);
-        RenderPassBuilder& setAttachmentStencilOps(
-            uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp);
-        RenderPassBuilder& setAttachmentLayouts(
-            uint32_t attachmentIndex, VkImageLayout initialLayout, VkImageLayout finalLayout);
-
-        RenderPassBuilder& setAttachmentFormat(
-            uint32_t attachmentIndex, VkFormat format, VkSampleCountFlagBits sampleCount);
-
-        // Subpass configuration
-        RenderPassBuilder& setSubpassCount(uint32_t numSubpasses);
-        RenderPassBuilder& configureSubpass(
-            uint32_t subpass,
-            VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            VkSubpassDescriptionFlags flags = 0);
-
-        RenderPassBuilder& addInputAttachmentRef(uint32_t subpass, uint32_t attachmentIndex, VkImageLayout imageLayout);
-        RenderPassBuilder& addColorAttachmentRef(uint32_t subpass, uint32_t attachmentIndex, VkImageLayout imageLayout);
-        RenderPassBuilder& addColorAttachmentRef(uint32_t subpass, uint32_t attachmentIndex);
-        RenderPassBuilder& addResolveAttachmentRef(
-            uint32_t subpass, uint32_t attachmentIndex, VkImageLayout imageLayout);
-
-        RenderPassBuilder& setDepthAttachmentRef(uint32_t subpass, uint32_t attachmentIndex, VkImageLayout imageLayout);
-
-        RenderPassBuilder& addPreserveAttachmentRef(uint32_t subpass, uint32_t attachmentIndex);
-
-        RenderPassBuilder& addDependency(
-            uint32_t srcSubpass,
-            uint32_t dstSubpass,
-            VkPipelineStageFlags srcStageMask,
-            VkAccessFlags srcAccessMask,
-            VkPipelineStageFlags dstStageMask,
-            VkAccessFlags dstAccessMask,
-            VkDependencyFlags flags = 0);
-
-        std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> create(VkDevice device) const;
-        std::vector<VkImageLayout> getFinalLayouts() const;
-
-    private:
-        std::vector<VkAttachmentDescription> m_attachments;
-
-        std::vector<std::vector<VkAttachmentReference>> m_inputAttachmentRefs;
-        std::vector<std::vector<VkAttachmentReference>> m_colorAttachmentRefs;
-        std::vector<std::vector<VkAttachmentReference>> m_resolveAttachmentRefs;
-        std::vector<VkAttachmentReference> m_depthAttachmentRefs;
-        std::vector<std::vector<uint32_t>> m_preserveAttachments;
-        std::vector<VkSubpassDescription> m_subpasses;
-
-        std::vector<VkSubpassDependency> m_dependencies;
-    };
-
     VkExtent2D getRenderArea(const RenderGraphPass& pass, VkExtent2D swapChainExtent);
 
     static RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc);

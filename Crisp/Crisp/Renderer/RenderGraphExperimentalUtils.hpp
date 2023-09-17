@@ -2,7 +2,6 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
 
 namespace crisp
 {
@@ -47,20 +46,6 @@ struct RenderGraphResourceHandle
     uint32_t id{kInvalidId};
 };
 
-struct RenderGraphImageHandle
-{
-    static constexpr uint32_t kInvalidId{~0u};
-
-    uint32_t id{kInvalidId};
-};
-
-struct RenderGraphBufferHandle
-{
-    static constexpr uint32_t kInvalidId{~0u};
-
-    uint32_t id{kInvalidId};
-};
-
 enum class ResourceType
 {
     Buffer,
@@ -72,9 +57,9 @@ struct RenderGraphResource
 {
     static constexpr uint16_t kInvalidIndex{std::numeric_limits<uint16_t>::max()};
 
-    ResourceType type{ResourceType::Unknown}; // Buffer, Image, or something else in the future. Determines the array to
-                                              // index into with description index.
-    uint16_t version{0};                      // Version to keep track of read-modify-write resources.
+    // Buffer, Image, or something else in the future. Determines the array to index into with description index.
+    ResourceType type{ResourceType::Unknown};
+    uint16_t version{0};                           // Version to keep track of read-modify-write resources.
     std::vector<RenderGraphPassHandle> readPasses; // Render pass handles where this resource is read.
 
     uint16_t descriptionIndex{kInvalidIndex}; // Index into resource description - a minimal set of input parameters

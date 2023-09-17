@@ -1,6 +1,7 @@
 #include <Crisp/Renderer/RenderGraphExperimental.hpp>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 
 #include <fstream>
@@ -32,7 +33,7 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res)
     pass.inputs.push_back(res);
     auto& accessState = pass.inputAccesses.emplace_back();
     accessState.usageType = ResourceUsageType::Texture;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    accessState.pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // TODO(neman): parameterize.
     accessState.access = VK_ACCESS_SHADER_READ_BIT;
 }
 
@@ -213,10 +214,9 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
     }
 
     // Iterate over each vertex and its neighbors in the graph
-    for (uint32_t i = 0; i < m_passes.size(); ++i)
+    for (auto&& [i, node] : std::views::enumerate(m_passes))
     {
-        const auto& node = m_passes[i];
-        const uint32_t vertexIdx = i + static_cast<uint32_t>(m_resources.size());
+        const auto vertexIdx = i + m_resources.size();
         // Write the vertex and its label
         outputFile << fmt::format(
                           R"({} [label="{}", style="filled", shape="{}", color="{}"];)",
@@ -252,155 +252,6 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
 const RenderGraphBlackboard& RenderGraph::getBlackboard() const
 {
     return m_blackboard;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setAttachmentCount(const uint32_t count)
-{
-    m_attachments.resize(count);
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setAttachmentOps(
-    const uint32_t attachmentIndex, const VkAttachmentLoadOp loadOp, const VkAttachmentStoreOp storeOp)
-{
-    m_attachments.at(attachmentIndex).loadOp = loadOp;
-    m_attachments.at(attachmentIndex).storeOp = storeOp;
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setAttachmentStencilOps(
-    const uint32_t attachmentIndex, const VkAttachmentLoadOp loadOp, const VkAttachmentStoreOp storeOp)
-{
-    m_attachments.at(attachmentIndex).stencilLoadOp = loadOp;
-    m_attachments.at(attachmentIndex).stencilStoreOp = storeOp;
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setAttachmentLayouts(
-    const uint32_t attachmentIndex, const VkImageLayout initialLayout, const VkImageLayout finalLayout)
-{
-    m_attachments.at(attachmentIndex).initialLayout = initialLayout;
-    m_attachments.at(attachmentIndex).finalLayout = finalLayout;
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setAttachmentFormat(
-    const uint32_t attachmentIndex, const VkFormat format, const VkSampleCountFlagBits sampleCount)
-{
-    m_attachments.at(attachmentIndex).format = format;
-    m_attachments.at(attachmentIndex).samples = sampleCount;
-    return *this;
-}
-
-// Subpass configuration
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setSubpassCount(const uint32_t numSubpasses)
-{
-    m_inputAttachmentRefs.resize(numSubpasses);
-    m_colorAttachmentRefs.resize(numSubpasses);
-    m_resolveAttachmentRefs.resize(numSubpasses);
-    m_depthAttachmentRefs.resize(numSubpasses);
-    m_preserveAttachments.resize(numSubpasses);
-    m_subpasses.resize(numSubpasses, VkSubpassDescription{0, VK_PIPELINE_BIND_POINT_GRAPHICS});
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::configureSubpass(
-    const uint32_t subpass, const VkPipelineBindPoint bindPoint, const VkSubpassDescriptionFlags flags)
-{
-    m_subpasses.at(subpass) = {flags, bindPoint};
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::addInputAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
-    m_inputAttachmentRefs[subpass].push_back({attachmentIndex, imageLayout});
-    m_subpasses[subpass].inputAttachmentCount = static_cast<uint32_t>(m_inputAttachmentRefs[subpass].size());
-    m_subpasses[subpass].pInputAttachments = m_inputAttachmentRefs[subpass].data();
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::addColorAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
-    m_colorAttachmentRefs[subpass].push_back({attachmentIndex, imageLayout});
-    m_subpasses[subpass].colorAttachmentCount = static_cast<uint32_t>(m_colorAttachmentRefs[subpass].size());
-    m_subpasses[subpass].pColorAttachments = m_colorAttachmentRefs[subpass].data();
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::addColorAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex)
-{
-    m_colorAttachmentRefs[subpass].push_back({attachmentIndex, m_attachments.at(attachmentIndex).finalLayout});
-    m_subpasses[subpass].colorAttachmentCount = static_cast<uint32_t>(m_colorAttachmentRefs[subpass].size());
-    m_subpasses[subpass].pColorAttachments = m_colorAttachmentRefs[subpass].data();
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::addResolveAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
-    m_resolveAttachmentRefs[subpass].push_back({attachmentIndex, imageLayout});
-    m_subpasses[subpass].pResolveAttachments = m_resolveAttachmentRefs[subpass].data();
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::setDepthAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
-    m_depthAttachmentRefs[subpass] = {attachmentIndex, imageLayout};
-    m_subpasses[subpass].pDepthStencilAttachment = &m_depthAttachmentRefs[subpass];
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::addPreserveAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex)
-{
-    m_preserveAttachments[subpass].push_back(attachmentIndex);
-    m_subpasses[subpass].preserveAttachmentCount = static_cast<uint32_t>(m_preserveAttachments[subpass].size());
-    m_subpasses[subpass].pPreserveAttachments = m_preserveAttachments[subpass].data();
-    return *this;
-}
-
-RenderGraph::RenderPassBuilder& RenderGraph::RenderPassBuilder::addDependency(
-    const uint32_t srcSubpass,
-    const uint32_t dstSubpass,
-    const VkPipelineStageFlags srcStageMask,
-    const VkAccessFlags srcAccessMask,
-    const VkPipelineStageFlags dstStageMask,
-    const VkAccessFlags dstAccessMask,
-    const VkDependencyFlags flags)
-{
-    m_dependencies.push_back({srcSubpass, dstSubpass, srcStageMask, dstStageMask, srcAccessMask, dstAccessMask, flags});
-    return *this;
-}
-
-std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderGraph::RenderPassBuilder::create(
-    const VkDevice device) const
-{
-    VkRenderPassCreateInfo renderPassInfo = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
-    renderPassInfo.pAttachments = m_attachments.data();
-    renderPassInfo.subpassCount = static_cast<uint32_t>(m_subpasses.size());
-    renderPassInfo.pSubpasses = m_subpasses.data();
-    renderPassInfo.dependencyCount = static_cast<uint32_t>(m_dependencies.size());
-    renderPassInfo.pDependencies = m_dependencies.data();
-
-    VkRenderPass renderPass{VK_NULL_HANDLE};
-    VK_CHECK(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
-    return {renderPass, m_attachments};
-}
-
-std::vector<VkImageLayout> RenderGraph::RenderPassBuilder::getFinalLayouts() const
-{
-    std::vector<VkImageLayout> layouts;
-    layouts.reserve(m_attachments.size());
-    for (const auto& attachment : m_attachments)
-    {
-        layouts.push_back(attachment.finalLayout);
-    }
-    return layouts;
 }
 
 VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExtent2D swapChainExtent)
@@ -765,9 +616,8 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
     for (const auto& pass : m_passes)
     {
         fmt::print("Building render pass: {}\n", pass.name);
-        auto& physicalPass = m_physicalPasses.emplace_back();
 
-        RenderPassBuilder builder{};
+        VulkanRenderPassBuilder builder{};
         builder.setSubpassCount(1)
             .configureSubpass(0, VK_PIPELINE_BIND_POINT_GRAPHICS)
             .setAttachmentCount(static_cast<uint32_t>(
@@ -785,17 +635,19 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                     ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                     : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             builder
-                .setAttachmentFormat(
-                    attachmentIndex,
-                    m_imageDescriptions[res.descriptionIndex].format,
-                    m_imageDescriptions[res.descriptionIndex].sampleCount)
-                .setAttachmentStencilOps(
-                    attachmentIndex, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-                .setAttachmentOps(
-                    attachmentIndex,
-                    res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE)
-                .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+                .setAttachment(
+                    static_cast<int32_t>(attachmentIndex),
+                    {
+                        .format = m_imageDescriptions[res.descriptionIndex].format,
+                        .samples = m_imageDescriptions[res.descriptionIndex].sampleCount,
+                        .loadOp = res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .storeOp =
+                            res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                        .initialLayout = initialLayout,
+                        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    })
                 .addColorAttachmentRef(0, attachmentIndex);
 
             auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
@@ -820,17 +672,19 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                     : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             builder
-                .setAttachmentFormat(
-                    attachmentIndex,
-                    m_imageDescriptions[res.descriptionIndex].format,
-                    m_imageDescriptions[res.descriptionIndex].sampleCount)
-                .setAttachmentStencilOps(
-                    attachmentIndex, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-                .setAttachmentOps(
-                    attachmentIndex,
-                    res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE)
-                .setAttachmentLayouts(attachmentIndex, initialLayout, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+                .setAttachment(
+                    static_cast<int32_t>(attachmentIndex),
+                    {
+                        .format = m_imageDescriptions[res.descriptionIndex].format,
+                        .samples = m_imageDescriptions[res.descriptionIndex].sampleCount,
+                        .loadOp = res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .storeOp =
+                            res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                        .initialLayout = initialLayout,
+                        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    })
                 .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
             auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
@@ -861,8 +715,8 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         auto [passHandle, vkAttachments] = builder.create(device.getHandle());
         renderPassParams.attachmentDescriptions = std::move(vkAttachments);
 
-        physicalPass = std::make_unique<VulkanRenderPass>(
-            device, passHandle, std::move(renderPassParams), std::move(attachmentClearValues));
+        auto& physicalPass = m_physicalPasses.emplace_back(std::make_unique<VulkanRenderPass>(
+            device, passHandle, std::move(renderPassParams), std::move(attachmentClearValues)));
 
         device.getDebugMarker().setObjectName(physicalPass->getHandle(), pass.name.c_str());
     }
