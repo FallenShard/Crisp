@@ -1,12 +1,14 @@
 
 #include <Crisp/Core/Result.hpp>
 
-#include <gtest/gtest.h>
+#include <Crisp/Core/Test/ResultTestUtils.hpp>
 
 #include <numeric>
 
 namespace crisp::test
 {
+using ::testing::Not;
+
 struct MoveOnlyType
 {
     MoveOnlyType() = default;
@@ -23,25 +25,18 @@ struct MoveOnlyType
 
 TEST(ResultTest, Basic)
 {
-    Result<int> result(5);
-
-    EXPECT_TRUE(result.hasValue());
-    EXPECT_EQ(std::move(result).unwrap(), 5);
+    EXPECT_THAT(Result<int>(5), HasValue(5));
 }
 
 TEST(ResultTest, BasicError)
 {
-    const Result<int> errorResult = resultError("{}", "invalid path!");
-
-    EXPECT_FALSE(errorResult.hasValue());
-    EXPECT_EQ(errorResult.getError(), "invalid path!");
+    EXPECT_THAT(Result<int>{resultError("{}", "invalid path!")}, HasErrorWithMessageRegex("invalid path"));
 }
 
 TEST(ResultTest, ValueWithMoveOnly)
 {
     Result<MoveOnlyType> result(MoveOnlyType{});
-
-    EXPECT_TRUE(result.hasValue());
+    EXPECT_THAT(result, Not(HasError()));
 
     const auto value = std::move(result).unwrap();
     EXPECT_EQ(*value.x, 10);

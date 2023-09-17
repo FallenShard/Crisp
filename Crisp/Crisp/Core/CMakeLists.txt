@@ -28,7 +28,7 @@ target_link_libraries(CrispResult
 )
 
 add_cpp_interface_library(CrispResultTestUtils
-    "Test/ResultTest.cpp")
+    "Test/ResultTestUtils.hpp")
 target_link_libraries(CrispResultTestUtils
     INTERFACE Crisp::Result GTest::gmock
 )
