@@ -1,3 +1,19 @@
+add_cpp_static_library(CrispPipelineBuilder
+    "PipelineBuilder.cpp"
+    "PipelineBuilder.hpp"
+    "PipelineLayoutBuilder.cpp"
+    "PipelineLayoutBuilder.hpp"
+    "IO/JsonPipelineBuilder.cpp"
+    "IO/JsonPipelineBuilder.hpp"
+    "IO/LuaPipelineBuilder.cpp"
+    "IO/LuaPipelineBuilder.hpp"
+)
+target_link_libraries(CrispPipelineBuilder
+    PUBLIC Crisp::Vulkan
+    PUBLIC nlohmann_json::nlohmann_json
+    PUBLIC Crisp::CoreUtils
+)
+
 add_cpp_static_library(CrispRenderer
     "RenderPasses/BlurPass.cpp"
     "RenderPasses/BlurPass.hpp"
@@ -23,10 +39,6 @@ add_cpp_static_library(CrispRenderer
     "IndexBuffer.hpp"
     "Material.cpp"
     "Material.hpp"
-    "PipelineBuilder.cpp"
-    "PipelineBuilder.hpp"
-    "PipelineLayoutBuilder.cpp"
-    "PipelineLayoutBuilder.hpp"
     "Renderer.cpp"
     "Renderer.hpp"
     "RendererConfig.hpp"
@@ -62,10 +74,7 @@ add_cpp_static_library(CrispRenderer
     "PipelineCache.hpp"
     "RenderTargetCache.cpp"
     "RenderTargetCache.hpp"
-    "IO/JsonPipelineBuilder.cpp"
-    "IO/JsonPipelineBuilder.hpp"
-    "IO/LuaPipelineBuilder.cpp"
-    "IO/LuaPipelineBuilder.hpp"
+
     "AssetPaths.hpp"
     "ShaderCache.hpp"
     "ShaderCache.cpp"
@@ -86,8 +95,8 @@ target_link_libraries(CrispRenderer
     PRIVATE Crisp::FileUtils
     PUBLIC Crisp::SpvReflection
     PRIVATE Crisp::ApplicationEnvironment
-    PUBLIC nlohmann_json::nlohmann_json
     PRIVATE Crisp::ShaderCompiler
+    PUBLIC Crisp::PipelineBuilder
 )
 
 add_cpp_static_library(CrispImageCache
