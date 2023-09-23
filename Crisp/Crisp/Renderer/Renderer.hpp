@@ -110,7 +110,7 @@ public:
 
     Geometry* getFullScreenGeometry() const;
 
-    std::unique_ptr<VulkanPipeline> createPipelineFromLua(
+    std::unique_ptr<VulkanPipeline> createPipeline(
         std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex);
 
     template <typename... Args>

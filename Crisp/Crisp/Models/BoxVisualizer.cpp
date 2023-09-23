@@ -33,7 +33,7 @@ BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, const Vulkan
 
     m_indexGeometry = std::make_unique<Geometry>(*renderer, std::vector<glm::vec4>{}, lines);
 
-    m_outlinePipeline = m_renderer->createPipelineFromLua("DebugBox.lua", renderPass, 0);
+    m_outlinePipeline = m_renderer->createPipeline("DebugBox.lua", renderPass, 0);
     m_outlineMaterial = std::make_unique<Material>(m_outlinePipeline.get());
 
     for (int i = 0; i < m_boxes.size(); ++i)

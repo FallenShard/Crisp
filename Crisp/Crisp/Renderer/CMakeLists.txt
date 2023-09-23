@@ -5,8 +5,6 @@ add_cpp_static_library(CrispPipelineBuilder
     "PipelineLayoutBuilder.hpp"
     "IO/JsonPipelineBuilder.cpp"
     "IO/JsonPipelineBuilder.hpp"
-    "IO/LuaPipelineBuilder.cpp"
-    "IO/LuaPipelineBuilder.hpp"
 )
 target_link_libraries(CrispPipelineBuilder
     PUBLIC Crisp::Vulkan
@@ -122,7 +120,6 @@ add_cpp_interface_library(CrispRendererConfig
 add_cpp_test(CrispPipelineLayoutBuilderTest
     "Test/PipelineLayoutBuilderTest.cpp")
 target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
-copy_shared_libs(CrispPipelineLayoutBuilderTest lua)
 
 add_cpp_static_library(CrispVulkanRenderPassBuilder
     "VulkanRenderPassBuilder.hpp"

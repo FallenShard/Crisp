@@ -17,7 +17,6 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
-
 #include <Crisp/GUI/Button.hpp>
 #include <Crisp/GUI/Form.hpp>
 #include <Crisp/GUI/Label.hpp>
@@ -51,7 +50,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
     m_uniformBuffers.emplace(
         "params", std::make_unique<UniformBuffer>(m_renderer, sizeof(ParticleParams), BufferUpdatePolicy::PerFrame));
 
-    m_pointSpritePipeline = m_renderer->createPipelineFromLua("PointSprite.lua", *mainPassNode.renderPass, 0);
+    m_pointSpritePipeline = m_renderer->createPipeline("PointSprite.lua", *mainPassNode.renderPass, 0);
     m_pointSpriteMaterial = std::make_unique<Material>(m_pointSpritePipeline.get());
     m_pointSpriteMaterial->writeDescriptor(0, 0, *m_transformsBuffer);
     m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
@@ -157,12 +156,12 @@ void FluidSimulationScene::createGui()
         return sliderPtr;
     };
 
-    addLabeledSlider("Gravity X", 0.0, -10.0, +10.0)->valueChanged +=
-        [this](double val) { m_fluidSimulation->setGravityX(static_cast<float>(val)); };
-    addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged +=
-        [this](double val) { m_fluidSimulation->setGravityY(static_cast<float>(val)); };
-    addLabeledSlider("Gravity Z", 0.0, -10.0, +10.0)->valueChanged +=
-        [this](double val) { m_fluidSimulation->setGravityZ(static_cast<float>(val)); };
+    addLabeledSlider("Gravity X", 0.0, -10.0, +10.0)->valueChanged += [this](double val)
+    { m_fluidSimulation->setGravityX(static_cast<float>(val)); };
+    addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val)
+    { m_fluidSimulation->setGravityY(static_cast<float>(val)); };
+    addLabeledSlider("Gravity Z", 0.0, -10.0, +10.0)->valueChanged += [this](double val)
+    { m_fluidSimulation->setGravityZ(static_cast<float>(val)); };
 
     auto viscoLabel = std::make_unique<Label>(form, "Viscosity");
     viscoLabel->setPosition({0, y});
@@ -194,8 +193,8 @@ void FluidSimulationScene::createGui()
     surfaceTensionSlider->setMaxValue(50);
     surfaceTensionSlider->setMinValue(1);
     surfaceTensionSlider->setValue(1);
-    surfaceTensionSlider->valueChanged +=
-        [this](int value) { m_fluidSimulation->setSurfaceTension(static_cast<float>(value)); };
+    surfaceTensionSlider->valueChanged += [this](int value)
+    { m_fluidSimulation->setSurfaceTension(static_cast<float>(value)); };
     panel->addControl(std::move(surfaceTensionSlider));
     y += 30;
 

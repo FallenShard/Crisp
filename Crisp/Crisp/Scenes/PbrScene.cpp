@@ -13,7 +13,6 @@
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
 
 namespace crisp
 {
@@ -428,8 +427,7 @@ void PbrScene::createCommonTextures()
 
     m_resourceContext->createPipeline("pbrTex", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
 
-    LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
-    setEnvironmentMap(config.get<std::string>("environmentMap").value_or("GreenwichPark"));
+    setEnvironmentMap("GreenwichPark");
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
     imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 }

@@ -17,7 +17,6 @@ target_link_libraries(CrispBitFlagsTest PRIVATE Crisp::BitFlags)
 add_cpp_interface_library(CrispUtils
     "ChromeProfiler.hpp"
     "GlmFormatters.hpp"
-    "LuaConfig.hpp"
     "Profiler.hpp"
     "Timer.hpp"
     "ZipIterator.hpp"
@@ -27,10 +26,9 @@ target_link_libraries(CrispUtils
     INTERFACE Crisp::Math
     INTERFACE Crisp::Format
     INTERFACE Crisp::Logger
-    INTERFACE lua)
+)
 
 add_cpp_test(CrispUtilsTest
     "Test/GlmStructuredBindingsTest.cpp"
-    "Test/LuaConfigTest.cpp")
+)
 target_link_libraries(CrispUtilsTest PRIVATE Crisp::Utils)
-copy_shared_libs(CrispUtilsTest lua)

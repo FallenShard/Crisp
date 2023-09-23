@@ -25,7 +25,9 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
     std::vector<Image> cubeMapImages;
     cubeMapImages.reserve(NumCubeMapFaces);
     for (std::size_t i = 0; i < NumCubeMapFaces; ++i)
+    {
         cubeMapImages.push_back(loadImage(cubeMapDir / (SideFilenames[i] + ".jpg")).unwrap());
+    }
 
     const uint32_t width = cubeMapImages[0].getWidth();
     const uint32_t height = cubeMapImages[0].getHeight();
@@ -40,11 +42,13 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
         VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
     for (uint32_t i = 0; i < NumCubeMapFaces; ++i)
+    {
         fillImageLayer(*m_cubeMap, *renderer, cubeMapImages[i].getData(), width * height * 4, i);
+    }
 
     m_cubeMapView = createView(*m_cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
     m_sampler = createLinearClampSampler(renderer->getDevice());
-    m_pipeline = renderer->createPipelineFromLua("Skybox.json", renderPass, 0);
+    m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);
     updateRenderNode(*m_sampler, *m_cubeMapView);
 
     // renderer->getDebugMarker().setObjectName(m_cubeMapView->getHandle(), "Cube Map View");
@@ -64,7 +68,7 @@ Skybox::Skybox(
         VertexAttribs);
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
-    m_pipeline = renderer->createPipelineFromLua("Skybox.json", renderPass, 0);
+    m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);
     updateRenderNode(sampler, cubeMapView);
 
     renderer->getDevice().flushDescriptorUpdates();

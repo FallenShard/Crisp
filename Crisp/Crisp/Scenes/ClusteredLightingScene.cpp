@@ -40,7 +40,6 @@
 #include <Crisp/GUI/Slider.hpp>
 
 #include <Crisp/Math/Constants.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
 namespace crisp
@@ -236,8 +235,7 @@ void ClusteredLightingScene::createCommonTextures()
             11.0f));
 
     // Environment map
-    LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
-    auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
+    auto hdrName = "GreenwichPark.hdr";
     auto envRefMap = createVulkanImage(
         *m_renderer,
         loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipOnLoad::Y).unwrap(),

@@ -24,7 +24,7 @@ VulkanPipeline* PipelineCache::loadPipeline(
     pipelineInfo.subpassIndex = subpassIndex;
 
     auto& pipeline =
-        m_pipelines.emplace(id, renderer->createPipelineFromLua(luaFilename, renderPass, subpassIndex)).first->second;
+        m_pipelines.emplace(id, renderer->createPipeline(luaFilename, renderPass, subpassIndex)).first->second;
     pipeline->setTag(id);
 
     auto layout = pipeline->getPipelineLayout();
@@ -47,7 +47,7 @@ void PipelineCache::recreatePipelines(Renderer& renderer)
         {
             for (auto& [id, info] : m_pipelineInfos)
             {
-                auto pipeline = renderer.createPipelineFromLua(info.luaFilename, *info.renderPass, info.subpassIndex);
+                auto pipeline = renderer.createPipeline(info.luaFilename, *info.renderPass, info.subpassIndex);
                 m_pipelines[id]->swapAll(*pipeline);
             }
         });

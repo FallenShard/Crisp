@@ -4,7 +4,6 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
-#include <Crisp/Renderer/IO/LuaPipelineBuilder.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
@@ -478,19 +477,12 @@ Geometry* Renderer::getFullScreenGeometry() const
     return m_fullScreenGeometry.get();
 }
 
-std::unique_ptr<VulkanPipeline> Renderer::createPipelineFromLua(
+std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
     std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex)
 {
-    if (pipelineName.ends_with(".json"))
-    {
-        const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
-        CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
-        return createPipelineFromJsonPath(absolutePipelinePath, *this, renderPass, subpassIndex).unwrap();
-    }
-
-    const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines/Backup" / pipelineName};
+    const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
-    return LuaPipelineBuilder(absolutePipelinePath).create(this, renderPass, subpassIndex);
+    return createPipelineFromJsonPath(absolutePipelinePath, *this, renderPass, subpassIndex).unwrap();
 }
 
 void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass)

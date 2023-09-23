@@ -65,10 +65,12 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
     // create sampler
     m_sampler = createLinearClampSampler(renderer->getDevice());
 
-    m_pipeline = renderer->createPipelineFromLua("Tonemapping.lua", renderer->getDefaultRenderPass(), 0);
+    m_pipeline = renderer->createPipeline("Tonemapping.lua", renderer->getDefaultRenderPass(), 0);
     m_material = std::make_unique<Material>(m_pipeline.get());
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
+    {
         m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler.get());
+    }
     renderer->getDevice().flushDescriptorUpdates();
 }
 

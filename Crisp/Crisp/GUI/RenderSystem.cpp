@@ -14,7 +14,6 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
-
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/Texture.hpp>
@@ -27,7 +26,7 @@ namespace crisp::gui
 {
 namespace
 {
-static constexpr float kDepthLayers = 32.0f;
+constexpr float kDepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
 
@@ -452,11 +451,11 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
 
 void RenderSystem::createPipelines()
 {
-    m_colorQuadPipeline = m_renderer->createPipelineFromLua("GuiColor.json", *m_guiPass.get(), 0);
-    m_textPipeline = m_renderer->createPipelineFromLua("GuiText.json", *m_guiPass.get(), 0);
-    m_texQuadPipeline = m_renderer->createPipelineFromLua("GuiTexture.json", *m_guiPass.get(), 0);
-    m_debugRectPipeline = m_renderer->createPipelineFromLua("GuiDebug.json", *m_guiPass.get(), 0);
-    m_fsQuadPipeline = m_renderer->createPipelineFromLua("Fullscreen.json", m_renderer->getDefaultRenderPass(), 0);
+    m_colorQuadPipeline = m_renderer->createPipeline("GuiColor.json", *m_guiPass.get(), 0);
+    m_textPipeline = m_renderer->createPipeline("GuiText.json", *m_guiPass.get(), 0);
+    m_texQuadPipeline = m_renderer->createPipeline("GuiTexture.json", *m_guiPass.get(), 0);
+    m_debugRectPipeline = m_renderer->createPipeline("GuiDebug.json", *m_guiPass.get(), 0);
+    m_fsQuadPipeline = m_renderer->createPipeline("Fullscreen.json", m_renderer->getDefaultRenderPass(), 0);
 }
 
 void RenderSystem::initGeometryBuffers()

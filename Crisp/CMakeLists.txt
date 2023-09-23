@@ -29,5 +29,5 @@ set_target_properties(CrispMain PROPERTIES
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
 )
 target_link_libraries(CrispMain PRIVATE Crisp::Application)
-copy_shared_libs(CrispMain lua freetype embree TBB::tbb)
+copy_shared_libs(CrispMain freetype embree TBB::tbb)
 target_sources(CrispMain PRIVATE Crisp.natvis)

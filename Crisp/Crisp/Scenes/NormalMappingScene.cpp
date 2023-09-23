@@ -2,7 +2,6 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 
@@ -11,7 +10,6 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
-
 
 #include <Crisp/Image/Io/Utils.hpp>
 

@@ -190,7 +190,6 @@ FetchContent_MakeAvailable(SPIRV-Reflect)
 # FetchContent_MakeAvailable(tinyexr)
 
 # List all used third-party libraries
-add_subdirectory(Externals/lua)
 add_subdirectory(Externals/imgui)
 add_subdirectory(Externals/stb)
 add_subdirectory(Externals/tinyexr)

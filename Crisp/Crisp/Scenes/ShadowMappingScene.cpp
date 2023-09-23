@@ -22,7 +22,6 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
-
 #include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 
 #include <Crisp/Lights/DirectionalLight.hpp>
@@ -43,7 +42,6 @@
 #include <Crisp/Models/Skybox.hpp>
 
 #include <Crisp/Math/Constants.hpp>
-#include <Crisp/Utils/LuaConfig.hpp>
 
 #include <random>
 #include <thread>
@@ -377,8 +375,7 @@ void ShadowMappingScene::createCommonTextures()
     addPbrTexturesToImageCache(createDefaultPbrTextureGroup(), "default", imageCache);
 
     // Environment map
-    LuaConfig config(m_renderer->getResourcesPath() / "Scripts/scene.lua");
-    auto hdrName = config.get<std::string>("environmentMap").value_or("GreenwichPark") + ".hdr";
+    auto hdrName = "GreenwichPark.hdr";
     auto envRefMap = createVulkanImage(
         *m_renderer,
         loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipOnLoad::Y).unwrap(),
