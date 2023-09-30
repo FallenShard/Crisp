@@ -5,7 +5,7 @@
 
 #include <numeric>
 
-namespace crisp::test {
+namespace crisp {
 using ::testing::Not;
 
 struct MoveOnlyType {
@@ -36,4 +36,4 @@ TEST(ResultTest, ValueWithMoveOnly) {
     const auto value = std::move(result).unwrap();
     EXPECT_EQ(*value.x, 10);
 }
-} // namespace crisp::test
+} // namespace crisp

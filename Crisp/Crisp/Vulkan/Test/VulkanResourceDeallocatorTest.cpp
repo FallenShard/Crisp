@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using VulkanResourceDeallocatorTest = VulkanTest;
 
@@ -34,4 +34,4 @@ TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
     EXPECT_EQ(device->getResourceDeallocator().getDeferredDestructorCount(), 0);
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

@@ -3,7 +3,7 @@
 
 #include <gmock/gmock.h>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 constexpr double kEpsilon = 1e-6;
 
@@ -65,4 +65,4 @@ TEST(FreeCameraControllerTest, ComplexMotion) {
     const auto lookAt3 = glm::lookAt(glm::vec3(1.5, 1, 4), glm::vec3(0, 1, 4), glm::vec3(0, 1, 0));
     EXPECT_THAT(controller.getCamera().getViewMatrix(), GlmMatNearEq(lookAt3));
 }
-} // namespace crisp::test
+} // namespace crisp

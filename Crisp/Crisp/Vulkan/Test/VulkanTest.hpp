@@ -17,7 +17,7 @@
 
 #include <glfw/glfw3.h>
 
-namespace crisp::test {
+namespace crisp {
 MATCHER(HandleIsValid, "Checks whether the handle is not null.") {
     std::ignore = result_listener;
     return arg.getHandle() != VK_NULL_HANDLE;
@@ -120,4 +120,4 @@ struct ScopeCommandExecutor {
     VkFence fence;
 };
 
-} // namespace crisp::test
+} // namespace crisp

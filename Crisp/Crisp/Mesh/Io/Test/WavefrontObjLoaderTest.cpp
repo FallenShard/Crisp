@@ -2,7 +2,7 @@
 
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 const std::filesystem::path ResourceDir("D:/Projects/Crisp/Resources/Meshes");
 
@@ -37,7 +37,7 @@ TEST(WavefrontObjTest, LoadCamelHead) {
 }
 
 } // namespace
-} // namespace crisp::test
+} // namespace crisp
 
 // glm::vec2 compMul(const glm::vec2& z, const glm::vec2& w)
 //{

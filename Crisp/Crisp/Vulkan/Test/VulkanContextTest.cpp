@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 
 using ::testing::IsNull;
@@ -30,4 +30,4 @@ TEST(VulkanContextTest, DeviceSelection) {
     EXPECT_THAT(context.selectPhysicalDevice({}), Not(HasError()));
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

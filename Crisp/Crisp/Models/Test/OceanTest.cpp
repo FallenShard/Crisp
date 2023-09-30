@@ -5,7 +5,7 @@
 
 #include <numeric>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using OceanTest = VulkanTest;
 
@@ -92,4 +92,4 @@ TEST_F(OceanTest, VulkanBuffer) {
 }
 
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

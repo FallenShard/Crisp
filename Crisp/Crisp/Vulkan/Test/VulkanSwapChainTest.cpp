@@ -2,7 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using ::testing::Each;
 
@@ -99,4 +99,4 @@ TEST_F(VulkanSwapChainTest, WindowResized) {
     window_->setSize(kDefaultWidth, kDefaultHeight);
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

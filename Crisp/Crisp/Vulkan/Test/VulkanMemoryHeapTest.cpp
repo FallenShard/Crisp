@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using ::testing::SizeIs;
 
@@ -69,4 +69,4 @@ TEST_F(VulkanMemoryHeapTest, Coalescing) {
     ASSERT_EQ(block.freeChunks[1984], 56);
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

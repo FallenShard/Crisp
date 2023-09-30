@@ -3,7 +3,7 @@
 #include <gmock/gmock.h>
 #include <spirv_reflect.h>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using ::testing::AllOf;
 using ::testing::ElementsAre;
@@ -80,4 +80,4 @@ TEST(ReflectionTest, SpirvReflect) {
 }
 
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

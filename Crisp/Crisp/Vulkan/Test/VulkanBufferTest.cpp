@@ -2,7 +2,7 @@
 
 #include <numeric>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using VulkanBufferTest = VulkanTest;
 
@@ -187,4 +187,4 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     }
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

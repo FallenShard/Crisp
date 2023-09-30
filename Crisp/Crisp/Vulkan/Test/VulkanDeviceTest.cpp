@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using VulkanDeviceTest = VulkanTest;
 
@@ -36,4 +36,4 @@ TEST_F(VulkanDeviceTest, NonCoherentMappedRanges) {
     EXPECT_EQ(device_->getMemoryAllocator().getDeviceMemoryUsage().bufferMemoryUsed, chunks * chunkSize);
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

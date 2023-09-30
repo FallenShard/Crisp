@@ -2,7 +2,7 @@
 
 #include <Crisp/Mesh/Io/GltfLoader.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 const std::filesystem::path ResourceDir("D:/Projects/Crisp/Resources/glTFSamples/2.0");
 
@@ -28,4 +28,4 @@ TEST(GltfLoaderTest, LoadAvocado) {
 }
 
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

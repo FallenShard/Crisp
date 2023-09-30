@@ -5,7 +5,7 @@
 
 #include <numeric>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
@@ -51,4 +51,4 @@ TEST(SlotMapTest, HandleType) {
 }
 
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

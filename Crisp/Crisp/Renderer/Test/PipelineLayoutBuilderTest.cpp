@@ -3,7 +3,7 @@
 
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using PipelineLayoutBuilderTest = VulkanTest;
 
@@ -26,4 +26,4 @@ TEST_F(PipelineLayoutBuilderTest, BasicUsage) {
     }
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

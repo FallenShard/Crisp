@@ -6,7 +6,7 @@
 #include <fstream>
 #include <stack>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 
 using ::testing::SizeIs;
@@ -203,4 +203,4 @@ TEST(RenderGraphTest2, Blackboard) {
 }
 
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

@@ -2,7 +2,7 @@
 
 #include <Crisp/Camera/Camera.hpp>
 
-namespace crisp::test {
+namespace crisp {
 constexpr uint32_t kDefaultWidth = 512;
 constexpr uint32_t kDefaultHeight = 512;
 
@@ -28,4 +28,4 @@ TEST(CameraTest, DepthRange) {
     EXPECT_EQ(Camera(kDefaultWidth, kDefaultHeight, kZNear, kZFar).getViewDepthRange(), glm::vec2(kZNear, kZFar));
 }
 
-} // namespace crisp::test
+} // namespace crisp

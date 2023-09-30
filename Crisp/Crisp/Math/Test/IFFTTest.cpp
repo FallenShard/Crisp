@@ -5,7 +5,7 @@
 #include <complex>
 #include <random>
 
-namespace crisp::test {
+namespace crisp {
 constexpr size_t Size = 8;
 
 std::vector<std::complex<float>> toComplex(const std::vector<float>& real) {
@@ -145,4 +145,4 @@ TEST(FFT, SimpleTest) {
     auto original = ifft(res);
 }
 
-} // namespace crisp::test
+} // namespace crisp

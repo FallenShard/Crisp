@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using VulkanPhysicalDeviceWithSurfaceTest = VulkanTestWithSurface;
 using VulkanPhysicalDeviceTest = VulkanTest;
@@ -59,4 +59,4 @@ TEST_F(VulkanPhysicalDeviceTest, FormatProperties) {
     EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp

@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test {
+namespace crisp {
 namespace {
 using VulkanMemoryAllocatorTest = VulkanTest;
 
@@ -11,4 +11,4 @@ TEST_F(VulkanMemoryAllocatorTest, EmptyMemoryUsage) {
     ASSERT_EQ(memoryMetrics.stagingMemoryUsed, 0);
 }
 } // namespace
-} // namespace crisp::test
+} // namespace crisp
