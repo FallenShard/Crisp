@@ -2,8 +2,7 @@
 
 #include <Crisp/Renderer/Renderer.hpp>
 
-namespace crisp
-{
+namespace crisp {
 StorageBuffer::StorageBuffer(
     Renderer* renderer,
     VkDeviceSize size,
@@ -14,22 +13,20 @@ StorageBuffer::StorageBuffer(
     , m_updatePolicy(updatePolicy)
     , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount)
     , m_singleRegionSize(0)
-    , m_buffer(nullptr)
-{
+    , m_buffer(nullptr) {
     const VkBufferUsageFlags usageFlags =
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags | (data ? VK_BUFFER_USAGE_TRANSFER_DST_BIT : 0);
 
-    if (m_updatePolicy == BufferUpdatePolicy::Constant)
-    {
+    if (m_updatePolicy == BufferUpdatePolicy::Constant) {
         m_buffer = std::make_unique<VulkanBuffer>(
             m_renderer->getDevice(), size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        if (data != nullptr)
+        if (data != nullptr) {
             m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);
+        }
 
         m_singleRegionSize = size;
-    }
-    else if (
+    } else if (
         m_updatePolicy == BufferUpdatePolicy::PerFrame ||
         m_updatePolicy == BufferUpdatePolicy::PerFrameGpu) // Setup ring buffering
     {
@@ -40,11 +37,9 @@ StorageBuffer::StorageBuffer(
             usageFlags,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        if (m_updatePolicy == BufferUpdatePolicy::PerFrame)
-        {
+        if (m_updatePolicy == BufferUpdatePolicy::PerFrame) {
             m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(m_renderer->getDevice(), size);
-            if (data)
-            {
+            if (data) {
                 updateStagingBuffer(data, size);
             }
             m_renderer->registerStreamingStorageBuffer(this);
@@ -52,22 +47,21 @@ StorageBuffer::StorageBuffer(
     }
 }
 
-StorageBuffer::~StorageBuffer()
-{
-    if (m_updatePolicy == BufferUpdatePolicy::PerFrame || m_updatePolicy == BufferUpdatePolicy::PerFrameGpu)
+StorageBuffer::~StorageBuffer() {
+    if (m_updatePolicy == BufferUpdatePolicy::PerFrame || m_updatePolicy == BufferUpdatePolicy::PerFrameGpu) {
         m_renderer->unregisterStreamingStorageBuffer(this);
+    }
 }
 
-void StorageBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset)
-{
+void StorageBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
     m_stagingBuffer->updateFromHost(data, size, offset);
     m_framesToUpdateOnGpu = RendererConfig::VirtualFrameCount;
 }
 
-void StorageBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex)
-{
-    if (m_framesToUpdateOnGpu == 0)
+void StorageBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex) {
+    if (m_framesToUpdateOnGpu == 0) {
         return;
+    }
 
     m_buffer->copyFrom(
         commandBuffer, *m_stagingBuffer, 0, currentFrameIndex * m_singleRegionSize, m_stagingBuffer->getSize());
@@ -75,23 +69,19 @@ void StorageBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t c
     m_framesToUpdateOnGpu--;
 }
 
-uint32_t StorageBuffer::getDynamicOffset(uint32_t currentFrameIndex) const
-{
+uint32_t StorageBuffer::getDynamicOffset(uint32_t currentFrameIndex) const {
     return static_cast<uint32_t>(currentFrameIndex * m_singleRegionSize);
 }
 
-VkDescriptorBufferInfo StorageBuffer::getDescriptorInfo() const
-{
+VkDescriptorBufferInfo StorageBuffer::getDescriptorInfo() const {
     return {m_buffer->getHandle(), 0, m_singleRegionSize};
 }
 
-VkDescriptorBufferInfo StorageBuffer::getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const
-{
+VkDescriptorBufferInfo StorageBuffer::getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const {
     return {m_buffer->getHandle(), offset, range};
 }
 
-VkDescriptorBufferInfo StorageBuffer::createDescriptorInfoFromSection(uint32_t sectionIndex)
-{
+VkDescriptorBufferInfo StorageBuffer::createDescriptorInfoFromSection(uint32_t sectionIndex) {
     return {m_buffer->getHandle(), sectionIndex * m_singleRegionSize, m_singleRegionSize};
 }
 } // namespace crisp

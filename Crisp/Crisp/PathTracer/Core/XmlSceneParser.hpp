@@ -3,15 +3,12 @@
 #include <memory>
 #include <string>
 
-namespace crisp
-{
-namespace pt
-{
+namespace crisp {
+namespace pt {
 class Scene;
 }
 
-class XmlSceneParser
-{
+class XmlSceneParser {
 public:
     std::unique_ptr<pt::Scene> parse(const std::string& fileName);
 };

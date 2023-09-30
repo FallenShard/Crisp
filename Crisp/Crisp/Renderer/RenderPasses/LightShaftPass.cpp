@@ -7,10 +7,8 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
-std::unique_ptr<VulkanRenderPass> createLightShaftPass(const VulkanDevice& device, VkExtent2D renderArea)
-{
+namespace crisp {
+std::unique_ptr<VulkanRenderPass> createLightShaftPass(const VulkanDevice& device, VkExtent2D renderArea) {
     return RenderPassBuilder()
         /*.setRenderTargetCount(1)
         .setRenderTargetFormat(0, VK_FORMAT_R8G8B8A8_UNORM)

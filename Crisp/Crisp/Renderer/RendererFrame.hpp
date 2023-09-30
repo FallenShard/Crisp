@@ -7,13 +7,10 @@
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
-namespace crisp
-{
-class RendererFrame
-{
+namespace crisp {
+class RendererFrame {
 public:
-    enum class Status
-    {
+    enum class Status {
         Idle,
         Submitted
     };
@@ -42,8 +39,7 @@ private:
     VkDevice m_deviceHandle; // Non-owning.
     int32_t m_logicalIndex;
 
-    struct Submission
-    {
+    struct Submission {
         std::vector<VkCommandBuffer> cmdBufferHandles;
 
         std::vector<VkSemaphore> waitSemaphores;

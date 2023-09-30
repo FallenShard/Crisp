@@ -5,10 +5,8 @@
 #include <Crisp/Math/Distribution1D.hpp>
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
-namespace crisp
-{
-class Mesh : public Shape
-{
+namespace crisp {
+class Mesh : public Shape {
 public:
     Mesh(const VariantMap& params = VariantMap());
 

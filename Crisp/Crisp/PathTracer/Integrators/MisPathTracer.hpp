@@ -2,12 +2,10 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
+namespace crisp {
 struct Intersection;
 
-class MisPathTracerIntegrator : public Integrator
-{
+class MisPathTracerIntegrator : public Integrator {
 public:
     MisPathTracerIntegrator(const VariantMap& attributes);
     virtual ~MisPathTracerIntegrator();
@@ -20,8 +18,7 @@ public:
         IlluminationFlags flags = Illumination::Full) const override;
 
 private:
-    struct Path
-    {
+    struct Path {
         Ray3 currRay;
         Ray3 nextRay;
         Spectrum throughput;
@@ -35,9 +32,7 @@ private:
             , throughput(1.0f)
             , bsdfSample(1.0f)
             , isSpecular(false)
-            , bounces(0)
-        {
-        }
+            , bounces(0) {}
     };
 
     Spectrum bsdfImportanceSample(

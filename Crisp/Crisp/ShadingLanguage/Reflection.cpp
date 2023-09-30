@@ -5,24 +5,19 @@
 #include <fstream>
 #include <ranges>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 #define SPV_TO_VK_CASE_RETURN(enumEntry)                                                                               \
     case SPV_REFLECT_##enumEntry:                                                                                      \
         return VK_##enumEntry;
 
 #define CRISP_SPV_TRY(spvFunctionCall)                                                                                 \
-    if ((spvFunctionCall) != SPV_REFLECT_RESULT_SUCCESS)                                                               \
-    {                                                                                                                  \
+    if ((spvFunctionCall) != SPV_REFLECT_RESULT_SUCCESS) {                                                             \
         return resultError("Error while calling {}", #spvFunctionCall);                                                \
     }
 
-Result<VkShaderStageFlagBits> toVulkanShaderStage(const SpvReflectShaderStageFlagBits stageBit)
-{
-    switch (stageBit)
-    {
+Result<VkShaderStageFlagBits> toVulkanShaderStage(const SpvReflectShaderStageFlagBits stageBit) {
+    switch (stageBit) {
         SPV_TO_VK_CASE_RETURN(SHADER_STAGE_RAYGEN_BIT_KHR)
         SPV_TO_VK_CASE_RETURN(SHADER_STAGE_CLOSEST_HIT_BIT_KHR)
         SPV_TO_VK_CASE_RETURN(SHADER_STAGE_MISS_BIT_KHR)
@@ -45,10 +40,8 @@ Result<VkShaderStageFlagBits> toVulkanShaderStage(const SpvReflectShaderStageFla
     }
 }
 
-Result<VkDescriptorType> toVulkanDescriptorType(const SpvReflectDescriptorType type)
-{
-    switch (type)
-    {
+Result<VkDescriptorType> toVulkanDescriptorType(const SpvReflectDescriptorType type) {
+    switch (type) {
         SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_SAMPLER)
         SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
         SPV_TO_VK_CASE_RETURN(DESCRIPTOR_TYPE_SAMPLED_IMAGE)
@@ -66,16 +59,12 @@ Result<VkDescriptorType> toVulkanDescriptorType(const SpvReflectDescriptorType t
     }
 }
 
-class SpirvShaderReflectionModuleGuard
-{
+class SpirvShaderReflectionModuleGuard {
 public:
     explicit SpirvShaderReflectionModuleGuard(SpvReflectShaderModule& module)
-        : m_module(module)
-    {
-    }
+        : m_module(module) {}
 
-    ~SpirvShaderReflectionModuleGuard()
-    {
+    ~SpirvShaderReflectionModuleGuard() {
         spvReflectDestroyShaderModule(&m_module);
     }
 
@@ -91,32 +80,25 @@ private:
 
 } // namespace
 
-void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs)
-{
+void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs) {
     // Resize current, if necessary
-    if (rhs.descriptorSetLayoutBindings.size() > descriptorSetLayoutBindings.size())
-    {
+    if (rhs.descriptorSetLayoutBindings.size() > descriptorSetLayoutBindings.size()) {
         descriptorSetLayoutBindings.resize(rhs.descriptorSetLayoutBindings.size());
     }
 
-    for (auto&& [setIdx, rhsLayout] : std::views::enumerate(rhs.descriptorSetLayoutBindings))
-    {
+    for (auto&& [setIdx, rhsLayout] : std::views::enumerate(rhs.descriptorSetLayoutBindings)) {
         // Resize layout[i], if ncessary
-        if (rhsLayout.size() > descriptorSetLayoutBindings[setIdx].size())
-        {
+        if (rhsLayout.size() > descriptorSetLayoutBindings[setIdx].size()) {
             descriptorSetLayoutBindings[setIdx].resize(rhsLayout.size());
         }
 
-        for (auto&& [bindingIdx, rhsBinding] : std::views::enumerate(rhsLayout))
-        {
+        for (auto&& [bindingIdx, rhsBinding] : std::views::enumerate(rhsLayout)) {
             auto& lhsLayout = descriptorSetLayoutBindings[setIdx][bindingIdx];
-            if (lhsLayout.descriptorCount > 0)
-            {
+            if (lhsLayout.descriptorCount > 0) {
                 lhsLayout.stageFlags |= rhsBinding.stageFlags;
             }
             // If RHS binding is valid, merge it into the current LHS
-            else if (rhsBinding.descriptorCount > 0)
-            {
+            else if (rhsBinding.descriptorCount > 0) {
                 lhsLayout = rhsBinding;
             }
         }
@@ -125,18 +107,15 @@ void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs)
     pushConstants.insert(pushConstants.end(), rhs.pushConstants.begin(), rhs.pushConstants.end());
 }
 
-Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath)
-{
+Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
-    if (!file.is_open())
-    {
+    if (!file.is_open()) {
         return resultError("Failed to open spirv file: {}!", filePath.string());
     }
 
     const size_t fileSize = static_cast<size_t>(file.tellg());
-    if (fileSize % sizeof(uint32_t) != 0)
-    {
+    if (fileSize % sizeof(uint32_t) != 0) {
         return resultError(
             "File size of {} is not divisible by 4. SPIRV code is a stream of 32-bit tokens.", filePath.string());
     }
@@ -148,18 +127,15 @@ Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath)
     return buffer;
 }
 
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath)
-{
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath) {
     const auto spirvFile{readSpirvFile(filePath)};
-    if (!spirvFile)
-    {
+    if (!spirvFile) {
         return resultError("Failed to load spirv file from: {}", filePath.string());
     }
     return reflectUniformMetadataFromSpirvShader(*spirvFile);
 }
 
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const std::span<const char> spirvShader)
-{
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const std::span<const char> spirvShader) {
     SpvReflectShaderModule module;
     CRISP_SPV_TRY(spvReflectCreateShaderModule(spirvShader.size(), spirvShader.data(), &module));
     SpirvShaderReflectionModuleGuard moduleGuard(module);
@@ -170,27 +146,23 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
         static_cast<const SpvReflectDescriptorSet*>(module.descriptor_sets), module.descriptor_set_count};
 
     uint32_t totalSetCount = module.descriptor_set_count;
-    for (const auto& descSet : descriptorSetSpan)
-    {
+    for (const auto& descSet : descriptorSetSpan) {
         totalSetCount = std::max(totalSetCount, descSet.set + 1);
     }
 
     ShaderUniformInputMetadata metadata{};
     metadata.descriptorSetLayoutBindings.resize(totalSetCount);
 
-    for (const auto& descSet : descriptorSetSpan)
-    {
+    for (const auto& descSet : descriptorSetSpan) {
         const std::span bindingSpan{descSet.bindings, descSet.binding_count};
 
         uint32_t totalBindingCount = descSet.binding_count;
-        for (const auto& binding : bindingSpan)
-        {
+        for (const auto& binding : bindingSpan) {
             totalBindingCount = std::max(totalBindingCount, binding->binding + 1); // NOLINT
         }
         metadata.descriptorSetLayoutBindings[descSet.set].resize(totalBindingCount);
 
-        for (const auto& spvBinding : bindingSpan)
-        {
+        for (const auto& spvBinding : bindingSpan) {
             auto& binding = metadata.descriptorSetLayoutBindings[descSet.set][spvBinding->binding];
             binding.binding = spvBinding->binding;
             binding.descriptorCount = spvBinding->count;
@@ -201,8 +173,7 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
     }
 
     metadata.pushConstants.resize(module.push_constant_block_count);
-    for (uint32_t i = 0; i < module.push_constant_block_count; ++i)
-    {
+    for (uint32_t i = 0; i < module.push_constant_block_count; ++i) {
         metadata.pushConstants[i].offset = module.push_constant_blocks[i].offset; // NOLINT
         metadata.pushConstants[i].size = module.push_constant_blocks[i].size;     // NOLINT
         metadata.pushConstants[i].stageFlags = stageFlags;

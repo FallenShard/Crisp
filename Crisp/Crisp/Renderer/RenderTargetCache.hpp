@@ -4,11 +4,9 @@
 
 #include <optional>
 
-namespace crisp
-{
+namespace crisp {
 
-class RenderTargetBuilder
-{
+class RenderTargetBuilder {
 public:
     RenderTargetBuilder() = default;
 
@@ -32,8 +30,7 @@ private:
     RenderTargetInfo m_info;
 };
 
-class RenderTargetCache
-{
+class RenderTargetCache {
 public:
     RenderTargetCache() = default;
 

@@ -6,19 +6,16 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 inline constexpr uint32_t kCubeMapFaceCount = 6;
 
-struct ImageBasedLightingData
-{
+struct ImageBasedLightingData {
     Image equirectangularEnvironmentMap;
     std::vector<Image> diffuseIrradianceCubeMap;
     std::vector<std::vector<Image>> specularReflectanceMapMipLevels;
 };
 
-class EnvironmentLight
-{
+class EnvironmentLight {
 public:
     static constexpr uint32_t kDiffuseCubeMapSize = 64;
     static constexpr uint32_t kSpecularCubeMapSize = 512;
@@ -27,29 +24,24 @@ public:
 
     void update(Renderer& renderer, ImageBasedLightingData&& iblData);
 
-    void setName(const std::string& name)
-    {
+    void setName(const std::string& name) {
         m_name = name;
     }
 
-    const std::string& getName() const
-    {
+    const std::string& getName() const {
         return m_name;
     }
 
-    inline const VulkanImageView& getDiffuseMapView() const
-    {
+    inline const VulkanImageView& getDiffuseMapView() const {
         return *m_diffuseEnvironmentMapView;
     }
 
-    inline const VulkanImageView& getSpecularMapView() const
-    {
+    inline const VulkanImageView& getSpecularMapView() const {
         return *m_specularEnvironmentMapView;
     }
 
     inline std::unique_ptr<Skybox> createSkybox(
-        Renderer& renderer, const VulkanRenderPass& renderPass, const VulkanSampler& sampler) const
-    {
+        Renderer& renderer, const VulkanRenderPass& renderPass, const VulkanSampler& sampler) const {
         return std::make_unique<Skybox>(&renderer, renderPass, *m_cubeMapView, sampler);
     }
 

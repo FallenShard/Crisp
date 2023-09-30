@@ -4,14 +4,11 @@
 
 #include <random>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 constexpr float g = 9.81f;
 
-float calculatePhillipsSpectrum(const WindParameters& wind, const glm::vec2& k)
-{
+float calculatePhillipsSpectrum(const WindParameters& wind, const glm::vec2& k) {
     const float kLen2 = glm::dot(k, k) + 0.000001f;
     const glm::vec2 kNorm = kLen2 == 0.0f ? glm::vec2(0.0f) : k / std::sqrtf(kLen2);
 
@@ -32,8 +29,7 @@ OceanParameters createOceanParameters(
     const float windX,
     const float windZ,
     const float A,
-    const float l)
-{
+    const float l) {
     const glm::vec2 windVelocity{windX, windZ};
     return {
         .N = patchGridSize,
@@ -49,8 +45,7 @@ OceanParameters createOceanParameters(
 }
 
 std::vector<glm::vec4> createOceanSpectrum(
-    const uint32_t seed, const OceanParameters& oceanParams, const OceanSpectrumData spectrumData)
-{
+    const uint32_t seed, const OceanParameters& oceanParams, const OceanSpectrumData spectrumData) {
     WindParameters wind;
     wind.speed = {40, 40};
     wind.magnitude = std::sqrt(glm::dot(wind.speed, wind.speed));
@@ -60,19 +55,14 @@ std::vector<glm::vec4> createOceanSpectrum(
     std::mt19937 gen{seed};
     std::normal_distribution<> distrib(0, 1);
     std::vector<glm::vec4> spectrum;
-    for (int32_t i = 0; i < oceanParams.N; ++i)
-    {
-        for (int32_t j = 0; j < oceanParams.M; ++j)
-        {
+    for (int32_t i = 0; i < oceanParams.N; ++i) {
+        for (int32_t j = 0; j < oceanParams.M; ++j) {
 
             const glm::vec2 eps0 = glm::vec2(distrib(gen), distrib(gen));
             const glm::vec2 eps1 = glm::vec2(distrib(gen), distrib(gen));
-            if (spectrumData == OceanSpectrumData::UniformGaussian)
-            {
+            if (spectrumData == OceanSpectrumData::UniformGaussian) {
                 spectrum.emplace_back(eps0, eps1);
-            }
-            else
-            {
+            } else {
                 const glm::ivec2 idx = glm::ivec2(j, i) - glm::ivec2(oceanParams.N, oceanParams.M) / 2;
                 const glm::vec2 k =
                     glm::vec2(idx) * 2.0f * glm::pi<float>() / glm::vec2(oceanParams.Lx, oceanParams.Lz);

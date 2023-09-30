@@ -5,10 +5,8 @@
 #include <Crisp/Core/Mouse.hpp>
 #include <Crisp/Core/Window.hpp>
 
-namespace crisp
-{
-class TargetCameraController
-{
+namespace crisp {
+class TargetCameraController {
 public:
     explicit TargetCameraController(Window& window);
     ~TargetCameraController();

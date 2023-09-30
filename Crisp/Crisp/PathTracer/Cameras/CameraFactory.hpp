@@ -6,10 +6,8 @@
 #include <memory>
 #include <string>
 
-namespace crisp
-{
-class CameraFactory
-{
+namespace crisp {
+class CameraFactory {
 public:
     static std::unique_ptr<Camera> create(std::string type, VariantMap parameters);
 };

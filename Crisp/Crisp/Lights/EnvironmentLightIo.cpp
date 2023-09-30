@@ -2,11 +2,9 @@
 
 #include <Crisp/Image/Io/Utils.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
-Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem::path& envMapDir)
-{
+Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem::path& envMapDir) {
     const auto envMapName{envMapDir.stem().string()};
     ImageBasedLightingData data{};
 
@@ -18,8 +16,7 @@ Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem:
     data.diffuseIrradianceCubeMap = loadCubeMapFacesFromHCrossImage(diffMapPath);
 
     constexpr uint32_t kReflectionMipMapLevels{9};
-    for (uint32_t i = 0; i < kReflectionMipMapLevels; ++i)
-    {
+    for (uint32_t i = 0; i < kReflectionMipMapLevels; ++i) {
         const uint32_t width = (1 << (kReflectionMipMapLevels - i)) * 4;
         const uint32_t height = (1 << (kReflectionMipMapLevels - i)) * 3;
         const std::filesystem::path reflMapPath{

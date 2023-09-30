@@ -7,12 +7,10 @@
 
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 class DescriptorSetAllocator;
 
-class PipelineLayoutBuilder
-{
+class PipelineLayoutBuilder {
 public:
     PipelineLayoutBuilder() = default;
 

@@ -11,24 +11,20 @@
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
-namespace crisp
-{
-class ResourceContext
-{
+namespace crisp {
+class ResourceContext {
 public:
     explicit ResourceContext(Renderer* renderer);
 
     template <typename T>
-    UniformBuffer* createUniformBuffer(std::string id, const std::vector<T>& data, BufferUpdatePolicy updatePolicy)
-    {
+    UniformBuffer* createUniformBuffer(std::string id, const std::vector<T>& data, BufferUpdatePolicy updatePolicy) {
         m_uniformBuffers[id] =
             std::make_unique<UniformBuffer>(m_renderer, data.size() * sizeof(T), updatePolicy, data.data());
         return m_uniformBuffers[id].get();
     }
 
     template <typename... Args>
-    UniformBuffer* createUniformBuffer(const std::string& id, Args&&... args)
-    {
+    UniformBuffer* createUniformBuffer(const std::string& id, Args&&... args) {
         return addUniformBuffer(id, std::make_unique<UniformBuffer>(m_renderer, std::forward<Args>(args)...));
     }
 
@@ -36,8 +32,7 @@ public:
     UniformBuffer* getUniformBuffer(std::string id) const;
 
     template <typename... Args>
-    StorageBuffer* createStorageBuffer(const std::string& id, Args&&... args)
-    {
+    StorageBuffer* createStorageBuffer(const std::string& id, Args&&... args) {
         return addStorageBuffer(id, std::make_unique<StorageBuffer>(m_renderer, std::forward<Args>(args)...));
     }
 
@@ -61,13 +56,11 @@ public:
 
     void recreatePipelines();
 
-    inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout)
-    {
+    inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return pipelineCache.getDescriptorAllocator(pipelineLayout);
     }
 
-    inline const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& getRenderNodes() const
-    {
+    inline const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& getRenderNodes() const {
         return m_renderNodes;
     }
 

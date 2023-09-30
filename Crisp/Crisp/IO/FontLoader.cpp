@@ -6,14 +6,11 @@
 
 #include <Crisp/Core/Logger.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 constexpr int kPadding = 0;
 
-uint32_t ceilPowerOf2(uint32_t value)
-{
+uint32_t ceilPowerOf2(uint32_t value) {
     uint32_t result = value - 1;
     result |= result >> 1;
     result |= result >> 2;
@@ -24,22 +21,19 @@ uint32_t ceilPowerOf2(uint32_t value)
 }
 } // namespace
 
-FontLoader::FontLoader()
-{
-    if (FT_Init_FreeType(&m_context))
+FontLoader::FontLoader() {
+    if (FT_Init_FreeType(&m_context)) {
         std::cerr << "Failed to initialize FreeType font library!" << std::endl;
+    }
 }
 
-FontLoader::~FontLoader()
-{
+FontLoader::~FontLoader() {
     FT_Done_FreeType(m_context);
 }
 
-std::unique_ptr<Font> FontLoader::load(const std::filesystem::path& fontPath, int fontPixelSize) const
-{
+std::unique_ptr<Font> FontLoader::load(const std::filesystem::path& fontPath, int fontPixelSize) const {
     FT_Face face;
-    if (FT_New_Face(m_context, fontPath.string().c_str(), 0, &face))
-    {
+    if (FT_New_Face(m_context, fontPath.string().c_str(), 0, &face)) {
         spdlog::error("Failed to create new face: {}\n", fontPath.string());
         return nullptr;
     }
@@ -65,17 +59,14 @@ std::unique_ptr<Font> FontLoader::load(const std::filesystem::path& fontPath, in
     return std::move(font);
 }
 
-std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) const
-{
+std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) const {
     FT_GlyphSlot glyph = fontFace->glyph;
 
     uint32_t width = 0;
     uint32_t height = 0;
 
-    for (unsigned int i = kCharBegin; i < kCharEnd; i++)
-    {
-        if (FT_Load_Char(fontFace, i, FT_LOAD_RENDER))
-        {
+    for (unsigned int i = kCharBegin; i < kCharEnd; i++) {
+        if (FT_Load_Char(fontFace, i, FT_LOAD_RENDER)) {
             std::cerr << "Failed to load character: " << static_cast<char>(i) << std::endl;
             continue;
         }
@@ -87,17 +78,14 @@ std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) con
     return {width, height};
 }
 
-void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const
-{
+void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const {
     FT_GlyphSlot glyph = face->glyph;
     int currX = 0;
 
     float xOffsetScale = static_cast<float>(font.width) / static_cast<float>(paddedWidth);
 
-    for (int i = kCharBegin; i < kCharEnd; i++)
-    {
-        if (FT_Load_Char(face, i, FT_LOAD_RENDER))
-        {
+    for (int i = kCharBegin; i < kCharEnd; i++) {
+        if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
             std::cerr << "Failed to load character: " << static_cast<char>(i) << std::endl;
             continue;
         }
@@ -127,12 +115,9 @@ void FontLoader::updateTexData(
     int xOffset,
     uint32_t dstWidth,
     uint32_t width,
-    uint32_t height) const
-{
-    for (uint32_t y = 0; y < height; y++)
-    {
-        for (uint32_t x = 0; x < width; x++)
-        {
+    uint32_t height) const {
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
             uint32_t srcIndex = y * width + x;
             uint32_t dstIndex = y * dstWidth + x + xOffset;
 

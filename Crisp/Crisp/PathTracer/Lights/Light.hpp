@@ -1,19 +1,16 @@
 #pragma once
 
+#include <Crisp/Math/Ray.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
-#include <Crisp/Math/Ray.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Sampler;
 class Shape;
 
-class Light
-{
+class Light {
 public:
-    struct Sample
-    {
+    struct Sample {
         glm::vec3 ref; // In(eval, sample) - Vantage point that is being illuminated
         glm::vec3 p;   // In(eval), Out(sample) - Point on the emitter
         glm::vec3 n;   // In(eval), Out(sample) - Normal at the emitter point
@@ -27,17 +24,13 @@ public:
 
         Sample()
             : pdf(0.0f)
-            , light(nullptr)
-        {
-        }
+            , light(nullptr) {}
 
         // To be used when sampling the emitter
         Sample(const glm::vec3& ref)
             : ref(ref)
             , pdf(0.0f)
-            , light(nullptr)
-        {
-        }
+            , light(nullptr) {}
 
         // To be used when evaluating the emitter
         Sample(const glm::vec3& ref, const glm::vec3& p, const glm::vec3& n)
@@ -45,20 +38,16 @@ public:
             , p(p)
             , n(n)
             , pdf(0.0f)
-            , light(nullptr)
-        {
-        }
+            , light(nullptr) {}
     };
 
     virtual ~Light(){};
 
-    virtual bool isOnSurface()
-    {
+    virtual bool isOnSurface() {
         return true;
     }
 
-    void setShape(Shape* shape)
-    {
+    void setShape(Shape* shape) {
         m_shape = shape;
     }
 

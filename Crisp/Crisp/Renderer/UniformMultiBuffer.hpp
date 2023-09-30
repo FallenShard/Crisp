@@ -6,20 +6,17 @@
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
 // Models resizable, frequently (per-frame) updated uniform buffer (for batching transforms etc.)
-class UniformMultiBuffer
-{
+class UniformMultiBuffer {
 public:
-    UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize resourceSize,
-        const void* data = nullptr);
+    UniformMultiBuffer(
+        Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize resourceSize, const void* data = nullptr);
     ~UniformMultiBuffer();
 
-    inline VkBuffer get(uint32_t index) const
-    {
+    inline VkBuffer get(uint32_t index) const {
         return m_buffers[index]->getHandle();
     }
 

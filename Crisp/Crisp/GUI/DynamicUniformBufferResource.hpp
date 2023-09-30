@@ -6,18 +6,17 @@
 
 #include <Crisp/Renderer/Renderer.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class UniformMultiBuffer;
 }
 
-namespace crisp::gui
-{
-class DynamicUniformBufferResource
-{
+namespace crisp::gui {
+class DynamicUniformBufferResource {
 public:
-    DynamicUniformBufferResource(Renderer* renderer,
-        const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets, uint32_t resourceSize,
+    DynamicUniformBufferResource(
+        Renderer* renderer,
+        const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets,
+        uint32_t resourceSize,
         uint32_t descBinding);
     ~DynamicUniformBufferResource();
 

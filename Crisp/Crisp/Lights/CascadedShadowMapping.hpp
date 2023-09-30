@@ -6,15 +6,12 @@
 
 #include <memory>
 
-namespace crisp
-{
-struct CascadedShadowMapping
-{
+namespace crisp {
+struct CascadedShadowMapping {
     // Balances logarithmic and linear splitting of the cascade depths.
     float splitLambda{0.5f};
 
-    struct Cascade
-    {
+    struct Cascade {
         float zNear;
         float zFar;
 

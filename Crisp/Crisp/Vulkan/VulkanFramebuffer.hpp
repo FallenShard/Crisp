@@ -3,10 +3,8 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-namespace crisp
-{
-class VulkanFramebuffer : public VulkanResource<VkFramebuffer>
-{
+namespace crisp {
+class VulkanFramebuffer : public VulkanResource<VkFramebuffer> {
 public:
     VulkanFramebuffer(
         const VulkanDevice& device,
@@ -16,8 +14,7 @@ public:
         uint32_t layers = 1,
         VkFramebufferCreateFlags flags = 0);
 
-    VkImageView getAttachment(uint32_t idx) const
-    {
+    VkImageView getAttachment(uint32_t idx) const {
         return m_attachments.at(idx);
     }
 

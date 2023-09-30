@@ -3,15 +3,14 @@
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 auto logger = createLoggerMt("MeshLoader");
 
 TriangleMesh convertToTriangleMesh(
-    const std::filesystem::path& path, WavefrontObjMesh&& objMesh, std::vector<VertexAttributeDescriptor> vertexAttribs)
-{
+    const std::filesystem::path& path,
+    WavefrontObjMesh&& objMesh,
+    std::vector<VertexAttributeDescriptor> vertexAttribs) {
     TriangleMesh mesh(
         std::move(objMesh.positions),
         std::move(objMesh.normals),
@@ -26,10 +25,8 @@ TriangleMesh convertToTriangleMesh(
 } // namespace
 
 Result<TriangleMesh> loadTriangleMesh(
-    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
-{
-    if (isWavefrontObjFile(path))
-    {
+    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
+    if (isWavefrontObjFile(path)) {
         return convertToTriangleMesh(path, loadWavefrontObj(path), vertexAttributes);
     }
 
@@ -37,10 +34,8 @@ Result<TriangleMesh> loadTriangleMesh(
 }
 
 Result<MeshAndMaterial> loadTriangleMeshAndMaterial(
-    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
-{
-    if (isWavefrontObjFile(path))
-    {
+    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
+    if (isWavefrontObjFile(path)) {
         auto objMesh = loadWavefrontObj(path);
         auto materials = std::move(objMesh.materials);
         return MeshAndMaterial{convertToTriangleMesh(path, std::move(objMesh), vertexAttributes), std::move(materials)};

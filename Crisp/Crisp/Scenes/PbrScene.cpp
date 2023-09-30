@@ -14,10 +14,8 @@
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 const auto logger = createLoggerMt("PbrScene");
 
 constexpr const char* kForwardLightingPass = "forwardPass";
@@ -31,13 +29,11 @@ constexpr std::array<const char*, kCascadeCount> kCsmPasses = {
     "csmPass3",
 };
 
-struct ForwardLightingData
-{
+struct ForwardLightingData {
     RenderGraphResourceHandle hdrImage;
 };
 
-struct CascadedShadowMapData
-{
+struct CascadedShadowMapData {
     std::array<RenderGraphResourceHandle, kCascadeCount> cascades;
 };
 
@@ -50,8 +46,7 @@ void setPbrMaterialSceneParams(
     Material& material,
     const ResourceContext& resourceContext,
     const LightSystem& lightSystem,
-    const rg::RenderGraph& rg)
-{
+    const rg::RenderGraph& rg) {
     const auto& imageCache = resourceContext.imageCache;
     const auto& envLight = *lightSystem.getEnvironmentLight();
     material.writeDescriptor(1, 0, *resourceContext.getUniformBuffer("camera"));
@@ -60,10 +55,8 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
-    for (uint32_t i = 0; i < kCascadeCount; ++i)
-    {
-        for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k)
-        {
+    for (uint32_t i = 0; i < kCascadeCount; ++i) {
+        for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
             const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
             material.writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
         }
@@ -74,19 +67,14 @@ void createDrawCommand(
     std::vector<DrawCommand>& drawCommands,
     const RenderNode& renderNode,
     const std::string_view renderPass,
-    const uint32_t virtualFrameIndex)
-{
-    if (!renderNode.isVisible)
-    {
+    const uint32_t virtualFrameIndex) {
+    if (!renderNode.isVisible) {
         return;
     }
 
-    for (const auto& [key, materialMap] : renderNode.materials)
-    {
-        for (const auto& [part, material] : materialMap)
-        {
-            if (key.renderPassName == renderPass)
-            {
+    for (const auto& [key, materialMap] : renderNode.materials) {
+        for (const auto& [part, material] : materialMap) {
+            if (key.renderPassName == renderPass) {
                 drawCommands.push_back(material.createDrawCommand(virtualFrameIndex, renderNode));
             }
         }
@@ -98,21 +86,19 @@ Material* createPbrMaterial(
     const std::string& materialKey,
     ResourceContext& resourceContext,
     const PbrParams& params,
-    const TransformBuffer& transformBuffer)
-{
+    const TransformBuffer& transformBuffer) {
     auto& imageCache = resourceContext.imageCache;
 
     auto* material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
 
     const auto setMaterialTexture =
-        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName)
-    {
-        const std::string key = fmt::format("{}-{}", materialKey, texName);
-        const std::string fallbackKey = fmt::format("default-{}", texName);
-        material->writeDescriptor(
-            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    };
+        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
+            const std::string key = fmt::format("{}-{}", materialKey, texName);
+            const std::string fallbackKey = fmt::format("default-{}", texName);
+            material->writeDescriptor(
+                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+        };
 
     setMaterialTexture(0, "diffuse");
     setMaterialTexture(1, "metallic");
@@ -131,8 +117,7 @@ Material* createPbrMaterial(
 } // namespace
 
 PbrScene::PbrScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     setupInput();
 
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
@@ -141,12 +126,10 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
 
     m_rg = std::make_unique<rg::RenderGraph>();
 
-    for (uint32_t i = 0; i < kCsmPasses.size(); ++i)
-    {
+    for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
         m_rg->addPass(
             kCsmPasses[i],
-            [i](rg::RenderGraph::Builder& builder)
-            {
+            [i](rg::RenderGraph::Builder& builder) {
                 auto& data = i == 0 ? builder.getBlackboard().insert<CascadedShadowMapData>()
                                     : builder.getBlackboard().get<CascadedShadowMapData>();
 
@@ -160,18 +143,15 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
                     fmt::format("cascaded-shadow-map-{}", i),
                     VkClearValue{.depthStencil{1.0f, 0}});
             },
-            [this, i](const RenderPassExecutionContext& ctx)
-            {
+            [this, i](const RenderPassExecutionContext& ctx) {
                 const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
                 std::vector<DrawCommand> drawCommands{};
-                for (const auto& [id, renderNode] : m_renderNodes)
-                {
+                for (const auto& [id, renderNode] : m_renderNodes) {
                     createDrawCommand(drawCommands, *renderNode, kCsmPasses[i], virtualFrameIndex);
                 }
 
                 const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
-                for (const auto& drawCommand : drawCommands)
-                {
+                for (const auto& drawCommand : drawCommands) {
                     RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
                 }
             });
@@ -179,11 +159,9 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
 
     m_rg->addPass(
         kForwardLightingPass,
-        [](rg::RenderGraph::Builder& builder)
-        {
+        [](rg::RenderGraph::Builder& builder) {
             const auto& csmData = builder.getBlackboard().get<CascadedShadowMapData>();
-            for (const auto& shadowMap : csmData.cascades)
-            {
+            for (const auto& shadowMap : csmData.cascades) {
                 builder.readTexture(shadowMap);
             }
 
@@ -204,38 +182,32 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
                 "forward-pass-depth",
                 VkClearValue{.depthStencil{0.0f, 0}});
         },
-        [this](const RenderPassExecutionContext& ctx)
-        {
+        [this](const RenderPassExecutionContext& ctx) {
             const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
             std::vector<DrawCommand> drawCommands{};
-            for (const auto& [id, renderNode] : m_renderNodes)
-            {
+            for (const auto& [id, renderNode] : m_renderNodes) {
                 createDrawCommand(drawCommands, *renderNode, kForwardLightingPass, virtualFrameIndex);
             }
 
             createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass, virtualFrameIndex);
 
             const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
-            for (const auto& drawCommand : drawCommands)
-            {
+            for (const auto& drawCommand : drawCommands) {
                 RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
             }
         });
 
-    m_renderer->enqueueResourceUpdate(
-        [this](const VkCommandBuffer cmdBuffer)
-        {
-            m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
+    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
+        m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
 
-            const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-            m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
-            for (auto& sv : m_sceneImageViews)
-            {
-                sv = m_rg->createViewFromResource(data.hdrImage);
-            }
+        const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
+        m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+        for (auto& sv : m_sceneImageViews) {
+            sv = m_rg->createViewFromResource(data.hdrImage);
+        }
 
-            m_renderer->setSceneImageViews(m_sceneImageViews);
-        });
+        m_renderer->setSceneImageViews(m_sceneImageViews);
+    });
     m_renderer->flushResourceUpdates(true);
 
     auto& imageCache = m_resourceContext->imageCache;
@@ -252,8 +224,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
 
     createCommonTextures();
 
-    for (uint32_t i = 0; i < kCascadeCount; ++i)
-    {
+    for (uint32_t i = 0; i < kCascadeCount; ++i) {
         std::string key = "cascadedShadowMap" + std::to_string(i);
         auto* csmPipeline =
             m_resourceContext->createPipeline(key, "ShadowMap.json", m_rg->getRenderPass(kCsmPasses[i]), 0);
@@ -271,14 +242,12 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
     m_renderer->getDevice().flushDescriptorUpdates();
 
     for (const auto& dir :
-         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps"))
-    {
+         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
         m_environmentMapNames.push_back(dir.path().stem().string());
     }
 }
 
-void PbrScene::resize(int width, int height)
-{
+void PbrScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     // m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(),
@@ -286,26 +255,22 @@ void PbrScene::resize(int width, int height)
 
     // m_renderGraph->resize(width, height);
 
-    m_renderer->enqueueResourceUpdate(
-        [this](const VkCommandBuffer cmdBuffer)
-        {
-            m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-            updateMaterialsWithRenderGraphResources();
+    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
+        m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
+        updateMaterialsWithRenderGraphResources();
 
-            const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-            m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
-            for (auto& sv : m_sceneImageViews)
-            {
-                sv = m_rg->createViewFromResource(data.hdrImage);
-            }
+        const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
+        m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+        for (auto& sv : m_sceneImageViews) {
+            sv = m_rg->createViewFromResource(data.hdrImage);
+        }
 
-            m_renderer->setSceneImageViews(m_sceneImageViews);
-        });
+        m_renderer->setSceneImageViews(m_sceneImageViews);
+    });
     m_renderer->flushResourceUpdates(true);
 }
 
-void PbrScene::update(float dt)
-{
+void PbrScene::update(float dt) {
     // Camera
     m_cameraController->update(dt);
     const auto camParams = m_cameraController->getCameraParameters();
@@ -319,13 +284,11 @@ void PbrScene::update(float dt)
     m_resourceContext->getUniformBuffer("sceneObject-params")->updateStagingBuffer(m_uniformMaterialParams);
 }
 
-void PbrScene::render()
-{
+void PbrScene::render() {
     m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) { m_rg->execute(cmdBuffer); });
 }
 
-void PbrScene::renderGui()
-{
+void PbrScene::renderGui() {
     ImGui::Begin("Settings");
     ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness, 0.0f, 1.0f);
     ImGui::SliderFloat("Metallic", &m_uniformMaterialParams.metallic, 0.0f, 1.0f);
@@ -341,8 +304,7 @@ void PbrScene::renderGui()
         m_environmentMapNames,
         [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
 
-    if (ImGui::Checkbox("Show Floor", &m_showFloor))
-    {
+    if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
         m_renderNodes["floor"]->isVisible = m_showFloor;
     }
 
@@ -363,8 +325,7 @@ void PbrScene::renderGui()
     // form->add(std::move(panel));
 }
 
-void PbrScene::onMaterialSelected(const std::string& materialName)
-{
+void PbrScene::onMaterialSelected(const std::string& materialName) {
     m_renderer->finish();
 
     const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialName};
@@ -375,20 +336,17 @@ void PbrScene::onMaterialSelected(const std::string& materialName)
 
     auto& imageCache{m_resourceContext->imageCache};
     const auto setMaterialTexture =
-        [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName)
-    {
-        const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
-        const std::string fallbackKey = fmt::format("default-{}", texName);
-        shaderBallMaterial->writeDescriptor(
-            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    };
+        [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName) {
+            const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
+            const std::string fallbackKey = fmt::format("default-{}", texName);
+            shaderBallMaterial->writeDescriptor(
+                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+        };
 
-    if (pbrMaterial.name != "Grass")
-    {
+    if (pbrMaterial.name != "Grass") {
         addPbrTexturesToImageCache(loadPbrTextureGroup(materialPath), pbrMaterial.name, imageCache);
     }
-    if (m_shaderBallPbrMaterialKey != "Grass")
-    {
+    if (m_shaderBallPbrMaterialKey != "Grass") {
         removePbrTexturesFromImageCache(m_shaderBallPbrMaterialKey, imageCache);
     }
     setMaterialTexture(0, "diffuse");
@@ -402,10 +360,8 @@ void PbrScene::onMaterialSelected(const std::string& materialName)
     m_shaderBallPbrMaterialKey = pbrMaterial.name;
 }
 
-RenderNode* PbrScene::createRenderNode(std::string id, bool hasTransform)
-{
-    if (!hasTransform)
-    {
+RenderNode* PbrScene::createRenderNode(std::string id, bool hasTransform) {
+    if (!hasTransform) {
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
     }
 
@@ -414,8 +370,7 @@ RenderNode* PbrScene::createRenderNode(std::string id, bool hasTransform)
         .first->second.get();
 }
 
-void PbrScene::createCommonTextures()
-{
+void PbrScene::createCommonTextures() {
     constexpr float kAnisotropy{16.0f};
     constexpr float kMaxLod{9.0f};
     auto& imageCache = m_resourceContext->imageCache;
@@ -432,15 +387,13 @@ void PbrScene::createCommonTextures()
     imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 }
 
-void PbrScene::setEnvironmentMap(const std::string& envMapName)
-{
+void PbrScene::setEnvironmentMap(const std::string& envMapName) {
     m_lightSystem->setEnvironmentMap(
         loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName).unwrap(),
         envMapName);
 }
 
-void PbrScene::createSceneObject()
-{
+void PbrScene::createSceneObject() {
     // m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
 
     const std::string entityName{"sceneObject"};
@@ -448,8 +401,7 @@ void PbrScene::createSceneObject()
     const bool loadHelmet = true;
     TriangleMesh mesh{};
     PbrMaterial material{};
-    if (loadHelmet)
-    {
+    if (loadHelmet) {
         auto renderObjects =
             loadGltfModel(
                 m_renderer->getResourcesPath() / "Meshes/DamagedHelmet/DamagedHelmet.gltf", flatten(kPbrVertexFormat))
@@ -463,9 +415,7 @@ void PbrScene::createSceneObject()
         const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
         sceneObject->transformPack->M =
             translation * glm::rotate(glm::pi<float>() * 0.5f, glm ::vec3(1.0f, 0.0f, 0.0f));
-    }
-    else
-    {
+    } else {
         auto [triMesh, materials] =
             loadTriangleMeshAndMaterial(
                 m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(kPbrVertexFormat))
@@ -493,8 +443,7 @@ void PbrScene::createSceneObject()
         *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    for (uint32_t c = 0; c < kCascadeCount; ++c)
-    {
+    for (uint32_t c = 0; c < kCascadeCount; ++c) {
         auto& subpass = sceneObject->pass(kCsmPasses[c]);
         subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
         subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
@@ -504,8 +453,7 @@ void PbrScene::createSceneObject()
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void PbrScene::createPlane()
-{
+void PbrScene::createPlane() {
     const std::string entityName{"floor"};
     const TriangleMesh planeMesh{createPlaneMesh(flatten(kPbrVertexFormat), 200.0f)};
     m_resourceContext->addGeometry(entityName, std::make_unique<Geometry>(*m_renderer, planeMesh, kPbrVertexFormat));
@@ -530,35 +478,26 @@ void PbrScene::createPlane()
                     .isSubsetOf(floor->geometry->getVertexLayout()));
 }
 
-void PbrScene::setupInput()
-{
-    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe(
-        [this](const Key key, int)
+void PbrScene::setupInput() {
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe([this](const Key key, int) {
+        switch (key) // NOLINT
         {
-            switch (key) // NOLINT
-            {
-            case Key::F5:
-            {
-                m_resourceContext->recreatePipelines();
-                break;
-            }
-            default:
-            {
-            }
-            }
-        }));
+        case Key::F5: {
+            m_resourceContext->recreatePipelines();
+            break;
+        }
+        default: {
+        }
+        }
+    }));
 }
 
-void PbrScene::updateMaterialsWithRenderGraphResources()
-{
+void PbrScene::updateMaterialsWithRenderGraphResources() {
     const auto& imageCache = m_resourceContext->imageCache;
-    for (auto&& [name, node] : m_renderNodes)
-    {
+    for (auto&& [name, node] : m_renderNodes) {
         auto& material = node->pass(kForwardLightingPass).material;
-        for (uint32_t i = 0; i < kCascadeCount; ++i)
-        {
-            for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k)
-            {
+        for (uint32_t i = 0; i < kCascadeCount; ++i) {
+            for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
                 const auto& shadowMapView{m_rg->getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
                 material->writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
             }

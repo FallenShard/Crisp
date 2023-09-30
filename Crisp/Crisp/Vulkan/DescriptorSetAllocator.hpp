@@ -5,10 +5,8 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-class DescriptorSetAllocator
-{
+namespace crisp {
+class DescriptorSetAllocator {
 public:
     DescriptorSetAllocator(
         const VulkanDevice& device,
@@ -23,8 +21,7 @@ public:
     const VulkanDevice& getDevice() const;
 
 private:
-    struct DescriptorPool
-    {
+    struct DescriptorPool {
         VkDescriptorPool handle;
 
         uint32_t currentAllocations;

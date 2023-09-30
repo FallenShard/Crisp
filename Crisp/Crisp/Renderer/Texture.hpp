@@ -4,16 +4,14 @@
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 class VulkanDevice;
 class VulkanImage;
 class VulkanImageView;
 class VulkanBuffer;
 
-class Texture
-{
+class Texture {
 public:
     Texture(
         Renderer* renderer,

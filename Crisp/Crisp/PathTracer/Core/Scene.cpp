@@ -15,31 +15,25 @@
 
 #include <Crisp/Core/Logger.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 auto logger = spdlog::stderr_color_mt("pt::Scene");
 }
 
-namespace
-{
-void logEmbreeError(void*, RTCError code, const char* str)
-{
+namespace {
+void logEmbreeError(void*, RTCError code, const char* str) {
     logger->error("Error code {} - {}", static_cast<uint32_t>(code), str);
 }
 } // namespace
 
-namespace pt
-{
+namespace pt {
 Scene::Scene()
     : m_device(nullptr)
     , m_scene(nullptr)
     , m_sampler(nullptr)
     , m_integrator(nullptr)
     , m_camera(nullptr)
-    , m_envLight(nullptr)
-{
+    , m_envLight(nullptr) {
     m_device = rtcNewDevice(nullptr);
     rtcSetDeviceErrorFunction(m_device, logEmbreeError, this);
 
@@ -52,33 +46,26 @@ Scene::Scene()
     m_imageSize = m_camera->getImageSize();
 }
 
-Scene::~Scene()
-{
+Scene::~Scene() {
     rtcReleaseScene(m_scene);
     rtcReleaseDevice(m_device);
 }
 
-void Scene::setIntegrator(std::unique_ptr<Integrator> integrator)
-{
+void Scene::setIntegrator(std::unique_ptr<Integrator> integrator) {
     m_integrator = std::move(integrator);
 }
 
-void Scene::setSampler(std::unique_ptr<Sampler> sampler)
-{
+void Scene::setSampler(std::unique_ptr<Sampler> sampler) {
     m_sampler = std::move(sampler);
 }
 
-void Scene::setCamera(std::unique_ptr<Camera> camera)
-{
+void Scene::setCamera(std::unique_ptr<Camera> camera) {
     m_camera = std::move(camera);
 }
 
-void Scene::addShape(std::unique_ptr<Shape> shape, BSDF* bsdf, Light* light)
-{
-    if (shape->addToAccelerationStructure(m_device, m_scene))
-    {
-        if (light)
-        {
+void Scene::addShape(std::unique_ptr<Shape> shape, BSDF* bsdf, Light* light) {
+    if (shape->addToAccelerationStructure(m_device, m_scene)) {
+        if (light) {
             shape->setLight(light);
             light->setShape(shape.get());
         }
@@ -91,88 +78,76 @@ void Scene::addShape(std::unique_ptr<Shape> shape, BSDF* bsdf, Light* light)
     }
 }
 
-void Scene::addLight(std::unique_ptr<Light> light)
-{
+void Scene::addLight(std::unique_ptr<Light> light) {
     m_lights.emplace_back(std::move(light));
 }
 
-void Scene::addEnvironmentLight(std::unique_ptr<Light> light)
-{
+void Scene::addEnvironmentLight(std::unique_ptr<Light> light) {
     m_lights.emplace_back(std::move(light));
     m_envLight = m_lights.back().get();
 }
 
-void Scene::addBSDF(std::unique_ptr<BSDF> bsdf)
-{
+void Scene::addBSDF(std::unique_ptr<BSDF> bsdf) {
     m_bsdfs.emplace_back(std::move(bsdf));
 }
 
-void Scene::finishInitialization()
-{
+void Scene::finishInitialization() {
     auto center = m_boundingBox.getCenter();
     auto radius = m_boundingBox.radius();
     m_boundingSphere = glm::vec4(center, radius);
-    if (m_envLight)
-    {
+    if (m_envLight) {
         m_envLight->setBoundingSphere(m_boundingSphere);
     }
 
     rtcCommitScene(m_scene);
 
     int err = rtcGetDeviceError(m_device);
-    if (err != RTC_ERROR_NONE)
-    {
+    if (err != RTC_ERROR_NONE) {
         std::cout << "Embree error: " << err << std::endl;
     }
 }
 
-const Sampler* Scene::getSampler() const
-{
+const Sampler* Scene::getSampler() const {
     return m_sampler.get();
 }
 
-const Integrator* Scene::getIntegrator() const
-{
+const Integrator* Scene::getIntegrator() const {
     return m_integrator.get();
 }
 
-const Camera* Scene::getCamera() const
-{
+const Camera* Scene::getCamera() const {
     return m_camera.get();
 }
 
-std::vector<std::unique_ptr<Shape>>& Scene::getShapes()
-{
+std::vector<std::unique_ptr<Shape>>& Scene::getShapes() {
     return m_shapes;
 }
 
-Light* Scene::getRandomLight(float sample) const
-{
+Light* Scene::getRandomLight(float sample) const {
     auto numLights = m_lights.size();
     auto index = std::min(static_cast<size_t>(std::floor(numLights * sample)), numLights - 1);
     return numLights == 0 ? nullptr : m_lights[index].get();
 }
 
-float Scene::getLightPdf() const
-{
+float Scene::getLightPdf() const {
     return 1.0f / static_cast<float>(m_lights.size());
 }
 
-Light* Scene::getEnvironmentLight() const
-{
+Light* Scene::getEnvironmentLight() const {
     return m_envLight;
 }
 
-Spectrum Scene::sampleLight(const Intersection& /*its*/, Sampler& sampler, Light::Sample& lightSample) const
-{
+Spectrum Scene::sampleLight(const Intersection& /*its*/, Sampler& sampler, Light::Sample& lightSample) const {
     auto light = getRandomLight(sampler.next1D());
-    if (!light)
+    if (!light) {
         return Spectrum(0.0f);
+    }
 
     Spectrum lightContrib = light->sample(lightSample, sampler);
 
-    if (lightSample.pdf == 0.0f)
+    if (lightSample.pdf == 0.0f) {
         return Spectrum(0.0f);
+    }
 
     lightContrib /= getLightPdf();
     lightSample.pdf *= getLightPdf();
@@ -180,15 +155,13 @@ Spectrum Scene::sampleLight(const Intersection& /*its*/, Sampler& sampler, Light
     return lightContrib;
 }
 
-Spectrum Scene::evalEnvLight(const Ray3& ray) const
-{
+Spectrum Scene::evalEnvLight(const Ray3& ray) const {
     Light::Sample sample(ray.o, ray(1.0f), ray.d);
     sample.wi = ray.d;
     return m_envLight ? m_envLight->eval(sample) : Spectrum(0.0f);
 }
 
-bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const
-{
+bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const {
     RTCRayHit rayHit;
     rayHit.ray.org_x = ray.o.x;
     rayHit.ray.org_y = ray.o.y;
@@ -208,8 +181,7 @@ bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const
     rtcInitIntersectContext(&context);
     rtcIntersect1(m_scene, &context, &rayHit);
 
-    if (rayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
-    {
+    if (rayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
         its.tHit = rayHit.ray.tfar;
         its.uv.x = rayHit.hit.u;
         its.uv.y = rayHit.hit.v;
@@ -222,8 +194,7 @@ bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const
     return false;
 }
 
-bool Scene::rayIntersect(const Ray3& shadowRay) const
-{
+bool Scene::rayIntersect(const Ray3& shadowRay) const {
     RTCRay rtcRay;
     rtcRay.org_x = shadowRay.o.x;
     rtcRay.org_y = shadowRay.o.y;
@@ -243,13 +214,11 @@ bool Scene::rayIntersect(const Ray3& shadowRay) const
     return rtcRay.tfar < 0.0f;
 }
 
-BoundingBox3 Scene::getBoundingBox() const
-{
+BoundingBox3 Scene::getBoundingBox() const {
     return m_boundingBox;
 }
 
-glm::vec4 Scene::getBoundingSphere() const
-{
+glm::vec4 Scene::getBoundingSphere() const {
     return m_boundingSphere;
 }
 } // namespace pt

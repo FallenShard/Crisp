@@ -24,16 +24,13 @@
 
 #include <Crisp/Renderer/RenderGraph.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 static constexpr const char* MainPass = "mainPass";
 }
 
 FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_uniformBuffers.emplace(
         "camera", std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
@@ -75,22 +72,19 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
     m_renderGraph->printExecutionOrder();
 }
 
-FluidSimulationScene::~FluidSimulationScene()
-{
+FluidSimulationScene::~FluidSimulationScene() {
     m_window->keyPressed.unsubscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
     // m_app->getForm()->remove("fluidSimulationPanel");
 }
 
-void FluidSimulationScene::resize(int width, int height)
-{
+void FluidSimulationScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_renderGraph->resize(width, height);
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 }
 
-void FluidSimulationScene::update(float dt)
-{
+void FluidSimulationScene::update(float dt) {
     m_cameraController->update(dt);
     m_uniformBuffers["camera"]->updateStagingBuffer(m_cameraController->getCameraParameters());
 
@@ -113,15 +107,13 @@ void FluidSimulationScene::update(float dt)
     m_fluidGeometry->setVertexBufferOffset(1, vertexByteOffset);
 }
 
-void FluidSimulationScene::render()
-{
+void FluidSimulationScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->addToCommandLists(m_fluidRenderNode);
     m_renderGraph->executeCommandLists();
 }
 
-void FluidSimulationScene::createGui()
-{
+void FluidSimulationScene::createGui() {
     using namespace gui;
     gui::Form* form = {};
     std::unique_ptr<Panel> panel = std::make_unique<Panel>(form);
@@ -133,8 +125,7 @@ void FluidSimulationScene::createGui()
     panel->setHorizontalSizingPolicy(SizingPolicy::WrapContent);
 
     int y = 0;
-    auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal)
-    {
+    auto addLabeledSlider = [&](const std::string& labelText, double val, double minVal, double maxVal) {
         auto label = std::make_unique<Label>(form, labelText);
         label->setPosition({0, y});
         panel->addControl(std::move(label));
@@ -156,12 +147,12 @@ void FluidSimulationScene::createGui()
         return sliderPtr;
     };
 
-    addLabeledSlider("Gravity X", 0.0, -10.0, +10.0)->valueChanged += [this](double val)
-    { m_fluidSimulation->setGravityX(static_cast<float>(val)); };
-    addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val)
-    { m_fluidSimulation->setGravityY(static_cast<float>(val)); };
-    addLabeledSlider("Gravity Z", 0.0, -10.0, +10.0)->valueChanged += [this](double val)
-    { m_fluidSimulation->setGravityZ(static_cast<float>(val)); };
+    addLabeledSlider("Gravity X", 0.0, -10.0, +10.0)->valueChanged +=
+        [this](double val) { m_fluidSimulation->setGravityX(static_cast<float>(val)); };
+    addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged +=
+        [this](double val) { m_fluidSimulation->setGravityY(static_cast<float>(val)); };
+    addLabeledSlider("Gravity Z", 0.0, -10.0, +10.0)->valueChanged +=
+        [this](double val) { m_fluidSimulation->setGravityZ(static_cast<float>(val)); };
 
     auto viscoLabel = std::make_unique<Label>(form, "Viscosity");
     viscoLabel->setPosition({0, y});
@@ -193,8 +184,8 @@ void FluidSimulationScene::createGui()
     surfaceTensionSlider->setMaxValue(50);
     surfaceTensionSlider->setMinValue(1);
     surfaceTensionSlider->setValue(1);
-    surfaceTensionSlider->valueChanged += [this](int value)
-    { m_fluidSimulation->setSurfaceTension(static_cast<float>(value)); };
+    surfaceTensionSlider->valueChanged +=
+        [this](int value) { m_fluidSimulation->setSurfaceTension(static_cast<float>(value)); };
     panel->addControl(std::move(surfaceTensionSlider));
     y += 30;
 

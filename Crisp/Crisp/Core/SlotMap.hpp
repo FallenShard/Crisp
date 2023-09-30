@@ -2,11 +2,9 @@
 
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 template <typename IntegerType, size_t IdBits, size_t GenerationBits>
-struct HandleType
-{
+struct HandleType {
     IntegerType id : IdBits;
     IntegerType generation : GenerationBits;
     // static_assert(sizeof(HandleType) == sizeof(IntegerType));
@@ -15,53 +13,43 @@ struct HandleType
 using Handle = HandleType<uint32_t, 20, 12>;
 
 template <typename ValueType>
-class SlotMap
-{
+class SlotMap {
 public:
     using HandleType = HandleType<uint32_t, 20, 12>;
 
     using ValueVector = std::vector<ValueType>;
     using HandleVector = std::vector<HandleType>;
 
-    explicit SlotMap(const size_t reserveCount = 1024)
-    {
+    explicit SlotMap(const size_t reserveCount = 1024) {
         m_values.reserve(reserveCount);
     }
 
-    size_t size() const
-    {
+    size_t size() const {
         return m_values.size();
     }
 
-    bool empty() const
-    {
+    bool empty() const {
         return m_values.empty();
     }
 
-    ValueVector::iterator begin()
-    {
+    ValueVector::iterator begin() {
         return m_values.begin();
     }
 
-    ValueVector::const_iterator cbegin() const
-    {
+    ValueVector::const_iterator cbegin() const {
         return m_values.cbegin();
     }
 
-    ValueVector::iterator end()
-    {
+    ValueVector::iterator end() {
         return m_values.end();
     }
 
-    ValueVector::const_iterator cend() const
-    {
+    ValueVector::const_iterator cend() const {
         return m_values.cend();
     }
 
-    bool contains(HandleType handle) const
-    {
-        if (handle.id >= m_denseToSparseIndexMapping.size())
-        {
+    bool contains(HandleType handle) const {
+        if (handle.id >= m_denseToSparseIndexMapping.size()) {
             return false;
         }
 
@@ -69,37 +57,30 @@ public:
         return m_handles[handleIdx].generation == handle.generation;
     }
 
-    ValueType& at(HandleType handle)
-    {
+    ValueType& at(HandleType handle) {
         return m_values.at(handle.id);
     }
 
-    const ValueType& at(HandleType handle) const
-    {
+    const ValueType& at(HandleType handle) const {
         return m_values.at(handle.id);
     }
 
-    ValueType& operator[](HandleType handle)
-    {
+    ValueType& operator[](HandleType handle) {
         return m_values[handle.id];
     }
 
-    const ValueType& operator[](HandleType handle) const
-    {
+    const ValueType& operator[](HandleType handle) const {
         return m_values[handle.id];
     }
 
     template <typename... Args>
-    HandleType emplace(Args... args)
-    {
+    HandleType emplace(Args... args) {
         return insert(ValueType{std::forward<Args>(args)...});
     }
 
     template <typename ValueT>
-    HandleType insert(ValueT&& value)
-    {
-        if (m_freeListStart == kInvalidFreeListIndex)
-        {
+    HandleType insert(ValueT&& value) {
+        if (m_freeListStart == kInvalidFreeListIndex) {
             HandleType handle;
             handle.id = static_cast<uint32_t>(m_values.size());
             handle.generation = 0;
@@ -126,23 +107,18 @@ public:
 
         handle.id = m_freeListStart;
 
-        if (m_handles.size() == m_values.size())
-        {
+        if (m_handles.size() == m_values.size()) {
             m_freeListStart = kInvalidFreeListIndex;
-        }
-        else
-        {
+        } else {
             m_freeListStart = nextFreeIndex;
         }
 
         return handle;
     }
 
-    bool erase(const HandleType handle)
-    {
+    bool erase(const HandleType handle) {
         const auto handleIdx = handle.id;
-        if (m_handles[handleIdx].generation != handle.generation)
-        {
+        if (m_handles[handleIdx].generation != handle.generation) {
             return false;
         }
 
@@ -157,12 +133,9 @@ public:
 
         // Enlist the handle slot as free.
         m_handles[handleIdx].generation++;
-        if (m_freeListStart == kInvalidFreeListIndex)
-        {
+        if (m_freeListStart == kInvalidFreeListIndex) {
             m_freeListStart = handleIdx;
-        }
-        else
-        {
+        } else {
             m_handles[handleIdx].id = m_freeListStart;
             m_freeListStart = handleIdx;
         }

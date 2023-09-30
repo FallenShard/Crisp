@@ -3,16 +3,13 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
-namespace crisp::detail
-{
+namespace crisp::detail {
 const char* toString(VkResult result) noexcept;
 
 template <typename... Args>
 void doAssert(
-    const VkResult result, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept
-{
-    if (result == VK_SUCCESS)
-    {
+    const VkResult result, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept {
+    if (result == VK_SUCCESS) {
         return;
     }
 
@@ -29,10 +26,8 @@ void doAssert(
     std::abort();
 }
 
-inline void doAssert(const VkResult result, LocationFormatString&& formatString) noexcept
-{
-    if (result == VK_SUCCESS)
-    {
+inline void doAssert(const VkResult result, LocationFormatString&& formatString) noexcept {
+    if (result == VK_SUCCESS) {
         return;
     }
 

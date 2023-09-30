@@ -2,12 +2,10 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
+namespace crisp {
 struct Intersection;
 
-class DirectLightingIntegrator : public Integrator
-{
+class DirectLightingIntegrator : public Integrator {
 public:
     DirectLightingIntegrator(const VariantMap& params = VariantMap());
     virtual ~DirectLightingIntegrator();

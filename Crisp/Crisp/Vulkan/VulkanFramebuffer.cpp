@@ -1,7 +1,6 @@
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanFramebuffer::VulkanFramebuffer(
     const VulkanDevice& device,
     const VkRenderPass renderPass,
@@ -10,8 +9,7 @@ VulkanFramebuffer::VulkanFramebuffer(
     const uint32_t layers,
     const VkFramebufferCreateFlags flags)
     : VulkanResource(device.getResourceDeallocator())
-    , m_attachments(attachmentList)
-{
+    , m_attachments(attachmentList) {
     VkFramebufferCreateInfo createInfo = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
     createInfo.renderPass = renderPass;
     createInfo.width = extent.width;

@@ -6,10 +6,8 @@
 
 #include <Crisp/Core/Keyboard.hpp>
 
-namespace crisp
-{
-class FluidSimulation
-{
+namespace crisp {
+class FluidSimulation {
 public:
     virtual ~FluidSimulation() {}
 

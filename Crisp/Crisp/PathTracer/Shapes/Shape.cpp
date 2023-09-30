@@ -2,64 +2,51 @@
 
 #include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>
 
-namespace crisp
-{
+namespace crisp {
 Shape::Shape()
     : m_light(nullptr)
     , m_bsdf(nullptr)
-    , m_bssrdf(nullptr)
-{
-}
+    , m_bssrdf(nullptr) {}
 
 Shape::~Shape() {}
 
-BoundingBox3 Shape::getBoundingBox() const
-{
+BoundingBox3 Shape::getBoundingBox() const {
     return m_boundingBox;
 }
 
-void Shape::setLight(Light* light)
-{
+void Shape::setLight(Light* light) {
     m_light = light;
 }
 
-const Light* Shape::getLight() const
-{
+const Light* Shape::getLight() const {
     return m_light;
 }
 
-void Shape::setBSDF(BSDF* bsdf)
-{
+void Shape::setBSDF(BSDF* bsdf) {
     m_bsdf = bsdf;
 }
 
-const BSDF* Shape::getBSDF() const
-{
+const BSDF* Shape::getBSDF() const {
     return m_bsdf;
 }
 
-void Shape::setBSSRDF(std::unique_ptr<BSSRDF> bssrdf)
-{
+void Shape::setBSSRDF(std::unique_ptr<BSSRDF> bssrdf) {
     m_bssrdf = std::move(bssrdf);
 }
 
-const BSSRDF* Shape::getBSSRDF() const
-{
+const BSSRDF* Shape::getBSSRDF() const {
     return m_bssrdf.get();
 }
 
-BSSRDF* Shape::getBSSRDF()
-{
+BSSRDF* Shape::getBSSRDF() {
     return m_bssrdf.get();
 }
 
-void Shape::setMedium(Medium* medium)
-{
+void Shape::setMedium(Medium* medium) {
     m_medium = medium;
 }
 
-const Medium* Shape::getMedium() const
-{
+const Medium* Shape::getMedium() const {
     return m_medium;
 }
 } // namespace crisp

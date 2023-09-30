@@ -1,13 +1,11 @@
 #include <Crisp/Camera/Camera.hpp>
 
-namespace
-{
+namespace {
 constexpr float kDefaultNearZ{0.1f};
 constexpr float kDefaultFarZ{1000.0f};
 const glm::mat4 InvertProjectionY = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f));
 
-glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar)
-{
+glm::mat4 reverseZPerspective(float fovY, float aspectRatio, float zNear, float zFar) {
     [[maybe_unused]] const glm::mat4 test = glm::perspective(fovY, aspectRatio, zNear, 500.0f);
     const float f = 1.0f / std::tan(fovY / 2.0f);
     [[maybe_unused]] const auto a = glm::mat4(
@@ -47,12 +45,9 @@ constexpr glm::vec<3, ScalarType> kAxisZ = {
     static_cast<ScalarType>(0.0), static_cast<ScalarType>(0.0), static_cast<ScalarType>(1.0)};
 } // namespace
 
-namespace crisp
-{
+namespace crisp {
 Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight)
-    : Camera(viewportWidth, viewportHeight, kDefaultNearZ, kDefaultFarZ)
-{
-}
+    : Camera(viewportWidth, viewportHeight, kDefaultNearZ, kDefaultFarZ) {}
 
 Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight, const float zNear, const float zFar)
     : m_verticalFov(glm::radians(45.0f))
@@ -64,95 +59,78 @@ Camera::Camera(const int32_t viewportWidth, const int32_t viewportHeight, const 
     , m_orientation(glm::angleAxis(glm::radians(0.0), kAxisY<double>))
     , m_V(1.0f)
     , m_invV(1.0f)
-    , m_frustumPlanes{}
-{
+    , m_frustumPlanes{} {
     updateProjectionMatrix();
     updateViewMatrix();
 }
 
-void Camera::setVerticalFov(const float verticalFov)
-{
+void Camera::setVerticalFov(const float verticalFov) {
     m_verticalFov = glm::radians(verticalFov);
     updateProjectionMatrix();
 }
 
-float Camera::getVerticalFov() const
-{
+float Camera::getVerticalFov() const {
     return glm::degrees(m_verticalFov);
 }
 
-void Camera::setViewportSize(const int32_t viewportWidth, const int32_t viewportHeight)
-{
+void Camera::setViewportSize(const int32_t viewportWidth, const int32_t viewportHeight) {
     setAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
 }
 
-void Camera::setAspectRatio(const float aspectRatio)
-{
+void Camera::setAspectRatio(const float aspectRatio) {
     m_aspectRatio = aspectRatio;
     updateProjectionMatrix();
 }
 
-glm::mat4 Camera::getProjectionMatrix() const
-{
+glm::mat4 Camera::getProjectionMatrix() const {
     return m_P;
 }
 
-void Camera::setPosition(const glm::vec3& position)
-{
+void Camera::setPosition(const glm::vec3& position) {
     m_position = position;
     updateViewMatrix();
 }
 
-void Camera::translate(const glm::vec3& translation)
-{
+void Camera::translate(const glm::vec3& translation) {
     m_position += translation;
     updateViewMatrix();
 }
 
-glm::vec3 Camera::getPosition() const
-{
+glm::vec3 Camera::getPosition() const {
     return m_position;
 }
 
-void Camera::setOrientation(const glm::dquat& orientation)
-{
+void Camera::setOrientation(const glm::dquat& orientation) {
     m_orientation = orientation;
     updateViewMatrix();
 }
 
-glm::mat4 Camera::getViewMatrix() const
-{
+glm::mat4 Camera::getViewMatrix() const {
     return m_V;
 }
 
-glm::mat4 Camera::getInvViewMatrix() const
-{
+glm::mat4 Camera::getInvViewMatrix() const {
     return m_invV;
 }
 
-glm::vec3 Camera::getRightDir() const
-{
+glm::vec3 Camera::getRightDir() const {
     return m_invV * glm::vec4(kAxisX<float>, 0.0f);
 }
 
-glm::vec3 Camera::getLookDir() const
-{
+glm::vec3 Camera::getLookDir() const {
     return m_invV * glm::vec4(-kAxisZ<float>, 0.0f);
 }
 
-glm::vec3 Camera::getUpDir() const
-{
+glm::vec3 Camera::getUpDir() const {
     return m_invV * glm::vec4(kAxisY<float>, 0.0f);
 }
 
-glm::vec2 Camera::getViewDepthRange() const
-{
+glm::vec2 Camera::getViewDepthRange() const {
     return {m_zNear, m_zFar};
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints(
-    const float zNear, const float zFar) const
-{
+    const float zNear, const float zFar) const {
     const float tanFovHalf = std::tan(m_verticalFov * 0.5f);
 
     const float halfNearH = zNear * tanFovHalf;
@@ -171,24 +149,20 @@ std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints(
         glm::vec3(+halfFarW, +halfFarH, -zFar),
         glm::vec3(-halfFarW, +halfFarH, -zFar)};
 
-    for (auto& p : frustumPoints)
-    {
+    for (auto& p : frustumPoints) {
         p = glm::vec3(m_invV * glm::vec4(p, 1.0f));
     }
 
     return frustumPoints;
 }
 
-std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints() const
-{
+std::array<glm::vec3, Camera::kFrustumPointCount> Camera::computeFrustumPoints() const {
     return computeFrustumPoints(m_zNear, m_zFar);
 }
 
-glm::vec4 Camera::computeFrustumBoundingSphere(const float zNear, const float zFar) const
-{
+glm::vec4 Camera::computeFrustumBoundingSphere(const float zNear, const float zFar) const {
     const float k = std::sqrt(1.0f + m_aspectRatio * m_aspectRatio) * std::tan(m_verticalFov * 0.5f);
-    if (k * k >= (zFar - zNear) / (zFar + zNear))
-    {
+    if (k * k >= (zFar - zNear) / (zFar + zNear)) {
         const glm::vec3 center = m_invV * glm::vec4(0.0f, 0.0f, -zFar, 1.0f);
         return {center, zFar * k};
     }
@@ -200,13 +174,11 @@ glm::vec4 Camera::computeFrustumBoundingSphere(const float zNear, const float zF
     return {center, radius};
 }
 
-void Camera::updateProjectionMatrix()
-{
+void Camera::updateProjectionMatrix() {
     m_P = InvertProjectionY * reverseZPerspective(m_verticalFov, m_aspectRatio, m_zNear, m_zFar);
 }
 
-void Camera::updateViewMatrix()
-{
+void Camera::updateViewMatrix() {
     const glm::mat4 rotationMat = glm::mat4_cast(m_orientation);
     m_V = glm::transpose(rotationMat) * glm::translate(-m_position);
     m_invV = glm::translate(m_position) * rotationMat;

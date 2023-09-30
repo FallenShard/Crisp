@@ -1,18 +1,12 @@
 #include "Sampler.hpp"
 
-namespace crisp
-{
-    Sampler::Sampler()
-        : m_sampleCount(0)
-    {
-    }
+namespace crisp {
+Sampler::Sampler()
+    : m_sampleCount(0) {}
 
-    Sampler::~Sampler()
-    {
-    }
+Sampler::~Sampler() {}
 
-    size_t Sampler::getSampleCount() const
-    {
-        return m_sampleCount;
-    }
+size_t Sampler::getSampleCount() const {
+    return m_sampleCount;
 }
+} // namespace crisp

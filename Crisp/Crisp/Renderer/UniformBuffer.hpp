@@ -6,10 +6,8 @@
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-namespace crisp
-{
-class UniformBuffer
-{
+namespace crisp {
+class UniformBuffer {
 public:
     UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
     UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, const void* data = nullptr);
@@ -22,26 +20,20 @@ public:
 
     template <typename T>
     inline UniformBuffer(Renderer* renderer, T&& data)
-        : UniformBuffer(renderer, sizeof(T), BufferUpdatePolicy::Constant, &data)
-    {
-    }
+        : UniformBuffer(renderer, sizeof(T), BufferUpdatePolicy::Constant, &data) {}
 
     template <typename T>
     inline UniformBuffer(Renderer* renderer, const T& data, BufferUpdatePolicy updatePolicy)
-        : UniformBuffer(renderer, sizeof(T), updatePolicy, &data)
-    {
-    }
+        : UniformBuffer(renderer, sizeof(T), updatePolicy, &data) {}
 
     ~UniformBuffer();
 
-    inline VkBuffer get() const
-    {
+    inline VkBuffer get() const {
         return m_buffer->getHandle();
     }
 
     template <typename T>
-    void updateStagingBuffer(T&& data)
-    {
+    void updateStagingBuffer(T&& data) {
         using BaseType = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
         updateStagingBuffer(&data, sizeof(BaseType), 0);
     }
@@ -64,8 +56,7 @@ private:
     uint32_t m_framesToUpdateOnGpu;
 };
 
-struct DynamicBufferView
-{
+struct DynamicBufferView {
     const UniformBuffer* buffer;
     uint32_t subOffset;
 };

@@ -3,36 +3,28 @@
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-namespace crisp
-{
-namespace
-{
-inline bool solveQuadratic(float a, float b, float c, float& x0, float& x1)
-{
+namespace crisp {
+namespace {
+inline bool solveQuadratic(float a, float b, float c, float& x0, float& x1) {
     float D = b * b - 4.0f * a * c;
-    if (D < 0)
-    {
+    if (D < 0) {
         return false;
-    }
-    else if (D < Ray3::Epsilon)
-    {
+    } else if (D < Ray3::Epsilon) {
         x0 = x1 = -0.5f * b / a;
-    }
-    else
-    {
+    } else {
         float q = (b > 0) ? -0.5f * (b + std::sqrtf(D)) : -0.5f * (b - std::sqrtf(D));
         x0 = q / a;
         x1 = c / q;
     }
 
-    if (x0 > x1)
+    if (x0 > x1) {
         std::swap(x0, x1);
+    }
 
     return true;
 }
 
-inline bool analyticIntersection(const glm::vec3& center, float radius, const RTCRay& ray, float& t)
-{
+inline bool analyticIntersection(const glm::vec3& center, float radius, const RTCRay& ray, float& t) {
     glm::vec3 centerToOrigin(ray.org_x - center.x, ray.org_y - center.y, ray.org_z - center.z);
 
     float b = 2.0f * (ray.dir_x * centerToOrigin.x + ray.dir_y * centerToOrigin.y + ray.dir_z * centerToOrigin.z);
@@ -43,13 +35,10 @@ inline bool analyticIntersection(const glm::vec3& center, float radius, const RT
     if (discrim < 0.0f) // both complex solutions, no intersection
     {
         return false;
-    }
-    else if (discrim < Ray3::Epsilon) // Discriminant is practically zero
+    } else if (discrim < Ray3::Epsilon) // Discriminant is practically zero
     {
         t = -0.5f * b;
-    }
-    else
-    {
+    } else {
         float factor = (b > 0.0f) ? -0.5f * (b + sqrtf(discrim)) : -0.5f * (b - sqrtf(discrim));
         float t0 = factor;
         float t1 = c / factor;
@@ -57,22 +46,20 @@ inline bool analyticIntersection(const glm::vec3& center, float radius, const RT
         if (t0 > t1) // Prefer the smaller t, select larger if smaller is less than tNear
         {
             t = t1 < ray.tnear ? t0 : t1;
-        }
-        else
-        {
+        } else {
             t = t0 < ray.tnear ? t1 : t0;
         }
     }
 
-    if (t < ray.tnear || t > ray.tfar)
+    if (t < ray.tnear || t > ray.tfar) {
         return false;
-    else
+    } else {
         return true;
+    }
 }
 } // namespace
 
-Sphere::Sphere(const VariantMap& params)
-{
+Sphere::Sphere(const VariantMap& params) {
     m_center = params.get<glm::vec3>("center", glm::vec3(0.0f));
     m_radius = params.get<float>("radius", 1.0f);
 
@@ -82,8 +69,7 @@ Sphere::Sphere(const VariantMap& params)
 
 Sphere::~Sphere() {}
 
-void Sphere::fillBounds(const RTCBoundsFunctionArguments* args)
-{
+void Sphere::fillBounds(const RTCBoundsFunctionArguments* args) {
     const Sphere* s = static_cast<const Sphere*>(args->geometryUserPtr);
     args->bounds_o->lower_x = s->m_center.x - s->m_radius;
     args->bounds_o->lower_y = s->m_center.y - s->m_radius;
@@ -93,19 +79,16 @@ void Sphere::fillBounds(const RTCBoundsFunctionArguments* args)
     args->bounds_o->upper_z = s->m_center.z + s->m_radius;
 }
 
-void Sphere::rayIntersect(const RTCIntersectFunctionNArguments* args)
-{
+void Sphere::rayIntersect(const RTCIntersectFunctionNArguments* args) {
     const Sphere* sphere = static_cast<const Sphere*>(args->geometryUserPtr);
 
     RTCRayN* rays = RTCRayHitN_RayN(args->rayhit, args->N);
     RTCHitN* hits = RTCRayHitN_HitN(args->rayhit, args->N);
 
-    for (unsigned int i = 0; i < args->N; ++i)
-    {
+    for (unsigned int i = 0; i < args->N; ++i) {
         RTCRay ray = rtcGetRayFromRayN(rays, args->N, i);
         float t;
-        if (analyticIntersection(sphere->m_center, sphere->m_radius, ray, t))
-        {
+        if (analyticIntersection(sphere->m_center, sphere->m_radius, ray, t)) {
             RTCRayN_tfar(rays, args->N, i) = t;
             RTCHitN_geomID(hits, args->N, i) = sphere->m_geometryId;
             RTCHitN_primID(hits, args->N, i) = 0;
@@ -113,24 +96,20 @@ void Sphere::rayIntersect(const RTCIntersectFunctionNArguments* args)
     }
 }
 
-void Sphere::rayOcclude(const RTCOccludedFunctionNArguments* args)
-{
+void Sphere::rayOcclude(const RTCOccludedFunctionNArguments* args) {
     const Sphere* sphere = reinterpret_cast<const Sphere*>(args->geometryUserPtr);
 
-    for (unsigned int i = 0; i < args->N; ++i)
-    {
+    for (unsigned int i = 0; i < args->N; ++i) {
         RTCRay ray = rtcGetRayFromRayN(args->ray, args->N, i);
 
         float t;
-        if (analyticIntersection(sphere->m_center, sphere->m_radius, ray, t))
-        {
+        if (analyticIntersection(sphere->m_center, sphere->m_radius, ray, t)) {
             RTCRayN_tfar(args->ray, args->N, i) = -std::numeric_limits<float>::infinity();
         }
     }
 }
 
-void Sphere::fillIntersection(unsigned int /*triangleId*/, const Ray3& ray, Intersection& its) const
-{
+void Sphere::fillIntersection(unsigned int /*triangleId*/, const Ray3& ray, Intersection& its) const {
     its.p = ray.o + ray.d * its.tHit;
     glm::vec3 normal = glm::normalize(its.p - m_center);
 
@@ -147,8 +126,7 @@ void Sphere::fillIntersection(unsigned int /*triangleId*/, const Ray3& ray, Inte
     its.shape = this;
 }
 
-void Sphere::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const
-{
+void Sphere::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const {
     float invRad2 = 1.0f / (m_radius * m_radius);
     // Uniform sampling
     // glm::vec3 q = warp::squareToUniformSphere(sampler.next2D());
@@ -172,8 +150,7 @@ void Sphere::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const
     shapeSample.pdf = invRad2 * warp::squareToUniformSphereCapPdf(cosThetaMax);
 }
 
-float Sphere::pdfSurface(const Shape::Sample& shapeSample) const
-{
+float Sphere::pdfSurface(const Shape::Sample& shapeSample) const {
     float invRad2 = 1.0f / (m_radius * m_radius);
     // return invRad2 * warp::squareToUniformSpherePdf();
 
@@ -189,8 +166,7 @@ float Sphere::pdfSurface(const Shape::Sample& shapeSample) const
     return invRad2 * warp::squareToUniformSphereCapPdf(cosThetaMax);
 }
 
-bool Sphere::addToAccelerationStructure(RTCDevice device, RTCScene scene)
-{
+bool Sphere::addToAccelerationStructure(RTCDevice device, RTCScene scene) {
     m_geometry = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_USER);
     rtcSetGeometryUserPrimitiveCount(m_geometry, 1);
     rtcSetGeometryUserData(m_geometry, this);

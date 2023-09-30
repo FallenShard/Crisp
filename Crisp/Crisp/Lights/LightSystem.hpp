@@ -11,16 +11,14 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 class RenderGraph;
 class VulkanImage;
 class VulkanImageView;
 class UniformBuffer;
 
-class LightSystem
-{
+class LightSystem {
 public:
     LightSystem(Renderer* renderer, const DirectionalLight& dirLight, uint32_t shadowMapSize, uint32_t cascadeCount);
 
@@ -28,8 +26,7 @@ public:
 
     void setDirectionalLight(const DirectionalLight& dirLight);
 
-    inline const DirectionalLight& getDirectionalLight() const
-    {
+    inline const DirectionalLight& getDirectionalLight() const {
         return m_directionalLight;
     }
 
@@ -51,8 +48,7 @@ public:
     UniformBuffer* getLightIndexBuffer() const;
     const std::vector<std::unique_ptr<VulkanImageView>>& getTileGridViews() const;
 
-    EnvironmentLight* getEnvironmentLight() const
-    {
+    EnvironmentLight* getEnvironmentLight() const {
         return m_environmentLight.get();
     }
 

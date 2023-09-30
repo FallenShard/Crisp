@@ -7,14 +7,11 @@
 #include <Crisp/Image/Io/OpenEXRReader.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 const auto logger = createLoggerMt("PbrMaterial");
 
-struct TexInfo
-{
+struct TexInfo {
     std::string_view name;
     VkFormat defaultFormat;
 };
@@ -28,14 +25,11 @@ constexpr TexInfo kEmissionTex = {"emissive", VK_FORMAT_R8G8B8A8_UNORM};
 
 } // namespace
 
-PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
-{
+PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir) {
     const auto loadTextureOpt =
-        [&materialDir](const std::string_view name, const uint32_t requestedChannels) -> std::optional<Image>
-    {
+        [&materialDir](const std::string_view name, const uint32_t requestedChannels) -> std::optional<Image> {
         const auto& path = materialDir / fmt::format("{}.png", name);
-        if (std::filesystem::exists(path))
-        {
+        if (std::filesystem::exists(path)) {
             return loadImage(path, static_cast<int32_t>(requestedChannels), FlipOnLoad::Y).unwrap();
         }
 
@@ -53,12 +47,10 @@ PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir)
     return textureGroup;
 }
 
-void addPbrTexturesToImageCache(const PbrTextureGroup& texGroup, const std::string& materialKey, ImageCache& imageCache)
-{
-    const auto addTex = [&imageCache, &materialKey](const std::optional<Image>& texture, const TexInfo& texInfo)
-    {
-        if (texture)
-        {
+void addPbrTexturesToImageCache(
+    const PbrTextureGroup& texGroup, const std::string& materialKey, ImageCache& imageCache) {
+    const auto addTex = [&imageCache, &materialKey](const std::optional<Image>& texture, const TexInfo& texInfo) {
+        if (texture) {
             const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
             imageCache.addImageWithView(
                 key, createVulkanImage(*imageCache.getRenderer(), *texture, texInfo.defaultFormat));
@@ -73,11 +65,9 @@ void addPbrTexturesToImageCache(const PbrTextureGroup& texGroup, const std::stri
     addTex(texGroup.emissive, kEmissionTex);
 }
 
-void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache& imageCache)
-{
+void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache& imageCache) {
     logger->info("Removing PBR textures with key: {}", materialKey);
-    const auto removeTexAndView = [&imageCache, &materialKey](const TexInfo& texInfo)
-    {
+    const auto removeTexAndView = [&imageCache, &materialKey](const TexInfo& texInfo) {
         const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
         imageCache.removeImage(key);
         imageCache.removeImageView(key);
@@ -91,8 +81,7 @@ void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache&
     removeTexAndView(kEmissionTex);
 }
 
-std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir)
-{
+std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir) {
     OpenEXRReader reader;
     std::vector<float> buffer;
     uint32_t w{};

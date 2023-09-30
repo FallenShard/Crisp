@@ -11,16 +11,14 @@
 
 #include "FluidSimulation.hpp"
 
-namespace crisp
-{
+namespace crisp {
 class VulkanPipeline;
 class Renderer;
 class VulkanDevice;
 class UniformBuffer;
 class RenderGraph;
 
-class SPH : public FluidSimulation
-{
+class SPH : public FluidSimulation {
 public:
     SPH(Renderer* renderer, RenderGraph* renderGraph);
     virtual ~SPH();
@@ -70,8 +68,7 @@ private:
     mutable uint32_t m_prevSection;
     mutable uint32_t m_currentSection;
 
-    struct GridParams
-    {
+    struct GridParams {
         glm::uvec3 dim;
         uint32_t numCells;
         glm::vec3 spaceSize;

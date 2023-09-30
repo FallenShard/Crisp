@@ -8,32 +8,27 @@
 #include <string>
 #include <vector>
 
-namespace crisp
-{
-struct QueueFamilyIndices
-{
+namespace crisp {
+struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
     std::optional<uint32_t> computeFamily;
     std::optional<uint32_t> transferFamily;
 
-    bool isComplete() const
-    {
+    bool isComplete() const {
         return graphicsFamily.has_value() && presentFamily.has_value() && computeFamily.has_value() &&
                transferFamily.has_value();
     }
 };
 
-struct SurfaceSupport
-{
+struct SurfaceSupport {
     VkSurfaceKHR surface;
     VkSurfaceCapabilitiesKHR capabilities = {};
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-class VulkanPhysicalDevice
-{
+class VulkanPhysicalDevice {
 public:
     explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
     ~VulkanPhysicalDevice() = default;
@@ -43,38 +38,31 @@ public:
     VulkanPhysicalDevice& operator=(const VulkanPhysicalDevice& other) = delete;
     VulkanPhysicalDevice& operator=(VulkanPhysicalDevice&& other) noexcept;
 
-    inline VkPhysicalDevice getHandle() const
-    {
+    inline VkPhysicalDevice getHandle() const {
         return m_handle;
     }
 
-    inline const VkPhysicalDeviceFeatures& getFeatures() const
-    {
+    inline const VkPhysicalDeviceFeatures& getFeatures() const {
         return m_features.features;
     }
 
-    inline const VkPhysicalDeviceFeatures2& getFeatures2() const
-    {
+    inline const VkPhysicalDeviceFeatures2& getFeatures2() const {
         return m_features;
     }
 
-    inline const VkPhysicalDeviceProperties& getProperties() const
-    {
+    inline const VkPhysicalDeviceProperties& getProperties() const {
         return m_properties.properties;
     }
 
-    inline const VkPhysicalDeviceLimits& getLimits() const
-    {
+    inline const VkPhysicalDeviceLimits& getLimits() const {
         return m_properties.properties.limits;
     }
 
-    inline const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const
-    {
+    inline const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const {
         return m_rayTracingPipelineProperties;
     }
 
-    inline const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const
-    {
+    inline const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
         return m_memoryProperties.memoryProperties;
     }
 

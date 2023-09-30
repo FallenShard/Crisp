@@ -9,12 +9,10 @@
 #include <Crisp/GUI/GuiEnums.hpp>
 #include <Crisp/GUI/RenderSystem.hpp>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Form;
 
-class Control
-{
+class Control {
 public:
     Control(Form* form);
     virtual ~Control();
@@ -90,8 +88,7 @@ public:
     virtual void draw(const RenderSystem& renderSystem) const = 0;
 
     template <typename T>
-    T* getTypedControlById(std::string id)
-    {
+    T* getTypedControlById(std::string id) {
         return static_cast<T*>(getControlById(id));
     }
 

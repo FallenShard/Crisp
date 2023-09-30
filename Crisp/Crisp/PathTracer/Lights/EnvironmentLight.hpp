@@ -7,10 +7,8 @@
 #include <Crisp/Math/Distribution1D.hpp>
 #include <Crisp/PathTracer/Core/MipMap.hpp>
 
-namespace crisp
-{
-class EnvironmentLight : public Light
-{
+namespace crisp {
+class EnvironmentLight : public Light {
 public:
     EnvironmentLight(const VariantMap& params = VariantMap());
     ~EnvironmentLight();

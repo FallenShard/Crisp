@@ -1,9 +1,7 @@
 #pragma once
 
-namespace crisp::gui
-{
-class SliderModel
-{
+namespace crisp::gui {
+class SliderModel {
 public:
     virtual ~SliderModel() {}
 

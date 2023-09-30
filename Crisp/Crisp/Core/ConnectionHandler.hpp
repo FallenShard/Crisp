@@ -3,15 +3,11 @@
 #include <functional>
 #include <memory>
 
-namespace crisp
-{
-struct ConnectionHandler
-{
+namespace crisp {
+struct ConnectionHandler {
 public:
-    ~ConnectionHandler()
-    {
-        if (disconnectCallback)
-        {
+    ~ConnectionHandler() {
+        if (disconnectCallback) {
             disconnectCallback();
         }
     }
@@ -27,9 +23,7 @@ private:
     friend class Event;
 
     explicit ConnectionHandler(std::function<void()> disconnectCallback)
-        : disconnectCallback(std::move(disconnectCallback))
-    {
-    }
+        : disconnectCallback(std::move(disconnectCallback)) {}
 
     std::function<void()> disconnectCallback;
 };

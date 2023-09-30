@@ -10,10 +10,8 @@
 #include <Crisp/Renderer/RenderGraphExperimental.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
-class PbrScene : public Scene
-{
+namespace crisp {
+class PbrScene : public Scene {
 public:
     PbrScene(Renderer* renderer, Window* window);
 

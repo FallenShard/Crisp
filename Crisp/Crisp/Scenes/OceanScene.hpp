@@ -8,10 +8,8 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
-class OceanScene : public Scene
-{
+namespace crisp {
+class OceanScene : public Scene {
 public:
     OceanScene(Renderer* renderer, Window* window);
 

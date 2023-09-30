@@ -2,13 +2,10 @@
 
 #include <Crisp/Core/Result.hpp>
 
-namespace crisp::detail
-{
+namespace crisp::detail {
 template <typename... Args>
-void doAssert(const bool expr, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept
-{
-    if (expr)
-    {
+void doAssert(const bool expr, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept {
+    if (expr) {
         return;
     }
 
@@ -24,10 +21,8 @@ void doAssert(const bool expr, const char* exprString, LocationFormatString&& fo
     std::abort();
 }
 
-inline void doAssert(const bool expr, LocationFormatString&& formatString) noexcept
-{
-    if (expr)
-    {
+inline void doAssert(const bool expr, LocationFormatString&& formatString) noexcept {
+    if (expr) {
         return;
     }
 

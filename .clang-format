@@ -8,11 +8,11 @@ AlignConsecutiveAssignments: None
 AlignAfterOpenBracket: AlwaysBreak
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortLambdasOnASingleLine: None
+AllowShortLambdasOnASingleLine: All
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AlwaysBreakTemplateDeclarations: true
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Attach
 BreakConstructorInitializers: BeforeComma
 BinPackArguments: false
 BinPackParameters: false
@@ -29,5 +29,4 @@ TabWidth: 4
 UseTab: Never
 SeparateDefinitionBlocks: Always
 InsertBraces: true
-AllowShortLambdasOnASingleLine: All
 PenaltyIndentedWhitespace: 1

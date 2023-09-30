@@ -1,13 +1,10 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using VulkanResourceDeallocatorTest = VulkanTest;
 
-TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation)
-{
+TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
     const auto& device = device_;
     constexpr VkDeviceSize size = 100;
 
@@ -18,8 +15,7 @@ TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation)
     const VkBuffer buffer2 = device->createBuffer(bufferInfo);
     const VkBuffer buffer3 = device->createBuffer(bufferInfo);
 
-    const auto deferDeallocation = [&device](int32_t framesToLive, VkBuffer buffer)
-    {
+    const auto deferDeallocation = [&device](int32_t framesToLive, VkBuffer buffer) {
         device->getResourceDeallocator().deferDestruction(framesToLive, buffer);
     };
 

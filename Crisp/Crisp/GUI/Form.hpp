@@ -10,14 +10,12 @@
 #include <Crisp/GUI/ControlGroup.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class RenderSystem;
 class StopWatch;
 class ControlGroup;
 
-class Form
-{
+class Form {
 public:
     Form(std::unique_ptr<RenderSystem> renderSystem);
     ~Form();
@@ -36,8 +34,7 @@ public:
     void remove(std::string controlId, float duration = 1.0f);
 
     template <typename T>
-    T* getControlById(std::string id)
-    {
+    T* getControlById(std::string id) {
         return m_rootControlGroup->getTypedControlById<T>(id);
     }
 

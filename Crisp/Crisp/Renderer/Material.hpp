@@ -11,10 +11,8 @@
 
 #include <vector>
 
-namespace crisp
-{
-class Material
-{
+namespace crisp {
+class Material {
 public:
     explicit Material(VulkanPipeline* pipeline);
     Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator);
@@ -72,25 +70,21 @@ public:
         uint32_t frameIdx, VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
     void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
 
-    inline VulkanPipeline* getPipeline() const
-    {
+    inline VulkanPipeline* getPipeline() const {
         return m_pipeline;
     }
 
-    inline void setPipeline(VulkanPipeline* pipeline)
-    {
+    inline void setPipeline(VulkanPipeline* pipeline) {
         m_pipeline = pipeline;
     }
 
     void setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicBuffer, uint32_t offset);
 
-    inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const
-    {
+    inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const {
         return m_dynamicBufferViews;
     }
 
-    VkDescriptorSet getDescriptorSet(const uint32_t setIndex, const uint32_t frameIndex) const
-    {
+    VkDescriptorSet getDescriptorSet(const uint32_t setIndex, const uint32_t frameIndex) const {
         return m_sets.at(frameIndex).at(setIndex);
     }
 

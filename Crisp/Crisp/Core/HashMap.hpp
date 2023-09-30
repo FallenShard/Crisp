@@ -6,8 +6,7 @@
 #include <robin_hood.h>
 #pragma warning(pop)
 
-namespace crisp
-{
+namespace crisp {
 template <typename Key, typename Value, typename Hash = robin_hood::hash<Key>>
 using FlatHashMap = robin_hood::unordered_flat_map<Key, Value, Hash>;
 

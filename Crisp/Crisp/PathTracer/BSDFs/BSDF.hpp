@@ -7,10 +7,8 @@
 #include <Crisp/Spectra/Spectrum.hpp>
 #include <Crisp/Utils/BitFlags.hpp>
 
-namespace crisp
-{
-enum class Lobe
-{
+namespace crisp {
+enum class Lobe {
     Passthrough = 1 << 0,
     Diffuse = 1 << 1,
     Glossy = 1 << 2,
@@ -21,18 +19,15 @@ enum class Lobe
 
 DECLARE_BITFLAG(Lobe)
 
-class BSDF
-{
+class BSDF {
 public:
-    enum class Measure
-    {
+    enum class Measure {
         Unknown,
         SolidAngle,
         Discrete
     };
 
-    struct Sample
-    {
+    struct Sample {
         glm::vec3 p;
         glm::vec2 uv;
         glm::vec3 wi;
@@ -53,9 +48,7 @@ public:
             , pdf(0.0f)
             , measure(Measure::Unknown)
             , sampledLobe(Lobe::Passthrough)
-            , eta(0.0f)
-        {
-        }
+            , eta(0.0f) {}
 
         Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi)
             : p(p)
@@ -65,9 +58,7 @@ public:
             , pdf(0.0f)
             , measure(Measure::Unknown)
             , sampledLobe(Lobe::Passthrough)
-            , eta(0.0f)
-        {
-        }
+            , eta(0.0f) {}
 
         Sample(const glm::vec3& p, const glm::vec2& uv, const glm::vec3& wi, const glm::vec3& wo)
             : p(p)
@@ -77,9 +68,7 @@ public:
             , pdf(0.0f)
             , measure(Measure::Unknown)
             , sampledLobe(Lobe::Passthrough)
-            , eta(0.0f)
-        {
-        }
+            , eta(0.0f) {}
     };
 
     BSDF(LobeFlags lobeFlags);

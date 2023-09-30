@@ -4,10 +4,8 @@
 
 #include <Crisp/Math/Constants.hpp>
 
-namespace crisp
-{
-enum class Easing
-{
+namespace crisp {
+enum class Easing {
     Linear,
     SlowIn,
     SlowOut,
@@ -22,15 +20,12 @@ enum class Easing
 };
 
 template <typename T, Easing easing = Easing::Linear>
-class PropertyAnimation : public Animation
-{
+class PropertyAnimation : public Animation {
 public:
     PropertyAnimation(double duration, T start, T end, double delay = 0, bool isLooped = false, int loopCount = 1)
         : Animation(delay, duration, isLooped, loopCount)
         , m_propertyStart(start)
-        , m_propertyEnd(end)
-    {
-    }
+        , m_propertyEnd(end) {}
 
     PropertyAnimation(
         double duration,
@@ -43,9 +38,7 @@ public:
         : Animation(delay, duration, isLooped, loopCount)
         , m_propertyStart(start)
         , m_propertyEnd(end)
-        , m_updater(updater)
-    {
-    }
+        , m_updater(updater) {}
 
     PropertyAnimation(
         double duration,
@@ -54,43 +47,35 @@ public:
         bool isLooped = false,
         int loopCount = 1)
         : Animation(delay, duration, isLooped, loopCount)
-        , m_updater(updater)
-    {
-    }
+        , m_updater(updater) {}
 
-    inline T getPropertyStart()
-    {
+    inline T getPropertyStart() {
         return m_propertyStart;
     }
 
-    inline T getPropertyEnd()
-    {
+    inline T getPropertyEnd() {
         return m_propertyEnd;
     }
 
-    void setUpdater(std::function<void(const T&)> updater)
-    {
+    void setUpdater(std::function<void(const T&)> updater) {
         m_updater = updater;
     }
 
-    virtual void update(double dt) override
-    {
-        if (m_isFinished)
+    virtual void update(double dt) override {
+        if (m_isFinished) {
             return;
+        }
 
-        if (m_elapsedDelayTime < m_startDelay)
-        {
+        if (m_elapsedDelayTime < m_startDelay) {
             m_elapsedDelayTime += dt;
             return;
         }
 
-        if (m_elapsedTime < m_duration)
-        {
+        if (m_elapsedTime < m_duration) {
             m_elapsedTime += dt;
             const double frameTime = hasElapsed() ? 1.0 : interpolateTime(m_elapsedTime / m_duration);
 
-            if (m_updater)
-            {
+            if (m_updater) {
                 const T lerpVal = m_propertyStart + (m_propertyEnd - m_propertyStart) * static_cast<float>(frameTime);
                 m_updater(lerpVal);
             }
@@ -98,73 +83,61 @@ public:
             m_framesCompleted++;
         }
 
-        if (hasElapsed())
-        {
+        if (hasElapsed()) {
             m_loopsCompleted++;
 
-            if (m_isLooped && m_loopsCompleted < m_loopCount)
-            {
+            if (m_isLooped && m_loopsCompleted < m_loopCount) {
                 m_isFinished = false;
                 m_elapsedTime -= m_duration;
-            }
-            else
-            {
+            } else {
                 m_isFinished = true;
                 finished();
             }
         }
     }
 
-    inline bool hasElapsed() const
-    {
+    inline bool hasElapsed() const {
         return std::abs(m_elapsedTime - m_duration) <= 1e-7;
     }
 
-    void reset(T start, T end)
-    {
+    void reset(T start, T end) {
         m_propertyStart = start;
         m_propertyEnd = end;
         Animation::reset();
     }
 
 private:
-    double interpolateTime(double dt)
-    {
-        if constexpr (easing == Easing::Linear)
+    double interpolateTime(double dt) {
+        if constexpr (easing == Easing::Linear) {
             return dt;
-        else if constexpr (easing == Easing::Linear)
+        } else if constexpr (easing == Easing::Linear) {
             return dt * dt;
-        else if constexpr (easing == Easing::CubicIn)
+        } else if constexpr (easing == Easing::CubicIn) {
             return dt * dt * dt;
-        else if constexpr (easing == Easing::SlowIn)
+        } else if constexpr (easing == Easing::SlowIn) {
             return dt * dt * dt * dt;
-        else if constexpr (easing == Easing::QuarticIn)
+        } else if constexpr (easing == Easing::QuarticIn) {
             return dt * dt * dt * dt;
-        else if constexpr (easing == Easing::QuadraticOut)
+        } else if constexpr (easing == Easing::QuadraticOut) {
             return -1.0 * dt * (dt - 2.0);
-        else if constexpr (easing == Easing::CubicOut)
-        {
+        } else if constexpr (easing == Easing::CubicOut) {
             dt -= 1.0;
             return dt * dt * dt + 1.0;
-        }
-        else if constexpr (easing == Easing::SlowOut)
-        {
+        } else if constexpr (easing == Easing::SlowOut) {
             dt -= 1.0;
             dt *= dt;
             return -1.0 * (dt * dt - 1.0);
-        }
-        else if constexpr (easing == Easing::QuarticOut)
-        {
+        } else if constexpr (easing == Easing::QuarticOut) {
             dt -= 1.0;
             dt *= dt;
             return -1.0 * (dt * dt - 1.0);
-        }
-        else if constexpr (easing == Easing::Root)
+        } else if constexpr (easing == Easing::Root) {
             return std::sqrt(dt);
-        else if constexpr (easing == Easing::Sine)
+        } else if constexpr (easing == Easing::Sine) {
             return std::sin(dt * PI<double> / 2.0);
-        else
+        } else {
             return dt;
+        }
     }
 
     T m_propertyStart;

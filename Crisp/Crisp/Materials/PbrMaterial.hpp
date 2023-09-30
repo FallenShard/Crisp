@@ -6,10 +6,8 @@
 #include <filesystem>
 #include <optional>
 
-namespace crisp
-{
-struct PbrParams
-{
+namespace crisp {
+struct PbrParams {
     glm::vec4 albedo{1.0f, 1.0f, 1.0f, 1.0f};
     glm::vec2 uvScale{1.0f, 1.0f};
     float metallic{1.0f};
@@ -17,8 +15,7 @@ struct PbrParams
     float aoStrength{1.0f};
 };
 
-struct PbrTextureGroup
-{
+struct PbrTextureGroup {
     std::optional<Image> albedo;
     std::optional<Image> normal;
     std::optional<Image> roughness;
@@ -27,8 +24,7 @@ struct PbrTextureGroup
     std::optional<Image> emissive;
 };
 
-struct PbrMaterial
-{
+struct PbrMaterial {
     std::string name;
     PbrTextureGroup textures;
     PbrParams params;

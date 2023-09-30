@@ -1,7 +1,6 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanImageView::VulkanImageView(
     const VulkanDevice& device,
     VulkanImage& image,
@@ -12,8 +11,7 @@ VulkanImageView::VulkanImageView(
     uint32_t mipLevels)
     : VulkanResource(device.getResourceDeallocator())
     , m_image(image)
-    , m_subresourceRange{}
-{
+    , m_subresourceRange{} {
     VkImageViewCreateInfo viewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     viewInfo.image = image.getHandle();
     viewInfo.viewType = type;
@@ -33,13 +31,11 @@ VulkanImageView::VulkanImageView(
     vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_handle);
 }
 
-VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const
-{
+VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const {
     return {sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout};
 }
 
-std::unique_ptr<VulkanImageView> createView(VulkanImage& image, VkImageViewType type)
-{
+std::unique_ptr<VulkanImageView> createView(VulkanImage& image, VkImageViewType type) {
     return std::make_unique<VulkanImageView>(
         image.getDevice(), image, type, 0, image.getLayerCount(), 0, image.getMipLevels());
 }
@@ -50,10 +46,8 @@ std::unique_ptr<VulkanImageView> createView(
     uint32_t baseLayer,
     uint32_t numLayers,
     uint32_t baseMipLevel,
-    uint32_t mipLevels)
-{
-    if (type == VK_IMAGE_VIEW_TYPE_CUBE)
-    {
+    uint32_t mipLevels) {
+    if (type == VK_IMAGE_VIEW_TYPE_CUBE) {
         numLayers = 6;
     }
     return std::make_unique<VulkanImageView>(

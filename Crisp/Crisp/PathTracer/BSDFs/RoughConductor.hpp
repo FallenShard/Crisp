@@ -5,10 +5,8 @@
 
 #include "MicrofacetDistributions/MicrofacetDistribution.hpp"
 
-namespace crisp
-{
-class RoughConductorBSDF : public BSDF
-{
+namespace crisp {
+class RoughConductorBSDF : public BSDF {
 public:
     RoughConductorBSDF(const VariantMap& params = VariantMap());
     ~RoughConductorBSDF();

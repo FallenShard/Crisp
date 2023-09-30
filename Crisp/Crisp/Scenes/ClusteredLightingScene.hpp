@@ -6,10 +6,8 @@
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp
-{
-namespace gui
-{
+namespace crisp {
+namespace gui {
 class Form;
 }
 
@@ -28,8 +26,7 @@ class VulkanSampler;
 class BoxVisualizer;
 class Skybox;
 
-class ClusteredLightingScene : public Scene
-{
+class ClusteredLightingScene : public Scene {
 public:
     ClusteredLightingScene(Renderer* renderer, Window* window);
     ~ClusteredLightingScene();
@@ -45,8 +42,7 @@ public:
     void setRoughness(double roughness);
 
 private:
-    struct PbrUnifMaterialParams
-    {
+    struct PbrUnifMaterialParams {
         glm::vec4 albedo;
         float metallic;
         float roughness;

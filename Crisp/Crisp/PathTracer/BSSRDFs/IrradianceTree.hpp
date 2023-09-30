@@ -1,24 +1,20 @@
 #pragma once
 
-#include <Crisp/Spectra/Spectrum.hpp>
 #include <Crisp/Math/BoundingBox.hpp>
+#include <Crisp/Spectra/Spectrum.hpp>
 #include <array>
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-struct SurfacePoint
-{
+namespace crisp {
+struct SurfacePoint {
     SurfacePoint() {}
 
     SurfacePoint(const glm::vec3& p, const glm::vec3& n, float a)
         : p(p)
         , n(n)
         , area(a)
-        , rayEpsilon(Ray3::Epsilon)
-    {
-    }
+        , rayEpsilon(Ray3::Epsilon) {}
 
     glm::vec3 p;
     glm::vec3 n;
@@ -26,20 +22,15 @@ struct SurfacePoint
     float rayEpsilon;
 };
 
-struct PoissonCheck
-{
+struct PoissonCheck {
     PoissonCheck(float maxDist, const glm::vec3& point)
         : maxDist2(maxDist * maxDist)
         , failed(false)
-        , p(point)
-    {
-    }
+        , p(point) {}
 
-    bool operator()(const SurfacePoint& point)
-    {
+    bool operator()(const SurfacePoint& point) {
         glm::vec3 diff = point.p - p;
-        if (glm::dot(diff, diff) < maxDist2)
-        {
+        if (glm::dot(diff, diff) < maxDist2) {
             failed = true;
             return false;
         }
@@ -52,8 +43,7 @@ struct PoissonCheck
     glm::vec3 p;
 };
 
-struct IrradiancePoint
-{
+struct IrradiancePoint {
     IrradiancePoint() {}
 
     IrradiancePoint(const SurfacePoint& surfPt, const Spectrum& spectrum)
@@ -61,9 +51,7 @@ struct IrradiancePoint
         , n(surfPt.n)
         , e(spectrum)
         , area(surfPt.area)
-        , rayEpsilon(surfPt.rayEpsilon)
-    {
-    }
+        , rayEpsilon(surfPt.rayEpsilon) {}
 
     glm::vec3 p;
     glm::vec3 n;
@@ -72,8 +60,7 @@ struct IrradiancePoint
     float rayEpsilon;
 };
 
-struct IrradianceNode
-{
+struct IrradianceNode {
     glm::vec3 p;
     bool isLeaf;
     Spectrum e;
@@ -83,17 +70,14 @@ struct IrradianceNode
 
     IrradianceNode()
         : isLeaf(true)
-        , sumArea(0.0f)
-    {
-        for (int i = 0; i < 8; i++)
-        {
+        , sumArea(0.0f) {
+        for (int i = 0; i < 8; i++) {
             irrPts[i] = nullptr;
             children[i] = nullptr;
         }
     }
 
-    inline BoundingBox3 getChildBound(int child, const BoundingBox3& bounds, const glm::vec3& mid)
-    {
+    inline BoundingBox3 getChildBound(int child, const BoundingBox3& bounds, const glm::vec3& mid) {
         BoundingBox3 bound;
         bound.min.x = (child & 4) ? mid.x : bounds.min.x;
         bound.min.y = (child & 2) ? mid.y : bounds.min.y;
@@ -104,15 +88,11 @@ struct IrradianceNode
         return bound;
     }
 
-    void insert(const BoundingBox3& nodeBounds, IrradiancePoint* point)
-    {
+    void insert(const BoundingBox3& nodeBounds, IrradiancePoint* point) {
         glm::vec3 mid = nodeBounds.getCenter();
-        if (isLeaf)
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                if (!irrPts[i])
-                {
+        if (isLeaf) {
+            for (int i = 0; i < 8; i++) {
+                if (!irrPts[i]) {
                     irrPts[i] = point;
                     return;
                 }
@@ -120,52 +100,48 @@ struct IrradianceNode
 
             isLeaf = false;
             IrradiancePoint* localPts[8];
-            for (int i = 0; i < 8; i++)
-            {
+            for (int i = 0; i < 8; i++) {
                 localPts[i] = irrPts[i];
                 children[i] = nullptr;
             }
 
-            for (int i = 0; i < 8; i++)
-            {
+            for (int i = 0; i < 8; i++) {
                 IrradiancePoint* currPt = localPts[i];
 
                 int child =
                     (currPt->p.x > mid.x ? 4 : 0) + (currPt->p.y > mid.y ? 2 : 0) + (currPt->p.z > mid.z ? 1 : 0);
-                if (children[child] == nullptr)
+                if (children[child] == nullptr) {
                     children[child] = std::make_unique<IrradianceNode>();
+                }
 
                 BoundingBox3 childBounds = getChildBound(child, nodeBounds, mid);
                 children[child]->insert(childBounds, currPt);
             }
 
             int child = (point->p.x > mid.x ? 4 : 0) + (point->p.y > mid.y ? 2 : 0) + (point->p.z > mid.z ? 1 : 0);
-            if (children[child] == nullptr)
+            if (children[child] == nullptr) {
                 children[child] = std::make_unique<IrradianceNode>();
+            }
 
             BoundingBox3 childBounds = getChildBound(child, nodeBounds, mid);
             children[child]->insert(childBounds, point);
         }
     }
 
-    Spectrum getLeafIrradiance()
-    {
+    Spectrum getLeafIrradiance() {
         Spectrum sum(0.0f);
-        if (isLeaf)
-        {
-            for (int i = 0; i < irrPts.size(); i++)
-            {
-                if (!irrPts[i])
+        if (isLeaf) {
+            for (int i = 0; i < irrPts.size(); i++) {
+                if (!irrPts[i]) {
                     break;
+                }
                 sum += irrPts[i]->e;
             }
-        }
-        else
-        {
-            for (int i = 0; i < children.size(); i++)
-            {
-                if (!children[i])
+        } else {
+            for (int i = 0; i < children.size(); i++) {
+                if (!children[i]) {
                     continue;
+                }
                 sum += children[i]->getLeafIrradiance();
             }
         }
@@ -173,24 +149,20 @@ struct IrradianceNode
         return sum;
     }
 
-    Spectrum getTotalIrradiance()
-    {
+    Spectrum getTotalIrradiance() {
         Spectrum sum(0.0f);
-        if (isLeaf)
-        {
-            for (int i = 0; i < irrPts.size(); i++)
-            {
-                if (!irrPts[i])
+        if (isLeaf) {
+            for (int i = 0; i < irrPts.size(); i++) {
+                if (!irrPts[i]) {
                     break;
+                }
                 sum += irrPts[i]->e;
             }
-        }
-        else
-        {
-            for (int i = 0; i < children.size(); i++)
-            {
-                if (!children[i])
+        } else {
+            for (int i = 0; i < children.size(); i++) {
+                if (!children[i]) {
                     continue;
+                }
                 sum += children[i]->getLeafIrradiance();
             }
 
@@ -200,16 +172,14 @@ struct IrradianceNode
         return sum;
     }
 
-    void initHierarchy()
-    {
-        if (isLeaf)
-        {
+    void initHierarchy() {
+        if (isLeaf) {
             float weightSum = 0.0f;
             size_t i;
-            for (i = 0; i < 8; i++)
-            {
-                if (!irrPts[i])
+            for (i = 0; i < 8; i++) {
+                if (!irrPts[i]) {
                     break;
+                }
                 float weight = irrPts[i]->e.getLuminance();
                 e += irrPts[i]->e;
                 p += weight * irrPts[i]->p;
@@ -217,20 +187,20 @@ struct IrradianceNode
                 sumArea += irrPts[i]->area;
             }
 
-            if (weightSum > 0.0f)
+            if (weightSum > 0.0f) {
                 p /= weightSum;
+            }
 
-            if (i > 0)
+            if (i > 0) {
                 e /= static_cast<float>(i);
-        }
-        else
-        {
+            }
+        } else {
             float weightSum = 0.0f;
             size_t numChildren = 0;
-            for (uint32_t i = 0; i < 8; i++)
-            {
-                if (!children[i])
+            for (uint32_t i = 0; i < 8; i++) {
+                if (!children[i]) {
                     continue;
+                }
                 ++numChildren;
                 children[i]->initHierarchy();
                 float weight = children[i]->e.getLuminance();
@@ -239,44 +209,43 @@ struct IrradianceNode
                 weightSum += weight;
                 sumArea += children[i]->sumArea;
             }
-            if (weightSum > 0.0f)
+            if (weightSum > 0.0f) {
                 p /= weightSum;
+            }
 
-            if (numChildren > 0)
+            if (numChildren > 0) {
                 e /= static_cast<float>(numChildren);
+            }
         }
     }
 
     template <typename Func>
-    Spectrum Mo(const BoundingBox3& nodeBounds, const glm::vec3& pt, Func& func, float maxError)
-    {
+    Spectrum Mo(const BoundingBox3& nodeBounds, const glm::vec3& pt, Func& func, float maxError) {
         glm::vec3 diff = pt - p;
         float sqrDist = glm::dot(diff, diff);
         float distanceWeight = sumArea / sqrDist;
-        if (distanceWeight < maxError && !nodeBounds.contains(pt))
+        if (distanceWeight < maxError && !nodeBounds.contains(pt)) {
             return func(sqrDist) * e * sumArea;
+        }
 
         Spectrum mo = 0.0f;
-        if (isLeaf)
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                if (!irrPts[i])
+        if (isLeaf) {
+            for (int i = 0; i < 8; i++) {
+                if (!irrPts[i]) {
                     break;
+                }
 
                 glm::vec3 diffC = irrPts[i]->p - pt;
                 float cSqrDist = glm::dot(diffC, diffC);
 
                 mo += func(cSqrDist) * irrPts[i]->e * irrPts[i]->area;
             }
-        }
-        else
-        {
+        } else {
             glm::vec3 mid = nodeBounds.getCenter();
-            for (int child = 0; child < 8; child++)
-            {
-                if (!children[child])
+            for (int child = 0; child < 8; child++) {
+                if (!children[child]) {
                     continue;
+                }
 
                 BoundingBox3 childBounds = getChildBound(child, nodeBounds, mid);
                 mo += children[child]->Mo(childBounds, pt, func, maxError);
@@ -287,8 +256,7 @@ struct IrradianceNode
     }
 };
 
-struct IrradianceTree
-{
+struct IrradianceTree {
     std::unique_ptr<IrradianceNode> root;
     BoundingBox3 boundingBox;
 };

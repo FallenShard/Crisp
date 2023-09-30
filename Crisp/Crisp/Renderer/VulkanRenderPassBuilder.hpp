@@ -4,10 +4,8 @@
 
 #include <vector>
 
-namespace crisp
-{
-class VulkanRenderPassBuilder
-{
+namespace crisp {
+class VulkanRenderPassBuilder {
 public:
     // Attachment configuration
     VulkanRenderPassBuilder& setAttachmentCount(uint32_t count);

@@ -6,10 +6,8 @@
 #include <filesystem>
 #include <vector>
 
-namespace crisp
-{
-class MipMap
-{
+namespace crisp {
+class MipMap {
 public:
     MipMap(std::filesystem::path filePath);
 

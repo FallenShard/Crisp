@@ -7,10 +7,8 @@
 
 #include <memory>
 
-namespace crisp
-{
-class Camera
-{
+namespace crisp {
+class Camera {
 public:
     virtual ~Camera() = default;
     virtual Spectrum sampleRay(Ray3& ray, const glm::vec2& samplePosition, const glm::vec2& apertureSample) const = 0;

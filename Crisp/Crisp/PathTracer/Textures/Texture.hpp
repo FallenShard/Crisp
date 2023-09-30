@@ -7,14 +7,11 @@
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
 
-namespace crisp
-{
+namespace crisp {
 template <typename T>
-class Texture
-{
+class Texture {
 public:
-    Texture(const VariantMap& params = VariantMap())
-    {
+    Texture(const VariantMap& params = VariantMap()) {
         m_name = params.get<std::string>("name", "");
     }
 
@@ -22,8 +19,7 @@ public:
 
     virtual T eval(const glm::vec2& uv) const = 0;
 
-    std::string getName() const
-    {
+    std::string getName() const {
         return m_name;
     }
 

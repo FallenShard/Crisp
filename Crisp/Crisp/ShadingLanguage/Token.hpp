@@ -3,11 +3,8 @@
 #include <any>
 #include <string>
 
-
-namespace crisp::sl
-{
-enum class TokenType
-{
+namespace crisp::sl {
+enum class TokenType {
     // Single-character tokens
     LeftParen,
     RightParen,
@@ -324,8 +321,7 @@ enum class TokenType
     EndOfFile
 };
 
-struct Token
-{
+struct Token {
     Token() = default;
 
     template <typename T>
@@ -333,9 +329,7 @@ struct Token
         : lexeme(std::move(lexeme))
         , type(type)
         , literal(std::move(literal))
-        , line(line)
-    {
-    }
+        , line(line) {}
 
     std::string lexeme;
     TokenType type = TokenType::Unknown;

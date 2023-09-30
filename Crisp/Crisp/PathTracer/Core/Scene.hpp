@@ -15,8 +15,7 @@
 #include <Crisp/PathTracer/Lights/Light.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Integrator;
 class Sampler;
 class Camera;
@@ -24,11 +23,9 @@ class Shape;
 class BSDF;
 class Mesh;
 
-namespace pt
-{
+namespace pt {
 
-class Scene
-{
+class Scene {
 public:
     Scene();
     ~Scene();

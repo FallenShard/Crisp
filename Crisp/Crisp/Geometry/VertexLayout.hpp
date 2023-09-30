@@ -5,12 +5,10 @@
 
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 using VertexLayoutDescription = std::vector<std::vector<VertexAttributeDescriptor>>;
 
-struct VertexLayout
-{
+struct VertexLayout {
     std::vector<VkVertexInputBindingDescription> bindings;
     std::vector<VkVertexInputAttributeDescription> attributes;
 

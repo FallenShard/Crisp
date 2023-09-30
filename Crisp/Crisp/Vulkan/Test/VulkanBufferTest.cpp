@@ -2,16 +2,13 @@
 
 #include <numeric>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using VulkanBufferTest = VulkanTest;
 
 using ::testing::Not;
 
-TEST_F(VulkanBufferTest, StagingVulkanBuffer)
-{
+TEST_F(VulkanBufferTest, StagingVulkanBuffer) {
     constexpr uint32_t kElementCount{100};
     std::array<float, kElementCount> data{};
     std::iota(data.begin(), data.end(), 0.0f);
@@ -24,14 +21,12 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer)
     stagingBuffer.updateFromHost(data);
 
     const auto* ptr = stagingBuffer.getHostVisibleData<float>();
-    for (uint32_t i = 0; i < data.size(); ++i)
-    {
+    for (uint32_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(ptr[i], data[i]); // NOLINT
     }
 }
 
-TEST_F(VulkanBufferTest, MoveConstruction)
-{
+TEST_F(VulkanBufferTest, MoveConstruction) {
     constexpr uint32_t kElementCount{100};
     std::array<float, kElementCount> data{};
     std::iota(data.begin(), data.end(), 0.0f);
@@ -48,8 +43,7 @@ TEST_F(VulkanBufferTest, MoveConstruction)
     EXPECT_THAT(stagingBuffer, HandleIsNull()); // NOLINT
 }
 
-TEST_F(VulkanBufferTest, VulkanBuffer)
-{
+TEST_F(VulkanBufferTest, VulkanBuffer) {
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
     std::vector<float> data(elementCount);
@@ -64,8 +58,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
     StagingVulkanBuffer stagingBuffer(*device_, size);
     const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
-    for (uint32_t i = 0; i < data.size(); ++i)
-    {
+    for (uint32_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(stagingPtr[i], data[i]); // NOLINT
     }
 
@@ -92,14 +85,12 @@ TEST_F(VulkanBufferTest, VulkanBuffer)
     }
 
     const auto* ptr = downloadBuffer.getHostVisibleData<float>();
-    for (uint32_t i = 0; i < elementCount; ++i)
-    {
+    for (uint32_t i = 0; i < elementCount; ++i) {
         ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i; // NOLINT
     }
 }
 
-TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
-{
+TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     auto device = std::make_unique<VulkanDevice>(
         *physicalDevice_,
         createQueueConfiguration({QueueType::General, QueueType::Transfer}, *context_, *physicalDevice_),
@@ -119,8 +110,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
     std::iota(data.begin(), data.end(), 0.0f);
     const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
-    for (uint32_t i = 0; i < data.size(); ++i)
-    {
+    for (uint32_t i = 0; i < data.size(); ++i) {
         ASSERT_EQ(stagingPtr[i], data[i]); // NOLINT
     }
 
@@ -191,8 +181,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer)
 
     const auto* ptr = downloadBuffer.getHostVisibleData<float>();
     const auto* ptr2 = downloadBuffer2.getHostVisibleData<float>();
-    for (uint32_t i = 0; i < kElementCount; ++i)
-    {
+    for (uint32_t i = 0; i < kElementCount; ++i) {
         EXPECT_EQ(ptr[i], data[i]) << " not equal at index " << i;  // NOLINT
         EXPECT_EQ(ptr2[i], data[i]) << " not equal at index " << i; // NOLINT
     }

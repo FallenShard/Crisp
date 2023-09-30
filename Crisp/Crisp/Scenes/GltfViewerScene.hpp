@@ -11,10 +11,8 @@
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
-class GltfViewerScene : public Scene
-{
+namespace crisp {
+class GltfViewerScene : public Scene {
 public:
     GltfViewerScene(Renderer* renderer, Window* window);
     ~GltfViewerScene() override = default;

@@ -2,23 +2,18 @@
 
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using ::testing::Each;
 
-class VulkanSwapChainTest : public VulkanTestWithSurface
-{
+class VulkanSwapChainTest : public VulkanTestWithSurface {
 protected:
-    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled)
-    {
+    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled) {
         return {*device_, *physicalDevice_, context_->getSurface(), buffering};
     }
 };
 
-TEST_F(VulkanSwapChainTest, Constructor)
-{
+TEST_F(VulkanSwapChainTest, Constructor) {
     VulkanSwapChain swapChain(createSwapChain());
     EXPECT_THAT(swapChain, HandleIsValid());
 
@@ -27,20 +22,17 @@ TEST_F(VulkanSwapChainTest, Constructor)
     EXPECT_THAT(anotherSwapChain, HandleIsValid());
 }
 
-TEST_F(VulkanSwapChainTest, MultipleSwapChainsCanExist)
-{
+TEST_F(VulkanSwapChainTest, MultipleSwapChainsCanExist) {
     std::vector<VulkanSwapChain> swapChains;
     swapChains.reserve(5);
-    for (uint32_t i = 0; i < swapChains.size(); ++i)
-    {
+    for (uint32_t i = 0; i < swapChains.size(); ++i) {
         swapChains.push_back(createSwapChain());
     }
 
     EXPECT_THAT(swapChains, Each(HandleIsValid()));
 }
 
-TEST_F(VulkanSwapChainTest, Bounds)
-{
+TEST_F(VulkanSwapChainTest, Bounds) {
     const VulkanSwapChain swapChain(createSwapChain());
     EXPECT_THAT(swapChain, HandleIsValid());
 
@@ -64,15 +56,13 @@ TEST_F(VulkanSwapChainTest, Bounds)
     EXPECT_EQ(scissor.offset.y, 0);
 }
 
-TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering)
-{
+TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering) {
     const VulkanSwapChain swapChain(createSwapChain());
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getImageCount(), 3u);
 }
 
-TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
-{
+TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent) {
     const VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
     EXPECT_THAT(swapChain, HandleIsValid());
 
@@ -80,21 +70,18 @@ TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent)
     EXPECT_NE(swapChain.getImageView(0), swapChain.getImageView(1));
 }
 
-TEST_F(VulkanSwapChainTest, Recreate)
-{
+TEST_F(VulkanSwapChainTest, Recreate) {
     VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
     EXPECT_THAT(swapChain, HandleIsValid());
 
-    for (uint32_t i = 0; i < 5; ++i)
-    {
+    for (uint32_t i = 0; i < 5; ++i) {
         swapChain.recreate(*device_, *physicalDevice_, context_->getSurface());
     }
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getImageCount(), 2u);
 }
 
-TEST_F(VulkanSwapChainTest, WindowResized)
-{
+TEST_F(VulkanSwapChainTest, WindowResized) {
     VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getExtent().width, kDefaultWidth);

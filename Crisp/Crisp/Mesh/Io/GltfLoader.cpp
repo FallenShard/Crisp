@@ -8,10 +8,8 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf.h>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 const auto logger = createLoggerMt("GltfLoader");
 
 constexpr uint32_t OcclusionMapChannel{0};
@@ -20,8 +18,7 @@ constexpr uint32_t MetallicMapChannel{2};
 
 constexpr int32_t GltfInvalidIdx{-1};
 
-Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, uint32_t indicesAccessorIdx)
-{
+Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, uint32_t indicesAccessorIdx) {
     const auto& accessor{model.accessors.at(indicesAccessorIdx)};
     const auto& bufferView{model.bufferViews.at(accessor.bufferView)};
     const auto& buffer{model.buffers.at(bufferView.buffer)};
@@ -32,22 +29,16 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, ui
     const size_t triangleCount{bufferView.byteLength / triangleByteCount};
 
     std::vector<glm::uvec3> indices(triangleCount);
-    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-    {
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
         std::memcpy(indices.data(), buffer.data.data() + bufferView.byteOffset, bufferView.byteLength);
-    }
-    else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-    {
+    } else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
         glm::u16vec3 temp{};
-        for (size_t i = 0; i < triangleCount; ++i)
-        {
+        for (size_t i = 0; i < triangleCount; ++i) {
             const size_t offset{bufferView.byteOffset + i * triangleByteCount};
             std::memcpy(&temp, buffer.data.data() + offset, triangleByteCount);
             indices[i] = glm::uvec3(temp.x, temp.y, temp.z);
         }
-    }
-    else
-    {
+    } else {
         return resultError("Failed to parse index buffer!");
     }
 
@@ -55,8 +46,7 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, ui
 }
 
 template <typename T>
-Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint32_t accessorIdx)
-{
+Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint32_t accessorIdx) {
     const auto& accessor = model.accessors.at(accessorIdx);
 
     const auto& bufferView = model.bufferViews.at(accessor.bufferView);
@@ -76,8 +66,7 @@ Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint
     attributes.reserve(accessor.count);
 
     T temp{};
-    for (size_t i = 0; i < accessor.count; ++i)
-    {
+    for (size_t i = 0; i < accessor.count; ++i) {
         const size_t offset{bufferRangeStart + i * byteStride};
         std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
         attributes.emplace_back(temp);
@@ -89,17 +78,13 @@ Result<std::vector<T>> loadBufferFromAccessor(const tinygltf::Model& model, uint
 template <typename T>
 //, size_t Size, typename Scalar>
 concept GlmVec = requires(T v) {
-    {
-        T::length()
-    } -> std::same_as<glm::length_t>;
+    { T::length() } -> std::same_as<glm::length_t>;
 };
 
 template <GlmVec DstType, GlmVec SrcType = DstType>
 Result<std::vector<DstType>> loadVertexBuffer(
-    const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string& attrib)
-{
-    if (!primitive.attributes.contains(attrib))
-    {
+    const tinygltf::Model& model, const tinygltf::Primitive& primitive, const std::string& attrib) {
+    if (!primitive.attributes.contains(attrib)) {
         return std::vector<DstType>{};
     }
 
@@ -122,8 +107,7 @@ Result<std::vector<DstType>> loadVertexBuffer(
     attributes.reserve(accessor.count);
 
     SrcType temp{};
-    for (size_t i = 0; i < accessor.count; ++i)
-    {
+    for (size_t i = 0; i < accessor.count; ++i) {
         const size_t offset{bufferRangeStart + i * byteStride};
         std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
         attributes.emplace_back(temp);
@@ -132,8 +116,7 @@ Result<std::vector<DstType>> loadVertexBuffer(
     return attributes;
 }
 
-struct GltfImageLoader
-{
+struct GltfImageLoader {
     const std::filesystem::path baseDir;
     std::vector<std::pair<std::string, Image>> loadedImages;
 };
@@ -147,16 +130,13 @@ bool loadImageFromGltf(
     const int32_t reqHeight,
     const uint8_t* bytes,
     const int32_t size,
-    void* userPtr)
-{
+    void* userPtr) {
     logger->info("Index {}, Uri: {}, required size: {} x {}", imageIdx, image->uri, reqWidth, reqHeight);
     logger->info("Size {}, bytes {}", size, bytes ? "available" : "empty");
-    if (err && !err->empty())
-    {
+    if (err && !err->empty()) {
         logger->error("Error while loading GLTF texture: {}", *err);
     }
-    if (warn && !warn->empty())
-    {
+    if (warn && !warn->empty()) {
         logger->warn("Warning while loading GLTF texture: {}", *warn);
     }
 
@@ -169,66 +149,52 @@ bool loadImageFromGltf(
 } // namespace
 
 template <typename GlmType>
-GlmType toGlm(const std::vector<double>& values)
-{
+GlmType toGlm(const std::vector<double>& values) {
     CRISP_CHECK_EQ(values.size(), GlmType::length());
     GlmType glmValue{};
-    for (glm::length_t k = 0; k < GlmType::length(); ++k)
-    {
+    for (glm::length_t k = 0; k < GlmType::length(); ++k) {
         glmValue[k] = static_cast<float>(values[k]);
     }
     return glmValue;
 }
 
-glm::mat4 getNodeTransform(const tinygltf::Node& node)
-{
+glm::mat4 getNodeTransform(const tinygltf::Node& node) {
     glm::mat4 transform(1.0f);
-    if (!node.matrix.empty())
-    {
+    if (!node.matrix.empty()) {
         CRISP_CHECK_EQ(node.matrix.size(), 16);
-        for (uint32_t i = 0; i < node.matrix.size(); ++i)
-        {
+        for (uint32_t i = 0; i < node.matrix.size(); ++i) {
             transform[i / 4][i % 4] = static_cast<float>(node.matrix[i]);
         }
     }
-    if (!node.translation.empty())
-    {
+    if (!node.translation.empty()) {
         transform = transform * glm::translate(toGlm<glm::vec3>(node.translation));
     }
-    if (!node.rotation.empty())
-    {
+    if (!node.rotation.empty()) {
         transform = transform * glm::toMat4(toGlm<glm::quat>(node.rotation));
     }
-    if (!node.scale.empty())
-    {
+    if (!node.scale.empty()) {
         transform = transform * glm::scale(toGlm<glm::vec3>(node.scale));
     }
     return transform;
 }
 
-glm::vec3 getNodeTranslation(const tinygltf::Node& node)
-{
+glm::vec3 getNodeTranslation(const tinygltf::Node& node) {
     return node.translation.empty() ? glm::vec3(0.0f) : toGlm<glm::vec3>(node.translation);
 }
 
-glm::quat getNodeRotation(const tinygltf::Node& node)
-{
+glm::quat getNodeRotation(const tinygltf::Node& node) {
     return node.rotation.empty() ? glm::quat(1.0f, 0.0f, 0.0f, 0.0f) : toGlm<glm::quat>(node.rotation);
 }
 
-glm::vec3 getNodeScale(const tinygltf::Node& node)
-{
+glm::vec3 getNodeScale(const tinygltf::Node& node) {
     return node.scale.empty() ? glm::vec3(1.0f) : toGlm<glm::vec3>(node.scale);
 }
 
-PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material, GltfImageLoader& imageLoader)
-{
+PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material, GltfImageLoader& imageLoader) {
     PbrMaterial pbrMat{};
 
-    const auto getTexture = [&imageLoader](std::optional<Image>& image, const int32_t textureIndex)
-    {
-        if (textureIndex != GltfInvalidIdx)
-        {
+    const auto getTexture = [&imageLoader](std::optional<Image>& image, const int32_t textureIndex) {
+        if (textureIndex != GltfInvalidIdx) {
             image = imageLoader.loadedImages.at(textureIndex).second;
         }
     };
@@ -241,8 +207,7 @@ PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material
     getTexture(pbrMat.textures.emissive, material.emissiveTexture.index);
 
     // Metallic and roughness.
-    if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != GltfInvalidIdx)
-    {
+    if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != GltfInvalidIdx) {
         const auto& imageNamePair{
             imageLoader.loadedImages.at(material.pbrMetallicRoughness.metallicRoughnessTexture.index)};
 
@@ -253,8 +218,7 @@ PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material
     pbrMat.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
 
     // Occlusion.
-    if (material.occlusionTexture.index != GltfInvalidIdx)
-    {
+    if (material.occlusionTexture.index != GltfInvalidIdx) {
         pbrMat.textures.occlusion =
             imageLoader.loadedImages.at(material.occlusionTexture.index).second.createFromChannel(OcclusionMapChannel);
     }
@@ -266,8 +230,7 @@ PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material
 TriangleMesh createMeshFromPrimitive(
     const tinygltf::Model& model,
     const tinygltf::Primitive& primitive,
-    const std::vector<VertexAttributeDescriptor>& vertexAttributes)
-{
+    const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
     std::vector<glm::vec3> positions{loadVertexBuffer<glm::vec3>(model, primitive, "POSITION").unwrap()};
     std::vector<glm::vec3> normals{loadVertexBuffer<glm::vec3>(model, primitive, "NORMAL").unwrap()};
     std::vector<glm::vec2> texCoords{loadVertexBuffer<glm::vec2>(model, primitive, "TEXCOORD_0").unwrap()};
@@ -279,12 +242,10 @@ TriangleMesh createMeshFromPrimitive(
         std::move(positions), std::move(normals), std::move(texCoords), std::move(indices), vertexAttributes};
 }
 
-Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& model, const uint32_t accessorIdx)
-{
+Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& model, const uint32_t accessorIdx) {
     std::vector<glm::mat4> transforms{};
     const auto& accessor{model.accessors.at(accessorIdx)};
-    if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT)
-    {
+    if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
         return resultError("InverseBindTransforms must be a float accessor");
     }
 
@@ -303,8 +264,7 @@ Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& 
     CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
 
     glm::mat4 temp{};
-    for (size_t i = 0; i < accessor.count; ++i)
-    {
+    for (size_t i = 0; i < accessor.count; ++i) {
         const size_t offset{bufferRangeStart + i * byteStride};
         std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize);
         transforms.emplace_back(temp);
@@ -317,35 +277,29 @@ void createModelDataFromNode(
     const tinygltf::Node& node,
     GltfImageLoader& imageLoader,
     const std::vector<VertexAttributeDescriptor>& vertexAttributes,
-    std::vector<ModelData>& models)
-{
-    if (node.camera)
-    {
+    std::vector<ModelData>& models) {
+    if (node.camera) {
         logger->trace("Gltf contains camera information which will be unused.");
     }
     // CRISP_CHECK_EQ(node.skin, GltfInvalidIdx, "Skinning is unsupported!");
 
     SkinningData skinningData{};
-    if (node.skin != GltfInvalidIdx)
-    {
+    if (node.skin != GltfInvalidIdx) {
         const auto& skin{model.skins.at(node.skin)};
 
         const size_t jointCount{skin.joints.size()};
         FlatHashMap<int32_t, int32_t> modelNodeToLocalIdx(jointCount);
         Skeleton skeleton{};
         skeleton.setJointCount(jointCount);
-        for (uint32_t i = 0; i < jointCount; ++i)
-        {
+        for (uint32_t i = 0; i < jointCount; ++i) {
             const int32_t jointNodeIdx{skin.joints.at(i)};
             modelNodeToLocalIdx[jointNodeIdx] = i;
             skeleton.joints[i].rotation = getNodeRotation(model.nodes.at(jointNodeIdx));
             skeleton.joints[i].translation = getNodeTranslation(model.nodes.at(jointNodeIdx));
             skeleton.joints[i].scale = getNodeScale(model.nodes.at(jointNodeIdx));
         }
-        for (const auto& [modelNodeIdx, localIdx] : modelNodeToLocalIdx)
-        {
-            for (const auto& child : model.nodes.at(modelNodeIdx).children)
-            {
+        for (const auto& [modelNodeIdx, localIdx] : modelNodeToLocalIdx) {
+            for (const auto& child : model.nodes.at(modelNodeIdx).children) {
                 skeleton.parents[modelNodeToLocalIdx[child]] = localIdx;
             }
         }
@@ -355,8 +309,7 @@ void createModelDataFromNode(
         skinningData.modelNodeToLinearIdx = std::move(modelNodeToLocalIdx);
     }
 
-    if (node.mesh != GltfInvalidIdx)
-    {
+    if (node.mesh != GltfInvalidIdx) {
         const auto& currMesh{model.meshes.at(node.mesh)};
         CRISP_CHECK(node.weights.empty(), "Morph targets are not supported!");
 
@@ -376,8 +329,7 @@ void createModelDataFromNode(
             createCustomVertexAttributeBuffer<glm::uvec4>(
                 loadVertexBuffer<glm::uvec4, glm::u16vec4>(model, currPrimitive, "JOINTS_0").unwrap()));
 
-        if (currPrimitive.material != GltfInvalidIdx)
-        {
+        if (currPrimitive.material != GltfInvalidIdx) {
             modelData.material =
                 createPbrMaterialFromGltfMaterial(model.materials.at(currPrimitive.material), imageLoader);
         }
@@ -386,49 +338,36 @@ void createModelDataFromNode(
         models.push_back(std::move(modelData));
     }
 
-    for (const uint32_t childIdx : node.children)
-    {
+    for (const uint32_t childIdx : node.children) {
         createModelDataFromNode(model, model.nodes.at(childIdx), imageLoader, vertexAttributes, models);
     }
 }
 
-GltfAnimation loadGltfAnimation(const tinygltf::Model& model, const tinygltf::Animation& animation)
-{
+GltfAnimation loadGltfAnimation(const tinygltf::Model& model, const tinygltf::Animation& animation) {
     GltfAnimation anim;
-    for (const auto& ch : animation.channels)
-    {
+    for (const auto& ch : animation.channels) {
         AnimationChannel channel{};
         channel.targetNode = ch.target_node;
         channel.propertyName = ch.target_path;
 
         auto& sampler{animation.samplers.at(ch.sampler)};
-        if (sampler.interpolation == "CUBICSPLINE")
-        {
+        if (sampler.interpolation == "CUBICSPLINE") {
             channel.sampler.interpolation = AnimationSampler::Interpolation::CubicSpline;
-        }
-        else if (sampler.interpolation == "STEP")
-        {
+        } else if (sampler.interpolation == "STEP") {
             channel.sampler.interpolation = AnimationSampler::Interpolation::Step;
-        }
-        else
-        {
+        } else {
             channel.sampler.interpolation = AnimationSampler::Interpolation::Linear;
         }
         channel.sampler.inputs = loadBufferFromAccessor<float>(model, sampler.input).unwrap();
-        if (channel.propertyName == "translation")
-        {
+        if (channel.propertyName == "translation") {
             auto vals = loadBufferFromAccessor<glm::vec3>(model, sampler.output).unwrap();
             channel.sampler.outputs.resize(vals.size() * sizeof(glm::vec3));
             memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::vec3));
-        }
-        else if (channel.propertyName == "rotation")
-        {
+        } else if (channel.propertyName == "rotation") {
             auto vals = loadBufferFromAccessor<glm::quat>(model, sampler.output).unwrap();
             channel.sampler.outputs.resize(vals.size() * sizeof(glm::quat));
             memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::quat));
-        }
-        else
-        {
+        } else {
             auto vals = loadBufferFromAccessor<glm::vec3>(model, sampler.output).unwrap();
             channel.sampler.outputs.resize(vals.size() * sizeof(glm::vec3));
             memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::vec3));
@@ -440,10 +379,8 @@ GltfAnimation loadGltfAnimation(const tinygltf::Model& model, const tinygltf::An
 }
 
 Result<std::vector<ModelData>> loadGltfModel(
-    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes)
-{
-    if (!std::filesystem::exists(path))
-    {
+    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
+    if (!std::filesystem::exists(path)) {
         return resultError("GLTF Path doesn't exist! {}", path.string());
     }
 
@@ -457,21 +394,17 @@ Result<std::vector<ModelData>> loadGltfModel(
     std::string warn{};
     const bool success{loader.LoadASCIIFromFile(&model, &err, &warn, path.string())};
 
-    if (!warn.empty())
-    {
+    if (!warn.empty()) {
         logger->warn("GLTF warning from {}: {}", path.string(), warn);
     }
-    if (!err.empty())
-    {
+    if (!err.empty()) {
         return resultError("GLTF error from {}: {}", path.string(), err);
     }
-    if (!success)
-    {
+    if (!success) {
         return resultError("Failed to parse GLTF: {}!", path.string());
     }
 
-    if (model.nodes.empty())
-    {
+    if (model.nodes.empty()) {
         return resultError("Provided GLTF {} is empty!", path.string());
     }
 
@@ -480,19 +413,16 @@ Result<std::vector<ModelData>> loadGltfModel(
     const auto& gltfScene{model.scenes.at(model.defaultScene)};
 
     std::vector<ModelData> modelData{};
-    for (uint32_t i = 0; i < gltfScene.nodes.size(); ++i)
-    {
+    for (uint32_t i = 0; i < gltfScene.nodes.size(); ++i) {
         createModelDataFromNode(model, model.nodes[i], imageLoader, vertexAttributes, modelData);
     }
 
     std::vector<GltfAnimation> animations{};
-    for (const auto& anim : model.animations)
-    {
+    for (const auto& anim : model.animations) {
         animations.push_back(loadGltfAnimation(model, anim));
 
         // Check if animation matches the skeleton.
-        for (auto& ch : animations.back().channels)
-        {
+        for (auto& ch : animations.back().channels) {
             ch.targetNode = modelData.back().skinningData.modelNodeToLinearIdx[ch.targetNode];
         }
     }

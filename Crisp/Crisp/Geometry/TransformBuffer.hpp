@@ -6,17 +6,13 @@
 
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 
-struct TransformHandle
-{
+struct TransformHandle {
 #pragma warning(disable : 4201)
 
-    union
-    {
-        struct
-        {
+    union {
+        struct {
             uint16_t index;
             uint16_t generation;
         };
@@ -26,8 +22,7 @@ struct TransformHandle
 
 #pragma warning(default : 4201)
 
-    consteval static TransformHandle createInvalidHandle()
-    {
+    consteval static TransformHandle createInvalidHandle() {
         constexpr auto kMaxValue = std::numeric_limits<uint16_t>::max();
         return {
             {kMaxValue, kMaxValue}
@@ -35,28 +30,23 @@ struct TransformHandle
     }
 };
 
-inline bool operator==(const TransformHandle& a, const TransformHandle& b)
-{
+inline bool operator==(const TransformHandle& a, const TransformHandle& b) {
     return (a.value == b.value);
 }
 
-inline bool operator!=(const TransformHandle& a, const TransformHandle& b)
-{
+inline bool operator!=(const TransformHandle& a, const TransformHandle& b) {
     return (a.value != b.value);
 }
 
-inline bool operator<(const TransformHandle& a, const TransformHandle& b)
-{
+inline bool operator<(const TransformHandle& a, const TransformHandle& b) {
     return (a.value < b.value);
 }
 
-inline bool operator>(const TransformHandle& a, const TransformHandle& b)
-{
+inline bool operator>(const TransformHandle& a, const TransformHandle& b) {
     return (a.value > b.value);
 }
 
-class TransformBuffer
-{
+class TransformBuffer {
 public:
     TransformBuffer(Renderer* renderer, std::size_t maxTransformCount);
 
@@ -66,8 +56,7 @@ public:
     TransformPack& getPack(TransformHandle index);
 
     // The buffer is used as UNIFORM_DYNAMIC, hence we only provide info for one transformation.
-    inline VkDescriptorBufferInfo getDescriptorInfo() const
-    {
+    inline VkDescriptorBufferInfo getDescriptorInfo() const {
         return m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack));
     }
 

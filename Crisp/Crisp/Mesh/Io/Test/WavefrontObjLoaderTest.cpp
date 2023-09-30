@@ -2,42 +2,35 @@
 
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 const std::filesystem::path ResourceDir("D:/Projects/Crisp/Resources/Meshes");
 
-TEST(WavefrontObjTest, LoadAjax)
-{
+TEST(WavefrontObjTest, LoadAjax) {
     const auto mesh = loadWavefrontObj(ResourceDir / "ajax.obj");
     EXPECT_EQ(mesh.positions.size(), 409'676);
     EXPECT_EQ(mesh.triangles.size(), 544'566);
 }
 
-TEST(WavefrontObjTest, LoadBuddha)
-{
+TEST(WavefrontObjTest, LoadBuddha) {
     const auto mesh = loadWavefrontObj(ResourceDir / "buddha.obj");
     EXPECT_EQ(mesh.positions.size(), 49'990);
     EXPECT_EQ(mesh.triangles.size(), 100'000);
 }
 
-TEST(WavefrontObjTest, LoadCube)
-{
+TEST(WavefrontObjTest, LoadCube) {
     const auto mesh = loadWavefrontObj(ResourceDir / "cube.obj");
     EXPECT_EQ(mesh.positions.size(), 24);
     EXPECT_EQ(mesh.triangles.size(), 12);
 }
 
-TEST(WavefrontObjTest, LoadShaderBall)
-{
+TEST(WavefrontObjTest, LoadShaderBall) {
     const auto mesh = loadWavefrontObj(ResourceDir / "shader_ball.obj");
     EXPECT_EQ(mesh.positions.size(), 35'877);
     EXPECT_EQ(mesh.triangles.size(), 67'832);
 }
 
-TEST(WavefrontObjTest, LoadCamelHead)
-{
+TEST(WavefrontObjTest, LoadCamelHead) {
     const auto mesh = loadWavefrontObj(ResourceDir / "camelhead.obj");
     EXPECT_EQ(mesh.positions.size(), 11'381);
     EXPECT_EQ(mesh.triangles.size(), 22'704);

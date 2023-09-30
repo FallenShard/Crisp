@@ -3,10 +3,8 @@
 #include <Crisp/Math/Transform.hpp>
 #include <Crisp/PathTracer/Cameras/Camera.hpp>
 
-namespace crisp
-{
-class PerspectiveCamera : public Camera
-{
+namespace crisp {
+class PerspectiveCamera : public Camera {
 public:
     PerspectiveCamera(const VariantMap& params = VariantMap());
 

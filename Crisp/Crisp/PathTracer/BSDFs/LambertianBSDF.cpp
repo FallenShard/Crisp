@@ -4,19 +4,15 @@
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/PathTracer/Textures/TextureFactory.hpp>
 
-namespace crisp
-{
+namespace crisp {
 LambertianBSDF::LambertianBSDF(const VariantMap& params)
-    : BSDF(Lobe::Diffuse)
-{
+    : BSDF(Lobe::Diffuse) {
     VariantMap texParams;
     Spectrum albedo(1.0f);
-    if (params.contains("albedo"))
-    {
+    if (params.contains("albedo")) {
         albedo = params.get<Spectrum>("albedo");
     }
-    if (params.contains("reflectance"))
-    {
+    if (params.contains("reflectance")) {
         albedo = params.get<Spectrum>("reflectance");
     }
     texParams.insert("value", albedo);
@@ -24,25 +20,22 @@ LambertianBSDF::LambertianBSDF(const VariantMap& params)
     m_albedo = TextureFactory::create<Spectrum>("constant-spectrum", texParams);
 }
 
-void LambertianBSDF::setTexture(std::shared_ptr<Texture<Spectrum>> texture)
-{
-    if (texture->getName() == "albedo" || texture->getName() == "reflectance")
-    {
+void LambertianBSDF::setTexture(std::shared_ptr<Texture<Spectrum>> texture) {
+    if (texture->getName() == "albedo" || texture->getName() == "reflectance") {
         m_albedo = texture;
     }
 }
 
-Spectrum LambertianBSDF::eval(const BSDF::Sample& bsdfSample) const
-{
+Spectrum LambertianBSDF::eval(const BSDF::Sample& bsdfSample) const {
     if (bsdfSample.measure != Measure::SolidAngle || CoordinateFrame::cosTheta(bsdfSample.wi) <= 0.0f ||
-        CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f)
+        CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f) {
         return 0.0f;
+    }
 
     return m_albedo->eval(bsdfSample.uv) * InvPI<> * CoordinateFrame::cosTheta(bsdfSample.wo);
 }
 
-Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
-{
+Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const {
     bsdfSample.wo = warp::squareToCosineHemisphere(sampler.next2D());
     bsdfSample.pdf = warp::squareToCosineHemispherePdf(bsdfSample.wo);
     bsdfSample.measure = Measure::SolidAngle;
@@ -54,12 +47,12 @@ Spectrum LambertianBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
     return m_albedo->eval(bsdfSample.uv);
 }
 
-float LambertianBSDF::pdf(const BSDF::Sample& bsdfSample) const
-{
+float LambertianBSDF::pdf(const BSDF::Sample& bsdfSample) const {
     auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
     if (bsdfSample.measure != Measure::SolidAngle || cosThetaO <= 0.0f ||
-        CoordinateFrame::cosTheta(bsdfSample.wi) <= 0.0f)
+        CoordinateFrame::cosTheta(bsdfSample.wi) <= 0.0f) {
         return 0.0f;
+    }
 
     return InvPI<> * cosThetaO;
 }

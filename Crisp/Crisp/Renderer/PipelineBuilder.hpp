@@ -8,10 +8,8 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-enum class PipelineState
-{
+namespace crisp {
+enum class PipelineState {
     VertexInput = 0x001,
     InputAssembly = 0x002,
     Tessellation = 0x004,
@@ -26,8 +24,7 @@ enum class PipelineState
 };
 DECLARE_BITFLAG(PipelineState);
 
-class PipelineBuilder
-{
+class PipelineBuilder {
 public:
     PipelineBuilder();
 

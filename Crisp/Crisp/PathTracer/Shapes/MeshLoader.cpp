@@ -6,27 +6,23 @@
 
 #include <fstream>
 
-namespace crisp
-{
+namespace crisp {
 bool MeshLoader::load(
     std::filesystem::path path,
     std::vector<glm::vec3>& positions,
     std::vector<glm::vec3>& normals,
     std::vector<glm::vec2>& texCoords,
-    std::vector<glm::uvec3>& faces) const
-{
+    std::vector<glm::uvec3>& faces) const {
     std::string ext = path.extension().string();
 
     auto cachedModelPath = path.remove_filename() / "cache" / path.filename();
 
-    if (loadModelCache(cachedModelPath.string(), positions, normals, texCoords, faces))
-    {
+    if (loadModelCache(cachedModelPath.string(), positions, normals, texCoords, faces)) {
         spdlog::info("Loading cached version of Wavefront Obj mesh: {}", cachedModelPath.filename().string());
         return true;
     }
 
-    if (isWavefrontObjFile(path))
-    {
+    if (isWavefrontObjFile(path)) {
         spdlog::info("Loading Wavefront Obj mesh: {}", path.filename().string());
         auto objMesh = loadWavefrontObj(path);
         positions = std::move(objMesh.positions);
@@ -45,11 +41,11 @@ bool MeshLoader::loadModelCache(
     std::vector<glm::vec3>& positions,
     std::vector<glm::vec3>& normals,
     std::vector<glm::vec2>& texCoords,
-    std::vector<glm::uvec3>& faces) const
-{
+    std::vector<glm::uvec3>& faces) const {
     std::ifstream binaryFile(fileName + ".cmf", std::ios::in | std::ios::binary);
-    if (binaryFile.fail())
+    if (binaryFile.fail()) {
         return false;
+    }
 
     std::size_t numVertices;
     binaryFile.read(reinterpret_cast<char*>(&numVertices), sizeof(std::size_t));
@@ -80,8 +76,7 @@ void MeshLoader::createModelCache(
     const std::vector<glm::vec3>& positions,
     const std::vector<glm::vec3>& normals,
     const std::vector<glm::vec2>& texCoords,
-    const std::vector<glm::uvec3>& faces) const
-{
+    const std::vector<glm::uvec3>& faces) const {
     std::ofstream binaryFile(fileName + ".cmf", std::ios::out | std::ios::binary);
 
     const std::size_t numVertices = positions.size();

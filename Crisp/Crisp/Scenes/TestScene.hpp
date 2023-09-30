@@ -2,10 +2,8 @@
 
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
-class TestScene : public Scene
-{
+namespace crisp {
+class TestScene : public Scene {
 public:
     TestScene(Renderer* renderer, Window* window);
     ~TestScene() override;

@@ -6,10 +6,8 @@
 #include "IrradianceTree.hpp"
 #include <Crisp/Math/Octree.hpp>
 
-namespace crisp
-{
-class DipoleBSSRDF : public BSSRDF
-{
+namespace crisp {
+class DipoleBSSRDF : public BSSRDF {
 public:
     DipoleBSSRDF(const VariantMap& params);
     virtual void preprocess(const Shape* shape, const pt::Scene* scene) override;

@@ -1,14 +1,10 @@
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer commandBuffer)
-    : m_handle(commandBuffer)
-{
-}
+    : m_handle(commandBuffer) {}
 
-void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage) const
-{
+void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage) const {
     VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = commandBufferUsage;
     beginInfo.pInheritanceInfo = nullptr;
@@ -17,8 +13,7 @@ void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags commandBufferUsage) co
 }
 
 void VulkanCommandBuffer::begin(
-    VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance) const
-{
+    VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance) const {
     VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = commandBufferUsage;
     beginInfo.pInheritanceInfo = inheritance;
@@ -26,14 +21,12 @@ void VulkanCommandBuffer::begin(
     vkBeginCommandBuffer(m_handle, &beginInfo);
 }
 
-void VulkanCommandBuffer::end() const
-{
+void VulkanCommandBuffer::end() const {
     vkEndCommandBuffer(m_handle);
 }
 
 void VulkanCommandBuffer::transferOwnership(
-    VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const
-{
+    VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const {
     VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     barrier.buffer = buffer;
     barrier.offset = 0;
@@ -60,8 +53,7 @@ void VulkanCommandBuffer::insertBufferMemoryBarrier(
     VkPipelineStageFlags srcStage,
     VkAccessFlags srcAccess,
     VkPipelineStageFlags dstStage,
-    VkAccessFlags dstAccess) const
-{
+    VkAccessFlags dstAccess) const {
     VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     barrier.buffer = bufferInfo.buffer;
     barrier.offset = bufferInfo.offset;
@@ -72,14 +64,12 @@ void VulkanCommandBuffer::insertBufferMemoryBarrier(
 }
 
 void VulkanCommandBuffer::insertBufferMemoryBarrier(
-    const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
-{
+    const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const {
     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 }
 
 void VulkanCommandBuffer::insertBufferMemoryBarriers(
-    std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
-{
+    std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const {
     vkCmdPipelineBarrier(
         m_handle,
         srcStage,
@@ -94,8 +84,7 @@ void VulkanCommandBuffer::insertBufferMemoryBarriers(
 }
 
 void VulkanCommandBuffer::insertImageMemoryBarrier(
-    const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const
-{
+    const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const {
     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
@@ -115,18 +104,16 @@ void VulkanCommandBuffer::insertImageMemoryBarrier(
 //     vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 0, nullptr);
 // }
 
-void VulkanCommandBuffer::executeSecondaryBuffers(const std::vector<VkCommandBuffer>& commandBuffers) const
-{
+void VulkanCommandBuffer::executeSecondaryBuffers(const std::vector<VkCommandBuffer>& commandBuffers) const {
     vkCmdExecuteCommands(m_handle, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 }
 
-void VulkanCommandBuffer::updateBuffer(const VkDescriptorBufferInfo& bufferInfo, const MemoryRegion& memoryRegion) const
-{
+void VulkanCommandBuffer::updateBuffer(
+    const VkDescriptorBufferInfo& bufferInfo, const MemoryRegion& memoryRegion) const {
     vkCmdUpdateBuffer(m_handle, bufferInfo.buffer, bufferInfo.offset, bufferInfo.range, memoryRegion.ptr);
 }
 
-void VulkanCommandBuffer::copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo, VkBuffer dstBuffer) const
-{
+void VulkanCommandBuffer::copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo, VkBuffer dstBuffer) const {
     VkBufferCopy copyRegion = {};
     copyRegion.srcOffset = srcBufferInfo.offset;
     copyRegion.dstOffset = 0;
@@ -134,8 +121,7 @@ void VulkanCommandBuffer::copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo
     vkCmdCopyBuffer(m_handle, srcBufferInfo.buffer, dstBuffer, 1, &copyRegion);
 }
 
-void VulkanCommandBuffer::dispatchCompute(const glm::ivec3& workGroupCount) const
-{
+void VulkanCommandBuffer::dispatchCompute(const glm::ivec3& workGroupCount) const {
     vkCmdDispatch(m_handle, workGroupCount.x, workGroupCount.y, workGroupCount.z);
 }
 } // namespace crisp

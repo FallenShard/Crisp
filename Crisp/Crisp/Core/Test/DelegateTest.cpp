@@ -4,23 +4,19 @@
 
 using namespace crisp;
 
-namespace
-{
-struct DelegateTester
-{
+namespace {
+struct DelegateTester {
     int state = 0;
     int triggerCounter = 0;
 
-    void onEventTriggered(int newStateValue)
-    {
+    void onEventTriggered(int newStateValue) {
         state = newStateValue;
         ++triggerCounter;
     }
 };
 } // namespace
 
-TEST(DelegateTest, Basic)
-{
+TEST(DelegateTest, Basic) {
     DelegateTester tester;
 
     const auto del = createDelegate<&DelegateTester::onEventTriggered>(&tester);
@@ -34,8 +30,7 @@ TEST(DelegateTest, Basic)
     EXPECT_EQ(tester.triggerCounter, 4);
 }
 
-TEST(DelegateTest, IsFromObject)
-{
+TEST(DelegateTest, IsFromObject) {
     DelegateTester tester;
 
     const auto del = createDelegate<&DelegateTester::onEventTriggered>(&tester);
@@ -46,8 +41,7 @@ TEST(DelegateTest, IsFromObject)
     EXPECT_FALSE(del.isFromObject(&tester2));
 }
 
-TEST(DelegateTest, Comparison)
-{
+TEST(DelegateTest, Comparison) {
     DelegateTester tester;
     DelegateTester tester2;
 

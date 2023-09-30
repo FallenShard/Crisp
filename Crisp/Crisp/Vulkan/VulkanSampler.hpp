@@ -3,12 +3,10 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-namespace crisp
-{
+namespace crisp {
 inline constexpr float MaxAnisotropy = 16.0f;
 
-class VulkanSampler final : public VulkanResource<VkSampler>
-{
+class VulkanSampler final : public VulkanResource<VkSampler> {
 public:
     VulkanSampler(
         const VulkanDevice& device,

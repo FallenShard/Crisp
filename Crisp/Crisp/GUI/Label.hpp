@@ -6,10 +6,8 @@
 
 #include "DrawComponents/TextDrawComponent.hpp"
 
-namespace crisp::gui
-{
-class Label : public Control
-{
+namespace crisp::gui {
+class Label : public Control {
 public:
     Label(Form* parentForm, const std::string& text = "Example Text", unsigned int fontSize = 14);
     ~Label();

@@ -42,10 +42,8 @@
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 static constexpr uint32_t ShadowMapSize = 2048;
 static constexpr uint32_t CascadeCount = 4;
 
@@ -54,8 +52,7 @@ static constexpr const char* CsmPass = "csmPass";
 } // namespace
 
 ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     setupInput();
 
     // Camera
@@ -127,21 +124,18 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
     // createGui(m_app->getForm());
 }
 
-ClusteredLightingScene::~ClusteredLightingScene()
-{
+ClusteredLightingScene::~ClusteredLightingScene() {
     // m_app->getForm()->remove("shadowMappingPanel");
 }
 
-void ClusteredLightingScene::resize(int width, int height)
-{
+void ClusteredLightingScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_renderGraph->resize(width, height);
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
 }
 
-void ClusteredLightingScene::update(float dt)
-{
+void ClusteredLightingScene::update(float dt) {
     m_cameraController->update(dt);
     const auto cameraParams = m_cameraController->getCameraParameters();
 
@@ -155,48 +149,40 @@ void ClusteredLightingScene::update(float dt)
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
 }
 
-void ClusteredLightingScene::render()
-{
+void ClusteredLightingScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->buildCommandLists(m_renderNodes);
     m_renderGraph->executeCommandLists();
 }
 
-void ClusteredLightingScene::setRedAlbedo(double red)
-{
+void ClusteredLightingScene::setRedAlbedo(double red) {
     m_uniformMaterialParams.albedo.r = static_cast<float>(red);
 }
 
-void ClusteredLightingScene::setGreenAlbedo(double green)
-{
+void ClusteredLightingScene::setGreenAlbedo(double green) {
     m_uniformMaterialParams.albedo.g = static_cast<float>(green);
 }
 
-void ClusteredLightingScene::setBlueAlbedo(double blue)
-{
+void ClusteredLightingScene::setBlueAlbedo(double blue) {
     m_uniformMaterialParams.albedo.b = static_cast<float>(blue);
 }
 
-void ClusteredLightingScene::setMetallic(double metallic)
-{
+void ClusteredLightingScene::setMetallic(double metallic) {
     m_uniformMaterialParams.metallic = static_cast<float>(metallic);
 }
 
-void ClusteredLightingScene::setRoughness(double roughness)
-{
+void ClusteredLightingScene::setRoughness(double roughness) {
     m_uniformMaterialParams.roughness = static_cast<float>(roughness);
 }
 
-RenderNode* ClusteredLightingScene::createRenderNode(std::string id, int transformIndex)
-{
+RenderNode* ClusteredLightingScene::createRenderNode(std::string id, int transformIndex) {
     TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
     auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
     m_renderNodes.emplace(id, std::move(node));
     return m_renderNodes.at(id).get();
 }
 
-void ClusteredLightingScene::createCommonTextures()
-{
+void ClusteredLightingScene::createCommonTextures() {
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addSampler(
         "nearestNeighbor",
@@ -276,8 +262,7 @@ void ClusteredLightingScene::createCommonTextures()
     pbrMaterial->writeDescriptor(3, 0, m_lightSystem->getTileGridViews(), nullptr, VK_IMAGE_LAYOUT_GENERAL);
 }
 
-void ClusteredLightingScene::createShaderball()
-{
+void ClusteredLightingScene::createShaderball() {
     // std::vector<VertexAttributeDescriptor> shadowVertexFormat = { VertexAttribute::Position };
     // std::vector<VertexAttributeDescriptor> pbrVertexFormat = { VertexAttribute::Position, VertexAttribute::Normal,
     // VertexAttribute::TexCoord, VertexAttribute::Tangent };
@@ -302,8 +287,7 @@ void ClusteredLightingScene::createShaderball()
     // m_renderer->getDevice()->flushDescriptorUpdates();
 }
 
-void ClusteredLightingScene::createPlane()
-{
+void ClusteredLightingScene::createPlane() {
     const VertexLayoutDescription pbrVertexFormat = {
         {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
     };
@@ -321,12 +305,9 @@ void ClusteredLightingScene::createPlane()
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void ClusteredLightingScene::setupInput()
-{
-    m_window->keyPressed += [this](Key key, int)
-    {
-        switch (key)
-        {
+void ClusteredLightingScene::setupInput() {
+    m_window->keyPressed += [this](Key key, int) {
+        switch (key) {
         case Key::F5:
             m_resourceContext->recreatePipelines();
             break;

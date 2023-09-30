@@ -11,14 +11,11 @@
 //
 #include <random>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 glm::vec4 pc(0.2f, 0.0f, 0.0f, 1.0f);
 
-struct BlurParams
-{
+struct BlurParams {
     float dirX;
     float dirY;
     float sigma;
@@ -28,8 +25,7 @@ struct BlurParams
 constexpr BlurParams kBlurH = {0.0f, 1.0f / Application::kDefaultWindowWidth, 1.0f, 3};
 constexpr BlurParams kBlurV = {1.0f / Application::kDefaultWindowHeight, 0.0f, 1.0f, 3};
 
-std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer, RenderTargetCache& renderTargetCache)
-{
+std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer, RenderTargetCache& renderTargetCache) {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         "AmbientOcclusionMap",
@@ -62,8 +58,7 @@ std::unique_ptr<VulkanRenderPass> createAmbientOcclusionPass(Renderer& renderer,
 
 AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
-    , m_ssaoParams{128, 0.5f}
-{
+    , m_ssaoParams{128, 0.5f} {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     /*m_cameraController->getCamera().setRotation(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
     m_cameraController->getCamera().setPosition(glm::vec3(0.0f, 2.0f, 1.0f));*/
@@ -72,8 +67,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     std::default_random_engine randomEngine(42);
     std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
     glm::vec4 samples[512];
-    for (int i = 0; i < 512; i++)
-    {
+    for (int i = 0; i < 512; i++) {
         float x = distribution(randomEngine);
         float y = distribution(randomEngine);
         float r = distribution(randomEngine);
@@ -82,8 +76,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     }
 
     std::vector<glm::vec4> noiseTexData;
-    for (int i = 0; i < 16; i++)
-    {
+    for (int i = 0; i < 16; i++) {
         glm::vec3 s(distribution(randomEngine) * 2.0f - 1.0f, distribution(randomEngine) * 2.0f - 1.0f, 0.0f);
         s = glm::normalize(s);
         noiseTexData.push_back(glm::vec4(s, 1.0f));
@@ -216,13 +209,11 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     createGui();
 }
 
-AmbientOcclusionScene::~AmbientOcclusionScene()
-{
+AmbientOcclusionScene::~AmbientOcclusionScene() {
     // m_app->getForm()->remove("ambientOcclusionPanel");
 }
 
-void AmbientOcclusionScene::resize(int width, int height)
-{
+void AmbientOcclusionScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_renderGraph->resize(width, height);
@@ -233,8 +224,7 @@ void AmbientOcclusionScene::resize(int width, int height)
         ->writeDescriptor(0, 0, *mainPass, 0, &m_resourceContext->imageCache.getSampler("nearestClamp"));
 }
 
-void AmbientOcclusionScene::update(float dt)
-{
+void AmbientOcclusionScene::update(float dt) {
     m_cameraController->update(dt);
     const CameraParameters cameraParams = m_cameraController->getCameraParameters();
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
@@ -244,8 +234,7 @@ void AmbientOcclusionScene::update(float dt)
     m_skybox->updateTransforms(cameraParams.V, cameraParams.P);
 }
 
-void AmbientOcclusionScene::render()
-{
+void AmbientOcclusionScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->buildCommandLists(m_resourceContext->getRenderNodes());
     m_renderGraph->addToCommandLists(*m_floorNode);
@@ -253,18 +242,15 @@ void AmbientOcclusionScene::render()
     m_renderGraph->executeCommandLists();
 }
 
-void AmbientOcclusionScene::setNumSamples(int numSamples)
-{
+void AmbientOcclusionScene::setNumSamples(int numSamples) {
     m_ssaoParams.numSamples = numSamples;
 }
 
-void AmbientOcclusionScene::setRadius(double radius)
-{
+void AmbientOcclusionScene::setRadius(double radius) {
     m_ssaoParams.radius = static_cast<float>(radius);
 }
 
-void AmbientOcclusionScene::createGui()
-{
+void AmbientOcclusionScene::createGui() {
     /*using namespace gui;
     auto panel = std::make_unique<Panel>(m_app->getForm());
     panel->setId("ambientOcclusionPanel");

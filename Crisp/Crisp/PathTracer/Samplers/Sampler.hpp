@@ -2,13 +2,11 @@
 
 #include <memory>
 
-#include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-namespace crisp
-{
-class Sampler
-{
+namespace crisp {
+class Sampler {
 public:
     Sampler();
     virtual ~Sampler();

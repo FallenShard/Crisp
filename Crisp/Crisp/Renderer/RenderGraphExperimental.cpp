@@ -7,24 +7,19 @@
 #include <fstream>
 #include <ranges>
 
-namespace crisp::rg
-{
+namespace crisp::rg {
 RenderGraph::Builder::Builder(RenderGraph& renderGraph, const RenderGraphPassHandle passHandle)
     : m_renderGraph(renderGraph)
     , m_passHandle(passHandle)
-    , m_blackboard(renderGraph.getBlackboard())
-{
-}
+    , m_blackboard(renderGraph.getBlackboard()) {}
 
-void RenderGraph::Builder::exportTexture(RenderGraphResourceHandle res)
-{
+void RenderGraph::Builder::exportTexture(RenderGraphResourceHandle res) {
     auto& resource = m_renderGraph.getResource(res);
     resource.imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
     resource.readPasses.push_back({RenderGraphPassHandle::kExternalPass});
 }
 
-void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res)
-{
+void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
     resource.imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -37,8 +32,7 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res)
     accessState.access = VK_ACCESS_SHADER_READ_BIT;
 }
 
-void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res)
-{
+void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
 
@@ -50,8 +44,7 @@ void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res)
     accessState.access = VK_ACCESS_SHADER_READ_BIT;
 }
 
-void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res)
-{
+void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
     resource.imageUsageFlags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
@@ -64,8 +57,7 @@ void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res)
     accessState.access = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 }
 
-void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res)
-{
+void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
     resource.imageUsageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
@@ -79,8 +71,7 @@ void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res)
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
-    const RenderGraphImageDescription& description, std::string&& name, std::optional<VkClearValue> clearValue)
-{
+    const RenderGraphImageDescription& description, std::string&& name, std::optional<VkClearValue> clearValue) {
     const auto handle = m_renderGraph.addImageResource(description, std::move(name));
     auto& resource = m_renderGraph.getResource(handle);
     resource.producer = m_passHandle;
@@ -98,20 +89,16 @@ RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
         isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     accessState.access =
         isDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    if (isDepthAttachment)
-    {
+    if (isDepthAttachment) {
         pass.setDepthAttachment(handle);
-    }
-    else
-    {
+    } else {
         pass.pushColorAttachment(handle);
     }
     return handle;
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
-    const RenderGraphImageDescription& description, std::string&& name)
-{
+    const RenderGraphImageDescription& description, std::string&& name) {
     const auto handle = m_renderGraph.addImageResource(description, std::move(name));
     auto& resource = m_renderGraph.getResource(handle);
     resource.producer = m_passHandle;
@@ -126,8 +113,7 @@ RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createBuffer(
-    const RenderGraphBufferDescription& description, std::string&& name)
-{
+    const RenderGraphBufferDescription& description, std::string&& name) {
     const auto handle = m_renderGraph.addBufferResource(description, std::move(name));
     m_renderGraph.getResource(handle).producer = m_passHandle;
 
@@ -139,8 +125,7 @@ RenderGraphResourceHandle RenderGraph::Builder::createBuffer(
     return handle;
 }
 
-RenderGraphResourceHandle RenderGraph::Builder::writeAttachment(RenderGraphResourceHandle handle)
-{
+RenderGraphResourceHandle RenderGraph::Builder::writeAttachment(RenderGraphResourceHandle handle) {
     readAttachment(handle);
     const auto& inputResource = m_renderGraph.getResource(handle);
     const auto& inputDesc = m_renderGraph.getImageDescription(handle);
@@ -151,42 +136,34 @@ RenderGraphResourceHandle RenderGraph::Builder::writeAttachment(RenderGraphResou
     return modifiedHandle;
 }
 
-RenderGraphBlackboard& RenderGraph::Builder::getBlackboard()
-{
+RenderGraphBlackboard& RenderGraph::Builder::getBlackboard() {
     return m_blackboard;
 }
 
-size_t RenderGraph::getPassCount() const
-{
+size_t RenderGraph::getPassCount() const {
     return m_passes.size();
 }
 
-size_t RenderGraph::getResourceCount() const
-{
+size_t RenderGraph::getResourceCount() const {
     return m_resources.size();
 }
 
-std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(const RenderGraphResourceHandle handle) const
-{
+std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(const RenderGraphResourceHandle handle) const {
     const auto& res{getResource(handle)};
     return createView(*m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
 }
 
-Result<> RenderGraph::toGraphViz(const std::string& path) const
-{
+Result<> RenderGraph::toGraphViz(const std::string& path) const {
     std::ofstream outputFile(path);
-    if (!outputFile)
-    {
+    if (!outputFile) {
         return resultError("Failed to open output file: {}!", path);
     }
 
     // Write the Graphviz header
     outputFile << "digraph FrameGraph {" << std::endl;
 
-    for (auto&& [idx, res] : std::views::enumerate(m_resources))
-    {
-        if (res.type == ResourceType::Image)
-        {
+    for (auto&& [idx, res] : std::views::enumerate(m_resources)) {
+        if (res.type == ResourceType::Image) {
             outputFile << fmt::format(
                               R"({} [label="{} R: {}, PROD: {}, V: {}", style="filled", shape="{}", color="{}"];)",
                               idx,
@@ -197,9 +174,7 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
                               "ellipse",
                               "springgreen")
                        << std::endl;
-        }
-        else
-        {
+        } else {
             outputFile << fmt::format(
                               R"({} [label="{} R: {}, PROD: {}, V: {}", style="filled", shape="{}", color="{}"];)",
                               idx,
@@ -214,8 +189,7 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
     }
 
     // Iterate over each vertex and its neighbors in the graph
-    for (auto&& [i, node] : std::views::enumerate(m_passes))
-    {
+    for (auto&& [i, node] : std::views::enumerate(m_passes)) {
         const auto vertexIdx = i + m_resources.size();
         // Write the vertex and its label
         outputFile << fmt::format(
@@ -227,14 +201,12 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
                    << std::endl;
 
         // Iterate over the neighbors of the current vertex
-        for (const auto& neighbor : node.inputs)
-        {
+        for (const auto& neighbor : node.inputs) {
             // Write the edge between the current vertex and its neighbor
             outputFile << "    " << neighbor.id << " -> " << vertexIdx << ";" << std::endl;
         }
 
-        for (const auto& neighbor : node.outputs)
-        {
+        for (const auto& neighbor : node.outputs) {
             // Write the edge between the current vertex and its neighbor
             outputFile << "    " << vertexIdx << " -> " << neighbor.id << ";" << std::endl;
         }
@@ -249,40 +221,30 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const
     return kResultSuccess;
 }
 
-const RenderGraphBlackboard& RenderGraph::getBlackboard() const
-{
+const RenderGraphBlackboard& RenderGraph::getBlackboard() const {
     return m_blackboard;
 }
 
-VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExtent2D swapChainExtent)
-{
+VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExtent2D swapChainExtent) {
     VkExtent2D renderArea{0, 0};
-    for (const auto& output : pass.outputs)
-    {
+    for (const auto& output : pass.outputs) {
         const auto& desc = m_imageDescriptions[getResource(output).descriptionIndex];
         const auto dims = calculateImageExtent(desc, swapChainExtent);
-        if (renderArea.width != 0)
-        {
+        if (renderArea.width != 0) {
             CRISP_CHECK_EQ(renderArea.width, dims.width);
-        }
-        else
-        {
+        } else {
             renderArea.width = dims.width;
         }
-        if (renderArea.height != 0)
-        {
+        if (renderArea.height != 0) {
             CRISP_CHECK_EQ(renderArea.height, dims.height);
-        }
-        else
-        {
+        } else {
             renderArea.height = dims.height;
         }
     }
     return renderArea;
 }
 
-RenderTargetInfo RenderGraph::toRenderTargetInfo(const RenderGraphImageDescription& desc)
-{
+RenderTargetInfo RenderGraph::toRenderTargetInfo(const RenderGraphImageDescription& desc) {
     return {
         .format = desc.format,
         .sampleCount = desc.sampleCount,
@@ -296,25 +258,20 @@ RenderTargetInfo RenderGraph::toRenderTargetInfo(const RenderGraphImageDescripti
 }
 
 void RenderGraph::compile(
-    const VulkanDevice& device, const VkExtent2D& swapChainExtent, const VkCommandBuffer cmdBuffer)
-{
+    const VulkanDevice& device, const VkExtent2D& swapChainExtent, const VkCommandBuffer cmdBuffer) {
     determineAliasedResurces();
     createPhysicalResources(device, swapChainExtent, cmdBuffer);
     createPhysicalPasses(device, swapChainExtent);
 }
 
-void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
-{
+void RenderGraph::execute(const VkCommandBuffer cmdBuffer) {
     RenderPassExecutionContext executionCtx{};
     executionCtx.cmdBuffer = cmdBuffer;
-    for (const auto&& [idx, pass] : std::views::enumerate(m_passes))
-    {
-        for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses))
-        {
+    for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
+        for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
             const auto& res = getResource(pass.inputs[inIdx]);
 
-            if (inputAccess.usageType == ResourceUsageType::Texture)
-            {
+            if (inputAccess.usageType == ResourceUsageType::Texture) {
                 const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
                 const bool isDepthAttachment = isDepthFormat(m_imageDescriptions[res.descriptionIndex].format);
                 physicalImage.image->transitionLayout(
@@ -335,24 +292,20 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer)
     }
 }
 
-RenderGraphBlackboard& RenderGraph::getBlackboard()
-{
+RenderGraphBlackboard& RenderGraph::getBlackboard() {
     return m_blackboard;
 }
 
-const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) const
-{
+const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) const {
     return *m_physicalPasses[m_passMap.at(name).id];
 }
 
 void RenderGraph::resize(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) // NOLINT
 {
-    for (auto& image : m_physicalImages)
-    {
+    for (auto& image : m_physicalImages) {
         const auto& desc = m_imageDescriptions.at(image.descriptionIndex);
-        if (desc.sizePolicy == SizePolicy::Absolute)
-        {
+        if (desc.sizePolicy == SizePolicy::Absolute) {
             continue;
         }
 
@@ -380,37 +333,30 @@ void RenderGraph::resize(
     // }
 }
 
-std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines()
-{
+std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines() {
     FlatHashMap<std::string, ResourceTimeline> unversionedTimelines;
-    for (const auto& res : m_resources)
-    {
+    for (const auto& res : m_resources) {
         unversionedTimelines[res.name] = {};
     }
 
-    for (auto&& [passIdx, pass] : std::views::enumerate(m_passes))
-    {
-        for (const auto& in : pass.inputs)
-        {
+    for (auto&& [passIdx, pass] : std::views::enumerate(m_passes)) {
+        for (const auto& in : pass.inputs) {
             auto& tl = unversionedTimelines[getResource(in).name];
             tl.lastRead = std::max(tl.lastRead, static_cast<uint32_t>(passIdx));
         }
 
-        for (const auto& out : pass.outputs)
-        {
+        for (const auto& out : pass.outputs) {
             auto& tl = unversionedTimelines[getResource(out).name];
             tl.firstWrite = std::min(tl.firstWrite, static_cast<uint32_t>(passIdx));
         }
     }
 
     std::vector<ResourceTimeline> timelines(m_resources.size());
-    for (auto&& [idx, t] : std::views::enumerate(timelines))
-    {
+    for (auto&& [idx, t] : std::views::enumerate(timelines)) {
         t = unversionedTimelines[m_resources[idx].name];
     }
 
-    for (auto&& [idx, t] : std::views::enumerate(timelines))
-    {
+    for (auto&& [idx, t] : std::views::enumerate(timelines)) {
         spdlog::warn(
             "{}. {}-{}: W: {} ({}), R: {} ({})",
             idx,
@@ -426,8 +372,7 @@ std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelin
 }
 
 RenderGraphResourceHandle RenderGraph::addImageResource(
-    const RenderGraphImageDescription& description, std::string&& name)
-{
+    const RenderGraphImageDescription& description, std::string&& name) {
     m_imageDescriptions.push_back(description);
 
     auto& res = m_resources.emplace_back();
@@ -439,8 +384,7 @@ RenderGraphResourceHandle RenderGraph::addImageResource(
 }
 
 RenderGraphResourceHandle RenderGraph::addBufferResource(
-    const RenderGraphBufferDescription& description, std::string&& name)
-{
+    const RenderGraphBufferDescription& description, std::string&& name) {
     m_bufferDescriptions.push_back(description);
 
     auto& res = m_resources.emplace_back();
@@ -451,99 +395,79 @@ RenderGraphResourceHandle RenderGraph::addBufferResource(
     return {static_cast<uint32_t>(m_resources.size()) - 1};
 }
 
-RenderGraphPass& RenderGraph::getPass(const RenderGraphPassHandle handle)
-{
+RenderGraphPass& RenderGraph::getPass(const RenderGraphPassHandle handle) {
     return m_passes[handle.id];
 }
 
-const RenderGraphPass& RenderGraph::getPass(const RenderGraphPassHandle handle) const
-{
+const RenderGraphPass& RenderGraph::getPass(const RenderGraphPassHandle handle) const {
     return m_passes[handle.id];
 }
 
-RenderGraphResource& RenderGraph::getResource(const RenderGraphResourceHandle handle)
-{
+RenderGraphResource& RenderGraph::getResource(const RenderGraphResourceHandle handle) {
     return m_resources[handle.id];
 }
 
-const RenderGraphResource& RenderGraph::getResource(const RenderGraphResourceHandle handle) const
-{
+const RenderGraphResource& RenderGraph::getResource(const RenderGraphResourceHandle handle) const {
     return m_resources[handle.id];
 }
 
-const RenderGraphImageDescription& RenderGraph::getImageDescription(const RenderGraphResourceHandle handle)
-{
+const RenderGraphImageDescription& RenderGraph::getImageDescription(const RenderGraphResourceHandle handle) {
     return m_imageDescriptions[getResource(handle).physicalResourceIndex];
 }
 
-VkImageUsageFlags RenderGraph::determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const
-{
+VkImageUsageFlags RenderGraph::determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const {
     VkImageUsageFlags flags{0};
-    for (uint32_t idx : imageResourceIndices)
-    {
+    for (uint32_t idx : imageResourceIndices) {
         flags = flags | m_resources[idx].imageUsageFlags;
     }
     return flags;
 }
 
-VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const
-{
+VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const {
     VkImageCreateFlags flags{0};
-    for (uint32_t idx : imageResourceIndices)
-    {
+    for (uint32_t idx : imageResourceIndices) {
         flags = flags | m_imageDescriptions[m_resources[idx].descriptionIndex].createFlags;
     }
     return flags;
 };
 
 std::tuple<VkImageLayout, VkPipelineStageFlagBits> RenderGraph::determineInitialLayout(
-    const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags)
-{
-    if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT)
-    {
+    const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags) {
+    if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT) {
         return {VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
     }
-    if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT)
-    {
+    if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT) {
         return {VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
     }
 
-    if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format))
-    {
+    if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format)) {
         return {VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT};
     }
 
     return {VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 };
 
-void RenderGraph::determineAliasedResurces()
-{
+void RenderGraph::determineAliasedResurces() {
     const auto timelines{calculateResourceTimelines()};
     std::vector<bool> processed(m_resources.size(), false);
     uint16_t currPhysBufferIdx{0};
     uint16_t currPhysImageIdx{0};
-    for (auto&& [idx, resource] : std::views::enumerate(m_resources))
-    {
-        if (processed[idx])
-        {
+    for (auto&& [idx, resource] : std::views::enumerate(m_resources)) {
+        if (processed[idx]) {
             continue;
         }
 
         processed[idx] = true;
 
-        const auto findResourcesToAlias = [&](const auto& descriptions, auto& physicalResource)
-        {
+        const auto findResourcesToAlias = [&](const auto& descriptions, auto& physicalResource) {
             uint32_t lastReadPassIdx = timelines[idx].lastRead;
-            for (uint32_t j = static_cast<uint32_t>(idx) + 1; j < m_resources.size(); ++j)
-            {
-                if (lastReadPassIdx >= timelines[j].firstWrite)
-                {
+            for (uint32_t j = static_cast<uint32_t>(idx) + 1; j < m_resources.size(); ++j) {
+                if (lastReadPassIdx >= timelines[j].firstWrite) {
                     continue;
                 }
-                if (resource.type == m_resources[j].type)
-                {
-                    if (descriptions[resource.descriptionIndex].canAlias(descriptions[m_resources[j].descriptionIndex]))
-                    {
+                if (resource.type == m_resources[j].type) {
+                    if (descriptions[resource.descriptionIndex].canAlias(
+                            descriptions[m_resources[j].descriptionIndex])) {
                         lastReadPassIdx = timelines[j].lastRead;
                         m_resources[j].physicalResourceIndex = resource.physicalResourceIndex;
                         processed[j] = true;
@@ -554,16 +478,13 @@ void RenderGraph::determineAliasedResurces()
             }
         };
 
-        if (resource.type == ResourceType::Buffer)
-        {
+        if (resource.type == ResourceType::Buffer) {
             resource.physicalResourceIndex = currPhysBufferIdx++;
             auto& desc = m_physicalBuffers.emplace_back();
             desc.descriptionIndex = resource.descriptionIndex;
             desc.aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
             findResourcesToAlias(m_bufferDescriptions, desc);
-        }
-        else
-        {
+        } else {
             resource.physicalResourceIndex = currPhysImageIdx++;
             auto& desc = m_physicalImages.emplace_back();
             desc.descriptionIndex = resource.descriptionIndex;
@@ -576,10 +497,8 @@ void RenderGraph::determineAliasedResurces()
 }
 
 void RenderGraph::createPhysicalResources(
-    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer)
-{
-    for (auto& res : m_physicalImages)
-    {
+    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
+    for (auto& res : m_physicalImages) {
         const auto& desc = m_imageDescriptions[res.descriptionIndex];
         const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
 
@@ -599,8 +518,7 @@ void RenderGraph::createPhysicalResources(
             res.image->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
     }
 
-    for (auto& res : m_physicalBuffers)
-    {
+    for (auto& res : m_physicalBuffers) {
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
 
         const uint32_t sizeMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
@@ -609,12 +527,10 @@ void RenderGraph::createPhysicalResources(
     }
 }
 
-void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent)
-{
+void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent) {
     m_physicalPasses.clear();
     m_physicalPasses.reserve(m_passes.size());
-    for (const auto& pass : m_passes)
-    {
+    for (const auto& pass : m_passes) {
         fmt::print("Building render pass: {}\n", pass.name);
 
         VulkanRenderPassBuilder builder{};
@@ -627,8 +543,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         uint32_t attachmentIndex = 0;
         RenderPassParameters renderPassParams{};
         std::vector<VkClearValue> attachmentClearValues{};
-        for (const RenderGraphResourceHandle colorAttachment : pass.colorAttachments)
-        {
+        for (const RenderGraphResourceHandle colorAttachment : pass.colorAttachments) {
             const auto& res{getResource(colorAttachment)};
             const VkImageLayout initialLayout =
                 res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
@@ -663,8 +578,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
             ++attachmentIndex;
         }
 
-        if (pass.depthStencilAttachment)
-        {
+        if (pass.depthStencilAttachment) {
             const auto& res{getResource(*pass.depthStencilAttachment)};
             const VkImageLayout initialLayout =
                 res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT

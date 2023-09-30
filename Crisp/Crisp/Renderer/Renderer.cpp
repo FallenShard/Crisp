@@ -8,15 +8,12 @@
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 auto logger = spdlog::stdout_color_mt("Renderer");
 
 std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
-    const VulkanDevice& device, const VulkanSwapChain& swapChain, RenderTarget& renderTarget)
-{
+    const VulkanDevice& device, const VulkanSwapChain& swapChain, RenderTarget& renderTarget) {
     std::vector<RenderTarget*> renderTargets{&renderTarget};
     renderTargets[0]->info.buffered = true;
     renderTargets[0]->info.format = swapChain.getImageFormat();
@@ -49,8 +46,7 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     return renderPass;
 }
 
-std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer)
-{
+std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer) {
     const std::vector<glm::vec2> vertices = {
         {-1.0f, -1.0f},
         {+3.0f, -1.0f},
@@ -73,13 +69,11 @@ Renderer::Renderer(
     , m_assetPaths(std::move(assetPaths))
     , m_defaultViewport()
     , m_defaultScissor()
-    , m_coroCmdBuffer(VK_NULL_HANDLE)
-{
+    , m_coroCmdBuffer(VK_NULL_HANDLE) {
     recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
 
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
-    if (enableRayTracingExtensions)
-    {
+    if (enableRayTracingExtensions) {
         addRayTracingDeviceExtensions(deviceExtensions);
     }
 
@@ -101,16 +95,14 @@ Renderer::Renderer(
 
     // Create frame resources, such as command buffer, fence and semaphores
     m_virtualFrames.reserve(RendererConfig::VirtualFrameCount);
-    for (int32_t i = 0; i < static_cast<int32_t>(RendererConfig::VirtualFrameCount); ++i)
-    {
+    for (int32_t i = 0; i < static_cast<int32_t>(RendererConfig::VirtualFrameCount); ++i) {
         m_virtualFrames.emplace_back(*m_device, i);
     }
 
     m_shaderCache = std::make_unique<ShaderCache>(m_device->getHandle());
 
     m_workers.resize(1);
-    for (auto& w : m_workers)
-    {
+    for (auto& w : m_workers) {
         w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
     }
 
@@ -125,127 +117,102 @@ Renderer::Renderer(
 
 Renderer::~Renderer() {} // NOLINT
 
-const AssetPaths& Renderer::getAssetPaths() const
-{
+const AssetPaths& Renderer::getAssetPaths() const {
     return m_assetPaths;
 }
 
-const std::filesystem::path& Renderer::getResourcesPath() const
-{
+const std::filesystem::path& Renderer::getResourcesPath() const {
     return m_assetPaths.resourceDir;
 }
 
-std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const
-{
+std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const {
     return m_assetPaths.shaderSourceDir / (shaderName + ".glsl");
 }
 
-VulkanContext& Renderer::getContext() const
-{
+VulkanContext& Renderer::getContext() const {
     return *m_context;
 }
 
-const VulkanPhysicalDevice& Renderer::getPhysicalDevice() const
-{
+const VulkanPhysicalDevice& Renderer::getPhysicalDevice() const {
     return *m_physicalDevice;
 }
 
-VulkanDevice& Renderer::getDevice() const
-{
+VulkanDevice& Renderer::getDevice() const {
     return *m_device;
 }
 
-VulkanSwapChain& Renderer::getSwapChain() const
-{
+VulkanSwapChain& Renderer::getSwapChain() const {
     return *m_swapChain;
 }
 
-VkExtent2D Renderer::getSwapChainExtent() const
-{
+VkExtent2D Renderer::getSwapChainExtent() const {
     return m_swapChain->getExtent();
 }
 
-VkExtent3D Renderer::getSwapChainExtent3D() const
-{
+VkExtent3D Renderer::getSwapChainExtent3D() const {
     return {m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1};
 }
 
-VulkanRenderPass& Renderer::getDefaultRenderPass() const
-{
+VulkanRenderPass& Renderer::getDefaultRenderPass() const {
     return *m_defaultRenderPass;
 }
 
-VkViewport Renderer::getDefaultViewport() const
-{
+VkViewport Renderer::getDefaultViewport() const {
     return m_defaultViewport;
 }
 
-VkRect2D Renderer::getDefaultScissor() const
-{
+VkRect2D Renderer::getDefaultScissor() const {
     return m_defaultScissor;
 }
 
-VkShaderModule Renderer::loadShaderModule(const std::string& key)
-{
+VkShaderModule Renderer::loadShaderModule(const std::string& key) {
     return loadSpirvShaderModule(m_assetPaths.spvShaderDir / (key + ".spv"));
 }
 
-VkShaderModule Renderer::getShaderModule(const std::string& key) const
-{
+VkShaderModule Renderer::getShaderModule(const std::string& key) const {
     return m_shaderCache->getShaderModuleHandle(key);
 }
 
-void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const
-{
+void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const {
     vkCmdSetViewport(cmdBuffer, 0, 1, &m_defaultViewport);
 }
 
-void Renderer::setDefaultScissor(VkCommandBuffer cmdBuffer) const
-{
+void Renderer::setDefaultScissor(VkCommandBuffer cmdBuffer) const {
     vkCmdSetScissor(cmdBuffer, 0, 1, &m_defaultScissor);
 }
 
-void Renderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const
-{
+void Renderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const {
     m_fullScreenGeometry->bindAndDraw(cmdBuffer);
 }
 
-uint32_t Renderer::getCurrentVirtualFrameIndex() const
-{
+uint32_t Renderer::getCurrentVirtualFrameIndex() const {
     return m_currentFrameIndex % NumVirtualFrames;
 }
 
-uint64_t Renderer::getCurrentFrameIndex() const
-{
+uint64_t Renderer::getCurrentFrameIndex() const {
     return m_currentFrameIndex;
 }
 
-void Renderer::resize(int /*width*/, int /*height*/)
-{
+void Renderer::resize(int /*width*/, int /*height*/) {
     recreateSwapChain();
 
     flushResourceUpdates(true);
 }
 
-void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate)
-{
+void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate) {
     m_resourceUpdates.emplace_back(std::move(resourceUpdate));
 }
 
-void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
-{
+void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction) {
     m_defaultPassDrawCommands.emplace_back(std::move(drawAction));
 }
 
-void Renderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction)
-{
+void Renderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction) {
     m_drawCommands.emplace_back(std::move(drawAction));
 }
 
-void Renderer::flushResourceUpdates(bool waitOnAllQueues)
-{
-    if (m_resourceUpdates.empty())
-    {
+void Renderer::flushResourceUpdates(bool waitOnAllQueues) {
+    if (m_resourceUpdates.empty()) {
         return;
     }
 
@@ -264,8 +231,7 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-    for (const auto& update : m_resourceUpdates)
-    {
+    for (const auto& update : m_resourceUpdates) {
         update(commandBuffer);
     }
 
@@ -275,8 +241,7 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     generalQueue.submit(commandBuffer, tempFence);
     m_device->wait(tempFence);
 
-    if (waitOnAllQueues)
-    {
+    if (waitOnAllQueues) {
         finish();
     }
 
@@ -289,10 +254,8 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues)
     m_resourceUpdates.clear();
 }
 
-void Renderer::flushCoroutines()
-{
-    if (m_cmdBufferCoroutines.empty())
-    {
+void Renderer::flushCoroutines() {
+    if (m_cmdBufferCoroutines.empty()) {
         return;
     }
 
@@ -312,8 +275,7 @@ void Renderer::flushCoroutines()
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
     m_coroCmdBuffer = commandBuffer;
-    for (auto& coro : m_cmdBufferCoroutines)
-    {
+    for (auto& coro : m_cmdBufferCoroutines) {
         coro.resume();
     }
 
@@ -334,16 +296,14 @@ void Renderer::flushCoroutines()
     m_cmdBufferCoroutines.clear();
 }
 
-FrameContext Renderer::beginFrame()
-{
+FrameContext Renderer::beginFrame() {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     // Obtain a frame that we can safely draw into
     auto& frame = m_virtualFrames[virtualFrameIndex];
     frame.waitCompletion(m_device->getHandle());
 
     std::function<void()> task;
-    while (m_mainThreadQueue.tryPop(task))
-    {
+    while (m_mainThreadQueue.tryPop(task)) {
         task();
     }
 
@@ -354,8 +314,7 @@ FrameContext Renderer::beginFrame()
     m_device->flushMappedRanges();
 
     const std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
-    if (!swapImageIndex.has_value())
-    {
+    if (!swapImageIndex.has_value()) {
         logger->error("Failed to acquire swap chain image!");
         return {};
     }
@@ -369,8 +328,7 @@ FrameContext Renderer::beginFrame()
     return {m_currentFrameIndex, virtualFrameIndex, *swapImageIndex, commandBuffer};
 }
 
-void Renderer::endFrame(const FrameContext& frameContext)
-{
+void Renderer::endFrame(const FrameContext& frameContext) {
     frameContext.commandBuffer->end();
     auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
     frame.addSubmission(*frameContext.commandBuffer);
@@ -386,11 +344,9 @@ void Renderer::endFrame(const FrameContext& frameContext)
     ++m_currentFrameIndex;
 }
 
-void Renderer::drawFrame()
-{
+void Renderer::drawFrame() {
     const auto frameCtx{beginFrame()};
-    if (!frameCtx.commandBuffer)
-    {
+    if (!frameCtx.commandBuffer) {
         return;
     }
 
@@ -398,50 +354,40 @@ void Renderer::drawFrame()
     endFrame(frameCtx);
 }
 
-void Renderer::finish()
-{
+void Renderer::finish() {
     logger->warn("Calling vkDeviceWaitIdle()");
     vkDeviceWaitIdle(m_device->getHandle());
 }
 
-void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset)
-{
+void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset) {
     auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(*m_device, size);
     stagingBuffer->updateFromHost(data);
-    m_resourceUpdates.emplace_back([stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer)
-                                   { buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size); });
+    m_resourceUpdates.emplace_back([stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer) {
+        buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
+    });
 }
 
-void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex)
-{
-    if (renderPass)
-    {
+void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex) {
+    if (renderPass) {
         m_sceneImageViews = renderPass->getAttachmentViews(renderTargetIndex);
-        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
-        {
+        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
             m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
         }
 
         m_device->flushDescriptorUpdates();
-    }
-    else // Prevent rendering any scene output to the screen
+    } else // Prevent rendering any scene output to the screen
     {
         m_sceneImageViews.clear();
     }
 }
 
-void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews)
-{
+void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews) {
     m_sceneImageViews.clear();
 
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
-    {
-        if (imageViews.size() == RendererConfig::VirtualFrameCount)
-        {
+    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
+        if (imageViews.size() == RendererConfig::VirtualFrameCount) {
             m_sceneImageViews.push_back(imageViews[i].get());
-        }
-        else
-        {
+        } else {
             m_sceneImageViews.push_back(imageViews.front().get());
         }
     }
@@ -452,49 +398,40 @@ void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageV
     m_device->flushDescriptorUpdates();
 }
 
-void Renderer::registerStreamingUniformBuffer(UniformBuffer* buffer)
-{
+void Renderer::registerStreamingUniformBuffer(UniformBuffer* buffer) {
     m_streamingUniformBuffers.insert(buffer);
 }
 
-void Renderer::unregisterStreamingUniformBuffer(UniformBuffer* buffer)
-{
+void Renderer::unregisterStreamingUniformBuffer(UniformBuffer* buffer) {
     m_streamingUniformBuffers.erase(buffer);
 }
 
-void Renderer::registerStreamingStorageBuffer(StorageBuffer* buffer)
-{
+void Renderer::registerStreamingStorageBuffer(StorageBuffer* buffer) {
     m_streamingStorageBuffers.insert(buffer);
 }
 
-void Renderer::unregisterStreamingStorageBuffer(StorageBuffer* buffer)
-{
+void Renderer::unregisterStreamingStorageBuffer(StorageBuffer* buffer) {
     m_streamingStorageBuffers.erase(buffer);
 }
 
-Geometry* Renderer::getFullScreenGeometry() const
-{
+Geometry* Renderer::getFullScreenGeometry() const {
     return m_fullScreenGeometry.get();
 }
 
 std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
-    std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex)
-{
+    std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex) {
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
     return createPipelineFromJsonPath(absolutePipelinePath, *this, renderPass, subpassIndex).unwrap();
 }
 
-void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass)
-{
+void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass) {
     enqueueResourceUpdate([&renderPass](VkCommandBuffer cmdBuffer) { renderPass.updateInitialLayouts(cmdBuffer); });
 }
 
-void Renderer::loadShaders(const std::filesystem::path& directoryPath)
-{
+void Renderer::loadShaders(const std::filesystem::path& directoryPath) {
     const auto files = enumerateFiles(directoryPath, "spv");
-    for (const auto& file : files)
-    {
+    for (const auto& file : files) {
         const auto shaderModule = loadSpirvShaderModule(directoryPath / file);
         m_device->getDebugMarker().setObjectName(shaderModule, file);
     }
@@ -502,13 +439,11 @@ void Renderer::loadShaders(const std::filesystem::path& directoryPath)
     logger->info("Loaded all {} shaders", files.size());
 }
 
-VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath)
-{
+VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath) {
     return m_shaderCache->loadSpirvShaderModule(shaderModulePath);
 }
 
-std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame)
-{
+std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     uint32_t imageIndex{};
     const VkResult result = vkAcquireNextImageKHR(
         m_device->getHandle(),
@@ -517,19 +452,16 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame)
         frame.getImageAvailableSemaphoreHandle(),
         VK_NULL_HANDLE,
         &imageIndex);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR)
-    {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         logger->warn("Swap chain is 'out of date'");
         recreateSwapChain();
         return std::nullopt;
     }
-    if (result == VK_SUBOPTIMAL_KHR)
-    {
+    if (result == VK_SUBOPTIMAL_KHR) {
         logger->warn("Unable to acquire optimal VulkanSwapChain image!");
         return std::nullopt;
     }
-    if (result != VK_SUCCESS)
-    {
+    if (result != VK_SUCCESS) {
         logger->critical("Encountered an unknown error with vkAcquireNextImageKHR!");
         return std::nullopt;
     }
@@ -537,37 +469,30 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame)
     return imageIndex;
 }
 
-void Renderer::record(VkCommandBuffer commandBuffer)
-{
+void Renderer::record(VkCommandBuffer commandBuffer) {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
 
-    for (auto& uniformBuffer : m_streamingUniformBuffers)
-    {
+    for (auto& uniformBuffer : m_streamingUniformBuffers) {
         uniformBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
     }
-    for (auto& storageBuffer : m_streamingStorageBuffers)
-    {
+    for (auto& storageBuffer : m_streamingStorageBuffers) {
         storageBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
     }
-    for (const auto& update : m_resourceUpdates)
-    {
+    for (const auto& update : m_resourceUpdates) {
         update(commandBuffer);
     }
 
     m_coroCmdBuffer = commandBuffer;
-    for (auto h : m_cmdBufferCoroutines)
-    {
+    for (auto h : m_cmdBufferCoroutines) {
         h.resume();
     }
     m_cmdBufferCoroutines.clear();
 
-    for (const auto& drawCommand : m_drawCommands)
-    {
+    for (const auto& drawCommand : m_drawCommands) {
         drawCommand(commandBuffer);
     }
 
-    if (!m_sceneImageViews.empty())
-    {
+    if (!m_sceneImageViews.empty()) {
         m_sceneImageViews[virtualFrameIndex]->getImage().transitionLayout(
             commandBuffer,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -576,8 +501,7 @@ void Renderer::record(VkCommandBuffer commandBuffer)
     }
 
     m_defaultRenderPass->begin(commandBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
-    if (!m_sceneImageViews.empty())
-    {
+    if (!m_sceneImageViews.empty()) {
         m_scenePipeline->bind(commandBuffer);
         setDefaultViewport(commandBuffer);
         setDefaultScissor(commandBuffer);
@@ -585,30 +509,24 @@ void Renderer::record(VkCommandBuffer commandBuffer)
         drawFullScreenQuad(commandBuffer);
     }
 
-    for (const auto& drawCommand : m_defaultPassDrawCommands)
-    {
+    for (const auto& drawCommand : m_defaultPassDrawCommands) {
         drawCommand(commandBuffer);
     }
     m_defaultRenderPass->end(commandBuffer, virtualFrameIndex);
 }
 
-void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex)
-{
+void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex) {
     const VkResult result = m_device->getGeneralQueue().present(
         frame.getRenderFinishedSemaphoreHandle(), m_swapChain->getHandle(), swapChainImageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-    {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreateSwapChain();
-    }
-    else if (result != VK_SUCCESS)
-    {
+    } else if (result != VK_SUCCESS) {
         CRISP_FATAL("Failed to present swap chain image!");
     }
 }
 
-void Renderer::recreateSwapChain()
-{
+void Renderer::recreateSwapChain() {
     vkDeviceWaitIdle(m_device->getHandle());
 
     m_swapChain->recreate(*m_device, *m_physicalDevice, m_context->getSurface());
@@ -620,16 +538,13 @@ void Renderer::recreateSwapChain()
     m_defaultRenderPass->recreate(*m_device, m_swapChain->getExtent());
 }
 
-void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView)
-{
+void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView) {
     auto& framebuffer = m_defaultRenderPass->getFramebuffer(virtualFrameIndex);
-    if (framebuffer && framebuffer->getAttachment(0) == swapChainImageView)
-    {
+    if (framebuffer && framebuffer->getAttachment(0) == swapChainImageView) {
         return;
     }
 
-    if (!m_swapChainFramebuffers.contains(swapChainImageView))
-    {
+    if (!m_swapChainFramebuffers.contains(swapChainImageView)) {
         const auto attachmentViews = {swapChainImageView};
         m_swapChainFramebuffers.emplace(
             swapChainImageView,
@@ -638,8 +553,7 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
     }
 
     // Release ownership of the framebuffer into the pool of swap chain framebuffers.
-    if (framebuffer)
-    {
+    if (framebuffer) {
         framebuffer.swap(m_swapChainFramebuffers.at(framebuffer->getAttachment(0)));
     }
 

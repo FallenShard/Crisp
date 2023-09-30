@@ -3,12 +3,10 @@
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Shape;
 
-struct Intersection
-{
+struct Intersection {
     float tHit;   // Unoccluded distance the ray traveled
     glm::vec3 p;  // Intersection point
     glm::vec2 uv; // UV texture coordinates of the hit
@@ -19,17 +17,13 @@ struct Intersection
     const Shape* shape; // Pointer to the underlying shape
 
     Intersection()
-        : shape(nullptr)
-    {
-    }
+        : shape(nullptr) {}
 
-    inline glm::vec3 toLocal(const glm::vec3& dir) const
-    {
+    inline glm::vec3 toLocal(const glm::vec3& dir) const {
         return shFrame.toLocal(dir);
     }
 
-    inline glm::vec3 toWorld(const glm::vec3& dir) const
-    {
+    inline glm::vec3 toWorld(const glm::vec3& dir) const {
         return shFrame.toWorld(dir);
     }
 };

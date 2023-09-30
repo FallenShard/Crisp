@@ -11,10 +11,8 @@
 
 #include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 
-namespace crisp
-{
-class VulkanRayTracingScene : public Scene
-{
+namespace crisp {
+class VulkanRayTracingScene : public Scene {
 public:
     VulkanRayTracingScene(Renderer* renderer, Window* window);
 
@@ -23,8 +21,7 @@ public:
     virtual void render() override;
 
 private:
-    struct PbrUnifMaterialParams
-    {
+    struct PbrUnifMaterialParams {
         glm::vec4 albedo;
         float metallic;
         float roughness;
@@ -55,8 +52,7 @@ private:
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<Material> m_material;
 
-    struct ShaderBindingTable
-    {
+    struct ShaderBindingTable {
         std::unique_ptr<VulkanBuffer> buffer;
 
         VkStridedDeviceAddressRegionKHR rgen;

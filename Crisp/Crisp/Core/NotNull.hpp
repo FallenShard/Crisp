@@ -7,21 +7,15 @@
 #include <type_traits>
 #include <utility>
 
-namespace crisp
-{
-namespace details
-{
+namespace crisp {
+namespace details {
 template <typename T, typename = void>
-struct is_comparable_to_nullptr : std::false_type
-{
-};
+struct is_comparable_to_nullptr : std::false_type {};
 
 template <typename T>
 struct is_comparable_to_nullptr<
     T,
-    std::enable_if_t<std::is_convertible<decltype(std::declval<T>() != nullptr), bool>::value>> : std::true_type
-{
-};
+    std::enable_if_t<std::is_convertible<decltype(std::declval<T>() != nullptr), bool>::value>> : std::true_type {};
 
 // Resolves to the more efficient of `const T` or `const T&`, in the context of returning a const-qualified value
 // of type T.
@@ -69,51 +63,42 @@ using owner = T;
 // - allow implicit conversion to U*
 //
 template <class T>
-class NotNull
-{
+class NotNull {
 public:
     static_assert(details::is_comparable_to_nullptr<T>::value, "T cannot be compared to nullptr.");
 
     template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
     constexpr NotNull(U&& u)
-        : m_ptr(std::forward<U>(u))
-    {
+        : m_ptr(std::forward<U>(u)) {
         CRISP_CHECK(m_ptr != nullptr);
     }
 
     template <typename = std::enable_if_t<!std::is_same<std::nullptr_t, T>::value>>
     constexpr NotNull(T u)
-        : m_ptr(std::move(u))
-    {
+        : m_ptr(std::move(u)) {
         CRISP_CHECK(m_ptr != nullptr);
     }
 
     template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
     constexpr NotNull(const NotNull<U>& other)
-        : NotNull(other.get())
-    {
-    }
+        : NotNull(other.get()) {}
 
     NotNull(const NotNull& other) = default;
     NotNull& operator=(const NotNull& other) = default;
 
-    constexpr details::value_or_reference_return_t<T> get() const
-    {
+    constexpr details::value_or_reference_return_t<T> get() const {
         return m_ptr;
     }
 
-    constexpr operator T() const
-    {
+    constexpr operator T() const {
         return get();
     }
 
-    constexpr decltype(auto) operator->() const
-    {
+    constexpr decltype(auto) operator->() const {
         return get();
     }
 
-    constexpr decltype(auto) operator*() const
-    {
+    constexpr decltype(auto) operator*() const {
         return *get();
     }
 
@@ -135,50 +120,43 @@ private:
 };
 
 template <class T>
-auto makeNotNull(T&& t) noexcept
-{
+auto makeNotNull(T&& t) noexcept {
     return NotNull<std::remove_cv_t<std::remove_reference_t<T>>>{std::forward<T>(t)};
 }
 
 template <class T, class U>
 auto operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) noexcept(noexcept(lhs.get() == rhs.get()))
-    -> decltype(lhs.get() == rhs.get())
-{
+    -> decltype(lhs.get() == rhs.get()) {
     return lhs.get() == rhs.get();
 }
 
 template <class T, class U>
 auto operator!=(const NotNull<T>& lhs, const NotNull<U>& rhs) noexcept(noexcept(lhs.get() != rhs.get()))
-    -> decltype(lhs.get() != rhs.get())
-{
+    -> decltype(lhs.get() != rhs.get()) {
     return lhs.get() != rhs.get();
 }
 
 template <class T, class U>
 auto operator<(const NotNull<T>& lhs, const NotNull<U>& rhs) noexcept(noexcept(std::less<>{}(lhs.get(), rhs.get())))
-    -> decltype(std::less<>{}(lhs.get(), rhs.get()))
-{
+    -> decltype(std::less<>{}(lhs.get(), rhs.get())) {
     return std::less<>{}(lhs.get(), rhs.get());
 }
 
 template <class T, class U>
 auto operator<=(const NotNull<T>& lhs, const NotNull<U>& rhs) noexcept(
-    noexcept(std::less_equal<>{}(lhs.get(), rhs.get()))) -> decltype(std::less_equal<>{}(lhs.get(), rhs.get()))
-{
+    noexcept(std::less_equal<>{}(lhs.get(), rhs.get()))) -> decltype(std::less_equal<>{}(lhs.get(), rhs.get())) {
     return std::less_equal<>{}(lhs.get(), rhs.get());
 }
 
 template <class T, class U>
 auto operator>(const NotNull<T>& lhs, const NotNull<U>& rhs) noexcept(noexcept(std::greater<>{}(lhs.get(), rhs.get())))
-    -> decltype(std::greater<>{}(lhs.get(), rhs.get()))
-{
+    -> decltype(std::greater<>{}(lhs.get(), rhs.get())) {
     return std::greater<>{}(lhs.get(), rhs.get());
 }
 
 template <class T, class U>
 auto operator>=(const NotNull<T>& lhs, const NotNull<U>& rhs) noexcept(
-    noexcept(std::greater_equal<>{}(lhs.get(), rhs.get()))) -> decltype(std::greater_equal<>{}(lhs.get(), rhs.get()))
-{
+    noexcept(std::greater_equal<>{}(lhs.get(), rhs.get()))) -> decltype(std::greater_equal<>{}(lhs.get(), rhs.get())) {
     return std::greater_equal<>{}(lhs.get(), rhs.get());
 }
 
@@ -196,17 +174,14 @@ template <
     class T,
     class U = decltype(std::declval<const T&>().get()),
     bool = std::is_default_constructible<std::hash<U>>::value>
-struct NotNullHash
-{
-    std::size_t operator()(const T& value) const
-    {
+struct NotNullHash {
+    std::size_t operator()(const T& value) const {
         return std::hash<U>{}(value.get());
     }
 };
 
 template <class T, class U>
-struct NotNullHash<T, U, false>
-{
+struct NotNullHash<T, U, false> {
     NotNullHash() = delete;
     NotNullHash(const NotNullHash&) = delete;
     NotNullHash& operator=(const NotNullHash&) = delete;
@@ -214,11 +189,8 @@ struct NotNullHash<T, U, false>
 
 } // namespace crisp
 
-namespace std
-{
+namespace std {
 template <class T>
-struct hash<crisp::NotNull<T>> : crisp::NotNullHash<crisp::NotNull<T>>
-{
-};
+struct hash<crisp::NotNull<T>> : crisp::NotNullHash<crisp::NotNull<T>> {};
 
 } // namespace std

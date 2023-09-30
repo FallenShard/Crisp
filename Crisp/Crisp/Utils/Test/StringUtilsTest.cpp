@@ -4,8 +4,7 @@
 
 using namespace crisp;
 
-TEST(StringUtilsTest, Tokenize)
-{
+TEST(StringUtilsTest, Tokenize) {
     std::string text = "Hello World";
 
     auto tokens = tokenize(text, " ");
@@ -15,8 +14,7 @@ TEST(StringUtilsTest, Tokenize)
     EXPECT_EQ(tokens[1], "World");
 }
 
-TEST(StringUtilsTest, FixedTokenize)
-{
+TEST(StringUtilsTest, FixedTokenize) {
     std::string text = "10/15/20";
     auto tokens = fixedTokenize<3>(text, "/");
 

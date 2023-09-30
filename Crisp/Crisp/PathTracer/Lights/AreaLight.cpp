@@ -5,26 +5,23 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
-AreaLight::AreaLight(const VariantMap& params)
-{
+namespace crisp {
+AreaLight::AreaLight(const VariantMap& params) {
     m_radiance = params.get("radiance", Spectrum(10.0f));
 }
 
-Spectrum AreaLight::eval(const Light::Sample& sample) const
-{
+Spectrum AreaLight::eval(const Light::Sample& sample) const {
     glm::vec3 wi = sample.p - sample.ref;
     float cosTheta = glm::dot(sample.n, glm::normalize(-wi));
 
-    if (cosTheta <= 0.0f)
+    if (cosTheta <= 0.0f) {
         return Spectrum(0.0f);
+    }
 
     return m_radiance;
 }
 
-Spectrum AreaLight::sample(Light::Sample& sample, Sampler& sampler) const
-{
+Spectrum AreaLight::sample(Light::Sample& sample, Sampler& sampler) const {
     Shape::Sample shapeSample(sample.ref);
     m_shape->sampleSurface(shapeSample, sampler);
 
@@ -38,12 +35,9 @@ Spectrum AreaLight::sample(Light::Sample& sample, Sampler& sampler) const
     float cosTheta = glm::dot(sample.n, -sample.wi);
     Spectrum radiance(0.0f);
 
-    if (cosTheta <= 0.0f)
-    {
+    if (cosTheta <= 0.0f) {
         sample.pdf = 0.0f;
-    }
-    else
-    {
+    } else {
         sample.pdf = shapeSample.pdf * squaredDist / cosTheta;
         radiance = m_radiance / sample.pdf;
     }
@@ -51,22 +45,21 @@ Spectrum AreaLight::sample(Light::Sample& sample, Sampler& sampler) const
     return radiance;
 }
 
-float AreaLight::pdf(const Light::Sample& sample) const
-{
+float AreaLight::pdf(const Light::Sample& sample) const {
     Shape::Sample shapeSample(sample.ref);
     float areaPdf = m_shape->pdfSurface(shapeSample);
 
     float cosTheta = glm::dot(sample.n, -sample.wi);
-    if (cosTheta <= 0.0f)
+    if (cosTheta <= 0.0f) {
         return 0.0f;
+    }
 
     glm::vec3 wi = sample.p - sample.ref;
     float squaredDist = glm::dot(wi, wi);
     return areaPdf * squaredDist / cosTheta;
 }
 
-Spectrum AreaLight::samplePhoton(Ray3& ray, Sampler& sampler) const
-{
+Spectrum AreaLight::samplePhoton(Ray3& ray, Sampler& sampler) const {
     Shape::Sample shapeSample;
     m_shape->sampleSurface(shapeSample, sampler);
 
@@ -78,8 +71,7 @@ Spectrum AreaLight::samplePhoton(Ray3& ray, Sampler& sampler) const
     return PI<> * m_radiance / m_shape->pdfSurface(shapeSample);
 }
 
-bool AreaLight::isDelta() const
-{
+bool AreaLight::isDelta() const {
     return false;
 }
 } // namespace crisp

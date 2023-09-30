@@ -3,10 +3,8 @@
 #include <Crisp/Core/Event.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp
-{
-class Animation
-{
+namespace crisp {
+class Animation {
 public:
     Animation(double startDelay, double duration, bool isLooped = false, int loopCount = 1);
     virtual ~Animation() = default;

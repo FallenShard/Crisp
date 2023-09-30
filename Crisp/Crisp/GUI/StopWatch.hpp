@@ -2,24 +2,18 @@
 
 #include <Crisp/Core/Event.hpp>
 
-namespace crisp::gui
-{
-class StopWatch
-{
+namespace crisp::gui {
+class StopWatch {
 public:
     StopWatch(double triggerPeriod)
         : m_time(0.0)
-        , m_triggerPeriod(triggerPeriod)
-    {
-    }
+        , m_triggerPeriod(triggerPeriod) {}
 
     ~StopWatch() {}
 
-    void accumulate(double dt)
-    {
+    void accumulate(double dt) {
         m_time += dt;
-        if (m_time >= m_triggerPeriod)
-        {
+        if (m_time >= m_triggerPeriod) {
             m_time -= m_triggerPeriod;
             triggered();
         }

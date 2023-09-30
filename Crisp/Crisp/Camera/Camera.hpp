@@ -4,18 +4,15 @@
 
 #include <array>
 
-namespace crisp
-{
-struct CameraParameters
-{
+namespace crisp {
+struct CameraParameters {
     glm::mat4 V;
     glm::mat4 P;
     glm::vec2 screenSize;
     glm::vec2 nearFar;
 };
 
-struct ExtendedCameraParameters
-{
+struct ExtendedCameraParameters {
     glm::mat4 V;
     glm::mat4 P;
     glm::mat4 invV;
@@ -24,8 +21,7 @@ struct ExtendedCameraParameters
     glm::vec2 nearFar;
 };
 
-class Camera
-{
+class Camera {
 public:
     static constexpr uint32_t kFrustumPlaneCount = 6;
     static constexpr uint32_t kFrustumPointCount = 8;

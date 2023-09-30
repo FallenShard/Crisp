@@ -7,10 +7,8 @@
 
 #include <vector>
 
-namespace crisp
-{
-class RenderPassBuilder
-{
+namespace crisp {
+class RenderPassBuilder {
 public:
     RenderPassBuilder& setAllocateAttachmentViews(bool allocateAttachmentViews);
 

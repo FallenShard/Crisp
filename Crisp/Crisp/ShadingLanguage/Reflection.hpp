@@ -8,10 +8,8 @@
 #include <span>
 #include <vector>
 
-namespace crisp
-{
-struct ShaderUniformInputMetadata
-{
+namespace crisp {
+struct ShaderUniformInputMetadata {
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
     std::vector<VkPushConstantRange> pushConstants;
 

@@ -4,8 +4,7 @@
 
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(

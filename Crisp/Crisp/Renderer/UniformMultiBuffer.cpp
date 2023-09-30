@@ -2,18 +2,18 @@
 
 #include <Crisp/Renderer/Renderer.hpp>
 
-namespace crisp
-{
-UniformMultiBuffer::UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize /*resSize*/,
-    const void* /*data*/)
+namespace crisp {
+UniformMultiBuffer::UniformMultiBuffer(
+    Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize /*resSize*/, const void* /*data*/)
     : m_renderer(renderer)
     , m_singleRegionSize(initialSize)
-    , m_buffers(RendererConfig::VirtualFrameCount)
-{
-    for (auto& buffer : m_buffers)
-    {
-        buffer = std::make_unique<VulkanBuffer>(m_renderer->getDevice(), initialSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    , m_buffers(RendererConfig::VirtualFrameCount) {
+    for (auto& buffer : m_buffers) {
+        buffer = std::make_unique<VulkanBuffer>(
+            m_renderer->getDevice(),
+            initialSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
     m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(m_renderer->getDevice(), initialSize);
@@ -21,23 +21,19 @@ UniformMultiBuffer::UniformMultiBuffer(Renderer* renderer, VkDeviceSize initialS
 
 UniformMultiBuffer::~UniformMultiBuffer() {}
 
-void UniformMultiBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset)
-{
+void UniformMultiBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
     m_stagingBuffer->updateFromHost(data, size, offset);
 }
 
-void UniformMultiBuffer::updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex)
-{
+void UniformMultiBuffer::updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex) {
     m_buffers[currentFrameIndex]->copyFrom(commandBuffer, *m_stagingBuffer, 0, 0, m_singleRegionSize);
 }
 
-uint32_t UniformMultiBuffer::getDynamicOffset(uint32_t currentFrameIndex) const
-{
+uint32_t UniformMultiBuffer::getDynamicOffset(uint32_t currentFrameIndex) const {
     return currentFrameIndex;
 }
 
-void UniformMultiBuffer::resize(VkDeviceSize newSize)
-{
+void UniformMultiBuffer::resize(VkDeviceSize newSize) {
     auto newStagingBuffer = std::make_unique<StagingVulkanBuffer>(m_renderer->getDevice(), newSize);
     newStagingBuffer->updateFromStaging(*m_stagingBuffer);
 
@@ -46,10 +42,9 @@ void UniformMultiBuffer::resize(VkDeviceSize newSize)
     m_singleRegionSize = newSize;
 }
 
-void UniformMultiBuffer::resizeOnDevice(uint32_t index)
-{
+void UniformMultiBuffer::resizeOnDevice(uint32_t index) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    m_buffers[index] = std::make_unique<VulkanBuffer>(m_renderer->getDevice(), m_singleRegionSize, usageFlags,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_buffers[index] = std::make_unique<VulkanBuffer>(
+        m_renderer->getDevice(), m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 } // namespace crisp

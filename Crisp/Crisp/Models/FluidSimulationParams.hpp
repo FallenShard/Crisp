@@ -1,7 +1,6 @@
 #pragma once
 
-namespace crisp
-{
+namespace crisp {
 static constexpr float PI = 3.141592f;
 
 static constexpr float vizScale = 10.0f;

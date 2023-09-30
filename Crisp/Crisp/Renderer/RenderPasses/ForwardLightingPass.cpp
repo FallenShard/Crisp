@@ -7,11 +7,9 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D renderArea)
-{
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D renderArea) {
     std::vector<RenderTarget*> renderTargets(2);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         "ForwardPassColor",

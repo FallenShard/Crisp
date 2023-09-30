@@ -14,10 +14,8 @@
 
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 static const int PC0 = 0;
 }
 
@@ -27,8 +25,7 @@ Grass::Grass(
     VulkanRenderPass* /*shadowRenderPass*/,
     UniformBuffer* /*cameraBuffer*/,
     VulkanSampler* /*sampler*/)
-    : m_renderer(renderer)
-{
+    : m_renderer(renderer) {
     // m_shadowPipelines.reserve(4);
     // for (uint32_t i = 0; i < 4; i++)
     //     m_shadowPipelines.emplace_back(createInstancingShadowMapPipeline(m_renderer, shadowRenderPass, i));
@@ -86,13 +83,11 @@ Grass::Grass(
 
 Grass::~Grass() {}
 
-DrawCommand Grass::createDrawCommand()
-{
+DrawCommand Grass::createDrawCommand() {
     return m_drawCommand;
 }
 
-DrawCommand Grass::createShadowCommand(uint32_t subpassIndex)
-{
+DrawCommand Grass::createShadowCommand(uint32_t subpassIndex) {
     DrawCommand command = m_shadowDrawCommand;
     // TODO: command.setPushConstants(subpassIndex);
     command.pipeline = m_shadowPipelines[subpassIndex].get();

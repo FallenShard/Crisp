@@ -17,60 +17,48 @@
 #include <Crisp/Scenes/RaytracedImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 RayTracerScene::RayTracerScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
     , m_progress(0.0f)
-    , m_timeSpentRendering(0.0f)
-{
+    , m_timeSpentRendering(0.0f) {
     m_image = std::make_unique<RayTracedImage>(512, 512, m_renderer);
     m_imageData.resize(512 * 512 * 4, 0.01f);
     m_rayTracer = std::make_unique<RayTracer>();
-    m_rayTracer->setProgressUpdater(
-        [this](RayTracerUpdate&& update)
-        {
-            m_progress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
-            m_timeSpentRendering = update.totalTimeSpentRendering;
-            m_updateQueue.emplace(std::move(update));
-            rayTracerProgressed(m_progress, m_timeSpentRendering);
-        });
+    m_rayTracer->setProgressUpdater([this](RayTracerUpdate&& update) {
+        m_progress = static_cast<float>(update.pixelsRendered) / static_cast<float>(update.numPixels);
+        m_timeSpentRendering = update.totalTimeSpentRendering;
+        m_updateQueue.emplace(std::move(update));
+        rayTracerProgressed(m_progress, m_timeSpentRendering);
+    });
     m_renderer->setSceneImageView(nullptr, 0);
 
     createGui();
 }
 
-RayTracerScene::~RayTracerScene()
-{
+RayTracerScene::~RayTracerScene() {
     // m_app->getForm()->remove("vesperOptionsPanel");
     // m_app->getForm()->remove("progressBarBg");
 }
 
-void RayTracerScene::resize(int width, int height)
-{
+void RayTracerScene::resize(int width, int height) {
     m_image->resize(width, height);
 }
 
-void RayTracerScene::update(float)
-{
-    while (!m_updateQueue.empty())
-    {
+void RayTracerScene::update(float) {
+    while (!m_updateQueue.empty()) {
         RayTracerUpdate update;
-        if (m_updateQueue.try_pop(update))
-        {
+        if (m_updateQueue.try_pop(update)) {
             m_image->postTextureUpdate(update);
 
             auto imageSize = m_rayTracer->getImageSize();
-            for (int y = 0; y < update.height; y++)
-            {
-                for (int x = 0; x < update.width; x++)
-                {
+            for (int y = 0; y < update.height; y++) {
+                for (int x = 0; x < update.width; x++) {
                     size_t rowIdx = update.y + y;
                     size_t colIdx = update.x + x;
 
-                    for (int c = 0; c < 4; c++)
-                    {
+                    for (int c = 0; c < 4; c++) {
                         m_imageData[(rowIdx * imageSize.x + colIdx) * 4 + c] =
                             update.data[(y * update.width + x) * 4 + c];
                     }
@@ -80,37 +68,30 @@ void RayTracerScene::update(float)
     }
 }
 
-void RayTracerScene::render()
-{
-    if (m_image)
-    {
+void RayTracerScene::render() {
+    if (m_image) {
         m_image->draw(m_renderer);
     }
 }
 
-void RayTracerScene::openSceneFileFromDialog()
-{
+void RayTracerScene::openSceneFileFromDialog() {
     std::string openedFile = "D:/version-control/Crisp/Resources/VesperScenes/cbox-test-mis.xml"; // openFileDialog();
-    if (openedFile == "")
-    {
+    if (openedFile == "") {
         return;
     }
 
     openSceneFile(openedFile);
 }
 
-void RayTracerScene::startRendering()
-{
+void RayTracerScene::startRendering() {
     m_rayTracer->start();
 }
 
-void RayTracerScene::stopRendering()
-{
+void RayTracerScene::stopRendering() {
     m_rayTracer->stop();
 }
 
-void RayTracerScene::writeImageToExr()
-{
+void RayTracerScene::writeImageToExr() {
     const std::string outputDirectory = "Output";
     std::filesystem::create_directories(outputDirectory);
 
@@ -121,8 +102,7 @@ void RayTracerScene::writeImageToExr()
 
     // Avoid overwriting by providing a new filepath with an index
     int i = 0;
-    while (std::filesystem::exists(filepath))
-    {
+    while (std::filesystem::exists(filepath)) {
         filepath = fmt::format("{}/{}_{}.exr", outputDirectory, ++i, m_projectName);
     }
 
@@ -131,8 +111,7 @@ void RayTracerScene::writeImageToExr()
     // writer.write(filepath.string(), m_imageData.data(), 512, 512, true);
 }
 
-void RayTracerScene::openSceneFile(const std::filesystem::path& filename)
-{
+void RayTracerScene::openSceneFile(const std::filesystem::path& filename) {
     m_renderer->flushResourceUpdates(true);
     m_projectName = filename.stem().string();
     m_rayTracer->initializeScene(filename.string());
@@ -143,8 +122,7 @@ void RayTracerScene::openSceneFile(const std::filesystem::path& filename)
     // m_app->getWindow().setTitle(filename.string());
 }
 
-void RayTracerScene::createGui()
-{
+void RayTracerScene::createGui() {
     gui::Form* form = nullptr; // m_app->getForm();
 
     auto panel = std::make_unique<gui::Panel>(form);
@@ -217,8 +195,7 @@ void RayTracerScene::createGui()
     label->setOrigin(gui::Origin::Center);
     label->setColor(glm::vec4(1.0f));
 
-    rayTracerProgressed += [form, label = label.get(), bar = progressBar.get()](float percentage, float timeSpent)
-    {
+    rayTracerProgressed += [form, label = label.get(), bar = progressBar.get()](float percentage, float timeSpent) {
         float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
 
         std::stringstream stringStream;

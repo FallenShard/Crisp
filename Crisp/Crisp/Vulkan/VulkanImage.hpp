@@ -8,10 +8,8 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-class VulkanImage : public VulkanResource<VkImage>
-{
+namespace crisp {
+class VulkanImage : public VulkanResource<VkImage> {
 public:
     VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo);
     VulkanImage(

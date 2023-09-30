@@ -1,7 +1,6 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanPipeline::VulkanPipeline(
     const VulkanDevice& device,
     const VkPipeline pipelineHandle,
@@ -13,22 +12,17 @@ VulkanPipeline::VulkanPipeline(
     , m_pipelineLayout(std::move(pipelineLayout))
     , m_dynamicStateFlags(dynamicStateFlags)
     , m_vertexLayout(std::move(vertexLayout))
-    , m_bindPoint(bindPoint)
-{
-}
+    , m_bindPoint(bindPoint) {}
 
-void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const
-{
+void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const {
     vkCmdBindPipeline(cmdBuffer, m_bindPoint, m_handle);
 }
 
-VulkanDescriptorSet VulkanPipeline::allocateDescriptorSet(uint32_t setId) const
-{
+VulkanDescriptorSet VulkanPipeline::allocateDescriptorSet(uint32_t setId) const {
     return {setId, m_pipelineLayout.get()};
 }
 
-void VulkanPipeline::swapAll(VulkanPipeline& other)
-{
+void VulkanPipeline::swapAll(VulkanPipeline& other) {
     swap(other);
     m_pipelineLayout->swap(*other.m_pipelineLayout);
 }

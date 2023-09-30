@@ -8,8 +8,7 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
+namespace crisp {
 DirectLightingIntegrator::DirectLightingIntegrator(const VariantMap& /*params*/) {}
 
 DirectLightingIntegrator::~DirectLightingIntegrator() {}
@@ -17,19 +16,20 @@ DirectLightingIntegrator::~DirectLightingIntegrator() {}
 void DirectLightingIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum DirectLightingIntegrator::Li(
-    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
-{
+    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const {
     Intersection its;
-    if (!scene->rayIntersect(ray, its))
+    if (!scene->rayIntersect(ray, its)) {
         return Spectrum(0.0f);
+    }
 
     Spectrum L(0.0f);
 
     Light::Sample lightSample(its.p);
     auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
-    if (lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
+    if (lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)) {
         return Spectrum(0.0f);
+    }
 
     BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
     bsdfSample.measure = BSDF::Measure::SolidAngle;

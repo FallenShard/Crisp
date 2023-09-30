@@ -7,12 +7,10 @@
 #include "Control.hpp"
 #include "DrawComponents/RectDrawComponent.hpp"
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Label;
 
-class Button : public Control
-{
+class Button : public Control {
 public:
     Button(Form* parentForm, std::string = "Button");
     virtual ~Button();
@@ -43,8 +41,7 @@ private:
 
     State m_state;
 
-    struct Color
-    {
+    struct Color {
         glm::vec3 background;
         glm::vec3 text;
         glm::vec3 border;

@@ -2,8 +2,7 @@
 
 #include "Form.hpp"
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 // ListBox::ListBox(Form* parentForm)
 //     : ControlGroup(parentForm)
 //     , m_drawComponent(parentForm->getRenderSystem())

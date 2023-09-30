@@ -3,20 +3,15 @@
 #include <Crisp/Core/Checks.hpp>
 #include <cstddef>
 
-namespace crisp
-{
-namespace
-{
-uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffers)
-{
-    if (vertexBuffers.empty())
-    {
+namespace crisp {
+namespace {
+uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffers) {
+    if (vertexBuffers.empty()) {
         return 0;
     }
 
     const uint64_t vertexCount{vertexBuffers[0].buffer.size() / vertexBuffers[0].vertexSize};
-    for (uint32_t i = 1; i < vertexBuffers.size(); ++i)
-    {
+    for (uint32_t i = 1; i < vertexBuffers.size(); ++i) {
         CRISP_CHECK(vertexBuffers[i].buffer.size() / vertexBuffers[i].vertexSize == vertexCount);
     }
 
@@ -31,9 +26,7 @@ Geometry::Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLay
           VertexLayout::create(vertexLayoutDescription),
           mesh.createInterleavedVertexBuffers(vertexLayoutDescription, false),
           mesh.getFaces(),
-          mesh.getViews())
-{
-}
+          mesh.getViews()) {}
 
 Geometry::Geometry(
     Renderer& renderer,
@@ -47,9 +40,7 @@ Geometry::Geometry(
           mesh.createInterleavedVertexBuffers(vertexLayoutDescription, padToVec4),
           mesh.getFaces(),
           mesh.getViews(),
-          usageFlags)
-{
-}
+          usageFlags) {}
 
 Geometry::Geometry(
     Renderer& renderer,
@@ -62,17 +53,14 @@ Geometry::Geometry(
     , m_vertexCount(::crisp::getVertexCount(interleavedVertexBuffers))
     , m_indexCount(static_cast<uint32_t>(faces.size() * 3))
     , m_instanceCount(1)
-    , m_meshViews(meshViews)
-{
-    for (const auto& buffer : interleavedVertexBuffers)
-    {
+    , m_meshViews(meshViews) {
+    for (const auto& buffer : interleavedVertexBuffers) {
         auto vertexBuffer = createVertexBuffer(renderer.getDevice(), buffer.buffer.size(), usageFlags);
         renderer.fillDeviceBuffer(vertexBuffer.get(), buffer.buffer);
         m_vertexBuffers.push_back(std::move(vertexBuffer));
     }
 
-    for (const auto& buffer : m_vertexBuffers)
-    {
+    for (const auto& buffer : m_vertexBuffers) {
         m_vertexBufferHandles.push_back(buffer->getHandle());
         m_offsets.push_back(0);
     }
@@ -86,8 +74,7 @@ Geometry::Geometry(
 Geometry::Geometry(Renderer& renderer, const uint32_t vertexCount, const std::vector<glm::uvec2>& faces)
     : m_vertexCount(vertexCount)
     , m_indexCount(static_cast<uint32_t>(faces.size()) * 2)
-    , m_instanceCount(1)
-{
+    , m_instanceCount(1) {
     auto vertexBuffer = createVertexBuffer(
         renderer.getDevice(),
         static_cast<VkDeviceSize>(RendererConfig::VirtualFrameCount * vertexCount) * sizeof(glm::vec3));
@@ -101,37 +88,31 @@ Geometry::Geometry(Renderer& renderer, const uint32_t vertexCount, const std::ve
     m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size()); // NOLINT
 }
 
-void Geometry::addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer)
-{
+void Geometry::addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer) {
     m_vertexBuffers.push_back(std::move(vertexBuffer));
     m_vertexBufferHandles.push_back(m_vertexBuffers.back()->getHandle());
     m_offsets.push_back(0);
     m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
 }
 
-void Geometry::addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer)
-{
+void Geometry::addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer) {
     m_vertexBufferHandles.push_back(vertexBuffer->getHandle());
     m_offsets.push_back(0);
     m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
 }
 
-void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer) const
-{
-    if (m_bindingCount == 0)
-    {
+void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer) const {
+    if (m_bindingCount == 0) {
         return;
     }
 
     vkCmdBindVertexBuffers(cmdBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
 }
 
-void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer, uint32_t bufferCount) const
-{
+void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer, uint32_t bufferCount) const {
     CRISP_CHECK(firstBuffer >= m_firstBinding);
     CRISP_CHECK(firstBuffer + bufferCount <= m_firstBinding + m_bindingCount);
-    if (m_bindingCount == 0)
-    {
+    if (m_bindingCount == 0) {
         return;
     }
 
@@ -139,63 +120,48 @@ void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer
         cmdBuffer, firstBuffer, bufferCount, &m_vertexBufferHandles[firstBuffer], &m_offsets[firstBuffer]);
 }
 
-void Geometry::bind(VkCommandBuffer commandBuffer) const
-{
-    if (m_bindingCount > 0)
-    {
+void Geometry::bind(VkCommandBuffer commandBuffer) const {
+    if (m_bindingCount > 0) {
         vkCmdBindVertexBuffers(
             commandBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
     }
-    if (m_indexBuffer)
-    {
+    if (m_indexBuffer) {
         vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
     }
 }
 
-void Geometry::draw(VkCommandBuffer commandBuffer) const
-{
-    if (m_indexBuffer)
-    {
+void Geometry::draw(VkCommandBuffer commandBuffer) const {
+    if (m_indexBuffer) {
         vkCmdDrawIndexed(commandBuffer, m_indexCount, 1, 0, 0, 0);
-    }
-    else
-    {
+    } else {
         vkCmdDraw(commandBuffer, m_vertexCount, 1, 0, 0);
     }
 }
 
-void Geometry::bindAndDraw(VkCommandBuffer commandBuffer) const
-{
-    if (m_bindingCount > 0)
-    {
+void Geometry::bindAndDraw(VkCommandBuffer commandBuffer) const {
+    if (m_bindingCount > 0) {
         vkCmdBindVertexBuffers(
             commandBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
     }
 
-    if (m_indexBuffer)
-    {
+    if (m_indexBuffer) {
         vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, m_indexCount, 1, 0, 0, 0);
-    }
-    else
-    {
+    } else {
         vkCmdDraw(commandBuffer, m_vertexCount, 1, 0, 0);
     }
 }
 
-IndexedGeometryView Geometry::createIndexedGeometryView() const
-{
+IndexedGeometryView Geometry::createIndexedGeometryView() const {
     return {m_indexBuffer->getHandle(), m_indexCount, m_instanceCount, 0, 0, 0};
 }
 
-IndexedGeometryView Geometry::createIndexedGeometryView(uint32_t partIndex) const
-{
+IndexedGeometryView Geometry::createIndexedGeometryView(uint32_t partIndex) const {
     return {
         m_indexBuffer->getHandle(), m_meshViews[partIndex].count, m_instanceCount, m_meshViews[partIndex].first, 0, 0};
 }
 
-ListGeometryView Geometry::createListGeometryView() const
-{
+ListGeometryView Geometry::createListGeometryView() const {
     return {m_vertexCount, m_instanceCount, 0, 0};
 }
 } // namespace crisp

@@ -2,10 +2,8 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
-class AmbientOcclusionIntegrator : public Integrator
-{
+namespace crisp {
+class AmbientOcclusionIntegrator : public Integrator {
 public:
     AmbientOcclusionIntegrator(const VariantMap& params = VariantMap());
     virtual ~AmbientOcclusionIntegrator();

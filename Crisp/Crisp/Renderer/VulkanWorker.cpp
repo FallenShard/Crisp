@@ -1,13 +1,10 @@
 #include <Crisp/Renderer/VulkanWorker.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanWorker::VulkanWorker(VulkanDevice& device, const VulkanQueue& queue, uint32_t virtualFrameCount)
     : m_cmdPools(virtualFrameCount)
-    , m_cmdBuffers(virtualFrameCount)
-{
-    for (uint32_t i = 0; i < virtualFrameCount; ++i)
-    {
+    , m_cmdBuffers(virtualFrameCount) {
+    for (uint32_t i = 0; i < virtualFrameCount; ++i) {
         m_cmdPools[i] = std::make_unique<VulkanCommandPool>(
             queue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), device.getResourceDeallocator());
         m_cmdBuffers[i] = std::make_unique<VulkanCommandBuffer>(

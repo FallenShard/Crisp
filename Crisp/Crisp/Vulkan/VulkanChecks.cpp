@@ -1,11 +1,8 @@
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 
-namespace crisp::detail
-{
-const char* toString(const VkResult result) noexcept
-{
-    switch (result)
-    {
+namespace crisp::detail {
+const char* toString(const VkResult result) noexcept {
+    switch (result) {
     case VK_NOT_READY:
         return "VK_NOT_READY";
     case VK_TIMEOUT:

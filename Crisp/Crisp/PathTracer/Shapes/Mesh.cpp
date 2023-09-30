@@ -4,39 +4,37 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 Mesh::Mesh(const VariantMap& params)
-    : m_mesh(
-          loadTriangleMesh("D:/version-control/Crisp/Resources/Meshes/" + params.get<std::string>("filename")).unwrap())
-{
+    : m_mesh(loadTriangleMesh("D:/version-control/Crisp/Resources/Meshes/" + params.get<std::string>("filename"))
+                 .unwrap()) {
     m_toWorld = params.get<Transform>("toWorld");
 
     m_mesh.transform(m_toWorld.mat);
     m_boundingBox = m_mesh.getBoundingBox();
 
     m_pdf.reserve(getNumTriangles());
-    for (auto i = 0; i < getNumTriangles(); i++)
+    for (auto i = 0; i < getNumTriangles(); i++) {
         m_pdf.append(m_mesh.calculateFaceArea(i));
+    }
     m_pdf.normalize();
 }
 
-void Mesh::fillIntersection(unsigned int triangleId, const Ray3& /*ray*/, Intersection& its) const
-{
+void Mesh::fillIntersection(unsigned int triangleId, const Ray3& /*ray*/, Intersection& its) const {
     const glm::vec3 barycentric(1.0f - its.uv.x - its.uv.y, its.uv.x, its.uv.y);
     its.p = m_mesh.interpolatePosition(triangleId, barycentric);
     its.geoFrame = CoordinateFrame(m_mesh.calculateFaceNormal(triangleId));
     its.shFrame = !m_mesh.getNormals().empty() ? CoordinateFrame(m_mesh.interpolateNormal(triangleId, barycentric))
                                                : its.geoFrame;
 
-    if (!m_mesh.getTexCoords().empty())
+    if (!m_mesh.getTexCoords().empty()) {
         its.uv = m_mesh.interpolateTexCoord(triangleId, barycentric);
+    }
 
     its.shape = this;
 }
 
-void Mesh::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const
-{
+void Mesh::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const {
     glm::vec2 sample = sampler.next2D();
     const uint32_t triangleId = static_cast<uint32_t>(m_pdf.sampleReuse(sample.x));
     const glm::vec3 barycentric = warp::squareToUniformTriangle(sample);
@@ -47,15 +45,14 @@ void Mesh::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const
     shapeSample.pdf = m_pdf.getNormFactor();
 }
 
-float Mesh::pdfSurface(const Shape::Sample& /*shapeSample*/) const
-{
+float Mesh::pdfSurface(const Shape::Sample& /*shapeSample*/) const {
     return m_pdf.getNormFactor();
 }
 
-bool Mesh::addToAccelerationStructure(RTCDevice device, RTCScene scene)
-{
-    if (m_mesh.getFaces().empty())
+bool Mesh::addToAccelerationStructure(RTCDevice device, RTCScene scene) {
+    if (m_mesh.getFaces().empty()) {
         return false;
+    }
 
     m_geometry = rtcNewGeometry(device, RTCGeometryType::RTC_GEOMETRY_TYPE_TRIANGLE);
 
@@ -90,23 +87,19 @@ bool Mesh::addToAccelerationStructure(RTCDevice device, RTCScene scene)
     return true;
 }
 
-size_t Mesh::getNumTriangles() const
-{
+size_t Mesh::getNumTriangles() const {
     return m_mesh.getFaceCount();
 }
 
-size_t Mesh::getNumVertices() const
-{
+size_t Mesh::getNumVertices() const {
     return m_mesh.getVertexCount();
 }
 
-const std::vector<glm::vec3>& Mesh::getVertexPositions() const
-{
+const std::vector<glm::vec3>& Mesh::getVertexPositions() const {
     return m_mesh.getPositions();
 }
 
-const std::vector<glm::uvec3>& Mesh::getTriangleIndices() const
-{
+const std::vector<glm::uvec3>& Mesh::getTriangleIndices() const {
     return m_mesh.getFaces();
 }
 } // namespace crisp

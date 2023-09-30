@@ -12,22 +12,18 @@
 
 #include <tbb/concurrent_vector.h>
 
-namespace crisp
-{
-class RenderGraph
-{
+namespace crisp {
+class RenderGraph {
 public:
     using DependencyCallback = std::function<void(const VulkanRenderPass&, VulkanCommandBuffer&, uint32_t)>;
 
-    enum class NodeType
-    {
+    enum class NodeType {
         Rasterizer,
         Compute,
         Raytracing
     };
 
-    struct Node
-    {
+    struct Node {
         Node() = default;
         Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass);
         Node(Node&& node) = default;
@@ -94,8 +90,7 @@ private:
     std::vector<Node*> m_executionOrder;
     FlatHashMap<std::string, std::unique_ptr<Node>> m_nodes;
 
-    struct CmdBufferContext
-    {
+    struct CmdBufferContext {
         std::unique_ptr<VulkanCommandPool> pool;
         std::unique_ptr<VulkanCommandBuffer> cmdBuffer;
     };

@@ -6,8 +6,7 @@
 
 #include <filesystem>
 
-namespace crisp
-{
+namespace crisp {
 PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir);
 
 void addPbrTexturesToImageCache(

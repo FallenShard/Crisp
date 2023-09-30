@@ -12,10 +12,8 @@
 
 #include <imgui.h>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 const auto logger = createLoggerMt("GltfViewerScene");
 
 constexpr const char* kForwardLightingPass = "forwardPass";
@@ -36,8 +34,7 @@ const VertexLayoutDescription kPbrVertexFormat = {
 };
 
 void setPbrMaterialSceneParams(
-    Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem)
-{
+    Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem) {
     const auto& imageCache = resourceContext.imageCache;
     const auto& envLight = *lightSystem.getEnvironmentLight();
     material.writeDescriptor(1, 0, *resourceContext.getUniformBuffer("camera"));
@@ -55,21 +52,19 @@ Material* createPbrMaterial(
     const std::string& materialKey,
     ResourceContext& resourceContext,
     const PbrParams& params,
-    const TransformBuffer& transformBuffer)
-{
+    const TransformBuffer& transformBuffer) {
     auto& imageCache = resourceContext.imageCache;
 
     auto material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
 
     const auto setMaterialTexture =
-        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName)
-    {
-        const std::string key = fmt::format("{}-{}", materialKey, texName);
-        const std::string fallbackKey = fmt::format("default-{}", texName);
-        material->writeDescriptor(
-            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    };
+        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
+            const std::string key = fmt::format("{}-{}", materialKey, texName);
+            const std::string fallbackKey = fmt::format("default-{}", texName);
+            material->writeDescriptor(
+                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+        };
 
     setMaterialTexture(0, "diffuse");
     setMaterialTexture(1, "metallic");
@@ -89,8 +84,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer,
     const glm::uvec3& workGroupSize,
     const PipelineLayoutBuilder& layoutBuilder,
-    const std::string& shaderName)
-{
+    const std::string& shaderName) {
     const VulkanDevice& device = renderer->getDevice();
     auto layout = layoutBuilder.create(device);
 
@@ -120,8 +114,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
         device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
 }
 
-std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
-{
+std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder.defineDescriptorSet(
         0,
@@ -141,8 +134,7 @@ std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const
 } // namespace
 
 GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     setupInput();
 
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
@@ -154,8 +146,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
         kForwardLightingPass,
         createForwardLightingPass(
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, m_renderer->getSwapChainExtent()));
-    for (uint32_t i = 0; i < kCsmPasses.size(); ++i)
-    {
+    for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
         m_renderGraph->addRenderPass(
             kCsmPasses[i],
             createShadowMapPass(m_renderer->getDevice(), m_resourceContext->renderTargetCache, kShadowMapSize, i));
@@ -195,8 +186,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
 
     createCommonTextures();
 
-    for (uint32_t i = 0; i < kCascadeCount; ++i)
-    {
+    for (uint32_t i = 0; i < kCascadeCount; ++i) {
         std::string key = "cascadedShadowMap" + std::to_string(i);
         auto csmPipeline =
             m_resourceContext->createPipeline(key, "ShadowMap.json", m_renderGraph->getRenderPass(kCsmPasses[i]), 0);
@@ -216,8 +206,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void GltfViewerScene::resize(int width, int height)
-{
+void GltfViewerScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
@@ -226,8 +215,7 @@ void GltfViewerScene::resize(int width, int height)
     m_renderer->setSceneImageView(m_renderGraph->getNode(kForwardLightingPass).renderPass.get(), 0);
 }
 
-void GltfViewerScene::update(float dt)
-{
+void GltfViewerScene::update(float dt) {
     static float totalT = 0.0f;
 
     // Camera
@@ -240,8 +228,7 @@ void GltfViewerScene::update(float dt)
     m_lightSystem->update(m_cameraController->getCamera(), dt);
     m_skybox->updateTransforms(camParams.V, camParams.P);
 
-    if (m_skinningData.skeleton.joints.empty())
-    {
+    if (m_skinningData.skeleton.joints.empty()) {
         return;
     }
 
@@ -254,39 +241,34 @@ void GltfViewerScene::update(float dt)
             m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4));
 
     totalT += dt;
-    if (totalT >= 2.0f)
+    if (totalT >= 2.0f) {
         totalT = 0.0f;
+    }
 }
 
-void GltfViewerScene::render()
-{
+void GltfViewerScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->buildCommandLists(m_renderNodes);
     m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
     m_renderGraph->executeCommandLists();
 }
 
-void GltfViewerScene::renderGui()
-{
+void GltfViewerScene::renderGui() {
     static std::vector<std::string> paths =
         enumerateDirectories(m_renderer->getAssetPaths().resourceDir / "glTFSamples/2.0");
     static int32_t selectedIdx{0};
     ImGui::Begin("Hi");
     ImGui::Text("GLTF Examples");
-    if (ImGui::BeginListBox("##", ImVec2(0, 500)))
-    {
-        for (int32_t i = 0; i < paths.size(); ++i)
-        {
+    if (ImGui::BeginListBox("##", ImVec2(0, 500))) {
+        for (int32_t i = 0; i < paths.size(); ++i) {
             const bool isSelected{selectedIdx == i};
-            if (ImGui::Selectable(paths[i].c_str(), isSelected))
-            {
+            if (ImGui::Selectable(paths[i].c_str(), isSelected)) {
                 selectedIdx = i;
                 m_renderer->finish();
                 loadGltf(paths.at(selectedIdx));
             }
 
-            if (isSelected)
-            {
+            if (isSelected) {
                 ImGui::SetItemDefaultFocus();
             }
         }
@@ -295,22 +277,17 @@ void GltfViewerScene::renderGui()
     ImGui::End();
 }
 
-RenderNode* GltfViewerScene::createRenderNode(std::string id, bool hasTransform)
-{
-    if (!hasTransform)
-    {
+RenderNode* GltfViewerScene::createRenderNode(std::string id, bool hasTransform) {
+    if (!hasTransform) {
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
-    }
-    else
-    {
+    } else {
         const auto transformIndex{m_transformBuffer->getNextIndex()};
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex))
             .first->second.get();
     }
 }
 
-void GltfViewerScene::createCommonTextures()
-{
+void GltfViewerScene::createCommonTextures() {
     constexpr float Anisotropy{16.0f};
     constexpr float MaxLod{9.0f};
     auto& imageCache = m_resourceContext->imageCache;
@@ -331,8 +308,7 @@ void GltfViewerScene::createCommonTextures()
     imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 }
 
-void GltfViewerScene::loadGltf(const std::string& gltfAsset)
-{
+void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
     const std::string gltfRelativePath{fmt::format("glTFSamples/2.0/{}/glTF/{}.gltf", gltfAsset, gltfAsset)};
     auto renderObjects =
         loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath, flatten(kPbrVertexFormat)).unwrap();
@@ -358,8 +334,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
         entityName, renderObject.material.name, *m_resourceContext, renderObject.material.params, *m_transformBuffer);
     setPbrMaterialSceneParams(*gltfNode->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem);
 
-    for (uint32_t c = 0; c < kCascadeCount; ++c)
-    {
+    for (uint32_t c = 0; c < kCascadeCount; ++c) {
         auto& subpass = gltfNode->pass(kCsmPasses[c]);
         subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
         subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
@@ -369,11 +344,11 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
     m_renderer->getDevice().flushDescriptorUpdates();
 
     const bool hasSkinning{renderObject.mesh.hasCustomAttribute("weights0")};
-    if (hasSkinning)
-    {
+    if (hasSkinning) {
         m_skinningData = renderObject.skinningData;
-        if (!renderObject.animations.empty())
+        if (!renderObject.animations.empty()) {
             m_animation = renderObject.animations.at(0);
+        }
 
         const auto& restPositions = renderObject.mesh.getPositions();
         const uint32_t vertexCount = static_cast<uint32_t>(restPositions.size());
@@ -416,29 +391,26 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
             0, 4, VkDescriptorBufferInfo{gltfNode->geometry->getVertexBuffer()->getHandle(), 0, VK_WHOLE_SIZE});
 
         skinningPass.preDispatchCallback =
-            [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-        {
-            cmdBuffer.insertBufferMemoryBarrier(
-                gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
-                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-                VK_ACCESS_SHADER_READ_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+            [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+                cmdBuffer.insertBufferMemoryBarrier(
+                    gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
+                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
-            struct SkinningParams
-            {
-                uint32_t vertexCount;
-                uint32_t jointsPerVertex;
+                struct SkinningParams {
+                    uint32_t vertexCount;
+                    uint32_t jointsPerVertex;
+                };
+                SkinningParams params{vertexCount, SkinningData::JointsPerVertex};
+                node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
             };
-            SkinningParams params{vertexCount, SkinningData::JointsPerVertex};
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
-        };
 
         m_renderGraph->addDependency(
             "SkinningPass",
             kForwardLightingPass,
-            [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/)
-            {
+            [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/) {
                 cmdBuffer.insertBufferMemoryBarrier(
                     gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -449,18 +421,14 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset)
     }
 }
 
-void GltfViewerScene::setupInput()
-{
-    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe(
-        [this](Key key, int)
-        {
-            switch (key)
-            {
-            case Key::F5:
-                m_resourceContext->recreatePipelines();
-                break;
-            }
-        }));
+void GltfViewerScene::setupInput() {
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe([this](Key key, int) {
+        switch (key) {
+        case Key::F5:
+            m_resourceContext->recreatePipelines();
+            break;
+        }
+    }));
 }
 
 } // namespace crisp

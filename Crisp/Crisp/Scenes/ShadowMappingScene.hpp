@@ -13,23 +13,19 @@
 
 #include <Crisp/Core/HashMap.hpp>
 
-namespace crisp
-{
-namespace gui
-{
+namespace crisp {
+namespace gui {
 class Form;
 class Panel;
 } // namespace gui
 
-struct GaussianBlur
-{
+struct GaussianBlur {
     glm::vec2 texelSize;
     float sigma;
     int radius;
 };
 
-struct PbrUnifMaterial
-{
+struct PbrUnifMaterial {
     glm::vec4 albedo;
     float metallic;
     float roughness;
@@ -59,8 +55,7 @@ class Skybox;
 class Grass;
 class RayTracingMaterial;
 
-class ShadowMappingScene : public Scene
-{
+class ShadowMappingScene : public Scene {
 public:
     ShadowMappingScene(Renderer* renderer, Window* window);
     ~ShadowMappingScene();

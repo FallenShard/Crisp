@@ -7,11 +7,9 @@
 #include <filesystem>
 #include <string>
 
-namespace crisp
-{
+namespace crisp {
 
-class ShaderCache
-{
+class ShaderCache {
 public:
     explicit ShaderCache(VkDevice deviceHandle);
     ~ShaderCache();
@@ -22,16 +20,14 @@ public:
     ShaderCache(ShaderCache&&) noexcept = delete;
     ShaderCache& operator=(ShaderCache&&) noexcept = delete;
 
-    inline VkShaderModule getShaderModuleHandle(const std::string& key) const
-    {
+    inline VkShaderModule getShaderModuleHandle(const std::string& key) const {
         return m_shaderModules.at(key).handle;
     }
 
     VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
 
 private:
-    struct ShaderModule
-    {
+    struct ShaderModule {
         VkShaderModule handle{VK_NULL_HANDLE};
         std::filesystem::file_time_type lastModifiedTimestamp;
     };

@@ -3,8 +3,7 @@
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-namespace crisp
-{
+namespace crisp {
 inline constexpr uint32_t DepthPassDepthAttachmentIndex{0};
 
 std::unique_ptr<VulkanRenderPass> createDepthPass(

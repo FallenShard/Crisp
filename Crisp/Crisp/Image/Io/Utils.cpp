@@ -12,14 +12,10 @@
 
 #include <string>
 
-namespace crisp
-{
-namespace
-{
-auto getStbComponentFormat(const int numComponents)
-{
-    switch (numComponents)
-    {
+namespace crisp {
+namespace {
+auto getStbComponentFormat(const int numComponents) {
+    switch (numComponents) {
     case 0:
         return STBI_default;
     case 1:
@@ -36,8 +32,7 @@ auto getStbComponentFormat(const int numComponents)
 }
 } // namespace
 
-std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, FlipOnLoad flipOnLoad)
-{
+std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, FlipOnLoad flipOnLoad) {
     const Image hcrossImage{loadImage(path, 4, flipOnLoad).unwrap()};
     const uint32_t cubeMapSize{hcrossImage.getWidth() / 4};
     CRISP_CHECK(
@@ -58,8 +53,7 @@ std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& 
     return cubeMapFaces;
 }
 
-Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipOnLoad flip)
-{
+Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipOnLoad flip) {
     stbi_set_flip_vertically_on_load(flip == FlipOnLoad::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
@@ -69,21 +63,17 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
     int32_t height = 0;
     int32_t channelCount = 0;
     const std::string filePathString = filePath.string();
-    if (filePath.extension().string() == ".hdr")
-    {
+    if (filePath.extension().string() == ".hdr") {
         elementSize = sizeof(float);
         dataPtr = stbi_loadf(
             filePathString.c_str(), &width, &height, &channelCount, getStbComponentFormat(requestedChannels));
-    }
-    else
-    {
+    } else {
         dataPtr =
             stbi_load(filePathString.c_str(), &width, &height, &channelCount, getStbComponentFormat(requestedChannels));
     }
     stbi_set_flip_vertically_on_load(false);
 
-    if (!dataPtr)
-    {
+    if (!dataPtr) {
         return resultError("Failed to load image from {}. STB error: ", filePathString, stbi_failure_reason());
     }
 
@@ -98,8 +88,7 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
 }
 
 Result<Image> loadImage(
-    const std::span<const uint8_t> imageFileContent, const int requestedChannels, const FlipOnLoad flip)
-{
+    const std::span<const uint8_t> imageFileContent, const int requestedChannels, const FlipOnLoad flip) {
     stbi_set_flip_vertically_on_load(flip == FlipOnLoad::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
@@ -126,8 +115,7 @@ Result<Image> loadImage(
     //}
     stbi_set_flip_vertically_on_load(false);
 
-    if (!dataPtr)
-    {
+    if (!dataPtr) {
         return resultError("Failed to load image from memory. STB error: ", stbi_failure_reason());
     }
 
@@ -135,10 +123,8 @@ Result<Image> loadImage(
     const uint32_t imageHeight = static_cast<uint32_t>(height);
 
     std::vector<uint8_t> pixelData(imageWidth * imageHeight * requestedChannels * elementSize);
-    for (uint32_t i = 0; i < imageHeight; ++i)
-    {
-        for (uint32_t j = 0; j < imageWidth; ++j)
-        {
+    for (uint32_t i = 0; i < imageHeight; ++i) {
+        for (uint32_t j = 0; j < imageWidth; ++j) {
             const std::size_t copySize = std::min(channelCount, requestedChannels) * elementSize;
             uint8_t* dstPtr = &pixelData[(imageWidth * i + j) * requestedChannels * elementSize];
             const uint8_t* srcPtr =

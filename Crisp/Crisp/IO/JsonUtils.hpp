@@ -7,11 +7,9 @@
 #include <filesystem>
 #include <optional>
 
-namespace crisp
-{
+namespace crisp {
 
-enum class JsonType
-{
+enum class JsonType {
     Null,
     Object,
     Array,
@@ -24,39 +22,44 @@ enum class JsonType
 };
 
 template <JsonType type>
-constexpr nlohmann::detail::value_t toNlohmannJsonType()
-{
-    if constexpr (type == JsonType::Null)
+constexpr nlohmann::detail::value_t toNlohmannJsonType() {
+    if constexpr (type == JsonType::Null) {
         return nlohmann::detail::value_t::null;
-    if constexpr (type == JsonType::Object)
+    }
+    if constexpr (type == JsonType::Object) {
         return nlohmann::detail::value_t::object;
-    if constexpr (type == JsonType::Array)
+    }
+    if constexpr (type == JsonType::Array) {
         return nlohmann::detail::value_t::array;
-    if constexpr (type == JsonType::String)
+    }
+    if constexpr (type == JsonType::String) {
         return nlohmann::detail::value_t::string;
-    if constexpr (type == JsonType::Boolean)
+    }
+    if constexpr (type == JsonType::Boolean) {
         return nlohmann::detail::value_t::boolean;
-    if constexpr (type == JsonType::NumberInt)
+    }
+    if constexpr (type == JsonType::NumberInt) {
         return nlohmann::detail::value_t::number_integer;
-    if constexpr (type == JsonType::NumberUint)
+    }
+    if constexpr (type == JsonType::NumberUint) {
         return nlohmann::detail::value_t::number_unsigned;
-    if constexpr (type == JsonType::NumberFloat)
+    }
+    if constexpr (type == JsonType::NumberFloat) {
         return nlohmann::detail::value_t::number_float;
-    if constexpr (type == JsonType::Binary)
+    }
+    if constexpr (type == JsonType::Binary) {
         return nlohmann::detail::value_t::binary;
+    }
 }
 
 template <JsonType fieldType>
-bool hasField(const nlohmann::json& json, const std::string_view key)
-{
+bool hasField(const nlohmann::json& json, const std::string_view key) {
     return json.contains(key) && json[key].type() == toNlohmannJsonType<fieldType>();
 }
 
-inline Result<nlohmann::json> loadJsonFromFile(const std::filesystem::path& filePath)
-{
+inline Result<nlohmann::json> loadJsonFromFile(const std::filesystem::path& filePath) {
     auto maybeString = fileToString(filePath);
-    if (!maybeString)
-    {
+    if (!maybeString) {
         return resultError("Failed to load json from a file: {}", maybeString.getError());
     }
 
@@ -64,10 +67,8 @@ inline Result<nlohmann::json> loadJsonFromFile(const std::filesystem::path& file
 }
 
 template <typename T>
-std::optional<T> getIfExists(const nlohmann::json& json, const std::string_view key)
-{
-    if (!json.contains(key))
-    {
+std::optional<T> getIfExists(const nlohmann::json& json, const std::string_view key) {
+    if (!json.contains(key)) {
         return std::nullopt;
     }
 

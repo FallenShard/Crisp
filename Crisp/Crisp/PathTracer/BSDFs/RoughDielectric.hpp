@@ -4,10 +4,8 @@
 #include "MicrofacetDistributions/MicrofacetDistribution.hpp"
 #include <Crisp/PathTracer/Textures/Texture.hpp>
 
-namespace crisp
-{
-class RoughDielectricBSDF : public BSDF
-{
+namespace crisp {
+class RoughDielectricBSDF : public BSDF {
 public:
     RoughDielectricBSDF(const VariantMap& params);
     ~RoughDielectricBSDF();

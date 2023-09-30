@@ -7,18 +7,15 @@
 
 #include <Crisp/ShadingLanguage/Reflection.hpp>
 
-namespace crisp
-{
+namespace crisp {
 FlatHashMap<VkPipeline, glm::uvec3> workGroupSizes;
 
-glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline)
-{
+glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline) {
     return workGroupSizes.at(pipeline.getHandle());
 }
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
-    const VulkanDevice& device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout)
-{
+    const VulkanDevice& device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout) {
     return std::make_unique<VulkanPipeline>(
         device, pipelineHandle, std::move(pipelineLayout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
 }
@@ -28,21 +25,18 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     std::string&& shaderName,
     uint32_t numDynamicStorageBuffers,
     uint32_t /*numDescriptorSets*/,
-    const glm::uvec3& workGroupSize)
-{
+    const glm::uvec3& workGroupSize) {
     auto refl =
         reflectUniformMetadataFromSpirvPath(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
-    for (uint32_t i = 0; i < numDynamicStorageBuffers; i++)
-    {
+    for (uint32_t i = 0; i < numDynamicStorageBuffers; i++) {
         bindings.push_back({i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT});
     }
 
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder.defineDescriptorSet(0, false, std::move(bindings));
-    if (!refl.pushConstants.empty())
-    {
+    if (!refl.pushConstants.empty()) {
         layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, refl.pushConstants.front().size);
     }
     auto layout = layoutBuilder.create(renderer->getDevice());
@@ -74,8 +68,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     return createComputePipeline(renderer->getDevice(), pipelineHandle, std::move(layout));
 }
 
-std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize)
-{
+std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder
         .defineDescriptorSet(
@@ -125,13 +118,11 @@ std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* rend
     return createComputePipeline(renderer->getDevice(), pipeline, std::move(layout));
 }
 
-glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline)
-{
+glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline) {
     return (dataDims - glm::uvec3(1)) / getWorkGroupSize(pipeline) + glm::uvec3(1);
 }
 
-glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const glm::uvec3& workGroupSize)
-{
+glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const glm::uvec3& workGroupSize) {
     return (dataDims - glm::uvec3(1)) / workGroupSize + glm::uvec3(1);
 }
 

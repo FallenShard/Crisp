@@ -2,12 +2,11 @@
 
 #include <Crisp/Lights/LightDescriptor.hpp>
 
-namespace crisp
-{
-class PointLight
-{
+namespace crisp {
+class PointLight {
 public:
     PointLight() {}
+
     PointLight(const glm::vec3& power, const glm::vec3& position, const glm::vec3& directionHint);
 
     const glm::mat4& getViewMatrix() const;
@@ -15,15 +14,13 @@ public:
 
     glm::mat4 createModelMatrix(float scale) const;
 
-    inline void setPosition(glm::vec4 pos)
-    {
+    inline void setPosition(glm::vec4 pos) {
         m_position = pos;
     }
 
     LightDescriptor createDescriptorData() const;
 
-    inline void calculateRadius(float cutoff = 1.0f / 256.0f)
-    {
+    inline void calculateRadius(float cutoff = 1.0f / 256.0f) {
         float maxIllum = std::max(m_power.r, std::max(m_power.g, m_power.b));
         m_radius = std::sqrt(maxIllum / cutoff);
     }

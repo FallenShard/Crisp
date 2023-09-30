@@ -3,38 +3,28 @@
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 auto logger = createLoggerSt("ShaderCache");
 
 ShaderCache::ShaderCache(VkDevice deviceHandle)
-    : m_deviceHandle(deviceHandle)
-{
-}
+    : m_deviceHandle(deviceHandle) {}
 
-ShaderCache::~ShaderCache()
-{
-    for (auto& shaderModule : m_shaderModules)
-    {
+ShaderCache::~ShaderCache() {
+    for (auto& shaderModule : m_shaderModules) {
         vkDestroyShaderModule(m_deviceHandle, shaderModule.second.handle, nullptr);
     }
 }
 
-VkShaderModule ShaderCache::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath)
-{
+VkShaderModule ShaderCache::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath) {
     const auto timestamp = std::filesystem::last_write_time(shaderModulePath);
     const auto shaderKey = shaderModulePath.stem().string();
     const auto existingItem = m_shaderModules.find(shaderKey);
-    if (existingItem != m_shaderModules.end())
-    {
+    if (existingItem != m_shaderModules.end()) {
         // Cached shader module is same or newer
-        if (existingItem->second.lastModifiedTimestamp >= timestamp)
-        {
+        if (existingItem->second.lastModifiedTimestamp >= timestamp) {
             return existingItem->second.handle;
-        }
-        else
-        {
+        } else {
             logger->info("Reloading shader module: {}", shaderKey);
             vkDestroyShaderModule(m_deviceHandle, existingItem->second.handle, nullptr);
         }

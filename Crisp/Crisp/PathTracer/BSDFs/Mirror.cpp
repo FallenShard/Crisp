@@ -4,22 +4,17 @@
 #include <Crisp/Optics/Fresnel.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 MirrorBSDF::MirrorBSDF(const VariantMap& /*params*/)
-    : BSDF(Lobe::Delta)
-{
-}
+    : BSDF(Lobe::Delta) {}
 
 MirrorBSDF::~MirrorBSDF() {}
 
-Spectrum MirrorBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const
-{
+Spectrum MirrorBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const {
     return Spectrum(0.0f);
 }
 
-Spectrum MirrorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& /*sampler*/) const
-{
+Spectrum MirrorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& /*sampler*/) const {
     bsdfSample.wo = glm::vec3(-bsdfSample.wi.x, -bsdfSample.wi.y, bsdfSample.wi.z);
     bsdfSample.pdf = 1.0f;
     bsdfSample.measure = Measure::Discrete;
@@ -29,8 +24,7 @@ Spectrum MirrorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& /*sampler*/) cons
     return Spectrum(1.0f);
 }
 
-float MirrorBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const
-{
+float MirrorBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const {
     return 0.0f;
 }
 } // namespace crisp

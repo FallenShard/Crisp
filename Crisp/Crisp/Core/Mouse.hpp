@@ -2,18 +2,15 @@
 
 #include <Crisp/Core/Keyboard.hpp>
 
-namespace crisp
-{
-enum class MouseButton
-{
+namespace crisp {
+enum class MouseButton {
     Unknown = -1,
     Left = 0,
     Right = 1,
     Middle = 2
 };
 
-struct MouseEventArgs
-{
+struct MouseEventArgs {
     MouseButton button{MouseButton::Unknown};
     ModifierFlags modifiers;
     double x{0.0};

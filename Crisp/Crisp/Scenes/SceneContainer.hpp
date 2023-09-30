@@ -8,10 +8,8 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
-class SceneContainer
-{
+namespace crisp {
+class SceneContainer {
 public:
     SceneContainer(Renderer* renderer, Window* window, const std::string& sceneName);
 

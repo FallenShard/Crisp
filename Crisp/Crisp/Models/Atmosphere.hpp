@@ -8,8 +8,7 @@
 
 #include <string>
 
-namespace crisp
-{
+namespace crisp {
 class RenderGraph;
 class Renderer;
 class ResourceContext;
@@ -17,8 +16,7 @@ class ResourceContext;
 static constexpr float EarthMieScaleHeight = 1.2f;
 static constexpr float EarthRayleighScaleHeight = 8.0f;
 
-struct AtmosphereParameters
-{
+struct AtmosphereParameters {
     glm::mat4 VP = glm::transpose(glm::mat4{
         -0.856325269,
         0.00,

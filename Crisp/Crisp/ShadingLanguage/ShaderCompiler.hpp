@@ -5,10 +5,8 @@
 #include <filesystem>
 #include <string>
 
-namespace crisp
-{
-struct GlslSourceFile
-{
+namespace crisp {
+struct GlslSourceFile {
     std::string sourceCode;
     std::filesystem::file_time_type lastModifiedRecursive;
 };

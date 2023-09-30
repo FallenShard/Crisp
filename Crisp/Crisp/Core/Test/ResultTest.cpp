@@ -5,12 +5,10 @@
 
 #include <numeric>
 
-namespace crisp::test
-{
+namespace crisp::test {
 using ::testing::Not;
 
-struct MoveOnlyType
-{
+struct MoveOnlyType {
     MoveOnlyType() = default;
     ~MoveOnlyType() = default;
 
@@ -23,18 +21,15 @@ struct MoveOnlyType
     std::unique_ptr<int> x{std::make_unique<int>(10)};
 };
 
-TEST(ResultTest, Basic)
-{
+TEST(ResultTest, Basic) {
     EXPECT_THAT(Result<int>(5), HasValue(5));
 }
 
-TEST(ResultTest, BasicError)
-{
+TEST(ResultTest, BasicError) {
     EXPECT_THAT(Result<int>{resultError("{}", "invalid path!")}, HasErrorWithMessageRegex("invalid path"));
 }
 
-TEST(ResultTest, ValueWithMoveOnly)
-{
+TEST(ResultTest, ValueWithMoveOnly) {
     Result<MoveOnlyType> result(MoveOnlyType{});
     EXPECT_THAT(result, Not(HasError()));
 

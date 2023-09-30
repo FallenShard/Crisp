@@ -8,8 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 class AbstractCamera;
 
 class Renderer;
@@ -18,8 +17,7 @@ class UniformBuffer;
 class ShadowPass;
 class VulkanPipeline;
 
-class ShadowMapper
-{
+class ShadowMapper {
 public:
     ShadowMapper(Renderer* renderer, uint32_t numLights);
     ~ShadowMapper();

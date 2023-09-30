@@ -4,15 +4,12 @@
 #include <Crisp/PathTracer/Media/Medium.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Sampler;
 
-class PhaseFunction
-{
+class PhaseFunction {
 public:
-    struct Sample
-    {
+    struct Sample {
         const Medium::Sample& mediumSample;
 
         glm::vec3 wi;
@@ -24,16 +21,12 @@ public:
 
         Sample(const Medium::Sample& mSam, const glm::vec3& wi)
             : mediumSample(mSam)
-            , wi(wi)
-        {
-        }
+            , wi(wi) {}
 
         Sample(const Medium::Sample& mSam, const glm::vec3& wi, const glm::vec3& wo)
             : mediumSample(mSam)
             , wi(wi)
-            , wo(wo)
-        {
-        }
+            , wo(wo) {}
     };
 
     virtual ~PhaseFunction() {}

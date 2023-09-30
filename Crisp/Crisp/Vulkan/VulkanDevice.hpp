@@ -8,10 +8,8 @@
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-namespace crisp
-{
-class VulkanDevice
-{
+namespace crisp {
+class VulkanDevice {
 public:
     VulkanDevice(
         const VulkanPhysicalDevice& physicalDevice,
@@ -37,8 +35,7 @@ public:
     VkBuffer createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const;
     VkImage createImage(const VkImageCreateInfo& imageCreateInfo) const;
 
-    VulkanMemoryAllocator& getMemoryAllocator() const
-    {
+    VulkanMemoryAllocator& getMemoryAllocator() const {
         return *m_memoryAllocator;
     }
 
@@ -48,21 +45,17 @@ public:
     void postDescriptorWrite(VkWriteDescriptorSet&& write);
     void flushDescriptorUpdates();
 
-    VulkanResourceDeallocator& getResourceDeallocator() const
-    {
+    VulkanResourceDeallocator& getResourceDeallocator() const {
         return *m_resourceDeallocator;
     }
 
-    inline void wait(const VkFence fence) const
-    {
+    inline void wait(const VkFence fence) const {
         vkWaitForFences(m_handle, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     }
 
     template <size_t N>
-    void wait(const std::array<VkFence, N>& fences) const
-    {
-        if constexpr (N == 0)
-        {
+    void wait(const std::array<VkFence, N>& fences) const {
+        if constexpr (N == 0) {
             return;
         }
 
@@ -74,8 +67,7 @@ public:
             std::numeric_limits<uint64_t>::max());
     }
 
-    const VulkanDebugMarker& getDebugMarker() const
-    {
+    const VulkanDebugMarker& getDebugMarker() const {
         return *m_debugMarker;
     }
 

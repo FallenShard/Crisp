@@ -3,10 +3,8 @@
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Operations.hpp>
 
-namespace crisp
-{
-BeckmannDistribution::BeckmannDistribution(const VariantMap& params)
-{
+namespace crisp {
+BeckmannDistribution::BeckmannDistribution(const VariantMap& params) {
     m_alpha = params.get<float>("alpha", 0.1f);
 
     m_alpha = clamp(m_alpha, 0.0f, 1.0f);
@@ -14,8 +12,7 @@ BeckmannDistribution::BeckmannDistribution(const VariantMap& params)
 
 BeckmannDistribution::~BeckmannDistribution() {}
 
-glm::vec3 BeckmannDistribution::sampleNormal(const glm::vec2& sample) const
-{
+glm::vec3 BeckmannDistribution::sampleNormal(const glm::vec2& sample) const {
     float denominator = 1.0f - m_alpha * m_alpha * log(1.0f - sample.y);
     float cosTheta = sqrtf(fabs(1.0f / denominator));
     float theta = acosf(cosTheta);
@@ -25,16 +22,15 @@ glm::vec3 BeckmannDistribution::sampleNormal(const glm::vec2& sample) const
     return glm::vec3(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
 }
 
-float BeckmannDistribution::pdf(const glm::vec3& m) const
-{
+float BeckmannDistribution::pdf(const glm::vec3& m) const {
     return D(m) * std::abs(CoordinateFrame::cosTheta(m));
 }
 
-float BeckmannDistribution::D(const glm::vec3& m) const
-{
+float BeckmannDistribution::D(const glm::vec3& m) const {
     float cosTheta = CoordinateFrame::cosTheta(m);
-    if (cosTheta < 0.0f)
+    if (cosTheta < 0.0f) {
         return 0.0f;
+    }
 
     float temp = CoordinateFrame::tanTheta(m) / m_alpha;
     float alphaCosTheta2 = m_alpha * cosTheta * cosTheta;
@@ -42,24 +38,25 @@ float BeckmannDistribution::D(const glm::vec3& m) const
     return std::exp(-temp * temp) * InvPI<> / (alphaCosTheta2 * alphaCosTheta2);
 }
 
-float BeckmannDistribution::G(const glm::vec3& wi, const glm::vec3& wo, const glm::vec3& m) const
-{
+float BeckmannDistribution::G(const glm::vec3& wi, const glm::vec3& wo, const glm::vec3& m) const {
     return smithBeckmannG1(wi, m) * smithBeckmannG1(wo, m);
 }
 
-float BeckmannDistribution::smithBeckmannG1(const glm::vec3& v, const glm::vec3& m) const
-{
+float BeckmannDistribution::smithBeckmannG1(const glm::vec3& v, const glm::vec3& m) const {
     // Back-surface check
-    if (glm::dot(v, m) * CoordinateFrame::cosTheta(v) <= 0)
+    if (glm::dot(v, m) * CoordinateFrame::cosTheta(v) <= 0) {
         return 0.0f;
+    }
 
     float tanTheta = std::abs(CoordinateFrame::tanTheta(v));
-    if (tanTheta == 0.0f)
+    if (tanTheta == 0.0f) {
         return 1.0f;
+    }
 
     float a = 1.0f / (m_alpha * tanTheta);
-    if (a >= 1.6f)
+    if (a >= 1.6f) {
         return 1.0f;
+    }
 
     float a2 = a * a;
 

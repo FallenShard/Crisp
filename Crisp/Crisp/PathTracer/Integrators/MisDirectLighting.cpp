@@ -8,19 +8,15 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
-namespace
-{
-inline float powerHeuristic(float fPdf, float gPdf)
-{
+namespace crisp {
+namespace {
+inline float powerHeuristic(float fPdf, float gPdf) {
     float fPdf2 = fPdf * fPdf;
     float gPdf2 = gPdf * gPdf;
     return fPdf2 / (fPdf2 + gPdf2);
 }
 
-inline float balanceHeuristic(float fPdf, float gPdf)
-{
+inline float balanceHeuristic(float fPdf, float gPdf) {
     return fPdf / (fPdf + gPdf);
 }
 } // namespace
@@ -32,16 +28,15 @@ MisDirectLightingIntegrator::~MisDirectLightingIntegrator() {}
 void MisDirectLightingIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum MisDirectLightingIntegrator::Li(
-    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
-{
+    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const {
     Intersection its;
-    if (!scene->rayIntersect(ray, its))
+    if (!scene->rayIntersect(ray, its)) {
         return scene->evalEnvLight(ray);
+    }
 
     Spectrum L(0.0f);
 
-    if (its.shape->getLight())
-    {
+    if (its.shape->getLight()) {
         Light::Sample lightSample(ray.o, its.p, its.shFrame.n);
         L += its.shape->getLight()->eval(lightSample);
     }
@@ -53,19 +48,20 @@ Spectrum MisDirectLightingIntegrator::Li(
 }
 
 Spectrum MisDirectLightingIntegrator::lightImportanceSample(
-    const pt::Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
-{
+    const pt::Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const {
     Light::Sample lightSample(its.p);
     Spectrum Li = scene->sampleLight(its, sampler, lightSample);
-    if (lightSample.pdf <= 0.0f || Li.isZero() || scene->rayIntersect(lightSample.shadowRay))
+    if (lightSample.pdf <= 0.0f || Li.isZero() || scene->rayIntersect(lightSample.shadowRay)) {
         return Spectrum(0.0f);
+    }
 
     BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));
     bsdfSample.measure = BSDF::Measure::SolidAngle;
     bsdfSample.eta = 1.0f;
     auto f = its.shape->getBSDF()->eval(bsdfSample);
-    if (f.isZero())
+    if (f.isZero()) {
         return Spectrum(0.0f);
+    }
 
     float pdfLight = lightSample.pdf;
     float pdfBsdf = lightSample.light->isDelta() ? 0.0f : its.shape->getBSDF()->pdf(bsdfSample);
@@ -73,34 +69,33 @@ Spectrum MisDirectLightingIntegrator::lightImportanceSample(
 }
 
 Spectrum MisDirectLightingIntegrator::bsdfImportanceSample(
-    const pt::Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const
-{
+    const pt::Scene* scene, Sampler& sampler, const Ray3& ray, const Intersection& its) const {
     BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
     auto f = its.shape->getBSDF()->sample(bsdfSample, sampler);
-    if (f.isZero())
+    if (f.isZero()) {
         return Spectrum(0.0f);
+    }
 
     Intersection bsdfIts;
     Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
     const Light* hitLight = nullptr;
 
-    if (!scene->rayIntersect(bsdfRay, bsdfIts))
-    {
+    if (!scene->rayIntersect(bsdfRay, bsdfIts)) {
         hitLight = scene->getEnvironmentLight();
-    }
-    else if (bsdfIts.shape->getLight())
-    {
+    } else if (bsdfIts.shape->getLight()) {
         hitLight = bsdfIts.shape->getLight();
     }
 
-    if (!hitLight)
+    if (!hitLight) {
         return Spectrum(0.0f);
+    }
 
     Light::Sample lightSam(its.p, bsdfIts.p, bsdfIts.shFrame.n);
     lightSam.wi = bsdfRay.d;
     auto Li = hitLight->eval(lightSam);
-    if (Li.isZero())
+    if (Li.isZero()) {
         return Spectrum(0.0f);
+    }
 
     float pdfBsdf = bsdfSample.pdf;
     float pdfLight = bsdfSample.sampledLobe == Lobe::Delta ? 0.0f : hitLight->pdf(lightSam) * scene->getLightPdf();

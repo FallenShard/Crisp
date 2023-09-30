@@ -7,10 +7,8 @@
 #include <thread>
 #include <vector>
 
-namespace crisp
-{
-class VulkanWorker
-{
+namespace crisp {
+class VulkanWorker {
 public:
     VulkanWorker(VulkanDevice& device, const VulkanQueue& queue, uint32_t virtualFrameCount);
     ~VulkanWorker() = default;
@@ -21,8 +19,7 @@ public:
     VulkanWorker(VulkanWorker&&) noexcept = delete;
     VulkanWorker& operator=(VulkanWorker&&) noexcept = delete;
 
-    inline VulkanCommandBuffer* getCmdBuffer(uint32_t virtualFrameIndex) const
-    {
+    inline VulkanCommandBuffer* getCmdBuffer(uint32_t virtualFrameIndex) const {
         return m_cmdBuffers[virtualFrameIndex].get();
     }
 

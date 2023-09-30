@@ -2,12 +2,10 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
+namespace crisp {
 struct Intersection;
 
-class VolumePathTracerIntegrator : public Integrator
-{
+class VolumePathTracerIntegrator : public Integrator {
 public:
     VolumePathTracerIntegrator(const VariantMap& attributes);
     virtual ~VolumePathTracerIntegrator();

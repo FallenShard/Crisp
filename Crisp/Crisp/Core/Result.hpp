@@ -5,12 +5,9 @@
 #include <expected>
 #include <source_location>
 
-namespace crisp
-{
-namespace detail
-{
-struct LocationFormatString
-{
+namespace crisp {
+namespace detail {
+struct LocationFormatString {
     fmt::string_view str;
     std::source_location loc;
 
@@ -18,35 +15,24 @@ struct LocationFormatString
         const char* str = "",
         const std::source_location& loc = std::source_location::current())
         : str(str)
-        , loc(loc)
-    {
-    }
+        , loc(loc) {}
 };
 } // namespace detail
 
 template <typename T = void>
-class Result
-{
+class Result {
 public:
     constexpr Result(const T& value) // NOLINT
-        : m_expected(value)
-    {
-    }
+        : m_expected(value) {}
 
     constexpr Result(T&& value) // NOLINT
-        : m_expected(std::move(value))
-    {
-    }
+        : m_expected(std::move(value)) {}
 
     constexpr Result(std::unexpected<std::string>&& unexp) // NOLINT
-        : m_expected(std::move(unexp))
-    {
-    }
+        : m_expected(std::move(unexp)) {}
 
-    constexpr T&& unwrap()
-    {
-        if (!m_expected)
-        {
+    constexpr T&& unwrap() {
+        if (!m_expected) {
             spdlog::critical(m_expected.error());
             std::exit(1);
         }
@@ -54,15 +40,12 @@ public:
         return std::move(m_expected).value();
     }
 
-    constexpr T&& extract()
-    {
+    constexpr T&& extract() {
         return std::move(m_expected).value();
     }
 
-    constexpr std::string getError()
-    {
-        if (m_expected.has_value())
-        {
+    constexpr std::string getError() {
+        if (m_expected.has_value()) {
             spdlog::critical("Failed to extract error!");
             std::exit(1);
         }
@@ -70,10 +53,8 @@ public:
         return std::move(m_expected.error());
     }
 
-    constexpr const std::string& getError() const
-    {
-        if (m_expected.has_value())
-        {
+    constexpr const std::string& getError() const {
+        if (m_expected.has_value()) {
             spdlog::critical("Failed to get error!");
             std::exit(1);
         }
@@ -81,13 +62,11 @@ public:
         return m_expected.error();
     }
 
-    constexpr bool hasValue() const
-    {
+    constexpr bool hasValue() const {
         return m_expected.has_value();
     }
 
-    constexpr const T& operator*() const
-    {
+    constexpr const T& operator*() const {
         return *m_expected;
     }
 
@@ -107,21 +86,16 @@ public:
     constexpr Result() {} // NOLINT
 
     constexpr Result(std::unexpected<std::string>&& unexp) // NOLINT
-        : m_expected(std::move(unexp))
-    {
-    }
+        : m_expected(std::move(unexp)) {}
 
-    constexpr void unwrap()
-    {
-        if (!m_expected)
-        {
+    constexpr void unwrap() {
+        if (!m_expected) {
             spdlog::critical(m_expected.error());
             std::exit(1);
         }
     }
 
-    constexpr bool isValid()
-    {
+    constexpr bool isValid() {
         return m_expected.has_value();
     }
 
@@ -132,8 +106,7 @@ private:
 inline constexpr Result<void> kResultSuccess;
 
 template <typename... Args>
-std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args)
-{
+std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args) {
     std::string errorMessage = fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...);
     spdlog::error(
         "File: {}\n[Function: {}][Line {}, Column {}] Error:\n {}",

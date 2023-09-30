@@ -2,14 +2,12 @@
 
 #include "Panel.hpp"
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Form;
 class Label;
 class StopWatch;
 
-class MemoryUsageBar : public Panel
-{
+class MemoryUsageBar : public Panel {
 public:
     MemoryUsageBar(Form* parentForm);
     virtual ~MemoryUsageBar();

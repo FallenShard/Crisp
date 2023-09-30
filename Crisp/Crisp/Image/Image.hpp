@@ -4,18 +4,15 @@
 #include <cstdint>
 #include <vector>
 
-namespace crisp
-{
-class Image
-{
+namespace crisp {
+class Image {
 public:
     Image();
     Image(
         std::vector<uint8_t> pixelData, uint32_t width, uint32_t height, uint32_t channelCount, uint32_t pixelByteSize);
 
     template <typename T = uint8_t>
-    inline const T* getData() const
-    {
+    inline const T* getData() const {
         return static_cast<const T*>(m_data.data());
     }
 

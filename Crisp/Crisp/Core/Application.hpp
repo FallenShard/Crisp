@@ -10,10 +10,8 @@
 
 #include <memory>
 
-namespace crisp
-{
-class Application
-{
+namespace crisp {
+class Application {
 public:
     static constexpr const char* kTitle = "Crisp";
     static constexpr int32_t kDefaultWindowWidth = 1920;

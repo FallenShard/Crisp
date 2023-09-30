@@ -5,18 +5,15 @@
 
 #include <random>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 static constexpr const char* MainPass = "mainPass";
 
 static const VertexLayoutDescription posFormat = {
     {VertexAttribute::Position, VertexAttribute::Normal}
 };
 
-std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, const std::filesystem::path& relativePath)
-{
+std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, const std::filesystem::path& relativePath) {
     return std::make_unique<Geometry>(
         renderer,
         loadTriangleMesh(renderer.getResourcesPath() / relativePath, flatten(posFormat)).unwrap(),
@@ -26,8 +23,7 @@ std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, const std
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
 
-VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geometry& geometry)
-{
+VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geometry& geometry) {
     VkAccelerationStructureGeometryKHR geo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
     geo.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
     geo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
@@ -45,8 +41,7 @@ VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geo
 } // namespace
 
 VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     setupInput();
 
     // Camera
@@ -56,8 +51,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     std::vector<std::string> meshNames = {"walls", "leftwall", "rightwall", "light"};
 
     std::vector<VulkanAccelerationStructure*> blases;
-    for (const auto& meshName : meshNames)
-    {
+    for (const auto& meshName : meshNames) {
         const std::filesystem::path relativePath = std::filesystem::path("Meshes") / (meshName + ".obj");
 
         auto& geometry = m_resourceContext->addGeometry(meshName, createRayTracingGeometry(*m_renderer, relativePath));
@@ -71,18 +65,15 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
 
-    m_renderer->enqueueResourceUpdate(
-        [this](VkCommandBuffer cmdBuffer)
-        {
-            std::vector<VulkanAccelerationStructure*> blases;
-            for (auto& blas : m_bottomLevelAccelStructures)
-            {
-                blas->build(m_renderer->getDevice(), cmdBuffer, {});
-                blases.push_back(blas.get());
-            }
+    m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
+        std::vector<VulkanAccelerationStructure*> blases;
+        for (auto& blas : m_bottomLevelAccelStructures) {
+            blas->build(m_renderer->getDevice(), cmdBuffer, {});
+            blases.push_back(blas.get());
+        }
 
-            m_topLevelAccelStructure->build(m_renderer->getDevice(), cmdBuffer, blases);
-        });
+        m_topLevelAccelStructure->build(m_renderer->getDevice(), cmdBuffer, blases);
+    });
 
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;
@@ -98,8 +89,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
 
     std::array<VkImageView, RendererConfig::VirtualFrameCount> rtImageViewHandles;
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i)
-    {
+    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
         m_rtImageViews.emplace_back(createView(*m_rtImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
         rtImageViewHandles[i] = m_rtImageViews.back()->getHandle();
     }
@@ -119,18 +109,15 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_renderer->setSceneImageViews(m_rtImageViews);
 }
 
-void VulkanRayTracingScene::resize(int /*width*/, int /*height*/)
-{
+void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {
     /* m_cameraController->onViewportResized(width, height);
 
      m_renderGraph->resize(width, height);
      m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);*/
 }
 
-void VulkanRayTracingScene::update(float dt)
-{
-    if (m_cameraController->update(dt))
-    {
+void VulkanRayTracingScene::update(float dt) {
+    if (m_cameraController->update(dt)) {
         m_frameIdx = 0;
     }
 
@@ -138,52 +125,46 @@ void VulkanRayTracingScene::update(float dt)
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
 }
 
-void VulkanRayTracingScene::render()
-{
-    m_renderer->enqueueDrawCommand(
-        [this](VkCommandBuffer cmdBuffer)
-        {
-            const auto virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
+void VulkanRayTracingScene::render() {
+    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
+        const auto virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
 
-            m_rtImage->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                0,
-                1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+        m_rtImage->transitionLayout(
+            cmdBuffer,
+            VK_IMAGE_LAYOUT_GENERAL,
+            0,
+            1,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 
-            m_pipeline->bind(cmdBuffer);
-            m_material->bind(virtualFrameIndex, cmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+        m_pipeline->bind(cmdBuffer);
+        m_material->bind(virtualFrameIndex, cmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
 
-            m_pipeline->setPushConstant(
-                cmdBuffer, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 0, m_frameIdx);
+        m_pipeline->setPushConstant(
+            cmdBuffer, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 0, m_frameIdx);
 
-            const auto extent = m_renderer->getSwapChainExtent();
-            vkCmdTraceRaysKHR(
-                cmdBuffer, &m_sbt.rgen, &m_sbt.miss, &m_sbt.hit, &m_sbt.call, extent.width, extent.height, 1);
+        const auto extent = m_renderer->getSwapChainExtent();
+        vkCmdTraceRaysKHR(cmdBuffer, &m_sbt.rgen, &m_sbt.miss, &m_sbt.hit, &m_sbt.call, extent.width, extent.height, 1);
 
-            m_rtImage->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                0,
-                1,
-                VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-            m_frameIdx++;
-        });
+        m_rtImage->transitionLayout(
+            cmdBuffer,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            0,
+            1,
+            VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        m_frameIdx++;
+    });
 }
 
-RenderNode* VulkanRayTracingScene::createRenderNode(std::string id, int transformIndex)
-{
+RenderNode* VulkanRayTracingScene::createRenderNode(std::string id, int transformIndex) {
     const TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
     auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
     m_renderNodes.emplace(id, std::move(node));
     return m_renderNodes.at(id).get();
 }
 
-std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayout()
-{
+std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayout() {
     PipelineLayoutBuilder builder{};
     builder
         .defineDescriptorSet(
@@ -213,8 +194,7 @@ std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayou
 }
 
 std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
-    std::unique_ptr<VulkanPipelineLayout> pipelineLayout)
-{
+    std::unique_ptr<VulkanPipelineLayout> pipelineLayout) {
     std::vector<VkPipelineShaderStageCreateInfo> stages(4, {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO});
     stages[0].stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
     stages[0].module = m_renderer->loadShaderModule("path-trace.rgen");
@@ -231,8 +211,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups(
         4, {VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR});
-    for (uint32_t i = 0; i < groups.size(); ++i)
-    {
+    for (uint32_t i = 0; i < groups.size(); ++i) {
         groups[i].anyHitShader = VK_SHADER_UNUSED_KHR;
         groups[i].closestHitShader = VK_SHADER_UNUSED_KHR;
         groups[i].generalShader = VK_SHADER_UNUSED_KHR;
@@ -267,8 +246,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
     vkGetRayTracingShaderGroupHandlesKHR(
         deviceHandle, pipeline, 0, groupCount, shaderHandleStorage.size(), shaderHandleStorage.data());
 
-    for (int32_t i = groupCount - 1; i >= 0; --i)
-    {
+    for (int32_t i = groupCount - 1; i >= 0; --i) {
         memcpy(&shaderHandleStorage[i * baseAlignment], &shaderHandleStorage[i * handleSize], handleSize);
     }
 
@@ -292,8 +270,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
     m_sbt.call.stride = baseAlignment;
 
     m_renderer->enqueueResourceUpdate(
-        [this, deviceHandle, handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer)
-        {
+        [this, deviceHandle, handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer) {
             vkCmdUpdateBuffer(cmdBuffer, m_sbt.buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
         });
     return std::make_unique<VulkanPipeline>(
@@ -304,8 +281,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
         VertexLayout{});
 }
 
-void VulkanRayTracingScene::updateDescriptorSets()
-{
+void VulkanRayTracingScene::updateDescriptorSets() {
     const auto tlasInfo = m_topLevelAccelStructure->getDescriptorInfo();
     m_material->writeDescriptor(0, 0, tlasInfo);
     m_material->writeDescriptor(0, 1, m_rtImageViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
@@ -313,19 +289,15 @@ void VulkanRayTracingScene::updateDescriptorSets()
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void VulkanRayTracingScene::updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx)
-{
+void VulkanRayTracingScene::updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx) {
     m_material->writeDescriptor(1, 0, geometry.getVertexBuffer()->createDescriptorInfo(), idx);
     m_material->writeDescriptor(1, 1, geometry.getIndexBuffer()->createDescriptorInfo(), idx);
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void VulkanRayTracingScene::setupInput()
-{
-    m_window->keyPressed += [this](Key key, int)
-    {
-        switch (key)
-        {
+void VulkanRayTracingScene::setupInput() {
+    m_window->keyPressed += [this](Key key, int) {
+        switch (key) {
         case Key::F5:
             m_resourceContext->recreatePipelines();
             break;

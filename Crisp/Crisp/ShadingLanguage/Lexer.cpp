@@ -7,10 +7,8 @@
 
 #include <charconv>
 
-namespace
-{
-robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordMap()
-{
+namespace {
+robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordMap() {
     using crisp::sl::TokenType;
     robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> map;
 
@@ -249,28 +247,21 @@ robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordM
 robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
 } // namespace
 
-namespace crisp::sl
-{
+namespace crisp::sl {
 Lexer::Lexer(const std::string& source)
     : m_source(source)
     , m_start(0)
     , m_current(0)
-    , m_line(1)
-{
-}
+    , m_line(1) {}
 
 Lexer::Lexer(std::string&& source)
     : m_source(std::move(source))
     , m_start(0)
     , m_current(0)
-    , m_line(1)
-{
-}
+    , m_line(1) {}
 
-std::vector<Token> Lexer::scanTokens()
-{
-    while (!isAtEnd())
-    {
+std::vector<Token> Lexer::scanTokens() {
+    while (!isAtEnd()) {
         m_start = m_current;
         scanToken();
     }
@@ -280,16 +271,13 @@ std::vector<Token> Lexer::scanTokens()
     return std::move(m_tokens);
 }
 
-bool Lexer::isAtEnd() const
-{
+bool Lexer::isAtEnd() const {
     return m_current >= static_cast<int>(m_source.size());
 }
 
-void Lexer::scanToken()
-{
+void Lexer::scanToken() {
     char c = advance();
-    switch (c)
-    {
+    switch (c) {
     case '(':
         addToken(TokenType::LeftParen);
         break;
@@ -315,31 +303,21 @@ void Lexer::scanToken()
         addToken(TokenType::Comma);
         break;
     case '-':
-        if (match('-'))
-        {
+        if (match('-')) {
             addToken(TokenType::MinusMinus);
-        }
-        else if (match('='))
-        {
+        } else if (match('=')) {
             addToken(TokenType::MinusEqual);
-        }
-        else
-        {
+        } else {
             addToken(TokenType::Minus);
         }
         break;
 
     case '+':
-        if (match('+'))
-        {
+        if (match('+')) {
             addToken(TokenType::PlusPlus);
-        }
-        else if (match('='))
-        {
+        } else if (match('=')) {
             addToken(TokenType::PlusEqual);
-        }
-        else
-        {
+        } else {
             addToken(TokenType::Plus);
         }
         break;
@@ -363,8 +341,7 @@ void Lexer::scanToken()
         addToken(TokenType::Tilde);
         break;
     case '#':
-        while (peek() != '\n' && !isAtEnd())
-        {
+        while (peek() != '\n' && !isAtEnd()) {
             advance();
         }
         break;
@@ -384,60 +361,40 @@ void Lexer::scanToken()
         addToken(match('=') ? TokenType::EqualEqual : TokenType::Equal);
         break;
     case '<':
-        if (match('='))
-        {
+        if (match('=')) {
             addToken(TokenType::LessThanEqual);
-        }
-        else if (match('<'))
-        {
+        } else if (match('<')) {
             addToken(TokenType::BitShiftLeft);
-        }
-        else
-        {
+        } else {
             addToken(TokenType::LessThan);
         }
         break;
 
     case '>':
-        if (match('='))
-        {
+        if (match('=')) {
             addToken(TokenType::GreaterThanEqual);
-        }
-        else if (match('>'))
-        {
+        } else if (match('>')) {
             addToken(TokenType::BitShiftRight);
-        }
-        else
-        {
+        } else {
             addToken(TokenType::GreaterThan);
         }
         break;
 
     case '/':
-        if (match('/'))
-        {
-            while (peek() != '\n' && !isAtEnd())
-            {
+        if (match('/')) {
+            while (peek() != '\n' && !isAtEnd()) {
                 advance();
             }
-        }
-        else if (match('*'))
-        {
-            while (peek() != '*' || peekNext() != '/')
-            {
+        } else if (match('*')) {
+            while (peek() != '*' || peekNext() != '/') {
                 advance();
             }
-            while (peek() != '\n')
-            {
+            while (peek() != '\n') {
                 advance();
             }
-        }
-        else if (match('='))
-        {
+        } else if (match('=')) {
             addToken(TokenType::SlashEqual);
-        }
-        else
-        {
+        } else {
             addToken(TokenType::Slash);
         }
         break;
@@ -455,53 +412,40 @@ void Lexer::scanToken()
         break;
 
     default:
-        if (isDigit(c))
-        {
+        if (isDigit(c)) {
             addNumber();
-        }
-        else if (isAlpha(c))
-        {
+        } else if (isAlpha(c)) {
             addIdentifier();
-        }
-        else
-        {
+        } else {
             spdlog::error("{} Unexpected character: {}", m_line, c);
         }
     }
 }
 
-char Lexer::peek() const
-{
-    if (isAtEnd())
-    {
+char Lexer::peek() const {
+    if (isAtEnd()) {
         return '\0';
     }
     return m_source[m_current];
 }
 
-char Lexer::peekNext() const
-{
-    if (m_current + 1 >= static_cast<int32_t>(m_source.size()))
-    {
+char Lexer::peekNext() const {
+    if (m_current + 1 >= static_cast<int32_t>(m_source.size())) {
         return '\0';
     }
     return m_source[m_current + 1];
 }
 
-char Lexer::advance()
-{
+char Lexer::advance() {
     return m_source[m_current++];
 }
 
-bool Lexer::match(char expected)
-{
-    if (isAtEnd())
-    {
+bool Lexer::match(char expected) {
+    if (isAtEnd()) {
         return false;
     }
 
-    if (m_source[m_current] != expected)
-    {
+    if (m_source[m_current] != expected) {
         return false;
     }
 
@@ -509,51 +453,41 @@ bool Lexer::match(char expected)
     return true;
 }
 
-bool Lexer::isAlpha(char c)
-{
+bool Lexer::isAlpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-bool Lexer::isAlphaNumeric(char c)
-{
+bool Lexer::isAlphaNumeric(char c) {
     return isAlpha(c) || isDigit(c);
 }
 
-bool Lexer::isDigit(char c)
-{
+bool Lexer::isDigit(char c) {
     return c >= '0' && c <= '9';
 }
 
-bool Lexer::isHexadecimalDigit(char c)
-{
+bool Lexer::isHexadecimalDigit(char c) {
     return isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
-void Lexer::addToken(TokenType type)
-{
+void Lexer::addToken(TokenType type) {
     addToken(type, {});
 }
 
-void Lexer::addToken(TokenType type, std::any literal)
-{
+void Lexer::addToken(TokenType type, std::any literal) {
     std::string lexeme = m_source.substr(m_start, m_current - m_start);
     m_tokens.emplace_back(type, lexeme, std::move(literal), m_line);
 }
 
-void Lexer::addString()
-{
-    while (peek() != '"' && !isAtEnd())
-    {
-        if (peek() == '\n')
-        {
+void Lexer::addString() {
+    while (peek() != '"' && !isAtEnd()) {
+        if (peek() == '\n') {
             m_line++;
         }
 
         advance();
     }
 
-    if (!isAtEnd())
-    {
+    if (!isAtEnd()) {
         spdlog::error("Unexpected string at line: {}", m_line);
         return;
     }
@@ -564,84 +498,64 @@ void Lexer::addString()
     addToken(TokenType::String, value);
 }
 
-void Lexer::addNumber()
-{
+void Lexer::addNumber() {
     int startOffset = 0;
     int base = 10;
-    if (m_source[m_start] == '0')
-    {
+    if (m_source[m_start] == '0') {
         startOffset = 1;
         base = 8;
     }
 
-    if (match('x'))
-    {
+    if (match('x')) {
         startOffset = 2;
         base = 16;
 
-        while (isHexadecimalDigit(peek()))
-        {
+        while (isHexadecimalDigit(peek())) {
             advance();
         }
-    }
-    else
-    {
-        while (isDigit(peek()))
-        {
+    } else {
+        while (isDigit(peek())) {
             advance();
         }
     }
 
-    if (peek() == '.' && isDigit(peekNext()))
-    {
+    if (peek() == '.' && isDigit(peekNext())) {
         advance();
 
-        while (isDigit(peek()))
-        {
+        while (isDigit(peek())) {
             advance();
         }
 
-        if (peek() == 'e' || peek() == 'E')
-        {
+        if (peek() == 'e' || peek() == 'E') {
             advance();
 
-            if (peek() == '+' || peek() == '-')
-            {
+            if (peek() == '+' || peek() == '-') {
                 advance();
             }
 
-            while (isDigit(peek()))
-            {
+            while (isDigit(peek())) {
                 advance();
             }
         }
 
-        if (peek() == 'f' || peek() == 'F')
-        {
+        if (peek() == 'f' || peek() == 'F') {
             float value = 0;
             std::from_chars(&m_source[m_start], &m_source[m_current], value);
             addToken(TokenType::FloatConstant, value);
 
             advance();
-        }
-        else
-        {
+        } else {
             double value = 0;
             std::from_chars(&m_source[m_start], &m_source[m_current], value);
             addToken(TokenType::DoubleConstant, value);
         }
-    }
-    else
-    {
-        if (peek() == 'u')
-        {
+    } else {
+        if (peek() == 'u') {
             unsigned int value = 0;
             std::from_chars(&m_source[m_start + startOffset], &m_source[m_current], value, base);
             addToken(TokenType::UintConstant, value);
             advance();
-        }
-        else
-        {
+        } else {
             int value = 0;
             std::from_chars(&m_source[m_start + startOffset], &m_source[m_current], value, base);
             addToken(TokenType::IntConstant, value);
@@ -649,28 +563,22 @@ void Lexer::addNumber()
     }
 }
 
-void Lexer::addIdentifier()
-{
-    while (isAlphaNumeric(peek()))
-    {
+void Lexer::addIdentifier() {
+    while (isAlphaNumeric(peek())) {
         advance();
     }
 
     std::string text = m_source.substr(m_start, m_current - m_start);
     TokenType type = TokenType::Identifier;
     auto iter = Keywords.find(text);
-    if (iter != Keywords.end())
-    {
+    if (iter != Keywords.end()) {
         type = iter->second;
     }
 
     std::any literal;
-    if (text == "true")
-    {
+    if (text == "true") {
         literal = true;
-    }
-    else if (text == "false")
-    {
+    } else if (text == "false") {
         literal = false;
     }
 

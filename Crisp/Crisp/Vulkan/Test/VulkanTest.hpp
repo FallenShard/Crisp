@@ -17,45 +17,37 @@
 
 #include <glfw/glfw3.h>
 
-namespace crisp::test
-{
-MATCHER(HandleIsValid, "Checks whether the handle is not null.")
-{
+namespace crisp::test {
+MATCHER(HandleIsValid, "Checks whether the handle is not null.") {
     std::ignore = result_listener;
     return arg.getHandle() != VK_NULL_HANDLE;
 }
 
-MATCHER(HandleIsNull, "Checks whether the handle is null.")
-{
+MATCHER(HandleIsNull, "Checks whether the handle is null.") {
     std::ignore = result_listener;
     *result_listener << "Arg is not null!";
     return arg.getHandle() == VK_NULL_HANDLE;
 }
 
-MATCHER_P(HandleIs, rhs, "Checks whether the handle is equal to another object's handle.")
-{
+MATCHER_P(HandleIs, rhs, "Checks whether the handle is equal to another object's handle.") {
     *result_listener << "Expected: " << rhs.getHandle() << "\n";
     *result_listener << "Actual:   " << arg.getHandle() << "\n";
     return arg.getHandle() == rhs.getHandle();
 }
 
-enum class SurfacePolicy
-{
+enum class SurfacePolicy {
     Headless,
     HiddenWindow
 };
 
 template <SurfacePolicy surfacePolicy = SurfacePolicy::Headless>
-class VulkanTestBase : public ::testing::Test
-{
+class VulkanTestBase : public ::testing::Test {
 protected:
-    static void SetUpTestSuite()
-    {
+    static void SetUpTestSuite() {
         spdlog::set_level(spdlog::level::warn);
         glfwInit();
 
-        if constexpr (surfacePolicy == SurfacePolicy::HiddenWindow)
-        {
+        if constexpr (surfacePolicy == SurfacePolicy::HiddenWindow) {
             window_ = std::make_unique<Window>(
                 glm::ivec2{0, 0}, glm::ivec2{kDefaultWidth, kDefaultHeight}, "unit_test", WindowVisibility::Hidden);
         }
@@ -74,8 +66,7 @@ protected:
             RendererConfig::VirtualFrameCount);
     }
 
-    static void TearDownTestSuite()
-    {
+    static void TearDownTestSuite() {
         device_.reset();
         physicalDevice_.reset();
         context_.reset();
@@ -85,8 +76,7 @@ protected:
 
     void SetUp() override {}
 
-    void TearDown() override
-    {
+    void TearDown() override {
         device_->getResourceDeallocator().freeAllResources();
     }
 
@@ -102,19 +92,16 @@ protected:
 using VulkanTest = VulkanTestBase<SurfacePolicy::Headless>;
 using VulkanTestWithSurface = VulkanTestBase<SurfacePolicy::HiddenWindow>;
 
-struct ScopeCommandExecutor
-{
+struct ScopeCommandExecutor {
     inline explicit ScopeCommandExecutor(const VulkanDevice& device)
         : device(device)
         , commandPool(device.getGeneralQueue().createCommandPool(), device.getResourceDeallocator())
         , cmdBuffer(commandPool.allocateCommandBuffer(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY))
-        , fence(device.createFence(0))
-    {
+        , fence(device.createFence(0)) {
         cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     }
 
-    inline ~ScopeCommandExecutor()
-    {
+    inline ~ScopeCommandExecutor() {
         cmdBuffer.end();
         device.getGeneralQueue().submit(cmdBuffer.getHandle(), fence);
         device.wait(fence);

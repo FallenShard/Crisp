@@ -6,10 +6,8 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 
-namespace crisp
-{
-class Scene
-{
+namespace crisp {
+class Scene {
 public:
     Scene(Renderer* renderer, Window* window);
     virtual ~Scene() = default;

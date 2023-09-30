@@ -8,10 +8,8 @@
 
 #include <vector>
 
-namespace crisp
-{
-class TriangleMesh
-{
+namespace crisp {
+class TriangleMesh {
 public:
     TriangleMesh() = default;
     TriangleMesh(

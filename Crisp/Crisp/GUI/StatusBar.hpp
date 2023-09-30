@@ -2,13 +2,11 @@
 
 #include "Panel.hpp"
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Form;
 class Label;
 
-class StatusBar : public Panel
-{
+class StatusBar : public Panel {
 public:
     StatusBar(Form* parentForm);
     virtual ~StatusBar();

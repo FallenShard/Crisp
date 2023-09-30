@@ -7,8 +7,7 @@
 
 #include <iostream>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)
     : Control(parentForm)
     , m_state(State::Idle)
@@ -16,8 +15,7 @@ ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)
     , m_label(std::make_unique<Label>(parentForm, "Selected Item"))
     , m_drawComponent(parentForm->getRenderSystem())
     , m_itemsPanel(std::make_unique<ControlGroup>(parentForm))
-    , m_showPanel(false)
-{
+    , m_showPanel(false) {
     setSizeHint({100.0f, 30.0f});
 
     glm::vec3 color(0.5f, 0.3f, 0.3f);
@@ -45,15 +43,13 @@ ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)
     m_itemsPanel->setAnchor(Anchor::TopLeft);
 
     std::vector<std::string> labels = {"SSAO", "HBAO+", "SSDO"};
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         auto item = std::make_unique<ComboBoxItem>(parentForm, labels[i]);
         item->setId("Item " + std::to_string(i));
         item->setPosition({0.0f, i * 20.0f});
         item->setSizeHint({100.0f, 20.0f});
         item->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-        item->clicked += [this, item = item.get()]()
-        {
+        item->clicked += [this, item = item.get()]() {
             itemSelected(item->getText());
             m_label->setText(item->getText());
             setValidationFlags(Validation::Geometry);
@@ -64,72 +60,55 @@ ComboBox::ComboBox(Form* parentForm, std::vector<std::string> elements)
 
 ComboBox::~ComboBox() {}
 
-Rect<float> ComboBox::getInteractionBounds() const
-{
-    if (m_showPanel)
+Rect<float> ComboBox::getInteractionBounds() const {
+    if (m_showPanel) {
         return getAbsoluteBounds().merge(m_itemsPanel->getAbsoluteBounds());
-    else
+    } else {
         return getAbsoluteBounds();
+    }
 }
 
-void ComboBox::onMouseEntered(float x, float y)
-{
-    if (m_showPanel && m_itemsPanel->getInteractionBounds().contains(x, y))
-    {
+void ComboBox::onMouseEntered(float x, float y) {
+    if (m_showPanel && m_itemsPanel->getInteractionBounds().contains(x, y)) {
         m_itemsPanel->onMouseEntered(x, y);
         setValidationFlags(Validation::Color);
     }
 }
 
-void ComboBox::onMouseMoved(float x, float y)
-{
-    if (m_showPanel)
-    {
+void ComboBox::onMouseMoved(float x, float y) {
+    if (m_showPanel) {
         m_itemsPanel->onMouseMoved(x, y);
         setValidationFlags(Validation::Color);
     }
 }
 
-void ComboBox::onMouseExited(float x, float y)
-{
-    if (m_showPanel)
-    {
+void ComboBox::onMouseExited(float x, float y) {
+    if (m_showPanel) {
         m_itemsPanel->onMouseExited(x, y);
         setValidationFlags(Validation::Color);
     }
 }
 
-bool ComboBox::onMousePressed(float x, float y)
-{
-    if (m_showPanel)
-    {
+bool ComboBox::onMousePressed(float x, float y) {
+    if (m_showPanel) {
         m_itemsPanel->onMousePressed(x, y);
         setValidationFlags(Validation::Color);
-    }
-    else
-    {
+    } else {
         m_form->setFocusedControl(this);
     }
 
     return true;
 }
 
-bool ComboBox::onMouseReleased(float x, float y)
-{
-    if (getInteractionBounds().contains(x, y))
-    {
-        if (m_showPanel)
-        {
+bool ComboBox::onMouseReleased(float x, float y) {
+    if (getInteractionBounds().contains(x, y)) {
+        if (m_showPanel) {
             m_itemsPanel->onMouseReleased(x, y);
             m_showPanel = false;
-        }
-        else
-        {
+        } else {
             m_showPanel = true;
         }
-    }
-    else
-    {
+    } else {
         m_showPanel = false;
         m_form->setFocusedControl(nullptr);
     }
@@ -137,8 +116,7 @@ bool ComboBox::onMouseReleased(float x, float y)
     return true;
 }
 
-void ComboBox::validate()
-{
+void ComboBox::validate() {
     auto absPos = getAbsolutePosition();
     auto absDepth = getAbsoluteDepth();
     auto absSize = getSize();
@@ -154,27 +132,24 @@ void ComboBox::validate()
     m_itemsPanel->validateAndClearFlags();
 }
 
-void ComboBox::draw(const RenderSystem& renderSystem) const
-{
+void ComboBox::draw(const RenderSystem& renderSystem) const {
     m_drawComponent.draw(m_M[3][2]);
     m_label->draw(renderSystem);
 
-    if (m_showPanel)
+    if (m_showPanel) {
         m_itemsPanel->draw(renderSystem);
+    }
 }
 
-void ComboBox::setItems(const std::vector<std::string>& items)
-{
+void ComboBox::setItems(const std::vector<std::string>& items) {
     m_itemsPanel->clearControls();
-    for (int i = 0; i < items.size(); i++)
-    {
+    for (int i = 0; i < items.size(); i++) {
         auto item = std::make_unique<ComboBoxItem>(m_form, items[i]);
         item->setId("Item " + std::to_string(i));
         item->setPosition({0.0f, i * 20.0f});
         item->setSizeHint({100.0f, 20.0f});
         item->setHorizontalSizingPolicy(SizingPolicy::FillParent);
-        item->clicked += [this, item = item.get()]()
-        {
+        item->clicked += [this, item = item.get()]() {
             itemSelected(item->getText());
             m_label->setText(item->getText());
             setValidationFlags(Validation::Geometry);
@@ -185,15 +160,14 @@ void ComboBox::setItems(const std::vector<std::string>& items)
     m_label->setText(items[0]);
 }
 
-void ComboBox::selectItem(std::size_t index)
-{
+void ComboBox::selectItem(std::size_t index) {
     auto item = m_itemsPanel->getTypedControlById<ComboBoxItem>("Item " + std::to_string(index));
-    if (item)
+    if (item) {
         item->clicked();
+    }
 }
 
-void ComboBox::setDisplayedItem(const std::string& displayedItem)
-{
+void ComboBox::setDisplayedItem(const std::string& displayedItem) {
     m_label->setText(displayedItem);
 }
 

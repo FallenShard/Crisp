@@ -2,10 +2,8 @@
 
 #include <Crisp/Utils/BitFlags.hpp>
 
-namespace crisp
-{
-enum class MyOptions
-{
+namespace crisp {
+enum class MyOptions {
     Red = 0x01,
     Green = 0x02,
     Blue = 0x04,
@@ -17,11 +15,9 @@ enum class MyOptions
 
 DECLARE_BITFLAG(MyOptions);
 
-namespace test
-{
+namespace test {
 
-TEST(BitFlagsTest, Comparisons)
-{
+TEST(BitFlagsTest, Comparisons) {
     MyOptionsFlags flags;
 
     EXPECT_TRUE(flags == MyOptionsFlags());
@@ -41,8 +37,7 @@ TEST(BitFlagsTest, Comparisons)
     EXPECT_EQ(flags, MyOptions::Red | MyOptions::Green);
 }
 
-TEST(BitFlagsTest, BitwiseOperations)
-{
+TEST(BitFlagsTest, BitwiseOperations) {
     MyOptionsFlags flags;
 
     EXPECT_TRUE(flags == MyOptionsFlags());

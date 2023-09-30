@@ -5,13 +5,11 @@
 #include <Crisp/GUI/Control.hpp>
 #include <Crisp/GUI/DrawComponents/RectDrawComponent.hpp>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Label;
 class ControlGroup;
 
-class ComboBox : public Control
-{
+class ComboBox : public Control {
 public:
     ComboBox(Form* parentForm, std::vector<std::string> elements = {});
     virtual ~ComboBox();
@@ -38,8 +36,7 @@ private:
 
     State m_state;
 
-    struct Color
-    {
+    struct Color {
         glm::vec3 background;
         glm::vec3 text;
     };

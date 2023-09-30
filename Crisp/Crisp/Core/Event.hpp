@@ -11,27 +11,20 @@
 #include <Crisp/Core/Delegate.hpp>
 #include <Crisp/Core/HashMap.hpp>
 
-namespace crisp
-{
+namespace crisp {
 using ConnectionToken = std::size_t;
 
 template <typename... ParamTypes>
-class Event
-{
+class Event {
 public:
-    struct Connection
-    {
+    struct Connection {
         Connection(ConnectionToken token, std::function<void(ParamTypes...)> callback)
             : key(token)
-            , callback(callback)
-        {
-        }
+            , callback(callback) {}
 
         Connection(void* obj, std::function<void(ParamTypes...)> callback)
             : key(obj)
-            , callback(callback)
-        {
-        }
+            , callback(callback) {}
 
         std::variant<ConnectionToken, void*> key;
         std::function<void(ParamTypes...)> callback;
@@ -46,70 +39,56 @@ public:
     Event& operator=(Event&& other) noexcept = default;
 
     template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
-    void subscribe(ReceiverType* obj)
-    {
+    void subscribe(ReceiverType* obj) {
         m_delegates.insert(createDelegate<F>(obj));
     }
 
     template <auto Fn>
-    void subscribe()
-    {
+    void subscribe() {
         m_delegates.insert(createDelegate<Fn>());
     }
 
     template <typename FuncType>
-    ConnectionToken operator+=(FuncType&& func)
-    {
+    ConnectionToken operator+=(FuncType&& func) {
         ConnectionToken token = m_tokenCounter++;
         m_connections.emplace_back(token, std::forward<FuncType>(func));
         return token;
     }
 
     template <typename FuncType>
-    [[nodiscard]] ConnectionHandler subscribe(FuncType&& func)
-    {
+    [[nodiscard]] ConnectionHandler subscribe(FuncType&& func) {
         ConnectionToken token = m_tokenCounter++;
         m_connections.emplace_back(token, std::forward<FuncType>(func));
         return ConnectionHandler([this, token] { unsubscribe(token); });
     }
 
-    void operator+=(Connection connection)
-    {
+    void operator+=(Connection connection) {
         m_connections.emplace_back(connection);
     }
 
-    void subscribe(Delegate<void, ParamTypes...> del)
-    {
+    void subscribe(Delegate<void, ParamTypes...> del) {
         m_delegates.insert(del);
     }
 
-    void operator+=(Delegate<void, ParamTypes...> del)
-    {
+    void operator+=(Delegate<void, ParamTypes...> del) {
         m_delegates.insert(del);
     }
 
     template <auto F, typename ReceiverType = detail::MemFnClassType<F>>
-    void unsubscribe(ReceiverType* obj)
-    {
+    void unsubscribe(ReceiverType* obj) {
         m_delegates.erase(createDelegate<F>(obj));
     }
 
-    void operator-=(Delegate<void, ParamTypes...> del)
-    {
+    void operator-=(Delegate<void, ParamTypes...> del) {
         m_delegates.erase(del);
     }
 
-    void unsubscribe(void* obj)
-    {
+    void unsubscribe(void* obj) {
         auto it = m_delegates.begin();
-        while (it != m_delegates.end())
-        {
-            if (it->isFromObject(obj))
-            {
+        while (it != m_delegates.end()) {
+            if (it->isFromObject(obj)) {
                 it = m_delegates.erase(it);
-            }
-            else
-            {
+            } else {
                 ++it;
             }
         }
@@ -118,18 +97,13 @@ public:
             std::remove_if(
                 m_connections.begin(),
                 m_connections.end(),
-                [obj](const Connection& conn)
-                {
+                [obj](const Connection& conn) {
                     return std::visit(
-                        [obj](auto&& arg)
-                        {
+                        [obj](auto&& arg) {
                             using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, void*>)
-                            {
+                            if constexpr (std::is_same_v<T, void*>) {
                                 return arg == obj;
-                            }
-                            else
-                            {
+                            } else {
                                 return false;
                             }
                         },
@@ -138,8 +112,7 @@ public:
             m_connections.end());
     }
 
-    void unsubscribe(std::variant<ConnectionToken, void*> connectionKey)
-    {
+    void unsubscribe(std::variant<ConnectionToken, void*> connectionKey) {
         m_connections.erase(
             std::remove_if(
                 m_connections.begin(),
@@ -148,37 +121,30 @@ public:
             m_connections.end());
     }
 
-    void operator()(const ParamTypes&... args) const
-    {
-        for (auto& delegate : m_delegates)
-        {
+    void operator()(const ParamTypes&... args) const {
+        for (auto& delegate : m_delegates) {
             delegate(args...);
         }
 
-        for (auto& conn : m_connections)
-        {
+        for (auto& conn : m_connections) {
             conn.callback(args...);
         }
     }
 
-    void clear()
-    {
+    void clear() {
         m_delegates.clear();
         m_connections.clear();
     }
 
-    std::size_t getSubscriberCount() const
-    {
+    std::size_t getSubscriberCount() const {
         return m_delegates.size() + m_connections.size();
     }
 
-    std::size_t getDelegateCount() const
-    {
+    std::size_t getDelegateCount() const {
         return m_delegates.size();
     }
 
-    std::size_t getFunctorCount() const
-    {
+    std::size_t getFunctorCount() const {
         return m_connections.size();
     }
 

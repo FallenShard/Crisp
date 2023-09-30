@@ -4,22 +4,18 @@
 #include <Crisp/Optics/Fresnel.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 DielectricBSDF::DielectricBSDF(const VariantMap& params)
-    : BSDF(Lobe::Delta)
-{
+    : BSDF(Lobe::Delta) {
     m_intIOR = params.get("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
     m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
 }
 
-Spectrum DielectricBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const
-{
+Spectrum DielectricBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const {
     return Spectrum(0.0f);
 }
 
-Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
-{
+Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const {
     // Get the fresnel coefficient
     float cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
     float cosThetaT = 0.0f;
@@ -30,8 +26,7 @@ Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
     bsdfSample.sampledLobe = Lobe::Delta;
 
     // If sample is less than fresnel, reflect, otherwise refract
-    if (sampler.next1D() <= fresnel)
-    {
+    if (sampler.next1D() <= fresnel) {
         // Reflection in local coordinates
         bsdfSample.wo = glm::vec3(-bsdfSample.wi.x, -bsdfSample.wi.y, bsdfSample.wi.z);
         bsdfSample.eta = 1.0f;
@@ -55,8 +50,7 @@ Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
     return Spectrum(eta * eta);
 }
 
-float DielectricBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const
-{
+float DielectricBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const {
     return 0.0f;
 }
 } // namespace crisp

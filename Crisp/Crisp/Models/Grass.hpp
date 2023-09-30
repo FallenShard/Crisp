@@ -5,8 +5,7 @@
 
 #include <Crisp/Renderer/DrawCommand.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 class VulkanPipeline;
 class Material;
@@ -16,11 +15,14 @@ class UniformBuffer;
 
 class VulkanSampler;
 
-class Grass
-{
+class Grass {
 public:
-    Grass(Renderer* renderer, VulkanRenderPass* mainRenderPass, VulkanRenderPass* renderPass,
-        UniformBuffer* cameraBuffer, VulkanSampler* sampler);
+    Grass(
+        Renderer* renderer,
+        VulkanRenderPass* mainRenderPass,
+        VulkanRenderPass* renderPass,
+        UniformBuffer* cameraBuffer,
+        VulkanSampler* sampler);
     ~Grass();
 
     DrawCommand createDrawCommand();

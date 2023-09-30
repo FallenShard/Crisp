@@ -6,8 +6,7 @@
 #include <Crisp/Renderer/UniformMultiBuffer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 DynamicUniformBufferResource::DynamicUniformBufferResource(
     Renderer* renderer,
     const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets,
@@ -20,11 +19,9 @@ DynamicUniformBufferResource::DynamicUniformBufferResource(
     , m_resourcesPerGranularity(m_bufferGranularity / m_resourceSize)
     , m_binding(descBinding)
     , m_sets(sets)
-    , m_numRegistered(0)
-{
+    , m_numRegistered(0) {
 
-    for (unsigned int i = 0; i < m_resourcesPerGranularity; i++)
-    {
+    for (unsigned int i = 0; i < m_resourcesPerGranularity; i++) {
         m_idPool.insert(i); // unoccupied resource ids
     }
 
@@ -35,25 +32,21 @@ DynamicUniformBufferResource::DynamicUniformBufferResource(
     // data/desc set
     m_buffer = std::make_unique<UniformMultiBuffer>(renderer, m_bufferGranularity * multiplier, m_bufferGranularity);
 
-    for (unsigned int i = 0; i < RendererConfig::VirtualFrameCount; i++)
-    {
+    for (unsigned int i = 0; i < RendererConfig::VirtualFrameCount; i++) {
         updateSet(i);
     }
 }
 
 DynamicUniformBufferResource::~DynamicUniformBufferResource() {}
 
-uint32_t DynamicUniformBufferResource::registerResource()
-{
+uint32_t DynamicUniformBufferResource::registerResource() {
     auto freeId = *m_idPool.begin(); // Smallest element in a set is at .begin()
     m_idPool.erase(m_idPool.begin());
     m_numRegistered++;
 
     // If we use up all free resource ids, resize the buffers
-    if (m_idPool.empty())
-    {
-        for (unsigned int i = 0; i < m_resourcesPerGranularity; i++)
-        {
+    if (m_idPool.empty()) {
+        for (unsigned int i = 0; i < m_resourcesPerGranularity; i++) {
             m_idPool.insert(m_numRegistered + i);
         }
 
@@ -61,8 +54,7 @@ uint32_t DynamicUniformBufferResource::registerResource()
         auto multiplier = (numResources - 1) / m_resourcesPerGranularity + 1;
 
         m_buffer->resize(m_bufferGranularity * multiplier);
-        for (auto& v : m_isSetUpdated)
-        {
+        for (auto& v : m_isSetUpdated) {
             v = false;
         }
     }
@@ -70,21 +62,17 @@ uint32_t DynamicUniformBufferResource::registerResource()
     return freeId;
 }
 
-void DynamicUniformBufferResource::updateResource(uint32_t resourceId, const void* resourceData)
-{
+void DynamicUniformBufferResource::updateResource(uint32_t resourceId, const void* resourceData) {
     m_buffer->updateStagingBuffer(resourceData, m_resourceSize, resourceId * m_resourceSize);
 }
 
-void DynamicUniformBufferResource::unregisterResource(uint32_t resourceId)
-{
+void DynamicUniformBufferResource::unregisterResource(uint32_t resourceId) {
     m_idPool.insert(resourceId);
     m_numRegistered--;
 }
 
-void DynamicUniformBufferResource::update(VkCommandBuffer cmdBuffer, uint32_t frameIdx)
-{
-    if (!m_isSetUpdated[frameIdx])
-    {
+void DynamicUniformBufferResource::update(VkCommandBuffer cmdBuffer, uint32_t frameIdx) {
+    if (!m_isSetUpdated[frameIdx]) {
         m_buffer->resizeOnDevice(frameIdx);
         updateSet(frameIdx);
     }
@@ -92,23 +80,19 @@ void DynamicUniformBufferResource::update(VkCommandBuffer cmdBuffer, uint32_t fr
     m_buffer->updateDeviceBuffer(cmdBuffer, frameIdx);
 }
 
-VkDescriptorSet DynamicUniformBufferResource::getDescriptorSet(uint32_t frameIdx) const
-{
+VkDescriptorSet DynamicUniformBufferResource::getDescriptorSet(uint32_t frameIdx) const {
     return m_sets[frameIdx];
 }
 
-uint32_t DynamicUniformBufferResource::getDynamicOffset(uint32_t resourceId) const
-{
+uint32_t DynamicUniformBufferResource::getDynamicOffset(uint32_t resourceId) const {
     return static_cast<uint32_t>(m_bufferGranularity * (resourceId / m_resourcesPerGranularity));
 }
 
-uint32_t DynamicUniformBufferResource::getPushConstantValue(uint32_t resourceId) const
-{
+uint32_t DynamicUniformBufferResource::getPushConstantValue(uint32_t resourceId) const {
     return resourceId % m_resourcesPerGranularity;
 }
 
-void DynamicUniformBufferResource::updateSet(uint32_t index)
-{
+void DynamicUniformBufferResource::updateSet(uint32_t index) {
     VkDescriptorBufferInfo transBufferInfo = {};
     transBufferInfo.buffer = m_buffer->get(index);
     transBufferInfo.offset = 0;

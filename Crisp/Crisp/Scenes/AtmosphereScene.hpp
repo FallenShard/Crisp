@@ -7,10 +7,8 @@
 #include <Crisp/Models/Atmosphere.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
-class AtmosphereScene : public Scene
-{
+namespace crisp {
+class AtmosphereScene : public Scene {
 public:
     AtmosphereScene(Renderer* renderer, Window* window);
 

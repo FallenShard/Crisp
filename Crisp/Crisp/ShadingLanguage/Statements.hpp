@@ -1,198 +1,180 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Visitor.hpp>
 #include <Crisp/ShadingLanguage/Expressions.hpp>
+#include <Crisp/ShadingLanguage/Visitor.hpp>
 
-namespace crisp::sl
-{
-    struct Statement
-    {
-        virtual ~Statement() {}
+namespace crisp::sl {
+struct Statement {
+    virtual ~Statement() {}
 
-        template <typename T>
-        inline T* as()
-        {
-            return static_cast<T*>(this);
-        }
+    template <typename T>
+    inline T* as() {
+        return static_cast<T*>(this);
+    }
 
-        virtual void accept(Visitor& visitor) = 0;
-    };
+    virtual void accept(Visitor& visitor) = 0;
+};
 
-    using StatementPtr = std::unique_ptr<Statement>;
+using StatementPtr = std::unique_ptr<Statement>;
 
-    struct ExprStatement : public Statement
-    {
-        ExprStatement(ExpressionPtr expr) : expr(std::move(expr)) {}
-        ExpressionPtr expr;
+struct ExprStatement : public Statement {
+    ExprStatement(ExpressionPtr expr)
+        : expr(std::move(expr)) {}
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+    ExpressionPtr expr;
 
-    struct PrecisionDeclaration : public Statement
-    {
-        PrecisionDeclaration(Token q, std::unique_ptr<TypeSpecifier> typeSpec)
-            : qualifier(q), type(std::move(typeSpec)) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        Token qualifier;
-        std::unique_ptr<TypeSpecifier> type;
+struct PrecisionDeclaration : public Statement {
+    PrecisionDeclaration(Token q, std::unique_ptr<TypeSpecifier> typeSpec)
+        : qualifier(q)
+        , type(std::move(typeSpec)) {}
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+    Token qualifier;
+    std::unique_ptr<TypeSpecifier> type;
 
-    struct FunctionDefinition : public Statement
-    {
-        FunctionDefinition() {}
-        FunctionDefinition(std::unique_ptr<FunctionPrototype> prototype, std::unique_ptr<StatementBlock> scope)
-            : prototype(std::move(prototype))
-            , scope(std::move(scope))
-        {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        std::unique_ptr<FunctionPrototype> prototype;
-        std::unique_ptr<StatementBlock> scope;
+struct FunctionDefinition : public Statement {
+    FunctionDefinition() {}
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+    FunctionDefinition(std::unique_ptr<FunctionPrototype> prototype, std::unique_ptr<StatementBlock> scope)
+        : prototype(std::move(prototype))
+        , scope(std::move(scope)) {}
 
-    struct StatementBlock : public Statement
-    {
-        std::string name;
-        std::vector<StatementPtr> statements;
+    std::unique_ptr<FunctionPrototype> prototype;
+    std::unique_ptr<StatementBlock> scope;
 
-        StatementBlock(std::string name) : name(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct StatementBlock : public Statement {
+    std::string name;
+    std::vector<StatementPtr> statements;
 
-    struct JumpStatement : public Statement
-    {
-        Token jump;
-        ExpressionPtr result;
+    StatementBlock(std::string name)
+        : name(name) {}
 
-        JumpStatement(Token name) : jump(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct JumpStatement : public Statement {
+    Token jump;
+    ExpressionPtr result;
 
-    struct LoopStatement : public Statement
-    {
-        Token loop;
-        ExpressionPtr condition;
-        StatementPtr body;
+    JumpStatement(Token name)
+        : jump(name) {}
 
-        LoopStatement(Token name) : loop(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct LoopStatement : public Statement {
+    Token loop;
+    ExpressionPtr condition;
+    StatementPtr body;
 
-    struct ForStatement : public LoopStatement
-    {
-        StatementPtr init;
-        ExpressionPtr increment;
+    LoopStatement(Token name)
+        : loop(name) {}
 
-        ForStatement(Token name) : LoopStatement(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct ForStatement : public LoopStatement {
+    StatementPtr init;
+    ExpressionPtr increment;
 
-    struct CaseLabel : public Statement
-    {
-        Token token;
-        ExpressionPtr condition;
+    ForStatement(Token name)
+        : LoopStatement(name) {}
 
-        CaseLabel(Token name) : token(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct CaseLabel : public Statement {
+    Token token;
+    ExpressionPtr condition;
 
-    struct SwitchStatement : public Statement
-    {
-        Token token;
-        ExpressionPtr condition;
-        std::vector<StatementPtr> body;
+    CaseLabel(Token name)
+        : token(name) {}
 
-        SwitchStatement(Token name) : token(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct SwitchStatement : public Statement {
+    Token token;
+    ExpressionPtr condition;
+    std::vector<StatementPtr> body;
 
-    struct IfStatement : public Statement
-    {
-        Token token;
-        ExpressionPtr condition;
-        StatementPtr thenBranch;
-        StatementPtr elseBranch;
+    SwitchStatement(Token name)
+        : token(name) {}
 
-        IfStatement(Token name) : token(name) {}
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+struct IfStatement : public Statement {
+    Token token;
+    ExpressionPtr condition;
+    StatementPtr thenBranch;
+    StatementPtr elseBranch;
 
-    struct StructFieldDeclaration : public Statement
-    {
-        std::unique_ptr<FullType> fullType;
-        std::unique_ptr<Variable> variable;
-        std::vector<std::unique_ptr<Variable>> varList;
+    IfStatement(Token name)
+        : token(name) {}
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-    struct InitDeclaratorList : public Statement
-    {
-        std::unique_ptr<FullType> fullType;
-        std::vector<std::unique_ptr<Variable>> vars;
-        std::vector<ExpressionPtr> initializers;
+struct StructFieldDeclaration : public Statement {
+    std::unique_ptr<FullType> fullType;
+    std::unique_ptr<Variable> variable;
+    std::vector<std::unique_ptr<Variable>> varList;
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-    struct BlockDeclaration : public Statement
-    {
-        BlockDeclaration(Token name) : name(name) {}
+struct InitDeclaratorList : public Statement {
+    std::unique_ptr<FullType> fullType;
+    std::vector<std::unique_ptr<Variable>> vars;
+    std::vector<ExpressionPtr> initializers;
 
-        std::vector<std::unique_ptr<TypeQualifier>> qualifiers;
-        Token name;
-        std::vector<std::unique_ptr<StructFieldDeclaration>> fields;
-        std::vector<std::unique_ptr<Variable>> variables;
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
 
-        virtual void accept(Visitor& visitor) override
-        {
-            visitor.visit(*this);
-        }
-    };
-}
+struct BlockDeclaration : public Statement {
+    BlockDeclaration(Token name)
+        : name(name) {}
+
+    std::vector<std::unique_ptr<TypeQualifier>> qualifiers;
+    Token name;
+    std::vector<std::unique_ptr<StructFieldDeclaration>> fields;
+    std::vector<std::unique_ptr<Variable>> variables;
+
+    virtual void accept(Visitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+} // namespace crisp::sl

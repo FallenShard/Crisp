@@ -7,11 +7,9 @@
 
 #include <filesystem>
 
-namespace crisp
-{
+namespace crisp {
 
-struct ModelData
-{
+struct ModelData {
     TriangleMesh mesh;
     PbrMaterial material;
 

@@ -1,13 +1,10 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using VulkanMemoryAllocatorTest = VulkanTest;
 
-TEST_F(VulkanMemoryAllocatorTest, EmptyMemoryUsage)
-{
+TEST_F(VulkanMemoryAllocatorTest, EmptyMemoryUsage) {
     const auto memoryMetrics = device_->getMemoryAllocator().getDeviceMemoryUsage();
     ASSERT_EQ(memoryMetrics.bufferMemoryUsed, 0);
     ASSERT_EQ(memoryMetrics.imageMemoryUsed, 0);

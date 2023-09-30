@@ -1,7 +1,6 @@
 #include <Crisp/Camera/FreeCameraController.hpp>
 
-namespace crisp
-{
+namespace crisp {
 FreeCameraController::FreeCameraController(Window& window)
     : m_window(&window)
     , m_camera(m_window->getSize().x, m_window->getSize().y)
@@ -10,8 +9,7 @@ FreeCameraController::FreeCameraController(Window& window)
     , m_yaw(0.0f)
     , m_pitch(0.0f)
     , m_isDragging(false)
-    , m_prevMousePos(0.0f)
-{
+    , m_prevMousePos(0.0f) {
     m_window->mouseButtonPressed.subscribe<&FreeCameraController::onMousePressed>(this);
     m_window->mouseButtonReleased.subscribe<&FreeCameraController::onMouseReleased>(this);
     m_window->mouseMoved.subscribe<&FreeCameraController::onMouseMoved>(this);
@@ -27,15 +25,12 @@ FreeCameraController::FreeCameraController(const int32_t viewportWidth, const in
     , m_yaw(0.0f)
     , m_pitch(0.0f)
     , m_isDragging(false)
-    , m_prevMousePos(0.0f)
-{
+    , m_prevMousePos(0.0f) {
     m_camera.translate({0.0f, 1.0f, 0.0f});
 }
 
-FreeCameraController::~FreeCameraController()
-{
-    if (m_window)
-    {
+FreeCameraController::~FreeCameraController() {
+    if (m_window) {
         m_window->mouseButtonPressed.unsubscribe<&FreeCameraController::onMousePressed>(this);
         m_window->mouseButtonReleased.unsubscribe<&FreeCameraController::onMouseReleased>(this);
         m_window->mouseMoved.unsubscribe<&FreeCameraController::onMouseMoved>(this);
@@ -43,19 +38,16 @@ FreeCameraController::~FreeCameraController()
     }
 }
 
-void FreeCameraController::setSpeed(const float speed)
-{
+void FreeCameraController::setSpeed(const float speed) {
     m_speed = speed;
 }
 
-void FreeCameraController::move(const float dx, const float dz)
-{
+void FreeCameraController::move(const float dx, const float dz) {
     const glm::vec3 translation = m_camera.getRightDir() * m_speed * dx + m_camera.getLookDir() * m_speed * dz;
     m_camera.translate(translation);
 }
 
-void FreeCameraController::updateOrientation(const float dYaw, const float dPitch)
-{
+void FreeCameraController::updateOrientation(const float dYaw, const float dPitch) {
     m_yaw += m_angularSpeed * dYaw;
     m_pitch += m_angularSpeed * dPitch;
     const glm::dquat yaw(glm::angleAxis(m_yaw, glm::vec3(0.0f, 1.0f, 0.0f)));
@@ -63,34 +55,28 @@ void FreeCameraController::updateOrientation(const float dYaw, const float dPitc
     m_camera.setOrientation(yaw * pitch);
 }
 
-const Camera& FreeCameraController::getCamera() const
-{
+const Camera& FreeCameraController::getCamera() const {
     return m_camera;
 }
 
-bool FreeCameraController::update(const float dt)
-{
+bool FreeCameraController::update(const float dt) {
     bool hasMoved = false;
-    if (m_window->isKeyDown(Key::A))
-    {
+    if (m_window->isKeyDown(Key::A)) {
         m_camera.translate(-m_camera.getRightDir() * m_speed * dt);
         hasMoved = true;
     }
 
-    if (m_window->isKeyDown(Key::D))
-    {
+    if (m_window->isKeyDown(Key::D)) {
         m_camera.translate(+m_camera.getRightDir() * m_speed * dt);
         hasMoved = true;
     }
 
-    if (m_window->isKeyDown(Key::S))
-    {
+    if (m_window->isKeyDown(Key::S)) {
         m_camera.translate(-m_camera.getLookDir() * m_speed * dt);
         hasMoved = true;
     }
 
-    if (m_window->isKeyDown(Key::W))
-    {
+    if (m_window->isKeyDown(Key::W)) {
         m_camera.translate(+m_camera.getLookDir() * m_speed * dt);
         hasMoved = true;
     }
@@ -100,10 +86,8 @@ bool FreeCameraController::update(const float dt)
     return wasUpdated;
 }
 
-void FreeCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs)
-{
-    if (mouseEventArgs.button == MouseButton::Right)
-    {
+void FreeCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs) {
+    if (mouseEventArgs.button == MouseButton::Right) {
         m_isDragging = true;
         m_window->setCursorState(CursorState::Disabled);
 
@@ -112,10 +96,8 @@ void FreeCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs)
     }
 }
 
-void FreeCameraController::onMouseReleased(const MouseEventArgs& mouseEventArgs)
-{
-    if (mouseEventArgs.button == MouseButton::Right)
-    {
+void FreeCameraController::onMouseReleased(const MouseEventArgs& mouseEventArgs) {
+    if (mouseEventArgs.button == MouseButton::Right) {
         m_isDragging = false;
         m_window->setCursorState(CursorState::Normal);
 
@@ -124,12 +106,10 @@ void FreeCameraController::onMouseReleased(const MouseEventArgs& mouseEventArgs)
     }
 }
 
-void FreeCameraController::onMouseMoved(const double xPos, const double yPos)
-{
+void FreeCameraController::onMouseMoved(const double xPos, const double yPos) {
     const glm::vec2 mousePos(static_cast<float>(xPos), static_cast<float>(yPos));
 
-    if (m_isDragging)
-    {
+    if (m_isDragging) {
         // In [-1, 1] range
         const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
         updateOrientation(-delta.x, -delta.y);
@@ -139,18 +119,15 @@ void FreeCameraController::onMouseMoved(const double xPos, const double yPos)
     m_prevMousePos = mousePos;
 }
 
-void FreeCameraController::onMouseWheelScrolled(const double offset)
-{
+void FreeCameraController::onMouseWheelScrolled(const double offset) {
     m_camera.setVerticalFov(std::clamp(m_camera.getVerticalFov() - static_cast<float>(offset) * 3.0f, 5.0f, 90.0f));
 }
 
-void FreeCameraController::onViewportResized(const int32_t width, const int32_t height)
-{
+void FreeCameraController::onViewportResized(const int32_t width, const int32_t height) {
     m_camera.setViewportSize(width, height);
 }
 
-CameraParameters FreeCameraController::getCameraParameters() const
-{
+CameraParameters FreeCameraController::getCameraParameters() const {
     CameraParameters params{};
     params.V = m_camera.getViewMatrix();
     params.P = m_camera.getProjectionMatrix();
@@ -159,8 +136,7 @@ CameraParameters FreeCameraController::getCameraParameters() const
     return params;
 }
 
-ExtendedCameraParameters FreeCameraController::getExtendedCameraParameters() const
-{
+ExtendedCameraParameters FreeCameraController::getExtendedCameraParameters() const {
     ExtendedCameraParameters params{};
     params.V = m_camera.getViewMatrix();
     params.P = m_camera.getProjectionMatrix();

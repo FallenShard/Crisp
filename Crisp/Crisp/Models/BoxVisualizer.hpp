@@ -10,8 +10,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class CameraController;
 
 class Renderer;
@@ -22,8 +21,7 @@ class MeshGeometry;
 class VulkanPipeline;
 class VulkanRenderPass;
 
-class BoxVisualizer
-{
+class BoxVisualizer {
 public:
     BoxVisualizer(Renderer* renderer, uint32_t numBoxes, const VulkanRenderPass& renderPass);
     ~BoxVisualizer();
@@ -38,8 +36,7 @@ public:
 private:
     Renderer* m_renderer;
 
-    struct BoxData
-    {
+    struct BoxData {
         std::array<glm::vec4, 8> points;
         glm::mat4 transform;
         glm::vec4 color;

@@ -7,12 +7,10 @@
 #include <functional>
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)>;
 
-class VulkanContext
-{
+class VulkanContext {
 public:
     VulkanContext(
         SurfaceCreator&& surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers);

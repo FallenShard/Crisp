@@ -5,10 +5,8 @@
 
 #include <Crisp/Spectra/RgbSpectrum.hpp>
 
-namespace crisp
-{
-enum class IndexOfRefraction
-{
+namespace crisp {
+enum class IndexOfRefraction {
     Vacuum,
     Air,
     Ice,
@@ -18,26 +16,23 @@ enum class IndexOfRefraction
     Diamond
 };
 
-struct ComplexIOR
-{
+struct ComplexIOR {
     RgbSpectrum eta;
     RgbSpectrum k;
 };
 
-class Fresnel
-{
+class Fresnel {
 public:
-    inline static float dielectric(float cosThetaI, float extIOR, float intIOR, float& cosThetaT)
-    {
+    inline static float dielectric(float cosThetaI, float extIOR, float intIOR, float& cosThetaT) {
         float etaI = extIOR, etaT = intIOR;
 
         // If indices of refraction are the same, no fresnel effects
-        if (extIOR == intIOR)
+        if (extIOR == intIOR) {
             return 0.0f;
+        }
 
         // if cosThetaI is < 0, it means the ray is coming from inside the object
-        if (cosThetaI < 0.0f)
-        {
+        if (cosThetaI < 0.0f) {
             std::swap(etaI, etaT);
             cosThetaI = -cosThetaI;
         }
@@ -46,8 +41,9 @@ public:
         float sinThetaTSqr = eta * eta * (1.0f - cosThetaI * cosThetaI);
 
         // Total internal reflection
-        if (sinThetaTSqr > 1.0f)
+        if (sinThetaTSqr > 1.0f) {
             return 1.0f;
+        }
 
         cosThetaT = std::sqrtf(1.0f - sinThetaTSqr);
 
@@ -56,17 +52,16 @@ public:
         return (Rs * Rs + Rp * Rp) / 2.0f;
     }
 
-    inline static float dielectric(float cosThetaI, float extIOR, float intIOR)
-    {
+    inline static float dielectric(float cosThetaI, float extIOR, float intIOR) {
         float etaI = extIOR, etaT = intIOR;
 
         // If indices of refraction are the same, no fresnel effects
-        if (extIOR == intIOR)
+        if (extIOR == intIOR) {
             return 0.0f;
+        }
 
         // if cosThetaI is < 0, it means the ray is coming from inside the object
-        if (cosThetaI < 0.0f)
-        {
+        if (cosThetaI < 0.0f) {
             std::swap(etaI, etaT);
             cosThetaI = -cosThetaI;
         }
@@ -75,8 +70,9 @@ public:
         float sinThetaTSqr = eta * eta * (1.0f - cosThetaI * cosThetaI);
 
         // Total internal reflection
-        if (sinThetaTSqr > 1.0f)
+        if (sinThetaTSqr > 1.0f) {
             return 1.0f;
+        }
 
         float cosThetaT = std::sqrtf(1.0f - sinThetaTSqr);
 
@@ -85,10 +81,8 @@ public:
         return (Rs * Rs + Rp * Rp) / 2.0f;
     }
 
-    inline static float getIOR(IndexOfRefraction iorMaterial)
-    {
-        switch (iorMaterial)
-        {
+    inline static float getIOR(IndexOfRefraction iorMaterial) {
+        switch (iorMaterial) {
         case IndexOfRefraction::Vacuum:
             return 1.0f;
         case IndexOfRefraction::Air:
@@ -108,8 +102,7 @@ public:
         }
     };
 
-    inline static ComplexIOR getComplexIOR(std::string name)
-    {
+    inline static ComplexIOR getComplexIOR(std::string name) {
         static const std::map<std::string, ComplexIOR> complexIorMap = {
             {   "a-C",   {{2.9440999183f, 2.2271502925f, 1.9681668794f}, {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
             {    "Ag",   {{0.1552646489f, 0.1167232965f, 0.1383806959f}, {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
@@ -155,8 +148,7 @@ public:
 
         auto iter = complexIorMap.find(name);
 
-        if (iter == complexIorMap.end())
-        {
+        if (iter == complexIorMap.end()) {
             std::cerr << "Invalid complex IOR requested! Using gold ('Au') as default!" << '\n';
             return complexIorMap.at("Au");
         }
@@ -164,8 +156,7 @@ public:
         return iter->second;
     }
 
-    inline static RgbSpectrum conductor(float cosThetaI, const ComplexIOR& ior)
-    {
+    inline static RgbSpectrum conductor(float cosThetaI, const ComplexIOR& ior) {
         RgbSpectrum squareTerm = ior.eta * ior.eta + ior.k * ior.k;
         float cosTheta2 = cosThetaI * cosThetaI;
         RgbSpectrum etaCosTheta = 2.0f * ior.eta * cosThetaI;
@@ -177,8 +168,7 @@ public:
         return (Rs + Rp) * 0.5f;
     }
 
-    inline static RgbSpectrum conductorFull(float cosThetaI, const ComplexIOR& ior)
-    {
+    inline static RgbSpectrum conductorFull(float cosThetaI, const ComplexIOR& ior) {
         float cosTheta2 = cosThetaI * cosThetaI;
         float sinTheta2 = 1.0f - cosTheta2;
         glm::vec3 eta2(ior.eta.r * ior.eta.r, ior.eta.g * ior.eta.g, ior.eta.b * ior.eta.b);

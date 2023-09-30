@@ -6,16 +6,14 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 std::unique_ptr<VulkanRenderPass> createTexturePass(
     const VulkanDevice& device,
     RenderTargetCache& renderTargetCache,
     VkExtent2D renderArea,
     VkFormat textureFormat,
-    const bool bufferedRenderTargets)
-{
+    const bool bufferedRenderTargets) {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         "TexturePass",

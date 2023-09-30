@@ -7,8 +7,7 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
+namespace crisp {
 NormalsIntegrator::NormalsIntegrator(const VariantMap& /*params*/) {}
 
 NormalsIntegrator::~NormalsIntegrator() {}
@@ -16,11 +15,11 @@ NormalsIntegrator::~NormalsIntegrator() {}
 void NormalsIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum NormalsIntegrator::Li(
-    const pt::Scene* scene, Sampler& /*sampler*/, Ray3& ray, IlluminationFlags /*illumFlags*/) const
-{
+    const pt::Scene* scene, Sampler& /*sampler*/, Ray3& ray, IlluminationFlags /*illumFlags*/) const {
     Intersection its;
-    if (!scene->rayIntersect(ray, its))
+    if (!scene->rayIntersect(ray, its)) {
         return Spectrum(0.0f);
+    }
 
     Spectrum color;
     color.r = std::fabsf(its.shFrame.n.x);

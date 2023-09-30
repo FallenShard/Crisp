@@ -3,10 +3,8 @@
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-namespace crisp
-{
-class VulkanCommandPool final : public VulkanResource<VkCommandPool>
-{
+namespace crisp {
+class VulkanCommandPool final : public VulkanResource<VkCommandPool> {
 public:
     VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator);
 

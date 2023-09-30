@@ -9,10 +9,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-namespace crisp
-{
-struct GlyphInfo
-{
+namespace crisp {
+struct GlyphInfo {
     float advanceX, advanceY;
     float bmpHeight, bmpWidth;
     float bmpLeft, bmpTop;
@@ -21,8 +19,7 @@ struct GlyphInfo
 
 using GlyphArray = std::array<GlyphInfo, 96>;
 
-struct Font
-{
+struct Font {
     std::vector<unsigned char> textureData;
     uint32_t width;
     uint32_t height;
@@ -31,8 +28,7 @@ struct Font
     uint32_t pixelSize;
 };
 
-class FontLoader
-{
+class FontLoader {
 public:
     static constexpr unsigned char kCharBegin = 32;
     static constexpr unsigned char kCharEnd = 128;

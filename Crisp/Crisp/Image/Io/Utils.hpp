@@ -6,10 +6,8 @@
 #include <filesystem>
 #include <span>
 
-namespace crisp
-{
-enum class FlipOnLoad
-{
+namespace crisp {
+enum class FlipOnLoad {
     None,
     Y,
 };

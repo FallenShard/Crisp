@@ -3,20 +3,17 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 #define STRINGIFY(x) #x
 
 #define APPEND_FLAG_BIT_STR(res, flags, bit)                                                                           \
-    if ((flags)&VK_IMAGE_USAGE_##bit)                                                                                  \
-    {                                                                                                                  \
+    if ((flags) & VK_IMAGE_USAGE_##bit) {                                                                              \
         (res) += STRINGIFY(VK_IMAGE_USAGE_##bit);                                                                      \
         (res) += " | ";                                                                                                \
     }
 
-inline std::string toString(VkImageUsageFlags flags)
-{
+inline std::string toString(VkImageUsageFlags flags) {
     std::string res;
     APPEND_FLAG_BIT_STR(res, flags, TRANSFER_SRC_BIT);
     APPEND_FLAG_BIT_STR(res, flags, TRANSFER_DST_BIT);
@@ -31,30 +28,26 @@ inline std::string toString(VkImageUsageFlags flags)
     return res;
 }
 
-struct RenderGraphPassHandle
-{
+struct RenderGraphPassHandle {
     static constexpr uint32_t kInvalidId{~0u};
     static constexpr uint32_t kExternalPass{~0u};
 
     uint32_t id{kInvalidId};
 };
 
-struct RenderGraphResourceHandle
-{
+struct RenderGraphResourceHandle {
     static constexpr uint32_t kInvalidId{~0u};
 
     uint32_t id{kInvalidId};
 };
 
-enum class ResourceType
-{
+enum class ResourceType {
     Buffer,
     Image,
     Unknown
 };
 
-struct RenderGraphResource
-{
+struct RenderGraphResource {
     static constexpr uint16_t kInvalidIndex{std::numeric_limits<uint16_t>::max()};
 
     // Buffer, Image, or something else in the future. Determines the array to index into with description index.
@@ -74,35 +67,30 @@ struct RenderGraphResource
     std::string name; // Symbolic name of the resource.
 };
 
-enum class PassType
-{
+enum class PassType {
     Compute,
     Rasterizer,
     RayTracing,
     Unknown
 };
 
-enum class ResourceUsageType
-{
+enum class ResourceUsageType {
     Storage,
     Attachment,
     Texture
 };
 
-struct ResourceAccessState
-{
+struct ResourceAccessState {
     ResourceUsageType usageType;
     VkPipelineStageFlags pipelineStage;
     VkAccessFlags access;
 };
 
-struct RenderPassExecutionContext
-{
+struct RenderPassExecutionContext {
     VkCommandBuffer cmdBuffer;
 };
 
-struct RenderGraphPass
-{
+struct RenderGraphPass {
     std::string name; // Symbolic name for the render pass. Must be unique in the render graph.
     PassType type{PassType::Unknown};
 
@@ -118,28 +106,24 @@ struct RenderGraphPass
     std::vector<RenderGraphResourceHandle> colorAttachments;
     std::optional<RenderGraphResourceHandle> depthStencilAttachment;
 
-    void pushColorAttachment(RenderGraphResourceHandle handle)
-    {
+    void pushColorAttachment(RenderGraphResourceHandle handle) {
         colorAttachments.push_back(handle);
     }
 
-    void setDepthAttachment(RenderGraphResourceHandle handle)
-    {
+    void setDepthAttachment(RenderGraphResourceHandle handle) {
         depthStencilAttachment = handle;
     }
 
     std::function<void(const RenderPassExecutionContext&)> executeFunc{};
 };
 
-enum class SizePolicy
-{
+enum class SizePolicy {
     Absolute,
     SwapChainRelative,
     InputRelative
 };
 
-struct RenderGraphImageDescription
-{
+struct RenderGraphImageDescription {
     SizePolicy sizePolicy{SizePolicy::Absolute};
     uint32_t width{0};
     uint32_t height{0};
@@ -154,30 +138,25 @@ struct RenderGraphImageDescription
 
     VkImageCreateFlags createFlags{};
 
-    bool canAlias(const RenderGraphImageDescription& desc) const
-    {
+    bool canAlias(const RenderGraphImageDescription& desc) const {
         return sizePolicy == desc.sizePolicy && width == desc.height && depth == desc.depth && format == desc.format &&
                layerCount == desc.layerCount && mipLevelCount == desc.mipLevelCount &&
                sampleCount == desc.sampleCount && createFlags == desc.createFlags;
     }
 };
 
-struct RenderGraphBufferDescription
-{
+struct RenderGraphBufferDescription {
     VkFormat formatHint;
     VkDeviceSize size;
     VkBufferUsageFlags usageFlags;
 
-    bool canAlias(const RenderGraphBufferDescription& desc) const
-    {
+    bool canAlias(const RenderGraphBufferDescription& desc) const {
         return size == desc.size && formatHint == desc.formatHint;
     }
 };
 
-inline VkExtent3D calculateImageExtent(const RenderGraphImageDescription& desc, const VkExtent2D swapChainExtent)
-{
-    switch (desc.sizePolicy)
-    {
+inline VkExtent3D calculateImageExtent(const RenderGraphImageDescription& desc, const VkExtent2D swapChainExtent) {
+    switch (desc.sizePolicy) {
     case SizePolicy::Absolute:
         CRISP_CHECK_GT(desc.width, 0);
         CRISP_CHECK_GT(desc.height, 0);
@@ -189,15 +168,13 @@ inline VkExtent3D calculateImageExtent(const RenderGraphImageDescription& desc, 
     }
 }
 
-struct RenderGraphPhysicalImage
-{
+struct RenderGraphPhysicalImage {
     uint32_t descriptionIndex{}; // Index into the descriptions for metadata.
     std::unique_ptr<VulkanImage> image;
     std::vector<uint32_t> aliasedResourceIndices;
 };
 
-struct RenderGraphPhysicalBuffer
-{
+struct RenderGraphPhysicalBuffer {
     uint32_t descriptionIndex{};
     std::unique_ptr<VulkanBuffer> buffer;
     std::vector<uint32_t> aliasedResourceIndices;

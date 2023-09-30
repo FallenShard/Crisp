@@ -8,8 +8,7 @@
 
 #include <memory>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(

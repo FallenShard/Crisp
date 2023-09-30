@@ -8,12 +8,9 @@
 
 #define PIPELINE_STAGE_TO_STRING(x) CASE_ENUM_TO_STRING(VK_PIPELINE_STAGE_##x, std::strlen("VK_PIPELINE_STAGE_"));
 
-namespace crisp
-{
-std::string pipelineStageBitToString(VkPipelineStageFlagBits flags)
-{
-    switch (flags)
-    {
+namespace crisp {
+std::string pipelineStageBitToString(VkPipelineStageFlagBits flags) {
+    switch (flags) {
         PIPELINE_STAGE_TO_STRING(TOP_OF_PIPE_BIT);
         PIPELINE_STAGE_TO_STRING(DRAW_INDIRECT_BIT);
         PIPELINE_STAGE_TO_STRING(VERTEX_INPUT_BIT);
@@ -48,16 +45,12 @@ std::string pipelineStageBitToString(VkPipelineStageFlagBits flags)
     return "Unknown";
 }
 
-std::string pipelineStageToString(VkPipelineStageFlags flags)
-{
+std::string pipelineStageToString(VkPipelineStageFlags flags) {
     std::string result;
     uint32_t i = 0;
-    while (flags)
-    {
-        if (flags & 0x01)
-        {
-            if (!result.empty())
-            {
+    while (flags) {
+        if (flags & 0x01) {
+            if (!result.empty()) {
                 result += " | ";
             }
             result += pipelineStageBitToString(static_cast<VkPipelineStageFlagBits>(1 << i));

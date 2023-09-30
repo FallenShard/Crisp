@@ -7,40 +7,33 @@
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
-class VertexBuffer
-{
+class VertexBuffer {
 public:
     VertexBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data = nullptr);
 
     template <typename T>
-    VertexBuffer(Renderer* renderer, const std::vector<T>& data,
-        BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
-        : VertexBuffer(renderer, data.size() * sizeof(T), updatePolicy, data.data())
-    {
-    }
+    VertexBuffer(
+        Renderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
+        : VertexBuffer(renderer, data.size() * sizeof(T), updatePolicy, data.data()) {}
 
     ~VertexBuffer();
 
-    inline VkBuffer get() const
-    {
+    inline VkBuffer get() const {
         return m_buffer->getHandle();
     }
 
     void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 
     template <typename T>
-    void updateStagingBuffer(const std::vector<T>& vec)
-    {
+    void updateStagingBuffer(const std::vector<T>& vec) {
         updateStagingBuffer(vec.data(), vec.size() * sizeof(T));
     }
 
     template <typename T, size_t N>
-    void updateStagingBuffer(const std::array<T, N>& array)
-    {
+    void updateStagingBuffer(const std::array<T, N>& array) {
         updateStagingBuffer(array.data(), N * sizeof(T));
     }
 

@@ -2,10 +2,8 @@
 
 #include <imgui.h>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 const auto logger = createLoggerMt("AtmosphereScene");
 
 float azimuth = 0.0f;
@@ -18,8 +16,7 @@ const VertexLayoutDescription PbrVertexFormat = {
 } // namespace
 
 AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     setupInput();
 
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
@@ -34,8 +31,9 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
 
     auto nodes = addAtmosphereRenderPasses(
         *m_renderGraph, *m_renderer, *m_resourceContext, m_resourceContext->renderTargetCache, "SCREEN");
-    for (auto& [key, value] : nodes)
+    for (auto& [key, value] : nodes) {
         m_renderNodes.emplace(std::move(key), std::move(value));
+    }
     m_renderer->setSceneImageView(m_renderGraph->getNode("rayMarchingPass").renderPass.get(), 0);
 
     m_renderGraph->sortRenderPasses().unwrap();
@@ -44,8 +42,7 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void AtmosphereScene::resize(int width, int height)
-{
+void AtmosphereScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
@@ -54,8 +51,7 @@ void AtmosphereScene::resize(int width, int height)
     // m_renderer->setSceneImageView(m_renderGraph->getNode(ForwardLightingPass).renderPass.get(), 0);
 }
 
-void AtmosphereScene::update(float dt)
-{
+void AtmosphereScene::update(float dt) {
     // Camera
     m_cameraController->update(dt);
     const auto camParams = m_cameraController->getCameraParameters();
@@ -94,24 +90,20 @@ void AtmosphereScene::update(float dt)
     m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer(m_atmosphereParams);
 }
 
-void AtmosphereScene::render()
-{
+void AtmosphereScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->buildCommandLists(m_renderNodes);
     m_renderGraph->executeCommandLists();
 }
 
-void AtmosphereScene::renderGui()
-{
+void AtmosphereScene::renderGui() {
     ImGui::Begin("Settings");
-    if (ImGui::SliderFloat("Azimuth", &azimuth, 0.0f, 2.0f * glm::pi<float>()))
-    {
+    if (ImGui::SliderFloat("Azimuth", &azimuth, 0.0f, 2.0f * glm::pi<float>())) {
         m_atmosphereParams.sunDirection.x = std::cos(azimuth) * std::cos(altitude);
         m_atmosphereParams.sunDirection.y = std::sin(altitude);
         m_atmosphereParams.sunDirection.z = std::sin(azimuth) * std::cos(altitude);
     }
-    if (ImGui::SliderFloat("Altitude", &altitude, 0.0f, glm::pi<float>()))
-    {
+    if (ImGui::SliderFloat("Altitude", &altitude, 0.0f, glm::pi<float>())) {
         m_atmosphereParams.sunDirection.x = std::cos(azimuth) * std::cos(altitude);
         m_atmosphereParams.sunDirection.y = std::sin(altitude);
         m_atmosphereParams.sunDirection.z = std::sin(azimuth) * std::cos(altitude);
@@ -119,22 +111,17 @@ void AtmosphereScene::renderGui()
     ImGui::End();
 }
 
-RenderNode* AtmosphereScene::createRenderNode(std::string id, bool hasTransform)
-{
-    if (!hasTransform)
-    {
+RenderNode* AtmosphereScene::createRenderNode(std::string id, bool hasTransform) {
+    if (!hasTransform) {
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
-    }
-    else
-    {
+    } else {
         const auto transformHandle{m_transformBuffer->getNextIndex()};
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle))
             .first->second.get();
     }
 }
 
-void AtmosphereScene::createCommonTextures()
-{
+void AtmosphereScene::createCommonTextures() {
     constexpr float kAnisotropy{16.0f};
     constexpr float kMaxLod{9.0f};
     auto& imageCache = m_resourceContext->imageCache;
@@ -144,17 +131,13 @@ void AtmosphereScene::createCommonTextures()
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy));
 }
 
-void AtmosphereScene::setupInput()
-{
-    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe(
-        [this](Key key, int)
-        {
-            switch (key)
-            {
-            case Key::F5:
-                m_resourceContext->recreatePipelines();
-                break;
-            }
-        }));
+void AtmosphereScene::setupInput() {
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe([this](Key key, int) {
+        switch (key) {
+        case Key::F5:
+            m_resourceContext->recreatePipelines();
+            break;
+        }
+    }));
 }
 } // namespace crisp

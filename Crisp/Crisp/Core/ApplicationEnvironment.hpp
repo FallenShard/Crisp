@@ -4,13 +4,11 @@
 
 #include <filesystem>
 
-namespace crisp
-{
+namespace crisp {
 class ApplicationEnvironment // NOLINT
 {
 public:
-    struct Parameters
-    {
+    struct Parameters {
         std::string configPath{};
         std::string scene{"ocean"};
         bool enableRayTracingExtension{false};

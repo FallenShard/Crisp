@@ -4,10 +4,8 @@
 
 #include <filesystem>
 
-namespace crisp::sl
-{
-class Lexer
-{
+namespace crisp::sl {
+class Lexer {
 public:
     explicit Lexer(const std::string& source);
     explicit Lexer(std::string&& source);

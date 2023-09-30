@@ -3,10 +3,8 @@
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-namespace crisp
-{
-class VulkanQueue
-{
+namespace crisp {
+class VulkanQueue {
 public:
     VulkanQueue(VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId);
 
@@ -26,8 +24,7 @@ public:
 
     bool supportsOperations(VkQueueFlags queueFlags) const;
 
-    inline VkQueue getHandle() const
-    {
+    inline VkQueue getHandle() const {
         return m_handle;
     }
 

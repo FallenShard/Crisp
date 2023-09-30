@@ -3,15 +3,12 @@
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
-namespace crisp
-{
-class VulkanDescriptorSet
-{
+namespace crisp {
+class VulkanDescriptorSet {
 public:
     VulkanDescriptorSet(uint32_t index, const VulkanPipelineLayout* pipelineLayout);
 
-    inline VkDescriptorSet getHandle() const
-    {
+    inline VkDescriptorSet getHandle() const {
         return m_set;
     }
 

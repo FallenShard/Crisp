@@ -5,48 +5,33 @@
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-namespace crisp
-{
+namespace crisp {
 template <typename T>
-class VulkanResource
-{
+class VulkanResource {
 public:
     VulkanResource(VulkanResourceDeallocator& deallocator)
         : m_handle(VK_NULL_HANDLE)
-        , m_deallocator(&deallocator)
-    {
-    }
+        , m_deallocator(&deallocator) {}
 
     VulkanResource(T handle, VulkanResourceDeallocator& deallocator)
         : m_handle(handle)
-        , m_deallocator(&deallocator)
-    {
-    }
+        , m_deallocator(&deallocator) {}
 
-    virtual ~VulkanResource()
-    {
-        if (getDestroyFunc<T>() != nullptr)
-        {
-            if (!m_handle || !m_deallocator)
-            {
+    virtual ~VulkanResource() {
+        if (getDestroyFunc<T>() != nullptr) {
+            if (!m_handle || !m_deallocator) {
                 return;
             }
 
-            if (m_framesToLive == 0)
-            {
+            if (m_framesToLive == 0) {
                 destroyDeferred(m_handle, m_deallocator, getDestroyFunc<T>());
-            }
-            else
+            } else {
                 m_deallocator->deferDestruction(
-                    m_framesToLive,
-                    m_handle,
-                    [](void* handle, VulkanResourceDeallocator* deallocator)
-                    {
+                    m_framesToLive, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
                         destroyDeferred(handle, deallocator, getDestroyFunc<T>());
                     });
-        }
-        else
-        {
+            }
+        } else {
             spdlog::error("Didn't destroy object of type: {}", typeid(T).name());
         }
     }
@@ -57,12 +42,9 @@ public:
     VulkanResource(VulkanResource&& other) noexcept
         : m_deallocator(std::exchange(other.m_deallocator, nullptr))
         , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
-        , m_framesToLive(std::exchange(other.m_framesToLive, 0))
-    {
-    }
+        , m_framesToLive(std::exchange(other.m_framesToLive, 0)) {}
 
-    VulkanResource& operator=(VulkanResource&& other) noexcept
-    {
+    VulkanResource& operator=(VulkanResource&& other) noexcept {
         m_deallocator = std::exchange(other.m_deallocator, nullptr);
         m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
         m_framesToLive = std::exchange(other.m_framesToLive, 0);
@@ -70,32 +52,27 @@ public:
     }
 
     template <typename DestroyFunc>
-    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, DestroyFunc&& func)
-    {
+    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, DestroyFunc&& func) {
         spdlog::debug("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
         func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
         deallocator->removeTag(handle);
     }
 
-    inline T getHandle() const
-    {
+    inline T getHandle() const {
         return m_handle;
     }
 
-    inline void swap(VulkanResource& rhs)
-    {
+    inline void swap(VulkanResource& rhs) {
         std::swap(m_deallocator, rhs.m_deallocator);
         std::swap(m_handle, rhs.m_handle);
         std::swap(m_framesToLive, rhs.m_framesToLive);
     }
 
-    inline void setDeferredDestruction(bool isEnabled)
-    {
+    inline void setDeferredDestruction(bool isEnabled) {
         m_framesToLive = isEnabled ? RendererConfig::VirtualFrameCount : 0;
     }
 
-    inline void setTag(std::string tag) const
-    {
+    inline void setTag(std::string tag) const {
         m_deallocator->setTag(m_handle, std::move(tag));
     }
 

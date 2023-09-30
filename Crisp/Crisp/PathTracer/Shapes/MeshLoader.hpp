@@ -5,10 +5,8 @@
 #include <filesystem>
 #include <vector>
 
-namespace crisp
-{
-class MeshLoader
-{
+namespace crisp {
+class MeshLoader {
 public:
     bool load(
         std::filesystem::path path,

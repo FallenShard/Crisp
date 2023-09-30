@@ -5,12 +5,9 @@
 #include "ControlGroup.hpp"
 #include "DrawComponents/RectDrawComponent.hpp"
 
-namespace crisp
-{
-namespace gui
-{
-class Panel : public ControlGroup
-{
+namespace crisp {
+namespace gui {
+class Panel : public ControlGroup {
 public:
     Panel(Form* parentForm);
     ~Panel();

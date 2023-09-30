@@ -4,24 +4,20 @@
 
 #include <vector>
 
-namespace crisp
-{
-struct WindParameters
-{
+namespace crisp {
+struct WindParameters {
     glm::vec2 speed;
     glm::vec2 speedNorm;
     float magnitude;
     float Lw;
 };
 
-enum class OceanSpectrumData
-{
+enum class OceanSpectrumData {
     UniformGaussian,
     Phillips
 };
 
-struct OceanParameters
-{
+struct OceanParameters {
     int32_t N;
     int32_t M;
     float Lx;

@@ -5,25 +5,20 @@
 
 using namespace crisp;
 
-namespace
-{
+namespace {
 static int copies = 0;
 
-class EventData
-{
+class EventData {
 public:
     EventData(std::string msg, double x, double y)
         : message(msg)
         , x(x)
-        , y(y)
-    {
-    }
+        , y(y) {}
 
     EventData(const EventData& ev)
         : message(ev.message)
         , x(ev.x)
-        , y(ev.y)
-    {
+        , y(ev.y) {
         copies++;
         std::cout << "Copy ctor\n";
     }
@@ -33,22 +28,19 @@ public:
     double y;
 };
 
-struct DelegateTester
-{
+struct DelegateTester {
     std::string message;
     int state = 0;
 
     int triggerCounter = 0;
 
-    void onEventTriggered(int newStateValue, std::string msg)
-    {
+    void onEventTriggered(int newStateValue, std::string msg) {
         message = msg;
         state = newStateValue;
         ++triggerCounter;
     }
 
-    void onEventData(const EventData& evData)
-    {
+    void onEventData(const EventData& evData) {
         message = evData.message;
         state = static_cast<int>(evData.x * evData.y);
     }
@@ -57,8 +49,7 @@ struct DelegateTester
 void printStuff(const std::string&) {}
 } // namespace
 
-TEST(EventTest, Subscriptions)
-{
+TEST(EventTest, Subscriptions) {
     Event<int, std::string> customEvent;
     DelegateTester tester;
 
@@ -81,19 +72,14 @@ TEST(EventTest, Subscriptions)
     EXPECT_EQ(customEvent.getSubscriberCount(), 0);
 }
 
-TEST(EventTest, Disconnects)
-{
+TEST(EventTest, Disconnects) {
     Event<const EventData&> event;
     DelegateTester tester;
 
     const auto del = createDelegate<&DelegateTester::onEventData>(&tester);
 
     event += del;
-    event +=
-        {&tester,
-         [](const EventData&)
-         {
-         }};
+    event += {&tester, [](const EventData&) {}};
     EXPECT_EQ(event.getSubscriberCount(), 2);
     EXPECT_EQ(event.getDelegateCount(), 1);
     EXPECT_EQ(event.getFunctorCount(), 1);
@@ -108,8 +94,7 @@ TEST(EventTest, Disconnects)
     EXPECT_EQ(event.getSubscriberCount(), 0);
 }
 
-TEST(EventTest, StaticFunctions)
-{
+TEST(EventTest, StaticFunctions) {
     Event<const std::string&> event;
 
     const auto freeDelegate = createDelegate<printStuff>();
@@ -119,17 +104,12 @@ TEST(EventTest, StaticFunctions)
     EXPECT_EQ(event.getSubscriberCount(), 1);
 }
 
-TEST(EventTest, Autodisconnect)
-{
+TEST(EventTest, Autodisconnect) {
     Event<const std::string&> event;
     event.subscribe<&printStuff>();
 
     {
-        const auto handler = event.subscribe(
-            [](const std::string& a)
-            {
-                std::cout << a.size() << std::endl;
-            });
+        const auto handler = event.subscribe([](const std::string& a) { std::cout << a.size() << std::endl; });
         EXPECT_EQ(event.getSubscriberCount(), 2);
     }
 

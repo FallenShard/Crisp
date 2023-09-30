@@ -2,8 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 std::unique_ptr<VulkanRenderPass> createCubeMapPass(
     const VulkanDevice& device, RenderTarget* renderTarget, VkExtent2D renderArea, uint32_t mipLevelIndex = 0);

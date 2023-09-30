@@ -2,10 +2,8 @@
 
 #include "Panel.hpp"
 
-namespace crisp::gui
-{
-class DebugRect : public Panel
-{
+namespace crisp::gui {
+class DebugRect : public Panel {
 public:
     DebugRect(Form* parentForm);
     ~DebugRect();

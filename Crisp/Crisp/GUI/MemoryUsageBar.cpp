@@ -9,26 +9,19 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-namespace crisp::gui
-{
-namespace
-{
-glm::vec4 interpolateColor(float t)
-{
-    if (t > 0.5f)
-    {
+namespace crisp::gui {
+namespace {
+glm::vec4 interpolateColor(float t) {
+    if (t > 0.5f) {
         return {1.0f, 2.0f * (1.0f - t), 0.0f, 1.0f};
-    }
-    else
-    {
+    } else {
         return {t / 0.5f, 1.0f, 0.0f, 1.0f};
     }
 }
 } // namespace
 
 MemoryUsageBar::MemoryUsageBar(Form* parentForm)
-    : Panel(parentForm)
-{
+    : Panel(parentForm) {
     setId("memoryUsageBar");
     setAnchor(Anchor::BottomLeft);
     setOrigin(Origin::BottomLeft);
@@ -62,12 +55,10 @@ MemoryUsageBar::MemoryUsageBar(Form* parentForm)
     addControl(std::move(stagingLabel));
 
     m_stopWatch = std::make_unique<StopWatch>(2.0);
-    m_stopWatch->triggered += [this]()
-    {
+    m_stopWatch->triggered += [this]() {
         auto metrics = m_renderSystem->getRenderer().getDevice().getMemoryAllocator().getDeviceMemoryUsage();
 
-        auto transformToMb = [](uint64_t bytes)
-        {
+        auto transformToMb = [](uint64_t bytes) {
             uint64_t megaBytes = bytes >> 20;
             uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0;
             return std::to_string(megaBytes + remainder);
@@ -98,8 +89,7 @@ MemoryUsageBar::MemoryUsageBar(Form* parentForm)
     m_form->addStopWatch(m_stopWatch.get());
 }
 
-MemoryUsageBar::~MemoryUsageBar()
-{
+MemoryUsageBar::~MemoryUsageBar() {
     m_form->removeStopWatch(m_stopWatch.get());
 }
 } // namespace crisp::gui

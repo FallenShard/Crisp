@@ -7,10 +7,8 @@
 
 #include <memory>
 
-namespace crisp
-{
-class VulkanImageView : public VulkanResource<VkImageView>
-{
+namespace crisp {
+class VulkanImageView : public VulkanResource<VkImageView> {
 public:
     VulkanImageView(
         const VulkanDevice& device,
@@ -23,18 +21,15 @@ public:
     VkDescriptorImageInfo getDescriptorInfo(
         const VulkanSampler* sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
 
-    VkImageSubresourceRange getSubresourceRange() const
-    {
+    VkImageSubresourceRange getSubresourceRange() const {
         return m_subresourceRange;
     }
 
-    const VulkanImage& getImage() const
-    {
+    const VulkanImage& getImage() const {
         return m_image;
     }
 
-    VulkanImage& getImage()
-    {
+    VulkanImage& getImage() {
         return m_image;
     }
 

@@ -8,10 +8,8 @@
 #include <cstdint>
 #include <memory>
 
-namespace crisp
-{
-struct DeviceMemoryMetrics
-{
+namespace crisp {
+struct DeviceMemoryMetrics {
     uint64_t bufferMemorySize;
     uint64_t bufferMemoryUsed;
     uint64_t imageMemorySize;
@@ -20,8 +18,7 @@ struct DeviceMemoryMetrics
     uint64_t stagingMemoryUsed;
 };
 
-class VulkanMemoryAllocator
-{
+class VulkanMemoryAllocator {
 public:
     VulkanMemoryAllocator(const VulkanPhysicalDevice& physicalDevice, VkDevice deviceHandle);
 

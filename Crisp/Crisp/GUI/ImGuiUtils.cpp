@@ -6,15 +6,12 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
-namespace crisp::gui
-{
-namespace
-{
+namespace crisp::gui {
+namespace {
 VkDescriptorPool imGuiPool{VK_NULL_HANDLE};
 }
 
-void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string> fontPath)
-{
+void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string> fontPath) {
     VkDescriptorPoolSize poolSizes[] = {
         {               VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
@@ -51,47 +48,36 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
     initInfo.ImageCount = RendererConfig::VirtualFrameCount;
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     ImGui_ImplVulkan_LoadFunctions(
-        [](const char* funcName, void* userData)
-        {
+        [](const char* funcName, void* userData) {
             return vkGetInstanceProcAddr(static_cast<VkInstance>(userData), funcName);
         },
         initInfo.Instance);
     ImGui_ImplVulkan_Init(&initInfo, renderer.getDefaultRenderPass().getHandle());
 
-    if (fontPath)
-    {
+    if (fontPath) {
         ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->c_str(), 16);
     }
 
-    renderer.enqueueResourceUpdate(
-        [&](VkCommandBuffer cmd)
-        {
-            ImGui_ImplVulkan_CreateFontsTexture(cmd);
-        });
+    renderer.enqueueResourceUpdate([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
     renderer.finish();
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void shutdownImGui(Renderer& renderer)
-{
+void shutdownImGui(Renderer& renderer) {
     vkDestroyDescriptorPool(renderer.getDevice().getHandle(), imGuiPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
 }
 
-void prepareImGuiFrame()
-{
+void prepareImGuiFrame() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-void renderImGuiFrame(Renderer& renderer)
-{
+void renderImGuiFrame(Renderer& renderer) {
     ImGui::Render();
-    renderer.enqueueDefaultPassDrawCommand(
-        [](VkCommandBuffer cmdBuffer)
-        {
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
-        });
+    renderer.enqueueDefaultPassDrawCommand([](VkCommandBuffer cmdBuffer) {
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
+    });
 }
 } // namespace crisp::gui

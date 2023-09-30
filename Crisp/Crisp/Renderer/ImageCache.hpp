@@ -4,12 +4,10 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
-class ImageCache
-{
+class ImageCache {
 public:
     ImageCache(Renderer* renderer);
 
@@ -32,8 +30,7 @@ public:
     void addSampler(const std::string& key, std::unique_ptr<VulkanSampler> sampler);
     VulkanSampler& getSampler(const std::string& key) const;
 
-    inline Renderer* getRenderer()
-    {
+    inline Renderer* getRenderer() {
         return m_renderer;
     }
 

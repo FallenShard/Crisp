@@ -2,10 +2,8 @@
 
 #include "PhaseFunction.hpp"
 
-namespace crisp
-{
-class IsotropicPhaseFunction : public PhaseFunction
-{
+namespace crisp {
+class IsotropicPhaseFunction : public PhaseFunction {
 public:
     IsotropicPhaseFunction(const VariantMap& params);
     ~IsotropicPhaseFunction();

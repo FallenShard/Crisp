@@ -4,20 +4,16 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 PipelineCache::PipelineCache(const AssetPaths& assetPaths)
-    : m_assetPaths(assetPaths)
-{
-}
+    : m_assetPaths(assetPaths) {}
 
 VulkanPipeline* PipelineCache::loadPipeline(
     Renderer* renderer,
     const std::string& id,
     const std::string_view luaFilename,
     const VulkanRenderPass& renderPass,
-    const int subpassIndex)
-{
+    const int subpassIndex) {
     auto& pipelineInfo = m_pipelineInfos[id];
     pipelineInfo.luaFilename = luaFilename;
     pipelineInfo.renderPass = &renderPass;
@@ -33,24 +29,19 @@ VulkanPipeline* PipelineCache::loadPipeline(
     return pipeline.get();
 }
 
-VulkanPipeline* PipelineCache::getPipeline(const std::string& key) const
-{
+VulkanPipeline* PipelineCache::getPipeline(const std::string& key) const {
     return m_pipelines.at(key).get();
 }
 
-void PipelineCache::recreatePipelines(Renderer& renderer)
-{
+void PipelineCache::recreatePipelines(Renderer& renderer) {
     recompileShaderDir(renderer.getAssetPaths().shaderSourceDir, renderer.getAssetPaths().spvShaderDir);
 
-    renderer.enqueueResourceUpdate(
-        [this, &renderer](VkCommandBuffer)
-        {
-            for (auto& [id, info] : m_pipelineInfos)
-            {
-                auto pipeline = renderer.createPipeline(info.luaFilename, *info.renderPass, info.subpassIndex);
-                m_pipelines[id]->swapAll(*pipeline);
-            }
-        });
+    renderer.enqueueResourceUpdate([this, &renderer](VkCommandBuffer) {
+        for (auto& [id, info] : m_pipelineInfos) {
+            auto pipeline = renderer.createPipeline(info.luaFilename, *info.renderPass, info.subpassIndex);
+            m_pipelines[id]->swapAll(*pipeline);
+        }
+    });
 }
 
 } // namespace crisp

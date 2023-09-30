@@ -5,10 +5,8 @@
 #include <Crisp/Core/Mouse.hpp>
 #include <Crisp/Core/Window.hpp>
 
-namespace crisp
-{
-class FreeCameraController
-{
+namespace crisp {
+class FreeCameraController {
 public:
     FreeCameraController(Window& window);
     FreeCameraController(int32_t viewportWidth, int32_t viewportHeight);

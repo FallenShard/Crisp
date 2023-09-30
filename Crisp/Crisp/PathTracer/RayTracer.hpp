@@ -11,17 +11,14 @@
 #include "ImageBlock.hpp"
 #include "RayTracerUpdate.hpp"
 
-namespace crisp
-{
-namespace pt
-{
+namespace crisp {
+namespace pt {
 class Scene;
 }
 
 class Sampler;
 
-class RayTracer
-{
+class RayTracer {
 public:
     RayTracer();
     ~RayTracer();
@@ -41,8 +38,7 @@ private:
 
     void renderBlock(ImageBlock& block, Sampler& sampler, const pt::Scene* scene);
 
-    enum class RenderStatus
-    {
+    enum class RenderStatus {
         Free,
         Busy,
         Interrupted,

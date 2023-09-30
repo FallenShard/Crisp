@@ -2,10 +2,8 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
-class NormalsIntegrator : public Integrator
-{
+namespace crisp {
+class NormalsIntegrator : public Integrator {
 public:
     NormalsIntegrator(const VariantMap& params = VariantMap());
     virtual ~NormalsIntegrator();

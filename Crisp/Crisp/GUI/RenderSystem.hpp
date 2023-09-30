@@ -19,8 +19,7 @@
 
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 class VulkanPipeline;
 class VulkanImageView;
@@ -33,8 +32,7 @@ class VulkanRenderPass;
 
 struct Font;
 
-namespace gui
-{
+namespace gui {
 class Control;
 class Button;
 class CheckBox;
@@ -43,8 +41,7 @@ class Panel;
 
 class DynamicUniformBufferResource;
 
-class RenderSystem
-{
+class RenderSystem {
 public:
     RenderSystem(Renderer* renderer);
     ~RenderSystem();
@@ -121,8 +118,7 @@ private:
     std::unique_ptr<Material> m_fsMaterial;
 
     // Font resources
-    struct FontTexture
-    {
+    struct FontTexture {
         std::unique_ptr<Font> font;
         std::unique_ptr<Texture> texture;
         std::unique_ptr<VulkanImageView> VulkanImageView;
@@ -133,8 +129,7 @@ private:
     FontLoader m_fontLoader;
 
     // Text Resources
-    struct TextGeometryResource
-    {
+    struct TextGeometryResource {
         static constexpr uint32_t kNumInitialAllocatedCharacters = 32;
 
         uint32_t allocatedVertexCount;
@@ -165,8 +160,7 @@ private:
     std::vector<std::unique_ptr<TextGeometryResource>> m_textResources;
     std::set<unsigned int> m_textResourceIdPool;
 
-    struct GuiDrawCommand
-    {
+    struct GuiDrawCommand {
         using Callback = void (RenderSystem::*)(VkCommandBuffer, uint32_t, const GuiDrawCommand&) const;
         Callback drawFuncPtr;
         uint32_t transformId;
@@ -179,18 +173,14 @@ private:
             , transformId(transId)
             , colorId(colorId)
             , depth(d)
-            , textId(0)
-        {
-        }
+            , textId(0) {}
 
         GuiDrawCommand(Callback callback, uint32_t transId, uint32_t colorId, uint32_t textResId, float d)
             : drawFuncPtr(callback)
             , transformId(transId)
             , colorId(colorId)
             , depth(d)
-            , textId(textResId)
-        {
-        }
+            , textId(textResId) {}
     };
 
     void renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& drawCommand) const;

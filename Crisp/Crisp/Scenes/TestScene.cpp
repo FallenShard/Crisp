@@ -1,11 +1,8 @@
 #include <Crisp/Scenes/TestScene.hpp>
 
-namespace crisp
-{
+namespace crisp {
 TestScene::TestScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
-}
+    : Scene(renderer, window) {}
 
 TestScene::~TestScene() {}
 

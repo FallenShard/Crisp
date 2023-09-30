@@ -2,10 +2,8 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
-class PathTracerIntegrator : public Integrator
-{
+namespace crisp {
+class PathTracerIntegrator : public Integrator {
 public:
     PathTracerIntegrator(const VariantMap& attributes);
     virtual ~PathTracerIntegrator();

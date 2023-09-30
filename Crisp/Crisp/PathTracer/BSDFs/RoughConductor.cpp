@@ -6,11 +6,9 @@
 
 #include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 
-namespace crisp
-{
+namespace crisp {
 RoughConductorBSDF::RoughConductorBSDF(const VariantMap& params)
-    : BSDF(Lobe::Glossy)
-{
+    : BSDF(Lobe::Glossy) {
     auto materialName = params.get("material", std::string("Au"));
     m_IOR = Fresnel::getComplexIOR(materialName);
 
@@ -20,13 +18,13 @@ RoughConductorBSDF::RoughConductorBSDF(const VariantMap& params)
 
 RoughConductorBSDF::~RoughConductorBSDF() {}
 
-Spectrum RoughConductorBSDF::eval(const BSDF::Sample& bsdfSample) const
-{
+Spectrum RoughConductorBSDF::eval(const BSDF::Sample& bsdfSample) const {
     auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
     auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
 
-    if (bsdfSample.measure != Measure::SolidAngle || cosThetaI <= 0.0f || cosThetaO <= 0.0f)
+    if (bsdfSample.measure != Measure::SolidAngle || cosThetaI <= 0.0f || cosThetaO <= 0.0f) {
         return Spectrum(0.0f);
+    }
 
     glm::vec3 m = glm::normalize(bsdfSample.wi + bsdfSample.wo);
 
@@ -37,11 +35,11 @@ Spectrum RoughConductorBSDF::eval(const BSDF::Sample& bsdfSample) const
     return F * D * G / (4.0f * cosThetaI);
 }
 
-Spectrum RoughConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const
-{
+Spectrum RoughConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const {
     float cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
-    if (cosThetaI <= 0.0f)
+    if (cosThetaI <= 0.0f) {
         return Spectrum(0.0f);
+    }
 
     auto m = m_distrib->sampleNormal(sampler.next2D());
 
@@ -49,8 +47,9 @@ Spectrum RoughConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) 
     bsdfSample.wo = 2.0f * cosThetaIm * m - bsdfSample.wi;
 
     // Reflected vector must be on the same side as the original vector
-    if (CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f)
+    if (CoordinateFrame::cosTheta(bsdfSample.wo) <= 0.0f) {
         return Spectrum(0.0f);
+    }
 
     auto mPdf = m_distrib->pdf(m);
 
@@ -66,13 +65,13 @@ Spectrum RoughConductorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) 
     return F * G * cosThetaIm / (cosThetaI * CoordinateFrame::cosTheta(m));
 }
 
-float RoughConductorBSDF::pdf(const BSDF::Sample& bsdfSample) const
-{
+float RoughConductorBSDF::pdf(const BSDF::Sample& bsdfSample) const {
     auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
     auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
 
-    if (bsdfSample.measure != Measure::SolidAngle || cosThetaI < 0.0f || cosThetaO < 0.0f)
+    if (bsdfSample.measure != Measure::SolidAngle || cosThetaI < 0.0f || cosThetaO < 0.0f) {
         return 0.0f;
+    }
 
     auto m = glm::normalize(bsdfSample.wi + bsdfSample.wo);
 

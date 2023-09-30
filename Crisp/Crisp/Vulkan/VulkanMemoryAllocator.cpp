@@ -2,10 +2,8 @@
 
 #include <Crisp/Core/Logger.hpp>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 constexpr VkDeviceSize kDeviceHeapSize = 512 << 20;  // 512 MB
 constexpr VkDeviceSize kStagingHeapSize = 512 << 20; // 512 MB
 
@@ -13,8 +11,7 @@ auto logger = spdlog::stdout_color_mt("VulkanMemoryAllocator");
 } // namespace
 
 VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanPhysicalDevice& physicalDevice, VkDevice deviceHandle)
-    : m_physicalDevice(&physicalDevice)
-{
+    : m_physicalDevice(&physicalDevice) {
     // Device buffer memory
     const uint32_t deviceBufferHeapIndex = m_physicalDevice->findDeviceBufferMemoryType(deviceHandle).unwrap();
     m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(
@@ -39,23 +36,19 @@ VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanPhysicalDevice& physica
         "Staging Buffer Heap");
 }
 
-VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceBufferHeap() const
-{
+VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceBufferHeap() const {
     return *m_deviceBufferHeap;
 }
 
-VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceImageHeap() const
-{
+VulkanMemoryHeap& VulkanMemoryAllocator::getDeviceImageHeap() const {
     return *m_deviceImageHeap;
 }
 
-VulkanMemoryHeap& VulkanMemoryAllocator::getStagingBufferHeap() const
-{
+VulkanMemoryHeap& VulkanMemoryAllocator::getStagingBufferHeap() const {
     return *m_stagingBufferHeap;
 }
 
-DeviceMemoryMetrics VulkanMemoryAllocator::getDeviceMemoryUsage() const
-{
+DeviceMemoryMetrics VulkanMemoryAllocator::getDeviceMemoryUsage() const {
     DeviceMemoryMetrics memoryMetrics = {};
     memoryMetrics.bufferMemorySize = m_deviceBufferHeap->getAllocatedSize();
     memoryMetrics.bufferMemoryUsed = m_deviceBufferHeap->getUsedSize();
@@ -67,17 +60,14 @@ DeviceMemoryMetrics VulkanMemoryAllocator::getDeviceMemoryUsage() const
 }
 
 Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(
-    VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements)
-{
+    VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements) {
     const uint32_t supportedHeapIndex =
         m_physicalDevice->findMemoryType(memoryRequirements.memoryTypeBits, memoryProperties).unwrap();
 
-    if (m_deviceBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
-    {
+    if (m_deviceBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties)) {
         return m_deviceBufferHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
     }
-    if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
-    {
+    if (m_stagingBufferHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties)) {
         return m_stagingBufferHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
     }
 
@@ -85,13 +75,11 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateBuffer(
 }
 
 Result<VulkanMemoryHeap::Allocation> VulkanMemoryAllocator::allocateImage(
-    VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements)
-{
+    VkMemoryPropertyFlags memoryProperties, const VkMemoryRequirements& memoryRequirements) {
     const uint32_t supportedHeapIndex =
         m_physicalDevice->findMemoryType(memoryRequirements.memoryTypeBits, memoryProperties).unwrap();
 
-    if (m_deviceImageHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties))
-    {
+    if (m_deviceImageHeap->isFromHeapIndex(supportedHeapIndex, memoryProperties)) {
         return m_deviceImageHeap->allocate(memoryRequirements.size, memoryRequirements.alignment);
     }
 

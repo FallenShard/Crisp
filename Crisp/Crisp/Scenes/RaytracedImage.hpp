@@ -7,8 +7,7 @@
 
 #include <Crisp/PathTracer/RayTracerUpdate.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 class VulkanDevice;
 class VulkanBuffer;
@@ -19,8 +18,7 @@ class VulkanImageView;
 class VulkanPipeline;
 class VulkanImage;
 
-class RayTracedImage
-{
+class RayTracedImage {
 public:
     RayTracedImage(uint32_t width, uint32_t height, Renderer* renderer);
     ~RayTracedImage();

@@ -3,10 +3,8 @@
 #include <Crisp/Optics/Fresnel.hpp>
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 
-namespace crisp
-{
-class SmoothConductorBSDF : public BSDF
-{
+namespace crisp {
+class SmoothConductorBSDF : public BSDF {
 public:
     SmoothConductorBSDF(const VariantMap& params = VariantMap());
     ~SmoothConductorBSDF();

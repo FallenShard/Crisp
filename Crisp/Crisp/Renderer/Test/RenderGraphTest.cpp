@@ -6,52 +6,42 @@
 #include <fstream>
 #include <stack>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 
 using ::testing::SizeIs;
 using namespace rg;
 
-struct FluidSimulationData
-{
+struct FluidSimulationData {
     RenderGraphResourceHandle positionBuffer;
 };
 
-struct DepthPrePassData
-{
+struct DepthPrePassData {
     RenderGraphResourceHandle depthImage;
 };
 
-struct ForwardLightingData
-{
+struct ForwardLightingData {
     RenderGraphResourceHandle hdrImage;
 };
 
-class RenderGraphTest : public VulkanTestWithSurface
-{
+class RenderGraphTest : public VulkanTestWithSurface {
 protected:
-    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled)
-    {
+    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled) {
         return {*device_, *physicalDevice_, context_->getSurface(), buffering};
     }
 };
 
-VkClearValue createDepthClearValue(const float depthValue, const uint8_t stencilValue)
-{
+VkClearValue createDepthClearValue(const float depthValue, const uint8_t stencilValue) {
     VkClearValue v{};
     v.depthStencil = {depthValue, stencilValue};
     return v;
 }
 
-TEST(RenderGraphTest2, DISABLED_BasicUsage)
-{
+TEST(RenderGraphTest2, DISABLED_BasicUsage) {
     RenderGraph rg;
     rg.addPass(
         "fluid-pass",
-        [](RenderGraph::Builder& builder)
-        {
+        [](RenderGraph::Builder& builder) {
             auto& data = builder.getBlackboard().insert<FluidSimulationData>();
             data.positionBuffer = builder.createBuffer({}, "fluid-position-buffer");
         },
@@ -59,8 +49,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
 
     rg.addPass(
         "depth-pre-pass",
-        [](RenderGraph::Builder& builder)
-        {
+        [](RenderGraph::Builder& builder) {
             builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
 
             auto& data = builder.getBlackboard().insert<DepthPrePassData>();
@@ -74,16 +63,15 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
     RenderGraphResourceHandle output{};
     rg.addPass(
         "spectrum-pass",
-        [&output](RenderGraph::Builder& builder)
-        { output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image"); },
+        [&output](RenderGraph::Builder& builder) {
+            output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image");
+        },
         [](const RenderPassExecutionContext&) {});
 
-    for (uint32_t i = 0; i < 10; ++i)
-    {
+    for (uint32_t i = 0; i < 10; ++i) {
         rg.addPass(
             fmt::format("fft-pass-{}", i),
-            [&output, i](RenderGraph::Builder& builder)
-            {
+            [&output, i](RenderGraph::Builder& builder) {
                 builder.readStorageImage(output);
                 output = builder.createStorageImage(
                     {.format = VK_FORMAT_R32G32_SFLOAT}, fmt::format("fft-pass-image-{}", i));
@@ -93,8 +81,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
 
     rg.addPass(
         "forward-pass",
-        [&output](RenderGraph::Builder& builder)
-        {
+        [&output](RenderGraph::Builder& builder) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
             builder.readStorageImage(output);
@@ -106,8 +93,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
     RenderGraphResourceHandle modifiedHdrImage{};
     rg.addPass(
         "transparent-pass",
-        [&modifiedHdrImage](RenderGraph::Builder& builder)
-        {
+        [&modifiedHdrImage](RenderGraph::Builder& builder) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             modifiedHdrImage = builder.writeAttachment(builder.getBlackboard().get<ForwardLightingData>().hdrImage);
         },
@@ -116,8 +102,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
         "bloom-pass",
-        [modifiedHdrImage, &bloomImage](RenderGraph::Builder& builder)
-        {
+        [modifiedHdrImage, &bloomImage](RenderGraph::Builder& builder) {
             builder.readTexture(modifiedHdrImage);
             bloomImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "bloom-image");
         },
@@ -125,8 +110,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
 
     rg.addPass(
         "tonemapping-pass",
-        [bloomImage](RenderGraph::Builder& builder)
-        {
+        [bloomImage](RenderGraph::Builder& builder) {
             builder.readTexture(bloomImage);
             builder.createAttachment({.format = VK_FORMAT_R8G8B8A8_UNORM}, "ldr-image");
         },
@@ -138,14 +122,12 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage)
     EXPECT_THAT(rg.getResourceCount(), 17);
 }
 
-TEST_F(RenderGraphTest, BasicUsage)
-{
+TEST_F(RenderGraphTest, BasicUsage) {
     RenderGraph rg;
 
     rg.addPass(
         "forward-pass",
-        [](RenderGraph::Builder& builder)
-        {
+        [](RenderGraph::Builder& builder) {
             builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
@@ -166,8 +148,7 @@ TEST_F(RenderGraphTest, BasicUsage)
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
         "bloom-pass",
-        [&bloomImage](RenderGraph::Builder& builder)
-        {
+        [&bloomImage](RenderGraph::Builder& builder) {
             const auto& forwardData = builder.getBlackboard().get<ForwardLightingData>();
             builder.readTexture(forwardData.hdrImage);
             bloomImage = builder.createAttachment(
@@ -196,19 +177,15 @@ TEST_F(RenderGraphTest, BasicUsage)
     EXPECT_THAT(rg.getResourceCount(), 3);
 }
 
-TEST(RenderGraphTest2, Blackboard)
-{
+TEST(RenderGraphTest2, Blackboard) {
     RenderGraphBlackboard bb{};
 
-    struct MyStuff
-    {
+    struct MyStuff {
         RenderGraphResourceHandle img0{};
         RenderGraphResourceHandle img1{};
     };
 
-    struct MyStuff1
-    {
-    };
+    struct MyStuff1 {};
 
     auto& s1 = bb.insert<MyStuff>();
     s1.img0 = {123};

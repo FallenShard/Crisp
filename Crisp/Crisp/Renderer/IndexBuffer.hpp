@@ -8,42 +8,35 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
-namespace internal
-{
+namespace internal {
 template <typename T>
 struct IndexTypeTrait;
 
 template <>
-struct IndexTypeTrait<glm::u16vec2>
-{
+struct IndexTypeTrait<glm::u16vec2> {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16;
 };
 
 template <>
-struct IndexTypeTrait<glm::u16vec3>
-{
+struct IndexTypeTrait<glm::u16vec3> {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT16;
 };
 
 template <>
-struct IndexTypeTrait<glm::uvec3>
-{
+struct IndexTypeTrait<glm::uvec3> {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32;
 };
 
 template <>
-struct IndexTypeTrait<glm::uvec4>
-{
+struct IndexTypeTrait<glm::uvec4> {
     static constexpr VkIndexType value = VK_INDEX_TYPE_UINT32;
 };
 } // namespace internal
 
-class IndexBuffer
-{
+class IndexBuffer {
 public:
     IndexBuffer(
         Renderer* renderer,
@@ -55,22 +48,19 @@ public:
     template <typename T>
     IndexBuffer(
         Renderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
-        : IndexBuffer(renderer, internal::IndexTypeTrait<T>::value, updatePolicy, data.size() * sizeof(T), data.data())
-    {
-    }
+        : IndexBuffer(
+              renderer, internal::IndexTypeTrait<T>::value, updatePolicy, data.size() * sizeof(T), data.data()) {}
 
     ~IndexBuffer();
 
-    inline VkBuffer get() const
-    {
+    inline VkBuffer get() const {
         return m_buffer->getHandle();
     }
 
     void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 
     template <typename T>
-    void updateStagingBuffer(const std::vector<T>& vec)
-    {
+    void updateStagingBuffer(const std::vector<T>& vec) {
         updateStagingBuffer(vec.data(), vec.size() * sizeof(T));
     }
 

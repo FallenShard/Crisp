@@ -2,10 +2,8 @@
 
 #include "BSDF.hpp"
 
-namespace crisp
-{
-class LambertianBSDF : public BSDF
-{
+namespace crisp {
+class LambertianBSDF : public BSDF {
 public:
     LambertianBSDF(const VariantMap& params);
 

@@ -3,8 +3,7 @@
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 std::unique_ptr<VulkanRenderPass> createShadowMapPass(
     const VulkanDevice& device,

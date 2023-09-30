@@ -8,10 +8,8 @@
 #include <string>
 #include <vector>
 
-namespace crisp
-{
-struct WavefrontObjMaterial
-{
+namespace crisp {
+struct WavefrontObjMaterial {
     glm::vec3 ambient;
     glm::vec3 diffuse;
     glm::vec3 specular;
@@ -26,8 +24,7 @@ struct WavefrontObjMaterial
     std::string specularMap;
 };
 
-struct WavefrontObjMesh
-{
+struct WavefrontObjMesh {
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;

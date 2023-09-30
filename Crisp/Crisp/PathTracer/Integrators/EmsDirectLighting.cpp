@@ -8,8 +8,7 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
+namespace crisp {
 EmsDirectLightingIntegrator::EmsDirectLightingIntegrator(const VariantMap& /*params*/) {}
 
 EmsDirectLightingIntegrator::~EmsDirectLightingIntegrator() {}
@@ -17,17 +16,16 @@ EmsDirectLightingIntegrator::~EmsDirectLightingIntegrator() {}
 void EmsDirectLightingIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum EmsDirectLightingIntegrator::Li(
-    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
-{
+    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const {
     Intersection its;
-    if (!scene->rayIntersect(ray, its))
+    if (!scene->rayIntersect(ray, its)) {
         return Spectrum(0.0f);
+    }
 
     Spectrum L(0.0f);
 
     // Lighting from intersected emitter
-    if (its.shape->getLight())
-    {
+    if (its.shape->getLight()) {
         Light::Sample lightSample(ray.o, its.p, its.shFrame.n);
         L += its.shape->getLight()->eval(lightSample);
     }
@@ -37,8 +35,9 @@ Spectrum EmsDirectLightingIntegrator::Li(
     auto lightSpec = scene->sampleLight(its, sampler, lightSample);
 
     // Check if light sample gives any contribution
-    if (lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay))
+    if (lightSpec.isZero() || scene->rayIntersect(lightSample.shadowRay)) {
         return L;
+    }
 
     // Evaluate the BSDF at the intersection
     BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d), its.toLocal(lightSample.wi));

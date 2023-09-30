@@ -4,20 +4,17 @@
 
 #include <array>
 
-namespace crisp
-{
-class DirectionalLight
-{
+namespace crisp {
+class DirectionalLight {
 public:
     DirectionalLight() = default;
-    DirectionalLight(const glm::vec3& direction,
-        const glm::vec3& radiance,
-        const glm::vec3& extentMin,
-        const glm::vec3& extentMax);
+    DirectionalLight(
+        const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& extentMin, const glm::vec3& extentMax);
 
     void setDirection(glm::vec3 direction);
     void fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints);
-    void fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints,
+    void fitProjectionToFrustum(
+        const std::array<glm::vec3, 8>& worldFrustumPoints,
         const glm::vec3& center,
         float radius,
         uint32_t shadowMapSize);

@@ -2,12 +2,10 @@
 
 #include "Integrator.hpp"
 
-namespace crisp
-{
+namespace crisp {
 struct Intersection;
 
-class MatsDirectLightingIntegrator : public Integrator
-{
+class MatsDirectLightingIntegrator : public Integrator {
 public:
     MatsDirectLightingIntegrator(const VariantMap& params = VariantMap());
     virtual ~MatsDirectLightingIntegrator();

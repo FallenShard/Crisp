@@ -1,7 +1,6 @@
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanSampler::VulkanSampler(
     const VulkanDevice& device,
     const VkFilter minFilter,
@@ -9,8 +8,7 @@ VulkanSampler::VulkanSampler(
     const VkSamplerAddressMode addressMode,
     const float anisotropy,
     const float maxLod)
-    : VulkanResource(device.getResourceDeallocator())
-{
+    : VulkanResource(device.getResourceDeallocator()) {
     VkSamplerCreateInfo samplerInfo = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     samplerInfo.magFilter = magFilter;
     samplerInfo.minFilter = minFilter;
@@ -31,16 +29,14 @@ VulkanSampler::VulkanSampler(
 }
 
 std::unique_ptr<VulkanSampler> createLinearClampSampler(
-    const VulkanDevice& device, const float anisotropy, const float maxLod)
-{
+    const VulkanDevice& device, const float anisotropy, const float maxLod) {
     auto sampler = std::make_unique<VulkanSampler>(
         device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, anisotropy, maxLod);
     device.getDebugMarker().setObjectName(*sampler, "Linear Clamp Sampler");
     return sampler;
 }
 
-std::unique_ptr<VulkanSampler> createNearestClampSampler(const VulkanDevice& device)
-{
+std::unique_ptr<VulkanSampler> createNearestClampSampler(const VulkanDevice& device) {
     auto sampler = std::make_unique<VulkanSampler>(
         device, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     device.getDebugMarker().setObjectName(*sampler, "Nearest Clamp Sampler");
@@ -48,8 +44,7 @@ std::unique_ptr<VulkanSampler> createNearestClampSampler(const VulkanDevice& dev
 }
 
 std::unique_ptr<VulkanSampler> createLinearRepeatSampler(
-    const VulkanDevice& device, const float anisotropy, const float maxLod)
-{
+    const VulkanDevice& device, const float anisotropy, const float maxLod) {
     auto sampler = std::make_unique<VulkanSampler>(
         device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, anisotropy, maxLod);
     device.getDebugMarker().setObjectName(*sampler, "Linear Repeat Sampler");

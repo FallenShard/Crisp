@@ -6,39 +6,32 @@
 
 #include <unordered_set>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 auto logger = createLoggerMt("VulkanContext");
 
 const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"};
 
 [[nodiscard]] Result<> assertRequiredExtensionSupport(
-    const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions)
-{
+    const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions) {
     std::unordered_set<std::string> pendingExtensions;
 
     logger->info("Identified {} required Vulkan extensions:", requiredExtensions.size());
-    for (const auto* const extensionName : requiredExtensions)
-    {
+    for (const auto* const extensionName : requiredExtensions) {
         logger->info("\t{}", extensionName);
         pendingExtensions.insert(std::string(extensionName));
     }
 
-    for (const auto& ext : supportedExtensions)
-    {
+    for (const auto& ext : supportedExtensions) {
         pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any. // NOLINT
     }
 
     const size_t numSupportedReqExts{requiredExtensions.size() - pendingExtensions.size()};
     logger->info("{}/{} required extensions supported.", numSupportedReqExts, requiredExtensions.size());
 
-    if (!pendingExtensions.empty())
-    {
+    if (!pendingExtensions.empty()) {
         logger->error("The following required extensions are not supported:");
-        for (const auto& ext : pendingExtensions)
-        {
+        for (const auto& ext : pendingExtensions) {
             logger->error("{}", ext);
         }
 
@@ -48,10 +41,8 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     return {};
 }
 
-[[nodiscard]] Result<> assertValidationLayerSupport(const bool validationLayersEnabled)
-{
-    if (!validationLayersEnabled)
-    {
+[[nodiscard]] Result<> assertValidationLayerSupport(const bool validationLayersEnabled) {
+    if (!validationLayersEnabled) {
         return {};
     }
 
@@ -62,15 +53,12 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()));
 
     std::unordered_set<std::string> availableLayersSet;
-    for (const auto& layer : availableLayers)
-    {
+    for (const auto& layer : availableLayers) {
         availableLayersSet.insert(layer.layerName); // NOLINT
     }
 
-    for (const auto& validationLayer : ValidationLayers)
-    {
-        if (availableLayersSet.find(validationLayer) == availableLayersSet.end())
-        {
+    for (const auto& validationLayer : ValidationLayers) {
+        if (availableLayersSet.find(validationLayer) == availableLayersSet.end()) {
             return resultError("Validation layer {} is requested, but not supported!", validationLayer);
         }
     }
@@ -79,8 +67,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     return {};
 }
 
-VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers)
-{
+VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers) {
     loadVulkanLoaderFunctions();
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     appInfo.pApplicationName = "Crisp";
@@ -89,8 +76,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
-    if (enableValidationLayers)
-    {
+    if (enableValidationLayers) {
         reqPlatformExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
@@ -124,8 +110,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     return instance;
 }
 
-VkSurfaceKHR createSurface(const VkInstance instance, SurfaceCreator&& surfaceCreator)
-{
+VkSurfaceKHR createSurface(const VkInstance instance, SurfaceCreator&& surfaceCreator) {
     VkSurfaceKHR surface{VK_NULL_HANDLE};
     VK_CHECK(surfaceCreator(instance, nullptr, &surface));
     return surface;
@@ -136,30 +121,23 @@ VulkanContext::VulkanContext(
     SurfaceCreator&& surfaceCreator, std::vector<std::string>&& platformExtensions, const bool enableValidationLayers)
     : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
     , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
-    , m_surface(surfaceCreator ? createSurface(m_instance, std::move(surfaceCreator)) : VK_NULL_HANDLE)
-{
-}
+    , m_surface(surfaceCreator ? createSurface(m_instance, std::move(surfaceCreator)) : VK_NULL_HANDLE) {}
 
-VulkanContext::~VulkanContext()
-{
-    if (m_instance == VK_NULL_HANDLE)
-    {
+VulkanContext::~VulkanContext() {
+    if (m_instance == VK_NULL_HANDLE) {
         return;
     }
 
-    if (m_surface)
-    {
+    if (m_surface) {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     }
-    if (m_debugMessenger)
-    {
+    if (m_debugMessenger) {
         vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
     }
     vkDestroyInstance(m_instance, nullptr);
 }
 
-Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const
-{
+Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const {
     uint32_t deviceCount = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr));
     CRISP_CHECK(deviceCount > 0, "Vulkan found no physical devices.");
@@ -167,16 +145,13 @@ Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std
     std::vector<VkPhysicalDevice> devices(deviceCount);
     VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data()));
 
-    if (m_surface == VK_NULL_HANDLE)
-    {
+    if (m_surface == VK_NULL_HANDLE) {
         return VulkanPhysicalDevice(devices.front());
     }
 
-    for (const auto& device : devices)
-    {
+    for (const auto& device : devices) {
         VulkanPhysicalDevice physicalDevice(device);
-        if (physicalDevice.isSuitable(m_surface, deviceExtensions))
-        {
+        if (physicalDevice.isSuitable(m_surface, deviceExtensions)) {
             physicalDevice.setDeviceExtensions(std::move(deviceExtensions));
             return physicalDevice;
         }
@@ -185,13 +160,11 @@ Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std
     return resultError("Failed to find a suitable physical device!");
 }
 
-VkSurfaceKHR VulkanContext::getSurface() const
-{
+VkSurfaceKHR VulkanContext::getSurface() const {
     return m_surface;
 }
 
-VkInstance VulkanContext::getInstance() const
-{
+VkInstance VulkanContext::getInstance() const {
     return m_instance;
 }
 

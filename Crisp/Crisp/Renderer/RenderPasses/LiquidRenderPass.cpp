@@ -6,10 +6,8 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
-std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& device, VkExtent2D renderArea)
-{
+namespace crisp {
+std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& device, VkExtent2D renderArea) {
     return RenderPassBuilder()
         /*.setRenderTargetCount(3)
         .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)

@@ -8,23 +8,20 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
-namespace
-{
-inline float miWeight(float pdf1, float pdf2)
-{
+namespace crisp {
+namespace {
+inline float miWeight(float pdf1, float pdf2) {
     pdf1 *= pdf1;
     pdf2 *= pdf2;
     return pdf1 / (pdf1 + pdf2);
 }
 
-inline const Medium* resolveNextMedium(const Intersection& its, const glm::vec3& dir)
-{
-    if (glm::dot(its.geoFrame.n, dir) >= 0.0f)
+inline const Medium* resolveNextMedium(const Intersection& its, const glm::vec3& dir) {
+    if (glm::dot(its.geoFrame.n, dir) >= 0.0f) {
         return nullptr;
-    else
+    } else {
         return its.shape->getMedium();
+    }
 }
 
 Spectrum evalTransmittance(
@@ -34,8 +31,7 @@ Spectrum evalTransmittance(
     const glm::vec3& end,
     bool endOnSurface,
     const Medium* medium,
-    Sampler& sampler)
-{
+    Sampler& sampler) {
     glm::vec3 dir = end - start;
     float distance = glm::length(dir);
     dir = glm::normalize(dir);
@@ -47,17 +43,19 @@ Spectrum evalTransmittance(
     Spectrum transmittance(1.0f);
     Intersection its;
 
-    while (distance > 0.0f)
-    {
+    while (distance > 0.0f) {
         bool intersected = scene->rayIntersect(shadowRay, its);
-        if (intersected && !(its.shape->getBSDF()->getLobeType() & Lobe::Passthrough))
+        if (intersected && !(its.shape->getBSDF()->getLobeType() & Lobe::Passthrough)) {
             return Spectrum(0.0f);
+        }
 
-        if (medium)
+        if (medium) {
             transmittance *= medium->evalTransmittance(Ray3(shadowRay, 0, std::min(its.tHit, distance)), sampler);
+        }
 
-        if (!intersected || transmittance.isZero())
+        if (!intersected || transmittance.isZero()) {
             break;
+        }
 
         auto bsdf = its.shape->getBSDF();
         glm::vec3 localWi = its.shFrame.toLocal(shadowRay.d);
@@ -78,15 +76,16 @@ Spectrum evalTransmittance(
 }
 
 Spectrum sampleLightFromMedium(
-    Light::Sample& lightSample, const pt::Scene* scene, const Medium* medium, Sampler& sampler)
-{
+    Light::Sample& lightSample, const pt::Scene* scene, const Medium* medium, Sampler& sampler) {
     auto light = scene->getRandomLight(sampler.next1D());
-    if (!light)
+    if (!light) {
         return Spectrum(0.0f);
+    }
 
     Spectrum lightContrib = light->sample(lightSample, sampler);
-    if (lightSample.pdf == 0.0f)
+    if (lightSample.pdf == 0.0f) {
         return Spectrum(0.0f);
+    }
 
     lightContrib *= evalTransmittance(scene, lightSample.ref, false, lightSample.p, true, medium, sampler);
     lightContrib /= scene->getLightPdf();
@@ -101,8 +100,7 @@ Spectrum findLight(
     const Medium* medium,
     Ray3 ray,
     Intersection& itsRef,
-    Light::Sample& /*lightSample*/)
-{
+    Light::Sample& /*lightSample*/) {
     Intersection its2;
     Intersection* its = &itsRef;
 
@@ -111,23 +109,28 @@ Spectrum findLight(
     bool hasIntersected = false;
 
     int i = 0;
-    while (true)
-    {
+    while (true) {
         hasIntersected = scene->rayIntersect(ray, *its);
-        if (i++ == 0)
+        if (i++ == 0) {
             firstIntersected = hasIntersected;
+        }
 
-        if (medium)
+        if (medium) {
             transmittance *= medium->evalTransmittance(Ray3(ray, 0.0f, its->tHit), sampler);
+        }
 
-        if (!hasIntersected)
+        if (!hasIntersected) {
             break;
+        }
 
-        if (hasIntersected && !(its->shape->getBSDF()->getLobeType() & Lobe::Passthrough) && !(its->shape->getLight()))
+        if (hasIntersected && !(its->shape->getBSDF()->getLobeType() & Lobe::Passthrough) &&
+            !(its->shape->getLight())) {
             break;
+        }
 
-        if (transmittance.isZero())
+        if (transmittance.isZero()) {
             return Spectrum(0.0f);
+        }
     }
 
     return transmittance;
@@ -141,8 +144,7 @@ VolumePathTracerIntegrator::~VolumePathTracerIntegrator() {}
 void VolumePathTracerIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum VolumePathTracerIntegrator::Li(
-    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*flags*/) const
-{
+    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*flags*/) const {
     Spectrum L(0.0f);
 
     Spectrum throughput(1.0f);
@@ -158,23 +160,19 @@ Spectrum VolumePathTracerIntegrator::Li(
 
     Intersection its;
 
-    while (true)
-    {
-        if (medium && medium->sampleDistance(Ray3(ray, 0.0f, its.tHit), mediumSample, sampler))
-        {
+    while (true) {
+        if (medium && medium->sampleDistance(Ray3(ray, 0.0f, its.tHit), mediumSample, sampler)) {
             auto phaseFunc = medium->getPhaseFunction();
 
             throughput *= mediumSample.sigmaS * mediumSample.transmittance / mediumSample.pdfSuccess;
 
             Light::Sample lightSample(mediumSample.ref);
             auto Latt = sampleLightFromMedium(lightSample, scene, medium, sampler);
-            if (!Latt.isZero())
-            {
+            if (!Latt.isZero()) {
                 PhaseFunction::Sample pfSample(mediumSample, -ray.d, lightSample.wi);
                 float phaseFuncValue = phaseFunc->eval(pfSample);
 
-                if (phaseFuncValue > 0.0f)
-                {
+                if (phaseFuncValue > 0.0f) {
                     float pfPdf = phaseFunc->pdf(pfSample);
                     L += throughput * Latt * phaseFuncValue * miWeight(lightSample.pdf, pfPdf);
                 }
@@ -182,16 +180,16 @@ Spectrum VolumePathTracerIntegrator::Li(
 
             PhaseFunction::Sample pfSample(mediumSample, -ray.d);
             float phaseFuncValue = phaseFunc->sample(pfSample, sampler);
-            if (phaseFuncValue == 0.0f)
+            if (phaseFuncValue == 0.0f) {
                 break;
+            }
 
             throughput *= phaseFuncValue;
 
             ray = Ray3(mediumSample.ref, pfSample.wo, 0.0f, ray.maxT);
 
             Latt = findLight(scene, sampler, medium, ray, its, lightSample);
-            if (!Latt.isZero())
-            {
+            if (!Latt.isZero()) {
                 float lightPdf = lightSample.light->pdf(lightSample);
                 L += throughput * Latt * phaseFuncValue * miWeight(pfSample.pdf, lightPdf);
             }

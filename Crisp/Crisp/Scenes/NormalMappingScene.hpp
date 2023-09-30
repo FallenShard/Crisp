@@ -6,16 +6,14 @@
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class FreeCameraController;
 class TransformBuffer;
 class LightSystem;
 
 struct RenderNode;
 
-class NormalMappingScene : public Scene
-{
+class NormalMappingScene : public Scene {
 public:
     NormalMappingScene(Renderer* renderer, Window* window);
     ~NormalMappingScene();
@@ -25,8 +23,7 @@ public:
     virtual void render() override;
 
 private:
-    struct PbrUnifMaterialParams
-    {
+    struct PbrUnifMaterialParams {
         glm::vec4 albedo;
         float metallic;
         float roughness;

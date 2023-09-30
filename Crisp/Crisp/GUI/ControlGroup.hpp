@@ -6,17 +6,14 @@
 
 #include "Control.hpp"
 
-namespace crisp::gui
-{
-enum class LayoutType
-{
+namespace crisp::gui {
+enum class LayoutType {
     Vertical,
     Horizontal,
     Absolute
 };
 
-class ControlGroup : public Control
-{
+class ControlGroup : public Control {
 public:
     ControlGroup(Form* parentForm);
     virtual ~ControlGroup();
@@ -44,13 +41,11 @@ public:
     virtual Control* getControlById(const std::string& id);
     virtual void visit(std::function<void(Control*)> func) override;
 
-    void setLayoutType(LayoutType layoutType)
-    {
+    void setLayoutType(LayoutType layoutType) {
         m_layoutType = layoutType;
     }
 
-    void setLayoutSpacing(float spacing)
-    {
+    void setLayoutSpacing(float spacing) {
         m_spacing = spacing;
     }
 

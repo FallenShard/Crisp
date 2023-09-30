@@ -8,16 +8,13 @@
 
 #include <vector>
 
-namespace crisp
-{
-enum class TripleBuffering
-{
+namespace crisp {
+enum class TripleBuffering {
     Enabled,
     Disabled
 };
 
-class VulkanSwapChain : public VulkanResource<VkSwapchainKHR>
-{
+class VulkanSwapChain : public VulkanResource<VkSwapchainKHR> {
 public:
     VulkanSwapChain(
         const VulkanDevice& device,

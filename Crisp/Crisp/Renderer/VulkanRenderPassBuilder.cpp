@@ -2,25 +2,21 @@
 
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
-VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentCount(const uint32_t count)
-{
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentCount(const uint32_t count) {
     m_attachments.resize(count);
     return *this;
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachment(
-    int32_t attachmentIndex, VkAttachmentDescription&& description)
-{
+    int32_t attachmentIndex, VkAttachmentDescription&& description) {
     m_attachments.at(attachmentIndex) = description;
     return *this;
 }
 
 // Subpass configuration
-VulkanRenderPassBuilder& VulkanRenderPassBuilder::setSubpassCount(const uint32_t numSubpasses)
-{
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setSubpassCount(const uint32_t numSubpasses) {
     m_inputAttachmentRefs.resize(numSubpasses);
     m_colorAttachmentRefs.resize(numSubpasses);
     m_resolveAttachmentRefs.resize(numSubpasses);
@@ -31,15 +27,13 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::setSubpassCount(const uint32_t
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::configureSubpass(
-    const uint32_t subpass, const VkPipelineBindPoint bindPoint, const VkSubpassDescriptionFlags flags)
-{
+    const uint32_t subpass, const VkPipelineBindPoint bindPoint, const VkSubpassDescriptionFlags flags) {
     m_subpasses.at(subpass) = {flags, bindPoint};
     return *this;
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::addInputAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
+    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout) {
     m_inputAttachmentRefs[subpass].push_back({attachmentIndex, imageLayout});
     m_subpasses[subpass].inputAttachmentCount = static_cast<uint32_t>(m_inputAttachmentRefs[subpass].size());
     m_subpasses[subpass].pInputAttachments = m_inputAttachmentRefs[subpass].data();
@@ -47,8 +41,7 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::addInputAttachmentRef(
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::addColorAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
+    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout) {
     m_colorAttachmentRefs[subpass].push_back({attachmentIndex, imageLayout});
     m_subpasses[subpass].colorAttachmentCount = static_cast<uint32_t>(m_colorAttachmentRefs[subpass].size());
     m_subpasses[subpass].pColorAttachments = m_colorAttachmentRefs[subpass].data();
@@ -56,8 +49,7 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::addColorAttachmentRef(
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::addColorAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex)
-{
+    const uint32_t subpass, const uint32_t attachmentIndex) {
     m_colorAttachmentRefs[subpass].push_back({attachmentIndex, m_attachments.at(attachmentIndex).finalLayout});
     m_subpasses[subpass].colorAttachmentCount = static_cast<uint32_t>(m_colorAttachmentRefs[subpass].size());
     m_subpasses[subpass].pColorAttachments = m_colorAttachmentRefs[subpass].data();
@@ -65,24 +57,21 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::addColorAttachmentRef(
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::addResolveAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
+    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout) {
     m_resolveAttachmentRefs[subpass].push_back({attachmentIndex, imageLayout});
     m_subpasses[subpass].pResolveAttachments = m_resolveAttachmentRefs[subpass].data();
     return *this;
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::setDepthAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout)
-{
+    const uint32_t subpass, const uint32_t attachmentIndex, const VkImageLayout imageLayout) {
     m_depthAttachmentRefs[subpass] = {attachmentIndex, imageLayout};
     m_subpasses[subpass].pDepthStencilAttachment = &m_depthAttachmentRefs[subpass];
     return *this;
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::addPreserveAttachmentRef(
-    const uint32_t subpass, const uint32_t attachmentIndex)
-{
+    const uint32_t subpass, const uint32_t attachmentIndex) {
     m_preserveAttachments[subpass].push_back(attachmentIndex);
     m_subpasses[subpass].preserveAttachmentCount = static_cast<uint32_t>(m_preserveAttachments[subpass].size());
     m_subpasses[subpass].pPreserveAttachments = m_preserveAttachments[subpass].data();
@@ -96,15 +85,13 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::addDependency(
     const VkAccessFlags srcAccessMask,
     const VkPipelineStageFlags dstStageMask,
     const VkAccessFlags dstAccessMask,
-    const VkDependencyFlags flags)
-{
+    const VkDependencyFlags flags) {
     m_dependencies.push_back({srcSubpass, dstSubpass, srcStageMask, dstStageMask, srcAccessMask, dstAccessMask, flags});
     return *this;
 }
 
 std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> VulkanRenderPassBuilder::create(
-    const VkDevice device) const
-{
+    const VkDevice device) const {
     VkRenderPassCreateInfo renderPassInfo = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
     renderPassInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
     renderPassInfo.pAttachments = m_attachments.data();
@@ -118,12 +105,10 @@ std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> VulkanRenderPassBu
     return {renderPass, m_attachments};
 }
 
-std::vector<VkImageLayout> VulkanRenderPassBuilder::getFinalLayouts() const
-{
+std::vector<VkImageLayout> VulkanRenderPassBuilder::getFinalLayouts() const {
     std::vector<VkImageLayout> layouts;
     layouts.reserve(m_attachments.size());
-    for (const auto& attachment : m_attachments)
-    {
+    for (const auto& attachment : m_attachments) {
         layouts.push_back(attachment.finalLayout);
     }
     return layouts;

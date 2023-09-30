@@ -6,15 +6,12 @@
 
 #include <Crisp/Spectra/Spectrum.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class ReconstructionFilter;
 
-class ImageBlock
-{
+class ImageBlock {
 public:
-    struct Descriptor
-    {
+    struct Descriptor {
         glm::ivec2 offset;
         glm::ivec2 size;
 

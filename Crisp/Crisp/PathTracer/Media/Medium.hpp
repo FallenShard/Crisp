@@ -5,17 +5,14 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Sampler;
 class Shape;
 class PhaseFunction;
 
-class Medium
-{
+class Medium {
 public:
-    struct Sample
-    {
+    struct Sample {
         glm::vec3 ref;
         float t;
 

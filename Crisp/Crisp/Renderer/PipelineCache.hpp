@@ -7,12 +7,10 @@
 
 #include <string_view>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
-class PipelineCache
-{
+class PipelineCache {
 public:
     PipelineCache(const AssetPaths& assetPaths);
 
@@ -27,16 +25,14 @@ public:
 
     void recreatePipelines(Renderer& renderer);
 
-    inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout)
-    {
+    inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return m_descriptorAllocators.at(pipelineLayout).get();
     }
 
 private:
     AssetPaths m_assetPaths;
 
-    struct PipelineInfo
-    {
+    struct PipelineInfo {
         std::string luaFilename;
         const VulkanRenderPass* renderPass;
         int subpassIndex;

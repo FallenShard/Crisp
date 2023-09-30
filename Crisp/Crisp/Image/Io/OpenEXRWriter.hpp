@@ -2,14 +2,17 @@
 
 #include <string>
 
-namespace crisp
-{
-    class OpenEXRWriter
-    {
-    public:
-        OpenEXRWriter();
-        ~OpenEXRWriter();
+namespace crisp {
+class OpenEXRWriter {
+public:
+    OpenEXRWriter();
+    ~OpenEXRWriter();
 
-        void write(const std::string& fileName, const float* data, unsigned int width, unsigned int height, bool flipYAxis = false);
-    };
-}
+    void write(
+        const std::string& fileName,
+        const float* data,
+        unsigned int width,
+        unsigned int height,
+        bool flipYAxis = false);
+};
+} // namespace crisp

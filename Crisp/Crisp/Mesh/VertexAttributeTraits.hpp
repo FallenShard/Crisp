@@ -2,10 +2,8 @@
 
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp
-{
-enum class VertexAttribute
-{
+namespace crisp {
+enum class VertexAttribute {
     Position,
     Normal,
     TexCoord,
@@ -19,8 +17,7 @@ enum class VertexAttribute
 };
 
 template <VertexAttribute attribute>
-struct VertexAttributeTraits
-{
+struct VertexAttributeTraits {
     using GlmType = typename std::tuple_element<
         static_cast<std::size_t>(attribute),
         std::tuple<glm::vec3, glm::vec3, glm::vec2, glm::vec4>>::type;
@@ -28,10 +25,8 @@ struct VertexAttributeTraits
     static constexpr std::size_t numComponents = GlmType::length();
 };
 
-inline constexpr std::size_t getNumComponents(VertexAttribute attribute)
-{
-    switch (attribute)
-    {
+inline constexpr std::size_t getNumComponents(VertexAttribute attribute) {
+    switch (attribute) {
     case VertexAttribute::Position:
         return VertexAttributeTraits<VertexAttribute::Position>::numComponents;
     case VertexAttribute::Normal:
@@ -45,10 +40,8 @@ inline constexpr std::size_t getNumComponents(VertexAttribute attribute)
     }
 }
 
-inline constexpr uint32_t getByteSize(VertexAttribute attribute)
-{
-    switch (attribute)
-    {
+inline constexpr uint32_t getByteSize(VertexAttribute attribute) {
+    switch (attribute) {
     case VertexAttribute::Position:
         return VertexAttributeTraits<VertexAttribute::Position>::byteSize;
     case VertexAttribute::Normal:
@@ -62,10 +55,8 @@ inline constexpr uint32_t getByteSize(VertexAttribute attribute)
     }
 }
 
-inline constexpr const char* getAttribName(VertexAttribute attribute)
-{
-    switch (attribute)
-    {
+inline constexpr const char* getAttribName(VertexAttribute attribute) {
+    switch (attribute) {
     case VertexAttribute::Position:
         return "position";
     case VertexAttribute::Normal:

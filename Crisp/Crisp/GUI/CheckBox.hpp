@@ -8,12 +8,10 @@
 #include <Crisp/Animation/PropertyAnimation.hpp>
 #include <Crisp/Gui/Control.hpp>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Label;
 
-class CheckBox : public Control
-{
+class CheckBox : public Control {
 public:
     CheckBox(Form* parentForm);
     virtual ~CheckBox();
@@ -42,8 +40,7 @@ public:
     Event<bool> checked;
 
 private:
-    enum class State
-    {
+    enum class State {
         Idle,
         Hover,
         Pressed,

@@ -4,10 +4,8 @@
 #include "MicrofacetDistributions/MicrofacetDistribution.hpp"
 #include <Crisp/PathTracer/Textures/Texture.hpp>
 
-namespace crisp
-{
-class MicrofacetBSDF : public BSDF
-{
+namespace crisp {
+class MicrofacetBSDF : public BSDF {
 public:
     MicrofacetBSDF(const VariantMap& params);
     ~MicrofacetBSDF();

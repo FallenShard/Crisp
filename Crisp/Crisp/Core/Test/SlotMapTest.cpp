@@ -5,15 +5,12 @@
 
 #include <numeric>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
 
-TEST(SlotMapTest, Basic)
-{
+TEST(SlotMapTest, Basic) {
     SlotMap<std::string> slotMap;
 
     const auto k1 = slotMap.insert("red");
@@ -30,27 +27,23 @@ TEST(SlotMapTest, Basic)
     EXPECT_THAT(k2.generation, 1);
 }
 
-TEST(SlotMapTest, Push)
-{
+TEST(SlotMapTest, Push) {
     SlotMap<std::string> slotMap;
 
     std::vector<decltype(slotMap)::HandleType> handles;
 
-    for (uint32_t i = 0; i < 10; ++i)
-    {
+    for (uint32_t i = 0; i < 10; ++i) {
         handles.push_back(slotMap.insert(std::to_string(i)));
     }
     EXPECT_THAT(slotMap, SizeIs(10));
 
-    for (const auto& h : handles)
-    {
+    for (const auto& h : handles) {
         slotMap.erase(h);
     }
     EXPECT_THAT(slotMap, IsEmpty());
 }
 
-TEST(SlotMapTest, HandleType)
-{
+TEST(SlotMapTest, HandleType) {
     Handle handle;
     handle.id = 10;
     handle.generation = 0;

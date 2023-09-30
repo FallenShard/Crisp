@@ -7,8 +7,7 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 std::unique_ptr<VulkanRenderPass> createBlurPass(
     const VulkanDevice& device,
@@ -16,8 +15,7 @@ std::unique_ptr<VulkanRenderPass> createBlurPass(
     const VkFormat format,
     const VkExtent2D renderArea,
     const bool isSwapChainDependent,
-    std::string&& renderTargetName)
-{
+    std::string&& renderTargetName) {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         std::move(renderTargetName),

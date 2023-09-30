@@ -9,10 +9,8 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-struct RenderTargetInfo
-{
+namespace crisp {
+struct RenderTargetInfo {
     // Required to set correct initial layout.
     VkPipelineStageFlags initSrcStageFlags{VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
     VkPipelineStageFlags initDstStageFlags{};
@@ -37,21 +35,18 @@ struct RenderTargetInfo
     bool isSwapChainDependent{false};
 };
 
-struct RenderTarget
-{
+struct RenderTarget {
     RenderTargetInfo info;
     std::unique_ptr<VulkanImage> image;
 };
 
-struct AttachmentMapping
-{
+struct AttachmentMapping {
     uint32_t renderTargetIndex{};
     VkImageSubresourceRange subresource{};
     bool bufferOverDepthSlices{false};
 };
 
-struct RenderPassParameters
-{
+struct RenderPassParameters {
     uint32_t subpassCount{0};
     VkExtent2D renderArea{0, 0};
 
@@ -70,8 +65,7 @@ struct RenderPassParameters
     std::vector<VulkanImage*> renderTargets;
 };
 
-class VulkanRenderPass final : public VulkanResource<VkRenderPass>
-{
+class VulkanRenderPass final : public VulkanResource<VkRenderPass> {
 public:
     VulkanRenderPass(const VulkanDevice& device, VkRenderPass handle, RenderPassParameters&& parameters);
     VulkanRenderPass(
@@ -95,14 +89,12 @@ public:
     const VulkanImageView& getAttachmentView(uint32_t attachmentIndex, uint32_t frameIndex) const;
     std::vector<VulkanImageView*> getAttachmentViews(uint32_t renderTargetIndex) const;
 
-    inline uint32_t getSubpassCount() const
-    {
+    inline uint32_t getSubpassCount() const {
         return m_params.subpassCount;
     }
 
     // Used by default swap chain to update its framebuffers.
-    std::unique_ptr<VulkanFramebuffer>& getFramebuffer(uint32_t frameIdx)
-    {
+    std::unique_ptr<VulkanFramebuffer>& getFramebuffer(uint32_t frameIdx) {
         return m_framebuffers.at(frameIdx);
     }
 

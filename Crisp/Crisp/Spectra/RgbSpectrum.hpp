@@ -5,19 +5,15 @@
 #include <algorithm>
 #include <iostream>
 
-namespace crisp
-{
-struct RgbSpectrum
-{
+namespace crisp {
+struct RgbSpectrum {
 #pragma warning(push)
 #pragma warning(disable : 4201) // nameless struct
 
-    union
-    {
+    union {
         float values[3];
 
-        struct
-        {
+        struct {
             float r, g, b;
         };
     };
@@ -27,16 +23,12 @@ struct RgbSpectrum
     constexpr RgbSpectrum(float value = 0.0f)
         : r(value)
         , g(value)
-        , b(value)
-    {
-    }
+        , b(value) {}
 
     constexpr RgbSpectrum(float red, float green, float blue)
         : r(red)
         , g(green)
-        , b(blue)
-    {
-    }
+        , b(blue) {}
 
     RgbSpectrum(const glm::vec3& vec);
 

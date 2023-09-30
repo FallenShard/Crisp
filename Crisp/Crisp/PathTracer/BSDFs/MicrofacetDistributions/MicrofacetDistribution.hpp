@@ -4,10 +4,8 @@
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
 
-namespace crisp
-{
-class MicrofacetDistribution
-{
+namespace crisp {
+class MicrofacetDistribution {
 public:
     virtual ~MicrofacetDistribution(){};
 

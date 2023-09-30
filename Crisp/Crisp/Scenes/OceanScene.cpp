@@ -12,10 +12,8 @@
 
 #include <imgui.h>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 auto logger = spdlog::stdout_color_st("OceanScene");
 
 constexpr const char* kMainPass = "forwardPass";
@@ -31,8 +29,7 @@ constexpr float kGeometryPatchWorldSize = 20.0f;
 constexpr uint32_t kInstanceCount = 64;
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer* renderer, const glm::uvec3& workGroupSize, const std::string& shaderName)
-{
+    Renderer* renderer, const glm::uvec3& workGroupSize, const std::string& shaderName) {
     const auto spirvContents = readSpirvFile(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
     PipelineLayoutBuilder layoutBuilder(reflectUniformMetadataFromSpirvShader(spirvContents).unwrap());
 
@@ -64,8 +61,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
         renderer->getDevice(), pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
 }
 
-VkImageMemoryBarrier createImageMemoryReadBarrier(const VkImage imageHandle, const uint32_t layerIdx)
-{
+VkImageMemoryBarrier createImageMemoryReadBarrier(const VkImage imageHandle, const uint32_t layerIdx) {
     VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -85,16 +81,11 @@ VkImageMemoryBarrier createImageMemoryReadBarrier(const VkImage imageHandle, con
 OceanScene::OceanScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
     , m_oceanParams(createOceanParameters(N, Lx, 10.0f, 0.0f, 4.0f, 0.5f))
-    , m_choppiness(0.0f)
-{
-    m_window->keyPressed += [this](Key key, int /*modifiers*/)
-    {
-        if (key == Key::Space)
-        {
+    , m_choppiness(0.0f) {
+    m_window->keyPressed += [this](Key key, int /*modifiers*/) {
+        if (key == Key::Space) {
             m_paused = !m_paused;
-        }
-        else if (key == Key::F5)
-        {
+        } else if (key == Key::F5) {
             m_resourceContext->recreatePipelines();
         }
     };
@@ -122,10 +113,8 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
          dx = displacementXImage.get(),
          dz = displacementZImage.get(),
          nx = normalXImage.get(),
-         nz = normalZImage.get()](VkCommandBuffer cmdBuffer)
-        {
-            const auto transitionToGeneral = [cmdBuffer](VulkanImage& image)
-            {
+         nz = normalZImage.get()](VkCommandBuffer cmdBuffer) {
+            const auto transitionToGeneral = [cmdBuffer](VulkanImage& image) {
                 image.transitionLayout(
                     cmdBuffer,
                     VK_IMAGE_LAYOUT_GENERAL,
@@ -140,10 +129,8 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
         });
 
     auto& imageCache = m_resourceContext->imageCache;
-    const auto addImage = [&imageCache](std::unique_ptr<VulkanImage> image, const std::string& name)
-    {
-        for (uint32_t i = 0; i < 2; ++i)
-        {
+    const auto addImage = [&imageCache](std::unique_ptr<VulkanImage> image, const std::string& name) {
+        for (uint32_t i = 0; i < 2; ++i) {
             const std::string viewName{fmt::format("{}View{}", name, i)};
             imageCache.addImageView(viewName, createView(*image, VK_IMAGE_VIEW_TYPE_2D, i, 1));
         }
@@ -181,29 +168,28 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
         0, 5, imageCache.getImageView("normalZView0").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
     oscillationPass.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-    {
-        VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer()->getHandle();
-        barrier.offset = 0;
-        barrier.size = VK_WHOLE_SIZE;
+        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer()->getHandle();
+            barrier.offset = 0;
+            barrier.size = VK_WHOLE_SIZE;
 
-        vkCmdPipelineBarrier(
-            cmdBuffer.getHandle(),
-            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            0,
-            0,
-            nullptr,
-            1,
-            &barrier,
-            0,
-            nullptr);
+            vkCmdPipelineBarrier(
+                cmdBuffer.getHandle(),
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                0,
+                0,
+                nullptr,
+                1,
+                &barrier,
+                0,
+                nullptr);
 
-        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
-    };
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
+        };
 
     int layerToRead = applyFFT("fftImage");
     int ltr1 = applyFFT("displacementX");
@@ -248,47 +234,45 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
             .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
 
     geometryPass.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-    {
-        std::array<VkBufferMemoryBarrier, 2> barriers{};
-        barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        barriers[0].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getHandle();
-        barriers[0].offset = 0;
-        barriers[0].size = VK_WHOLE_SIZE;
+        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+            std::array<VkBufferMemoryBarrier, 2> barriers{};
+            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            barriers[0].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getHandle();
+            barriers[0].offset = 0;
+            barriers[0].size = VK_WHOLE_SIZE;
 
-        barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        barriers[1].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        barriers[1].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->getHandle();
-        barriers[1].offset = 0;
-        barriers[1].size = VK_WHOLE_SIZE;
+            barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            barriers[1].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            barriers[1].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->getHandle();
+            barriers[1].offset = 0;
+            barriers[1].size = VK_WHOLE_SIZE;
 
-        vkCmdPipelineBarrier(
-            cmdBuffer.getHandle(),
-            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            0,
-            0,
-            nullptr,
-            2,
-            barriers.data(),
-            0,
-            nullptr);
+            vkCmdPipelineBarrier(
+                cmdBuffer.getHandle(),
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                0,
+                0,
+                nullptr,
+                2,
+                barriers.data(),
+                0,
+                nullptr);
 
-        struct GeometryUpdateParams
-        {
-            int patchSize{N};
-            float patchWorldSize{};
-            float choppiness{};
+            struct GeometryUpdateParams {
+                int patchSize{N};
+                float patchWorldSize{};
+                float choppiness{};
+            };
+
+            GeometryUpdateParams params{};
+            params.patchWorldSize = kGeometryPatchWorldSize;
+            params.choppiness = m_choppiness;
+            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
         };
-
-        GeometryUpdateParams params{};
-        params.patchWorldSize = kGeometryPatchWorldSize;
-        params.choppiness = m_choppiness;
-        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
-    };
 
     m_renderGraph->addRenderPass(
         kMainPass,
@@ -298,8 +282,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     m_renderGraph->addDependency(
         kGeometryPass,
         kMainPass,
-        [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-        {
+        [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -376,16 +359,14 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void OceanScene::resize(int width, int height)
-{
+void OceanScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_renderGraph->resize(width, height);
     m_renderer->setSceneImageView(m_renderGraph->getNode(kMainPass).renderPass.get(), 0);
 }
 
-void OceanScene::update(float dt)
-{
+void OceanScene::update(float dt) {
     m_cameraController->update(dt);
     const CameraParameters cameraParams = m_cameraController->getCameraParameters();
 
@@ -394,32 +375,27 @@ void OceanScene::update(float dt)
 
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
 
-    if (!m_paused)
-    {
+    if (!m_paused) {
         m_oceanParams.time += dt;
     }
 }
 
-void OceanScene::render()
-{
+void OceanScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->buildCommandLists(m_renderNodes);
     m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
     m_renderGraph->executeCommandLists();
 }
 
-void OceanScene::renderGui()
-{
+void OceanScene::renderGui() {
     ImGui::Begin("Ocean Parameters");
     glm::vec2 windVelocity = m_oceanParams.windDirection * m_oceanParams.windSpeed;
-    if (ImGui::SliderFloat("Wind Speed X", &windVelocity.x, 0.001f, 100.0f))
-    {
+    if (ImGui::SliderFloat("Wind Speed X", &windVelocity.x, 0.001f, 100.0f)) {
         m_oceanParams.windSpeed = glm::length(windVelocity);
         m_oceanParams.windDirection = windVelocity / m_oceanParams.windSpeed;
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
     }
-    if (ImGui::SliderFloat("Wind Speed Z", &windVelocity.y, 0.001f, 100.0f))
-    {
+    if (ImGui::SliderFloat("Wind Speed Z", &windVelocity.y, 0.001f, 100.0f)) {
         m_oceanParams.windSpeed = glm::length(windVelocity);
         m_oceanParams.windDirection = windVelocity / m_oceanParams.windSpeed;
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
@@ -430,43 +406,34 @@ void OceanScene::renderGui()
     ImGui::End();
 }
 
-std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum()
-{
+std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
     const auto oceanSpectrum{createOceanSpectrum(0, m_oceanParams)};
 
     auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32B32A32_SFLOAT);
     std::shared_ptr<VulkanBuffer> buffer = createStagingBuffer(m_renderer->getDevice(), oceanSpectrum);
-    m_renderer->enqueueResourceUpdate(
-        [img = image.get(), stagingBuffer = buffer](VkCommandBuffer cmdBuffer)
-        {
-            img->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_TRANSFER_BIT);
+    m_renderer->enqueueResourceUpdate([img = image.get(), stagingBuffer = buffer](VkCommandBuffer cmdBuffer) {
+        img->transitionLayout(
+            cmdBuffer,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-            img->copyFrom(cmdBuffer, *stagingBuffer, 0, 1);
+        img->copyFrom(cmdBuffer, *stagingBuffer, 0, 1);
 
-            img->transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_GENERAL,
-                VK_PIPELINE_STAGE_TRANSFER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-        });
+        img->transitionLayout(
+            cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    });
 
     return image;
 }
 
-int OceanScene::applyFFT(std::string image)
-{
-    struct BitReversalPushConstants
-    {
+int OceanScene::applyFFT(std::string image) {
+    struct BitReversalPushConstants {
         int32_t reversalDirection; // 0 is horizontal, 1 is vertical.
         int32_t passCount;         // Logarithm of the patch discretization size.
     };
 
-    struct IFFTPushConstants
-    {
+    struct IFFTPushConstants {
         int32_t passIdx; // Index of the current pass.
         int32_t N;       // Number of elements in the array.
     };
@@ -490,17 +457,15 @@ int OceanScene::applyFFT(std::string image)
             0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
         bitReversePass.preDispatchCallback =
-            [image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-        {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{0, logN});
-        };
+            [image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+                node.pipeline->setPushConstants(
+                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{0, logN});
+            };
         m_renderGraph->addDependency(
             kSpectrumPass,
             image + "BitReversePass0",
             [this, image, imageLayerRead](
-                const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-            {
+                const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                 cmdBuffer.insertImageMemoryBarrier(
                     createImageMemoryReadBarrier(
                         m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
@@ -513,8 +478,7 @@ int OceanScene::applyFFT(std::string image)
     }
 
     // Horizontal IFFT passes.
-    for (int i = 0; i < logN; ++i)
-    {
+    for (int i = 0; i < logN; ++i) {
         const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
@@ -537,14 +501,12 @@ int OceanScene::applyFFT(std::string image)
 
         logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
-        if (i == 0)
-        {
+        if (i == 0) {
             m_renderGraph->addDependency(
                 image + "BitReversePass0",
                 name,
                 [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-                {
+                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
                             m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
@@ -553,15 +515,13 @@ int OceanScene::applyFFT(std::string image)
                 });
         }
 
-        if (i > 0)
-        {
+        if (i > 0) {
             std::string prevName = image + "TrueFFTPass" + std::to_string(i - 1);
             m_renderGraph->addDependency(
                 prevName,
                 name,
                 [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-                {
+                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
                             m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
@@ -588,11 +548,10 @@ int OceanScene::applyFFT(std::string image)
             0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
         bitReversePass2.preDispatchCallback =
-            [image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-        {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{1, logN});
-        };
+            [image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+                node.pipeline->setPushConstants(
+                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{1, logN});
+            };
 
         logger->info("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
 
@@ -600,8 +559,7 @@ int OceanScene::applyFFT(std::string image)
             image + "TrueFFTPass" + std::to_string(logN - 1),
             image + "BitReversePass1",
             [this, image, imageLayerRead](
-                const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-            {
+                const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                 cmdBuffer.insertImageMemoryBarrier(
                     createImageMemoryReadBarrier(
                         m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
@@ -613,8 +571,7 @@ int OceanScene::applyFFT(std::string image)
 
     // Vertical IFFT pass.
     std::string finalImageView;
-    for (int i = 0; i < logN; ++i)
-    {
+    for (int i = 0; i < logN; ++i) {
         const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
@@ -637,15 +594,13 @@ int OceanScene::applyFFT(std::string image)
                     cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
             };
 
-        if (i == logN - 1)
-        {
+        if (i == logN - 1) {
             finalImageView = imageViewWrite;
             m_renderGraph->addDependency(
                 name,
                 kGeometryPass,
                 [this, image, imageLayerWrite](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-                {
+                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
                     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
                     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -660,15 +615,12 @@ int OceanScene::applyFFT(std::string image)
                     cmdBuffer.insertImageMemoryBarrier(
                         barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
                 });
-        }
-        else if (i == 0)
-        {
+        } else if (i == 0) {
             m_renderGraph->addDependency(
                 image + "BitReversePass1",
                 name,
                 [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-                {
+                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
                             m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
@@ -677,15 +629,13 @@ int OceanScene::applyFFT(std::string image)
                 });
         }
 
-        if (i > 0)
-        {
+        if (i > 0) {
             std::string prevName = image + "TrueFFTPassVert" + std::to_string(i - 1);
             m_renderGraph->addDependency(
                 prevName,
                 name,
                 [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/)
-                {
+                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
                             m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),

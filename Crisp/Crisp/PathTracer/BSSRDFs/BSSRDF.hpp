@@ -3,20 +3,16 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Spectra/Spectrum.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Shape;
 
-namespace pt
-{
+namespace pt {
 class Scene;
 }
 
-class BSSRDF
-{
+class BSSRDF {
 public:
-    struct Sample
-    {
+    struct Sample {
         glm::vec3 p;
         glm::vec3 n;
         glm::vec3 wo;
@@ -24,9 +20,7 @@ public:
         Sample(const glm::vec3& p, const glm::vec3& n, const glm::vec3& wo)
             : p(p)
             , n(n)
-            , wo(wo)
-        {
-        }
+            , wo(wo) {}
     };
 
     virtual ~BSSRDF() {}

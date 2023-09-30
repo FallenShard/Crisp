@@ -4,8 +4,7 @@
 
 #include <string>
 
-namespace crisp
-{
+namespace crisp {
 
 std::string pipelineStageBitToString(VkPipelineStageFlagBits flags);
 

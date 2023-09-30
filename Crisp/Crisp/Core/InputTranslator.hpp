@@ -5,12 +5,9 @@
 
 #include <GLFW/glfw3.h>
 
-namespace crisp
-{
-inline Key translateGlfwToKey(const int keyCode)
-{
-    switch (keyCode)
-    {
+namespace crisp {
+inline Key translateGlfwToKey(const int keyCode) {
+    switch (keyCode) {
     case GLFW_KEY_UNKNOWN:
         return Key::Unknown;
     case GLFW_KEY_SPACE:
@@ -258,15 +255,12 @@ inline Key translateGlfwToKey(const int keyCode)
     }
 }
 
-inline int translateKeyToGlfw(Key key)
-{
+inline int translateKeyToGlfw(Key key) {
     return static_cast<std::underlying_type<Key>::type>(key);
 }
 
-inline MouseButton translateGlfwToMouseButton(int buttonCode)
-{
-    switch (buttonCode)
-    {
+inline MouseButton translateGlfwToMouseButton(int buttonCode) {
+    switch (buttonCode) {
     case GLFW_MOUSE_BUTTON_LEFT:
         return MouseButton::Left;
     case GLFW_MOUSE_BUTTON_RIGHT:

@@ -10,8 +10,7 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class FluidSimulation;
 
 class SceneRenderPass;
@@ -21,8 +20,7 @@ class UniformBuffer;
 class VulkanDevice;
 class VulkanSampler;
 
-class FluidSimulationScene : public Scene
-{
+class FluidSimulationScene : public Scene {
 public:
     FluidSimulationScene(Renderer* renderer, Window* window);
     ~FluidSimulationScene();
@@ -44,8 +42,7 @@ private:
     TransformPack m_transforms;
     std::unique_ptr<UniformBuffer> m_transformsBuffer;
 
-    struct ParticleParams
-    {
+    struct ParticleParams {
         float radius;
         float screenSpaceScale;
     };

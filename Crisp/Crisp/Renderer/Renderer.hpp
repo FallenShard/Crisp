@@ -28,14 +28,12 @@
 #include <optional>
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 class UniformBuffer;
 class Geometry;
 class Material;
 
-class Renderer
-{
+class Renderer {
 public:
     static constexpr uint32_t NumVirtualFrames = RendererConfig::VirtualFrameCount;
 
@@ -94,8 +92,7 @@ public:
     void fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 
     template <typename T>
-    inline void fillDeviceBuffer(VulkanBuffer* buffer, const std::vector<T>& data, VkDeviceSize offset = 0)
-    {
+    inline void fillDeviceBuffer(VulkanBuffer* buffer, const std::vector<T>& data, VkDeviceSize offset = 0) {
         fillDeviceBuffer(buffer, data.data(), data.size() * sizeof(T), offset);
     }
 
@@ -114,29 +111,23 @@ public:
         std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex);
 
     template <typename... Args>
-    std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args)
-    {
+    std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args) {
         return std::make_unique<UniformBuffer>(this, std::forward<Args>(args)...);
     }
 
-    auto getNextCommandBuffer()
-    {
-        struct Awaitable
-        {
+    auto getNextCommandBuffer() {
+        struct Awaitable {
             Renderer* renderer{nullptr};
 
-            bool await_ready() const noexcept
-            {
+            bool await_ready() const noexcept {
                 return false;
             }
 
-            void await_suspend(std::coroutine_handle<> h) noexcept
-            {
+            void await_suspend(std::coroutine_handle<> h) noexcept {
                 renderer->m_cmdBufferCoroutines.push_back(h);
             }
 
-            VkCommandBuffer await_resume() const noexcept
-            {
+            VkCommandBuffer await_resume() const noexcept {
                 return renderer->m_coroCmdBuffer;
             }
         };
@@ -146,18 +137,15 @@ public:
 
     void updateInitialLayouts(VulkanRenderPass& renderPass);
 
-    void schedule(std::function<void()>&& task)
-    {
+    void schedule(std::function<void()>&& task) {
         m_threadPool.schedule(std::move(task));
     }
 
-    void scheduleOnMainThread(std::function<void()>&& task)
-    {
+    void scheduleOnMainThread(std::function<void()>&& task) {
         m_mainThreadQueue.push(std::move(task));
     }
 
-    const VulkanDebugMarker& getDebugMarker() const
-    {
+    const VulkanDebugMarker& getDebugMarker() const {
         return m_device->getDebugMarker();
     }
 

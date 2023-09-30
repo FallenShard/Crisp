@@ -8,21 +8,17 @@
 #include <map>
 #include <string>
 
-namespace crisp
-{
-class VulkanMemoryHeap
-{
+namespace crisp {
+class VulkanMemoryHeap {
 public:
-    struct AllocationBlock
-    {
+    struct AllocationBlock {
         VulkanMemoryHeap* heap;
         VkDeviceMemory memory;
         void* mappedPtr;
         std::map<uint64_t, uint64_t> freeChunks;
         robin_hood::unordered_flat_map<uint64_t, uint64_t> usedChunks;
 
-        inline bool operator==(const AllocationBlock& other) const
-        {
+        inline bool operator==(const AllocationBlock& other) const {
             return memory == other.memory;
         }
 
@@ -31,34 +27,28 @@ public:
         std::pair<uint64_t, uint64_t> findFreeChunk(uint64_t size, uint64_t alignment) const;
     };
 
-    struct Allocation
-    {
+    struct Allocation {
         AllocationBlock* allocationBlock;
         uint64_t offset;
         uint64_t size;
 
-        inline void free() const
-        {
+        inline void free() const {
             allocationBlock->heap->free(*this);
         }
 
-        inline void* getBlockMappedPtr() const
-        {
+        inline void* getBlockMappedPtr() const {
             return allocationBlock->mappedPtr;
         }
 
-        inline char* getMappedPtr() const
-        {
+        inline char* getMappedPtr() const {
             return static_cast<char*>(allocationBlock->mappedPtr) + offset; // NOLINT
         }
 
-        inline VkDeviceMemory getMemory() const
-        {
+        inline VkDeviceMemory getMemory() const {
             return allocationBlock->memory;
         }
 
-        inline bool isValid() const
-        {
+        inline bool isValid() const {
             return allocationBlock != nullptr;
         }
     };
@@ -81,13 +71,11 @@ public:
 
     bool isFromHeapIndex(uint32_t heapIndex, VkMemoryPropertyFlags memoryProperties) const;
 
-    inline VkDeviceSize getUsedSize() const
-    {
+    inline VkDeviceSize getUsedSize() const {
         return m_usedSize;
     }
 
-    inline VkDeviceSize getAllocatedSize() const
-    {
+    inline VkDeviceSize getAllocatedSize() const {
         return m_allocationBlocks.size() * m_blockSize;
     }
 

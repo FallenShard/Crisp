@@ -6,17 +6,14 @@
 #include <span>
 #include <vector>
 
-namespace crisp
-{
-struct VertexAttributeBuffer
-{
+namespace crisp {
+struct VertexAttributeBuffer {
     VertexAttributeDescriptor descriptor;
     std::vector<std::byte> buffer;
 };
 
 template <typename T>
-VertexAttributeBuffer createCustomVertexAttributeBuffer(std::span<const T> vertexAttributeData)
-{
+VertexAttributeBuffer createCustomVertexAttributeBuffer(std::span<const T> vertexAttributeData) {
     VertexAttributeBuffer buffer{};
     buffer.descriptor.name = "";
     buffer.descriptor.size = sizeof(T);
@@ -26,8 +23,7 @@ VertexAttributeBuffer createCustomVertexAttributeBuffer(std::span<const T> verte
     return buffer;
 }
 
-struct InterleavedVertexBuffer
-{
+struct InterleavedVertexBuffer {
     std::size_t vertexSize{0};
     std::vector<std::byte> buffer;
 };

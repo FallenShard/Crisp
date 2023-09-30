@@ -5,10 +5,8 @@
 #include <string>
 #include <vector>
 
-namespace crisp
-{
-struct VertexAttributeDescriptor
-{
+namespace crisp {
+struct VertexAttributeDescriptor {
     VertexAttribute type; // Enum type
     std::string name;     // String id for custom types
     uint32_t size;        // Size in bytes
@@ -19,11 +17,9 @@ struct VertexAttributeDescriptor
 };
 
 template <typename T>
-std::vector<T> flatten(const std::vector<std::vector<T>>& vec)
-{
+std::vector<T> flatten(const std::vector<std::vector<T>>& vec) {
     std::vector<T> result;
-    for (const auto& v : vec)
-    {
+    for (const auto& v : vec) {
         result.insert(result.end(), v.begin(), v.end());
     }
     return result;

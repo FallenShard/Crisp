@@ -3,11 +3,9 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
-class Skybox
-{
+class Skybox {
 public:
     Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder);
     Skybox(

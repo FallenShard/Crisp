@@ -7,8 +7,7 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
+namespace crisp {
 PathTracerIntegrator::PathTracerIntegrator(const VariantMap& /*attribs*/) {}
 
 PathTracerIntegrator::~PathTracerIntegrator() {}
@@ -16,23 +15,19 @@ PathTracerIntegrator::~PathTracerIntegrator() {}
 void PathTracerIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum PathTracerIntegrator::Li(
-    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
-{
+    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const {
     Spectrum L(0.0f);
     Spectrum throughput(1.0f);
 
     Intersection its;
     unsigned int numBounces = 0;
-    while (true)
-    {
-        if (!scene->rayIntersect(ray, its))
-        {
+    while (true) {
+        if (!scene->rayIntersect(ray, its)) {
             L += throughput * scene->evalEnvLight(ray);
             return L;
         }
 
-        if (its.shape->getLight())
-        {
+        if (its.shape->getLight()) {
             Light::Sample lightSample(ray.o, its.p, its.shFrame.n);
             L += throughput * its.shape->getLight()->eval(lightSample);
         }
@@ -44,13 +39,13 @@ Spectrum PathTracerIntegrator::Li(
 
         numBounces++;
 
-        if (numBounces > 5)
-        {
+        if (numBounces > 5) {
             float q = 1.0f - std::min(throughput.maxCoeff(), 0.99f);
-            if (sampler.next1D() > q)
+            if (sampler.next1D() > q) {
                 throughput /= 1.0f - q;
-            else
+            } else {
                 break;
+            }
         }
     }
 

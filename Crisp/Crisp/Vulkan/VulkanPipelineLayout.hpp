@@ -7,18 +7,15 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-struct DescriptorSetLayout
-{
+namespace crisp {
+struct DescriptorSetLayout {
     VkDescriptorSetLayout handle;
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     std::vector<uint32_t> dynamicBufferIndices;
     bool isBuffered{false};
 };
 
-class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout>
-{
+class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout> {
 public:
     VulkanPipelineLayout(
         const VulkanDevice& device,
@@ -29,17 +26,14 @@ public:
         std::unique_ptr<DescriptorSetAllocator> setAllocator);
     ~VulkanPipelineLayout() override;
 
-    inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const
-    {
+    inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).bindings.at(binding).descriptorType;
     }
 
     VkDescriptorSet allocateSet(uint32_t setIndex) const;
 
-    inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const
-    {
-        for (const auto& pushConstant : m_pushConstants)
-        {
+    inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const {
+        for (const auto& pushConstant : m_pushConstants) {
             vkCmdPushConstants(
                 cmdBuffer,
                 m_handle,
@@ -50,38 +44,31 @@ public:
         }
     }
 
-    inline std::size_t getDescriptorSetLayoutCount() const
-    {
+    inline std::size_t getDescriptorSetLayoutCount() const {
         return m_descriptorSetLayouts.size();
     }
 
-    inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setIndex) const
-    {
+    inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).handle;
     }
 
-    inline const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t setIndex) const
-    {
+    inline const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).bindings;
     }
 
-    inline bool isDescriptorSetBuffered(uint32_t setIndex) const
-    {
+    inline bool isDescriptorSetBuffered(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).isBuffered;
     }
 
-    inline std::size_t getDynamicBufferCount() const
-    {
+    inline std::size_t getDynamicBufferCount() const {
         return m_dynamicBufferCount;
     }
 
-    inline uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const
-    {
+    inline uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).dynamicBufferIndices.at(binding);
     }
 
-    inline DescriptorSetAllocator* getDescriptorSetAllocator()
-    {
+    inline DescriptorSetAllocator* getDescriptorSetAllocator() {
         return m_setAllocator.get();
     }
 

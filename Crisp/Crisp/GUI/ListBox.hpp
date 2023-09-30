@@ -7,8 +7,7 @@
 #include <Crisp/GUI/DrawComponents/RectDrawComponent.hpp>
 #include <Crisp/Gui/ControlGroup.hpp>
 
-namespace crisp::gui
-{
+namespace crisp::gui {
 class Button;
 
 // class ListBox : public ControlGroup

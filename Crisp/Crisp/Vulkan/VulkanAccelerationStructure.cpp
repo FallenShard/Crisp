@@ -1,7 +1,6 @@
 #include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
 VulkanAccelerationStructure::VulkanAccelerationStructure(
     const VulkanDevice& device,
@@ -17,8 +16,7 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     , m_geometry(geometry)
     , m_buildInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR}
     , m_buildSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR}
-    , m_primitiveCount(primitiveCount)
-{
+    , m_primitiveCount(primitiveCount) {
     m_buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
     m_buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
     m_buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
@@ -51,16 +49,14 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
     , m_geometry{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR}
     , m_buildInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR}
     , m_buildSizesInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR}
-    , m_primitiveCount(static_cast<uint32_t>(bottomLevelAccelStructures.size()))
-{
+    , m_primitiveCount(static_cast<uint32_t>(bottomLevelAccelStructures.size())) {
     m_buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     m_buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
     m_buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     m_buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
 
     m_instances.resize(m_primitiveCount, VkAccelerationStructureInstanceKHR{});
-    for (uint32_t i = 0; i < m_primitiveCount; ++i)
-    {
+    for (uint32_t i = 0; i < m_primitiveCount; ++i) {
         m_instances[i].transform = bottomLevelAccelStructures[i]->m_transformMatrix;
         m_instances[i].instanceCustomIndex = i;
         m_instances[i].mask = 0xFF;
@@ -96,10 +92,8 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
 void VulkanAccelerationStructure::build(
     const VulkanDevice& /*device*/,
     VkCommandBuffer cmdBuffer,
-    const std::vector<VulkanAccelerationStructure*>& /*bottomLevelAccelStructures*/)
-{
-    if (m_buildInfo.type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
-    {
+    const std::vector<VulkanAccelerationStructure*>& /*bottomLevelAccelStructures*/) {
+    if (m_buildInfo.type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR) {
         VkAccelerationStructureBuildRangeInfoKHR rangeInfo;
         rangeInfo.firstVertex = 0;
         rangeInfo.primitiveCount = m_primitiveCount;
@@ -108,9 +102,7 @@ void VulkanAccelerationStructure::build(
         std::vector<VkAccelerationStructureBuildRangeInfoKHR*> rangeInfos{&rangeInfo};
 
         vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &m_buildInfo, rangeInfos.data());
-    }
-    else
-    {
+    } else {
         VkAccelerationStructureBuildRangeInfoKHR rangeInfo;
         rangeInfo.firstVertex = 0;
         rangeInfo.primitiveCount = static_cast<uint32_t>(m_instances.size());
@@ -143,8 +135,7 @@ void VulkanAccelerationStructure::build(
     }
 }
 
-VkWriteDescriptorSetAccelerationStructureKHR VulkanAccelerationStructure::getDescriptorInfo() const
-{
+VkWriteDescriptorSetAccelerationStructureKHR VulkanAccelerationStructure::getDescriptorInfo() const {
     VkWriteDescriptorSetAccelerationStructureKHR writeInfo = {
         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR};
     writeInfo.accelerationStructureCount = 1;
@@ -152,8 +143,7 @@ VkWriteDescriptorSetAccelerationStructureKHR VulkanAccelerationStructure::getDes
     return writeInfo;
 }
 
-void VulkanAccelerationStructure::createAccelerationStructure(const VulkanDevice& device)
-{
+void VulkanAccelerationStructure::createAccelerationStructure(const VulkanDevice& device) {
     m_accelerationStructureBuffer = std::make_unique<VulkanBuffer>(
         device,
         m_buildSizesInfo.accelerationStructureSize,

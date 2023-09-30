@@ -7,13 +7,10 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-namespace crisp::rg
-{
-class RenderGraph
-{
+namespace crisp::rg {
+class RenderGraph {
 public:
-    class Builder
-    {
+    class Builder {
     public:
         Builder(RenderGraph& renderGraph, RenderGraphPassHandle passHandle);
 
@@ -44,10 +41,8 @@ public:
     };
 
     template <typename BuilderFunc, typename ExecuteFunc>
-    RenderGraphPassHandle addPass(std::string name, BuilderFunc&& builderFunc, ExecuteFunc&& executeFunc)
-    {
-        if (m_passMap.contains(name))
-        {
+    RenderGraphPassHandle addPass(std::string name, BuilderFunc&& builderFunc, ExecuteFunc&& executeFunc) {
+        if (m_passMap.contains(name)) {
             CRISP_FATAL("RenderGraph already contains pass named '{}'.", name);
         }
 
@@ -86,8 +81,7 @@ public:
     void resize(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
 
 private:
-    struct ResourceTimeline
-    {
+    struct ResourceTimeline {
         uint32_t firstWrite{~0u};
         uint32_t lastRead{0};
     };

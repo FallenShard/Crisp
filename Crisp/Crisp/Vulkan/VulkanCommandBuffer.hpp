@@ -8,16 +8,13 @@
 #include <span>
 #include <vector>
 
-namespace crisp
-{
-struct MemoryRegion
-{
+namespace crisp {
+struct MemoryRegion {
     void* ptr;
     size_t size;
 };
 
-class VulkanCommandBuffer
-{
+class VulkanCommandBuffer {
 public:
     explicit VulkanCommandBuffer(VkCommandBuffer commandBuffer);
 
@@ -26,8 +23,7 @@ public:
 
     void end() const;
 
-    inline VkCommandBuffer getHandle() const
-    {
+    inline VkCommandBuffer getHandle() const {
         return m_handle;
     }
 

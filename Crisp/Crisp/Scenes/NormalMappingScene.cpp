@@ -46,10 +46,8 @@
 
 #include <thread>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 static constexpr uint32_t ShadowMapSize = 2048;
 static constexpr uint32_t CascadeCount = 4;
 
@@ -60,8 +58,7 @@ bool animationFrozen = true;
 } // namespace
 
 NormalMappingScene::NormalMappingScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-{
+    : Scene(renderer, window) {
     setupInput();
 
     // Camera
@@ -102,22 +99,19 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Window* window)
 
 NormalMappingScene::~NormalMappingScene() {}
 
-void NormalMappingScene::resize(int width, int height)
-{
+void NormalMappingScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_renderGraph->resize(width, height);
     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
 }
 
-void NormalMappingScene::update(float dt)
-{
+void NormalMappingScene::update(float dt) {
     m_cameraController->update(dt);
     const CameraParameters cameraParams = m_cameraController->getCameraParameters();
 
     static float angle = 0.0f;
-    if (!animationFrozen)
-    {
+    if (!animationFrozen) {
         angle += dt;
     }
 
@@ -132,15 +126,13 @@ void NormalMappingScene::update(float dt)
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
 }
 
-void NormalMappingScene::render()
-{
+void NormalMappingScene::render() {
     m_renderGraph->clearCommandLists();
     m_renderGraph->buildCommandLists(m_renderNodeList);
     m_renderGraph->executeCommandLists();
 }
 
-RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIndex)
-{
+RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIndex) {
     // auto node =
     // std::make_unique<RenderNode>(*m_transformBuffer,
     // transformIndex);
@@ -153,8 +145,7 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
     return m_renderNodeList.back().get();
 }
 
-void NormalMappingScene::createPlane()
-{
+void NormalMappingScene::createPlane() {
     auto& imageCache = m_resourceContext->imageCache;
     const VertexLayoutDescription PbrVertexFormat = {
         {VertexAttribute::Position},
@@ -233,8 +224,7 @@ void NormalMappingScene::createPlane()
     // = material;
 
     std::vector<std::string> parts = {"leg", "hand", "glass", "arm", "helmet", "body"};
-    for (int i = 1; i < mesh.getViews().size(); ++i)
-    {
+    for (int i = 1; i < mesh.getViews().size(); ++i) {
         std::string normalMapKey = "partNormalMap" + std::to_string(i);
         std::string diffuseMapKey = "partDiffuseMap" + std::to_string(i);
         std::string specularMapKey = "partSpecularMap" + std::to_string(i);
@@ -289,17 +279,14 @@ void NormalMappingScene::createPlane()
 
     nanosuit->pass(0, MainPass).material = m_resourceContext->getMaterial("normalMapPart3");
 
-    for (int i = 0; i < 100; ++i)
-    {
-        for (int j = 0; j < 100; ++j)
-        {
+    for (int i = 0; i < 100; ++i) {
+        for (int j = 0; j < 100; ++j) {
             int idx = i * 100 + j + 2;
             auto smallNano = createRenderNode("nanosuit" + std::to_string(idx), idx);
             smallNano->geometry = m_resourceContext->getGeometry("nanosuit");
             smallNano->setModelMatrix(
                 glm::translate(glm::vec3(-10.0f + j * 0.2f, 0.0f, -10.0f + i * 0.2f)) * glm::scale(glm::vec3(0.2f)));
-            for (int k = 1; k < mesh.getViews().size(); ++k)
-            {
+            for (int k = 1; k < mesh.getViews().size(); ++k) {
                 smallNano->pass(k, MainPass).material = m_resourceContext->getMaterial(
                     "normalMapP"
                     "art" +
@@ -311,12 +298,9 @@ void NormalMappingScene::createPlane()
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void NormalMappingScene::setupInput()
-{
-    m_window->keyPressed += [this](Key key, int)
-    {
-        switch (key)
-        {
+void NormalMappingScene::setupInput() {
+    m_window->keyPressed += [this](Key key, int) {
+        switch (key) {
         case Key::F5:
             m_resourceContext->recreatePipelines();
             break;
@@ -326,8 +310,7 @@ void NormalMappingScene::setupInput()
     };
 }
 
-void NormalMappingScene::createGui()
-{
+void NormalMappingScene::createGui() {
     using namespace gui;
     Form* form = nullptr; // m_app->getForm();
 

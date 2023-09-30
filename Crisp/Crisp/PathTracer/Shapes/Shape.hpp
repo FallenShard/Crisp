@@ -17,8 +17,7 @@
 #include <Crisp/PathTracer/Core/Intersection.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class BSDF;
 class Light;
 class Sampler;
@@ -26,33 +25,25 @@ class Scene;
 class Medium;
 class BSSRDF;
 
-class Shape
-{
+class Shape {
 public:
-    struct Sample
-    {
+    struct Sample {
         glm::vec3 ref; // Vantage point for the sample
         glm::vec3 p;   // Sampled point on the shape surface
         glm::vec3 n;   // Normal at the sampled point
         float pdf;     // pdf of the sample
 
         Sample()
-            : pdf(0.0f)
-        {
-        }
+            : pdf(0.0f) {}
 
         Sample(const glm::vec3& ref)
             : ref(ref)
-            , pdf(0.0f)
-        {
-        }
+            , pdf(0.0f) {}
 
         Sample(const glm::vec3& ref, const glm::vec3& p)
             : ref(ref)
             , p(p)
-            , pdf(0.0f)
-        {
-        }
+            , pdf(0.0f) {}
     };
 
     Shape();

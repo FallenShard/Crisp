@@ -5,23 +5,19 @@
 
 #include <numeric>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using OceanTest = VulkanTest;
 
 using ::testing::IsNull;
 using ::testing::Not;
 
-TEST_F(OceanTest, PatchConstruction)
-{
+TEST_F(OceanTest, PatchConstruction) {
     constexpr float kSize = 5.0;
     const std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
         {VertexAttribute::Position}, {VertexAttribute::Normal}};
 
-    for (const int32_t N : {64, 128, 256})
-    {
+    for (const int32_t N : {64, 128, 256}) {
         const TriangleMesh mesh = createGridMesh(flatten(vertexFormat), kSize, N - 1);
         EXPECT_EQ(mesh.getVertexCount(), N * N);
 
@@ -48,8 +44,7 @@ TEST_F(OceanTest, PatchConstruction)
 //     EXPECT_NEAR(boundingBox.getExtents().z, kSize, 1e-8);
 // }
 
-TEST_F(OceanTest, VulkanBuffer)
-{
+TEST_F(OceanTest, VulkanBuffer) {
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
     std::vector<float> data(elementCount);
@@ -64,8 +59,9 @@ TEST_F(OceanTest, VulkanBuffer)
     StagingVulkanBuffer stagingBuffer(*device_, size);
     const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
-    for (uint32_t i = 0; i < data.size(); ++i)
+    for (uint32_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(stagingPtr[i], data[i]);
+    }
 
     StagingVulkanBuffer downloadBuffer(*device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     {
@@ -90,8 +86,9 @@ TEST_F(OceanTest, VulkanBuffer)
     }
 
     const float* ptr = downloadBuffer.getHostVisibleData<float>();
-    for (uint32_t i = 0; i < elementCount; ++i)
+    for (uint32_t i = 0; i < elementCount; ++i) {
         ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i;
+    }
 }
 
 } // namespace

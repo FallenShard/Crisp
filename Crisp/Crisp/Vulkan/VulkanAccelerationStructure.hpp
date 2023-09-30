@@ -7,10 +7,8 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-namespace crisp
-{
-class VulkanAccelerationStructure : public VulkanResource<VkAccelerationStructureKHR>
-{
+namespace crisp {
+class VulkanAccelerationStructure : public VulkanResource<VkAccelerationStructureKHR> {
 public:
     VulkanAccelerationStructure(
         const VulkanDevice& device,

@@ -3,12 +3,8 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Utils/GlmFormatters.hpp>
 
-TEST(GlmStructuredBindingsTest, RValue)
-{
-    const auto createVec = []()
-    {
-        return glm::vec3(10.0f, 20.0f, 30.0f);
-    };
+TEST(GlmStructuredBindingsTest, RValue) {
+    const auto createVec = []() { return glm::vec3(10.0f, 20.0f, 30.0f); };
 
     auto [x, y, z] = createVec();
 
@@ -17,8 +13,7 @@ TEST(GlmStructuredBindingsTest, RValue)
     EXPECT_EQ(z, 30.0f);
 }
 
-TEST(GlmStructuredBindingsTest, LValue)
-{
+TEST(GlmStructuredBindingsTest, LValue) {
     glm::vec3 vec{-1.0f, 0.0f, 1.0f};
     auto [x, y, z] = vec;
 
@@ -36,8 +31,7 @@ TEST(GlmStructuredBindingsTest, LValue)
     EXPECT_EQ(10.0f, vec[0]);
 }
 
-TEST(GlmStructuredBindingsTest, CLValue)
-{
+TEST(GlmStructuredBindingsTest, CLValue) {
     const glm::vec3 vec{-1.0f, 0.0f, 1.0f};
     const auto [x, y, z] = vec;
 
@@ -46,8 +40,7 @@ TEST(GlmStructuredBindingsTest, CLValue)
     EXPECT_EQ(z, vec[2]);
 }
 
-TEST(GlmStructuredBindingsTest, Printing)
-{
+TEST(GlmStructuredBindingsTest, Printing) {
     const glm::vec3 vec(0.0f, 1.0f, 2.0f);
 
     const auto format = fmt::format("{}", vec);

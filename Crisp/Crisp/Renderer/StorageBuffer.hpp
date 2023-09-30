@@ -8,12 +8,10 @@
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-namespace crisp
-{
+namespace crisp {
 class Renderer;
 
-class StorageBuffer
-{
+class StorageBuffer {
 public:
     StorageBuffer(
         Renderer* renderer,
@@ -24,19 +22,16 @@ public:
 
     ~StorageBuffer();
 
-    inline VkBuffer getHandle() const
-    {
+    inline VkBuffer getHandle() const {
         return m_buffer->getHandle();
     }
 
-    inline VulkanBuffer* getDeviceBuffer() const
-    {
+    inline VulkanBuffer* getDeviceBuffer() const {
         return m_buffer.get();
     }
 
     template <typename T>
-    void updateStagingBuffer(T&& data)
-    {
+    void updateStagingBuffer(T&& data) {
         using BaseType = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
         updateStagingBuffer(&data, sizeof(BaseType), 0);
     }

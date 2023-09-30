@@ -22,17 +22,14 @@
 
 #include <Crisp/Core/Logger.hpp>
 
-namespace crisp::gui
-{
-namespace
-{
+namespace crisp::gui {
+namespace {
 constexpr float kDepthLayers = 32.0f;
 
 auto logger = spdlog::stdout_color_mt("RenderSystem");
 
 std::unique_ptr<VulkanRenderPass> createGuiRenderPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D swapChainExtent)
-{
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, const VkExtent2D swapChainExtent) {
     std::vector<RenderTarget*> renderTargets(2);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         "GuiPassColor",
@@ -77,8 +74,7 @@ std::unique_ptr<VulkanRenderPass> createGuiRenderPass(
 } // namespace
 
 RenderSystem::RenderSystem(Renderer* renderer)
-    : m_renderer(renderer)
-{
+    : m_renderer(renderer) {
     float width = static_cast<float>(m_renderer->getSwapChainExtent().width);
     float height = static_cast<float>(m_renderer->getSwapChainExtent().height);
     m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + kDepthLayers);
@@ -106,8 +102,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
     // Initialize resources to support dynamic addition of MVP transform resources
 
     std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets;
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
-    {
+    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++) {
         transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
     }
     m_transforms = std::make_unique<DynamicUniformBufferResource>(
@@ -119,13 +114,11 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     // Initialize resources to support dynamic addition of textured controls
     std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets;
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++)
-    {
+    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++) {
         tcSets[i] = m_texQuadPipeline->allocateDescriptorSet(1).getHandle();
     }
 
-    for (auto& set : tcSets)
-    {
+    for (auto& set : tcSets) {
         const auto imageInfo = m_guiAtlasView->getDescriptorInfo(m_linearClampSampler.get());
 
         VkWriteDescriptorSet descWrite = {};
@@ -146,62 +139,49 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
 RenderSystem::~RenderSystem() {}
 
-const glm::mat4& RenderSystem::getProjectionMatrix() const
-{
+const glm::mat4& RenderSystem::getProjectionMatrix() const {
     return m_P;
 }
 
-unsigned int RenderSystem::registerTransformResource()
-{
+unsigned int RenderSystem::registerTransformResource() {
     return m_transforms->registerResource();
 }
 
-void RenderSystem::updateTransformResource(unsigned int transformId, const glm::mat4& M)
-{
+void RenderSystem::updateTransformResource(unsigned int transformId, const glm::mat4& M) {
     m_transforms->updateResource(transformId, glm::value_ptr(m_P * M));
 }
 
-void RenderSystem::unregisterTransformResource(unsigned int transformId)
-{
+void RenderSystem::unregisterTransformResource(unsigned int transformId) {
     m_transforms->unregisterResource(transformId);
 }
 
-unsigned int RenderSystem::registerColorResource()
-{
+unsigned int RenderSystem::registerColorResource() {
     return m_colors->registerResource();
 }
 
-void RenderSystem::updateColorResource(unsigned int colorId, const glm::vec4& color)
-{
+void RenderSystem::updateColorResource(unsigned int colorId, const glm::vec4& color) {
     m_colors->updateResource(colorId, glm::value_ptr(color));
 }
 
-void RenderSystem::unregisterColorResource(unsigned int colorId)
-{
+void RenderSystem::unregisterColorResource(unsigned int colorId) {
     m_colors->unregisterResource(colorId);
 }
 
-unsigned int RenderSystem::registerTexCoordResource()
-{
+unsigned int RenderSystem::registerTexCoordResource() {
     return m_tcTransforms->registerResource();
 }
 
-void RenderSystem::updateTexCoordResource(unsigned int tcTransId, const glm::vec4& tcTrans)
-{
+void RenderSystem::updateTexCoordResource(unsigned int tcTransId, const glm::vec4& tcTrans) {
     m_tcTransforms->updateResource(tcTransId, glm::value_ptr(tcTrans));
 }
 
-void RenderSystem::unregisterTexCoordResource(unsigned int tcTransId)
-{
+void RenderSystem::unregisterTexCoordResource(unsigned int tcTransId) {
     m_tcTransforms->unregisterResource(tcTransId);
 }
 
-unsigned int RenderSystem::registerTextResource(std::string text, unsigned int fontId)
-{
-    if (m_textResourceIdPool.empty())
-    {
-        for (uint32_t i = 0; i < kTextResourceIncrement; ++i)
-        {
+unsigned int RenderSystem::registerTextResource(std::string text, unsigned int fontId) {
+    if (m_textResourceIdPool.empty()) {
+        for (uint32_t i = 0; i < kTextResourceIncrement; ++i) {
             m_textResourceIdPool.insert(static_cast<uint32_t>(m_textResources.size()) + i);
         }
     }
@@ -235,25 +215,21 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
     return freeTextResourceId;
 }
 
-glm::vec2 RenderSystem::updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId)
-{
+glm::vec2 RenderSystem::updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId) {
     m_textResources.at(textResId)->descSet = m_fonts.at(fontId)->descSet;
     m_textResources.at(textResId)->updateStagingBuffer(text, *m_fonts.at(fontId)->font);
     m_textResources.at(textResId)->isUpdatedOnDevice = false;
     return m_textResources.at(textResId)->extent;
 }
 
-void RenderSystem::unregisterTextResource(unsigned int textResId)
-{
+void RenderSystem::unregisterTextResource(unsigned int textResId) {
     m_textResourceIdPool.insert(textResId);
 }
 
-glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) const
-{
+glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) const {
     glm::vec2 extent = glm::vec2(0.0f, 0.0f);
     auto font = m_fonts.at(fontId)->font.get();
-    for (auto& character : text)
-    {
+    for (auto& character : text) {
         auto& gInfo = font->glyphs[character - FontLoader::kCharBegin];
         extent.x += gInfo.advanceX;
         extent.y = std::max(extent.y, gInfo.bmpHeight);
@@ -261,112 +237,94 @@ glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) c
     return extent;
 }
 
-void RenderSystem::drawQuad(unsigned int transformResourceId, uint32_t colorId, float depth) const
-{
+void RenderSystem::drawQuad(unsigned int transformResourceId, uint32_t colorId, float depth) const {
     m_drawCommands.emplace_back(&RenderSystem::renderQuad, transformResourceId, colorId, depth);
 }
 
 void RenderSystem::drawTexture(
-    unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const
-{
+    unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const {
     m_drawCommands.emplace_back(&RenderSystem::renderTexture, transformId, colorId, texCoordId, depth);
 }
 
-void RenderSystem::drawText(unsigned int textResId, unsigned int transformId, uint32_t colorId, float depth) const
-{
+void RenderSystem::drawText(unsigned int textResId, unsigned int transformId, uint32_t colorId, float depth) const {
     m_drawCommands.emplace_back(&RenderSystem::renderText, transformId, colorId, textResId, depth);
 }
 
-void RenderSystem::drawDebugRect(Rect<float> rect, glm::vec4 color) const
-{
+void RenderSystem::drawDebugRect(Rect<float> rect, glm::vec4 color) const {
     m_debugRects.emplace_back(rect);
     m_rectColors.emplace_back(color);
 }
 
-void RenderSystem::submitDrawCommands()
-{
-    m_renderer->enqueueResourceUpdate(
-        [this](VkCommandBuffer commandBuffer)
-        {
-            auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
+void RenderSystem::submitDrawCommands() {
+    m_renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer) {
+        auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
-            m_transforms->update(commandBuffer, currentFrame);
-            m_colors->update(commandBuffer, currentFrame);
-            m_tcTransforms->update(commandBuffer, currentFrame);
+        m_transforms->update(commandBuffer, currentFrame);
+        m_colors->update(commandBuffer, currentFrame);
+        m_tcTransforms->update(commandBuffer, currentFrame);
 
-            // Text resources
-            for (auto& textResource : m_textResources)
-            {
-                auto textRes = textResource.get();
-                if (!textRes->isUpdatedOnDevice)
-                {
-                    textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % RendererConfig::VirtualFrameCount;
-                    textRes->offsets[0] =
-                        textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
-                    textRes->indexBufferOffset =
-                        textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
-                    textRes->vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
-                    textRes->indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
+        // Text resources
+        for (auto& textResource : m_textResources) {
+            auto textRes = textResource.get();
+            if (!textRes->isUpdatedOnDevice) {
+                textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % RendererConfig::VirtualFrameCount;
+                textRes->offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
+                textRes->indexBufferOffset =
+                    textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
+                textRes->vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
+                textRes->indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
 
-                    textRes->isUpdatedOnDevice = true;
-                }
+                textRes->isUpdatedOnDevice = true;
             }
+        }
+    });
+
+    m_renderer->enqueueDrawCommand([this](VkCommandBuffer commandBuffer) {
+        std::sort(m_drawCommands.begin(), m_drawCommands.end(), [](const GuiDrawCommand& a, const GuiDrawCommand& b) {
+            return a.depth < b.depth;
         });
 
-    m_renderer->enqueueDrawCommand(
-        [this](VkCommandBuffer commandBuffer)
-        {
-            std::sort(
-                m_drawCommands.begin(),
-                m_drawCommands.end(),
-                [](const GuiDrawCommand& a, const GuiDrawCommand& b) { return a.depth < b.depth; });
+        auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
 
-            auto currentFrame = m_renderer->getCurrentVirtualFrameIndex();
+        m_guiPass->begin(commandBuffer, currentFrame, VK_SUBPASS_CONTENTS_INLINE);
+        for (auto& cmd : m_drawCommands) {
+            (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
+        }
 
-            m_guiPass->begin(commandBuffer, currentFrame, VK_SUBPASS_CONTENTS_INLINE);
-            for (auto& cmd : m_drawCommands)
-            {
-                (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
-            }
+        for (int i = 0; i < m_debugRects.size(); i++) {
+            renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
+        }
 
-            for (int i = 0; i < m_debugRects.size(); i++)
-            {
-                renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
-            }
+        m_guiPass->end(commandBuffer, currentFrame);
 
-            m_guiPass->end(commandBuffer, currentFrame);
+        auto size = m_drawCommands.size();
+        m_drawCommands.clear();
+        m_drawCommands.reserve(size);
 
-            auto size = m_drawCommands.size();
-            m_drawCommands.clear();
-            m_drawCommands.reserve(size);
+        m_debugRects.clear();
+        m_rectColors.clear();
 
-            m_debugRects.clear();
-            m_rectColors.clear();
+        m_guiPass->getRenderTarget(0).transitionLayout(
+            commandBuffer,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            currentFrame,
+            1,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    });
 
-            m_guiPass->getRenderTarget(0).transitionLayout(
-                commandBuffer,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                currentFrame,
-                1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        });
+    m_renderer->enqueueDefaultPassDrawCommand([this](VkCommandBuffer commandBuffer) {
+        unsigned int frameIndex = m_renderer->getCurrentVirtualFrameIndex();
+        m_fsQuadPipeline->bind(commandBuffer);
+        m_fsMaterial->bind(frameIndex, commandBuffer);
 
-    m_renderer->enqueueDefaultPassDrawCommand(
-        [this](VkCommandBuffer commandBuffer)
-        {
-            unsigned int frameIndex = m_renderer->getCurrentVirtualFrameIndex();
-            m_fsQuadPipeline->bind(commandBuffer);
-            m_fsMaterial->bind(frameIndex, commandBuffer);
-
-            m_renderer->setDefaultViewport(commandBuffer);
-            m_renderer->setDefaultScissor(commandBuffer);
-            m_renderer->drawFullScreenQuad(commandBuffer);
-        });
+        m_renderer->setDefaultViewport(commandBuffer);
+        m_renderer->setDefaultScissor(commandBuffer);
+        m_renderer->drawFullScreenQuad(commandBuffer);
+    });
 }
 
-void RenderSystem::resize(int /*width*/, int /*height*/)
-{
+void RenderSystem::resize(int /*width*/, int /*height*/) {
     m_P = glm::ortho(
         0.0f,
         static_cast<float>(m_renderer->getSwapChainExtent().width),
@@ -381,23 +339,18 @@ void RenderSystem::resize(int /*width*/, int /*height*/)
     updateFullScreenMaterial();
 }
 
-const Renderer& RenderSystem::getRenderer() const
-{
+const Renderer& RenderSystem::getRenderer() const {
     return *m_renderer;
 }
 
-glm::vec2 RenderSystem::getScreenSize() const
-{
+glm::vec2 RenderSystem::getScreenSize() const {
     return {m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height};
 }
 
-uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
-{
-    for (uint32_t i = 0; i < m_fonts.size(); ++i)
-    {
+uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize) {
+    for (uint32_t i = 0; i < m_fonts.size(); ++i) {
         auto& font = m_fonts[i]->font;
-        if (font->name == name && font->pixelSize == pixelSize)
-        {
+        if (font->name == name && font->pixelSize == pixelSize) {
             return i;
         }
     }
@@ -449,8 +402,7 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize)
     return static_cast<uint32_t>(m_fonts.size() - 1);
 }
 
-void RenderSystem::createPipelines()
-{
+void RenderSystem::createPipelines() {
     m_colorQuadPipeline = m_renderer->createPipeline("GuiColor.json", *m_guiPass.get(), 0);
     m_textPipeline = m_renderer->createPipeline("GuiText.json", *m_guiPass.get(), 0);
     m_texQuadPipeline = m_renderer->createPipeline("GuiTexture.json", *m_guiPass.get(), 0);
@@ -458,8 +410,7 @@ void RenderSystem::createPipelines()
     m_fsQuadPipeline = m_renderer->createPipeline("Fullscreen.json", m_renderer->getDefaultRenderPass(), 0);
 }
 
-void RenderSystem::initGeometryBuffers()
-{
+void RenderSystem::initGeometryBuffers() {
     std::vector<glm::vec2> quadVerts = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
@@ -481,20 +432,17 @@ void RenderSystem::initGeometryBuffers()
     m_lineLoopGeometry = std::make_unique<Geometry>(*m_renderer, quadVerts, loopSegments);
 }
 
-void RenderSystem::initGuiRenderTargetResources()
-{
+void RenderSystem::initGuiRenderTargetResources() {
     m_fsMaterial = std::make_unique<Material>(m_fsQuadPipeline.get());
     updateFullScreenMaterial();
 }
 
-void RenderSystem::updateFullScreenMaterial()
-{
+void RenderSystem::updateFullScreenMaterial() {
     m_fsMaterial->writeDescriptor(0, 0, *m_guiPass, 0, m_linearClampSampler.get());
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 
-void RenderSystem::loadTextureAtlas()
-{
+void RenderSystem::loadTextureAtlas() {
     const auto image = loadImage(m_renderer->getResourcesPath() / "Textures/Gui/Atlas.png").unwrap();
     m_guiAtlas = std::make_unique<Texture>(
         m_renderer,
@@ -506,8 +454,7 @@ void RenderSystem::loadTextureAtlas()
     m_guiAtlas->fill(image.getData(), image.getByteSize());
 }
 
-void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
-{
+void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const {
     m_colorQuadPipeline->bind(cmdBuffer);
     m_renderer->setDefaultViewport(cmdBuffer);
     m_renderer->setDefaultScissor(cmdBuffer);
@@ -534,8 +481,7 @@ void RenderSystem::renderQuad(VkCommandBuffer cmdBuffer, uint32_t frameIdx, cons
     m_quadGeometry->bindAndDraw(cmdBuffer);
 }
 
-void RenderSystem::renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
-{
+void RenderSystem::renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const {
     const auto textRes = m_textResources.at(cmd.textId).get();
     m_textPipeline->bind(cmdBuffer);
     m_renderer->setDefaultViewport(cmdBuffer);
@@ -576,8 +522,7 @@ void RenderSystem::renderText(VkCommandBuffer cmdBuffer, uint32_t frameIdx, cons
     textRes->drawIndexed(cmdBuffer);
 }
 
-void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const
-{
+void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, const GuiDrawCommand& cmd) const {
     m_texQuadPipeline->bind(cmdBuffer);
     m_renderer->setDefaultViewport(cmdBuffer);
     m_renderer->setDefaultScissor(cmdBuffer);
@@ -619,8 +564,7 @@ void RenderSystem::renderTexture(VkCommandBuffer cmdBuffer, uint32_t frameIdx, c
     m_quadGeometry->bindAndDraw(cmdBuffer);
 }
 
-void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const
-{
+void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>& rect, const glm::vec4& color) const {
     glm::mat4 transform =
         glm::translate(glm::vec3{rect.x, rect.y, -1.0f}) * glm::scale(glm::vec3{rect.width, rect.height, 1.0f});
     m_debugRectPipeline->bind(cmdBuffer);
@@ -629,8 +573,7 @@ void RenderSystem::renderDebugRect(VkCommandBuffer cmdBuffer, const Rect<float>&
     m_lineLoopGeometry->bindAndDraw(cmdBuffer);
 }
 
-void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, const Font& font)
-{
+void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, const Font& font) {
     std::vector<glm::vec4> textVertices;
     std::vector<glm::u16vec3> textFaces;
 
@@ -641,8 +584,7 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
     float atlasHeight = static_cast<float>(font.height);
 
     extent = glm::vec2(0.0f, 0.0f);
-    for (auto& character : text)
-    {
+    for (auto& character : text) {
         auto& gInfo = font.glyphs[character - FontLoader::kCharBegin];
         float x1 = currentX + gInfo.bmpLeft;
         float y1 = currentY - gInfo.bmpTop;
@@ -675,8 +617,7 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
     indexBuffer->updateStagingBuffer(textFaces);
 }
 
-void RenderSystem::TextGeometryResource::drawIndexed(VkCommandBuffer cmdBuffer) const
-{
+void RenderSystem::TextGeometryResource::drawIndexed(VkCommandBuffer cmdBuffer) const {
     vkCmdBindVertexBuffers(cmdBuffer, firstBinding, bindingCount, buffers.data(), offsets.data());
     indexBuffer->bind(cmdBuffer, indexBufferOffset);
     vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);

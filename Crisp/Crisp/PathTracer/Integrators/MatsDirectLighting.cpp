@@ -8,8 +8,7 @@
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
+namespace crisp {
 MatsDirectLightingIntegrator::MatsDirectLightingIntegrator(const VariantMap& /*params*/) {}
 
 MatsDirectLightingIntegrator::~MatsDirectLightingIntegrator() {}
@@ -17,16 +16,15 @@ MatsDirectLightingIntegrator::~MatsDirectLightingIntegrator() {}
 void MatsDirectLightingIntegrator::preprocess(pt::Scene* /*scene*/) {}
 
 Spectrum MatsDirectLightingIntegrator::Li(
-    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const
-{
+    const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags /*illumFlags*/) const {
     Intersection its;
-    if (!scene->rayIntersect(ray, its))
+    if (!scene->rayIntersect(ray, its)) {
         return Spectrum(0.0f);
+    }
 
     Spectrum L(0.0f);
 
-    if (its.shape->getLight())
-    {
+    if (its.shape->getLight()) {
         Light::Sample sample(ray.o, its.p, its.shFrame.n);
         L += its.shape->getLight()->eval(sample);
     }
@@ -36,11 +34,13 @@ Spectrum MatsDirectLightingIntegrator::Li(
 
     Intersection sampledRayIts;
     Ray3 sampledRay(its.p, its.toWorld(bsdfSample.wo));
-    if (!scene->rayIntersect(sampledRay, sampledRayIts))
+    if (!scene->rayIntersect(sampledRay, sampledRayIts)) {
         return L;
+    }
 
-    if (!sampledRayIts.shape->getLight())
+    if (!sampledRayIts.shape->getLight()) {
         return L;
+    }
 
     auto light = sampledRayIts.shape->getLight();
     Light::Sample lightSample(its.p, sampledRayIts.p, sampledRayIts.shFrame.n);

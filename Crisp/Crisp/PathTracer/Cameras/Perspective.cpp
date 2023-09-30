@@ -4,10 +4,8 @@
 
 #include <Crisp/PathTracer/ReconstructionFilters/GaussianFilter.hpp>
 
-namespace crisp
-{
-PerspectiveCamera::PerspectiveCamera(const VariantMap& params)
-{
+namespace crisp {
+PerspectiveCamera::PerspectiveCamera(const VariantMap& params) {
     m_imageSize = params.get<glm::ivec2>("imageSize", {960, 540});
     m_fov = params.get<float>("fov", 30.0f);
     m_nearZ = params.get<float>("zNear", 1e-4f);
@@ -32,14 +30,13 @@ PerspectiveCamera::PerspectiveCamera(const VariantMap& params)
 
     m_sampleToCamera = unprojection * mirror * screenShift * ndcScale;
 
-    if (!m_filter)
-    {
+    if (!m_filter) {
         m_filter = std::make_unique<GaussianFilter>();
     }
 }
 
-Spectrum PerspectiveCamera::sampleRay(Ray3& ray, const glm::vec2& posSample, const glm::vec2& /*apertureSample*/) const
-{
+Spectrum PerspectiveCamera::sampleRay(
+    Ray3& ray, const glm::vec2& posSample, const glm::vec2& /*apertureSample*/) const {
     glm::vec3 screenPos = m_sampleToCamera.transformPoint(glm::vec3(posSample * m_invImageSize, 0.0f));
     glm::vec3 rayDir = glm::normalize(screenPos);
     float invZ = -1.0f / rayDir.z;

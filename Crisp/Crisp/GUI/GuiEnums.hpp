@@ -4,20 +4,16 @@
 
 #include <Crisp/Utils/BitFlags.hpp>
 
-namespace crisp
-{
-namespace gui
-{
+namespace crisp {
+namespace gui {
 
-enum class SizingPolicy
-{
+enum class SizingPolicy {
     Fixed,
     FillParent,
     WrapContent
 };
 
-enum class Anchor
-{
+enum class Anchor {
     TopLeft,
     TopCenter,
     TopRight,
@@ -29,8 +25,7 @@ enum class Anchor
     BottomRight
 };
 
-enum class Origin
-{
+enum class Origin {
     TopLeft,
     TopCenter,
     TopRight,
@@ -42,16 +37,14 @@ enum class Origin
     BottomRight
 };
 
-enum class Validation
-{
+enum class Validation {
     None = 0,
     Geometry = 1,
     Color = 2,
     All = Geometry | Color
 };
 
-enum class State
-{
+enum class State {
     Idle,
     Hover,
     Pressed,

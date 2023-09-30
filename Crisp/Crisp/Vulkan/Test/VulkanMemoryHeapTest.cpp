@@ -1,23 +1,18 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using ::testing::SizeIs;
 
-class VulkanMemoryHeapTest : public VulkanTest
-{
+class VulkanMemoryHeapTest : public VulkanTest {
 protected:
-    std::unique_ptr<VulkanMemoryHeap> createHeap(const VkMemoryPropertyFlags memProps, const VkDeviceSize blockSize)
-    {
+    std::unique_ptr<VulkanMemoryHeap> createHeap(const VkMemoryPropertyFlags memProps, const VkDeviceSize blockSize) {
         const uint32_t heapIndex = physicalDevice_->findMemoryType(memProps).unwrap();
         return std::make_unique<VulkanMemoryHeap>(memProps, blockSize, heapIndex, device_->getHandle(), "");
     }
 };
 
-TEST_F(VulkanMemoryHeapTest, StagingMemoryHeap)
-{
+TEST_F(VulkanMemoryHeapTest, StagingMemoryHeap) {
     auto heap = createHeap(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 1024);
     EXPECT_EQ(heap->getAllocatedSize(), 0);
     EXPECT_EQ(heap->getUsedSize(), 0);
@@ -40,15 +35,13 @@ TEST_F(VulkanMemoryHeapTest, StagingMemoryHeap)
     EXPECT_THAT(heap->allocate(1025, 0), HasError());
 }
 
-TEST_F(VulkanMemoryHeapTest, DeviceMemoryHeap)
-{
+TEST_F(VulkanMemoryHeapTest, DeviceMemoryHeap) {
     auto heap = createHeap(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1 << 20);
     EXPECT_EQ(heap->getAllocatedSize(), 0);
     EXPECT_EQ(heap->getUsedSize(), 0);
 }
 
-TEST_F(VulkanMemoryHeapTest, Coalescing)
-{
+TEST_F(VulkanMemoryHeapTest, Coalescing) {
     VulkanMemoryHeap::AllocationBlock block{};
     block.freeChunks[0] = 1024;
     block.freeChunks[1024] = 512;

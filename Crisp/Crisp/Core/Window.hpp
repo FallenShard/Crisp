@@ -13,22 +13,18 @@
 
 struct GLFWwindow;
 
-namespace crisp
-{
-enum class CursorState
-{
+namespace crisp {
+enum class CursorState {
     Disabled,
     Normal
 };
 
-enum class WindowVisibility
-{
+enum class WindowVisibility {
     Hidden,
     Shown
 };
 
-enum class EventType : uint32_t
-{
+enum class EventType : uint32_t {
     None = 0,
     MouseMoved = 1 << 0,
     MouseButtonPressed = 1 << 1,
@@ -58,8 +54,7 @@ enum class EventType : uint32_t
 };
 DECLARE_BITFLAG(EventType)
 
-class Window
-{
+class Window {
 public:
     Window(
         const glm::ivec2& position,
@@ -90,8 +85,7 @@ public:
     glm::ivec2 getSize() const;
     glm::vec2 getCursorPosition() const;
 
-    inline GLFWwindow* getHandle() const
-    {
+    inline GLFWwindow* getHandle() const {
         return m_window;
     }
 
@@ -132,17 +126,14 @@ private:
     BitFlags<EventType> m_activeEventMask{EventType::AllEvents};
 };
 
-class WindowEventGuard
-{
+class WindowEventGuard {
 public:
     WindowEventGuard(Window& window, BitFlags<EventType> eventMask)
-        : window(window)
-    {
+        : window(window) {
         window.disableEvents(eventMask);
     }
 
-    ~WindowEventGuard()
-    {
+    ~WindowEventGuard() {
         window.enableEvents(EventType::AllEvents);
     }
 

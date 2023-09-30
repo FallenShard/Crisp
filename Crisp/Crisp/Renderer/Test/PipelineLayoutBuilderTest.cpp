@@ -3,14 +3,11 @@
 
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using PipelineLayoutBuilderTest = VulkanTest;
 
-TEST_F(PipelineLayoutBuilderTest, BasicUsage)
-{
+TEST_F(PipelineLayoutBuilderTest, BasicUsage) {
     PipelineLayoutBuilder builder{};
     builder.defineDescriptorSet(
         0,
@@ -24,8 +21,9 @@ TEST_F(PipelineLayoutBuilderTest, BasicUsage)
 
     auto layoutHandles = builder.createDescriptorSetLayoutHandles(device_->getHandle());
     ASSERT_EQ(layoutHandles.size(), 1);
-    for (auto layout : layoutHandles)
+    for (auto layout : layoutHandles) {
         vkDestroyDescriptorSetLayout(device_->getHandle(), layout, nullptr);
+    }
 }
 } // namespace
 } // namespace crisp::test

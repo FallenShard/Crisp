@@ -7,10 +7,8 @@
 #include <memory>
 #include <vector>
 
-namespace crisp
-{
-class Animator
-{
+namespace crisp {
+class Animator {
 public:
     Animator();
     ~Animator() = default;

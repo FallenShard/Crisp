@@ -7,11 +7,9 @@
 
 #include <filesystem>
 
-namespace crisp
-{
+namespace crisp {
 
-struct MeshAndMaterial
-{
+struct MeshAndMaterial {
     TriangleMesh mesh;
     FlatHashMap<std::string, WavefrontObjMaterial> materials;
 };

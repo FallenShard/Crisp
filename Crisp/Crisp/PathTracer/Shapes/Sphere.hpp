@@ -2,10 +2,8 @@
 
 #include <Crisp/PathTracer/Shapes/Shape.hpp>
 
-namespace crisp
-{
-class Sphere : public Shape
-{
+namespace crisp {
+class Sphere : public Shape {
 public:
     Sphere(const VariantMap& params = VariantMap());
     virtual ~Sphere();

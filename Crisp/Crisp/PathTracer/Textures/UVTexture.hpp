@@ -7,10 +7,8 @@
 #include <memory>
 #include <string>
 
-namespace crisp
-{
-class UVTexture : public Texture<Spectrum>
-{
+namespace crisp {
+class UVTexture : public Texture<Spectrum> {
 public:
     UVTexture(const VariantMap& variantMap = VariantMap());
 

@@ -6,11 +6,9 @@
 #include <any>
 #include <typeindex>
 
-namespace crisp
-{
+namespace crisp {
 
-class RenderGraphBlackboard
-{
+class RenderGraphBlackboard {
 public:
     RenderGraphBlackboard() = default;
     ~RenderGraphBlackboard() = default;
@@ -22,11 +20,9 @@ public:
     RenderGraphBlackboard& operator=(RenderGraphBlackboard&&) = default;
 
     template <typename T>
-    T& insert()
-    {
+    T& insert() {
         const auto typeIdx{std::type_index(typeid(T))}; // NOLINT
-        if (m_resourceGroups.contains(typeIdx))
-        {
+        if (m_resourceGroups.contains(typeIdx)) {
             CRISP_FATAL("Blackboard '{}' already contains type '{}'.", m_name, typeid(T).name());
         }
 
@@ -35,21 +31,18 @@ public:
     }
 
     template <typename T>
-    const T& get() const
-    {
+    const T& get() const {
         const auto typeIdx{std::type_index(typeid(T))}; // NOLINT
         return std::any_cast<const T&>(m_resourceGroups.at(typeIdx));
     }
 
     template <typename T>
-    T& get()
-    {
+    T& get() {
         const auto typeIdx{std::type_index(typeid(T))}; // NOLINT
         return std::any_cast<T&>(m_resourceGroups.at(typeIdx));
     }
 
-    size_t size() const
-    {
+    size_t size() const {
         return m_resourceGroups.size();
     }
 

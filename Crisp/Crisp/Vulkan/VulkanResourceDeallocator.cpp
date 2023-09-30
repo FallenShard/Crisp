@@ -1,26 +1,20 @@
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
-namespace crisp
-{
+namespace crisp {
 VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, int32_t virtualFrameCount)
     : m_deviceHandle(device)
-    , m_virtualFrameCount{virtualFrameCount}
-{
+    , m_virtualFrameCount{virtualFrameCount} {
     m_handleTagMap.emplace(VK_NULL_HANDLE, "Unknown");
 }
 
-VulkanResourceDeallocator::~VulkanResourceDeallocator()
-{
+VulkanResourceDeallocator::~VulkanResourceDeallocator() {
     freeAllResources();
 }
 
-void VulkanResourceDeallocator::decrementLifetimes()
-{
+void VulkanResourceDeallocator::decrementLifetimes() {
     // Handle deferred destructors
-    for (auto& destructor : m_deferredDestructors)
-    {
-        if (--destructor.framesRemaining < 0)
-        {
+    for (auto& destructor : m_deferredDestructors) {
+        if (--destructor.framesRemaining < 0) {
             destructor.destructorCallback(destructor.vulkanHandle, this);
         }
     }
@@ -33,10 +27,8 @@ void VulkanResourceDeallocator::decrementLifetimes()
         m_deferredDestructors.end());
 
     // Free the memory chunks
-    for (auto& memoryChunkPair : m_deferredDeallocations)
-    {
-        if (--memoryChunkPair.first < 0)
-        {
+    for (auto& memoryChunkPair : m_deferredDeallocations) {
+        if (--memoryChunkPair.first < 0) {
             memoryChunkPair.second.free();
         }
     }
@@ -47,16 +39,13 @@ void VulkanResourceDeallocator::decrementLifetimes()
         m_deferredDeallocations.end());
 }
 
-void VulkanResourceDeallocator::freeAllResources()
-{
-    for (auto& destructor : m_deferredDestructors)
-    {
+void VulkanResourceDeallocator::freeAllResources() {
+    for (auto& destructor : m_deferredDestructors) {
         destructor.destructorCallback(destructor.vulkanHandle, this);
     }
     m_deferredDestructors.clear();
 
-    for (auto& memoryChunkPair : m_deferredDeallocations)
-    {
+    for (auto& memoryChunkPair : m_deferredDeallocations) {
         memoryChunkPair.second.free();
     }
     m_deferredDeallocations.clear();

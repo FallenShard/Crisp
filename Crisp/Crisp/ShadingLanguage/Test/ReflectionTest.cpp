@@ -3,23 +3,19 @@
 #include <gmock/gmock.h>
 #include <spirv_reflect.h>
 
-namespace crisp::test
-{
-namespace
-{
+namespace crisp::test {
+namespace {
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::SizeIs;
 
-std::filesystem::path getSpirvShaderPath(const std::string& shaderName)
-{
+std::filesystem::path getSpirvShaderPath(const std::string& shaderName) {
     const std::filesystem::path kSpvAssetPath = "D:/Projects/Crisp/Resources/Shaders";
     return kSpvAssetPath / (shaderName + ".spv");
 }
 
-TEST(ReflectionTest, VertexShader)
-{
+TEST(ReflectionTest, VertexShader) {
     const auto reflection = reflectUniformMetadataFromSpirvPath(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
     ASSERT_THAT(reflection.descriptorSetLayoutBindings, SizeIs(1));
     EXPECT_THAT(
@@ -58,8 +54,7 @@ TEST(ReflectionTest, VertexShader)
             Field(&VkPushConstantRange::stageFlags, VK_SHADER_STAGE_COMPUTE_BIT))));
 }
 
-TEST(ReflectionTest, SpirvReflect)
-{
+TEST(ReflectionTest, SpirvReflect) {
     SpvReflectShaderModule module;
     const auto spirv = readSpirvFile(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
     SpvReflectResult result = spvReflectCreateShaderModule(spirv.size(), spirv.data(), &module);

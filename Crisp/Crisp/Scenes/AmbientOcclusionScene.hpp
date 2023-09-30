@@ -5,11 +5,9 @@
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
-namespace crisp
-{
+namespace crisp {
 
-class AmbientOcclusionScene : public Scene
-{
+class AmbientOcclusionScene : public Scene {
 public:
     AmbientOcclusionScene(Renderer* renderer, Window* window);
     ~AmbientOcclusionScene();
@@ -24,8 +22,7 @@ public:
 private:
     void createGui();
 
-    struct SsaoParams
-    {
+    struct SsaoParams {
         int numSamples;
         float radius;
     };

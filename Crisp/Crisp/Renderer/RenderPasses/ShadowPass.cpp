@@ -7,16 +7,13 @@
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
-namespace crisp
-{
+namespace crisp {
 std::unique_ptr<VulkanRenderPass> createShadowMapPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, uint32_t shadowMapSize, uint32_t cascadeIndex)
-{
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, uint32_t shadowMapSize, uint32_t cascadeIndex) {
     const VkExtent2D shadowMapExtent{shadowMapSize, shadowMapSize};
 
     std::vector<RenderTarget*> renderTargets(1);
-    if (cascadeIndex == 0)
-    {
+    if (cascadeIndex == 0) {
         renderTargets[0] = renderTargetCache.addRenderTarget(
             "ShadowMap",
             RenderTargetBuilder()
@@ -26,9 +23,7 @@ std::unique_ptr<VulkanRenderPass> createShadowMapPass(
                 .configureDepthRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT, {1.0f, 0})
                 .setSize(shadowMapExtent, false)
                 .create(device));
-    }
-    else
-    {
+    } else {
         renderTargets[0] = renderTargetCache.get("ShadowMap");
     }
 
@@ -52,8 +47,7 @@ std::unique_ptr<VulkanRenderPass> createShadowMapPass(
 }
 
 std::unique_ptr<VulkanRenderPass> createVarianceShadowMappingPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, unsigned int shadowMapSize)
-{
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, unsigned int shadowMapSize) {
     const VkExtent2D shadowMapExtent{shadowMapSize, shadowMapSize};
 
     std::vector<RenderTarget*> renderTargets(2);

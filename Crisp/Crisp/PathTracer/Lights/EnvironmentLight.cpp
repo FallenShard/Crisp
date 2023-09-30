@@ -11,29 +11,22 @@
 
 #include <Crisp/PathTracer/Samplers/SamplerFactory.hpp>
 
-namespace crisp
-{
-namespace
-{
-inline uint32_t sampleReuse(float* cdf, uint32_t size, float& sample)
-{
+namespace crisp {
+namespace {
+inline uint32_t sampleReuse(float* cdf, uint32_t size, float& sample) {
     float* entry = std::lower_bound(cdf, cdf + size + 1, sample);
     uint32_t index = std::min((uint32_t)std::max((ptrdiff_t)0, entry - cdf - 1), size - 1);
     sample = (sample - cdf[index]) / (cdf[index + 1] - cdf[index]);
     return index;
 }
 
-float intervalToTent(float sample)
-{
+float intervalToTent(float sample) {
     float sign;
 
-    if (sample < 0.5f)
-    {
+    if (sample < 0.5f) {
         sign = 1;
         sample *= 2;
-    }
-    else
-    {
+    } else {
         sign = -1;
         sample = 2 * (sample - 0.5f);
     }
@@ -41,14 +34,12 @@ float intervalToTent(float sample)
     return sign * (1 - std::sqrt(sample));
 }
 
-inline glm::vec2 squareToTent(const glm::vec2& sample)
-{
+inline glm::vec2 squareToTent(const glm::vec2& sample) {
     return glm::vec2(intervalToTent(sample.x), intervalToTent(sample.y));
 }
 } // namespace
 
-EnvironmentLight::EnvironmentLight(const VariantMap& params)
-{
+EnvironmentLight::EnvironmentLight(const VariantMap& params) {
     auto probeFilename = params.get<std::string>("fileName", "uffizi-large.exr");
     m_scale = params.get<float>("scale", 1.0f);
 
@@ -68,13 +59,11 @@ EnvironmentLight::EnvironmentLight(const VariantMap& params)
     float rowSum = 0.0f;
 
     m_cdfRows[rowPos++] = 0;
-    for (int y = 0; y < h; y++)
-    {
+    for (int y = 0; y < h; y++) {
         float colSum = 0.0f;
 
         m_cdfCols[colPos++] = 0;
-        for (int x = 0; x < w; x++)
-        {
+        for (int x = 0; x < w; x++) {
             Spectrum val = m_probe->fetch(x, y);
 
             colSum += val.getLuminance();
@@ -82,8 +71,9 @@ EnvironmentLight::EnvironmentLight(const VariantMap& params)
         }
 
         float normalization = 1.0f / colSum;
-        for (int x = 1; x < w; x++)
+        for (int x = 1; x < w; x++) {
             m_cdfCols[colPos - x - 1] *= normalization;
+        }
         m_cdfCols[colPos - 1] = 1.0f;
 
         float weight = std::sin((y + 0.5f) * PI<> / h);
@@ -93,8 +83,9 @@ EnvironmentLight::EnvironmentLight(const VariantMap& params)
     }
 
     float normalization = 1.0f / rowSum;
-    for (int y = 1; y < h; y++)
+    for (int y = 1; y < h; y++) {
         m_cdfRows[rowPos - y - 1] *= normalization;
+    }
     m_cdfRows[rowPos - 1] = 1.0f;
 
     m_normalization = 1.0f / (rowSum * (2.0f * PI<> / w) * (PI<> / h));
@@ -148,16 +139,14 @@ EnvironmentLight::EnvironmentLight(const VariantMap& params)
 
 EnvironmentLight::~EnvironmentLight() {}
 
-Spectrum EnvironmentLight::eval(const Light::Sample& sample) const
-{
+Spectrum EnvironmentLight::eval(const Light::Sample& sample) const {
     float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI<>)*0.5f;
     float v = acosf(std::min(1.0f, sample.wi.y)) * InvPI<>;
 
     return m_scale * m_probe->evalLerp(u, v);
 }
 
-Spectrum EnvironmentLight::sample(Light::Sample& sample, Sampler& sampler) const
-{
+Spectrum EnvironmentLight::sample(Light::Sample& sample, Sampler& sampler) const {
     glm::vec2 point = sampler.next2D();
     uint32_t row = sampleReuse((float*)&m_cdfRows[0], m_probe->getHeight(), point.y);
     uint32_t col = sampleReuse((float*)&m_cdfCols[0] + row * (m_probe->getWidth() + 1), m_probe->getWidth(), point.x);
@@ -217,8 +206,7 @@ Spectrum EnvironmentLight::sample(Light::Sample& sample, Sampler& sampler) const
     // return m_scale * m_probe->evalLerp(contS.x, contS.y) / sample.pdf;
 }
 
-float EnvironmentLight::pdf(const Light::Sample& sample) const
-{
+float EnvironmentLight::pdf(const Light::Sample& sample) const {
     float u = (1.0f + atan2(sample.wi.x, -sample.wi.z) * InvPI<>)*0.5f;
     float v = acosf(sample.wi.y) * InvPI<>;
 
@@ -255,13 +243,11 @@ float EnvironmentLight::pdf(const Light::Sample& sample) const
     // return p * InvTwoPI / sin(theta);
 }
 
-Spectrum EnvironmentLight::samplePhoton(Ray3& /*ray*/, Sampler& /*sampler*/) const
-{
+Spectrum EnvironmentLight::samplePhoton(Ray3& /*ray*/, Sampler& /*sampler*/) const {
     return Spectrum();
 }
 
-void EnvironmentLight::setBoundingSphere(const glm::vec4& sphereParams)
-{
+void EnvironmentLight::setBoundingSphere(const glm::vec4& sphereParams) {
     m_sceneCenter.x = sphereParams.x;
     m_sceneCenter.y = sphereParams.y;
     m_sceneCenter.z = sphereParams.z;
@@ -270,13 +256,11 @@ void EnvironmentLight::setBoundingSphere(const glm::vec4& sphereParams)
     m_power = 4 * PI<> * m_sceneRadius * m_sceneRadius * m_scale / m_normalization;
 }
 
-bool EnvironmentLight::isDelta() const
-{
+bool EnvironmentLight::isDelta() const {
     return false;
 }
 
-glm::vec2 EnvironmentLight::sampleContinuous(const glm::vec2& /*point*/, float& /*pdf*/) const
-{
+glm::vec2 EnvironmentLight::sampleContinuous(const glm::vec2& /*point*/, float& /*pdf*/) const {
     // float uPdf = 0.0f;
     // float vPdf = 0.0f;
     // size_t vOffset = 0;
@@ -290,8 +274,7 @@ glm::vec2 EnvironmentLight::sampleContinuous(const glm::vec2& /*point*/, float& 
     return {0.0f, 0.0f};
 }
 
-float EnvironmentLight::distributionPdf(float /*u*/, float /*v*/) const
-{
+float EnvironmentLight::distributionPdf(float /*u*/, float /*v*/) const {
     // int uOffset = clamp(int(u * m_phiPdfs[0].getSize()), 0, int(m_phiPdfs[0].getSize() - 1));
     // int vOffset = clamp(int(v * m_thetaPdf.getSize()), 0, int(m_thetaPdf.getSize() - 1));
     //

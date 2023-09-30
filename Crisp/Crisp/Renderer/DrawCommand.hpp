@@ -10,12 +10,10 @@
 #include <variant>
 #include <vector>
 
-namespace crisp
-{
+namespace crisp {
 using GeometryViewVariant = std::variant<ListGeometryView, IndexedGeometryView>;
 
-struct PushConstantView
-{
+struct PushConstantView {
     const void* data = nullptr;
     VkDeviceSize size = 0;
 
@@ -24,43 +22,35 @@ struct PushConstantView
     template <typename T>
     PushConstantView(const T& pushConstant)
         : data(&pushConstant)
-        , size(sizeof(T))
-    {
-    }
+        , size(sizeof(T)) {}
 
     template <typename T>
-    inline void set(const T& pushConstant)
-    {
+    inline void set(const T& pushConstant) {
         data = &pushConstant;
         size = sizeof(T);
     }
 
     template <typename T, std::size_t Len>
-    inline void set(const std::array<T, Len>& pushConstants)
-    {
+    inline void set(const std::array<T, Len>& pushConstants) {
         data = pushConstants.data();
         size = Len * sizeof(T);
     }
 
-    inline void set(const std::vector<unsigned char>& buffer)
-    {
+    inline void set(const std::vector<unsigned char>& buffer) {
         data = buffer.data();
         size = buffer.size();
     }
 };
 
-namespace detail
-{
+namespace detail {
 using DrawFunc = void (*)(VkCommandBuffer, const GeometryViewVariant&);
 
-inline void draw(VkCommandBuffer cmdBuffer, const GeometryViewVariant& geomView)
-{
+inline void draw(VkCommandBuffer cmdBuffer, const GeometryViewVariant& geomView) {
     const auto& view = std::get<ListGeometryView>(geomView);
     vkCmdDraw(cmdBuffer, view.vertexCount, view.instanceCount, view.firstVertex, view.firstInstance);
 }
 
-inline void drawIndexed(VkCommandBuffer cmdBuffer, const GeometryViewVariant& geomView)
-{
+inline void drawIndexed(VkCommandBuffer cmdBuffer, const GeometryViewVariant& geomView) {
     const auto& view = std::get<IndexedGeometryView>(geomView);
     vkCmdBindIndexBuffer(cmdBuffer, view.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(
@@ -68,19 +58,18 @@ inline void drawIndexed(VkCommandBuffer cmdBuffer, const GeometryViewVariant& ge
 }
 
 template <typename GeometryView>
-constexpr DrawFunc getDrawFunc()
-{
-    if constexpr (std::is_same_v<GeometryView, IndexedGeometryView>)
+constexpr DrawFunc getDrawFunc() {
+    if constexpr (std::is_same_v<GeometryView, IndexedGeometryView>) {
         return drawIndexed;
-    else if constexpr (std::is_same_v<GeometryView, ListGeometryView>)
+    } else if constexpr (std::is_same_v<GeometryView, ListGeometryView>) {
         return draw;
-    else
+    } else {
         return nullptr;
+    }
 }
 } // namespace detail
 
-struct DrawCommand
-{
+struct DrawCommand {
     VkViewport viewport = {};
     VkRect2D scissor = {};
     std::vector<DynamicBufferView> dynamicBufferViews;
@@ -97,27 +86,23 @@ struct DrawCommand
     uint32_t bufferCount;
 
     template <typename GeometryView, typename... Args>
-    inline void setGeometryView(Args&&... args)
-    {
+    inline void setGeometryView(Args&&... args) {
         geometryView = GeometryView(std::forward<Args>(args)...);
         drawFunc = detail::getDrawFunc<GeometryView>();
     }
 
     template <typename GeometryView>
-    inline void setGeometryView(GeometryView&& view)
-    {
+    inline void setGeometryView(GeometryView&& view) {
         geometryView = std::move(view);
         drawFunc = detail::getDrawFunc<GeometryView>();
     }
 
     template <typename T>
-    inline void setPushConstantView(const T& data)
-    {
+    inline void setPushConstantView(const T& data) {
         pushConstantView.set(data);
     }
 
-    inline void setPushConstantView(PushConstantView view)
-    {
+    inline void setPushConstantView(PushConstantView view) {
         pushConstantView = view;
     }
 };

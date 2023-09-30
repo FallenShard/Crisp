@@ -14,10 +14,8 @@
 #include <string>
 #include <vector>
 
-namespace crisp
-{
-class RayTracerScene : public Scene
-{
+namespace crisp {
+class RayTracerScene : public Scene {
 public:
     RayTracerScene(Renderer* renderer, Window* window);
     ~RayTracerScene();

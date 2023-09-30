@@ -10,19 +10,15 @@
 #include <array>
 #include <fstream>
 
-namespace crisp
-{
-namespace
-{
+namespace crisp {
+namespace {
 const std::filesystem::path GlslExtension = ".glsl";
 
 auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 } // namespace
 
-void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir)
-{
-    if (!std::filesystem::exists(inputDir))
-    {
+void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir) {
+    if (!std::filesystem::exists(inputDir)) {
         logger->error("Specified input directory {} doesn't exist!", inputDir.string());
         return;
     }
@@ -30,10 +26,8 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
     logger->info("Processing and compiling shaders from: {}", inputDir.string());
     logger->info("Saving .spv modules in: {}", outputDir.string());
 
-    if (!std::filesystem::exists(outputDir))
-    {
-        if (!std::filesystem::create_directories(outputDir))
-        {
+    if (!std::filesystem::exists(outputDir)) {
+        if (!std::filesystem::create_directories(outputDir)) {
             logger->error("Failed to create output directory {}", outputDir.string());
             return;
         }
@@ -42,16 +36,13 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
     uint32_t shadersSkipped{0};
     uint32_t shadersRecompiled{0};
     std::array<char, 4096> lineBuffer; // NOLINT
-    for (const auto& inputEntry : std::filesystem::directory_iterator(inputDir))
-    {
-        if (inputEntry.is_directory())
-        {
+    for (const auto& inputEntry : std::filesystem::directory_iterator(inputDir)) {
+        if (inputEntry.is_directory()) {
             continue;
         }
 
         const std::filesystem::path& inputPath = inputEntry.path();
-        if (inputPath.extension() != GlslExtension)
-        {
+        if (inputPath.extension() != GlslExtension) {
             logger->warn("{} has no .glsl extension!", inputPath.string());
             continue;
         }
@@ -60,8 +51,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         // First getting the stem and then its "extension" will give us the stage name
         const std::string shaderType =
             inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
-        if (!isGlslShaderExtension(shaderType))
-        {
+        if (!isGlslShaderExtension(shaderType)) {
             logger->warn("{} is not a valid glsl shader type!", shaderType);
             continue;
         }
@@ -70,8 +60,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         const std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
 
         auto maybeGlslSource{preprocessGlslSource(inputPath)};
-        if (!maybeGlslSource.hasValue())
-        {
+        if (!maybeGlslSource.hasValue()) {
             logger->error(maybeGlslSource.getError());
             continue;
         }
@@ -80,8 +69,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             std::filesystem::exists(outputPath)
                 ? std::filesystem::last_write_time(outputPath)
                 : std::filesystem::file_time_type{};
-        if (glslSource.lastModifiedRecursive > outputModifiedTs)
-        {
+        if (glslSource.lastModifiedRecursive > outputModifiedTs) {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
             const std::filesystem::path tempInputPath = inputDir / "temp.glsl";
 
@@ -97,8 +85,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
             // Open a subprocess to compile this shader
             FILE* pipe = _popen(command.c_str(), "rt");
-            if (!pipe)
-            {
+            if (!pipe) {
                 logger->error("Failed to open the pipe for {}", command);
                 _pclose(pipe);
                 continue;
@@ -107,65 +94,50 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             // Read the pipe, typically the subprocess stdout
             lineBuffer.fill(0);
             uint32_t errorCount{0};
-            while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe))
-            {
+            while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe)) {
                 const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
-                if (view.substr(0, 5) == "ERROR")
-                {
+                if (view.substr(0, 5) == "ERROR") {
                     logger->error("{}", view);
                     ++errorCount;
-                }
-                else if (view.substr(0, 7) == "WARNING")
-                {
+                } else if (view.substr(0, 7) == "WARNING") {
                     logger->warn("{}", view);
                 }
             }
-            if (errorCount > 0)
-            {
+            if (errorCount > 0) {
                 logger->critical("Encountered errors while compiling: {}", inputPath.stem().string());
                 std::filesystem::remove(tempInputPath);
                 std::abort();
             }
 
             // Close the pipe and overwrite the output spv on success
-            if (feof(pipe))
-            {
+            if (feof(pipe)) {
                 const int retVal = _pclose(pipe);
-                if (retVal == 0)
-                {
+                if (retVal == 0) {
                     // On success, we remove the older version of the compiled shader and rename the temp file
                     // appropriately
-                    if (std::filesystem::exists(outputPath))
-                    {
+                    if (std::filesystem::exists(outputPath)) {
                         std::filesystem::remove(outputPath);
                     }
 
                     std::filesystem::rename(tempOutputPath, outputPath);
-                }
-                else
-                {
+                } else {
                     logger->error("Pipe process returned: {}", retVal);
                 }
-            }
-            else
-            {
+            } else {
                 logger->error("Failed to read the pipe to the end.");
             }
 
             std::filesystem::remove(tempInputPath);
 
             ++shadersRecompiled;
-        }
-        else
-        {
+        } else {
             ++shadersSkipped;
         }
     }
     logger->info("{} shaders recompiled, {} shaders skipped.", shadersRecompiled, shadersSkipped);
 }
 
-Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath)
-{
+Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath) {
     constexpr std::string_view includeDirective("#include");
     constexpr std::size_t trimLeft = 2;  // space + \"
     constexpr std::size_t trimRight = 1; // \"
@@ -178,28 +150,22 @@ Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPa
 
     GlslSourceFile result{};
     result.lastModifiedRecursive = std::filesystem::last_write_time(inputPath);
-    while (std::getline(inputFile, line))
-    {
-        if (line.starts_with(includeDirective))
-        {
+    while (std::getline(inputFile, line)) {
+        if (line.starts_with(includeDirective)) {
             const std::string relativeIncludePath = line.substr(includeDirective.size() + trimLeft);
             const std::filesystem::path includeFilePath =
                 inputPath.parent_path() / relativeIncludePath.substr(0, relativeIncludePath.size() - trimRight);
-            if (!std::filesystem::exists(includeFilePath))
-            {
+            if (!std::filesystem::exists(includeFilePath)) {
                 return resultError(
                     "Invalid include path {} at line {} of {}!", relativeIncludePath, lineIdx, inputPath.string());
             }
             preprocessed << fileToString(includeFilePath).unwrap() << '\n';
 
             const auto includeWriteTime{std::filesystem::last_write_time(includeFilePath)};
-            if (includeWriteTime > result.lastModifiedRecursive)
-            {
+            if (includeWriteTime > result.lastModifiedRecursive) {
                 result.lastModifiedRecursive = includeWriteTime;
             }
-        }
-        else
-        {
+        } else {
             preprocessed << line << '\n';
         }
         ++lineIdx;

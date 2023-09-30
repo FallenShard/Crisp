@@ -5,24 +5,19 @@
 
 #include <numeric>
 
-namespace crisp
-{
+namespace crisp {
 PipelineLayoutBuilder::PipelineLayoutBuilder(ShaderUniformInputMetadata&& metadata)
     : m_setLayoutBindings(std::move(metadata.descriptorSetLayoutBindings))
     , m_setBuffered(m_setLayoutBindings.size(), false)
     , m_createFlags(m_setLayoutBindings.size(), 0)
-    , m_pushConstantRanges(std::move(metadata.pushConstants))
-{
-}
+    , m_pushConstantRanges(std::move(metadata.pushConstants)) {}
 
 PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(
     const uint32_t setIndex,
     const bool isBuffered,
     std::vector<VkDescriptorSetLayoutBinding>&& bindings,
-    const VkDescriptorSetLayoutCreateFlags flags)
-{
-    if (m_setLayoutBindings.size() <= setIndex)
-    {
+    const VkDescriptorSetLayoutCreateFlags flags) {
+    if (m_setLayoutBindings.size() <= setIndex) {
         const std::size_t newSize = static_cast<std::size_t>(setIndex) + 1;
         m_setLayoutBindings.resize(newSize);
         m_createFlags.resize(newSize);
@@ -36,17 +31,14 @@ PipelineLayoutBuilder& PipelineLayoutBuilder::defineDescriptorSet(
 }
 
 PipelineLayoutBuilder& PipelineLayoutBuilder::addPushConstant(
-    VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size)
-{
+    VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size) {
     m_pushConstantRanges.push_back({stageFlags, offset, size});
     return *this;
 }
 
-std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayoutHandles(VkDevice device) const
-{
+std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayoutHandles(VkDevice device) const {
     std::vector<VkDescriptorSetLayout> setLayouts(m_setLayoutBindings.size(), VK_NULL_HANDLE);
-    for (uint32_t i = 0; i < setLayouts.size(); i++)
-    {
+    for (uint32_t i = 0; i < setLayouts.size(); i++) {
         VkDescriptorSetLayoutCreateInfo createInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
         createInfo.bindingCount = static_cast<uint32_t>(m_setLayoutBindings[i].size());
         createInfo.pBindings = m_setLayoutBindings[i].data();
@@ -58,8 +50,7 @@ std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLay
 }
 
 VkPipelineLayout PipelineLayoutBuilder::createHandle(
-    VkDevice device, VkDescriptorSetLayout* setLayouts, uint32_t setLayoutCount)
-{
+    VkDevice device, VkDescriptorSetLayout* setLayouts, uint32_t setLayoutCount) {
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
     pipelineLayoutInfo.setLayoutCount = setLayoutCount;
     pipelineLayoutInfo.pSetLayouts = setLayouts;
@@ -72,8 +63,7 @@ VkPipelineLayout PipelineLayoutBuilder::createHandle(
 }
 
 std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
-    const VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
-{
+    const VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const {
     return std::make_unique<VulkanPipelineLayout>(
         device,
         createDescriptorSetLayoutHandles(device.getHandle()),
@@ -84,76 +74,58 @@ std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
 }
 
 std::unique_ptr<DescriptorSetAllocator> PipelineLayoutBuilder::createMinimalDescriptorSetAllocator(
-    const VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const
-{
+    const VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) const {
     return std::make_unique<DescriptorSetAllocator>(device, m_setLayoutBindings, getNumCopiesPerSet(numCopies), flags);
 }
 
-std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::getDescriptorSetLayoutBindings() const
-{
+std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::getDescriptorSetLayoutBindings() const {
     return m_setLayoutBindings;
 }
 
-std::vector<VkPushConstantRange> PipelineLayoutBuilder::getPushConstantRanges() const
-{
+std::vector<VkPushConstantRange> PipelineLayoutBuilder::getPushConstantRanges() const {
     return m_pushConstantRanges;
 }
 
-std::size_t PipelineLayoutBuilder::getDescriptorSetLayoutCount() const
-{
+std::size_t PipelineLayoutBuilder::getDescriptorSetLayoutCount() const {
     return m_setLayoutBindings.size();
 }
 
-std::vector<bool> PipelineLayoutBuilder::getDescriptorSetBufferedStatuses() const
-{
+std::vector<bool> PipelineLayoutBuilder::getDescriptorSetBufferedStatuses() const {
     return m_setBuffered;
 }
 
-void PipelineLayoutBuilder::setDescriptorSetBuffering(int index, bool isBuffered)
-{
+void PipelineLayoutBuilder::setDescriptorSetBuffering(int index, bool isBuffered) {
     m_setBuffered.at(index) = isBuffered;
 }
 
-void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex, bool isDynamic)
-{
+void PipelineLayoutBuilder::setDescriptorDynamic(int setIndex, int bindingIndex, bool isDynamic) {
     VkDescriptorSetLayoutBinding& binding = m_setLayoutBindings.at(setIndex).at(bindingIndex);
-    if (isDynamic)
-    {
+    if (isDynamic) {
         CRISP_CHECK(
             binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
             binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
-        if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-        {
+        if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        }
-        else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-        {
+        } else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         }
-    }
-    else
-    {
+    } else {
         CRISP_CHECK(
             binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
             binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
 
-        if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-        {
+        if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        }
-        else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
-        {
+        } else if (binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
             binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         }
     }
 }
 
-std::vector<uint32_t> PipelineLayoutBuilder::getNumCopiesPerSet(uint32_t numCopies) const
-{
+std::vector<uint32_t> PipelineLayoutBuilder::getNumCopiesPerSet(uint32_t numCopies) const {
     std::vector<uint32_t> numCopiesPerSet;
-    for (uint32_t i = 0; i < m_setBuffered.size(); ++i)
-    {
+    for (uint32_t i = 0; i < m_setBuffered.size(); ++i) {
         numCopiesPerSet.push_back(m_setBuffered[i] ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
     }
     return numCopiesPerSet;

@@ -4,7 +4,6 @@
 
 #include <filesystem>
 
-namespace crisp
-{
+namespace crisp {
 Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem::path& path);
 } // namespace crisp
