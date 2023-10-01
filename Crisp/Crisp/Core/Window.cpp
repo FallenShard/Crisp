@@ -1,8 +1,6 @@
-#include "Window.hpp"
+#include <Crisp/Core/Window.hpp>
 
-#include "InputTranslator.hpp"
-
-#include <GLFW/glfw3.h>
+#include <Crisp/Core/InputTranslator.hpp>
 
 namespace crisp {
 

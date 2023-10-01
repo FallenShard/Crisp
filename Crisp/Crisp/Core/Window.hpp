@@ -7,11 +7,9 @@
 
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
-#include <memory>
 #include <string>
-#include <vector>
 
-struct GLFWwindow;
+#include <GLFW/glfw3.h>
 
 namespace crisp {
 enum class CursorState {

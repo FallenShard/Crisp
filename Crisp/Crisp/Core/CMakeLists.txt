@@ -56,8 +56,15 @@ target_link_libraries(CrispWindow
     PUBLIC Crisp::Math
     PUBLIC Crisp::Event
     PUBLIC Crisp::Input
-    PRIVATE glfw
+    PUBLIC glfw
     PUBLIC Vulkan::Headers
+)
+
+add_cpp_test(CrispWindowTest
+    "Test/WindowTest.cpp"
+)
+target_link_libraries(CrispWindowTest
+    PRIVATE Crisp::Window
 )
 
 add_cpp_interface_library(CrispInput
