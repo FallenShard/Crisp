@@ -569,15 +569,18 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                                                     ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                                                     : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+            const VkAttachmentLoadOp loadOp =
+                res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            const VkAttachmentStoreOp storeOp =
+                res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE;
             builder
                 .setAttachment(
                     static_cast<int32_t>(attachmentIndex),
                     {
                         .format = m_imageDescriptions[res.descriptionIndex].format,
                         .samples = m_imageDescriptions[res.descriptionIndex].sampleCount,
-                        .loadOp = res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .storeOp =
-                            res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+                        .loadOp = loadOp,
+                        .storeOp = storeOp,
                         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                         .initialLayout = initialLayout,
@@ -595,6 +598,18 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
             renderPassParams.attachmentMappings.push_back(
                 {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
             attachmentClearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
+
+            // Ensure that we are synchronizing the load.
+            if (loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                builder.addDependency({
+                    .srcSubpass = VK_SUBPASS_EXTERNAL,
+                    .dstSubpass = 0,
+                    .srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    .dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                    .srcAccessMask = 0,
+                    .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                });
+            }
 
             ++attachmentIndex;
         }

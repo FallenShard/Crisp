@@ -118,11 +118,11 @@ public:
         struct Awaitable {
             Renderer* renderer{nullptr};
 
-            bool await_ready() const noexcept {
+            bool await_ready() const noexcept { // NOLINT
                 return false;
             }
 
-            void await_suspend(std::coroutine_handle<> h) noexcept {
+            void await_suspend(std::coroutine_handle<> h) noexcept { // NOLINT
                 renderer->m_cmdBufferCoroutines.push_back(h);
             }
 
@@ -150,7 +150,7 @@ public:
 
 private:
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
-    void record(VkCommandBuffer commandBuffer);
+    void record(const VulkanCommandBuffer& commandBuffer);
     void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
 
     void recreateSwapChain();

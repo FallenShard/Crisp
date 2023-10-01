@@ -28,6 +28,11 @@ public:
     }
 
     void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
+    void insertMemoryBarrier(
+        VkPipelineStageFlags srcStage,
+        VkAccessFlags srcAccess,
+        VkPipelineStageFlags dstStage,
+        VkAccessFlags dstAccess) const;
     void insertBufferMemoryBarrier(
         const VkDescriptorBufferInfo& bufferInfo,
         VkPipelineStageFlags srcStage,

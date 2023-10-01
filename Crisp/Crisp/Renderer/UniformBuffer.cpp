@@ -43,9 +43,9 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy
 UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, bool isShaderStorageBuffer, const void* data)
     : m_renderer(renderer)
     , m_updatePolicy(BufferUpdatePolicy::PerFrame)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount)
     , m_singleRegionSize(0)
-    , m_buffer(nullptr) {
+    , m_buffer(nullptr)
+    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     auto& device = m_renderer->getDevice();
 
@@ -68,9 +68,9 @@ UniformBuffer::UniformBuffer(
     Renderer* renderer, size_t size, bool isShaderStorageBuffer, BufferUpdatePolicy updatePolicy, const void* data)
     : m_renderer(renderer)
     , m_updatePolicy(updatePolicy)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount)
     , m_singleRegionSize(0)
-    , m_buffer(nullptr) {
+    , m_buffer(nullptr)
+    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     if (isShaderStorageBuffer) {
         usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -136,4 +136,9 @@ VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo() const {
 VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const {
     return {m_buffer->getHandle(), offset, range};
 }
+
+VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo(uint32_t currentFrameIndex) const {
+    return {m_buffer->getHandle(), getDynamicOffset(currentFrameIndex), m_singleRegionSize};
+}
+
 } // namespace crisp

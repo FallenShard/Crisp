@@ -9,7 +9,7 @@ class VulkanRenderPassBuilder {
 public:
     // Attachment configuration
     VulkanRenderPassBuilder& setAttachmentCount(uint32_t count);
-    VulkanRenderPassBuilder& setAttachment(int32_t attachmentIndex, VkAttachmentDescription&& description);
+    VulkanRenderPassBuilder& setAttachment(int32_t attachmentIndex, const VkAttachmentDescription& description);
 
     // Subpass configuration
     VulkanRenderPassBuilder& setSubpassCount(uint32_t numSubpasses);
@@ -39,6 +39,11 @@ public:
         VkPipelineStageFlags dstStageMask,
         VkAccessFlags dstAccessMask,
         VkDependencyFlags flags = 0);
+
+    VulkanRenderPassBuilder& addDependency(const VkSubpassDependency& dependency) {
+        m_dependencies.emplace_back(dependency);
+        return *this;
+    }
 
     std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> create(VkDevice device) const;
     std::vector<VkImageLayout> getFinalLayouts() const;

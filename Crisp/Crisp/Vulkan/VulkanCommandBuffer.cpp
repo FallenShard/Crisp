@@ -48,19 +48,42 @@ void VulkanCommandBuffer::transferOwnership(
         nullptr);
 }
 
+void VulkanCommandBuffer::insertMemoryBarrier(
+    VkPipelineStageFlags srcStage,
+    VkAccessFlags srcAccess,
+    VkPipelineStageFlags dstStage,
+    VkAccessFlags dstAccess) const {
+    VkMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    barrier.srcStageMask = srcStage;
+    barrier.srcAccessMask = srcAccess;
+    barrier.dstStageMask = dstStage;
+    barrier.dstAccessMask = dstAccess;
+
+    VkDependencyInfo info{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+    info.memoryBarrierCount = 1;
+    info.pMemoryBarriers = &barrier;
+    vkCmdPipelineBarrier2(m_handle, &info);
+}
+
 void VulkanCommandBuffer::insertBufferMemoryBarrier(
     const VkDescriptorBufferInfo& bufferInfo,
     VkPipelineStageFlags srcStage,
     VkAccessFlags srcAccess,
     VkPipelineStageFlags dstStage,
     VkAccessFlags dstAccess) const {
-    VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+    VkBufferMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
     barrier.buffer = bufferInfo.buffer;
     barrier.offset = bufferInfo.offset;
     barrier.size = bufferInfo.range;
+    barrier.srcStageMask = srcStage;
     barrier.srcAccessMask = srcAccess;
+    barrier.dstStageMask = dstStage;
     barrier.dstAccessMask = dstAccess;
-    vkCmdPipelineBarrier(m_handle, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+
+    VkDependencyInfo info{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+    info.bufferMemoryBarrierCount = 1;
+    info.pBufferMemoryBarriers = &barrier;
+    vkCmdPipelineBarrier2(m_handle, &info);
 }
 
 void VulkanCommandBuffer::insertBufferMemoryBarrier(

@@ -45,6 +45,8 @@ public:
     VkDescriptorBufferInfo getDescriptorInfo() const;
     VkDescriptorBufferInfo getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const;
 
+    VkDescriptorBufferInfo getDescriptorInfo(uint32_t currentFrameIndex) const;
+
 private:
     Renderer* m_renderer;
 

@@ -100,7 +100,7 @@ void VulkanRenderPass::end(const VkCommandBuffer cmdBuffer, const uint32_t frame
     }
 }
 
-void VulkanRenderPass::nextSubpass(const VkCommandBuffer cmdBuffer, const VkSubpassContents contents) const {
+void VulkanRenderPass::nextSubpass(const VkCommandBuffer cmdBuffer, const VkSubpassContents contents) const { // NOLINT
     vkCmdNextSubpass(cmdBuffer, contents);
 }
 

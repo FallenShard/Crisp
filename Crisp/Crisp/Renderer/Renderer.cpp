@@ -341,7 +341,7 @@ void Renderer::drawFrame() {
         return;
     }
 
-    record(frameCtx.commandBuffer->getHandle());
+    record(*frameCtx.commandBuffer);
     endFrame(frameCtx);
 }
 
@@ -456,50 +456,59 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     return imageIndex;
 }
 
-void Renderer::record(VkCommandBuffer commandBuffer) {
+void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
+    const VkCommandBuffer cmdBuffer{commandBuffer.getHandle()};
 
     for (auto& uniformBuffer : m_streamingUniformBuffers) {
-        uniformBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
+        uniformBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
     }
     for (auto& storageBuffer : m_streamingStorageBuffers) {
-        storageBuffer->updateDeviceBuffer(commandBuffer, virtualFrameIndex);
-    }
-    for (const auto& update : m_resourceUpdates) {
-        update(commandBuffer);
+        storageBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
     }
 
-    m_coroCmdBuffer = commandBuffer;
+    commandBuffer.insertMemoryBarrier(
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_SHADER_READ_BIT);
+
+    for (const auto& update : m_resourceUpdates) {
+        update(cmdBuffer);
+    }
+
+    m_coroCmdBuffer = cmdBuffer;
     for (auto h : m_cmdBufferCoroutines) {
         h.resume();
     }
     m_cmdBufferCoroutines.clear();
 
     for (const auto& drawCommand : m_drawCommands) {
-        drawCommand(commandBuffer);
+        drawCommand(cmdBuffer);
     }
 
     if (!m_sceneImageViews.empty()) {
         m_sceneImageViews[virtualFrameIndex]->getImage().transitionLayout(
-            commandBuffer,
+            cmdBuffer,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
 
-    m_defaultRenderPass->begin(commandBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
+    m_defaultRenderPass->begin(cmdBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
     if (!m_sceneImageViews.empty()) {
-        m_scenePipeline->bind(commandBuffer);
-        setDefaultViewport(commandBuffer);
-        setDefaultScissor(commandBuffer);
-        m_sceneMaterial->bind(virtualFrameIndex, commandBuffer);
-        drawFullScreenQuad(commandBuffer);
+        m_scenePipeline->bind(cmdBuffer);
+        setDefaultViewport(cmdBuffer);
+        setDefaultScissor(cmdBuffer);
+        m_sceneMaterial->bind(virtualFrameIndex, cmdBuffer);
+        drawFullScreenQuad(cmdBuffer);
     }
 
     for (const auto& drawCommand : m_defaultPassDrawCommands) {
-        drawCommand(commandBuffer);
+        drawCommand(cmdBuffer);
     }
-    m_defaultRenderPass->end(commandBuffer, virtualFrameIndex);
+    m_defaultRenderPass->end(cmdBuffer, virtualFrameIndex);
 }
 
 void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex) {
