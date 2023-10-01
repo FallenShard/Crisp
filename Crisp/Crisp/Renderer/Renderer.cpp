@@ -99,7 +99,7 @@ Renderer::Renderer(
         m_virtualFrames.emplace_back(*m_device, i);
     }
 
-    m_shaderCache = std::make_unique<ShaderCache>(m_device->getHandle());
+    m_shaderCache = std::make_unique<ShaderCache>(m_device.get());
 
     m_workers.resize(1);
     for (auto& w : m_workers) {
@@ -107,7 +107,7 @@ Renderer::Renderer(
     }
 
     // Creates a map of all shaders
-    loadShaders(m_assetPaths.spvShaderDir);
+    // loadShaders(m_assetPaths.spvShaderDir);
 
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
@@ -165,12 +165,12 @@ VkRect2D Renderer::getDefaultScissor() const {
     return m_defaultScissor;
 }
 
-VkShaderModule Renderer::loadShaderModule(const std::string& key) {
-    return loadSpirvShaderModule(m_assetPaths.spvShaderDir / (key + ".spv"));
+VkShaderModule Renderer::getShaderModule(const std::string& key) const {
+    return m_shaderCache->getShaderModule(key).value_or(VK_NULL_HANDLE);
 }
 
-VkShaderModule Renderer::getShaderModule(const std::string& key) const {
-    return m_shaderCache->getShaderModuleHandle(key);
+VkShaderModule Renderer::getOrLoadShaderModule(const std::string& key) {
+    return m_shaderCache->getOrLoadShaderModule(m_assetPaths.spvShaderDir / (key + ".spv"));
 }
 
 void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const {
@@ -419,7 +419,7 @@ Geometry* Renderer::getFullScreenGeometry() const {
 }
 
 std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
-    std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex) {
+    std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex) {
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
     return createPipelineFromJsonPath(absolutePipelinePath, *this, renderPass, subpassIndex).unwrap();
@@ -429,19 +429,15 @@ void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass) {
     enqueueResourceUpdate([&renderPass](VkCommandBuffer cmdBuffer) { renderPass.updateInitialLayouts(cmdBuffer); });
 }
 
-void Renderer::loadShaders(const std::filesystem::path& directoryPath) {
-    const auto files = enumerateFiles(directoryPath, "spv");
-    for (const auto& file : files) {
-        const auto shaderModule = loadSpirvShaderModule(directoryPath / file);
-        m_device->getDebugMarker().setObjectName(shaderModule, file);
-    }
+// void Renderer::loadShaders(const std::filesystem::path& directoryPath) {
+//     const auto files = enumerateFiles(directoryPath, "spv");
+//     for (const auto& file : files) {
+//         const auto shaderModule = loadSpirvShaderModule(directoryPath / file);
+//         m_device->getDebugMarker().setObjectName(shaderModule, file);
+//     }
 
-    logger->info("Loaded all {} shaders", files.size());
-}
-
-VkShaderModule Renderer::loadSpirvShaderModule(const std::filesystem::path& shaderModulePath) {
-    return m_shaderCache->loadSpirvShaderModule(shaderModulePath);
-}
+//     logger->info("Loaded all {} shaders", files.size());
+// }
 
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     uint32_t imageIndex{};

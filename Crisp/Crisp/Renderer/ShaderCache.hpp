@@ -1,17 +1,19 @@
 #pragma once
 
 #include <Crisp/Core/HashMap.hpp>
-
+#include <Crisp/Core/Logger.hpp>
+#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 namespace crisp {
 
 class ShaderCache {
 public:
-    explicit ShaderCache(VkDevice deviceHandle);
+    explicit ShaderCache(VulkanDevice* device);
     ~ShaderCache();
 
     ShaderCache(const ShaderCache&) = delete;
@@ -20,11 +22,15 @@ public:
     ShaderCache(ShaderCache&&) noexcept = delete;
     ShaderCache& operator=(ShaderCache&&) noexcept = delete;
 
-    inline VkShaderModule getShaderModuleHandle(const std::string& key) const {
-        return m_shaderModules.at(key).handle;
+    inline std::optional<VkShaderModule> getShaderModule(const std::string& key) const {
+        const auto it = m_shaderModules.find(key);
+        if (it == m_shaderModules.end()) {
+            return std::nullopt;
+        }
+        return it->second.handle;
     }
 
-    VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
+    VkShaderModule getOrLoadShaderModule(const std::filesystem::path& spvShaderPath);
 
 private:
     struct ShaderModule {
@@ -32,7 +38,7 @@ private:
         std::filesystem::file_time_type lastModifiedTimestamp;
     };
 
-    VkDevice m_deviceHandle;
+    VulkanDevice* m_device{nullptr};
     FlatHashMap<std::string, ShaderModule> m_shaderModules;
 };
 

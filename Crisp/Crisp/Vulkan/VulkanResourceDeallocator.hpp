@@ -20,6 +20,12 @@ public:
     explicit VulkanResourceDeallocator(VkDevice device, int32_t virtualFrameCount);
     ~VulkanResourceDeallocator();
 
+    VulkanResourceDeallocator(const VulkanResourceDeallocator&) = delete;
+    VulkanResourceDeallocator& operator=(const VulkanResourceDeallocator&) = delete;
+
+    VulkanResourceDeallocator(VulkanResourceDeallocator&&) noexcept = default;
+    VulkanResourceDeallocator& operator=(VulkanResourceDeallocator&&) noexcept = default;
+
     void decrementLifetimes();
 
     void freeAllResources();

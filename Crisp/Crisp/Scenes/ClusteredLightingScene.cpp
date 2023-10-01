@@ -228,7 +228,7 @@ void ClusteredLightingScene::createCommonTextures() {
         VK_FORMAT_R32G32B32A32_SFLOAT);
     std::shared_ptr<VulkanImageView> envRefMapView = createView(*envRefMap, VK_IMAGE_VIEW_TYPE_2D);
 
-    auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView, 1024);
+    auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView);
 
     auto [diffEnv, diffEnvView] = setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
     imageCache.addImageWithView("envIrrMap", std::move(diffEnv), std::move(diffEnvView));

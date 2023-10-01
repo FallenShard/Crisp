@@ -82,7 +82,7 @@ std::unique_ptr<VulkanImage> createVulkanImage(Renderer& renderer, const Image& 
 
 std::unique_ptr<VulkanImage> createVulkanCubeMap(
     Renderer& renderer, const std::vector<std::vector<Image>>& cubeMapFaceMips, VkFormat format) {
-    CRISP_CHECK(cubeMapFaceMips.size() > 0);
+    CRISP_CHECK(!cubeMapFaceMips.empty());
     const uint32_t cubeMapSize{cubeMapFaceMips.front().front().getWidth()};
     VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;

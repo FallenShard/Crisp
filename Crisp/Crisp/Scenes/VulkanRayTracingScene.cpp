@@ -197,16 +197,16 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
     std::unique_ptr<VulkanPipelineLayout> pipelineLayout) {
     std::vector<VkPipelineShaderStageCreateInfo> stages(4, {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO});
     stages[0].stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-    stages[0].module = m_renderer->loadShaderModule("path-trace.rgen");
+    stages[0].module = m_renderer->getOrLoadShaderModule("path-trace.rgen");
     stages[0].pName = "main";
     stages[1].stage = VK_SHADER_STAGE_MISS_BIT_KHR;
-    stages[1].module = m_renderer->loadShaderModule("path-trace.rmiss");
+    stages[1].module = m_renderer->getOrLoadShaderModule("path-trace.rmiss");
     stages[1].pName = "main";
     stages[2].stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-    stages[2].module = m_renderer->loadShaderModule("path-trace.rchit");
+    stages[2].module = m_renderer->getOrLoadShaderModule("path-trace.rchit");
     stages[2].pName = "main";
     stages[3].stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR;
-    stages[3].module = m_renderer->loadShaderModule("path-trace-lambertian.rcall");
+    stages[3].module = m_renderer->getOrLoadShaderModule("path-trace-lambertian.rcall");
     stages[3].pName = "main";
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups(

@@ -12,10 +12,10 @@ EnvironmentLight::EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& 
     auto equirectMap =
         createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
     std::tie(m_cubeMap, m_cubeMapView) =
-        convertEquirectToCubeMap(&renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D), 1024);
+        convertEquirectToCubeMap(&renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D));
 
     m_diffuseEnvironmentMap =
-        createVulkanCubeMap(renderer, {iblData.diffuseIrradianceCubeMap}, VK_FORMAT_R32G32B32A32_SFLOAT);
+        createVulkanCubeMap(renderer, {std::move(iblData.diffuseIrradianceCubeMap)}, VK_FORMAT_R32G32B32A32_SFLOAT);
     m_diffuseEnvironmentMapView = createView(*m_diffuseEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
 
     m_specularEnvironmentMap =
@@ -36,8 +36,8 @@ void EnvironmentLight::update(Renderer& renderer, ImageBasedLightingData&& iblDa
 }
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
-    Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize) {
-    cubeMapSize = equirectMapView->getImage().getHeight() / 2;
+    Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView) {
+    const auto cubeMapSize = equirectMapView->getImage().getHeight() / 2;
 
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
     const auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
@@ -70,8 +70,58 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
 
     renderer->enqueueResourceUpdate(
         [&unitCube, &cubeMapPipelines, &cubeMapPass, &cubeMapMaterial](VkCommandBuffer cmdBuffer) {
-            glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-            glm::mat4 captureViews[] = {
+            // VkMemoryBarrier barrier{};
+            // barrier.sType = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+            // barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            // barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+            // VkMemoryBarrier barrier2{};
+            // barrier.sType = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+            // barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            // barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+            // std::array<VkMemoryBarrier, 2> barriers = {
+            //     {barrier, barrier2}
+            // };
+            // vkCmdPipelineBarrier(
+            //     cmdBuffer,
+            //     VK_PIPELINE_STAGE_TRANSFER_BIT,
+            //     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            //     0,
+            //     static_cast<uint32_t>(barriers.size()),
+            //     barriers.data(),
+            //     0,
+            //     nullptr,
+            //     0,
+            //     nullptr);
+
+            std::array<VkBufferMemoryBarrier, 2> barriers{};
+            VkBufferMemoryBarrier& barrier = barriers[0];
+            barrier.buffer = unitCube->getIndexBuffer()->getHandle();
+            barrier.sType = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+            barrier.offset = 0;
+            barrier.size = unitCube->getIndexBuffer()->getSize();
+            VkBufferMemoryBarrier& barrier2 = barriers[1];
+            barrier2.buffer = unitCube->getVertexBuffer()->getHandle();
+            barrier2.sType = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+            barrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier2.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+            barrier2.offset = 0;
+            barrier2.size = unitCube->getVertexBuffer()->getSize();
+            vkCmdPipelineBarrier(
+                cmdBuffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                0,
+                0,
+                nullptr,
+                static_cast<uint32_t>(barriers.size()),
+                barriers.data(),
+                0,
+                nullptr);
+
+            const glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+            const std::array<glm::mat4, kCubeMapFaceCount> captureViews = {
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
@@ -81,7 +131,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
 
             cubeMapPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
-            for (int i = 0; i < kCubeMapFaceCount; i++) {
+            for (uint32_t i = 0; i < kCubeMapFaceCount; i++) {
                 glm::mat4 MVP = captureProjection * captureViews[i];
                 std::vector<char> pushConst(sizeof(glm::mat4));
                 memcpy(pushConst.data(), glm::value_ptr(MVP), sizeof(glm::mat4));

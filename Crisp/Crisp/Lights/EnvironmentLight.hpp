@@ -59,7 +59,7 @@ private:
 };
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
-    Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView, uint32_t cubeMapSize);
+    Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
     Renderer* renderer,
     const VulkanImageView& cubeMapView,

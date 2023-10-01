@@ -8,7 +8,6 @@
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
-#include <filesystem>
 #include <memory>
 #include <vector>
 

@@ -21,7 +21,6 @@
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
-#include <array>
 #include <coroutine>
 #include <filesystem>
 #include <memory>
@@ -64,8 +63,8 @@ public:
     VkViewport getDefaultViewport() const;
     VkRect2D getDefaultScissor() const;
 
-    VkShaderModule loadShaderModule(const std::string& key);
     VkShaderModule getShaderModule(const std::string& key) const;
+    VkShaderModule getOrLoadShaderModule(const std::string& key);
 
     void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
     void setDefaultScissor(VkCommandBuffer cmdBuffer) const;
@@ -108,7 +107,7 @@ public:
     Geometry* getFullScreenGeometry() const;
 
     std::unique_ptr<VulkanPipeline> createPipeline(
-        std::string_view pipelineName, const VulkanRenderPass& renderPass, int subpassIndex);
+        std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex);
 
     template <typename... Args>
     std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args) {
@@ -150,8 +149,6 @@ public:
     }
 
 private:
-    void loadShaders(const std::filesystem::path& directoryPath);
-    VkShaderModule loadSpirvShaderModule(const std::filesystem::path& shaderModulePath);
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
     void record(VkCommandBuffer commandBuffer);
     void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);

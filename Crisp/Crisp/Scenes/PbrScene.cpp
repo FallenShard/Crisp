@@ -289,26 +289,26 @@ void PbrScene::render() {
 }
 
 void PbrScene::renderGui() {
-    ImGui::Begin("Settings");
-    ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness, 0.0f, 1.0f);
-    ImGui::SliderFloat("Metallic", &m_uniformMaterialParams.metallic, 0.0f, 1.0f);
-    ImGui::SliderFloat("Red", &m_uniformMaterialParams.albedo.r, 0.0f, 1.0f);
-    ImGui::SliderFloat("Green", &m_uniformMaterialParams.albedo.g, 0.0f, 1.0f);
-    ImGui::SliderFloat("Blue", &m_uniformMaterialParams.albedo.b, 0.0f, 1.0f);
-    ImGui::SliderFloat("U Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
-    ImGui::SliderFloat("V Scale", &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
+    // ImGui::Begin("Settings");
+    // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness, 0.0f, 1.0f);
+    // ImGui::SliderFloat("Metallic", &m_uniformMaterialParams.metallic, 0.0f, 1.0f);
+    // ImGui::SliderFloat("Red", &m_uniformMaterialParams.albedo.r, 0.0f, 1.0f);
+    // ImGui::SliderFloat("Green", &m_uniformMaterialParams.albedo.g, 0.0f, 1.0f);
+    // ImGui::SliderFloat("Blue", &m_uniformMaterialParams.albedo.b, 0.0f, 1.0f);
+    // ImGui::SliderFloat("U Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
+    // ImGui::SliderFloat("V Scale", &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
 
-    gui::drawComboBox(
-        "Environment Light",
-        m_lightSystem->getEnvironmentLight()->getName(),
-        m_environmentMapNames,
-        [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
+    // gui::drawComboBox(
+    //     "Environment Light",
+    //     m_lightSystem->getEnvironmentLight()->getName(),
+    //     m_environmentMapNames,
+    //     [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
 
-    if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
-        m_renderNodes["floor"]->isVisible = m_showFloor;
-    }
+    // if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
+    //     m_renderNodes["floor"]->isVisible = m_showFloor;
+    // }
 
-    ImGui::End();
+    // ImGui::End();
 
     // std::vector<std::string> materials;
     // for (const auto& dir :

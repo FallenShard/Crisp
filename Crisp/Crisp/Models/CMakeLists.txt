@@ -16,7 +16,9 @@ add_cpp_static_library(CrispModels
     "SPH.cpp"
     "SPH.hpp")
 target_link_libraries(CrispModels
-    PUBLIC Crisp::Renderer)
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Window
+)
 
 add_cpp_test(CrispOceanTest
     "Test/OceanTest.cpp"

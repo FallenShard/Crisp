@@ -75,7 +75,7 @@ void Application::run() {
         Window::pollEvents();
 
         while (timeSinceLastUpdate > kTimePerFrame) {
-            // m_sceneContainer->update(static_cast<float>(kTimePerFrame));
+            m_sceneContainer->update(static_cast<float>(kTimePerFrame));
             timeSinceLastUpdate -= kTimePerFrame;
         }
 

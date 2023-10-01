@@ -3,8 +3,6 @@
 
 #include <gmock/gmock.h>
 
-#include <numeric>
-
 namespace crisp {
 namespace {
 using ::testing::IsEmpty;
