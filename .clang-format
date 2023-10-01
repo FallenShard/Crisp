@@ -1,32 +1,43 @@
-
 Language: Cpp
-BasedOnStyle: Microsoft
 
+BasedOnStyle: LLVM
+
+BreakBeforeBraces: Attach
+# IndentCaseLabels: false
+SpacesInContainerLiterals: true
+
+
+ColumnLimit: 120
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
 AccessModifierOffset: -4
-AlignArrayOfStructures: Right
-AlignConsecutiveAssignments: None
-AlignAfterOpenBracket: AlwaysBreak
+SeparateDefinitionBlocks: Always
+
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: All
-AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AlwaysBreakTemplateDeclarations: true
-BreakBeforeBraces: Attach
-BreakConstructorInitializers: BeforeComma
+AlwaysBreakAfterDefinitionReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 100
+PenaltyBreakOpenParenthesis: 1
+PenaltyBreakBeforeFirstCallParameter: 1
+#PenaltyIndentedWhitespace: 1
+
+InsertBraces: true
+FixNamespaceComments: true
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+
 BinPackArguments: false
 BinPackParameters: false
-ColumnLimit: 120
+AllowAllArgumentsOnNextLine: true
+AlignAfterOpenBracket: AlwaysBreak
 Cpp11BracedListStyle: true
-DerivePointerAlignment: false
-FixNamespaceComments: true
-IndentWidth: 4
-IndentCaseLabels: false
+AlignConsecutiveAssignments: None
+# AlignArrayOfStructures: Left
+AlwaysBreakTemplateDeclarations: true
+BreakConstructorInitializers: BeforeComma
 NamespaceIndentation: None
-PointerAlignment: Left
-SpacesInContainerLiterals: true
-TabWidth: 4
-UseTab: Never
-SeparateDefinitionBlocks: Always
-InsertBraces: true
-PenaltyIndentedWhitespace: 1
+

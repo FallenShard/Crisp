@@ -19,42 +19,33 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     renderTargets[0]->info.format = swapChain.getImageFormat();
     renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
     renderTargets[0]->info.isSwapChainDependent = true;
-    renderTargets[0]->info.clearValue.color = {
-        {0.0, 0.0f, 0.0f, 1.0f}
-    };
+    renderTargets[0]->info.clearValue.color = {{0.0, 0.0f, 0.0f, 1.0f}};
 
-    auto renderPass =
-        RenderPassBuilder()
-            .setAllocateAttachmentViews(false)
+    auto renderPass = RenderPassBuilder()
+                          .setAllocateAttachmentViews(false)
 
-            .setAttachmentCount(1)
-            .setAttachmentMapping(0, 0)
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+                          .setAttachmentCount(1)
+                          .setAttachmentMapping(0, 0)
+                          .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+                          .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 
-            .setNumSubpasses(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(
-                VK_SUBPASS_EXTERNAL,
-                0,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                0,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-            .create(device, swapChain.getExtent(), renderTargets);
+                          .setNumSubpasses(1)
+                          .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+                          .addDependency(
+                              VK_SUBPASS_EXTERNAL,
+                              0,
+                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                              0,
+                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+                          .create(device, swapChain.getExtent(), renderTargets);
     device.getDebugMarker().setObjectName(*renderPass, "Default Render Pass");
     return renderPass;
 }
 
 std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer) {
-    const std::vector<glm::vec2> vertices = {
-        {-1.0f, -1.0f},
-        {+3.0f, -1.0f},
-        {-1.0f, +3.0f}
-    };
-    const std::vector<glm::uvec3> faces = {
-        {0, 2, 1}
-    };
+    const std::vector<glm::vec2> vertices = {{-1.0f, -1.0f}, {+3.0f, -1.0f}, {-1.0f, +3.0f}};
+    const std::vector<glm::uvec3> faces = {{0, 2, 1}};
     return std::make_unique<Geometry>(renderer, vertices, faces);
 }
 

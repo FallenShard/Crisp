@@ -90,9 +90,7 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
 
     // Geometry setup
     const VertexLayoutDescription shadowVertexFormat = {{VertexAttribute::Position}};
-    const VertexLayoutDescription cubeFormat{
-        {VertexAttribute::Position, VertexAttribute::Normal}
-    };
+    const VertexLayoutDescription cubeFormat{{VertexAttribute::Position, VertexAttribute::Normal}};
     m_resourceContext->addGeometry(
         "cubeRT", std::make_unique<Geometry>(*m_renderer, createCubeMesh(flatten(cubeFormat)), cubeFormat));
     m_resourceContext->addGeometry(
@@ -289,8 +287,7 @@ void ClusteredLightingScene::createShaderball() {
 
 void ClusteredLightingScene::createPlane() {
     const VertexLayoutDescription pbrVertexFormat = {
-        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
-    };
+        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
 
     m_resourceContext->addGeometry(
         "floor",

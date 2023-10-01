@@ -38,12 +38,7 @@ private:
 
     void renderBlock(ImageBlock& block, Sampler& sampler, const pt::Scene* scene);
 
-    enum class RenderStatus {
-        Free,
-        Busy,
-        Interrupted,
-        Done
-    };
+    enum class RenderStatus { Free, Busy, Interrupted, Done };
 
     std::unique_ptr<pt::Scene> m_scene;
     ImageBlock m_image;

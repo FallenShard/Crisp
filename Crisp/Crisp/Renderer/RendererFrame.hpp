@@ -10,10 +10,7 @@
 namespace crisp {
 class RendererFrame {
 public:
-    enum class Status {
-        Idle,
-        Submitted
-    };
+    enum class Status { Idle, Submitted };
 
     explicit RendererFrame(const VulkanDevice& device, int32_t logicalIndex);
     ~RendererFrame();

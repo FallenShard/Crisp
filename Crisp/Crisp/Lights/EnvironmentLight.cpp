@@ -42,16 +42,15 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
     const auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
 
-    auto cubeMapRenderTarget =
-        RenderTargetBuilder()
-            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-            .setLayerAndMipLevelCount(kCubeMapFaceCount, mipmapCount)
-            .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-            .configureColorRenderTarget(
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                additionalFlags)
-            .setSize({cubeMapSize, cubeMapSize}, false)
-            .create(renderer->getDevice());
+    auto cubeMapRenderTarget = RenderTargetBuilder()
+                                   .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+                                   .setLayerAndMipLevelCount(kCubeMapFaceCount, mipmapCount)
+                                   .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+                                   .configureColorRenderTarget(
+                                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT | additionalFlags)
+                                   .setSize({cubeMapSize, cubeMapSize}, false)
+                                   .create(renderer->getDevice());
 
     auto cubeMapPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
     renderer->updateInitialLayouts(*cubeMapPass);
@@ -255,16 +254,15 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
     auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
 
-    auto environmentSpecularMap =
-        RenderTargetBuilder()
-            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-            .setLayerAndMipLevelCount(kCubeMapFaceCount, kMipLevels)
-            .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-            .configureColorRenderTarget(
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-            .setSize({cubeMapSize, cubeMapSize}, false)
-            .create(renderer->getDevice());
+    auto environmentSpecularMap = RenderTargetBuilder()
+                                      .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+                                      .setLayerAndMipLevelCount(kCubeMapFaceCount, kMipLevels)
+                                      .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+                                      .configureColorRenderTarget(
+                                          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+                                      .setSize({cubeMapSize, cubeMapSize}, false)
+                                      .create(renderer->getDevice());
 
     for (int i = 0; i < static_cast<int>(kMipLevels); i++) {
         float roughness = i / static_cast<float>(kMipLevels - 1);

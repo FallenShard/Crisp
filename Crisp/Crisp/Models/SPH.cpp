@@ -238,15 +238,15 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     // Input/Output
     scanCombine.material->writeDescriptor(0, 0, *m_cellCountBuffer);
     scanCombine.material->writeDescriptor(0, 1, *m_blockSumBuffer);
-    scanCombine.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
+    scanCombine.preDispatchCallback = [this](
+                                          RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
+        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
 
-            node.material->setDynamicOffset(frameIdx, 0, m_cellCountBuffer->getDynamicOffset(m_currentSection));
-            node.material->setDynamicOffset(frameIdx, 1, m_blockSumBuffer->getDynamicOffset(m_currentSection));
+        node.material->setDynamicOffset(frameIdx, 0, m_cellCountBuffer->getDynamicOffset(m_currentSection));
+        node.material->setDynamicOffset(frameIdx, 1, m_blockSumBuffer->getDynamicOffset(m_currentSection));
 
-            node.isEnabled = false;
-        };
+        node.isEnabled = false;
+    };
 
     renderGraph->addDependency(
         "scan-combine",
@@ -410,8 +410,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     renderGraph->addDependency(
         "compute-forces",
         "integrate",
-        [this,
-         vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+        [this, vertexBufferSize](
+            const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             cmdBuffer.insertBufferMemoryBarrier(
                 m_forcesBuffer->createDescriptorInfoFromSection(m_currentSection),
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -469,8 +469,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     renderGraph->addDependency(
         "integrate",
         "mainPass",
-        [this,
-         vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+        [this, vertexBufferSize](
+            const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers) {
                 barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};

@@ -35,10 +35,7 @@ MATCHER_P(HandleIs, rhs, "Checks whether the handle is equal to another object's
     return arg.getHandle() == rhs.getHandle();
 }
 
-enum class SurfacePolicy {
-    Headless,
-    HiddenWindow
-};
+enum class SurfacePolicy { Headless, HiddenWindow };
 
 template <SurfacePolicy surfacePolicy = SurfacePolicy::Headless>
 class VulkanTestBase : public ::testing::Test {

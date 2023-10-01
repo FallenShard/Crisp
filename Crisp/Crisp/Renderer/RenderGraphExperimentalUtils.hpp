@@ -41,11 +41,7 @@ struct RenderGraphResourceHandle {
     uint32_t id{kInvalidId};
 };
 
-enum class ResourceType {
-    Buffer,
-    Image,
-    Unknown
-};
+enum class ResourceType { Buffer, Image, Unknown };
 
 struct RenderGraphResource {
     static constexpr uint16_t kInvalidIndex{std::numeric_limits<uint16_t>::max()};
@@ -67,18 +63,9 @@ struct RenderGraphResource {
     std::string name; // Symbolic name of the resource.
 };
 
-enum class PassType {
-    Compute,
-    Rasterizer,
-    RayTracing,
-    Unknown
-};
+enum class PassType { Compute, Rasterizer, RayTracing, Unknown };
 
-enum class ResourceUsageType {
-    Storage,
-    Attachment,
-    Texture
-};
+enum class ResourceUsageType { Storage, Attachment, Texture };
 
 struct ResourceAccessState {
     ResourceUsageType usageType;
@@ -117,11 +104,7 @@ struct RenderGraphPass {
     std::function<void(const RenderPassExecutionContext&)> executeFunc{};
 };
 
-enum class SizePolicy {
-    Absolute,
-    SwapChainRelative,
-    InputRelative
-};
+enum class SizePolicy { Absolute, SwapChainRelative, InputRelative };
 
 struct RenderGraphImageDescription {
     SizePolicy sizePolicy{SizePolicy::Absolute};

@@ -124,14 +124,14 @@ enum class Key {
     RightControl = 345,
     RightAlt = 346,
     RightSuper = 347,
-    Menu = 348
+    Menu = 348,
 };
 
 enum class Modifier {
     Shift = 0x01,
     Control = 0x02,
     Alt = 0x04,
-    Super = 0x08
+    Super = 0x08,
 };
 DECLARE_BITFLAG(Modifier);
 } // namespace crisp

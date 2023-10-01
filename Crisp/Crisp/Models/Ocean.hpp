@@ -12,10 +12,7 @@ struct WindParameters {
     float Lw;
 };
 
-enum class OceanSpectrumData {
-    UniformGaussian,
-    Phillips
-};
+enum class OceanSpectrumData { UniformGaussian, Phillips };
 
 struct OceanParameters {
     int32_t N;

@@ -10,7 +10,7 @@ namespace crisp::gui {
 enum class LayoutType {
     Vertical,
     Horizontal,
-    Absolute
+    Absolute,
 };
 
 class ControlGroup : public Control {

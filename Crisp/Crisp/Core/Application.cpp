@@ -85,7 +85,7 @@ void Application::run() {
 
         gui::prepareImGuiFrame();
         drawGui();
-        // m_sceneContainer->render();
+        m_sceneContainer->render();
 
         gui::renderImGuiFrame(*m_renderer);
 

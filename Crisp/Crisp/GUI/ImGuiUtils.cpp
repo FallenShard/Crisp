@@ -13,17 +13,17 @@ VkDescriptorPool imGuiPool{VK_NULL_HANDLE};
 
 void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string> fontPath) {
     VkDescriptorPoolSize poolSizes[] = {
-        {               VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-        {         VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-        {         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-        {  VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-        {  VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-        {        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-        {        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-        {      VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
+        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000},
     };
 
     VkDescriptorPoolCreateInfo poolInfo = {};
@@ -76,8 +76,7 @@ void prepareImGuiFrame() {
 
 void renderImGuiFrame(Renderer& renderer) {
     ImGui::Render();
-    renderer.enqueueDefaultPassDrawCommand([](VkCommandBuffer cmdBuffer) {
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
-    });
+    renderer.enqueueDefaultPassDrawCommand(
+        [](VkCommandBuffer cmdBuffer) { ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer); });
 }
 } // namespace crisp::gui

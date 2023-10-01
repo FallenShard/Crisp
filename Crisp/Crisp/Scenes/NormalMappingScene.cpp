@@ -148,9 +148,7 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
 void NormalMappingScene::createPlane() {
     auto& imageCache = m_resourceContext->imageCache;
     const VertexLayoutDescription PbrVertexFormat = {
-        {VertexAttribute::Position},
-        {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
-    };
+        {VertexAttribute::Position}, {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
     m_resourceContext->addGeometry(
         "floor",
         std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(PbrVertexFormat), 10.0f), PbrVertexFormat));

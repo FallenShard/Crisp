@@ -8,21 +8,29 @@ TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& verte
         glm::vec3(-size, 0.0f, +size),
         glm::vec3(+size, 0.0f, +size),
         glm::vec3(+size, 0.0f, -size),
-        glm::vec3(-size, 0.0f, -size)};
+        glm::vec3(-size, 0.0f, -size),
+    };
 
     std::vector<glm::vec3> normals = {
         glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f)};
+        glm::vec3(0.0f, 1.0f, 0.0f),
+    };
 
     std::vector<glm::vec2> texCoords = {
-        glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 1.0f)};
+        glm::vec2(0.0f, 0.0f),
+        glm::vec2(1.0f, 0.0f),
+        glm::vec2(1.0f, 1.0f),
+        glm::vec2(0.0f, 1.0f),
+    };
 
-    std::vector<glm::uvec3> faces = {glm::uvec3(0, 1, 2), glm::uvec3(0, 2, 3)};
+    std::vector<glm::uvec3> faces = {
+        glm::uvec3(0, 1, 2),
+        glm::uvec3(0, 2, 3),
+    };
 
-    return TriangleMesh(
-        std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
+    return {std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes};
 }
 
 TriangleMesh createGridMesh(
@@ -64,7 +72,8 @@ TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vert
         glm::vec3(-0.05f, 0.6f, -0.2f),
         glm::vec3(+0.05f, 0.6f, -0.2f),
         glm::vec3(-0.05f, 1.0f, -0.5f),
-        glm::vec3(+0.05f, 1.0f, -0.5f)};
+        glm::vec3(+0.05f, 1.0f, -0.5f),
+    };
 
     std::vector<glm::vec3> normals = {
         glm::vec3(0.0f, 1.0f, 0.0f),
@@ -72,7 +81,8 @@ TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vert
         glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f)};
+        glm::vec3(0.0f, 1.0f, 0.0f),
+    };
 
     std::vector<glm::vec2> texCoords = {
         glm::vec2(0.0f, 0.0f),
@@ -80,10 +90,15 @@ TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vert
         glm::vec2(0.0f, 0.5f),
         glm::vec2(1.0f, 0.5f),
         glm::vec2(0.0f, 1.0f),
-        glm::vec2(1.0f, 1.0f)};
+        glm::vec2(1.0f, 1.0f),
+    };
 
     std::vector<glm::uvec3> faces = {
-        glm::uvec3(0, 1, 3), glm::uvec3(0, 3, 2), glm::uvec3(2, 3, 5), glm::uvec3(2, 5, 4)};
+        glm::uvec3(0, 1, 3),
+        glm::uvec3(0, 3, 2),
+        glm::uvec3(2, 3, 5),
+        glm::uvec3(2, 5, 4),
+    };
 
     return TriangleMesh(
         std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
@@ -165,7 +180,8 @@ TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertex
         glm::vec3(-0.5f, -0.5f, -0.5f),
         glm::vec3(+0.5f, -0.5f, -0.5f),
         glm::vec3(+0.5f, -0.5f, +0.5f),
-        glm::vec3(-0.5f, -0.5f, +0.5f)};
+        glm::vec3(-0.5f, -0.5f, +0.5f),
+    };
 
     std::vector<glm::vec3> normals = {
         glm::vec3(0.0f, 0.0f, 1.0f),  glm::vec3(0.0f, 0.0f, 1.0f),
@@ -184,7 +200,8 @@ TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertex
         glm::vec3(0.0f, 1.0f, 0.0f),  glm::vec3(0.0f, 1.0f, 0.0f),
 
         glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f),
-        glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)};
+        glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f),
+    };
 
     std::vector<glm::vec2> texCoords = {
         glm::vec2(0.0f, 0.0f), glm::vec2(0.0f, 1.0f), glm::vec2(1.0f, 1.0f), glm::vec2(1.0f, 0.0f),

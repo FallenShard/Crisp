@@ -160,32 +160,19 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const {
     }
 
     // Write the Graphviz header
-    outputFile << "digraph FrameGraph {" << std::endl;
+    outputFile << "digraph FrameGraph {\n";
 
     for (auto&& [idx, res] : std::views::enumerate(m_resources)) {
-        if (res.type == ResourceType::Image) {
-            outputFile << fmt::format(
-                              R"({} [label="{} R: {}, PROD: {}, V: {}", style="filled", shape="{}", color="{}"];)",
-                              idx,
-                              res.name,
-                              res.readPasses.size(),
-                              getPass(res.producer).name,
-                              res.version,
-                              "ellipse",
-                              "springgreen")
-                       << std::endl;
-        } else {
-            outputFile << fmt::format(
-                              R"({} [label="{} R: {}, PROD: {}, V: {}", style="filled", shape="{}", color="{}"];)",
-                              idx,
-                              res.name,
-                              res.readPasses.size(),
-                              getPass(res.producer).name,
-                              res.version,
-                              "ellipse",
-                              "peachpuff")
-                       << std::endl;
-        }
+        const char* color = res.type == ResourceType::Image ? "springgreen" : "peachpuff";
+        outputFile << fmt::format(
+            R"({} [label="{} R: {}, PROD: {}, V: {}", style="filled", shape="{}", color="{}"];\n)",
+            idx,
+            res.name,
+            res.readPasses.size(),
+            getPass(res.producer).name,
+            res.version,
+            "ellipse",
+            color);
     }
 
     // Iterate over each vertex and its neighbors in the graph
@@ -193,30 +180,29 @@ Result<> RenderGraph::toGraphViz(const std::string& path) const {
         const auto vertexIdx = i + m_resources.size();
         // Write the vertex and its label
         outputFile << fmt::format(
-                          R"({} [label="{}", style="filled", shape="{}", color="{}"];)",
-                          vertexIdx,
-                          node.name,
-                          "box",
-                          "deepskyblue")
-                   << std::endl;
+            R"({} [label="{}", style="filled", shape="{}", color="{}"];\n)",
+            vertexIdx,
+            node.name,
+            "box",
+            "deepskyblue");
 
         // Iterate over the neighbors of the current vertex
         for (const auto& neighbor : node.inputs) {
             // Write the edge between the current vertex and its neighbor
-            outputFile << "    " << neighbor.id << " -> " << vertexIdx << ";" << std::endl;
+            outputFile << "    " << neighbor.id << " -> " << vertexIdx << ";\n";
         }
 
         for (const auto& neighbor : node.outputs) {
             // Write the edge between the current vertex and its neighbor
-            outputFile << "    " << vertexIdx << " -> " << neighbor.id << ";" << std::endl;
+            outputFile << "    " << vertexIdx << " -> " << neighbor.id << ";\n";
         }
     }
 
     // Write the Graphviz footer
-    outputFile << "}" << std::endl;
+    outputFile << "}\n";
 
     outputFile.close();
-    std::cout << "Graph visualization saved to: " << path << std::endl;
+    std::cout << "Graph visualization saved to: " << path << '\n';
 
     return kResultSuccess;
 }
@@ -545,10 +531,9 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         std::vector<VkClearValue> attachmentClearValues{};
         for (const RenderGraphResourceHandle colorAttachment : pass.colorAttachments) {
             const auto& res{getResource(colorAttachment)};
-            const VkImageLayout initialLayout =
-                res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            const VkImageLayout initialLayout = res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                                                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                                                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             builder
                 .setAttachment(
                     static_cast<int32_t>(attachmentIndex),
@@ -580,10 +565,9 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
 
         if (pass.depthStencilAttachment) {
             const auto& res{getResource(*pass.depthStencilAttachment)};
-            const VkImageLayout initialLayout =
-                res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            const VkImageLayout initialLayout = res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                                                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                                                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             builder
                 .setAttachment(

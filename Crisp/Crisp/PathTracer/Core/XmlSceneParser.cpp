@@ -145,16 +145,15 @@ inline VariantMap::VariantType parse<Transform>(xml_node<char>* node) {
 
 void parseParameters(VariantMap& params, xml_node<char>* node) {
     static std::unordered_map<std::string, std::function<VariantMap::VariantType(xml_node<char>*)>> keyValueParser = {
-        {     "bool",        [](xml_node<char>* node) { return parse<bool>(node); }},
-        {      "int",         [](xml_node<char>* node) { return parse<int>(node); }},
-        {    "float",       [](xml_node<char>* node) { return parse<float>(node); }},
-        {   "string", [](xml_node<char>* node) { return parse<std::string>(node); }},
-        {     "vec3",   [](xml_node<char>* node) { return parse<glm::vec3>(node); }},
-        {     "vec2",   [](xml_node<char>* node) { return parse<glm::vec2>(node); }},
-        {    "ivec2",  [](xml_node<char>* node) { return parse<glm::ivec2>(node); }},
-        { "spectrum",    [](xml_node<char>* node) { return parse<Spectrum>(node); }},
-        {"transform",   [](xml_node<char>* node) { return parse<Transform>(node); }}
-    };
+        {"bool", [](xml_node<char>* node) { return parse<bool>(node); }},
+        {"int", [](xml_node<char>* node) { return parse<int>(node); }},
+        {"float", [](xml_node<char>* node) { return parse<float>(node); }},
+        {"string", [](xml_node<char>* node) { return parse<std::string>(node); }},
+        {"vec3", [](xml_node<char>* node) { return parse<glm::vec3>(node); }},
+        {"vec2", [](xml_node<char>* node) { return parse<glm::vec2>(node); }},
+        {"ivec2", [](xml_node<char>* node) { return parse<glm::ivec2>(node); }},
+        {"spectrum", [](xml_node<char>* node) { return parse<Spectrum>(node); }},
+        {"transform", [](xml_node<char>* node) { return parse<Transform>(node); }}};
 
     if (node == nullptr) {
         return;

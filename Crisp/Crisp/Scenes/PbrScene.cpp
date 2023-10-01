@@ -39,7 +39,7 @@ struct CascadedShadowMapData {
 
 const VertexLayoutDescription kPbrVertexFormat = {
     {VertexAttribute::Position},
-    {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
+    {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent},
 };
 
 void setPbrMaterialSceneParams(
@@ -92,13 +92,13 @@ Material* createPbrMaterial(
     auto* material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
 
-    const auto setMaterialTexture =
-        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", materialKey, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            material->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
+    const auto setMaterialTexture = [&material, &imageCache, &materialKey](
+                                        const uint32_t index, const std::string_view texName) {
+        const std::string key = fmt::format("{}-{}", materialKey, texName);
+        const std::string fallbackKey = fmt::format("default-{}", texName);
+        material->writeDescriptor(
+            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+    };
 
     setMaterialTexture(0, "diffuse");
     setMaterialTexture(1, "metallic");
@@ -139,7 +139,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
                         .width = kShadowMapSize,
                         .height = kShadowMapSize,
                         .format = VK_FORMAT_D32_SFLOAT,
-                },
+                    },
                     fmt::format("cascaded-shadow-map-{}", i),
                     VkClearValue{.depthStencil{1.0f, 0}});
             },
@@ -178,7 +178,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
                     .format = VK_FORMAT_D32_SFLOAT,
-            },
+                },
                 "forward-pass-depth",
                 VkClearValue{.depthStencil{0.0f, 0}});
         },
@@ -290,19 +290,22 @@ void PbrScene::render() {
 
 void PbrScene::renderGui() {
     // ImGui::Begin("Settings");
-    // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness, 0.0f, 1.0f);
-    // ImGui::SliderFloat("Metallic", &m_uniformMaterialParams.metallic, 0.0f, 1.0f);
-    // ImGui::SliderFloat("Red", &m_uniformMaterialParams.albedo.r, 0.0f, 1.0f);
-    // ImGui::SliderFloat("Green", &m_uniformMaterialParams.albedo.g, 0.0f, 1.0f);
-    // ImGui::SliderFloat("Blue", &m_uniformMaterialParams.albedo.b, 0.0f, 1.0f);
-    // ImGui::SliderFloat("U Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
-    // ImGui::SliderFloat("V Scale", &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
+    // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness,
+    // 0.0f, 1.0f); ImGui::SliderFloat("Metallic",
+    // &m_uniformMaterialParams.metallic, 0.0f, 1.0f); ImGui::SliderFloat("Red",
+    // &m_uniformMaterialParams.albedo.r, 0.0f, 1.0f); ImGui::SliderFloat("Green",
+    // &m_uniformMaterialParams.albedo.g, 0.0f, 1.0f); ImGui::SliderFloat("Blue",
+    // &m_uniformMaterialParams.albedo.b, 0.0f, 1.0f); ImGui::SliderFloat("U
+    // Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
+    // ImGui::SliderFloat("V Scale",
+    // &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
 
     // gui::drawComboBox(
     //     "Environment Light",
     //     m_lightSystem->getEnvironmentLight()->getName(),
     //     m_environmentMapNames,
-    //     [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
+    //     [this](const std::string& selectedItem) {
+    //     setEnvironmentMap(selectedItem); });
 
     // if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
     //     m_renderNodes["floor"]->isVisible = m_showFloor;
@@ -312,7 +315,8 @@ void PbrScene::renderGui() {
 
     // std::vector<std::string> materials;
     // for (const auto& dir :
-    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/PbrMaterials"))
+    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() /
+    //      "Textures/PbrMaterials"))
     //     materials.push_back(dir.path().stem().string());
     // materials.push_back("Uniform");
 
@@ -335,13 +339,13 @@ void PbrScene::onMaterialSelected(const std::string& materialName) {
     auto* shaderBallMaterial = m_resourceContext->getMaterial("pbrTexshaderBall");
 
     auto& imageCache{m_resourceContext->imageCache};
-    const auto setMaterialTexture =
-        [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            shaderBallMaterial->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
+    const auto setMaterialTexture = [&shaderBallMaterial, &imageCache, &pbrMaterial](
+                                        const uint32_t index, const std::string_view texName) {
+        const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
+        const std::string fallbackKey = fmt::format("default-{}", texName);
+        shaderBallMaterial->writeDescriptor(
+            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+    };
 
     if (pbrMaterial.name != "Grass") {
         addPbrTexturesToImageCache(loadPbrTextureGroup(materialPath), pbrMaterial.name, imageCache);
@@ -503,6 +507,7 @@ void PbrScene::updateMaterialsWithRenderGraphResources() {
             }
         }
     }
-    //*sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg
+    //*sceneObject->pass(kForwardLightingPass).material, *m_resourceContext,
+    //*m_lightSystem, *m_rg
 }
 } // namespace crisp

@@ -5,11 +5,7 @@
 namespace crisp {
 class HomogeneousMedium : public Medium {
 public:
-    enum class SamplingStrategy {
-        Balance,
-        Single,
-        Manual
-    };
+    enum class SamplingStrategy { Balance, Single, Manual };
 
     HomogeneousMedium(const VariantMap& params);
     virtual ~HomogeneousMedium();

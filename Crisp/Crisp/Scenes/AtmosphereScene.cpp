@@ -10,9 +10,7 @@ float azimuth = 0.0f;
 float altitude = 0.0f;
 
 const VertexLayoutDescription PbrVertexFormat = {
-    {VertexAttribute::Position},
-    {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
-};
+    {VertexAttribute::Position}, {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
 } // namespace
 
 AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)

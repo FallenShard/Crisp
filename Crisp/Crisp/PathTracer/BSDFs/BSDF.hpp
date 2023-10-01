@@ -21,11 +21,7 @@ DECLARE_BITFLAG(Lobe)
 
 class BSDF {
 public:
-    enum class Measure {
-        Unknown,
-        SolidAngle,
-        Discrete
-    };
+    enum class Measure { Unknown, SolidAngle, Discrete };
 
     struct Sample {
         glm::vec3 p;

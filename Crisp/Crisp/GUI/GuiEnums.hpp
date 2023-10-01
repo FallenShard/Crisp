@@ -1,7 +1,5 @@
 #pragma once
 
-#include <type_traits>
-
 #include <Crisp/Utils/BitFlags.hpp>
 
 namespace crisp {
@@ -10,7 +8,7 @@ namespace gui {
 enum class SizingPolicy {
     Fixed,
     FillParent,
-    WrapContent
+    WrapContent,
 };
 
 enum class Anchor {
@@ -22,7 +20,7 @@ enum class Anchor {
     CenterRight,
     BottomLeft,
     BottomCenter,
-    BottomRight
+    BottomRight,
 };
 
 enum class Origin {
@@ -34,14 +32,14 @@ enum class Origin {
     CenterRight,
     BottomLeft,
     BottomCenter,
-    BottomRight
+    BottomRight,
 };
 
 enum class Validation {
     None = 0,
     Geometry = 1,
     Color = 2,
-    All = Geometry | Color
+    All = Geometry | Color,
 };
 
 enum class State {
@@ -50,7 +48,7 @@ enum class State {
     Pressed,
     Disabled,
 
-    Count
+    Count,
 };
 } // namespace gui
 

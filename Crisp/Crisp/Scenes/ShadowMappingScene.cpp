@@ -518,12 +518,9 @@ void ShadowMappingScene::createShaderballs() {
 
 void ShadowMappingScene::createTrees() {
     const VertexLayoutDescription shadowVertexFormat = {{VertexAttribute::Position}};
-    const VertexLayoutDescription shadowAlphaVertexFormat = {
-        {VertexAttribute::Position, VertexAttribute::TexCoord}
-    };
+    const VertexLayoutDescription shadowAlphaVertexFormat = {{VertexAttribute::Position, VertexAttribute::TexCoord}};
     const VertexLayoutDescription pbrVertexFormat = {
-        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
-    };
+        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
 
     TriangleMesh treeMesh(
         loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", flatten(pbrVertexFormat))
@@ -709,9 +706,7 @@ void ShadowMappingScene::createPlane() {
     // floor->pass(MainPass).material = material;
 
     const VertexLayoutDescription PbrVertexFormat = {
-        {VertexAttribute::Position},
-        {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
-    };
+        {VertexAttribute::Position}, {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
     m_resourceContext->addGeometry(
         "floor",
         std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(PbrVertexFormat), 200.0f), PbrVertexFormat));

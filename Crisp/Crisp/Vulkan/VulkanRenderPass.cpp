@@ -156,9 +156,9 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
             auto& renderTarget = *m_params.renderTargets.at(mapping.renderTargetIndex);
             if (mapping.bufferOverDepthSlices) {
                 // TODO(nemanjab): fix this to have similar interface to layer-based buffering.
-                framebufferLayerCount =
-                    renderTargetInfo.buffered ? renderTargetInfo.depthSlices / RendererConfig::VirtualFrameCount
-                                              : renderTargetInfo.depthSlices;
+                framebufferLayerCount = renderTargetInfo.buffered
+                                            ? renderTargetInfo.depthSlices / RendererConfig::VirtualFrameCount
+                                            : renderTargetInfo.depthSlices;
                 const uint32_t frameDepthOffset =
                     renderTargetInfo.buffered ? static_cast<uint32_t>(frameIdx) * framebufferLayerCount : 0;
                 const VkImageViewType type =

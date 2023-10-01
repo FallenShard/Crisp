@@ -17,11 +17,7 @@ class RenderGraph {
 public:
     using DependencyCallback = std::function<void(const VulkanRenderPass&, VulkanCommandBuffer&, uint32_t)>;
 
-    enum class NodeType {
-        Rasterizer,
-        Compute,
-        Raytracing
-    };
+    enum class NodeType { Rasterizer, Compute, Raytracing };
 
     struct Node {
         Node() = default;

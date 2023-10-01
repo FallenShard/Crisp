@@ -57,10 +57,7 @@ VkViewport VulkanSwapChain::getViewport(float minDepth, float maxDepth) const {
 }
 
 VkRect2D VulkanSwapChain::getScissorRect() const {
-    return {
-        {0, 0},
-        m_extent
-    };
+    return {{0, 0}, m_extent};
 }
 
 VkImageView VulkanSwapChain::getImageView(size_t index) const {

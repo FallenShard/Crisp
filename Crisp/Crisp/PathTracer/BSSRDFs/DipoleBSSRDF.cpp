@@ -70,8 +70,7 @@ struct SubsurfaceParams {
 };
 
 static std::unordered_map<std::string, SubsurfaceParams> materials = {
-    {"Ketchup", {{0.061f, 0.97f, 1.45f}, {0.18f, 0.07f, 0.03f}, 1.3f}}
-};
+    {"Ketchup", {{0.061f, 0.97f, 1.45f}, {0.18f, 0.07f, 0.03f}, 1.3f}}};
 
 struct IrradianceTask {
     IrradianceTask(int numLightSamples, const pt::Scene* scene, const Integrator* integrator)

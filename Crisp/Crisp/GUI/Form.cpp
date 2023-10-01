@@ -192,9 +192,8 @@ void Form::validateControls() {
 }
 
 std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float /*duration*/) {
-    auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f, [this, con = control.get()](const auto& t) {
-        con->setOpacity(t);
-    });
+    auto anim = std::make_shared<PropertyAnimation<float>>(
+        0.3, 0.0f, 1.0f, [this, con = control.get()](const auto& t) { con->setOpacity(t); });
     m_animator->add(anim);
 
     return control;

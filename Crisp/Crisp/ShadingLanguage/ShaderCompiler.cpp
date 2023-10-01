@@ -65,10 +65,9 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             continue;
         }
         const auto glslSource{std::move(maybeGlslSource).unwrap()};
-        const std::filesystem::file_time_type outputModifiedTs =
-            std::filesystem::exists(outputPath)
-                ? std::filesystem::last_write_time(outputPath)
-                : std::filesystem::file_time_type{};
+        const std::filesystem::file_time_type outputModifiedTs = std::filesystem::exists(outputPath)
+                                                                     ? std::filesystem::last_write_time(outputPath)
+                                                                     : std::filesystem::file_time_type{};
         if (glslSource.lastModifiedRecursive > outputModifiedTs) {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
             const std::filesystem::path tempInputPath = inputDir / "temp.glsl";

@@ -114,14 +114,13 @@ public:
     }
 
     float getNormalizedValue() const {
-        return !m_discreteValues.empty()
-                   ? static_cast<float>(m_indexValue) / (getValueCount() - 1)
-                   : std::max(
-                         0.0f,
-                         std::min(
-                             1.0f,
-                             static_cast<float>(m_indexValue * m_increment) /
-                                 static_cast<float>(m_maxValue - m_minValue)));
+        return !m_discreteValues.empty() ? static_cast<float>(m_indexValue) / (getValueCount() - 1)
+                                         : std::max(
+                                               0.0f,
+                                               std::min(
+                                                   1.0f,
+                                                   static_cast<float>(m_indexValue * m_increment) /
+                                                       static_cast<float>(m_maxValue - m_minValue)));
     }
 
     std::string getValueString() const {
@@ -338,7 +337,7 @@ private:
     enum class State {
         Idle,
         Hover,
-        Pressed
+        Pressed,
     };
 
     void setState(State state) {

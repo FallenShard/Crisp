@@ -12,11 +12,7 @@
 #include <utility>
 
 namespace crisp {
-enum class PipelineDynamicState {
-    None = 0x00,
-    Viewport = 0x01,
-    Scissor = 0x02
-};
+enum class PipelineDynamicState { None = 0x00, Viewport = 0x01, Scissor = 0x02 };
 DECLARE_BITFLAG(PipelineDynamicState);
 
 class VulkanPipeline final : public VulkanResource<VkPipeline> {
@@ -48,8 +44,11 @@ public:
     }
 
     inline void setPushConstant(
-        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, uint32_t size, const char* value)
-        const {
+        VkCommandBuffer cmdBuffer,
+        VkShaderStageFlags shaderStages,
+        uint32_t offset,
+        uint32_t size,
+        const char* value) const {
         vkCmdPushConstants(
             cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset); // NOLINT
     }

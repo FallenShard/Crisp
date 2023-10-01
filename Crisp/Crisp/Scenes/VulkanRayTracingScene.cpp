@@ -9,9 +9,7 @@ namespace crisp {
 namespace {
 static constexpr const char* MainPass = "mainPass";
 
-static const VertexLayoutDescription posFormat = {
-    {VertexAttribute::Position, VertexAttribute::Normal}
-};
+static const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
 
 std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, const std::filesystem::path& relativePath) {
     return std::make_unique<Geometry>(
@@ -172,9 +170,9 @@ std::unique_ptr<VulkanPipelineLayout> VulkanRayTracingScene::createPipelineLayou
             true,
             {
                 {0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
-                {1,              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
-                {2,     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
-    })
+                {1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
+                {2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR},
+            })
         .defineDescriptorSet(
             1,
             false,

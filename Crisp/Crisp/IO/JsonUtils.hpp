@@ -18,7 +18,7 @@ enum class JsonType {
     NumberInt,
     NumberUint,
     NumberFloat,
-    Binary
+    Binary,
 };
 
 template <JsonType type>

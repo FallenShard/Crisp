@@ -26,8 +26,7 @@ BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, const Vulkan
         {0, 4},
         {3, 7},
         {2, 6},
-        {1, 5}
-    };
+        {1, 5}};
 
     m_indexGeometry = std::make_unique<Geometry>(*renderer, std::vector<glm::vec4>{}, lines);
 

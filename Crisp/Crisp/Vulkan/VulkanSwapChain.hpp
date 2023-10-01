@@ -9,10 +9,7 @@
 #include <vector>
 
 namespace crisp {
-enum class TripleBuffering {
-    Enabled,
-    Disabled
-};
+enum class TripleBuffering { Enabled, Disabled };
 
 class VulkanSwapChain : public VulkanResource<VkSwapchainKHR> {
 public:

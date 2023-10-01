@@ -29,9 +29,7 @@ constexpr std::array<const char*, kCascadeCount> kCsmPasses = {
 };
 
 const VertexLayoutDescription kPbrVertexFormat = {
-    {VertexAttribute::Position},
-    {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}
-};
+    {VertexAttribute::Position}, {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
 
 void setPbrMaterialSceneParams(
     Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem) {
@@ -58,13 +56,13 @@ Material* createPbrMaterial(
     auto material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
 
-    const auto setMaterialTexture =
-        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", materialKey, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            material->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
+    const auto setMaterialTexture = [&material, &imageCache, &materialKey](
+                                        const uint32_t index, const std::string_view texName) {
+        const std::string key = fmt::format("{}-{}", materialKey, texName);
+        const std::string fallbackKey = fmt::format("default-{}", texName);
+        material->writeDescriptor(
+            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+    };
 
     setMaterialTexture(0, "diffuse");
     setMaterialTexture(1, "metallic");
@@ -88,12 +86,10 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device = renderer->getDevice();
     auto layout = layoutBuilder.create(device);
 
-    const std::vector<VkSpecializationMapEntry> specEntries = {
-  //   id,               offset,             size
-        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}
-    };
+    const std::vector<VkSpecializationMapEntry> specEntries = {//   id,               offset,             size
+                                                               {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
+                                                               {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
+                                                               {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}};
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
@@ -120,12 +116,12 @@ std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const
         0,
         false,
         {
-            {0,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {1,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {2,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
             {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {4,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-    });
+            {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+        });
 
     layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, 2 * sizeof(uint32_t));
     return createComputePipeline(renderer, workGroupSize, layoutBuilder, "linear-blend-skinning.comp");

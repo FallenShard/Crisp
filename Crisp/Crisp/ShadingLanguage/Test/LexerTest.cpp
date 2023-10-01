@@ -6,36 +6,34 @@
 using namespace crisp::sl;
 
 namespace {
-const std::string testSource =
-    ""
-    "#version 450 core\n"
-    "\n"
-    "layout(location = 0) in vec2 position;\n"
-    "\n"
-    "layout(location = 0) out vec2 texCoord;\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    texCoord = position * 0.5f + 0.5f;\n"
-    "    gl_Position = vec4(position, 0.0f, 1.0f);\n"
-    "}\n";
+const std::string testSource = ""
+                               "#version 450 core\n"
+                               "\n"
+                               "layout(location = 0) in vec2 position;\n"
+                               "\n"
+                               "layout(location = 0) out vec2 texCoord;\n"
+                               "\n"
+                               "void main()\n"
+                               "{\n"
+                               "    texCoord = position * 0.5f + 0.5f;\n"
+                               "    gl_Position = vec4(position, 0.0f, 1.0f);\n"
+                               "}\n";
 
-const std::string testSourceVertexShader =
-    ""
-    "#version 450 core\n"
-    "\n"
-    "layout(location = 0) in vec3 position;\n"
-    "layout(location = 1) in vec3 normal;\n"
-    "layout(location = 2) in vec2 texCoord;\n"
-    "layout(location = 3) in vec4 tangent;\n"
-    "\n"
-    "layout(location = 0) out vec2 texCoord;\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    texCoord = position.xy * 0.5f + 0.5f;\n"
-    "    gl_Position = vec4(position, 1.0f);\n"
-    "}\n";
+const std::string testSourceVertexShader = ""
+                                           "#version 450 core\n"
+                                           "\n"
+                                           "layout(location = 0) in vec3 position;\n"
+                                           "layout(location = 1) in vec3 normal;\n"
+                                           "layout(location = 2) in vec2 texCoord;\n"
+                                           "layout(location = 3) in vec4 tangent;\n"
+                                           "\n"
+                                           "layout(location = 0) out vec2 texCoord;\n"
+                                           "\n"
+                                           "void main()\n"
+                                           "{\n"
+                                           "    texCoord = position.xy * 0.5f + 0.5f;\n"
+                                           "    gl_Position = vec4(position, 1.0f);\n"
+                                           "}\n";
 } // namespace
 
 TEST(LexerTest, Basic) {

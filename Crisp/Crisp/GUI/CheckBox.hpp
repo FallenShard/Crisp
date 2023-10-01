@@ -44,7 +44,7 @@ private:
         Idle,
         Hover,
         Pressed,
-        Disabled
+        Disabled,
     };
 
     void updateTexCoordResource();

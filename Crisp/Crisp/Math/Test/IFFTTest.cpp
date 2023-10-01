@@ -131,11 +131,7 @@ TEST(FFT, SimpleTest) {
     auto res2 = dft(toComplex(signal));
 
     std::vector<std::complex<float>> sig2{
-        std::complex<float>{ 1,  0},
-        std::complex<float>{ 2, -1},
-        std::complex<float>{ 0, -1},
-        std::complex<float>{-1, +2}
-    };
+        std::complex<float>{1, 0}, std::complex<float>{2, -1}, std::complex<float>{0, -1}, std::complex<float>{-1, +2}};
 
     auto res3 = dft(sig2);
     auto res4 = fft(sig2);

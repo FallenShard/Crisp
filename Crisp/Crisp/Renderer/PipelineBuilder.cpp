@@ -5,10 +5,7 @@
 namespace crisp {
 namespace {
 
-enum class VertexAttributeLayout {
-    Interleaved,
-    Concatenated
-};
+enum class VertexAttributeLayout { Interleaved, Concatenated };
 
 std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(
     uint32_t locationOffset,

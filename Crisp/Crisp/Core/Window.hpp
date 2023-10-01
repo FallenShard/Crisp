@@ -14,12 +14,12 @@
 namespace crisp {
 enum class CursorState {
     Disabled,
-    Normal
+    Normal,
 };
 
 enum class WindowVisibility {
     Hidden,
-    Shown
+    Shown,
 };
 
 enum class EventType : uint32_t {
@@ -48,7 +48,7 @@ enum class EventType : uint32_t {
 
     AllKeyEvents = KeyPressed,
 
-    AllEvents = AllMouseEvents | AllWindowEvents | AllKeyEvents
+    AllEvents = AllMouseEvents | AllWindowEvents | AllKeyEvents,
 };
 DECLARE_BITFLAG(EventType)
 

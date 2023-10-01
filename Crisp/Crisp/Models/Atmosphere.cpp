@@ -166,7 +166,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
             false,
             {
                 {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-    })
+            })
         .defineDescriptorSet(
             1,
             true,
@@ -179,10 +179,10 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
     auto layout = layoutBuilder.create(device);
 
     std::vector<VkSpecializationMapEntry> specEntries = {
-  //   id,               offset,             size
+        //   id,               offset,             size
         {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
         {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}
+        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
     };
 
     VkSpecializationInfo specInfo = {};
@@ -222,21 +222,19 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
             node->pass(renderPassName).material = material;
             node->pass(renderPassName).pipeline = pipeline;
         };
-    const auto createPostProcessingRenderNode2 =
-        [&renderNodes, &renderer, &renderGraph, &resourceContext](
-            const std::string& renderPassName,
-            std::unique_ptr<VulkanRenderPass> renderPass,
-            const std::string& luaPipelineFile) {
-            renderGraph.addRenderPass(renderPassName, std::move(renderPass));
+    const auto createPostProcessingRenderNode2 = [&renderNodes, &renderer, &renderGraph, &resourceContext](
+                                                     const std::string& renderPassName,
+                                                     std::unique_ptr<VulkanRenderPass> renderPass,
+                                                     const std::string& luaPipelineFile) {
+        renderGraph.addRenderPass(renderPassName, std::move(renderPass));
 
-            auto node =
-                renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
-            node->geometry = renderer.getFullScreenGeometry();
-            node->pass(renderPassName).pipeline = resourceContext.createPipeline(
-                renderPassName + "Pipeline", luaPipelineFile, renderGraph.getRenderPass(renderPassName), 0);
-            node->pass(renderPassName).material =
-                resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
-        };
+        auto node = renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
+        node->geometry = renderer.getFullScreenGeometry();
+        node->pass(renderPassName).pipeline = resourceContext.createPipeline(
+            renderPassName + "Pipeline", luaPipelineFile, renderGraph.getRenderPass(renderPassName), 0);
+        node->pass(renderPassName).material =
+            resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
+    };
 
     resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParameters), BufferUpdatePolicy::PerFrame);
 
@@ -295,8 +293,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     renderGraph.addDependency(
         MultipleScatteringPass,
         SkyViewLutPass,
-        [tex = &imageCache.getImage("multiScatTex"),
-         views](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
+        [tex = &imageCache.getImage("multiScatTex"), views](
+            const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
             VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -331,14 +329,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         material->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
 
         // Voxelized multiple scattering
-        const std::vector<glm::vec2> vertices = {
-            {-1.0f, -1.0f},
-            {+3.0f, -1.0f},
-            {-1.0f, +3.0f}
-        };
-        const std::vector<glm::uvec3> faces = {
-            {0, 2, 1}
-        };
+        const std::vector<glm::vec2> vertices = {{-1.0f, -1.0f}, {+3.0f, -1.0f}, {-1.0f, +3.0f}};
+        const std::vector<glm::uvec3> faces = {{0, 2, 1}};
         resourceContext.addGeometry("fullScreenInstanced", std::make_unique<Geometry>(renderer, vertices, faces));
         resourceContext.getGeometry("fullScreenInstanced")->setInstanceCount(32);
 

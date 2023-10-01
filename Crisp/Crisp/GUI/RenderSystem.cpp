@@ -403,10 +403,10 @@ uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize) {
 }
 
 void RenderSystem::createPipelines() {
-    m_colorQuadPipeline = m_renderer->createPipeline("GuiColor.json", *m_guiPass.get(), 0);
-    m_textPipeline = m_renderer->createPipeline("GuiText.json", *m_guiPass.get(), 0);
-    m_texQuadPipeline = m_renderer->createPipeline("GuiTexture.json", *m_guiPass.get(), 0);
-    m_debugRectPipeline = m_renderer->createPipeline("GuiDebug.json", *m_guiPass.get(), 0);
+    m_colorQuadPipeline = m_renderer->createPipeline("GuiColor.json", *m_guiPass, 0);
+    m_textPipeline = m_renderer->createPipeline("GuiText.json", *m_guiPass, 0);
+    m_texQuadPipeline = m_renderer->createPipeline("GuiTexture.json", *m_guiPass, 0);
+    m_debugRectPipeline = m_renderer->createPipeline("GuiDebug.json", *m_guiPass, 0);
     m_fsQuadPipeline = m_renderer->createPipeline("Fullscreen.json", m_renderer->getDefaultRenderPass(), 0);
 }
 
@@ -415,11 +415,11 @@ void RenderSystem::initGeometryBuffers() {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
-        {0.0f, 1.0f}
+        {0.0f, 1.0f},
     };
     std::vector<glm::uvec3> quadFaces = {
         {0, 2, 1},
-        {0, 3, 2}
+        {0, 3, 2},
     };
     m_quadGeometry = std::make_unique<Geometry>(*m_renderer, quadVerts, quadFaces);
 
@@ -427,7 +427,7 @@ void RenderSystem::initGeometryBuffers() {
         {0, 1},
         {1, 2},
         {2, 3},
-        {3, 0}
+        {3, 0},
     };
     m_lineLoopGeometry = std::make_unique<Geometry>(*m_renderer, quadVerts, loopSegments);
 }

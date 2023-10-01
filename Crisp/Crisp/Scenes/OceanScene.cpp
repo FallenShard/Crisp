@@ -36,7 +36,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     auto layout = layoutBuilder.create(renderer->getDevice());
 
     const std::array<VkSpecializationMapEntry, 3> specEntries = {
-  //                            id,               offset,             size
+        //                            id,               offset,             size
         VkSpecializationMapEntry{0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
         VkSpecializationMapEntry{1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
         VkSpecializationMapEntry{2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
@@ -108,25 +108,24 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     auto normalZImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
     auto spectrumImage = createInitialSpectrum();
 
-    m_renderer->enqueueResourceUpdate(
-        [dy = displacementYImage.get(),
-         dx = displacementXImage.get(),
-         dz = displacementZImage.get(),
-         nx = normalXImage.get(),
-         nz = normalZImage.get()](VkCommandBuffer cmdBuffer) {
-            const auto transitionToGeneral = [cmdBuffer](VulkanImage& image) {
-                image.transitionLayout(
-                    cmdBuffer,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-            };
-            transitionToGeneral(*dy);
-            transitionToGeneral(*dx);
-            transitionToGeneral(*dz);
-            transitionToGeneral(*nx);
-            transitionToGeneral(*nz);
-        });
+    m_renderer->enqueueResourceUpdate([dy = displacementYImage.get(),
+                                       dx = displacementXImage.get(),
+                                       dz = displacementZImage.get(),
+                                       nx = normalXImage.get(),
+                                       nz = normalZImage.get()](VkCommandBuffer cmdBuffer) {
+        const auto transitionToGeneral = [cmdBuffer](VulkanImage& image) {
+            image.transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        };
+        transitionToGeneral(*dy);
+        transitionToGeneral(*dx);
+        transitionToGeneral(*dz);
+        transitionToGeneral(*nx);
+        transitionToGeneral(*nz);
+    });
 
     auto& imageCache = m_resourceContext->imageCache;
     const auto addImage = [&imageCache](std::unique_ptr<VulkanImage> image, const std::string& name) {

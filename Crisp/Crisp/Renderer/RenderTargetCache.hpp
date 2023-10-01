@@ -17,10 +17,7 @@ public:
     RenderTargetBuilder& setBuffered(bool isBuffered);
     RenderTargetBuilder& setSize(VkExtent2D size, bool isSwapChainDependent);
     RenderTargetBuilder& configureColorRenderTarget(
-        VkImageUsageFlags usageFlags,
-        VkClearColorValue clearValue = {
-            {0, 0, 0, 0}
-    });
+        VkImageUsageFlags usageFlags, VkClearColorValue clearValue = {{0, 0, 0, 0}});
     RenderTargetBuilder& configureDepthRenderTarget(
         VkImageUsageFlags usageFlags, VkClearDepthStencilValue clearValue = {0.0f, 0});
 

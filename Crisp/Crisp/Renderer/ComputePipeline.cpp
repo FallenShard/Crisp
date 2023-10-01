@@ -44,8 +44,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     std::vector<VkSpecializationMapEntry> specEntries = {
         {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
         {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}
-    };
+        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}};
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
@@ -74,13 +73,11 @@ std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* rend
         .defineDescriptorSet(
             0,
             false,
-            {
-                {0,         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-                {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-                {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-                {3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-                {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT}
-    })
+            {{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+             {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+             {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+             {3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+             {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT}})
         .defineDescriptorSet(
             1,
             true,
@@ -91,12 +88,10 @@ std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* rend
     VulkanDevice& device = renderer->getDevice();
     auto layout = layoutBuilder.create(device);
 
-    std::vector<VkSpecializationMapEntry> specEntries = {
-  //   id,               offset,             size
-        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}
-    };
+    std::vector<VkSpecializationMapEntry> specEntries = {//   id,               offset,             size
+                                                         {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
+                                                         {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
+                                                         {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}};
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());

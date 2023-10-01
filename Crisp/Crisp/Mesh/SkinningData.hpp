@@ -69,11 +69,7 @@ struct SkinningData {
 };
 
 struct AnimationSampler {
-    enum class Interpolation {
-        Linear,
-        Step,
-        CubicSpline
-    };
+    enum class Interpolation { Linear, Step, CubicSpline };
 
     Interpolation interpolation;
 
