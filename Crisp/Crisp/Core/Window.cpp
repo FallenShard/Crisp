@@ -1,8 +1,12 @@
 #include <Crisp/Core/Window.hpp>
 
 #include <Crisp/Core/InputTranslator.hpp>
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp {
+namespace {
+auto logger = createLoggerMt("Window");
+} // namespace
 
 Window::Window(
     const glm::ivec2& position, const glm::ivec2& size, const std::string& title, const WindowVisibility visibility) {
@@ -94,7 +98,7 @@ void Window::close() {
 }
 
 void Window::setCursorState(CursorState cursorState) {
-    int value = cursorState == CursorState::Normal ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
+    const int value = cursorState == CursorState::Normal ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
     glfwSetInputMode(m_window, GLFW_CURSOR, value);
 }
 
@@ -124,6 +128,10 @@ glm::vec2 Window::getCursorPosition() const {
 
 bool Window::isKeyDown(Key key) const {
     return glfwGetKey(m_window, translateKeyToGlfw(key)) == GLFW_PRESS;
+}
+
+bool Window::isMouseButtonDown(MouseButton mouseButton) const {
+    return glfwGetMouseButton(m_window, translateMouseButtonToGlfw(mouseButton)) == GLFW_PRESS;
 }
 
 void Window::clearAllEvents() {

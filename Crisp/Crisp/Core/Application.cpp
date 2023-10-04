@@ -43,7 +43,6 @@ Application::Application(const ApplicationEnvironment& environment)
         environment.getParameters().enableRayTracingExtension);
     logger->trace("Renderer created!");
 
-    m_window.mouseButtonReleased.subscribe<&Application::onMouseButtonRelease>(this);
     m_window.resized.subscribe<&Application::onResize>(this);
     m_window.minimized.subscribe<&Application::onMinimize>(this);
     m_window.restored.subscribe<&Application::onRestore>(this);
@@ -73,6 +72,7 @@ void Application::run() {
             m_window, ImGui::GetIO().WantCaptureMouse ? EventType::AllMouseEvents : EventType::None);
 
         Window::pollEvents();
+        resizeIfNeeded();
 
         while (timeSinceLastUpdate > kTimePerFrame) {
             m_sceneContainer->update(static_cast<float>(kTimePerFrame));
@@ -151,7 +151,7 @@ void Application::onRestore() {
     m_isMinimized = false;
 }
 
-void Application::onMouseButtonRelease(const MouseEventArgs&) {
+void Application::resizeIfNeeded() {
     if (m_isResizing) {
         if (const auto size = m_window.getSize(); size.x != 0 && size.y != 0) {
             m_renderer->resize(size.x, size.y);

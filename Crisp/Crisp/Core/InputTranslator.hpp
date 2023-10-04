@@ -256,7 +256,7 @@ inline Key translateGlfwToKey(const int keyCode) {
 }
 
 inline int translateKeyToGlfw(Key key) {
-    return static_cast<std::underlying_type<Key>::type>(key);
+    return static_cast<std::underlying_type_t<Key>>(key);
 }
 
 inline MouseButton translateGlfwToMouseButton(int buttonCode) {
@@ -271,4 +271,9 @@ inline MouseButton translateGlfwToMouseButton(int buttonCode) {
         return MouseButton::Unknown;
     }
 }
+
+inline int translateMouseButtonToGlfw(const MouseButton button) {
+    return static_cast<std::underlying_type_t<MouseButton>>(button);
+}
+
 } // namespace crisp

@@ -43,7 +43,7 @@ private:
     void onMinimize();
     void onRestore();
     void onResize(int width, int height);
-    void onMouseButtonRelease(const MouseEventArgs& args);
+    void resizeIfNeeded();
 
     void drawGui();
 

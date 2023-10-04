@@ -14,7 +14,7 @@ public:
 
     void setSpeed(float speed);
 
-    void move(float dx, float dy);
+    void move(float dx, float dz);
     void updateOrientation(float dYaw, float dPitch);
 
     const Camera& getCamera() const;

@@ -53,7 +53,7 @@ void VulkanCommandBuffer::insertMemoryBarrier(
     VkAccessFlags srcAccess,
     VkPipelineStageFlags dstStage,
     VkAccessFlags dstAccess) const {
-    VkMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    VkMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
     barrier.srcStageMask = srcStage;
     barrier.srcAccessMask = srcAccess;
     barrier.dstStageMask = dstStage;
@@ -71,7 +71,7 @@ void VulkanCommandBuffer::insertBufferMemoryBarrier(
     VkAccessFlags srcAccess,
     VkPipelineStageFlags dstStage,
     VkAccessFlags dstAccess) const {
-    VkBufferMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+    VkBufferMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2};
     barrier.buffer = bufferInfo.buffer;
     barrier.offset = bufferInfo.offset;
     barrier.size = bufferInfo.range;

@@ -56,6 +56,7 @@ target_link_libraries(CrispWindow
     PUBLIC Crisp::Math
     PUBLIC Crisp::Event
     PUBLIC Crisp::Input
+    PRIVATE Crisp::Logger
     PUBLIC glfw
     PUBLIC Vulkan::Headers
 )

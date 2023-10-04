@@ -88,6 +88,7 @@ public:
     }
 
     bool isKeyDown(Key key) const;
+    bool isMouseButtonDown(MouseButton mouseButton) const;
 
     void clearAllEvents();
 
