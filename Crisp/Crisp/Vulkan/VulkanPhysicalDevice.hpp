@@ -98,6 +98,7 @@ private:
     VkPhysicalDeviceFeatures2 m_features;
     VkPhysicalDeviceVulkan11Features m_features11;
     VkPhysicalDeviceVulkan12Features m_features12;
+    VkPhysicalDeviceVulkan13Features m_features13;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR m_rayTracingFeatures;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures;
 
@@ -106,6 +107,7 @@ private:
     VkPhysicalDeviceProperties2 m_properties;
     VkPhysicalDeviceVulkan11Properties m_properties11;
     VkPhysicalDeviceVulkan12Properties m_properties12;
+    VkPhysicalDeviceVulkan13Properties m_properties13;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties;
     VkPhysicalDeviceMemoryProperties2 m_memoryProperties;
 
