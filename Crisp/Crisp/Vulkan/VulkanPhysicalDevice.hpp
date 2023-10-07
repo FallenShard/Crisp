@@ -95,21 +95,24 @@ private:
     bool supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const;
 
     VkPhysicalDevice m_handle; // Implicitly cleaned up with VkInstance
-    VkPhysicalDeviceFeatures2 m_features;
-    VkPhysicalDeviceVulkan11Features m_features11;
-    VkPhysicalDeviceVulkan12Features m_features12;
-    VkPhysicalDeviceVulkan13Features m_features13;
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR m_rayTracingFeatures;
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures;
 
-    VkPhysicalDeviceMaintenance4Features m_maintenanceFeatures4;
+    VkPhysicalDeviceFeatures2 m_features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    VkPhysicalDeviceVulkan11Features m_features11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+    VkPhysicalDeviceVulkan12Features m_features12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    VkPhysicalDeviceVulkan13Features m_features13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR m_rayTracingFeatures{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
 
-    VkPhysicalDeviceProperties2 m_properties;
-    VkPhysicalDeviceVulkan11Properties m_properties11;
-    VkPhysicalDeviceVulkan12Properties m_properties12;
-    VkPhysicalDeviceVulkan13Properties m_properties13;
-    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties;
-    VkPhysicalDeviceMemoryProperties2 m_memoryProperties;
+    VkPhysicalDeviceProperties2 m_properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    VkPhysicalDeviceVulkan11Properties m_properties11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES};
+    VkPhysicalDeviceVulkan12Properties m_properties12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES};
+    VkPhysicalDeviceVulkan13Properties m_properties13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES};
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+
+    VkPhysicalDeviceMemoryProperties2 m_memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 
     std::vector<std::string> m_deviceExtensions;
 };
