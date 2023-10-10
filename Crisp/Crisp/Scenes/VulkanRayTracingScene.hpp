@@ -16,9 +16,9 @@ class VulkanRayTracingScene : public Scene {
 public:
     VulkanRayTracingScene(Renderer* renderer, Window* window);
 
-    virtual void resize(int width, int height) override;
-    virtual void update(float dt) override;
-    virtual void render() override;
+    void resize(int width, int height) override;
+    void update(float dt) override;
+    void render() override;
 
 private:
     struct PbrUnifMaterialParams {

@@ -26,10 +26,11 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    auto& accessState = pass.inputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Texture;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // TODO(neman): parameterize.
-    accessState.access = VK_ACCESS_SHADER_READ_BIT;
+    pass.inputAccesses.push_back({
+        .usageType = ResourceUsageType::Texture,
+        .pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .access = VK_ACCESS_SHADER_READ_BIT,
+    });
 }
 
 void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
@@ -38,10 +39,11 @@ void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    auto& accessState = pass.inputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Storage;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    accessState.access = VK_ACCESS_SHADER_READ_BIT;
+    pass.inputAccesses.push_back({
+        .usageType = ResourceUsageType::Storage,
+        .pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .access = VK_ACCESS_SHADER_READ_BIT,
+    });
 }
 
 void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
@@ -51,10 +53,11 @@ void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    auto& accessState = pass.inputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Attachment;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    accessState.access = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    pass.inputAccesses.push_back({
+        .usageType = ResourceUsageType::Attachment,
+        .pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .access = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+    });
 }
 
 void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
@@ -64,10 +67,11 @@ void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    auto& accessState = pass.inputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Storage;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    accessState.access = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    pass.inputAccesses.push_back({
+        .usageType = ResourceUsageType::Storage,
+        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        .access = VK_ACCESS_SHADER_READ_BIT,
+    });
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
@@ -104,11 +108,14 @@ RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
     resource.producer = m_passHandle;
     resource.imageUsageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
 
-    m_renderGraph.getPass(m_passHandle).outputs.push_back(handle);
-    auto& accessState = m_renderGraph.getPass(m_passHandle).outputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Storage;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    accessState.access = VK_ACCESS_SHADER_WRITE_BIT;
+    auto& pass = m_renderGraph.getPass(m_passHandle);
+    pass.outputs.push_back(handle);
+    pass.outputAccesses.push_back({
+        .usageType = ResourceUsageType::Storage,
+        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        .access = VK_ACCESS_SHADER_WRITE_BIT,
+    });
+
     return handle;
 }
 
@@ -117,11 +124,14 @@ RenderGraphResourceHandle RenderGraph::Builder::createBuffer(
     const auto handle = m_renderGraph.addBufferResource(description, std::move(name));
     m_renderGraph.getResource(handle).producer = m_passHandle;
 
-    m_renderGraph.getPass(m_passHandle).outputs.push_back(handle);
-    auto& accessState = m_renderGraph.getPass(m_passHandle).outputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Storage;
-    accessState.pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    accessState.access = VK_ACCESS_SHADER_WRITE_BIT;
+    auto& pass = m_renderGraph.getPass(m_passHandle);
+    pass.outputs.push_back(handle);
+    pass.outputAccesses.push_back({
+        .usageType = ResourceUsageType::Storage,
+        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        .access = VK_ACCESS_SHADER_WRITE_BIT,
+    });
+
     return handle;
 }
 

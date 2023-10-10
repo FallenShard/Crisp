@@ -3,13 +3,11 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
-#include <random>
-
 namespace crisp {
 namespace {
-static constexpr const char* MainPass = "mainPass";
+constexpr const char* MainPass = "mainPass";
 
-static const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
+const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
 
 std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, const std::filesystem::path& relativePath) {
     return std::make_unique<Geometry>(
@@ -156,7 +154,7 @@ void VulkanRayTracingScene::render() {
 }
 
 RenderNode* VulkanRayTracingScene::createRenderNode(std::string id, int transformIndex) {
-    const TransformHandle handle{static_cast<uint16_t>(transformIndex), 0};
+    const TransformHandle handle{{{static_cast<uint16_t>(transformIndex), 0}}};
     auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
     m_renderNodes.emplace(id, std::move(node));
     return m_renderNodes.at(id).get();
@@ -209,11 +207,11 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline(
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups(
         4, {VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR});
-    for (uint32_t i = 0; i < groups.size(); ++i) {
-        groups[i].anyHitShader = VK_SHADER_UNUSED_KHR;
-        groups[i].closestHitShader = VK_SHADER_UNUSED_KHR;
-        groups[i].generalShader = VK_SHADER_UNUSED_KHR;
-        groups[i].intersectionShader = VK_SHADER_UNUSED_KHR;
+    for (auto& group : groups) {
+        group.anyHitShader = VK_SHADER_UNUSED_KHR;
+        group.closestHitShader = VK_SHADER_UNUSED_KHR;
+        group.generalShader = VK_SHADER_UNUSED_KHR;
+        group.intersectionShader = VK_SHADER_UNUSED_KHR;
     }
     groups[0].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
     groups[0].generalShader = 0;

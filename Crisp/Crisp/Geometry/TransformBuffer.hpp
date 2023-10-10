@@ -24,7 +24,7 @@ struct TransformHandle {
 
     consteval static TransformHandle createInvalidHandle() {
         constexpr auto kMaxValue = std::numeric_limits<uint16_t>::max();
-        return {{kMaxValue, kMaxValue}};
+        return {{{kMaxValue, kMaxValue}}};
     }
 };
 

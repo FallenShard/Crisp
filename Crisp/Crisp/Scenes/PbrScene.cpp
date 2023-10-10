@@ -210,8 +210,6 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
     });
     m_renderer->flushResourceUpdates(true);
 
-    auto& imageCache = m_resourceContext->imageCache;
-
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
         DirectionalLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5)),
@@ -237,7 +235,9 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
     createSceneObject();
 
     m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
-        *m_renderer, m_rg->getRenderPass(kForwardLightingPass), imageCache.getSampler("linearClamp"));
+        *m_renderer,
+        m_rg->getRenderPass(kForwardLightingPass),
+        m_resourceContext->imageCache.getSampler("linearClamp"));
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
@@ -249,11 +249,6 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
 
 void PbrScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
-
-    // m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(),
-    // m_renderer->getSwapChainExtent());
-
-    // m_renderGraph->resize(width, height);
 
     m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
         m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
