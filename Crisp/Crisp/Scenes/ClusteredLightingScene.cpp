@@ -253,9 +253,12 @@ void ClusteredLightingScene::createCommonTextures() {
     pbrMaterial->writeDescriptor(1, 0, *m_lightSystem->getPointLightBuffer());
     pbrMaterial->writeDescriptor(1, 1, *m_lightSystem->getLightIndexBuffer());
 
-    pbrMaterial->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), &imageCache.getSampler("linearClamp"));
-    pbrMaterial->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), &imageCache.getSampler("linearMipmap"));
-    pbrMaterial->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), &imageCache.getSampler("linearClamp"));
+    pbrMaterial->writeDescriptor(
+        2, 0, imageCache.getImageView("envIrrMap").getDescriptorInfo(&imageCache.getSampler("linearClamp")));
+    pbrMaterial->writeDescriptor(
+        2, 1, imageCache.getImageView("filteredMap").getDescriptorInfo(&imageCache.getSampler("linearMipmap")));
+    pbrMaterial->writeDescriptor(
+        2, 2, imageCache.getImageView("brdfLut").getDescriptorInfo(&imageCache.getSampler("linearClamp")));
 
     pbrMaterial->writeDescriptor(3, 0, m_lightSystem->getTileGridViews(), nullptr, VK_IMAGE_LAYOUT_GENERAL);
 }

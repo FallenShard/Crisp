@@ -64,7 +64,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
-    cubeMapMaterial->writeDescriptor(0, 0, *equirectMapView, sampler.get());
+    cubeMapMaterial->writeDescriptor(0, 0, equirectMapView->getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();
 
     renderer->enqueueResourceUpdate(
@@ -199,7 +199,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto convMaterial = std::make_unique<Material>(convPipelines[0].get());
-    convMaterial->writeDescriptor(0, 0, cubeMapView, sampler.get());
+    convMaterial->writeDescriptor(0, 0, cubeMapView.getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();
 
     renderer->enqueueResourceUpdate([&unitCube, &convPipelines, &convPass, &convMaterial](VkCommandBuffer cmdBuffer) {
@@ -279,7 +279,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
         }
 
         std::shared_ptr filterMat = std::make_unique<Material>(filterPipelines[0].get());
-        filterMat->writeDescriptor(0, 0, cubeMapView, sampler.get());
+        filterMat->writeDescriptor(0, 0, cubeMapView.getDescriptorInfo(sampler.get()));
         renderer->getDevice().flushDescriptorUpdates();
 
         renderer->enqueueResourceUpdate(

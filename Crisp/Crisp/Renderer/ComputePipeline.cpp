@@ -5,7 +5,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 
-#include <Crisp/ShadingLanguage/Reflection.hpp>
+#include <Crisp/ShaderUtils/Reflection.hpp>
 
 namespace crisp {
 FlatHashMap<VkPipeline, glm::uvec3> workGroupSizes;

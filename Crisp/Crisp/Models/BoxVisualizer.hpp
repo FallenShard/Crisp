@@ -15,7 +15,6 @@ class CameraController;
 
 class Renderer;
 class UniformBuffer;
-class IndexBuffer;
 
 class MeshGeometry;
 class VulkanPipeline;

@@ -20,8 +20,6 @@ public:
     // Methods to update a descriptor referencing an image.
     void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo&& imageInfo);
     void writeDescriptor(
-        uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler);
-    void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler& sampler);
     void writeDescriptor(
         uint32_t setIndex,

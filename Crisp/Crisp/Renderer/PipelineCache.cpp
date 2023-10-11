@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
+#include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
 namespace crisp {
 PipelineCache::PipelineCache(const AssetPaths& assetPaths)

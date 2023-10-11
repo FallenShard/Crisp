@@ -12,6 +12,17 @@ target_link_libraries(CrispPipelineBuilder
     PUBLIC Crisp::CoreUtils
 )
 
+add_cpp_static_library(CrispShaderCache
+    "ShaderCache.hpp"
+    "ShaderCache.cpp"
+)
+target_link_libraries(CrispShaderCache
+    PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::Logger
+    PRIVATE Crisp::FileUtils
+)
+
 add_cpp_static_library(CrispRenderer
     "RenderPasses/BlurPass.cpp"
     "RenderPasses/BlurPass.hpp"
@@ -33,8 +44,8 @@ add_cpp_static_library(CrispRenderer
     "ComputePipeline.cpp"
     "ComputePipeline.hpp"
     "DrawCommand.hpp"
-    "IndexBuffer.cpp"
-    "IndexBuffer.hpp"
+    "VulkanRingBuffer.cpp"
+    "VulkanRingBuffer.hpp"
     "Material.cpp"
     "Material.hpp"
     "Renderer.cpp"
@@ -54,8 +65,6 @@ add_cpp_static_library(CrispRenderer
     "UniformBuffer.hpp"
     "UniformMultiBuffer.cpp"
     "UniformMultiBuffer.hpp"
-    "VertexBuffer.cpp"
-    "VertexBuffer.hpp"
     "RendererFrame.cpp"
     "RendererFrame.hpp"
     "VulkanBufferUtils.cpp"
@@ -72,10 +81,7 @@ add_cpp_static_library(CrispRenderer
     "PipelineCache.hpp"
     "RenderTargetCache.cpp"
     "RenderTargetCache.hpp"
-
     "AssetPaths.hpp"
-    "ShaderCache.hpp"
-    "ShaderCache.cpp"
 )
 target_link_libraries(CrispRenderer
     PUBLIC Crisp::BitFlags
@@ -90,11 +96,11 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::RendererConfig
     PUBLIC Crisp::FrameContext
     PUBLIC tbb
-    PRIVATE Crisp::FileUtils
     PUBLIC Crisp::SpvReflection
     PRIVATE Crisp::ApplicationEnvironment
     PRIVATE Crisp::ShaderCompiler
     PUBLIC Crisp::PipelineBuilder
+    PUBLIC Crisp::ShaderCache
 )
 
 add_cpp_static_library(CrispImageCache

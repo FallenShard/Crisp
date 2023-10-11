@@ -1,8 +1,7 @@
-#include "BoxVisualizer.hpp"
+#include <Crisp/Models/BoxVisualizer.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 
-#include <Crisp/Renderer/IndexBuffer.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>

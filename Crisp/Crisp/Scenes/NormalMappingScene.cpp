@@ -181,9 +181,12 @@ void NormalMappingScene::createPlane() {
     Material* material = m_resourceContext->createMaterial("normalMap", pipeline);
     material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
-    material->writeDescriptor(1, 0, imageCache.getImageView("normalMap"), &imageCache.getSampler("linearRepeat"));
-    material->writeDescriptor(1, 1, imageCache.getImageView("diffuseMap"), &imageCache.getSampler("linearRepeat"));
-    material->writeDescriptor(1, 2, imageCache.getImageView("specularMap"), &imageCache.getSampler("linearRepeat"));
+    material->writeDescriptor(
+        1, 0, imageCache.getImageView("normalMap").getDescriptorInfo(&imageCache.getSampler("linearRepeat")));
+    material->writeDescriptor(
+        1, 1, imageCache.getImageView("diffuseMap").getDescriptorInfo(&imageCache.getSampler("linearRepeat")));
+    material->writeDescriptor(
+        1, 2, imageCache.getImageView("specularMap").getDescriptorInfo(&imageCache.getSampler("linearRepeat")));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M =

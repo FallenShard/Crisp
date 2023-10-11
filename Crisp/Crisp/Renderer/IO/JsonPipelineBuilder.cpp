@@ -6,7 +6,7 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/ShadingLanguage/Reflection.hpp>
+#include <Crisp/ShaderUtils/Reflection.hpp>
 
 #include <string_view>
 

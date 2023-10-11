@@ -5,8 +5,8 @@ Material::Material(VulkanPipeline* pipeline)
     : Material(pipeline, pipeline->getPipelineLayout()->getDescriptorSetAllocator()) {}
 
 Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator)
-    : m_pipeline(pipeline)
-    , m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice())) {
+    : m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice()))
+    , m_pipeline(pipeline) {
     const std::size_t setCount = m_pipeline->getPipelineLayout()->getDescriptorSetLayoutCount();
 
     for (auto& setVector : m_sets) {
@@ -41,19 +41,17 @@ void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptor
     const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write), imageInfo);
+        m_device->postDescriptorWrite(
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = m_sets[i][setIndex],
+                .dstBinding = binding,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = m_pipeline->getDescriptorType(setIndex, binding),
+            },
+            imageInfo);
     }
-}
-
-void Material::writeDescriptor(
-    uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler* sampler) {
-    writeDescriptor(setIndex, binding, imageView.getDescriptorInfo(sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 }
 
 void Material::writeDescriptor(

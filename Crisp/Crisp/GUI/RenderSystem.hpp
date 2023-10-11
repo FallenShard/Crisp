@@ -1,9 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <set>
-#include <unordered_map>
-
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
@@ -11,13 +7,15 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Math/Rect.hpp>
 
-#include <Crisp/Renderer/IndexBuffer.hpp>
-#include <Crisp/Renderer/VertexBuffer.hpp>
+#include <Crisp/Renderer/VulkanRingBuffer.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/Material.hpp>
 
 #include <Crisp/Renderer/RenderTargetCache.hpp>
+
+#include <set>
+#include <string_view>
 
 namespace crisp {
 class Renderer;
@@ -25,7 +23,6 @@ class VulkanPipeline;
 class VulkanImageView;
 class VulkanDevice;
 
-class IndexBuffer;
 class Texture;
 
 class VulkanRenderPass;
@@ -63,7 +60,7 @@ public:
     unsigned int registerTextResource(std::string text, unsigned int fontId);
     glm::vec2 updateTextResource(unsigned int textResId, const std::string& text, unsigned int fontId);
     void unregisterTextResource(unsigned int textResId);
-    glm::vec2 queryTextExtent(std::string text, unsigned int fontId) const;
+    glm::vec2 queryTextExtent(std::string_view text, unsigned int fontId) const;
 
     void drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const;
     void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const;
@@ -81,7 +78,7 @@ public:
     const Renderer& getRenderer() const;
     glm::vec2 getScreenSize() const;
 
-    uint32_t getFont(std::string name, uint32_t pixelSize);
+    uint32_t getFont(const std::string& name, uint32_t pixelSize);
 
 private:
     void createPipelines();
@@ -140,8 +137,8 @@ private:
         uint32_t bindingCount;
         std::vector<VkBuffer> buffers;
         std::vector<VkDeviceSize> offsets;
-        std::unique_ptr<VertexBuffer> vertexBuffer;
-        std::unique_ptr<IndexBuffer> indexBuffer;
+        std::unique_ptr<VulkanRingBuffer> vertexBuffer;
+        std::unique_ptr<VulkanRingBuffer> indexBuffer;
         VkDeviceSize indexBufferOffset;
         uint32_t indexCount;
 

@@ -3,7 +3,6 @@
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <filesystem>
 #include <optional>

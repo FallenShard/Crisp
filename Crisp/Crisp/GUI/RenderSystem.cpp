@@ -1,8 +1,7 @@
-#include "RenderSystem.hpp"
+#include <Crisp/GUI/RenderSystem.hpp>
 #define NOMINMAX
 
 #include <algorithm>
-#include <iostream>
 
 #include <Crisp/IO/FontLoader.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
@@ -77,7 +76,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
     : m_renderer(renderer) {
     float width = static_cast<float>(m_renderer->getSwapChainExtent().width);
     float height = static_cast<float>(m_renderer->getSwapChainExtent().height);
-    m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + kDepthLayers);
+    m_P = glm::ortho(0.0f, width, 0.0f, height, 0.5f, 0.5f + kDepthLayers); // NOLINT
 
     // Create the render pass where all GUI controls will be drawn
     m_guiPass = createGuiRenderPass(m_renderer->getDevice(), m_renderTargetCache, m_renderer->getSwapChainExtent());
@@ -101,7 +100,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     // Initialize resources to support dynamic addition of MVP transform resources
 
-    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets;
+    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets; // NOLINT
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++) {
         transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
     }
@@ -113,7 +112,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
         m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
     // Initialize resources to support dynamic addition of textured controls
-    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets;
+    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets; // NOLINT
     for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++) {
         tcSets[i] = m_texQuadPipeline->allocateDescriptorSet(1).getHandle();
     }
@@ -171,12 +170,12 @@ unsigned int RenderSystem::registerTexCoordResource() {
     return m_tcTransforms->registerResource();
 }
 
-void RenderSystem::updateTexCoordResource(unsigned int tcTransId, const glm::vec4& tcTrans) {
-    m_tcTransforms->updateResource(tcTransId, glm::value_ptr(tcTrans));
+void RenderSystem::updateTexCoordResource(unsigned int resourceId, const glm::vec4& tcTrans) {
+    m_tcTransforms->updateResource(resourceId, glm::value_ptr(tcTrans));
 }
 
-void RenderSystem::unregisterTexCoordResource(unsigned int tcTransId) {
-    m_tcTransforms->unregisterResource(tcTransId);
+void RenderSystem::unregisterTexCoordResource(unsigned int resourceId) {
+    m_tcTransforms->unregisterResource(resourceId);
 }
 
 unsigned int RenderSystem::registerTextResource(std::string text, unsigned int fontId) {
@@ -194,13 +193,16 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
     textRes->allocatedFaceCount = TextGeometryResource::kNumInitialAllocatedCharacters * 2;   // 2 Triangles per letter
     textRes->updatedBufferIndex = 0;
     textRes->isUpdatedOnDevice = false;
-    textRes->vertexBuffer = std::make_unique<VertexBuffer>(
-        m_renderer, textRes->allocatedVertexCount * sizeof(glm::vec4), BufferUpdatePolicy::PerFrame);
-    textRes->indexBuffer = std::make_unique<IndexBuffer>(
+    textRes->vertexBuffer = std::make_unique<VulkanRingBuffer>(
         m_renderer,
-        VK_INDEX_TYPE_UINT16,
-        BufferUpdatePolicy::PerFrame,
-        textRes->allocatedFaceCount * sizeof(glm::u16vec3));
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        textRes->allocatedVertexCount * sizeof(glm::vec4),
+        BufferUpdatePolicy::PerFrame);
+    textRes->indexBuffer = std::make_unique<VulkanRingBuffer>(
+        m_renderer,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        textRes->allocatedFaceCount * sizeof(glm::u16vec3),
+        BufferUpdatePolicy::PerFrame);
     textRes->firstBinding = 0;
     textRes->bindingCount = 1;
     textRes->buffers = {textRes->vertexBuffer->get()};
@@ -208,7 +210,7 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
     textRes->indexBufferOffset = 0;
     textRes->indexCount = 32;
     textRes->descSet = m_fonts.at(fontId)->descSet;
-    textRes->updateStagingBuffer(text, *m_fonts.at(fontId)->font.get());
+    textRes->updateStagingBuffer(std::move(text), *m_fonts.at(fontId)->font);
 
     m_textResources.emplace_back(std::move(textRes));
 
@@ -226,7 +228,7 @@ void RenderSystem::unregisterTextResource(unsigned int textResId) {
     m_textResourceIdPool.insert(textResId);
 }
 
-glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) const {
+glm::vec2 RenderSystem::queryTextExtent(const std::string_view text, unsigned int fontId) const {
     glm::vec2 extent = glm::vec2(0.0f, 0.0f);
     auto font = m_fonts.at(fontId)->font.get();
     for (auto& character : text) {
@@ -237,8 +239,8 @@ glm::vec2 RenderSystem::queryTextExtent(std::string text, unsigned int fontId) c
     return extent;
 }
 
-void RenderSystem::drawQuad(unsigned int transformResourceId, uint32_t colorId, float depth) const {
-    m_drawCommands.emplace_back(&RenderSystem::renderQuad, transformResourceId, colorId, depth);
+void RenderSystem::drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const {
+    m_drawCommands.emplace_back(&RenderSystem::renderQuad, transformId, colorResourceId, depth);
 }
 
 void RenderSystem::drawTexture(
@@ -246,8 +248,10 @@ void RenderSystem::drawTexture(
     m_drawCommands.emplace_back(&RenderSystem::renderTexture, transformId, colorId, texCoordId, depth);
 }
 
-void RenderSystem::drawText(unsigned int textResId, unsigned int transformId, uint32_t colorId, float depth) const {
-    m_drawCommands.emplace_back(&RenderSystem::renderText, transformId, colorId, textResId, depth);
+void RenderSystem::drawText(
+    unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth) const {
+    m_drawCommands.emplace_back(
+        &RenderSystem::renderText, transformResourceId, colorResourceId, textRenderResourceId, depth);
 }
 
 void RenderSystem::drawDebugRect(Rect<float> rect, glm::vec4 color) const {
@@ -268,9 +272,10 @@ void RenderSystem::submitDrawCommands() {
             auto textRes = textResource.get();
             if (!textRes->isUpdatedOnDevice) {
                 textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % RendererConfig::VirtualFrameCount;
-                textRes->offsets[0] = textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4);
+                textRes->offsets[0] =
+                    textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4); // NOLINT
                 textRes->indexBufferOffset =
-                    textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3);
+                    textRes->updatedBufferIndex * textRes->allocatedFaceCount * sizeof(glm::u16vec3); // NOLINT
                 textRes->vertexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
                 textRes->indexBuffer->updateDeviceBuffer(commandBuffer, textRes->updatedBufferIndex);
 
@@ -291,7 +296,7 @@ void RenderSystem::submitDrawCommands() {
             (this->*(cmd.drawFuncPtr))(commandBuffer, currentFrame, cmd);
         }
 
-        for (int i = 0; i < m_debugRects.size(); i++) {
+        for (uint32_t i = 0; i < m_debugRects.size(); i++) {
             renderDebugRect(commandBuffer, m_debugRects[i], m_rectColors[i]);
         }
 
@@ -347,7 +352,7 @@ glm::vec2 RenderSystem::getScreenSize() const {
     return {m_renderer->getSwapChainExtent().width, m_renderer->getSwapChainExtent().height};
 }
 
-uint32_t RenderSystem::getFont(std::string name, uint32_t pixelSize) {
+uint32_t RenderSystem::getFont(const std::string& name, uint32_t pixelSize) {
     for (uint32_t i = 0; i < m_fonts.size(); ++i) {
         auto& font = m_fonts[i]->font;
         if (font->name == name && font->pixelSize == pixelSize) {
@@ -577,11 +582,11 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
     std::vector<glm::vec4> textVertices;
     std::vector<glm::u16vec3> textFaces;
 
-    unsigned short ind = 0;
+    uint16_t ind = 0;
     float currentX = 0.f;
     float currentY = 0.f;
-    float atlasWidth = static_cast<float>(font.width);
-    float atlasHeight = static_cast<float>(font.height);
+    const auto atlasWidth = static_cast<float>(font.width);
+    const auto atlasHeight = static_cast<float>(font.height);
 
     extent = glm::vec2(0.0f, 0.0f);
     for (auto& character : text) {
@@ -613,13 +618,13 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
     vertexCount = static_cast<uint32_t>(textVertices.size());
     indexCount = static_cast<uint32_t>(textFaces.size()) * 3;
 
-    vertexBuffer->updateStagingBuffer(textVertices);
-    indexBuffer->updateStagingBuffer(textFaces);
+    vertexBuffer->updateStagingBuffer(textVertices.data(), textVertices.size() * sizeof(glm::vec4));
+    indexBuffer->updateStagingBuffer(textFaces.data(), textFaces.size() * sizeof(glm::u16vec3));
 }
 
 void RenderSystem::TextGeometryResource::drawIndexed(VkCommandBuffer cmdBuffer) const {
     vkCmdBindVertexBuffers(cmdBuffer, firstBinding, bindingCount, buffers.data(), offsets.data());
-    indexBuffer->bind(cmdBuffer, indexBufferOffset);
+    vkCmdBindIndexBuffer(cmdBuffer, indexBuffer->get(), indexBufferOffset, VK_INDEX_TYPE_UINT16);
     vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);
 }
 } // namespace crisp::gui

@@ -6,7 +6,6 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
 #include <memory>
-#include <vector>
 
 namespace crisp {
 class Renderer;
@@ -36,46 +35,46 @@ struct IndexTypeTrait<glm::uvec4> {
 };
 } // namespace internal
 
-class IndexBuffer {
+class VulkanRingBuffer {
 public:
-    IndexBuffer(
+    VulkanRingBuffer(
         Renderer* renderer,
-        VkIndexType indexType,
-        BufferUpdatePolicy updatePolicy,
+        VkBufferUsageFlagBits bufferType,
         size_t size,
+        BufferUpdatePolicy updatePolicy,
         const void* data = nullptr);
 
-    template <typename T>
-    IndexBuffer(
-        Renderer* renderer, const std::vector<T>& data, BufferUpdatePolicy updatePolicy = BufferUpdatePolicy::Constant)
-        : IndexBuffer(
-              renderer, internal::IndexTypeTrait<T>::value, updatePolicy, data.size() * sizeof(T), data.data()) {}
+    VulkanRingBuffer(const VulkanRingBuffer&) = delete;
+    VulkanRingBuffer& operator=(const VulkanRingBuffer&) = delete;
 
-    ~IndexBuffer();
+    VulkanRingBuffer(VulkanRingBuffer&&) noexcept = default;
+    VulkanRingBuffer& operator=(VulkanRingBuffer&&) noexcept = default;
+
+    ~VulkanRingBuffer();
 
     inline VkBuffer get() const {
         return m_buffer->getHandle();
     }
 
     void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
+    void updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex);
 
-    template <typename T>
-    void updateStagingBuffer(const std::vector<T>& vec) {
-        updateStagingBuffer(vec.data(), vec.size() * sizeof(T));
-    }
-
-    void updateDeviceBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrameIndex);
-
-    void bind(VkCommandBuffer& commandBuffer, VkDeviceSize offset);
+    uint32_t getRegionOffset(uint32_t regionIndex) const;
+    VkDescriptorBufferInfo getDescriptorInfo() const;
+    VkDescriptorBufferInfo getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const;
+    VkDescriptorBufferInfo getDescriptorInfo(uint32_t currentFrameIndex) const;
 
 private:
     Renderer* m_renderer;
 
+    VkBufferUsageFlagBits m_bufferType;
+
     BufferUpdatePolicy m_updatePolicy;
+    VkDeviceSize m_size;
     VkDeviceSize m_singleRegionSize;
     std::unique_ptr<VulkanBuffer> m_buffer;
     std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
 
-    VkIndexType m_indexType;
+    uint32_t m_framesToUpdateOnGpu;
 };
 } // namespace crisp

@@ -6,7 +6,7 @@
 #include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
-#include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
+#include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
 namespace crisp {
 namespace {

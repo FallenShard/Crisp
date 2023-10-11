@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Reflection.hpp>
+#include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
