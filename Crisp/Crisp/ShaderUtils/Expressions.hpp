@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Token.hpp>
-#include <Crisp/ShadingLanguage/Visitor.hpp>
+#include <Crisp/ShaderUtils/Token.hpp>
+#include <Crisp/ShaderUtils/Visitor.hpp>
 
 #include <memory>
 #include <vector>

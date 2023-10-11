@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Expressions.hpp>
-#include <Crisp/ShadingLanguage/Statements.hpp>
-#include <Crisp/ShadingLanguage/Token.hpp>
-#include <Crisp/ShadingLanguage/Visitor.hpp>
+#include <Crisp/ShaderUtils/Expressions.hpp>
+#include <Crisp/ShaderUtils/Statements.hpp>
+#include <Crisp/ShaderUtils/Token.hpp>
+#include <Crisp/ShaderUtils/Visitor.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 

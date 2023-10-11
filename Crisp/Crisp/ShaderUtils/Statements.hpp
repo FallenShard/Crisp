@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Expressions.hpp>
-#include <Crisp/ShadingLanguage/Visitor.hpp>
+#include <Crisp/ShaderUtils/Expressions.hpp>
+#include <Crisp/ShaderUtils/Visitor.hpp>
 
 namespace crisp::sl {
 struct Statement {

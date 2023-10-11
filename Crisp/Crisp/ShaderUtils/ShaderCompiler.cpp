@@ -1,6 +1,6 @@
-#include <Crisp/ShadingLanguage/ShaderCompiler.hpp>
+#include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
-#include <Crisp/ShadingLanguage/ShaderType.hpp>
+#include <Crisp/ShaderUtils/ShaderType.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>

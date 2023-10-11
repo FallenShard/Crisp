@@ -1,4 +1,4 @@
-#include <Crisp/ShadingLanguage/ShaderType.hpp>
+#include <Crisp/ShaderUtils/ShaderType.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
 

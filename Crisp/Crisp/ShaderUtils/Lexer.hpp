@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Token.hpp>
+#include <Crisp/ShaderUtils/Token.hpp>
 
 #include <filesystem>
 

@@ -1,4 +1,4 @@
-#include <Crisp/ShadingLanguage/Parser.hpp>
+#include <Crisp/ShaderUtils/Parser.hpp>
 
 namespace crisp::sl {
 Parser::Parser(const std::vector<Token>& tokens)

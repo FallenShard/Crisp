@@ -1,4 +1,4 @@
-#include <Crisp/ShadingLanguage/Lexer.hpp>
+#include <Crisp/ShaderUtils/Lexer.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/IO/FileUtils.hpp>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Crisp/ShadingLanguage/Lexer.hpp>
-#include <Crisp/ShadingLanguage/Statements.hpp>
+#include <Crisp/ShaderUtils/Lexer.hpp>
+#include <Crisp/ShaderUtils/Statements.hpp>
 
 #include <iostream>
 #include <memory>

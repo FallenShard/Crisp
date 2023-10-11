@@ -1,4 +1,4 @@
-#include <Crisp/ShadingLanguage/Reflection.hpp>
+#include <Crisp/ShaderUtils/Reflection.hpp>
 
 #include <gmock/gmock.h>
 #include <spirv_reflect.h>
