@@ -41,4 +41,5 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::PathTracer
     PRIVATE Crisp::Application
     PRIVATE Crisp::RenderGraph
+    PRIVATE Crisp::RayTracingPipelineBuilder
 )

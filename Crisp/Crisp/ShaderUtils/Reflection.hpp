@@ -20,4 +20,7 @@ Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath);
 
 Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath);
 Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(std::span<const char> spirvShader);
+
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPaths(
+    std::span<const std::filesystem::path> filePaths);
 } // namespace crisp

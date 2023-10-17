@@ -8,7 +8,7 @@
 #include <string>
 
 namespace crisp {
-Result<VkShaderStageFlags> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath);
-Result<VkShaderStageFlags> getShaderStageFromShaderType(const std::string& glslShaderType);
+Result<VkShaderStageFlagBits> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath);
+Result<VkShaderStageFlagBits> getShaderStageFromShaderType(const std::string& glslShaderType);
 bool isGlslShaderExtension(const std::string& extension);
 } // namespace crisp

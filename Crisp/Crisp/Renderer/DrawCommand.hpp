@@ -17,10 +17,10 @@ struct PushConstantView {
     const void* data = nullptr;
     VkDeviceSize size = 0;
 
-    PushConstantView() {}
+    PushConstantView() = default;
 
     template <typename T>
-    PushConstantView(const T& pushConstant)
+    explicit PushConstantView(const T& pushConstant)
         : data(&pushConstant)
         , size(sizeof(T)) {}
 
@@ -93,7 +93,7 @@ struct DrawCommand {
 
     template <typename GeometryView>
     inline void setGeometryView(GeometryView&& view) {
-        geometryView = std::move(view);
+        geometryView = std::forward<GeometryView>(view);
         drawFunc = detail::getDrawFunc<GeometryView>();
     }
 

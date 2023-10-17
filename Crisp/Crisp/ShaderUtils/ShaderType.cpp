@@ -12,7 +12,9 @@ const FlatHashMap<std::string, VkShaderStageFlagBits> kShaderStageMap = {
     {"geom", VK_SHADER_STAGE_GEOMETRY_BIT},
     {"comp", VK_SHADER_STAGE_COMPUTE_BIT},
     {"rgen", VK_SHADER_STAGE_RAYGEN_BIT_KHR},
-    {"rchit", VK_SHADER_STAGE_ANY_HIT_BIT_KHR},
+    {"rchit", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR},
+    {"rahit", VK_SHADER_STAGE_ANY_HIT_BIT_KHR},
+    {"rits", VK_SHADER_STAGE_INTERSECTION_BIT_KHR},
     {"rmiss", VK_SHADER_STAGE_MISS_BIT_KHR},
     {"rcall", VK_SHADER_STAGE_CALLABLE_BIT_KHR},
     {"mesh", VK_SHADER_STAGE_MESH_BIT_EXT},
@@ -20,12 +22,16 @@ const FlatHashMap<std::string, VkShaderStageFlagBits> kShaderStageMap = {
 };
 } // namespace
 
-Result<VkShaderStageFlags> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath) {
-    // Convert "../path/to/shader.type.glsl" to type
-    return getShaderStageFromShaderType(glslShaderFilePath.stem().extension().string().substr(1));
+Result<VkShaderStageFlagBits> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath) {
+    if (glslShaderFilePath.extension() == ".glsl") {
+        // Convert "../path/to/shader.type.glsl" to type
+        return getShaderStageFromShaderType(glslShaderFilePath.stem().extension().string().substr(1));
+    }
+    // Convert "../path/to/shader.type" to type
+    return getShaderStageFromShaderType(glslShaderFilePath.extension().string().substr(1));
 }
 
-Result<VkShaderStageFlags> getShaderStageFromShaderType(const std::string& shaderType) {
+Result<VkShaderStageFlagBits> getShaderStageFromShaderType(const std::string& shaderType) {
     if (shaderType.empty()) {
         return resultError("Empty string passed to getShaderStageFromShaderType()!");
     }
@@ -34,7 +40,7 @@ Result<VkShaderStageFlags> getShaderStageFromShaderType(const std::string& shade
         return it->second;
     }
 
-    return resultError("Unknown shader stage: {}!", shaderType.size());
+    return resultError("Unknown shader stage: {}!", shaderType);
 }
 
 bool isGlslShaderExtension(const std::string& extension) {

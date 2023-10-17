@@ -182,4 +182,18 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
     return metadata;
 }
 
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPaths(
+    std::span<const std::filesystem::path> filePaths) {
+    ShaderUniformInputMetadata data{};
+    for (const auto& path : filePaths) {
+        auto result{reflectUniformMetadataFromSpirvPath(path)};
+        if (!result) {
+            return resultError("Could not parse reflection data from '{}'", path.string());
+        }
+        data.merge(result.extract());
+    }
+
+    return data;
+}
+
 } // namespace crisp

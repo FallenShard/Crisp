@@ -21,6 +21,8 @@ public:
     void render() override;
 
 private:
+    void renderGui() override;
+
     struct PbrUnifMaterialParams {
         glm::vec4 albedo;
         float metallic;
@@ -29,8 +31,7 @@ private:
 
     RenderNode* createRenderNode(std::string id, int transformIndex);
 
-    std::unique_ptr<VulkanPipelineLayout> createPipelineLayout();
-    std::unique_ptr<VulkanPipeline> createPipeline(std::unique_ptr<VulkanPipelineLayout> pipelineLayout);
+    std::unique_ptr<VulkanPipeline> createPipeline();
     void updateDescriptorSets();
 
     void setupInput();
@@ -63,6 +64,12 @@ private:
 
     ShaderBindingTable m_sbt;
 
-    uint32_t m_frameIdx{0};
+    struct IntegratorParameters {
+        int maxBounces{32};
+        int sampleCount{10};
+        int frameIdx{0};
+    };
+
+    IntegratorParameters m_integratorParams;
 };
 } // namespace crisp

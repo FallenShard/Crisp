@@ -161,7 +161,7 @@ VkShaderModule Renderer::getShaderModule(const std::string& key) const {
 }
 
 VkShaderModule Renderer::getOrLoadShaderModule(const std::string& key) {
-    return m_shaderCache->getOrLoadShaderModule(m_assetPaths.spvShaderDir / (key + ".spv"));
+    return m_shaderCache->getOrLoadShaderModule(m_assetPaths.getSpvShaderPath(key));
 }
 
 void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const {
