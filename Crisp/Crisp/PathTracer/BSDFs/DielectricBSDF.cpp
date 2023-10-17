@@ -12,7 +12,7 @@ DielectricBSDF::DielectricBSDF(const VariantMap& params)
 }
 
 Spectrum DielectricBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const {
-    return Spectrum(0.0f);
+    return {0.0f};
 }
 
 Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const {
@@ -32,7 +32,7 @@ Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
         bsdfSample.eta = 1.0f;
         bsdfSample.pdf = fresnel;
 
-        return Spectrum(1.0f);
+        return {1.0f};
     }
 
     // Normal to use for refraction direction formula
@@ -47,7 +47,7 @@ Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
     bsdfSample.pdf = 1.0f - fresnel;
 
     // Return the bsdf sample
-    return Spectrum(eta * eta);
+    return {eta * eta};
 }
 
 float DielectricBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const {

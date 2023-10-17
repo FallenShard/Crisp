@@ -230,9 +230,9 @@ void TriangleMesh::transform(const glm::mat4& transform) {
         p = glm::vec3(transform * glm::vec4(p, 1.0f));
     }
 
-    glm::mat4 invTransp = glm::inverse(glm::transpose(transform));
+    const glm::mat4 invTransp = glm::inverse(glm::transpose(transform));
     for (auto& n : m_normals) {
-        n = glm::vec3(invTransp * glm::vec4(n, 0.0f));
+        n = glm::normalize(glm::vec3(invTransp * glm::vec4(n, 0.0f)));
     }
 
     for (auto& t : m_tangents) {

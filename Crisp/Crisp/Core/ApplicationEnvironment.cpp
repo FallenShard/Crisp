@@ -51,6 +51,7 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     m_resourcesPath = m_config["resourcesPath"].get<std::string>();
     m_shaderSourcesPath = m_config["shaderSourcesPath"].get<std::string>();
     m_arguments.scene = m_config["scene"].get<std::string>();
+    m_arguments.enableRayTracingExtension = getIfExists<bool>(m_config, "enableVulkanRayTracing").value_or(false);
 }
 
 ApplicationEnvironment::~ApplicationEnvironment() {

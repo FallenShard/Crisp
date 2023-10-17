@@ -1,7 +1,6 @@
 #include <Crisp/Geometry/Geometry.hpp>
 
 #include <Crisp/Core/Checks.hpp>
-#include <cstddef>
 
 namespace crisp {
 namespace {
@@ -65,7 +64,7 @@ Geometry::Geometry(
         m_offsets.push_back(0);
     }
 
-    m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(glm::uvec3));
+    m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(glm::uvec3), usageFlags);
     renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
 
     m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size()); // NOLINT
