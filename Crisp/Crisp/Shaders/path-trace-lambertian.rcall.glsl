@@ -1,27 +1,9 @@
 #version 460 core
 #extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
 
-#define PI 3.1415926535897932384626433832795
-#define InvPI 0.31830988618379067154
-#define InvTwoPI 0.15915494309189533577f
-
-struct BsdfSample
-{
-    // Input: rng sample.
-    vec2 unitSample;
-    vec2 pad0;
-
-    // Input: normal at the hit location.
-    vec3 normal;
-    float pad1;
-
-    // Output: new direction.
-    vec3 sampleDirection;
-    float samplePdf;
-
-    vec3 eval;
-    float pad2;
-};
+#include "Parts/path-tracer-payload.part.glsl"
+#include "Parts/math-constants.part.glsl"
 
 layout(location = 0) callableDataInEXT BsdfSample bsdfSample;
 

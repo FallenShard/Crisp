@@ -1,27 +1,12 @@
 #version 460 core
 #extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
 
-#define PI 3.1415926535897932384626433832795
-#define InvPI 0.31830988618379067154
-const int kMaxBounces = 1024;
+#include "Parts/path-tracer-payload.part.glsl"
+#include "Parts/math-constants.part.glsl"
+#include "Parts/rng.part.glsl"
+
 const int kPayloadIndex = 0;
-
-struct HitInfo
-{
-    vec3 position;
-    float tHit;
-
-    vec3 sampleDirection;
-    float samplePdf;
-
-    vec3 Le;
-    uint bounceCount;
-
-    vec3 bsdfEval;
-    uint rngSeed;
-
-    vec4 debugValue;
-};
 
 layout(location = 0) rayPayloadEXT HitInfo hitInfo;
 
@@ -38,56 +23,12 @@ layout(set = 0, binding = 2) uniform Camera
     vec2 nearFar;
 } camera;
 
-// From https://redirect.cs.umbc.edu/~olano/papers/GPUTEA.pdf.
-uint tea(uint val0, uint val1)
+layout(set = 0, binding = 3) uniform IntegratorParameters
 {
-  uint v0 = val0;
-  uint v1 = val1;
-  uint s0 = 0;
-
-  for(uint n = 0; n < 16; n++)
-  {
-    s0 += 0x9e3779b9;
-    v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
-    v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
-  }
-
-  return v0;
-}
-
-// uint xorshift32(inout uint state)
-// {
-// 	/* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
-// 	uint x = state;
-// 	x ^= x << 13;
-// 	x ^= x >> 17;
-// 	x ^= x << 5;
-//     state = x;
-// 	return x;
-// }
-
-// float rndFloat(inout uint state)
-// {
-//     uint s = xorshift32(state);
-//     return uintBitsToFloat(s >> 9) - 1.0f;
-// }
-
-uint rndUint(inout uint seed)
-{
-    return (seed = 1664525 * seed + 1013904223);
-}
-
-float rndFloat(inout uint seed)
-{
-    const uint one = 0x3f800000;
-    const uint msk = 0x007fffff;
-    return uintBitsToFloat(one | (msk & (rndUint(seed) >> 9))) - 1;
-}
-
-layout(push_constant) uniform PushConstant
-{
-    uint frameIdx;
-} pushConst;
+    int maxBounces;
+    int sampleCount;
+    int frameIdx;
+} integrator;
 
 void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
 {
@@ -121,7 +62,7 @@ vec3 computeRadiance(inout uint seed)
 
     vec3 debugColor = vec3(0.0f);
     int bounceCount = 0;
-    while (bounceCount < kMaxBounces)
+    while (bounceCount < integrator.maxBounces)
     {
         hitInfo.bounceCount = bounceCount;
         hitInfo.rngSeed = seed;
@@ -169,21 +110,21 @@ vec3 computeRadiance(inout uint seed)
 
 void main() 
 {
-    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, pushConst.frameIdx);
+    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, integrator.frameIdx);
 
     vec3 L = vec3(0.0f);
-    const uint sampleCount = 10;
+    const uint sampleCount = integrator.sampleCount;
     for (uint i = 0; i < sampleCount; ++i)
     {
         L += computeRadiance(seed);
     }
     L /= sampleCount;
 
-    if (pushConst.frameIdx > 0)
+    if (integrator.frameIdx > 0)
     {
-       const float t = 1.0f / (pushConst.frameIdx + 1);
-       const vec3 oldVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-       imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(oldVal, L, t), 1.0));
+       const float t = 1.0f / (integrator.frameIdx + 1);
+       const vec3 prevVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+       imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(prevVal, L, t), 1.0));
     }
     else
     {
