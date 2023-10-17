@@ -8,11 +8,13 @@
 namespace crisp {
 class FreeCameraController {
 public:
-    FreeCameraController(Window& window);
+    explicit FreeCameraController(Window& window);
     FreeCameraController(int32_t viewportWidth, int32_t viewportHeight);
     ~FreeCameraController();
 
+    void setPosition(float x, float y, float z);
     void setSpeed(float speed);
+    void setFovY(float fovYDegrees);
 
     void move(float dx, float dz);
     void updateOrientation(float dYaw, float dPitch);

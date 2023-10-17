@@ -38,8 +38,18 @@ FreeCameraController::~FreeCameraController() {
     }
 }
 
+void FreeCameraController::setPosition(const float x, const float y, const float z) {
+    m_camera.setPosition({x, y, z});
+    m_hasUpdated = true;
+}
+
 void FreeCameraController::setSpeed(const float speed) {
     m_speed = speed;
+}
+
+void FreeCameraController::setFovY(const float fovYDegrees) {
+    m_camera.setVerticalFov(fovYDegrees);
+    m_hasUpdated = true;
 }
 
 void FreeCameraController::move(const float dx, const float dz) {
@@ -121,6 +131,7 @@ void FreeCameraController::onMouseMoved(const double xPos, const double yPos) {
 
 void FreeCameraController::onMouseWheelScrolled(const double offset) {
     m_camera.setVerticalFov(std::clamp(m_camera.getVerticalFov() - static_cast<float>(offset) * 3.0f, 5.0f, 90.0f));
+    m_hasUpdated = true;
 }
 
 void FreeCameraController::onViewportResized(const int32_t width, const int32_t height) {

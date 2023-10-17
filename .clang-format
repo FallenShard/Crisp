@@ -5,7 +5,7 @@ BasedOnStyle: LLVM
 BreakBeforeBraces: Attach
 # IndentCaseLabels: false
 SpacesInContainerLiterals: true
-
+BracedInitializerIndentWidth: 4
 
 ColumnLimit: 120
 IndentWidth: 4
@@ -22,6 +22,7 @@ AlwaysBreakAfterDefinitionReturnType: None
 PenaltyReturnTypeOnItsOwnLine: 100
 PenaltyBreakOpenParenthesis: 1
 PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakAssignment: 1
 #PenaltyIndentedWhitespace: 1
 
 InsertBraces: true
@@ -36,7 +37,7 @@ AllowAllArgumentsOnNextLine: true
 AlignAfterOpenBracket: AlwaysBreak
 Cpp11BracedListStyle: true
 AlignConsecutiveAssignments: None
-# AlignArrayOfStructures: Left
+AlignArrayOfStructures: None
 AlwaysBreakTemplateDeclarations: true
 BreakConstructorInitializers: BeforeComma
 NamespaceIndentation: None
