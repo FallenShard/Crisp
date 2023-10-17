@@ -151,3 +151,11 @@ add_cpp_test(CrispRenderGraphTest
     "Test/RenderGraphTest.cpp"
 )
 target_link_libraries(CrispRenderGraphTest PRIVATE Crisp::VulkanTestUtils Crisp::RenderGraph)
+
+add_cpp_static_library(CrispRayTracingPipelineBuilder
+    "RayTracingPipelineBuilder.hpp"
+    "RayTracingPipelineBuilder.cpp"
+)
+target_link_libraries(CrispRayTracingPipelineBuilder
+    PUBLIC Crisp::Renderer
+)
