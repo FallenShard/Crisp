@@ -9,6 +9,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
+#include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 
 namespace crisp {
@@ -29,8 +30,6 @@ private:
         float roughness;
     };
 
-    RenderNode* createRenderNode(std::string id, int transformIndex);
-
     std::unique_ptr<VulkanPipeline> createPipeline();
     void updateDescriptorSets();
 
@@ -39,10 +38,6 @@ private:
     void updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx);
 
     std::unique_ptr<FreeCameraController> m_cameraController;
-    std::unique_ptr<LightSystem> m_lightSystem;
-    std::unique_ptr<TransformBuffer> m_transformBuffer;
-
-    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
     std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;
@@ -53,16 +48,7 @@ private:
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<Material> m_material;
 
-    struct ShaderBindingTable {
-        std::unique_ptr<VulkanBuffer> buffer;
-
-        VkStridedDeviceAddressRegionKHR rgen;
-        VkStridedDeviceAddressRegionKHR miss;
-        VkStridedDeviceAddressRegionKHR hit;
-        VkStridedDeviceAddressRegionKHR call;
-    };
-
-    ShaderBindingTable m_sbt;
+    ShaderBindingTable m_shaderBindingTable;
 
     struct IntegratorParameters {
         int maxBounces{32};

@@ -13,6 +13,7 @@ layout(location = 1) callableDataEXT BsdfSample bsdfSample;
 
 const uint kLambertianShaderCallable = 0;
 const uint kDielectricShaderCallable = 1;
+const uint kMirrorShaderCallable = 2;
 
 hitAttributeEXT vec2 barycentric;
 
@@ -90,13 +91,6 @@ vec3 getPosition(uint objectId, ivec3 ind, vec3 bary)
     return positions * bary;
 }
 
-void sampleMirrorBrdf(in vec3 normal)
-{
-    hitInfo.sampleDirection = reflect(gl_WorldRayDirectionEXT, normal);
-    hitInfo.samplePdf = 0.0f;
-    hitInfo.bsdfEval = vec3(1.0f);
-}
-
 vec3 getAlbedo(const uint objId)
 {
     if (objId == 0)
@@ -159,7 +153,13 @@ void main()
     }
     else if (objId == 5)
     {
-        sampleMirrorBrdf(normal);
+        bsdfSample.normal = normal;
+        bsdfSample.wi = -gl_WorldRayDirectionEXT;
+        executeCallableEXT(kMirrorShaderCallable, 1);
+
+        hitInfo.sampleDirection = bsdfSample.sampleDirection;
+        hitInfo.samplePdf = bsdfSample.samplePdf;
+        hitInfo.bsdfEval = bsdfSample.eval;
     }
 
     // Account for any lights hit.    

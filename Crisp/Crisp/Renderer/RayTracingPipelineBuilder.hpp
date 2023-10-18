@@ -6,6 +6,17 @@
 
 namespace crisp {
 
+struct ShaderBindingTable {
+    static constexpr int32_t kRayGen = 0;
+    static constexpr int32_t kMiss = 1;
+    static constexpr int32_t kHit = 2;
+    static constexpr int32_t kCall = 3;
+
+    std::unique_ptr<VulkanBuffer> buffer;
+
+    std::array<VkStridedDeviceAddressRegionKHR, 4> bindings;
+};
+
 class RayTracingPipelineBuilder {
 public:
     explicit RayTracingPipelineBuilder(Renderer& renderer);
@@ -14,12 +25,13 @@ public:
     void addShaderGroup(uint32_t shaderStageIdx, VkRayTracingShaderGroupTypeKHR type);
 
     VkPipeline createHandle(VkPipelineLayout pipelineLayout);
-    std::unique_ptr<VulkanBuffer> createShaderBindingTable(VkPipeline rayTracingPipeline);
+    ShaderBindingTable createShaderBindingTable(VkPipeline rayTracingPipeline);
 
 private:
     Renderer& m_renderer;
 
     std::vector<VkPipelineShaderStageCreateInfo> m_stages;
+    std::unordered_map<VkShaderStageFlagBits, int32_t> m_stageCounts;
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_groups;
 };
 

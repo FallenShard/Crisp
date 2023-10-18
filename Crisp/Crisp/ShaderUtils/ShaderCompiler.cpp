@@ -12,7 +12,7 @@
 
 namespace crisp {
 namespace {
-const std::filesystem::path GlslExtension = ".glsl";
+const std::filesystem::path kGlslExtension = ".glsl";
 
 auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 } // namespace
@@ -36,13 +36,17 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
     uint32_t shadersSkipped{0};
     uint32_t shadersRecompiled{0};
     std::array<char, 4096> lineBuffer; // NOLINT
-    for (const auto& inputEntry : std::filesystem::directory_iterator(inputDir)) {
+    for (const auto& inputEntry : std::filesystem::recursive_directory_iterator(inputDir)) {
         if (inputEntry.is_directory()) {
             continue;
         }
 
         const std::filesystem::path& inputPath = inputEntry.path();
-        if (inputPath.extension() != GlslExtension) {
+        if (inputPath.string().ends_with("part.glsl")) {
+            continue;
+        }
+
+        if (inputPath.extension() != kGlslExtension) {
             logger->warn("{} has no .glsl extension!", inputPath.string());
             continue;
         }

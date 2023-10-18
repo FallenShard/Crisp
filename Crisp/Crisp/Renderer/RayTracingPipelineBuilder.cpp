@@ -15,6 +15,7 @@ void RayTracingPipelineBuilder::addShaderStage(const std::string& shaderName) {
         .module = m_renderer.getOrLoadShaderModule(shaderName),
         .pName = "main",
     });
+    m_stageCounts[m_stages.back().stage]++;
 }
 
 void RayTracingPipelineBuilder::addShaderGroup(
@@ -59,12 +60,13 @@ VkPipeline RayTracingPipelineBuilder::createHandle(const VkPipelineLayout pipeli
     return pipeline;
 }
 
-std::unique_ptr<VulkanBuffer> RayTracingPipelineBuilder::createShaderBindingTable(const VkPipeline rayTracingPipeline) {
-    const auto createShaderHandleBuffer = [this](const VkPipeline rayTracingPipeline, const uint32_t groupCount) {
+ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkPipeline rayTracingPipeline) {
+    const VkDeviceSize baseAlignment =
+        m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
+    const auto createShaderHandleBuffer = [this, baseAlignment](
+                                              const VkPipeline rayTracingPipeline, const uint32_t groupCount) {
         const uint32_t handleSize =
             m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupHandleSize;
-        const uint32_t baseAlignment =
-            m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
         std::vector<uint8_t> shaderHandleBuffer(groupCount * baseAlignment); // NOLINT
 
         vkGetRayTracingShaderGroupHandlesKHR(
@@ -94,6 +96,22 @@ std::unique_ptr<VulkanBuffer> RayTracingPipelineBuilder::createShaderBindingTabl
             vkCmdUpdateBuffer(cmdBuffer, buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
         });
 
-    return std::move(buffer);
+    std::vector<VkDeviceSize> sizes{0};
+    sizes.emplace_back(sizes.back() + m_stageCounts[VK_SHADER_STAGE_RAYGEN_BIT_KHR] * baseAlignment);
+    sizes.emplace_back(sizes.back() + m_stageCounts[VK_SHADER_STAGE_MISS_BIT_KHR] * baseAlignment);
+    sizes.emplace_back(sizes.back() + m_stageCounts[VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR] * baseAlignment);
+    sizes.emplace_back(sizes.back() + m_stageCounts[VK_SHADER_STAGE_CALLABLE_BIT_KHR] * baseAlignment);
+
+    std::array<VkStridedDeviceAddressRegionKHR, 4> bindings{};
+    for (int32_t i = 0; i < static_cast<int32_t>(bindings.size()); ++i) {
+        bindings[i].deviceAddress = buffer->getDeviceAddress() + sizes[i];
+        bindings[i].size = sizes[i + 1] - sizes[i];
+        bindings[i].stride = baseAlignment;
+    }
+
+    return {
+        .buffer = std::move(buffer),
+        .bindings = bindings,
+    };
 }
 } // namespace crisp

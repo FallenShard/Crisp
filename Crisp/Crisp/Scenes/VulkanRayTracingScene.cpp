@@ -1,4 +1,4 @@
-#include "Crisp/Renderer/RayTracingPipelineBuilder.hpp"
+
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
@@ -9,8 +9,6 @@
 
 namespace crisp {
 namespace {
-constexpr const char* MainPass = "mainPass";
-
 const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
 
 std::unique_ptr<Geometry> createRayTracingGeometry(
@@ -52,8 +50,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_cameraController->setPosition(0.0f, 0.919769f, 5.41159f);
     m_cameraController->setFovY(27.7856f);
     m_resourceContext->createUniformBuffer("camera", sizeof(ExtendedCameraParameters), BufferUpdatePolicy::PerFrame);
-
-    m_integratorParams = {.maxBounces = 5};
     m_resourceContext->createUniformBuffer("integrator", sizeof(IntegratorParameters), BufferUpdatePolicy::PerFrame);
 
     const std::vector<std::string> meshNames = {"walls", "leftwall", "rightwall", "light", "sphere", "sphere"};
@@ -155,7 +151,15 @@ void VulkanRayTracingScene::render() {
         m_material->bind(m_renderer->getCurrentVirtualFrameIndex(), cmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
 
         const auto extent = m_renderer->getSwapChainExtent();
-        vkCmdTraceRaysKHR(cmdBuffer, &m_sbt.rgen, &m_sbt.miss, &m_sbt.hit, &m_sbt.call, extent.width, extent.height, 1);
+        vkCmdTraceRaysKHR(
+            cmdBuffer,
+            &m_shaderBindingTable.bindings[ShaderBindingTable::kRayGen],
+            &m_shaderBindingTable.bindings[ShaderBindingTable::kMiss],
+            &m_shaderBindingTable.bindings[ShaderBindingTable::kHit],
+            &m_shaderBindingTable.bindings[ShaderBindingTable::kCall],
+            extent.width,
+            extent.height,
+            1);
 
         m_rtImage->transitionLayout(
             cmdBuffer,
@@ -179,12 +183,6 @@ void VulkanRayTracingScene::renderGui() {
     ImGui::End();
 }
 
-RenderNode* VulkanRayTracingScene::createRenderNode(std::string id, int transformIndex) {
-    const TransformHandle handle{{{static_cast<uint16_t>(transformIndex), 0}}};
-    auto node = std::make_unique<RenderNode>(*m_transformBuffer, handle);
-    return m_renderNodes.emplace(id, std::move(node)).first->second.get();
-}
-
 std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     std::vector<std::string> shaderNames{
         "path-trace.rgen",
@@ -192,6 +190,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         "path-trace.rchit",
         "path-trace-lambertian.rcall",
         "path-trace-dielectric.rcall",
+        "path-trace-mirror.rcall",
     };
     std::vector<std::filesystem::path> shaderSpvPaths;
     shaderSpvPaths.reserve(shaderNames.size());
@@ -213,25 +212,10 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     pipelineBuilder.addShaderGroup(2, VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR);
     pipelineBuilder.addShaderGroup(3, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
     pipelineBuilder.addShaderGroup(4, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
+    pipelineBuilder.addShaderGroup(5, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
 
     const VkPipeline pipeline{pipelineBuilder.createHandle(pipelineLayout->getHandle())};
-
-    const uint32_t baseAlignment =
-        m_renderer->getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
-
-    m_sbt.buffer = pipelineBuilder.createShaderBindingTable(pipeline);
-    m_sbt.rgen.deviceAddress = m_sbt.buffer->getDeviceAddress();
-    m_sbt.rgen.size = baseAlignment;
-    m_sbt.rgen.stride = baseAlignment;
-    m_sbt.miss.deviceAddress = m_sbt.buffer->getDeviceAddress() + baseAlignment;
-    m_sbt.miss.size = baseAlignment;
-    m_sbt.miss.stride = baseAlignment;
-    m_sbt.hit.deviceAddress = m_sbt.buffer->getDeviceAddress() + 2 * baseAlignment;
-    m_sbt.hit.size = baseAlignment;
-    m_sbt.hit.stride = baseAlignment;
-    m_sbt.call.deviceAddress = m_sbt.buffer->getDeviceAddress() + 3 * baseAlignment;
-    m_sbt.call.size = baseAlignment * 2;
-    m_sbt.call.stride = baseAlignment;
+    m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
 
     return std::make_unique<VulkanPipeline>(
         m_renderer->getDevice(),

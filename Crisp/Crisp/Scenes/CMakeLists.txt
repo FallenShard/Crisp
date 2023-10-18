@@ -39,7 +39,7 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::MaterialUtils
     PUBLIC Crisp::JsonUtils
     PUBLIC Crisp::PathTracer
+    PUBLIC Crisp::RayTracingPipelineBuilder
     PRIVATE Crisp::Application
     PRIVATE Crisp::RenderGraph
-    PRIVATE Crisp::RayTracingPipelineBuilder
 )

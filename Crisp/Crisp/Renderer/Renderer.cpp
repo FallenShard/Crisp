@@ -420,16 +420,6 @@ void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass) {
     enqueueResourceUpdate([&renderPass](VkCommandBuffer cmdBuffer) { renderPass.updateInitialLayouts(cmdBuffer); });
 }
 
-// void Renderer::loadShaders(const std::filesystem::path& directoryPath) {
-//     const auto files = enumerateFiles(directoryPath, "spv");
-//     for (const auto& file : files) {
-//         const auto shaderModule = loadSpirvShaderModule(directoryPath / file);
-//         m_device->getDebugMarker().setObjectName(shaderModule, file);
-//     }
-
-//     logger->info("Loaded all {} shaders", files.size());
-// }
-
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     uint32_t imageIndex{};
     const VkResult result = vkAcquireNextImageKHR(
