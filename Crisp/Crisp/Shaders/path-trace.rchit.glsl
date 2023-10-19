@@ -9,7 +9,9 @@
 #include "Parts/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
-layout(location = 1) callableDataEXT BsdfSample bsdfSample;
+layout(location = 1) callableDataEXT LambertianBsdfSample lambertian;
+layout(location = 2) callableDataEXT DielectricBsdfSample dielectric;
+layout(location = 3) callableDataEXT MirrorBsdfSample mirror;
 
 const uint kLambertianShaderCallable = 0;
 const uint kDielectricShaderCallable = 1;
@@ -130,36 +132,36 @@ void main()
         const float r1 = rndFloat(hitInfo.rngSeed);
         const float r2 = rndFloat(hitInfo.rngSeed);
 
-        bsdfSample.unitSample = vec2(r1, r2);
-        bsdfSample.normal = normal;
+        lambertian.unitSample = vec2(r1, r2);
+        lambertian.normal = normal;
         executeCallableEXT(kLambertianShaderCallable, 1);
 
-        hitInfo.sampleDirection = bsdfSample.sampleDirection;
-        hitInfo.samplePdf = bsdfSample.samplePdf;
+        hitInfo.sampleDirection = lambertian.sampleDirection;
+        hitInfo.samplePdf = lambertian.samplePdf;
         hitInfo.bsdfEval = getAlbedo(objId);
     }
     else if (objId == 4)
     {
         const float r1 = rndFloat(hitInfo.rngSeed);
 
-        bsdfSample.unitSample = vec2(r1, r1);
-        bsdfSample.normal = normal;
-        bsdfSample.wi = -gl_WorldRayDirectionEXT;
-        executeCallableEXT(kDielectricShaderCallable, 1);
+        dielectric.unitSample = vec2(r1, r1);
+        dielectric.normal = normal;
+        dielectric.wi = -gl_WorldRayDirectionEXT;
+        executeCallableEXT(kDielectricShaderCallable, 2);
 
-        hitInfo.sampleDirection = bsdfSample.sampleDirection;
-        hitInfo.samplePdf = bsdfSample.samplePdf;
-        hitInfo.bsdfEval = bsdfSample.eval;
+        hitInfo.sampleDirection = dielectric.sampleDirection;
+        hitInfo.samplePdf = dielectric.samplePdf;
+        hitInfo.bsdfEval = dielectric.eval;
     }
     else if (objId == 5)
     {
-        bsdfSample.normal = normal;
-        bsdfSample.wi = -gl_WorldRayDirectionEXT;
-        executeCallableEXT(kMirrorShaderCallable, 1);
+        mirror.normal = normal;
+        mirror.wi = -gl_WorldRayDirectionEXT;
+        executeCallableEXT(kMirrorShaderCallable, 3);
 
-        hitInfo.sampleDirection = bsdfSample.sampleDirection;
-        hitInfo.samplePdf = bsdfSample.samplePdf;
-        hitInfo.bsdfEval = bsdfSample.eval;
+        hitInfo.sampleDirection = mirror.sampleDirection;
+        hitInfo.samplePdf = mirror.samplePdf;
+        hitInfo.bsdfEval = mirror.eval;
     }
 
     // Account for any lights hit.    

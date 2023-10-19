@@ -5,7 +5,7 @@
 #include "Parts/path-tracer-payload.part.glsl"
 #include "Parts/math-constants.part.glsl"
 
-layout(location = 0) callableDataInEXT BsdfSample bsdfSample;
+layout(location = 0) callableDataInEXT LambertianBsdfSample bsdf;
 
 vec3 squareToCosineHemisphere(vec2 unitSample)
 {
@@ -20,15 +20,15 @@ vec3 squareToCosineHemisphere(vec2 unitSample)
 
 void main()
 {
-    const vec3 cwhSample = squareToCosineHemisphere(bsdfSample.unitSample);
+    const vec3 cwhSample = squareToCosineHemisphere(bsdf.unitSample);
 
-    const vec3 normal = bsdfSample.normal;
+    const vec3 normal = bsdf.normal;
 
     const vec3 upVector = abs(normal.y) < 0.999 ? vec3(0, 1, 0) : vec3(0, 0, 1);
     const vec3 tangentX = normalize(cross(upVector, normal));
     const vec3 tangentY = cross(normal, tangentX);
 
-    bsdfSample.sampleDirection = tangentX * cwhSample.x + tangentY * cwhSample.y + normal * cwhSample.z;
-    bsdfSample.samplePdf = InvTwoPI;
-    bsdfSample.eval = vec3(InvPI);
+    bsdf.sampleDirection = tangentX * cwhSample.x + tangentY * cwhSample.y + normal * cwhSample.z;
+    bsdf.samplePdf = InvTwoPI;
+    bsdf.eval = vec3(InvPI);
 }

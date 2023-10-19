@@ -4,11 +4,11 @@
 
 #include "Parts/path-tracer-payload.part.glsl"
 
-layout(location = 0) callableDataInEXT BsdfSample bsdfSample;
+layout(location = 0) callableDataInEXT MirrorBsdfSample bsdf;
 
 void main()
 {
-    bsdfSample.sampleDirection = reflect(-bsdfSample.wi, bsdfSample.normal);
-    bsdfSample.samplePdf = 0.0f;
-    bsdfSample.eval = vec3(1.0f);
+    bsdf.sampleDirection = reflect(-bsdf.wi, bsdf.normal);
+    bsdf.samplePdf = 0.0f;
+    bsdf.eval = vec3(1.0f);
 }

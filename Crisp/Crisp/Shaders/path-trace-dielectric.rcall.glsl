@@ -5,7 +5,7 @@
 #include "Parts/path-tracer-payload.part.glsl"
 #include "Parts/math-constants.part.glsl"
 
-layout(location = 0) callableDataInEXT BsdfSample bsdfSample;
+layout(location = 0) callableDataInEXT DielectricBsdfSample bsdf;
 
 float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float cosThetaT)
 {
@@ -43,23 +43,23 @@ void main()
     const float intIOR = 1.5046f;
     const float extIOR = 1.00029f;
     const float etaRatio = intIOR / extIOR;
-    const float cosThetaI = dot(bsdfSample.normal, bsdfSample.wi);
-    const vec3 localNormal = cosThetaI < 0.0f ? -bsdfSample.normal : bsdfSample.normal;
+    const float cosThetaI = dot(bsdf.normal, bsdf.wi);
+    const vec3 localNormal = cosThetaI < 0.0f ? -bsdf.normal : bsdf.normal;
     const float eta        = cosThetaI < 0.0f ? etaRatio : 1.0f / etaRatio;
     const float cosine     = cosThetaI < 0.0f ? etaRatio * cosThetaI : -cosThetaI;
     float cosThetaT = 0.0f;
     const float fresnel = fresnelDielectric(cosThetaI, extIOR, intIOR, cosThetaT);
 
-    if (bsdfSample.unitSample[0] <= fresnel)
+    if (bsdf.unitSample[0] <= fresnel)
     {
-        bsdfSample.sampleDirection = reflect(-bsdfSample.wi, localNormal);
-        bsdfSample.samplePdf = fresnel;
-        bsdfSample.eval = vec3(1.0f);
+        bsdf.sampleDirection = reflect(-bsdf.wi, localNormal);
+        bsdf.samplePdf = fresnel;
+        bsdf.eval = vec3(1.0f);
     }
     else
     {
-        bsdfSample.sampleDirection = refract(-bsdfSample.wi, localNormal, eta);
-        bsdfSample.samplePdf = 1.0f - fresnel;
-        bsdfSample.eval = vec3(eta * eta);
+        bsdf.sampleDirection = refract(-bsdf.wi, localNormal, eta);
+        bsdf.samplePdf = 1.0f - fresnel;
+        bsdf.eval = vec3(eta * eta);
     }
 }
