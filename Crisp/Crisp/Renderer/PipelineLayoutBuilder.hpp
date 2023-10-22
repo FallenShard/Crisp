@@ -42,10 +42,9 @@ public:
 private:
     std::vector<uint32_t> getNumCopiesPerSet(uint32_t numCopies) const;
 
-    std::vector<std::vector<VkDescriptorSetLayoutBinding>> m_setLayoutBindings;
+    ShaderUniformInputMetadata m_metadata;
+
     std::vector<VkDescriptorSetLayoutCreateFlags> m_createFlags;
     std::vector<bool> m_setBuffered;
-
-    std::vector<VkPushConstantRange> m_pushConstantRanges;
 };
 } // namespace crisp
