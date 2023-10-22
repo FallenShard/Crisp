@@ -9,13 +9,12 @@
 #include "Parts/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
-layout(location = 1) callableDataEXT LambertianBsdfSample lambertian;
-layout(location = 2) callableDataEXT DielectricBsdfSample dielectric;
-layout(location = 3) callableDataEXT MirrorBsdfSample mirror;
+layout(location = 1) callableDataEXT BsdfSample bsdf;
 
 const uint kLambertianShaderCallable = 0;
 const uint kDielectricShaderCallable = 1;
 const uint kMirrorShaderCallable = 2;
+const uint kMicrofacetShaderCallable = 3;
 
 hitAttributeEXT vec2 barycentric;
 
@@ -28,27 +27,22 @@ layout(set = 1, binding = 1, scalar) buffer Indices
     uint i[];
 } indices[6];
 
+layout(set = 1, binding = 2, scalar) buffer MaterialIds
+{
+    uint materialIds[];
+};
+
+layout(set = 1, binding = 3) buffer BrdfParams
+{
+    BrdfParameters brdfParams[];
+};
+
 vec3 evalAreaLight(vec3 p, vec3 n)
 {
     const vec3 ref = gl_WorldRayOriginEXT;
     const vec3 wi = p - ref;
     const float cosTheta = dot(n, normalize(-wi));
     return cosTheta <= 0.0f ? vec3(0.0f) : vec3(15.0f);
-}
-
-void coordinateSystem(in vec3 v1, out vec3 v2, out vec3 v3)
-{
-    if (abs(v1.x) > abs(v1.y))
-    {
-        float invLen = 1.0f / sqrt(v1.x * v1.x + v1.z * v1.z);
-        v3 = vec3(v1.z * invLen, 0.0f, -v1.x * invLen);
-    }
-    else
-    {
-        float invLen = 1.0f / sqrt(v1.y * v1.y + v1.z * v1.z);
-        v3 = vec3(0.0f, v1.z * invLen, -v1.y * invLen);
-    }
-    v2 = cross(v3, v1);
 }
 
 const int kVertexComponentCount = 6;
@@ -93,18 +87,14 @@ vec3 getPosition(uint objectId, ivec3 ind, vec3 bary)
     return positions * bary;
 }
 
-vec3 getAlbedo(const uint objId)
+vec3 toLocal(const vec3 dir, const mat3 coordinateFrame)
 {
-    if (objId == 0)
-        return vec3(0.725, 0.71, 0.68); // Top, bottom, back wall.
-    if (objId == 1)
-        return vec3(0.630, 0.065, 0.05); // Left wall.
-    if (objId == 2)
-        return vec3(0.161, 0.133, 0.427); // Right wall.
-    if (objId == 3)
-        return vec3(0.5f); // Area light.
-    
-    return vec3(1.0f);
+    return transpose(coordinateFrame) * dir;
+}
+
+vec3 toWorld(const vec3 dir, const mat3 coordinateFrame)
+{
+    return coordinateFrame * dir;
 }
 
 void main()
@@ -126,43 +116,40 @@ void main()
     hitInfo.position = position;
     hitInfo.tHit = gl_HitTEXT;
 
+    const uint materialId = materialIds[objId];
+    const int brdfType = brdfParams[materialId].type;
     // Determine sampled BRDF and the new path direction.
-    if (objId <= 3)
-    {
-        const float r1 = rndFloat(hitInfo.rngSeed);
-        const float r2 = rndFloat(hitInfo.rngSeed);
 
-        lambertian.unitSample = vec2(r1, r2);
-        lambertian.normal = normal;
-        executeCallableEXT(kLambertianShaderCallable, 1);
+    const mat3 worldTransform = createCoordinateFrame(normal);
 
-        hitInfo.sampleDirection = lambertian.sampleDirection;
-        hitInfo.samplePdf = lambertian.samplePdf;
-        hitInfo.bsdfEval = getAlbedo(objId);
-    }
-    else if (objId == 4)
-    {
-        const float r1 = rndFloat(hitInfo.rngSeed);
+    bsdf.normal = toLocal(normal, worldTransform);
+    bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
+    bsdf.materialId = materialId;
 
-        dielectric.unitSample = vec2(r1, r1);
-        dielectric.normal = normal;
-        dielectric.wi = -gl_WorldRayDirectionEXT;
-        executeCallableEXT(kDielectricShaderCallable, 2);
+    const float r1 = rndFloat(hitInfo.rngSeed);
+    const float r2 = rndFloat(hitInfo.rngSeed);
+    bsdf.unitSample = vec2(r1, r2);
 
-        hitInfo.sampleDirection = dielectric.sampleDirection;
-        hitInfo.samplePdf = dielectric.samplePdf;
-        hitInfo.bsdfEval = dielectric.eval;
-    }
-    else if (objId == 5)
-    {
-        mirror.normal = normal;
-        mirror.wi = -gl_WorldRayDirectionEXT;
-        executeCallableEXT(kMirrorShaderCallable, 3);
+    // if (brdfType == kLambertianShaderCallable)
+    // {
+        
+    // }
+    // else if (brdfType == kDielectricShaderCallable)
+    // {
+    //     const float r1 = rndFloat(hitInfo.rngSeed);
+    //     bsdf.unitSample = vec2(r1, r1);
+    // }
+    // else if (brdfType == kLambertianShaderCallable)
+    // {
+    //     const float r1 = rndFloat(hitInfo.rngSeed);
+    //     const float r2 = rndFloat(hitInfo.rngSeed);
+    //     bsdf.unitSample = vec2(r1, r2);
+    // }
 
-        hitInfo.sampleDirection = mirror.sampleDirection;
-        hitInfo.samplePdf = mirror.samplePdf;
-        hitInfo.bsdfEval = mirror.eval;
-    }
+    executeCallableEXT(brdfType, 1);
+    hitInfo.sampleDirection = toWorld(bsdf.sampleDirection, worldTransform);
+    hitInfo.samplePdf = bsdf.samplePdf;
+    hitInfo.bsdfEval = bsdf.eval;
 
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);

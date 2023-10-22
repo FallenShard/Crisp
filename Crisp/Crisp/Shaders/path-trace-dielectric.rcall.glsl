@@ -5,7 +5,12 @@
 #include "Parts/path-tracer-payload.part.glsl"
 #include "Parts/math-constants.part.glsl"
 
-layout(location = 0) callableDataInEXT DielectricBsdfSample bsdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
+
+layout(set = 1, binding = 3) buffer BrdfParams
+{
+    BrdfParameters brdfParams[];
+};
 
 float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float cosThetaT)
 {
@@ -40,8 +45,8 @@ float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float
 
 void main()
 {
-    const float intIOR = 1.5046f;
-    const float extIOR = 1.00029f;
+    const float intIOR = brdfParams[bsdf.materialId].intIor;
+    const float extIOR = brdfParams[bsdf.materialId].extIor;
     const float etaRatio = intIOR / extIOR;
     const float cosThetaI = dot(bsdf.normal, bsdf.wi);
     const vec3 localNormal = cosThetaI < 0.0f ? -bsdf.normal : bsdf.normal;

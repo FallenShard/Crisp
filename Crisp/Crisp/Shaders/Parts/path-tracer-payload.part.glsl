@@ -18,13 +18,13 @@ struct HitInfo
     vec4 debugValue;
 };
 
-struct LambertianBsdfSample
+struct BsdfSample
 {
     vec2 unitSample;
     vec2 pad0;
 
     vec3 normal;
-    float pad1;
+    uint materialId;
 
     vec3 wi;
     float pad2;
@@ -33,41 +33,27 @@ struct LambertianBsdfSample
     float samplePdf;
 
     vec3 eval;
-    float pad3;
+    float pad1;
 };
 
-struct DielectricBsdfSample
+struct BrdfParameters
 {
-    vec2 unitSample;
-    float intIOR;
-    float extIOR;
+    vec3 albedo;
+    int type;
 
-    vec3 normal;
+    float intIor;
+    float extIor;
+    int lobe;
+    int microfacetType;
+
+    vec3 kd;
+    float ks;
+
+    vec3 complexIorEta;
+    float microfacetAlpha;
+
+    vec3 complexIorK;
     float pad1;
-
-    vec3 wi;
-    float pad2;
-
-    vec3 sampleDirection;
-    float samplePdf;
-
-    vec3 eval;
-    float pad3;
-};
-
-struct MirrorBsdfSample
-{
-    vec3 normal;
-    float pad1;
-
-    vec3 wi;
-    float pad2;
-
-    vec3 sampleDirection;
-    float samplePdf;
-
-    vec3 eval;
-    float pad3;
 };
 
 #endif

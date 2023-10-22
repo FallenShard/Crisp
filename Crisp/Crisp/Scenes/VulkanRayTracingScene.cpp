@@ -9,6 +9,37 @@
 
 namespace crisp {
 namespace {
+
+BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
+    return {
+        .albedo = albedo,
+        .type = 0,
+    };
+}
+
+BrdfParameters createDielectricBrdf(const float intIor) {
+    return {
+        .type = 1,
+        .intIor = intIor,
+    };
+}
+
+BrdfParameters createMirrorBrdf() {
+    return {
+        .type = 2,
+    };
+}
+
+BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha) {
+    return {
+        .type = 3,
+        .intIor = Fresnel::getIOR(IndexOfRefraction::Glass),
+        .kd = kd,
+        .ks = 1.0f - std::max(kd.x, std::max(kd.y, kd.z)),
+        .microfacetAlpha = alpha,
+    };
+}
+
 const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
 
 std::unique_ptr<Geometry> createRayTracingGeometry(
@@ -53,6 +84,24 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_resourceContext->createUniformBuffer("integrator", sizeof(IntegratorParameters), BufferUpdatePolicy::PerFrame);
 
     const std::vector<std::string> meshNames = {"walls", "leftwall", "rightwall", "light", "sphere", "sphere"};
+    const std::vector<uint32_t> materialIds = {0, 1, 2, 3, 6, 5};
+    m_brdfParameters.push_back(createLambertianBrdf(glm::vec3(0.725, 0.71, 0.68)));
+    m_brdfParameters.push_back(createLambertianBrdf(glm::vec3(0.630, 0.065, 0.05)));
+    m_brdfParameters.push_back(createLambertianBrdf(glm::vec3(0.161, 0.133, 0.427)));
+    m_brdfParameters.push_back(createLambertianBrdf(glm::vec3(0.5f)));
+    m_brdfParameters.push_back(createDielectricBrdf(Fresnel::getIOR(IndexOfRefraction::Glass)));
+    m_brdfParameters.push_back(createMirrorBrdf());
+    m_brdfParameters.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
+
+    m_resourceContext->createStorageBuffer(
+        "brdfParams",
+        sizeof(BrdfParameters) * m_brdfParameters.size(),
+        0,
+        BufferUpdatePolicy::PerFrame,
+        m_brdfParameters.data());
+
+    m_resourceContext->createStorageBuffer(
+        "materialIds", sizeof(uint32_t) * meshNames.size(), 0, BufferUpdatePolicy::Constant, materialIds.data());
 
     std::vector<VulkanAccelerationStructure*> blases;
     for (auto&& [idx, meshName] : std::views::enumerate(meshNames)) {
@@ -135,6 +184,7 @@ void VulkanRayTracingScene::update(float dt) {
     const ExtendedCameraParameters cameraParams = m_cameraController->getExtendedCameraParameters();
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
     m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer(m_integratorParams);
+    m_resourceContext->getStorageBuffer("brdfParams")->updateStagingBufferFromVector(m_brdfParameters);
 }
 
 void VulkanRayTracingScene::render() {
@@ -180,39 +230,43 @@ void VulkanRayTracingScene::renderGui() {
     if (ImGui::InputInt("Samples per Frame", &m_integratorParams.sampleCount)) {
         m_integratorParams.frameIdx = 0;
     }
+    if (ImGui::SliderFloat("Int IOR", &m_brdfParameters[4].intIor, 1.0f, 10.0f)) {
+        m_integratorParams.frameIdx = 0;
+    }
+    if (ImGui::SliderFloat("Roughness IOR", &m_brdfParameters[6].microfacetAlpha, 1e-3f, 1.0f)) {
+        m_integratorParams.frameIdx = 0;
+    }
+
     ImGui::End();
 }
 
 std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
-    std::vector<std::string> shaderNames{
-        "path-trace.rgen",
-        "path-trace.rmiss",
-        "path-trace.rchit",
-        "path-trace-lambertian.rcall",
-        "path-trace-dielectric.rcall",
-        "path-trace-mirror.rcall",
+    std::vector<std::pair<std::string, VkRayTracingShaderGroupTypeKHR>> shaderInfos{
+        {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
+        {"path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     };
     std::vector<std::filesystem::path> shaderSpvPaths;
-    shaderSpvPaths.reserve(shaderNames.size());
-    for (const auto& name : shaderNames) {
-        shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getSpvShaderPath(name));
+    shaderSpvPaths.reserve(shaderInfos.size());
+    for (const auto& name : shaderInfos) {
+        shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getSpvShaderPath(name.first));
     }
     PipelineLayoutBuilder builder{reflectUniformMetadataFromSpirvPaths(shaderSpvPaths).unwrap()};
     builder.setDescriptorSetBuffering(0, true);
     builder.setDescriptorDynamic(0, 2, true);
     builder.setDescriptorDynamic(0, 3, true);
+    builder.setDescriptorDynamic(1, 3, true);
     auto pipelineLayout = builder.create(m_renderer->getDevice());
 
     RayTracingPipelineBuilder pipelineBuilder(*m_renderer);
-    for (const auto& shaderName : shaderNames) {
-        pipelineBuilder.addShaderStage(shaderName);
+    for (auto&& [idx, info] : std::views::enumerate(shaderInfos)) {
+        pipelineBuilder.addShaderStage(info.first);
+        pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), info.second);
     }
-    pipelineBuilder.addShaderGroup(0, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
-    pipelineBuilder.addShaderGroup(1, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
-    pipelineBuilder.addShaderGroup(2, VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR);
-    pipelineBuilder.addShaderGroup(3, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
-    pipelineBuilder.addShaderGroup(4, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
-    pipelineBuilder.addShaderGroup(5, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR);
 
     const VkPipeline pipeline{pipelineBuilder.createHandle(pipelineLayout->getHandle())};
     m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
@@ -230,6 +284,8 @@ void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(0, 1, m_rtImageViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     m_material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("camera"));
     m_material->writeDescriptor(0, 3, *m_resourceContext->getUniformBuffer("integrator"));
+    m_material->writeDescriptor(1, 2, *m_resourceContext->getStorageBuffer("materialIds"));
+    m_material->writeDescriptor(1, 3, *m_resourceContext->getStorageBuffer("brdfParams"));
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 

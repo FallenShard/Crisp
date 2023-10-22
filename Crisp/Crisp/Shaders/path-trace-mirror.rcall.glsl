@@ -4,7 +4,7 @@
 
 #include "Parts/path-tracer-payload.part.glsl"
 
-layout(location = 0) callableDataInEXT MirrorBsdfSample bsdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main()
 {

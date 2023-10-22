@@ -5,14 +5,34 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Optics/Fresnel.hpp>
+#include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
-
-#include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
 
 namespace crisp {
+
+struct BrdfParameters {
+    glm::vec3 albedo{1.0f, 1.0f, 1.0f};
+    int type;
+
+    float intIor{Fresnel::getIOR(IndexOfRefraction::Glass)};
+    float extIor{Fresnel::getIOR(IndexOfRefraction::Vacuum)};
+    int lobe;
+    int microfacetType;
+
+    glm::vec3 kd;
+    float ks;
+
+    glm::vec3 complexIorEta;
+    float microfacetAlpha;
+
+    glm::vec3 complexIorK;
+    float pad1;
+};
+
 class VulkanRayTracingScene : public Scene {
 public:
     VulkanRayTracingScene(Renderer* renderer, Window* window);
@@ -23,12 +43,6 @@ public:
 
 private:
     void renderGui() override;
-
-    struct PbrUnifMaterialParams {
-        glm::vec4 albedo;
-        float metallic;
-        float roughness;
-    };
 
     std::unique_ptr<VulkanPipeline> createPipeline();
     void updateDescriptorSets();
@@ -55,6 +69,8 @@ private:
         int sampleCount{10};
         int frameIdx{0};
     };
+
+    std::vector<BrdfParameters> m_brdfParameters;
 
     IntegratorParameters m_integratorParams;
 };
