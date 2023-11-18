@@ -5,10 +5,10 @@
 namespace crisp {
 struct Intersection;
 
-class DirectLightingIntegrator : public Integrator {
+class DirectLightingIntegrator final : public Integrator {
 public:
     DirectLightingIntegrator(const VariantMap& params = VariantMap());
-    virtual ~DirectLightingIntegrator();
+    ~DirectLightingIntegrator() override = default;
 
     virtual void preprocess(pt::Scene* scene) override;
     virtual Spectrum Li(

@@ -3,9 +3,10 @@
 #include <memory>
 #include <vector>
 
-#include "Light.hpp"
 #include <Crisp/Math/Distribution1D.hpp>
 #include <Crisp/PathTracer/Core/MipMap.hpp>
+#include <Crisp/PathTracer/Lights/Light.hpp>
+#include <Crisp/Spectra/Spectrum.hpp>
 
 namespace crisp {
 class EnvironmentLight : public Light {
@@ -38,7 +39,7 @@ private:
     float m_normalization;
     glm::vec2 m_pixelSize;
 
-    Spectrum m_power;
+    RgbSpectrum m_power;
 
     glm::vec3 m_sceneCenter;
     float m_sceneRadius;

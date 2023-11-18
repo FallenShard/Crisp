@@ -207,7 +207,7 @@ Spectrum MisPathTracerIntegrator::bsdfImportanceSample(
     BSDF::Sample bsdfSample(its.p, its.uv, its.toLocal(-ray.d));
     Spectrum f = its.shape->getBSDF()->sample(bsdfSample, sampler);
     if (f.isZero()) {
-        return Spectrum(0.0f);
+        return {0.0f};
     }
 
     Intersection bsdfIts;
@@ -226,7 +226,7 @@ Spectrum MisPathTracerIntegrator::bsdfImportanceSample(
     }
 
     if (!hitLight) {
-        return Spectrum(0.0f);
+        return {0.0f};
     }
 
     Light::Sample lightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);

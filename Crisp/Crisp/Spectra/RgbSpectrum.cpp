@@ -4,7 +4,7 @@
 #include <iostream>
 
 namespace crisp {
-RgbSpectrum::RgbSpectrum(const glm::vec3& vec)
+RgbSpectrum::RgbSpectrum(const glm::vec3& vec) // NOLINT
     : r(vec.r)
     , g(vec.g)
     , b(vec.b) {}
@@ -15,13 +15,6 @@ float& RgbSpectrum::operator[](int index) {
 
 const float& RgbSpectrum::operator[](int index) const {
     return values[index];
-}
-
-RgbSpectrum& RgbSpectrum::operator=(const RgbSpectrum& rgbSpectrum) {
-    r = rgbSpectrum.r;
-    g = rgbSpectrum.g;
-    b = rgbSpectrum.b;
-    return *this;
 }
 
 RgbSpectrum& RgbSpectrum::operator+=(const RgbSpectrum& rgbSpectrum) {
@@ -52,19 +45,19 @@ RgbSpectrum& RgbSpectrum::operator/=(const RgbSpectrum& rgbSpectrum) {
     return *this;
 }
 
-const RgbSpectrum RgbSpectrum::operator+(const RgbSpectrum& rgbSpectrum) const {
+RgbSpectrum RgbSpectrum::operator+(const RgbSpectrum& rgbSpectrum) const {
     return RgbSpectrum(*this) += rgbSpectrum;
 }
 
-const RgbSpectrum RgbSpectrum::operator-(const RgbSpectrum& rgbSpectrum) const {
+RgbSpectrum RgbSpectrum::operator-(const RgbSpectrum& rgbSpectrum) const {
     return RgbSpectrum(*this) -= rgbSpectrum;
 }
 
-const RgbSpectrum RgbSpectrum::operator*(const RgbSpectrum& rgbSpectrum) const {
+RgbSpectrum RgbSpectrum::operator*(const RgbSpectrum& rgbSpectrum) const {
     return RgbSpectrum(*this) *= rgbSpectrum;
 }
 
-const RgbSpectrum RgbSpectrum::operator/(const RgbSpectrum& rgbSpectrum) const {
+RgbSpectrum RgbSpectrum::operator/(const RgbSpectrum& rgbSpectrum) const {
     return RgbSpectrum(*this) /= rgbSpectrum;
 }
 
@@ -96,24 +89,24 @@ RgbSpectrum& RgbSpectrum::operator/=(float scalar) {
     return *this;
 }
 
-const RgbSpectrum RgbSpectrum::operator+(float scalar) const {
+RgbSpectrum RgbSpectrum::operator+(float scalar) const {
     return RgbSpectrum(*this) += scalar;
 }
 
-const RgbSpectrum RgbSpectrum::operator-(float scalar) const {
+RgbSpectrum RgbSpectrum::operator-(float scalar) const {
     return RgbSpectrum(*this) -= scalar;
 }
 
-const RgbSpectrum RgbSpectrum::operator*(float scalar) const {
+RgbSpectrum RgbSpectrum::operator*(float scalar) const {
     return RgbSpectrum(*this) *= scalar;
 }
 
-const RgbSpectrum RgbSpectrum::operator/(float scalar) const {
+RgbSpectrum RgbSpectrum::operator/(float scalar) const {
     return RgbSpectrum(*this) /= scalar;
 }
 
-const RgbSpectrum RgbSpectrum::operator-() const {
-    return {-r, -g, -b};
+RgbSpectrum RgbSpectrum::operator-() const {
+    return RgbSpectrum{-r, -g, -b};
 }
 
 float RgbSpectrum::getLuminance() const {
@@ -124,8 +117,8 @@ float RgbSpectrum::maxCoeff() const {
     return std::max(r, std::max(g, b));
 }
 
-const RgbSpectrum RgbSpectrum::exp() const {
-    return {std::exp(r), std::exp(g), std::exp(b)};
+RgbSpectrum RgbSpectrum::exp() const {
+    return RgbSpectrum{std::exp(r), std::exp(g), std::exp(b)};
 }
 
 RgbSpectrum RgbSpectrum::clamp() const {
@@ -151,19 +144,11 @@ bool RgbSpectrum::isZero() const {
 }
 
 bool RgbSpectrum::isInfinite() const {
-    if (!std::isfinite(r) || !std::isfinite(g) || !std::isfinite(b)) {
-        return true;
-    }
-
-    return false;
+    return !std::isfinite(r) || !std::isfinite(g) || !std::isfinite(b);
 }
 
 bool RgbSpectrum::isNaN() const {
-    if (std::isnan(r) || std::isnan(g) || std::isnan(b)) {
-        return true;
-    }
-
-    return false;
+    return std::isnan(r) || std::isnan(g) || std::isnan(b);
 }
 
 RgbSpectrum RgbSpectrum::toSrgb() const {
@@ -181,11 +166,11 @@ RgbSpectrum RgbSpectrum::toSrgb() const {
     return result;
 }
 
-const RgbSpectrum operator+(float scalar, const RgbSpectrum& rgbSpectrum) {
+RgbSpectrum operator+(float scalar, const RgbSpectrum& rgbSpectrum) {
     return rgbSpectrum + scalar;
 }
 
-const RgbSpectrum operator*(float scalar, const RgbSpectrum& rgbSpectrum) {
+RgbSpectrum operator*(float scalar, const RgbSpectrum& rgbSpectrum) {
     return rgbSpectrum * scalar;
 }
 

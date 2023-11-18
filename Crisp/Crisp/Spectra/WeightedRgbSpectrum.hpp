@@ -17,11 +17,11 @@ struct WeightedRgbSpectrum : public glm::vec4 {
         : glm::vec4(vec) {}
 
     RgbSpectrum toRgb() const {
-        if (w != 0) {
-            return glm::vec3(r, g, b) / w;
-        } else {
+        if (w == 0.0) {
             return RgbSpectrum(0.f);
         }
+
+        return RgbSpectrum(glm::vec3(r, g, b) / w);
     }
 };
 } // namespace crisp
