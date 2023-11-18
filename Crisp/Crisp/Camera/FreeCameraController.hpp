@@ -13,6 +13,7 @@ public:
     ~FreeCameraController();
 
     void setPosition(float x, float y, float z);
+    void setPosition(const glm::vec3& position);
     void setSpeed(float speed);
     void setFovY(float fovYDegrees);
 

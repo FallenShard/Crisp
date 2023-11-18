@@ -43,6 +43,11 @@ void FreeCameraController::setPosition(const float x, const float y, const float
     m_hasUpdated = true;
 }
 
+void FreeCameraController::setPosition(const glm::vec3& position) {
+    m_camera.setPosition(position);
+    m_hasUpdated = true;
+}
+
 void FreeCameraController::setSpeed(const float speed) {
     m_speed = speed;
 }
