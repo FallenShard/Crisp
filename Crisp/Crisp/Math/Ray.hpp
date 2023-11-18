@@ -2,24 +2,22 @@
 
 #include <limits>
 
-#include "Headers.hpp"
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp {
 template <typename PointType, typename DirType>
 struct Ray {
-    static constexpr float Epsilon = 1e-4f;
+    using ScalarType = typename PointType::value_type;
+    static constexpr ScalarType Epsilon = 1e-4f;
 
     PointType o;
     DirType d;
     DirType dInv;
-    float minT;
-    float maxT;
-    float time;
+    ScalarType minT{Epsilon};
+    ScalarType maxT{std::numeric_limits<ScalarType>::infinity()};
+    ScalarType time{0.0f};
 
-    Ray()
-        : minT(Epsilon)
-        , maxT(std::numeric_limits<float>::infinity())
-        , time(0.0f) {}
+    Ray() = default;
 
     Ray(const PointType& origin,
         const DirType& dir,
@@ -33,14 +31,6 @@ struct Ray {
         , time(time) {
         update();
     }
-
-    Ray(const Ray& ray)
-        : o(ray.o)
-        , d(ray.d)
-        , dInv(ray.dInv)
-        , minT(ray.minT)
-        , maxT(ray.maxT)
-        , time(ray.time) {}
 
     Ray(const Ray& ray, float minT, float maxT)
         : o(ray.o)
