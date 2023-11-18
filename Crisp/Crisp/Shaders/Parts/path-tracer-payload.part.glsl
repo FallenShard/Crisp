@@ -1,6 +1,9 @@
 #ifndef PATH_TRACER_PAYLOAD_PART_GLSL
 #define PATH_TRACER_PAYLOAD_PART_GLSL
 
+const int kLobeDelta = 0;
+const int kLobeGlossy = 1;
+
 struct HitInfo
 {
     vec3 position;
@@ -15,7 +18,14 @@ struct HitInfo
     vec3 bsdfEval;
     uint rngSeed;
 
-    vec4 debugValue;
+    vec3 debugValue;
+    int sampleLobeType;
+};
+
+struct ShadowRayHitInfo
+{
+    vec3 position;
+    float tHit;
 };
 
 struct BsdfSample

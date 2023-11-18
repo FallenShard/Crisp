@@ -97,6 +97,12 @@ vec3 toWorld(const vec3 dir, const mat3 coordinateFrame)
     return coordinateFrame * dir;
 }
 
+float miWeight(float pdf1, float pdf2) {
+    pdf1 *= pdf1;
+    pdf2 *= pdf2;
+    return pdf1 / (pdf1 + pdf2);
+}
+
 void main()
 {
     // Grab the ID of the object that we just hit.
@@ -130,31 +136,17 @@ void main()
     const float r2 = rndFloat(hitInfo.rngSeed);
     bsdf.unitSample = vec2(r1, r2);
 
-    // if (brdfType == kLambertianShaderCallable)
-    // {
-        
-    // }
-    // else if (brdfType == kDielectricShaderCallable)
-    // {
-    //     const float r1 = rndFloat(hitInfo.rngSeed);
-    //     bsdf.unitSample = vec2(r1, r1);
-    // }
-    // else if (brdfType == kLambertianShaderCallable)
-    // {
-    //     const float r1 = rndFloat(hitInfo.rngSeed);
-    //     const float r2 = rndFloat(hitInfo.rngSeed);
-    //     bsdf.unitSample = vec2(r1, r2);
-    // }
-
     executeCallableEXT(brdfType, 1);
     hitInfo.sampleDirection = toWorld(bsdf.sampleDirection, worldTransform);
     hitInfo.samplePdf = bsdf.samplePdf;
     hitInfo.bsdfEval = bsdf.eval;
 
+    hitInfo.debugValue = normal;
+
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);
     if (objId == 3)
     {
-        hitInfo.Le = evalAreaLight(position, normal);// eval light
+        hitInfo.Le = evalAreaLight(position, normal);
     }
 }

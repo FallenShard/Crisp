@@ -41,4 +41,11 @@ vec3 squareToUniformSphere(const vec2 unitSample)
     return cylinderToSphereSection(unitSample, 1.0f, -1.0f);
 }
 
+vec3 squareToUniformTriangle(const vec2 unitSample) {
+    const float val = sqrt(unitSample.x);
+    const float u = 1.0f - val;
+    const float v = unitSample.y * val;
+    return vec3(u, v, 1.0f - u - v);
+}
+
 #endif
