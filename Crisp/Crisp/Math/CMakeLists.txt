@@ -1,4 +1,6 @@
 add_cpp_static_library(CrispMath
+    "AliasTable.cpp"
+    "AliasTable.hpp"
     "BoundingBox.hpp"
     "Constants.hpp"
     "CoordinateFrame.hpp"
