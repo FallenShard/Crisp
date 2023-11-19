@@ -2,6 +2,7 @@
 Checks: >
     bugprone-*,
     -bugprone-easily-swappable-parameters,
+    -bugprone-implicit-widening-of-multiplication-result,
     cppcoreguidelines-*,
     -cppcoreguidelines-owning-memory,
     -cppcoreguidelines-avoid-non-const-global-variables,
@@ -17,6 +18,7 @@ Checks: >
     misc-*,
     -misc-non-private-member-variables-in-classes,
     -misc-misplaced-const,
+    -misc-no-recursion,
     modernize-*,
     -modernize-use-trailing-return-type,
     -modernize-use-nodiscard,
