@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/Format.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 namespace fmt {
@@ -13,7 +13,7 @@ struct formatter<glm::vec2> {
 
     template <typename FormatContext>
     auto format(const glm::vec2& vec, FormatContext& ctx) {
-        return fmt::format_to(ctx.out(), "[{}, {}]", vec.x, vec.y);
+        return fmt::format_to(ctx.out(), "[{:.4f}, {:.4f}]", vec.x, vec.y);
     }
 };
 
@@ -26,7 +26,7 @@ struct formatter<glm::vec3> {
 
     template <typename FormatContext>
     auto format(const glm::vec3& vec, FormatContext& ctx) {
-        return fmt::format_to(ctx.out(), "[{}, {}, {}]", vec.x, vec.y, vec.z);
+        return fmt::format_to(ctx.out(), "[{:.4f}, {:.4f}, {:.4f}]", vec.x, vec.y, vec.z);
     }
 };
 
@@ -39,7 +39,7 @@ struct formatter<glm::vec4> {
 
     template <typename FormatContext>
     auto format(const glm::vec4& vec, FormatContext& ctx) {
-        return fmt::format_to(ctx.out(), "[{}, {}, {}, {}]", vec.x, vec.y, vec.z, vec.w);
+        return fmt::format_to(ctx.out(), "[{:.4f}, {:.4f}, {:.4f}, {:.4f}]", vec.x, vec.y, vec.z, vec.w);
     }
 };
 } // namespace fmt

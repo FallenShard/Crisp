@@ -29,8 +29,8 @@ constexpr const auto& get(const glm::vec<N, T, Q>& v) noexcept {
 }
 
 template <std::size_t I, glm::length_t N, typename T, qualifier Q>
-constexpr auto&& get(glm::vec<N, T, Q>&& v) noexcept {
-    return std::move(v[I]);
+constexpr auto&& get(glm::vec<N, T, Q>&& v) noexcept { // NOLINT
+    return v[I];
 }
 } // namespace glm
 

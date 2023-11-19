@@ -157,7 +157,7 @@ VkRect2D Renderer::getDefaultScissor() const {
 }
 
 VkShaderModule Renderer::getShaderModule(const std::string& key) const {
-    return m_shaderCache->getShaderModule(key).value_or(VK_NULL_HANDLE);
+    return *m_shaderCache->getShaderModule(key);
 }
 
 VkShaderModule Renderer::getOrLoadShaderModule(const std::string& key) {
