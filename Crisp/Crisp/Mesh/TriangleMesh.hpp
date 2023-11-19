@@ -17,11 +17,11 @@ public:
         std::vector<glm::vec3> normals,
         std::vector<glm::vec2> texCoords,
         std::vector<glm::uvec3> faces,
-        std::vector<VertexAttributeDescriptor> vertexAttributes);
+        const std::vector<VertexAttributeDescriptor>& vertexAttributes);
 
-    uint32_t getFaceCount() const;
-    uint32_t getIndexCount() const;
     uint32_t getVertexCount() const;
+    uint32_t getTriangleCount() const;
+    uint32_t getIndexCount() const;
 
     std::vector<InterleavedVertexBuffer> createInterleavedVertexBuffers(
         const std::vector<std::vector<VertexAttributeDescriptor>>& vertexAttribs, bool padToVec4) const;
@@ -42,6 +42,7 @@ public:
     void setPositions(std::vector<glm::vec3>&& positions);
     void setNormals(std::vector<glm::vec3>&& normals);
     void setTexCoords(std::vector<glm::vec2>&& texCoords);
+    void setTangents(std::vector<glm::vec4>&& tangents);
     void setCustomAttribute(const std::string& id, VertexAttributeBuffer&& attributeBuffer);
 
     void setFaces(std::vector<glm::uvec3>&& faces);
@@ -73,9 +74,10 @@ private:
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
     std::vector<glm::vec4> m_tangents;
+    std::vector<glm::vec4> m_colors;
     FlatHashMap<std::string, VertexAttributeBuffer> m_customAttributes;
 
-    std::vector<glm::uvec3> m_faces;
+    std::vector<glm::uvec3> m_triangles;
     std::vector<TriangleMeshView> m_views;
     std::string m_meshName;
 

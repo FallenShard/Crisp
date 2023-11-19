@@ -1,3 +1,11 @@
+add_cpp_interface_library(CrispModelData
+    "ModelData.hpp"
+)
+target_link_libraries(CrispModelData
+    INTERFACE Crisp::Material
+    INTERFACE Crisp::Mesh
+)
+
 add_cpp_static_library(CrispGltfLoader
     "GltfLoader.cpp"
     "GltfLoader.hpp"
@@ -5,8 +13,7 @@ add_cpp_static_library(CrispGltfLoader
 target_link_libraries(CrispGltfLoader
     PUBLIC Crisp::Result
     PUBLIC Crisp::HashMap
-    PUBLIC Crisp::Material
-    PUBLIC Crisp::Mesh
+    PUBLIC Crisp::ModelData
     PRIVATE Crisp::Logger
     PRIVATE Crisp::ImageIo
     PRIVATE tinygltf

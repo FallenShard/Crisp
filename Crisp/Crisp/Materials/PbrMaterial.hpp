@@ -3,8 +3,9 @@
 #include <Crisp/Image/Image.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-#include <filesystem>
+#include <array>
 #include <optional>
+#include <string>
 
 namespace crisp {
 struct PbrParams {

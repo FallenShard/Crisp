@@ -1,13 +1,13 @@
 
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
+#include <Crisp/GUI/ImGuiCameraUtils.hpp>
+#include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
-
-#include <Crisp/GUI/ImGuiUtils.hpp>
 
 namespace crisp {
 namespace {
@@ -44,16 +44,16 @@ BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha) {
 
 AliasTable createAliasTable(const TriangleMesh& mesh) {
     std::vector<float> weights;
-    weights.reserve(mesh.getFaceCount());
+    weights.reserve(mesh.getTriangleCount());
 
     float totalArea = 0.0f;
-    for (uint32_t i = 0; i < mesh.getFaceCount(); ++i) {
+    for (uint32_t i = 0; i < mesh.getTriangleCount(); ++i) {
         weights.push_back(mesh.calculateFaceArea(i));
         totalArea += weights.back();
     }
 
     auto table = ::crisp::createAliasTable(weights);
-    table.insert(table.begin(), {.tau = 1.0f / totalArea, .j = mesh.getFaceCount()});
+    table.insert(table.begin(), {.tau = 1.0f / totalArea, .j = mesh.getTriangleCount()});
     return table;
 }
 
@@ -305,6 +305,8 @@ void VulkanRayTracingScene::renderGui() {
     }
 
     ImGui::End();
+
+    drawCameraUi(m_cameraController->getCamera());
 }
 
 std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {

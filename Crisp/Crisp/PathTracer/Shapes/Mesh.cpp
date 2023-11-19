@@ -69,9 +69,9 @@ bool Mesh::addToAccelerationStructure(RTCDevice device, RTCScene scene) {
         sizeof(glm::vec3),
         m_mesh.getVertexCount());
 
-    m_indexBuffer = rtcNewBuffer(device, sizeof(glm::uvec3) * m_mesh.getFaceCount());
+    m_indexBuffer = rtcNewBuffer(device, sizeof(glm::uvec3) * m_mesh.getTriangleCount());
     glm::uvec3* faces = static_cast<glm::uvec3*>(rtcGetBufferData(m_indexBuffer));
-    memcpy(faces, m_mesh.getFaces().data(), m_mesh.getFaceCount() * sizeof(glm::uvec3));
+    memcpy(faces, m_mesh.getFaces().data(), m_mesh.getTriangleCount() * sizeof(glm::uvec3));
     rtcSetGeometryBuffer(
         m_geometry,
         RTC_BUFFER_TYPE_INDEX,
@@ -80,7 +80,7 @@ bool Mesh::addToAccelerationStructure(RTCDevice device, RTCScene scene) {
         m_indexBuffer,
         0,
         sizeof(glm::uvec3),
-        m_mesh.getFaceCount());
+        m_mesh.getTriangleCount());
 
     rtcCommitGeometry(m_geometry);
     m_geometryId = rtcAttachGeometry(scene, m_geometry);
@@ -88,7 +88,7 @@ bool Mesh::addToAccelerationStructure(RTCDevice device, RTCScene scene) {
 }
 
 size_t Mesh::getNumTriangles() const {
-    return m_mesh.getFaceCount();
+    return m_mesh.getTriangleCount();
 }
 
 size_t Mesh::getNumVertices() const {

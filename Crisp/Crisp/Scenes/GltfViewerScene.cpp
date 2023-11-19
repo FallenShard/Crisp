@@ -40,9 +40,9 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 5, 0, imageCache.getImageView("csmFrame0"), &imageCache.getSampler("nearestNeighbor"));
-    material.writeDescriptor(1, 5, 1, imageCache.getImageView("csmFrame1"), &imageCache.getSampler("nearestNeighbor"));
-    material.writeDescriptor(1, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 6, 0, imageCache.getImageView("csmFrame0"), &imageCache.getSampler("nearestNeighbor"));
+    material.writeDescriptor(1, 6, 1, imageCache.getImageView("csmFrame1"), &imageCache.getSampler("nearestNeighbor"));
 }
 
 Material* createPbrMaterial(
@@ -98,12 +98,13 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     specInfo.pData = glm::value_ptr(workGroupSize);
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-    pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getShaderModule(shaderName));
+    pipelineInfo.stage =
+        createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getOrLoadShaderModule(shaderName));
     pipelineInfo.stage.pSpecializationInfo = &specInfo;
     pipelineInfo.layout = layout->getHandle();
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
-    VkPipeline pipeline;
+    VkPipeline pipeline{VK_NULL_HANDLE};
     vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
     return std::make_unique<VulkanPipeline>(
@@ -111,19 +112,10 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
 }
 
 std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
-    PipelineLayoutBuilder layoutBuilder;
-    layoutBuilder.defineDescriptorSet(
-        0,
-        false,
-        {
-            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-        });
-
-    layoutBuilder.addPushConstant(VK_SHADER_STAGE_COMPUTE_BIT, 0, 2 * sizeof(uint32_t));
+    PipelineLayoutBuilder layoutBuilder(
+        reflectUniformMetadataFromSpirvPath(renderer->getAssetPaths().spvShaderDir / "linear-blend-skinning.comp.spv")
+            .unwrap());
+    layoutBuilder.setDescriptorDynamic(0, 3, true);
     return createComputePipeline(renderer, workGroupSize, layoutBuilder, "linear-blend-skinning.comp");
 }
 
@@ -254,9 +246,9 @@ void GltfViewerScene::renderGui() {
         enumerateDirectories(m_renderer->getAssetPaths().resourceDir / "glTFSamples/2.0");
     static int32_t selectedIdx{0};
     ImGui::Begin("Hi");
-    ImGui::Text("GLTF Examples");
+    ImGui::Text("GLTF Examples"); // NOLINT
     if (ImGui::BeginListBox("##", ImVec2(0, 500))) {
-        for (int32_t i = 0; i < paths.size(); ++i) {
+        for (int32_t i = 0; i < std::ssize(paths); ++i) {
             const bool isSelected{selectedIdx == i};
             if (ImGui::Selectable(paths[i].c_str(), isSelected)) {
                 selectedIdx = i;
@@ -276,11 +268,10 @@ void GltfViewerScene::renderGui() {
 RenderNode* GltfViewerScene::createRenderNode(std::string id, bool hasTransform) {
     if (!hasTransform) {
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
-    } else {
-        const auto transformIndex{m_transformBuffer->getNextIndex()};
-        return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex))
-            .first->second.get();
     }
+    const auto transformIndex{m_transformBuffer->getNextIndex()};
+    return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex))
+        .first->second.get();
 }
 
 void GltfViewerScene::createCommonTextures() {
@@ -306,8 +297,7 @@ void GltfViewerScene::createCommonTextures() {
 
 void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
     const std::string gltfRelativePath{fmt::format("glTFSamples/2.0/{}/glTF/{}.gltf", gltfAsset, gltfAsset)};
-    auto renderObjects =
-        loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath, flatten(kPbrVertexFormat)).unwrap();
+    auto renderObjects = loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath).unwrap();
 
     auto& renderObject = renderObjects.at(0);
     renderObject.material.name = gltfAsset;
@@ -347,7 +337,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
         }
 
         const auto& restPositions = renderObject.mesh.getPositions();
-        const uint32_t vertexCount = static_cast<uint32_t>(restPositions.size());
+        const auto vertexCount = static_cast<uint32_t>(restPositions.size());
         auto restVertexBuffer = m_resourceContext->addStorageBuffer(
             "restPositions",
             std::make_unique<StorageBuffer>(
@@ -423,6 +413,8 @@ void GltfViewerScene::setupInput() {
         case Key::F5:
             m_resourceContext->recreatePipelines();
             break;
+        default: {
+        }
         }
     }));
 }

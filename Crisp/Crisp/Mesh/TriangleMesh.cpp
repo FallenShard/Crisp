@@ -4,7 +4,7 @@
 
 namespace crisp {
 namespace {
-static void fillInterleaved(
+void fillInterleaved(
     std::vector<std::byte>& interleavedBuffer,
     size_t vertexSize,
     size_t offset,
@@ -16,7 +16,7 @@ static void fillInterleaved(
 }
 
 template <typename T>
-static void fillInterleaved(
+void fillInterleaved(
     std::vector<std::byte>& interleavedBuffer, size_t vertexSize, size_t offset, const std::vector<T>& attribute) {
     for (size_t i = 0; i < attribute.size(); i++) {
         memcpy(&interleavedBuffer[i * vertexSize + offset], &attribute[i], sizeof(T));
@@ -29,12 +29,12 @@ TriangleMesh::TriangleMesh(
     std::vector<glm::vec3> normals,
     std::vector<glm::vec2> texCoords,
     std::vector<glm::uvec3> faces,
-    std::vector<VertexAttributeDescriptor> vertexAttributes)
+    const std::vector<VertexAttributeDescriptor>& vertexAttributes)
     : m_positions(std::move(positions))
     , m_normals(std::move(normals))
     , m_texCoords(std::move(texCoords))
-    , m_faces(std::move(faces)) {
-    m_views.emplace_back("", 0, static_cast<uint32_t>(m_faces.size() * 3));
+    , m_triangles(std::move(faces)) {
+    m_views.emplace_back("", 0, static_cast<uint32_t>(m_triangles.size() * 3));
 
     bool missingTexCoords{m_texCoords.empty()};
     bool missingNormals = false;
@@ -70,15 +70,15 @@ TriangleMesh::TriangleMesh(
 }
 
 const std::vector<glm::uvec3>& TriangleMesh::getFaces() const {
-    return m_faces;
+    return m_triangles;
 }
 
-uint32_t TriangleMesh::getFaceCount() const {
-    return static_cast<uint32_t>(m_faces.size());
+uint32_t TriangleMesh::getTriangleCount() const {
+    return static_cast<uint32_t>(m_triangles.size());
 }
 
 uint32_t TriangleMesh::getIndexCount() const {
-    return static_cast<uint32_t>(m_faces.size()) * 3;
+    return static_cast<uint32_t>(m_triangles.size()) * 3;
 }
 
 uint32_t TriangleMesh::getVertexCount() const {
@@ -156,8 +156,9 @@ void TriangleMesh::computeTangentVectors() {
     m_tangents = std::vector<glm::vec4>(m_positions.size(), glm::vec4(0.0f));
     std::vector<glm::vec3> bitangents = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
 
-    CRISP_CHECK_EQ(m_texCoords.size(), m_positions.size(), "Missing tex coords.");
-    for (const auto& face : m_faces) {
+    CRISP_CHECK_EQ(m_normals.size(), m_positions.size(), "Missing normals in computeTangentVectors().");
+    CRISP_CHECK_EQ(m_texCoords.size(), m_positions.size(), "Missing tex coords in computeTangentVectors().");
+    for (const auto& face : m_triangles) {
         const glm::vec3& v1 = m_positions[face[0]];
         const glm::vec3& v2 = m_positions[face[1]];
         const glm::vec3& v3 = m_positions[face[2]];
@@ -197,7 +198,7 @@ void TriangleMesh::computeTangentVectors() {
 }
 
 void TriangleMesh::computeVertexNormals() {
-    m_normals = computeVertexNormals(m_positions, m_faces);
+    m_normals = computeVertexNormals(m_positions, m_triangles);
 }
 
 void TriangleMesh::computeBoundingBox() {
@@ -263,12 +264,16 @@ void TriangleMesh::setTexCoords(std::vector<glm::vec2>&& texCoords) {
     m_texCoords = std::move(texCoords);
 }
 
+void TriangleMesh::setTangents(std::vector<glm::vec4>&& tangents) {
+    m_tangents = std::move(tangents);
+}
+
 void TriangleMesh::setCustomAttribute(const std::string& id, VertexAttributeBuffer&& attributeBuffer) {
     m_customAttributes.emplace(id, std::move(attributeBuffer));
 }
 
 void TriangleMesh::setFaces(std::vector<glm::uvec3>&& faces) {
-    m_faces = std::move(faces);
+    m_triangles = std::move(faces);
 }
 
 void TriangleMesh::setViews(std::vector<TriangleMeshView>&& views) {
@@ -299,38 +304,38 @@ bool TriangleMesh::hasCustomAttribute(const std::string& attributeName) const {
     return m_customAttributes.contains(attributeName);
 }
 
-float TriangleMesh::calculateFaceArea(uint32_t triangleId) const {
-    const glm::vec3& p0 = m_positions[m_faces[triangleId][0]];
-    const glm::vec3& p1 = m_positions[m_faces[triangleId][1]];
-    const glm::vec3& p2 = m_positions[m_faces[triangleId][2]];
+float TriangleMesh::calculateFaceArea(const uint32_t triangleId) const {
+    const glm::vec3& p0 = m_positions[m_triangles[triangleId][0]];
+    const glm::vec3& p1 = m_positions[m_triangles[triangleId][1]];
+    const glm::vec3& p2 = m_positions[m_triangles[triangleId][2]];
     return 0.5f * glm::length(glm::cross(p1 - p0, p2 - p0));
 }
 
 glm::vec3 TriangleMesh::calculateFaceNormal(uint32_t triangleId) const {
-    const glm::vec3& p0 = m_positions[m_faces[triangleId][0]];
-    const glm::vec3& p1 = m_positions[m_faces[triangleId][1]];
-    const glm::vec3& p2 = m_positions[m_faces[triangleId][2]];
+    const glm::vec3& p0 = m_positions[m_triangles[triangleId][0]];
+    const glm::vec3& p1 = m_positions[m_triangles[triangleId][1]];
+    const glm::vec3& p2 = m_positions[m_triangles[triangleId][2]];
     return glm::normalize(glm::cross(p1 - p0, p2 - p0));
 }
 
 glm::vec3 TriangleMesh::interpolatePosition(const uint32_t triangleId, const glm::vec3& barycentric) const {
-    const glm::vec3& p0 = m_positions[m_faces[triangleId][0]];
-    const glm::vec3& p1 = m_positions[m_faces[triangleId][1]];
-    const glm::vec3& p2 = m_positions[m_faces[triangleId][2]];
+    const glm::vec3& p0 = m_positions[m_triangles[triangleId][0]];
+    const glm::vec3& p1 = m_positions[m_triangles[triangleId][1]];
+    const glm::vec3& p2 = m_positions[m_triangles[triangleId][2]];
     return barycentric.x * p0 + barycentric.y * p1 + barycentric.z * p2;
 }
 
 glm::vec3 TriangleMesh::interpolateNormal(const uint32_t triangleId, const glm::vec3& barycentric) const {
-    const glm::vec3& n0 = m_normals[m_faces[triangleId][0]];
-    const glm::vec3& n1 = m_normals[m_faces[triangleId][1]];
-    const glm::vec3& n2 = m_normals[m_faces[triangleId][2]];
+    const glm::vec3& n0 = m_normals[m_triangles[triangleId][0]];
+    const glm::vec3& n1 = m_normals[m_triangles[triangleId][1]];
+    const glm::vec3& n2 = m_normals[m_triangles[triangleId][2]];
     return glm::normalize(barycentric.x * n0 + barycentric.y * n1 + barycentric.z * n2);
 }
 
 glm::vec2 TriangleMesh::interpolateTexCoord(const uint32_t triangleId, const glm::vec3& barycentric) const {
-    const glm::vec2& tc0 = m_texCoords[m_faces[triangleId][0]];
-    const glm::vec2& tc1 = m_texCoords[m_faces[triangleId][1]];
-    const glm::vec2& tc2 = m_texCoords[m_faces[triangleId][2]];
+    const glm::vec2& tc0 = m_texCoords[m_triangles[triangleId][0]];
+    const glm::vec2& tc1 = m_texCoords[m_triangles[triangleId][1]];
+    const glm::vec2& tc2 = m_texCoords[m_triangles[triangleId][2]];
     return barycentric.x * tc0 + barycentric.y * tc1 + barycentric.z * tc2;
 }
 } // namespace crisp

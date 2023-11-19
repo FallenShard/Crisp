@@ -45,7 +45,7 @@ struct Skeleton {
 
         // Recalculate the transformation hierarchy.
         std::vector<bool> processedJoints(joints.size(), false);
-        for (uint32_t i = 0; i < joints.size(); ++i) {
+        for (int32_t i = 0; i < static_cast<int32_t>(joints.size()); ++i) {
             jointTransforms[i] = getJointTransform(i, processedJoints);
         }
 
@@ -60,8 +60,6 @@ struct SkinningData {
     static constexpr uint32_t JointsPerVertex{4};
 
     Skeleton skeleton;
-
-    std::vector<glm::mat4> modelJointTransforms;
 
     std::vector<glm::mat4> inverseBindTransforms;
 
@@ -84,7 +82,7 @@ struct AnimationChannel {
     std::string propertyName;
 };
 
-struct GltfAnimation {
+struct AnimationData {
     std::vector<AnimationChannel> channels;
 
     inline void updateJoints(std::vector<Joint>& joints, float time) {
