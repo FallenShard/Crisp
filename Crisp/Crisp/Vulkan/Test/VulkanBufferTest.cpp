@@ -116,9 +116,10 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     const VulkanQueue& generalQueue = device->getGeneralQueue();
     const VulkanCommandPool commandPool(generalQueue.createCommandPool(), device->getResourceDeallocator());
-    const VulkanCommandBuffer cmdBuffer(commandPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    VulkanCommandBuffer cmdBuffer(commandPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
     VkFence fence = device->createFence();
     cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    EXPECT_EQ(cmdBuffer.getState(), VulkanCommandBuffer::State::Recording);
 
     // Copy and sync
     deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
@@ -139,8 +140,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     // Create the transfer execution context
     const VulkanCommandPool transferPool(transferQueue.createCommandPool(), device->getResourceDeallocator());
-    const VulkanCommandBuffer transferCmdBuffer(
-        transferPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    VulkanCommandBuffer transferCmdBuffer(transferPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
     VkFence transferFence = device->createFence();
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 

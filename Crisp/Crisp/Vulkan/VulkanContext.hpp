@@ -13,7 +13,9 @@ using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCall
 class VulkanContext {
 public:
     VulkanContext(
-        SurfaceCreator&& surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers);
+        const SurfaceCreator& surfaceCreator,
+        std::vector<std::string>&& platformExtensions,
+        bool enableValidationLayers);
     ~VulkanContext();
 
     VulkanContext(const VulkanContext& other) = delete;

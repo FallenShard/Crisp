@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
@@ -9,11 +10,11 @@ namespace crisp {
 template <typename T>
 class VulkanResource {
 public:
-    VulkanResource(VulkanResourceDeallocator& deallocator)
+    explicit VulkanResource(VulkanResourceDeallocator& deallocator)
         : m_handle(VK_NULL_HANDLE)
         , m_deallocator(&deallocator) {}
 
-    VulkanResource(T handle, VulkanResourceDeallocator& deallocator)
+    VulkanResource(const T handle, VulkanResourceDeallocator& deallocator)
         : m_handle(handle)
         , m_deallocator(&deallocator) {}
 
@@ -32,7 +33,7 @@ public:
                     });
             }
         } else {
-            spdlog::error("Didn't destroy object of type: {}", typeid(T).name());
+            CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
         }
     }
 
@@ -52,7 +53,7 @@ public:
     }
 
     template <typename DestroyFunc>
-    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, DestroyFunc&& func) {
+    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
         spdlog::debug("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
         func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
         deallocator->removeTag(handle);
@@ -62,7 +63,7 @@ public:
         return m_handle;
     }
 
-    inline void swap(VulkanResource& rhs) {
+    inline void swap(VulkanResource& rhs) noexcept {
         std::swap(m_deallocator, rhs.m_deallocator);
         std::swap(m_handle, rhs.m_handle);
         std::swap(m_framesToLive, rhs.m_framesToLive);
@@ -72,7 +73,7 @@ public:
         m_framesToLive = isEnabled ? RendererConfig::VirtualFrameCount : 0;
     }
 
-    inline void setTag(std::string tag) const {
+    inline void setTag(std::string tag) const { // NOLINT
         m_deallocator->setTag(m_handle, std::move(tag));
     }
 

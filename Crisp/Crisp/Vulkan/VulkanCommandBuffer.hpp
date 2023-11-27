@@ -16,15 +16,30 @@ struct MemoryRegion {
 
 class VulkanCommandBuffer {
 public:
+    enum class State {
+        Idle,
+        Recording,
+        Pending,
+        Executing,
+    };
+
     explicit VulkanCommandBuffer(VkCommandBuffer commandBuffer);
 
-    void begin(VkCommandBufferUsageFlags commandBufferUsage) const;
-    void begin(VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance) const;
+    void setIdleState();
 
-    void end() const;
+    void begin(VkCommandBufferUsageFlags commandBufferUsage);
+    void begin(VkCommandBufferUsageFlags commandBufferUsage, const VkCommandBufferInheritanceInfo* inheritance);
+
+    void end();
+
+    void setExecutionState();
 
     inline VkCommandBuffer getHandle() const {
         return m_handle;
+    }
+
+    inline State getState() const {
+        return m_state;
     }
 
     void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
@@ -59,6 +74,7 @@ public:
 
 private:
     VkCommandBuffer m_handle;
+    State m_state;
 };
 
 } // namespace crisp

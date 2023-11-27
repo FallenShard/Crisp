@@ -21,8 +21,9 @@ public:
     ~VulkanSwapChain() override;
 
     VulkanSwapChain(const VulkanSwapChain& other) = delete;
-    VulkanSwapChain(VulkanSwapChain&& other) noexcept;
     VulkanSwapChain& operator=(const VulkanSwapChain& other) = delete;
+
+    VulkanSwapChain(VulkanSwapChain&& other) noexcept;
     VulkanSwapChain& operator=(VulkanSwapChain&& other) noexcept;
 
     VkFormat getImageFormat() const;

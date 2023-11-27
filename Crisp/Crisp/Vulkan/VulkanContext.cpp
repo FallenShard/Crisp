@@ -10,9 +10,9 @@ namespace crisp {
 namespace {
 auto logger = createLoggerMt("VulkanContext");
 
-const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"};
+const std::vector<const char*> kValidationLayers = {"VK_LAYER_KHRONOS_validation"};
 
-[[nodiscard]] Result<> assertRequiredExtensionSupport(
+Result<> assertRequiredExtensionSupport(
     const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions) {
     std::unordered_set<std::string> pendingExtensions;
 
@@ -41,7 +41,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     return {};
 }
 
-[[nodiscard]] Result<> assertValidationLayerSupport(const bool validationLayersEnabled) {
+Result<> assertValidationLayerSupport(const bool validationLayersEnabled) {
     if (!validationLayersEnabled) {
         return {};
     }
@@ -57,7 +57,7 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
         availableLayersSet.insert(layer.layerName); // NOLINT
     }
 
-    for (const auto& validationLayer : ValidationLayers) {
+    for (const auto& validationLayer : kValidationLayers) {
         if (availableLayersSet.find(validationLayer) == availableLayersSet.end()) {
             return resultError("Validation layer {} is requested, but not supported!", validationLayer);
         }
@@ -67,7 +67,8 @@ const std::vector<const char*> ValidationLayers = {"VK_LAYER_KHRONOS_validation"
     return {};
 }
 
-VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers) {
+VkInstance createInstance(
+    std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers) { // NOLINT
     loadVulkanLoaderFunctions();
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     appInfo.pApplicationName = "Crisp";
@@ -91,8 +92,8 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-    createInfo.enabledLayerCount = enableValidationLayers ? static_cast<uint32_t>(ValidationLayers.size()) : 0;
-    createInfo.ppEnabledLayerNames = enableValidationLayers ? ValidationLayers.data() : nullptr;
+    createInfo.enabledLayerCount = enableValidationLayers ? static_cast<uint32_t>(kValidationLayers.size()) : 0;
+    createInfo.ppEnabledLayerNames = enableValidationLayers ? kValidationLayers.data() : nullptr;
 
     VkInstance instance{VK_NULL_HANDLE};
     VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
@@ -110,7 +111,7 @@ VkInstance createInstance(std::vector<std::string>&& reqPlatformExtensions, cons
     return instance;
 }
 
-VkSurfaceKHR createSurface(const VkInstance instance, SurfaceCreator&& surfaceCreator) {
+VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator& surfaceCreator) {
     VkSurfaceKHR surface{VK_NULL_HANDLE};
     VK_CHECK(surfaceCreator(instance, nullptr, &surface));
     return surface;
@@ -118,10 +119,12 @@ VkSurfaceKHR createSurface(const VkInstance instance, SurfaceCreator&& surfaceCr
 } // namespace
 
 VulkanContext::VulkanContext(
-    SurfaceCreator&& surfaceCreator, std::vector<std::string>&& platformExtensions, const bool enableValidationLayers)
+    const SurfaceCreator& surfaceCreator,
+    std::vector<std::string>&& platformExtensions,
+    const bool enableValidationLayers)
     : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
     , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
-    , m_surface(surfaceCreator ? createSurface(m_instance, std::move(surfaceCreator)) : VK_NULL_HANDLE) {}
+    , m_surface(surfaceCreator ? createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE) {}
 
 VulkanContext::~VulkanContext() {
     if (m_instance == VK_NULL_HANDLE) {
@@ -140,7 +143,7 @@ VulkanContext::~VulkanContext() {
 Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const {
     uint32_t deviceCount = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr));
-    CRISP_CHECK(deviceCount > 0, "Vulkan found no physical devices.");
+    CRISP_CHECK_GE(deviceCount, 0, "Vulkan found no physical devices.");
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data()));

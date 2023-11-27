@@ -8,13 +8,13 @@ class VulkanQueue {
 public:
     VulkanQueue(VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, QueueIdentifier queueId);
 
-    VkResult submit(
+    void submit(
         VkSemaphore waitSemaphore,
         VkSemaphore signalSemaphore,
         VkCommandBuffer commandBuffer,
         VkFence fence,
         VkPipelineStageFlags waitPipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) const;
-    VkResult submit(VkCommandBuffer cmdBuffer, VkFence fence = VK_NULL_HANDLE) const;
+    void submit(VkCommandBuffer cmdBuffer, VkFence fence = VK_NULL_HANDLE) const;
     VkResult present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const;
 
     void waitIdle() const;

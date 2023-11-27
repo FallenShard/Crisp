@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
+#include <Crisp/Vulkan/VulkanChecks.hpp>
+
 namespace crisp {
 VulkanQueue::VulkanQueue(
     const VkDevice deviceHandle, const VulkanPhysicalDevice& physicalDevice, const QueueIdentifier queueId)
@@ -14,12 +16,12 @@ VulkanQueue::VulkanQueue(
     vkGetDeviceQueue2(m_deviceHandle, &info, &m_handle);
 }
 
-VkResult VulkanQueue::submit(
-    VkSemaphore waitSemaphore,
-    VkSemaphore signalSemaphore,
-    VkCommandBuffer commandBuffer,
-    VkFence fence,
-    VkPipelineStageFlags waitPipelineStage) const {
+void VulkanQueue::submit(
+    const VkSemaphore waitSemaphore,
+    const VkSemaphore signalSemaphore,
+    const VkCommandBuffer commandBuffer,
+    const VkFence fence,
+    const VkPipelineStageFlags waitPipelineStage) const {
     const std::array<VkPipelineStageFlags, 1> waitStages{waitPipelineStage};
 
     VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
@@ -36,17 +38,18 @@ VkResult VulkanQueue::submit(
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
+    VK_CHECK(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
 }
 
-VkResult VulkanQueue::submit(VkCommandBuffer cmdBuffer, VkFence fence) const {
+void VulkanQueue::submit(const VkCommandBuffer cmdBuffer, const VkFence fence) const {
     VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &cmdBuffer;
-    return vkQueueSubmit(m_handle, 1, &submitInfo, fence);
+    VK_CHECK(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
 }
 
-VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const {
+VkResult VulkanQueue::present(
+    const VkSemaphore waitSemaphore, const VkSwapchainKHR VulkanSwapChain, const uint32_t imageIndex) const {
     VkPresentInfoKHR presentInfo = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &waitSemaphore;
@@ -58,16 +61,16 @@ VkResult VulkanQueue::present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSw
 }
 
 void VulkanQueue::waitIdle() const {
-    vkQueueWaitIdle(m_handle);
+    VK_CHECK(vkQueueWaitIdle(m_handle));
 }
 
-VkCommandPool VulkanQueue::createCommandPool(VkCommandPoolCreateFlags flags) const {
+VkCommandPool VulkanQueue::createCommandPool(const VkCommandPoolCreateFlags flags) const {
     VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     poolInfo.queueFamilyIndex = m_familyIndex;
     poolInfo.flags = flags;
 
     VkCommandPool pool{VK_NULL_HANDLE};
-    vkCreateCommandPool(m_deviceHandle, &poolInfo, nullptr, &pool);
+    VK_CHECK(vkCreateCommandPool(m_deviceHandle, &poolInfo, nullptr, &pool));
     return pool;
 }
 
@@ -75,7 +78,7 @@ uint32_t VulkanQueue::getFamilyIndex() const {
     return m_familyIndex;
 }
 
-bool VulkanQueue::supportsOperations(VkQueueFlags queueFlags) const {
+bool VulkanQueue::supportsOperations(const VkQueueFlags queueFlags) const {
     return m_familyProperties.queueFlags & queueFlags;
 }
 } // namespace crisp
