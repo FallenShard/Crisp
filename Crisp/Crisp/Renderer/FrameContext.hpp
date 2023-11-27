@@ -8,7 +8,7 @@ namespace crisp {
 struct FrameContext {
     uint64_t frameIndex;
     uint32_t virtualFrameIndex;
-    uint32_t swapImageIndex;
+    uint32_t swapChainImageIndex;
     VulkanCommandBuffer* commandBuffer{nullptr};
 };
 } // namespace crisp

@@ -51,7 +51,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
         } else if (arrayJson[i]["inputRate"] == "instance") {
             inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
         } else {
-            return resultError("Encountered unknown inputRate: {}", arrayJson[i]["inputRate"]);
+            return resultError("Encountered unknown inputRate: {}", arrayJson[i]["inputRate"].dump());
         }
 
         CRISP_CHECK(hasField<JsonType::Array>(arrayJson[i], "formats"));
@@ -64,7 +64,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
             } else if (f == "vec4") {
                 formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
             } else {
-                return resultError("Encountered unknown format {}", f);
+                return resultError("Encountered unknown format {}", f.dump());
             }
         }
         builder.addVertexInputBinding(i, inputRate, formats);
@@ -86,7 +86,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
             } else if (f == "vec4") {
                 formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
             } else {
-                return resultError("Encountered unknown format {}", f);
+                return resultError("Encountered unknown format {}", f.dump());
             }
         }
         builder.addVertexAttributes(i, formats);
@@ -106,7 +106,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
         } else if (primTopology == "triangleList") {
             builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
         } else {
-            return resultError("Unknown primitive topology: {}", primTopology.get<std::string>());
+            return resultError("Unknown primitive topology: {}", primTopology.dump());
         }
     }
     return {};
@@ -153,7 +153,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
         } else if (json["cullMode"] == "none") {
             builder.setCullMode(VK_CULL_MODE_NONE);
         } else {
-            return resultError("Encountered unknown cull mode {}", json["cullMode"]);
+            return resultError("Encountered unknown cull mode {}", json["cullMode"].dump());
         }
     }
     if (json.contains("polygonMode")) {
@@ -163,7 +163,7 @@ bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::str
         } else if (json["polygonMode"] == "fill") {
             builder.setCullMode(VK_POLYGON_MODE_FILL);
         } else {
-            return resultError("Encountered unknown polygon mode {}", json["polygonMode"]);
+            return resultError("Encountered unknown polygon mode {}", json["polygonMode"].dump());
         }
     }
     if (json.contains("lineWidth")) {

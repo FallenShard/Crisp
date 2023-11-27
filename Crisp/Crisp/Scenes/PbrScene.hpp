@@ -4,6 +4,7 @@
 #include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/HashMap.hpp>
+#include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Models/Skybox.hpp>
@@ -13,7 +14,7 @@
 namespace crisp {
 class PbrScene : public Scene {
 public:
-    PbrScene(Renderer* renderer, Window* window);
+    PbrScene(Renderer* renderer, Window* window, const nlohmann::json& args);
 
     void resize(int width, int height) override;
     void update(float dt) override;
@@ -28,7 +29,7 @@ private:
     void createCommonTextures();
     void setEnvironmentMap(const std::string& envMapName);
 
-    void createSceneObject();
+    void createSceneObject(const std::filesystem::path& path);
     void createPlane();
 
     void setupInput();

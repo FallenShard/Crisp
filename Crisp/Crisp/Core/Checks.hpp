@@ -4,7 +4,8 @@
 
 namespace crisp::detail {
 template <typename... Args>
-void doAssert(const bool expr, const char* exprString, LocationFormatString&& formatString, Args&&... args) noexcept {
+void doAssert(
+    const bool expr, const char* exprString, const LocationFormatString& formatString, Args&&... args) noexcept {
     if (expr) {
         return;
     }
@@ -21,7 +22,7 @@ void doAssert(const bool expr, const char* exprString, LocationFormatString&& fo
     std::abort();
 }
 
-inline void doAssert(const bool expr, LocationFormatString&& formatString) noexcept {
+inline void doAssert(const bool expr, const LocationFormatString& formatString) noexcept {
     if (expr) {
         return;
     }

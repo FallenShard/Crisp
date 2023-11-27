@@ -86,10 +86,12 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device = renderer->getDevice();
     auto layout = layoutBuilder.create(device);
 
-    const std::vector<VkSpecializationMapEntry> specEntries = {//   id,               offset,             size
-                                                               {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-                                                               {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-                                                               {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}};
+    const std::vector<VkSpecializationMapEntry> specEntries = {
+        //  id,               offset,             size
+        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
+        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
+        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
+    };
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
@@ -128,7 +130,6 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
     m_cameraController->setDistance(3.0f);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-    m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
 
     m_renderGraph->addRenderPass(
         kForwardLightingPass,

@@ -312,9 +312,8 @@ FrameContext Renderer::beginFrame() {
 
     updateSwapChainRenderPass(virtualFrameIndex, m_swapChain->getImageView(*swapImageIndex));
 
-    /*for (const auto& worker : m_workers)
-    {*/
     auto* commandBuffer = m_workers[0]->getCmdBuffer(virtualFrameIndex);
+    commandBuffer->setIdleState();
     commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     return {m_currentFrameIndex, virtualFrameIndex, *swapImageIndex, commandBuffer};
 }
@@ -323,10 +322,11 @@ void Renderer::endFrame(const FrameContext& frameContext) {
     frameContext.commandBuffer->end();
     auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
     frame.addSubmission(*frameContext.commandBuffer);
+    frameContext.commandBuffer->setExecutionState();
 
     frame.submitToQueue(m_device->getGeneralQueue());
 
-    present(frame, frameContext.swapImageIndex);
+    present(frame, frameContext.swapChainImageIndex);
 
     m_resourceUpdates.clear();
     m_drawCommands.clear();

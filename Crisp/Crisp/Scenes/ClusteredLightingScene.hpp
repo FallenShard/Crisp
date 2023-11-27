@@ -62,7 +62,7 @@ private:
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     PbrUnifMaterialParams m_uniformMaterialParams;
 };

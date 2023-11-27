@@ -117,7 +117,7 @@ Material* createPbrMaterial(
 
 } // namespace
 
-PbrScene::PbrScene(Renderer* renderer, Window* window)
+PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& args)
     : Scene(renderer, window) {
     setupInput();
 
@@ -233,7 +233,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window)
     }
 
     createPlane();
-    createSceneObject();
+    createSceneObject(args["modelPath"]);
 
     m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
         *m_renderer,
@@ -394,27 +394,26 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
         envMapName);
 }
 
-void PbrScene::createSceneObject() {
+void PbrScene::createSceneObject(const std::filesystem::path& path) {
     // m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
 
     const std::string entityName{"sceneObject"};
     auto* sceneObject = createRenderNode(entityName, true);
-    const bool loadHelmet = true;
     TriangleMesh mesh{};
     PbrMaterial material{};
-    if (loadHelmet) {
-        const std::filesystem::path fullPath{
-            m_renderer->getResourcesPath() / "Meshes/DamagedHelmet/DamagedHelmet.gltf"};
+    if (path.extension() == ".gltf") {
+        const std::filesystem::path fullPath{m_renderer->getResourcesPath() / path};
         auto renderObjects = loadGltfModel(fullPath).unwrap();
         logger->info("Loaded {} objects from {}.", renderObjects.size(), fullPath.generic_string());
 
         mesh = std::move(renderObjects.at(0).mesh);
 
         material = std::move(renderObjects.at(0).material);
-        material.name = "DamagedHelmet";
+        material.name = path.stem().generic_string();
+        m_uniformMaterialParams = material.params;
 
-        // const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-        sceneObject->transformPack->M = glm::mat4(1.0f);
+        const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
+        sceneObject->transformPack->M = translation;
         // translation * glm::rotate(glm::pi<float>() * 0.5f, glm ::vec3(1.0f, 0.0f, 0.0f));
     } else {
         auto [triMesh, materials] =

@@ -47,7 +47,8 @@ Application::Application(const ApplicationEnvironment& environment)
     m_window.minimized.subscribe<&Application::onMinimize>(this);
     m_window.restored.subscribe<&Application::onRestore>(this);
 
-    m_sceneContainer = std::make_unique<SceneContainer>(m_renderer.get(), &m_window, environment.getParameters().scene);
+    m_sceneContainer = std::make_unique<SceneContainer>(
+        m_renderer.get(), &m_window, environment.getParameters().scene, environment.getParameters().sceneArgs);
     m_sceneContainer->update(0.0f);
 
     gui::initImGui(
