@@ -6,16 +6,16 @@
 namespace crisp {
 struct TriangleMeshView {
     std::string tag;
-    uint32_t first;
-    uint32_t count;
+    uint32_t firstIndex;
+    uint32_t indexCount;
 
     inline TriangleMeshView()
-        : first(0)
-        , count(0) {}
+        : firstIndex(0)
+        , indexCount(0) {}
 
-    inline TriangleMeshView(const std::string& t, uint32_t f, uint32_t c)
-        : tag(t)
-        , first(f)
-        , count(c) {}
+    inline TriangleMeshView(std::string&& tag, const uint32_t firstIndex, const uint32_t indexCount)
+        : tag(std::move(tag))
+        , firstIndex(firstIndex)
+        , indexCount(indexCount) {}
 };
 } // namespace crisp

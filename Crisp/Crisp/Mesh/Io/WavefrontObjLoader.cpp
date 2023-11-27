@@ -22,13 +22,13 @@ struct ObjVertex {
     std::optional<IndexType> n;
     std::optional<IndexType> uv;
 
-    inline ObjVertex(){};
+    inline ObjVertex() = default;
 
-    inline ObjVertex(std::string_view stringView) {
+    inline explicit ObjVertex(std::string_view stringView) {
         auto vertexAttribs = fixedTokenize<3>(stringView, "/", false);
 
         auto parse = [](const std::string_view& line_view) {
-            IndexType val;
+            IndexType val; // NOLINT
             std::from_chars(line_view.data(), line_view.data() + line_view.size(), val);
             return val < 0 ? val : val - 1; // return negative if it is a negative value, otherwise 0-based
         };
@@ -82,7 +82,7 @@ FlatHashMap<std::string, WavefrontObjMaterial> loadMaterials(const std::filesyst
     std::string line;
     while (std::getline(file, line)) {
         const std::size_t prefixEnd = line.find_first_of(' ', 0);
-        const std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
+        const std::string_view prefix = std::string_view(line).substr(0, prefixEnd); // NOLINT
 
         if (prefix == "newmtl") {
             auto tokens = fixedTokenize<2>(line, " ");
@@ -183,12 +183,11 @@ WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath) {
     uint32_t uniqueVertexId = 0;
     while (std::getline(file, line)) {
         const std::size_t prefixEnd = line.find(' ', 0);
-        const std::string_view prefix = std::string_view(line).substr(0, prefixEnd);
+        const std::string_view prefix = std::string_view(line).substr(0, prefixEnd); // NOLINT
 
         if (prefix == "o") {
             const auto tokens = fixedTokenize<2>(line, " ");
-            meshViews.push_back(
-                TriangleMeshView{std::string(tokens[1]), static_cast<uint32_t>(3 * triangles.size()), 0});
+            meshViews.emplace_back(std::string(tokens[1]), static_cast<uint32_t>(3 * triangles.size()), 0);
         } else if (prefix == "mtllib") {
             const auto tokens = fixedTokenize<2>(line, " ");
             materials = loadMaterials(objFilePath.parent_path() / tokens[1]);
@@ -236,8 +235,7 @@ WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath) {
             }
         } else if (prefix == "usemtl") {
             const auto tokens = fixedTokenize<2>(line, " ");
-            meshViews.push_back(
-                TriangleMeshView{std::string(tokens[1]), static_cast<uint32_t>(3 * triangles.size()), 0});
+            meshViews.emplace_back(std::string(tokens[1]), static_cast<uint32_t>(3 * triangles.size()), 0);
         } else if (prefix == "#") {
             // comment;
         }
@@ -275,16 +273,16 @@ WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath) {
         }
     }
 
-    if (meshViews.size() >= 1) {
+    if (!meshViews.empty()) {
         for (std::size_t i = 0; i < meshViews.size() - 1; ++i) {
-            meshViews[i].count = meshViews[i + 1].first - meshViews[i].first;
+            meshViews[i].indexCount = meshViews[i + 1].firstIndex - meshViews[i].firstIndex;
         }
 
-        meshViews.back().count = static_cast<uint32_t>(3 * mesh.triangles.size() - meshViews.back().first);
+        meshViews.back().indexCount = static_cast<uint32_t>(3 * mesh.triangles.size() - meshViews.back().firstIndex);
     }
 
     const auto [begin, end] =
-        std::ranges::remove_if(meshViews, [](const TriangleMeshView& part) { return part.count == 0; });
+        std::ranges::remove_if(meshViews, [](const TriangleMeshView& part) { return part.indexCount == 0; });
     meshViews.erase(begin, end);
 
     mesh.views = std::move(meshViews);

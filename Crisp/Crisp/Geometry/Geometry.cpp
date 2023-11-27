@@ -152,15 +152,33 @@ void Geometry::bindAndDraw(VkCommandBuffer commandBuffer) const {
 }
 
 IndexedGeometryView Geometry::createIndexedGeometryView() const {
-    return {m_indexBuffer->getHandle(), m_indexCount, m_instanceCount, 0, 0, 0};
+    return {
+        .indexBuffer = m_indexBuffer->getHandle(),
+        .indexCount = m_indexCount,
+        .instanceCount = m_instanceCount,
+        .firstIndex = 0,
+        .vertexOffset = 0,
+        .firstInstance = 0,
+    };
 }
 
 IndexedGeometryView Geometry::createIndexedGeometryView(uint32_t partIndex) const {
     return {
-        m_indexBuffer->getHandle(), m_meshViews[partIndex].count, m_instanceCount, m_meshViews[partIndex].first, 0, 0};
+        .indexBuffer = m_indexBuffer->getHandle(),
+        .indexCount = m_meshViews[partIndex].indexCount,
+        .instanceCount = m_instanceCount,
+        .firstIndex = m_meshViews[partIndex].firstIndex,
+        .vertexOffset = 0,
+        .firstInstance = 0,
+    };
 }
 
 ListGeometryView Geometry::createListGeometryView() const {
-    return {m_vertexCount, m_instanceCount, 0, 0};
+    return {
+        .vertexCount = m_vertexCount,
+        .instanceCount = m_instanceCount,
+        .firstVertex = 0,
+        .firstInstance = 0,
+    };
 }
 } // namespace crisp

@@ -153,11 +153,16 @@ std::vector<glm::vec3> TriangleMesh::computeVertexNormals(
 }
 
 void TriangleMesh::computeTangentVectors() {
-    m_tangents = std::vector<glm::vec4>(m_positions.size(), glm::vec4(0.0f));
+    m_tangents = std::vector<glm::vec4>(m_positions.size(), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
     std::vector<glm::vec3> bitangents = std::vector<glm::vec3>(m_positions.size(), glm::vec3(0.0f));
 
-    CRISP_CHECK_EQ(m_normals.size(), m_positions.size(), "Missing normals in computeTangentVectors().");
-    CRISP_CHECK_EQ(m_texCoords.size(), m_positions.size(), "Missing tex coords in computeTangentVectors().");
+    if (m_texCoords.empty()) {
+        spdlog::warn("Missing tex coords in computeTangentVectors() for {}", m_meshName);
+        return;
+    }
+
+    // CRISP_CHECK_EQ(m_normals.size(), m_positions.size(), "Missing normals in computeTangentVectors().");
+    // CRISP_CHECK_EQ(m_texCoords.size(), m_positions.size(), "Missing tex coords in computeTangentVectors().");
     for (const auto& face : m_triangles) {
         const glm::vec3& v1 = m_positions[face[0]];
         const glm::vec3& v2 = m_positions[face[1]];
