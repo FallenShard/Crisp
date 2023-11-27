@@ -4,6 +4,14 @@
 #include <map>
 
 namespace crisp {
+namespace {
+struct AliasTableConstructionElement {
+    float tau;
+    uint32_t i;
+    uint32_t j;
+};
+} // namespace
+
 AliasTable createAliasTable(const std::vector<float>& weights) {
     float avgWeight = 0.0f;
     for (const float w : weights) {
@@ -16,12 +24,12 @@ AliasTable createAliasTable(const std::vector<float>& weights) {
         sortedSamples.insert({weights[i], i});
     }
 
-    std::vector<AliasTableElement> tuples;
+    std::vector<AliasTableConstructionElement> tuples;
     tuples.reserve(weights.size());
     for (uint32_t i = 0; i < weights.size(); ++i) {
         auto lowest = sortedSamples.begin();
         auto highest = --sortedSamples.end();
-        const AliasTableElement el{
+        const AliasTableConstructionElement el{
             .tau = lowest->first / avgWeight,
             .i = lowest->second,
             .j = highest->second,
@@ -41,7 +49,7 @@ AliasTable createAliasTable(const std::vector<float>& weights) {
 
     std::ranges::sort(tuples, [](const auto& a, const auto& b) { return a.i < b.i; });
 
-    std::vector<AliasTablePackedElement> table;
+    std::vector<AliasTableElement> table;
     table.reserve(tuples.size());
     for (const auto& el : tuples) {
         table.push_back({el.tau, el.j});
