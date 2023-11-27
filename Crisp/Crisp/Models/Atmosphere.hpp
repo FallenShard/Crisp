@@ -108,7 +108,7 @@ struct AtmosphereParameters {
     AtmosphereParameters();
 };
 
-robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
+FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     RenderGraph& renderGraph,
     Renderer& renderer,
     ResourceContext& resourceContext,

@@ -10,6 +10,7 @@ add_cpp_interface_library(CrispHashMap
 )
 target_link_libraries(CrispHashMap
     INTERFACE robin_hood
+    INTERFACE unordered_dense
 )
 
 add_cpp_interface_library(CrispLogger

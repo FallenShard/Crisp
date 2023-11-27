@@ -112,23 +112,29 @@ FetchContent_Declare(robin_hood
 )
 FetchContent_MakeAvailable(robin_hood)
 
+FetchContent_Declare(unordered_dense
+    GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
+    GIT_TAG v4.1.2
+)
+FetchContent_MakeAvailable(unordered_dense)
+
 FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG 9.1.0
+    GIT_TAG 10.1.1
 )
 set(FMT_OS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(fmt)
 
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.10.0
+    GIT_TAG v1.12.0
 )
 set(SPDLOG_FMT_EXTERNAL_HO ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 FetchContent_Declare(googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.12.1
+    GIT_TAG v1.14.0
 )
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
@@ -137,7 +143,7 @@ FetchContent_MakeAvailable(googletest)
 
 FetchContent_Declare(tinygltf
     GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
-    GIT_TAG v2.6.3
+    GIT_TAG v2.8.18
 )
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
@@ -152,7 +158,7 @@ FetchContent_MakeAvailable(MPMCQueue)
 # TODO: Configure to be dynamic.
 FetchContent_Declare(onetbb
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG v2021.6.0
+    GIT_TAG v2021.11.0
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS ON)
@@ -161,7 +167,7 @@ set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(embree
     GIT_REPOSITORY https://github.com/embree/embree.git
-    GIT_TAG v3.13.5
+    GIT_TAG v4.3.0
 )
 set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
 set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
@@ -169,13 +175,13 @@ FetchContent_MakeAvailable(embree)
 
 FetchContent_Declare(vulkan
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.3.250
+    GIT_TAG v1.3.270
 )
 FetchContent_MakeAvailable(vulkan)
 
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
-    GIT_TAG sdk-1.3.250.0
+    GIT_TAG vulkan-sdk-1.3.268.0
 )
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
 set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)

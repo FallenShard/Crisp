@@ -177,9 +177,7 @@ bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const {
 
     rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
-    RTCIntersectContext context;
-    rtcInitIntersectContext(&context);
-    rtcIntersect1(m_scene, &context, &rayHit);
+    rtcIntersect1(m_scene, &rayHit);
 
     if (rayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
         its.tHit = rayHit.ray.tfar;
@@ -207,10 +205,7 @@ bool Scene::rayIntersect(const Ray3& shadowRay) const {
     rtcRay.mask = 0xFFFFFFFF;
     rtcRay.time = shadowRay.time;
 
-    RTCIntersectContext context;
-    rtcInitIntersectContext(&context);
-    context.flags = RTC_INTERSECT_CONTEXT_FLAG_NONE;
-    rtcOccluded1(m_scene, &context, &rtcRay);
+    rtcOccluded1(m_scene, &rtcRay);
     return rtcRay.tfar < 0.0f;
 }
 

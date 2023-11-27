@@ -3,10 +3,14 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
+#pragma warning(push)
+#pragma warning(disable : 4018) // Signed/unsigned comparison.
+#pragma warning(disable : 4267) // Signed/unsigned comparison.
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf.h>
+#pragma warning(pop)
 
 namespace crisp {
 namespace {

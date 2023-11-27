@@ -4,10 +4,10 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4324) // alignment warning
-#include <embree3/rtcore.h>
-#include <embree3/rtcore_geometry.h>
-#include <embree3/rtcore_ray.h>
-#include <embree3/rtcore_scene.h>
+#include <embree4/rtcore.h>
+#include <embree4/rtcore_geometry.h>
+#include <embree4/rtcore_ray.h>
+#include <embree4/rtcore_scene.h>
 #pragma warning(pop)
 
 #include <Crisp/Math/BoundingBox.hpp>
