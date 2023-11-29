@@ -58,6 +58,9 @@ struct RenderGraphImageDescription {
 
     VkImageCreateFlags createFlags{};
 
+    std::optional<VkClearValue> clearValue{};
+    VkImageUsageFlags imageUsageFlags{};
+
     bool canAlias(const RenderGraphImageDescription& desc) const {
         return sizePolicy == desc.sizePolicy && width == desc.height && depth == desc.depth && format == desc.format &&
                layerCount == desc.layerCount && mipLevelCount == desc.mipLevelCount &&

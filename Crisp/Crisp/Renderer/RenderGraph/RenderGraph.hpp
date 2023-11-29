@@ -109,6 +109,10 @@ private:
         return m_resources.at(handle.id);
     }
 
+    RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) {
+        return m_imageDescriptions.at(getResource(handle).descriptionIndex);
+    }
+
     const RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) const {
         return m_imageDescriptions.at(getResource(handle).descriptionIndex);
     }

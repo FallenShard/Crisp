@@ -31,9 +31,6 @@ struct RenderGraphResource {
 
     RenderGraphPassHandle producer; // Pass that created and/or wrote to this resource.
 
-    std::optional<VkClearValue> clearValue{};
-    VkImageUsageFlags imageUsageFlags{};
-
     std::string name; // Symbolic name of the resource. Useful for debugging and logging.
 };
 
