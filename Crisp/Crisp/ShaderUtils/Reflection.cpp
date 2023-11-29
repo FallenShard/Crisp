@@ -59,6 +59,16 @@ Result<VkDescriptorType> toVulkanDescriptorType(const SpvReflectDescriptorType t
     }
 }
 
+Result<VkFormat> toVulkanFormat(const SpvReflectFormat format) {
+    switch (format) {
+        SPV_TO_VK_CASE_RETURN(FORMAT_R32G32_SFLOAT);
+        SPV_TO_VK_CASE_RETURN(FORMAT_R32G32B32_SFLOAT);
+        SPV_TO_VK_CASE_RETURN(FORMAT_R32G32B32A32_SFLOAT);
+    default:
+        return resultError("Failed to convert SPV Reflect format type {} to Vulkan!", static_cast<uint32_t>(format));
+    }
+}
+
 class SpirvShaderReflectionModuleGuard {
 public:
     explicit SpirvShaderReflectionModuleGuard(SpvReflectShaderModule& module)
@@ -80,7 +90,7 @@ private:
 
 } // namespace
 
-void ShaderUniformInputMetadata::merge(ShaderUniformInputMetadata&& rhs) {
+void ShaderUniformInputMetadata::merge(const ShaderUniformInputMetadata& rhs) {
     // Resize current, if necessary
     if (rhs.descriptorSetLayoutBindings.size() > descriptorSetLayoutBindings.size()) {
         descriptorSetLayoutBindings.resize(rhs.descriptorSetLayoutBindings.size());
@@ -127,12 +137,27 @@ Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath) {
     return buffer;
 }
 
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath) {
-    const auto spirvFile{readSpirvFile(filePath)};
-    if (!spirvFile) {
-        return resultError("Failed to load spirv file from: {}", filePath.string());
+Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span<const char> spirvShader) {
+    SpvReflectShaderModule module;
+    CRISP_SPV_TRY(spvReflectCreateShaderModule(spirvShader.size(), spirvShader.data(), &module));
+    SpirvShaderReflectionModuleGuard moduleGuard(module);
+
+    const auto stageFlags = toVulkanShaderStage(module.shader_stage).unwrap();
+    if (stageFlags != VK_SHADER_STAGE_VERTEX_BIT) {
+        return resultError("Invalid shader stage {}", static_cast<uint32_t>(stageFlags));
     }
-    return reflectUniformMetadataFromSpirvShader(*spirvFile);
+
+    ShaderVertexInputMetadata metadata{};
+    metadata.attributes.resize(module.input_variable_count);
+    for (uint32_t i = 0; i < module.input_variable_count; ++i) {
+        const auto& inputVariable = module.input_variables[i]; // NOLINT
+        metadata.attributes[i].format = toVulkanFormat(inputVariable->format).unwrap();
+        metadata.attributes[i].location = inputVariable->location;
+    }
+
+    std::ranges::sort(metadata.attributes, [](const auto& a, const auto& b) { return a.location < b.location; });
+
+    return metadata;
 }
 
 Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const std::span<const char> spirvShader) {
@@ -180,6 +205,14 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
     }
 
     return metadata;
+}
+
+Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath) {
+    const auto spirvFile{readSpirvFile(filePath)};
+    if (!spirvFile) {
+        return resultError("Failed to load spirv file from: {}", filePath.string());
+    }
+    return reflectUniformMetadataFromSpirvShader(*spirvFile);
 }
 
 Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPaths(

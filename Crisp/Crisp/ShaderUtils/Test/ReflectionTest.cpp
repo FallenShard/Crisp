@@ -15,7 +15,7 @@ std::filesystem::path getSpirvShaderPath(const std::string& shaderName) {
     return kSpvAssetPath / (shaderName + ".spv");
 }
 
-TEST(ReflectionTest, VertexShader) {
+TEST(ReflectionTest, ComputeShader) {
     const auto reflection = reflectUniformMetadataFromSpirvPath(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
     ASSERT_THAT(reflection.descriptorSetLayoutBindings, SizeIs(1));
     EXPECT_THAT(
@@ -77,6 +77,20 @@ TEST(ReflectionTest, SpirvReflect) {
     EXPECT_THAT(result, SPV_REFLECT_RESULT_SUCCESS);
 
     spvReflectDestroyShaderModule(&module);
+}
+
+TEST(ReflectionTest, VertexShader) {
+    const auto reflection =
+        reflectVertexMetadataFromSpirvShader(readSpirvFile(getSpirvShaderPath("physically-based-tex.vert")).unwrap())
+            .unwrap();
+    using AttribDesc = decltype(reflection)::VertexAttributeDescription;
+    EXPECT_THAT(
+        reflection.attributes,
+        ElementsAre(
+            AllOf(Field(&AttribDesc::location, 0), Field(&AttribDesc::format, VK_FORMAT_R32G32B32_SFLOAT)),
+            AllOf(Field(&AttribDesc::location, 1), Field(&AttribDesc::format, VK_FORMAT_R32G32B32_SFLOAT)),
+            AllOf(Field(&AttribDesc::location, 2), Field(&AttribDesc::format, VK_FORMAT_R32G32_SFLOAT)),
+            AllOf(Field(&AttribDesc::location, 3), Field(&AttribDesc::format, VK_FORMAT_R32G32B32A32_SFLOAT))));
 }
 
 } // namespace
