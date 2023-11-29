@@ -8,7 +8,7 @@
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Models/Skybox.hpp>
-#include <Crisp/Renderer/RenderGraphExperimental.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {

@@ -1,16 +1,13 @@
 #include <Crisp/Vulkan/Test/VulkanTest.hpp>
 
-#include <Crisp/Renderer/RenderGraphExperimental.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
-
-#include <fstream>
-#include <stack>
 
 namespace crisp {
 namespace {
 
 using ::testing::SizeIs;
-using namespace rg;
 
 struct FluidSimulationData {
     RenderGraphResourceHandle positionBuffer;
@@ -37,11 +34,11 @@ VkClearValue createDepthClearValue(const float depthValue, const uint8_t stencil
     return v;
 }
 
-TEST(RenderGraphTest2, DISABLED_BasicUsage) {
-    RenderGraph rg;
+TEST(RenderGraphTest2, BasicUsage) {
+    rg::RenderGraph rg;
     rg.addPass(
         "fluid-pass",
-        [](RenderGraph::Builder& builder) {
+        [](rg::RenderGraph::Builder& builder) {
             auto& data = builder.getBlackboard().insert<FluidSimulationData>();
             data.positionBuffer = builder.createBuffer({}, "fluid-position-buffer");
         },
@@ -49,7 +46,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
 
     rg.addPass(
         "depth-pre-pass",
-        [](RenderGraph::Builder& builder) {
+        [](rg::RenderGraph::Builder& builder) {
             builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
 
             auto& data = builder.getBlackboard().insert<DepthPrePassData>();
@@ -63,7 +60,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
     RenderGraphResourceHandle output{};
     rg.addPass(
         "spectrum-pass",
-        [&output](RenderGraph::Builder& builder) {
+        [&output](rg::RenderGraph::Builder& builder) {
             output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image");
         },
         [](const RenderPassExecutionContext&) {});
@@ -71,7 +68,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
     for (uint32_t i = 0; i < 10; ++i) {
         rg.addPass(
             fmt::format("fft-pass-{}", i),
-            [&output, i](RenderGraph::Builder& builder) {
+            [&output, i](rg::RenderGraph::Builder& builder) {
                 builder.readStorageImage(output);
                 output = builder.createStorageImage(
                     {.format = VK_FORMAT_R32G32_SFLOAT}, fmt::format("fft-pass-image-{}", i));
@@ -81,7 +78,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
 
     rg.addPass(
         "forward-pass",
-        [&output](RenderGraph::Builder& builder) {
+        [&output](rg::RenderGraph::Builder& builder) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
             builder.readStorageImage(output);
@@ -93,7 +90,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
     RenderGraphResourceHandle modifiedHdrImage{};
     rg.addPass(
         "transparent-pass",
-        [&modifiedHdrImage](RenderGraph::Builder& builder) {
+        [&modifiedHdrImage](rg::RenderGraph::Builder& builder) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             modifiedHdrImage = builder.writeAttachment(builder.getBlackboard().get<ForwardLightingData>().hdrImage);
         },
@@ -102,7 +99,7 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
         "bloom-pass",
-        [modifiedHdrImage, &bloomImage](RenderGraph::Builder& builder) {
+        [modifiedHdrImage, &bloomImage](rg::RenderGraph::Builder& builder) {
             builder.readTexture(modifiedHdrImage);
             bloomImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "bloom-image");
         },
@@ -110,24 +107,24 @@ TEST(RenderGraphTest2, DISABLED_BasicUsage) {
 
     rg.addPass(
         "tonemapping-pass",
-        [bloomImage](RenderGraph::Builder& builder) {
+        [bloomImage](rg::RenderGraph::Builder& builder) {
             builder.readTexture(bloomImage);
             builder.createAttachment({.format = VK_FORMAT_R8G8B8A8_UNORM}, "ldr-image");
         },
         [](const RenderPassExecutionContext&) {});
 
-    rg.toGraphViz("D:/graph.dot").unwrap();
+    toGraphViz(rg, "D:/graph.dot").unwrap();
 
     EXPECT_THAT(rg.getPassCount(), 17);
     EXPECT_THAT(rg.getResourceCount(), 17);
 }
 
 TEST_F(RenderGraphTest, BasicUsage) {
-    RenderGraph rg;
+    rg::RenderGraph rg;
 
     rg.addPass(
         "forward-pass",
-        [](RenderGraph::Builder& builder) {
+        [](rg::RenderGraph::Builder& builder) {
             builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
@@ -148,7 +145,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
         "bloom-pass",
-        [&bloomImage](RenderGraph::Builder& builder) {
+        [&bloomImage](rg::RenderGraph::Builder& builder) {
             const auto& forwardData = builder.getBlackboard().get<ForwardLightingData>();
             builder.readTexture(forwardData.hdrImage);
             bloomImage = builder.createAttachment(
@@ -171,7 +168,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
         rg.execute(executor.cmdBuffer.getHandle());
     }
 
-    rg.toGraphViz("D:/graph.dot").unwrap();
+    toGraphViz(rg, "D:/graph_small.dot").unwrap();
 
     EXPECT_THAT(rg.getPassCount(), 2);
     EXPECT_THAT(rg.getResourceCount(), 3);

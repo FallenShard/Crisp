@@ -1,4 +1,4 @@
-#include <Crisp/Renderer/RenderGraphExperimental.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
@@ -8,10 +8,24 @@
 #include <ranges>
 
 namespace crisp::rg {
+namespace {
+RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc) {
+    return {
+        .format = desc.format,
+        .sampleCount = desc.sampleCount,
+        .layerCount = desc.layerCount,
+        .mipmapCount = desc.mipLevelCount,
+        .depthSlices = desc.depth,
+        .createFlags = desc.createFlags,
+        .size = {desc.width, desc.height},
+        .isSwapChainDependent = desc.sizePolicy == SizePolicy::SwapChainRelative,
+    };
+}
+} // namespace
+
 RenderGraph::Builder::Builder(RenderGraph& renderGraph, const RenderGraphPassHandle passHandle)
     : m_renderGraph(renderGraph)
-    , m_passHandle(passHandle)
-    , m_blackboard(renderGraph.getBlackboard()) {}
+    , m_passHandle(passHandle) {}
 
 void RenderGraph::Builder::exportTexture(RenderGraphResourceHandle res) {
     auto& resource = m_renderGraph.getResource(res);
@@ -94,9 +108,9 @@ RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
     accessState.access =
         isDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     if (isDepthAttachment) {
-        pass.setDepthAttachment(handle);
+        pass.depthStencilAttachment = handle;
     } else {
-        pass.pushColorAttachment(handle);
+        pass.colorAttachments.push_back(handle);
     }
     return handle;
 }
@@ -147,7 +161,7 @@ RenderGraphResourceHandle RenderGraph::Builder::writeAttachment(RenderGraphResou
 }
 
 RenderGraphBlackboard& RenderGraph::Builder::getBlackboard() {
-    return m_blackboard;
+    return m_renderGraph.getBlackboard();
 }
 
 size_t RenderGraph::getPassCount() const {
@@ -161,60 +175,6 @@ size_t RenderGraph::getResourceCount() const {
 std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(const RenderGraphResourceHandle handle) const {
     const auto& res{getResource(handle)};
     return createView(*m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
-}
-
-Result<> RenderGraph::toGraphViz(const std::string& path) const {
-    std::ofstream outputFile(path);
-    if (!outputFile) {
-        return resultError("Failed to open output file: {}!", path);
-    }
-
-    // Write the Graphviz header
-    outputFile << "digraph FrameGraph {\n";
-
-    for (auto&& [idx, res] : std::views::enumerate(m_resources)) {
-        const char* color = res.type == ResourceType::Image ? "springgreen" : "peachpuff";
-        outputFile << fmt::format(
-            R"({} [label="{} R: {}, PROD: {}, V: {}", style="filled", shape="{}", color="{}"];\n)",
-            idx,
-            res.name,
-            res.readPasses.size(),
-            getPass(res.producer).name,
-            res.version,
-            "ellipse",
-            color);
-    }
-
-    // Iterate over each vertex and its neighbors in the graph
-    for (auto&& [i, node] : std::views::enumerate(m_passes)) {
-        const auto vertexIdx = i + m_resources.size();
-        // Write the vertex and its label
-        outputFile << fmt::format(
-            R"({} [label="{}", style="filled", shape="{}", color="{}"];\n)",
-            vertexIdx,
-            node.name,
-            "box",
-            "deepskyblue");
-
-        // Iterate over the neighbors of the current vertex
-        for (const auto& neighbor : node.inputs) {
-            // Write the edge between the current vertex and its neighbor
-            outputFile << "    " << neighbor.id << " -> " << vertexIdx << ";\n";
-        }
-
-        for (const auto& neighbor : node.outputs) {
-            // Write the edge between the current vertex and its neighbor
-            outputFile << "    " << vertexIdx << " -> " << neighbor.id << ";\n";
-        }
-    }
-
-    // Write the Graphviz footer
-    outputFile << "}\n";
-
-    outputFile.close();
-    std::cout << "Graph visualization saved to: " << path << '\n';
-
-    return kResultSuccess;
 }
 
 const RenderGraphBlackboard& RenderGraph::getBlackboard() const {
@@ -238,19 +198,6 @@ VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExten
         }
     }
     return renderArea;
-}
-
-RenderTargetInfo RenderGraph::toRenderTargetInfo(const RenderGraphImageDescription& desc) {
-    return {
-        .format = desc.format,
-        .sampleCount = desc.sampleCount,
-        .layerCount = desc.layerCount,
-        .mipmapCount = desc.mipLevelCount,
-        .depthSlices = desc.depth,
-        .createFlags = desc.createFlags,
-        .size = {desc.width, desc.height},
-        .isSwapChainDependent = desc.sizePolicy == SizePolicy::SwapChainRelative,
-    };
 }
 
 void RenderGraph::compile(
@@ -391,29 +338,9 @@ RenderGraphResourceHandle RenderGraph::addBufferResource(
     return {static_cast<uint32_t>(m_resources.size()) - 1};
 }
 
-RenderGraphPass& RenderGraph::getPass(const RenderGraphPassHandle handle) {
-    return m_passes[handle.id];
-}
-
-const RenderGraphPass& RenderGraph::getPass(const RenderGraphPassHandle handle) const {
-    return m_passes[handle.id];
-}
-
-RenderGraphResource& RenderGraph::getResource(const RenderGraphResourceHandle handle) {
-    return m_resources[handle.id];
-}
-
-const RenderGraphResource& RenderGraph::getResource(const RenderGraphResourceHandle handle) const {
-    return m_resources[handle.id];
-}
-
-const RenderGraphImageDescription& RenderGraph::getImageDescription(const RenderGraphResourceHandle handle) {
-    return m_imageDescriptions[getResource(handle).physicalResourceIndex];
-}
-
 VkImageUsageFlags RenderGraph::determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const {
     VkImageUsageFlags flags{0};
-    for (uint32_t idx : imageResourceIndices) {
+    for (const uint32_t idx : imageResourceIndices) {
         flags = flags | m_resources[idx].imageUsageFlags;
     }
     return flags;
@@ -421,7 +348,7 @@ VkImageUsageFlags RenderGraph::determineUsageFlags(const std::vector<uint32_t>& 
 
 VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const {
     VkImageCreateFlags flags{0};
-    for (uint32_t idx : imageResourceIndices) {
+    for (const uint32_t idx : imageResourceIndices) {
         flags = flags | m_imageDescriptions[m_resources[idx].descriptionIndex].createFlags;
     }
     return flags;
@@ -532,27 +459,27 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         VulkanRenderPassBuilder builder{};
         builder.setSubpassCount(1)
             .configureSubpass(0, VK_PIPELINE_BIND_POINT_GRAPHICS)
-            .setAttachmentCount(static_cast<uint32_t>(
-                pass.colorAttachments.size() + (pass.depthStencilAttachment.has_value() ? 1 : 0)));
+            .setAttachmentCount(pass.getAttachmentCount());
 
         std::vector<VkAttachmentReference> colorAttachmentRefs{};
         uint32_t attachmentIndex = 0;
         RenderPassParameters renderPassParams{};
         std::vector<VkClearValue> attachmentClearValues{};
-        for (const RenderGraphResourceHandle colorAttachment : pass.colorAttachments) {
-            const auto& res{getResource(colorAttachment)};
-            const VkImageLayout initialLayout = res.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+        for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
+            const auto& colorAttachment{getResource(resourceId)};
+            const VkImageLayout initialLayout = colorAttachment.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
                                                     ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                                                     : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             builder
                 .setAttachment(
                     static_cast<int32_t>(attachmentIndex),
                     {
-                        .format = m_imageDescriptions[res.descriptionIndex].format,
-                        .samples = m_imageDescriptions[res.descriptionIndex].sampleCount,
-                        .loadOp = res.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .storeOp =
-                            res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+                        .format = m_imageDescriptions[colorAttachment.descriptionIndex].format,
+                        .samples = m_imageDescriptions[colorAttachment.descriptionIndex].sampleCount,
+                        .loadOp =
+                            colorAttachment.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .storeOp = colorAttachment.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE
+                                                                      : VK_ATTACHMENT_STORE_OP_STORE,
                         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                         .initialLayout = initialLayout,
@@ -560,16 +487,17 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                     })
                 .addColorAttachmentRef(0, attachmentIndex);
 
-            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
-            rtInfo.usage = res.imageUsageFlags;
+            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[colorAttachment.descriptionIndex]);
+            rtInfo.usage = colorAttachment.imageUsageFlags;
             rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             rtInfo.buffered = false;
 
             renderPassParams.renderTargetInfos.push_back(rtInfo);
-            renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
+            renderPassParams.renderTargets.push_back(
+                m_physicalImages[colorAttachment.physicalResourceIndex].image.get());
             renderPassParams.attachmentMappings.push_back(
                 {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(res.clearValue ? *res.clearValue : VkClearValue{});
+            attachmentClearValues.push_back(colorAttachment.clearValue ? *colorAttachment.clearValue : VkClearValue{});
             ++attachmentIndex;
         }
 

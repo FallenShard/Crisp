@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Crisp/Core/Result.hpp>
-#include <Crisp/Renderer/RenderGraphBlackboard.hpp>
-#include <Crisp/Renderer/RenderGraphExperimentalUtils.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphBlackboard.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphUtils.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
@@ -37,18 +37,17 @@ public:
     private:
         RenderGraph& m_renderGraph;
         RenderGraphPassHandle m_passHandle;
-        RenderGraphBlackboard& m_blackboard;
     };
 
     template <typename BuilderFunc, typename ExecuteFunc>
-    RenderGraphPassHandle addPass(std::string name, BuilderFunc&& builderFunc, ExecuteFunc&& executeFunc) {
+    RenderGraphPassHandle addPass(std::string name, const BuilderFunc& builderFunc, ExecuteFunc&& executeFunc) {
         if (m_passMap.contains(name)) {
             CRISP_FATAL("RenderGraph already contains pass named '{}'.", name);
         }
 
         m_passes.emplace_back();
         m_passes.back().name = std::move(name);
-        m_passes.back().executeFunc = executeFunc;
+        m_passes.back().executeFunc = std::forward<ExecuteFunc>(executeFunc);
         const RenderGraphPassHandle handle{static_cast<uint32_t>(m_passes.size()) - 1};
         m_passMap.emplace(m_passes.back().name, handle);
 
@@ -62,13 +61,9 @@ public:
 
     std::unique_ptr<VulkanImageView> createViewFromResource(RenderGraphResourceHandle handle) const;
 
-    Result<> toGraphViz(const std::string& path) const;
-
     const RenderGraphBlackboard& getBlackboard() const;
 
     VkExtent2D getRenderArea(const RenderGraphPass& pass, VkExtent2D swapChainExtent);
-
-    static RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc);
 
     void compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent, VkCommandBuffer cmdBuffer);
 
@@ -80,22 +75,43 @@ public:
 
     void resize(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
 
+    const std::vector<RenderGraphResource>& getResources() const {
+        return m_resources;
+    }
+
+    const std::vector<RenderGraphPass>& getPasses() const {
+        return m_passes;
+    }
+
+    const RenderGraphPass& getPass(const RenderGraphPassHandle handle) const {
+        return m_passes.at(handle.id);
+    }
+
 private:
     struct ResourceTimeline {
         uint32_t firstWrite{~0u};
-        uint32_t lastRead{0};
+        uint32_t lastRead{0u};
     };
 
     std::vector<ResourceTimeline> calculateResourceTimelines();
     RenderGraphResourceHandle addImageResource(const RenderGraphImageDescription& description, std::string&& name);
     RenderGraphResourceHandle addBufferResource(const RenderGraphBufferDescription& description, std::string&& name);
 
-    RenderGraphPass& getPass(RenderGraphPassHandle handle);
-    const RenderGraphPass& getPass(RenderGraphPassHandle handle) const;
+    RenderGraphPass& getPass(const RenderGraphPassHandle handle) {
+        return m_passes.at(handle.id);
+    }
 
-    RenderGraphResource& getResource(RenderGraphResourceHandle handle);
-    const RenderGraphResource& getResource(RenderGraphResourceHandle handle) const;
-    const RenderGraphImageDescription& getImageDescription(RenderGraphResourceHandle handle);
+    RenderGraphResource& getResource(const RenderGraphResourceHandle handle) {
+        return m_resources.at(handle.id);
+    }
+
+    const RenderGraphResource& getResource(const RenderGraphResourceHandle handle) const {
+        return m_resources.at(handle.id);
+    }
+
+    const RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) const {
+        return m_imageDescriptions.at(getResource(handle).descriptionIndex);
+    }
 
     VkImageUsageFlags determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const;
     VkImageCreateFlags determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const;
@@ -119,7 +135,6 @@ private:
     // Physical resources, built during compilation.
     std::vector<RenderGraphPhysicalImage> m_physicalImages;
     std::vector<RenderGraphPhysicalBuffer> m_physicalBuffers;
-    // std::vector<RenderGraphPhysicalPass> m_physicalPasses;
     std::vector<std::unique_ptr<VulkanRenderPass>> m_physicalPasses;
 
     // Used to facilitate communication of pass dependencies across the codebase.

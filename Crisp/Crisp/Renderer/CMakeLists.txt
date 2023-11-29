@@ -1,3 +1,5 @@
+add_subdirectory(RenderGraph)
+
 add_cpp_static_library(CrispPipelineBuilder
     "PipelineBuilder.cpp"
     "PipelineBuilder.hpp"
@@ -134,23 +136,6 @@ add_cpp_static_library(CrispVulkanRenderPassBuilder
 target_link_libraries(CrispVulkanRenderPassBuilder
     PUBLIC Crisp::Vulkan
 )
-
-add_cpp_static_library(CrispRenderGraph
-    "RenderGraphBlackboard.hpp"
-    "RenderGraphExperimental.cpp"
-    "RenderGraphExperimental.hpp"
-    "RenderGraphExperimentalUtils.hpp"
-)
-target_link_libraries(CrispRenderGraph
-    PUBLIC Crisp::Vulkan
-    PRIVATE Crisp::VulkanRenderPassBuilder
-    PRIVATE Crisp::Renderer
-)
-
-add_cpp_test(CrispRenderGraphTest
-    "Test/RenderGraphTest.cpp"
-)
-target_link_libraries(CrispRenderGraphTest PRIVATE Crisp::VulkanTestUtils Crisp::RenderGraph)
 
 add_cpp_static_library(CrispRayTracingPipelineBuilder
     "RayTracingPipelineBuilder.hpp"

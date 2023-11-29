@@ -3,7 +3,6 @@
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
-#include <Crisp/Renderer/RenderGraphExperimental.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
@@ -199,8 +198,5 @@ private:
 
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
-
-    std::unique_ptr<rg::RenderGraph> m_rg;
-    std::vector<std::unique_ptr<VulkanImageView>> m_rgSceneImageViews;
 };
 } // namespace crisp
