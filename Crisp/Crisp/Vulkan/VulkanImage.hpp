@@ -98,5 +98,6 @@ VkImageAspectFlags determineImageAspect(VkFormat format);
 bool isDepthFormat(VkFormat format);
 
 const char* toString(VkImageLayout layout);
+std::string toString(VkImageUsageFlags flags);
 
 } // namespace crisp

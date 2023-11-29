@@ -3,6 +3,14 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 
+#define STRINGIFY(x) #x
+
+#define APPEND_FLAG_BIT_STR(res, flags, bit)                                                                           \
+    if ((flags) & VK_IMAGE_USAGE_##bit) {                                                                              \
+        (res) += STRINGIFY(VK_IMAGE_USAGE_##bit);                                                                      \
+        (res) += " | ";                                                                                                \
+    }
+
 namespace crisp {
 namespace {
 auto logger = createLoggerMt("VulkanImage");
@@ -64,6 +72,21 @@ const char* toString(const VkImageLayout layout) {
         logger->critical("Unknown layout encountered: {}.", static_cast<uint32_t>(layout));
         return "Unknown";
     }
+}
+
+std::string toString(VkImageUsageFlags flags) {
+    std::string res;
+    APPEND_FLAG_BIT_STR(res, flags, TRANSFER_SRC_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, TRANSFER_DST_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, SAMPLED_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, STORAGE_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, COLOR_ATTACHMENT_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, DEPTH_STENCIL_ATTACHMENT_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, TRANSIENT_ATTACHMENT_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, INPUT_ATTACHMENT_BIT);
+    APPEND_FLAG_BIT_STR(res, flags, FRAGMENT_DENSITY_MAP_BIT_EXT);
+    APPEND_FLAG_BIT_STR(res, flags, FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR);
+    return res;
 }
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)

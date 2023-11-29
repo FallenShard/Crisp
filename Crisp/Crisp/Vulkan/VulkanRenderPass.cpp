@@ -63,12 +63,13 @@ VkViewport VulkanRenderPass::createViewport() const {
         static_cast<float>(m_params.renderArea.width),
         static_cast<float>(m_params.renderArea.height),
         0.0f,
-        1.0f};
+        1.0f,
+    };
 }
 
 VkRect2D VulkanRenderPass::createScissor() const {
-    constexpr VkOffset2D zeroOrigin{0, 0};
-    return {zeroOrigin, m_params.renderArea};
+    static constexpr VkOffset2D kZero{0, 0};
+    return {kZero, m_params.renderArea};
 }
 
 void VulkanRenderPass::begin(
