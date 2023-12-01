@@ -42,18 +42,21 @@ BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha) {
     };
 }
 
-AliasTable createAliasTable(const TriangleMesh& mesh) {
+AliasTable createAliasTable(const TriangleMesh& mesh, bool addHeaderEntry = true) {
     std::vector<float> weights;
     weights.reserve(mesh.getTriangleCount());
 
     float totalArea = 0.0f;
     for (uint32_t i = 0; i < mesh.getTriangleCount(); ++i) {
-        weights.push_back(mesh.calculateFaceArea(i));
+        weights.push_back(mesh.calculateTriangleArea(i));
         totalArea += weights.back();
     }
 
     auto table = ::crisp::createAliasTable(weights);
-    table.insert(table.begin(), {.tau = 1.0f / totalArea, .j = mesh.getTriangleCount()});
+    if (addHeaderEntry) {
+        table.insert(table.begin(), {.tau = 1.0f / totalArea, .j = mesh.getTriangleCount()});
+    }
+
     return table;
 }
 

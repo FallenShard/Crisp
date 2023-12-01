@@ -1,10 +1,10 @@
 #pragma once
 
-#include <Crisp/Mesh/VertexAttributeDescriptor.hpp>
-
 #include <cstddef>
 #include <span>
 #include <vector>
+
+#include <Crisp/Mesh/VertexAttributeDescriptor.hpp>
 
 namespace crisp {
 struct VertexAttributeBuffer {

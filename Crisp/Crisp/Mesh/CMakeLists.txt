@@ -14,4 +14,4 @@ target_link_libraries(CrispMesh
     PRIVATE Crisp::Logger
     PUBLIC Crisp::HashMap)
 
-add_subdirectory(IO)
+add_subdirectory(Io)

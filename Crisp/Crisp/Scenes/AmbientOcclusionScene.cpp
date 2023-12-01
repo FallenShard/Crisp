@@ -133,9 +133,9 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     Material* normalMaterial = m_resourceContext->createMaterial("normal", normalPipeline);
     normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-    const VertexLayoutDescription positionFormat = {{VertexAttribute::Position}};
     m_resourceContext->addGeometry(
-        "floorPos", std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(positionFormat)), positionFormat));
+        "floorPos",
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
 
     const VertexLayoutDescription vertexFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
     m_resourceContext->addGeometry(

@@ -9,13 +9,12 @@ namespace crisp {
 constexpr std::size_t NumCubeMapFaces = 6;
 const std::array<const std::string, NumCubeMapFaces> SideFilenames = {
     "left", "right", "top", "bottom", "back", "front"};
-const VertexLayoutDescription VertexAttribs = {{VertexAttribute::Position}};
 
 Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder) {
     m_cubeGeometry = std::make_unique<Geometry>(
         *renderer,
-        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(VertexAttribs)).unwrap(),
-        VertexAttribs);
+        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
+        kPosVertexFormat);
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
     const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
@@ -59,8 +58,8 @@ Skybox::Skybox(
     const VulkanSampler& sampler) {
     m_cubeGeometry = std::make_unique<Geometry>(
         *renderer,
-        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(VertexAttribs)).unwrap(),
-        VertexAttribs);
+        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
+        kPosVertexFormat);
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
     m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);

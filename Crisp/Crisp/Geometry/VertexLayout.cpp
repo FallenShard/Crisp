@@ -19,6 +19,23 @@ Result<VkFormat> getFormat(const VertexAttribute attribute) {
     }
     return resultError("Failed to convert attribute {} into vulkan format!", static_cast<uint32_t>(attribute));
 }
+
+bool operator==(const VkVertexInputBindingDescription& a, const VkVertexInputBindingDescription& b) {
+    return a.binding == b.binding && a.inputRate == b.inputRate && a.stride == b.stride;
+}
+
+bool operator!=(const VkVertexInputBindingDescription& a, const VkVertexInputBindingDescription& b) {
+    return !(a == b);
+}
+
+bool operator==(const VkVertexInputAttributeDescription& a, const VkVertexInputAttributeDescription& b) {
+    return a.binding == b.binding && a.format == b.format && a.location == b.location && a.offset == b.offset;
+}
+
+bool operator!=(const VkVertexInputAttributeDescription& a, const VkVertexInputAttributeDescription& b) {
+    return !(a == b);
+}
+
 } // namespace
 
 bool VertexLayout::operator==(const VertexLayout& rhs) const {
@@ -27,15 +44,13 @@ bool VertexLayout::operator==(const VertexLayout& rhs) const {
     }
 
     for (uint32_t i = 0; i < bindings.size(); ++i) {
-        if (bindings[i].binding != rhs.bindings[i].binding || bindings[i].inputRate != rhs.bindings[i].inputRate ||
-            bindings[i].stride != rhs.bindings[i].stride) {
+        if (bindings[i] != rhs.bindings[i]) {
             return false;
         }
     }
 
     for (uint32_t i = 0; i < attributes.size(); ++i) {
-        if (attributes[i].binding != rhs.attributes[i].binding || attributes[i].format != rhs.attributes[i].format ||
-            attributes[i].location != rhs.attributes[i].location || attributes[i].offset != rhs.attributes[i].offset) {
+        if (attributes[i] != rhs.attributes[i]) {
             return false;
         }
     }
@@ -48,15 +63,13 @@ bool VertexLayout::isSubsetOf(const VertexLayout& rhs) const {
     }
 
     for (uint32_t i = 0; i < bindings.size(); ++i) {
-        if (bindings[i].binding != rhs.bindings[i].binding || bindings[i].inputRate != rhs.bindings[i].inputRate ||
-            bindings[i].stride != rhs.bindings[i].stride) {
+        if (bindings[i] != rhs.bindings[i]) {
             return false;
         }
     }
 
     for (uint32_t i = 0; i < attributes.size(); ++i) {
-        if (attributes[i].binding != rhs.attributes[i].binding || attributes[i].format != rhs.attributes[i].format ||
-            attributes[i].location != rhs.attributes[i].location || attributes[i].offset != rhs.attributes[i].offset) {
+        if (attributes[i] != rhs.attributes[i]) {
             return false;
         }
     }

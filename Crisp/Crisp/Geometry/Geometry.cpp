@@ -23,8 +23,8 @@ Geometry::Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLay
     : Geometry(
           renderer,
           VertexLayout::create(vertexLayoutDescription),
-          mesh.createInterleavedVertexBuffers(vertexLayoutDescription, false),
-          mesh.getFaces(),
+          interleaveVertexBuffers(mesh, vertexLayoutDescription, false),
+          mesh.getTriangles(),
           mesh.getViews()) {}
 
 Geometry::Geometry(
@@ -36,8 +36,8 @@ Geometry::Geometry(
     : Geometry(
           renderer,
           VertexLayout::create(vertexLayoutDescription),
-          mesh.createInterleavedVertexBuffers(vertexLayoutDescription, padToVec4),
-          mesh.getFaces(),
+          interleaveVertexBuffers(mesh, vertexLayoutDescription, padToVec4),
+          mesh.getTriangles(),
           mesh.getViews(),
           usageFlags) {}
 

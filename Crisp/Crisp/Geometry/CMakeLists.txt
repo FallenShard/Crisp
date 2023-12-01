@@ -20,6 +20,12 @@ add_cpp_static_library(CrispVertexLayout
 target_link_libraries(CrispVertexLayout
     PUBLIC Crisp::VulkanHeader
     PUBLIC Crisp::Mesh
+    PUBLIC Crisp::VulkanFormatTraits
     PRIVATE Crisp::Logger
     PRIVATE Crisp::Result
 )
+
+add_cpp_test(CrispVertexLayoutTest
+    "Test/VertexLayoutTest.cpp")
+target_link_libraries(CrispVertexLayoutTest
+    PRIVATE Crisp::VertexLayout)

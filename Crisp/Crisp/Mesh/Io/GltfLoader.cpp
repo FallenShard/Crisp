@@ -294,11 +294,9 @@ TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinyglt
     CRISP_CHECK_GE(primitive.indices, 0);
     std::vector<glm::uvec3> indices{loadIndexBuffer(model, model.accessors.at(primitive.indices)).unwrap()};
 
-    TriangleMesh triangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(indices), {}};
+    TriangleMesh triangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(indices)};
     if (!tangents.empty()) {
         triangleMesh.setTangents(std::move(tangents));
-    } else {
-        triangleMesh.computeTangentVectors();
     }
 
     return triangleMesh;

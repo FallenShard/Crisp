@@ -11,12 +11,12 @@ TriangleMesh convertToTriangleMesh(
     const std::filesystem::path& path,
     WavefrontObjMesh&& objMesh,
     std::vector<VertexAttributeDescriptor> vertexAttribs) {
+    (void)vertexAttribs;
     TriangleMesh mesh(
         std::move(objMesh.positions),
         std::move(objMesh.normals),
         std::move(objMesh.texCoords),
-        std::move(objMesh.triangles),
-        std::move(vertexAttribs));
+        std::move(objMesh.triangles));
 
     mesh.setMeshName(path.filename().stem().string());
     mesh.setViews(std::move(objMesh.views));

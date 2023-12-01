@@ -28,9 +28,6 @@ constexpr std::array<const char*, kCascadeCount> kCsmPasses = {
     "csmPass3",
 };
 
-const VertexLayoutDescription kPbrVertexFormat = {
-    {VertexAttribute::Position}, {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
-
 void setPbrMaterialSceneParams(
     Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem) {
     const auto& imageCache = resourceContext.imageCache;

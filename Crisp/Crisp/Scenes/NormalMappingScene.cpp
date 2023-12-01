@@ -147,11 +147,9 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
 
 void NormalMappingScene::createPlane() {
     auto& imageCache = m_resourceContext->imageCache;
-    const VertexLayoutDescription PbrVertexFormat = {
-        {VertexAttribute::Position}, {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
     m_resourceContext->addGeometry(
         "floor",
-        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(PbrVertexFormat), 10.0f), PbrVertexFormat));
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 10.0f), kPbrVertexFormat));
 
     imageCache.addSampler(
         "linearRepeat",
@@ -207,11 +205,11 @@ void NormalMappingScene::createPlane() {
 
     // NANOSUIT
     TriangleMesh mesh(
-        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj ", flatten(PbrVertexFormat))
+        loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/nanosuit/nanosuit.obj ", flatten(kPbrVertexFormat))
             .unwrap());
     mesh.normalizeToUnitBox();
     mesh.transform(glm::translate(glm::vec3(0.0f, 0.5f, 0.0f)));
-    m_resourceContext->addGeometry("nanosuit", std::make_unique<Geometry>(*m_renderer, mesh, PbrVertexFormat));
+    m_resourceContext->addGeometry("nanosuit", std::make_unique<Geometry>(*m_renderer, mesh, kPbrVertexFormat));
 
     // Leg, Hand, Glass, Arm, Helmet,
     // Body

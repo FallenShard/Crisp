@@ -4,6 +4,7 @@
 
 namespace crisp {
 TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, const float size) {
+    (void)vertexAttributes;
     std::vector<glm::vec3> positions = {
         glm::vec3(-size, 0.0f, +size),
         glm::vec3(+size, 0.0f, +size),
@@ -30,21 +31,22 @@ TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& verte
         glm::uvec3(0, 2, 3),
     };
 
-    return {std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes};
+    return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
 TriangleMesh createGridMesh(
     const std::vector<VertexAttributeDescriptor>& vertexAttributes, const float size, const int tessellation) {
+    (void)vertexAttributes;
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;
     std::vector<glm::uvec3> faces;
 
-    float scale = size / tessellation;
-    for (int i = 0; i <= tessellation; ++i) {
-        for (int j = 0; j <= tessellation; ++j) {
-            const float z = -i * scale + size / 2;
-            const float x = j * scale - size / 2;
+    const float scale = size / static_cast<float>(tessellation);
+    for (int32_t i = 0; i <= tessellation; ++i) {
+        for (int32_t j = 0; j <= tessellation; ++j) {
+            const float z = static_cast<float>(-i) * scale + size * 0.5f;
+            const float x = static_cast<float>(+j) * scale - size * 0.5f;
             positions.emplace_back(x, 0.0f, z);
             normals.emplace_back(0.0f, 1.0f, 0.0f);
             texCoords.emplace_back(x, z);
@@ -61,11 +63,11 @@ TriangleMesh createGridMesh(
         }
     }
 
-    return TriangleMesh(
-        std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
+    return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
 TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
+    (void)vertexAttributes;
     std::vector<glm::vec3> positions = {
         glm::vec3(-0.05f, 0.0f, +0.0f),
         glm::vec3(+0.05f, 0.0f, +0.0f),
@@ -100,11 +102,11 @@ TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vert
         glm::uvec3(2, 5, 4),
     };
 
-    return TriangleMesh(
-        std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
+    return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces));
 }
 
 TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
+    (void)vertexAttributes;
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;
@@ -114,13 +116,13 @@ TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vert
     constexpr int numSlices = 64;
 
     for (int j = 0; j <= numRings; j++) {
-        const float v = j / static_cast<float>(numRings);
+        const float v = static_cast<float>(j) / static_cast<float>(numRings);
         const float phi = glm::radians(90.0f - v * 180.0f);
         const float pSin = std::sinf(phi);
         const float pCos = std::cosf(phi);
 
         for (int i = 0; i <= numSlices; i++) {
-            const float u = i / static_cast<float>(numSlices);
+            const float u = static_cast<float>(i) / static_cast<float>(numSlices);
             const float theta = glm::radians(u * 360.0f);
             const float tSin = std::sinf(theta);
             const float tCos = std::cosf(theta);
@@ -140,11 +142,11 @@ TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vert
         }
     }
 
-    return TriangleMesh(
-        std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
+    return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
 TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
+    (void)vertexAttributes;
     std::vector<glm::vec3> positions = {
         // Front
         glm::vec3(-0.5f, -0.5f, +0.5f),
@@ -237,7 +239,6 @@ TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertex
         glm::uvec3(20, 22, 23),
     };
 
-    return TriangleMesh(
-        std::move(positions), std::move(normals), std::move(texCoords), std::move(faces), vertexAttributes);
+    return {std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 } // namespace crisp

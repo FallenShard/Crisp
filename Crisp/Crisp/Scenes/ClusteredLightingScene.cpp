@@ -89,19 +89,18 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
 
     // Geometry setup
-    const VertexLayoutDescription shadowVertexFormat = {{VertexAttribute::Position}};
     const VertexLayoutDescription cubeFormat{{VertexAttribute::Position, VertexAttribute::Normal}};
     m_resourceContext->addGeometry(
         "cubeRT", std::make_unique<Geometry>(*m_renderer, createCubeMesh(flatten(cubeFormat)), cubeFormat));
     m_resourceContext->addGeometry(
         "cubeShadow",
-        std::make_unique<Geometry>(*m_renderer, createCubeMesh(flatten(shadowVertexFormat)), shadowVertexFormat));
+        std::make_unique<Geometry>(*m_renderer, createCubeMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
     m_resourceContext->addGeometry(
         "sphereShadow",
-        std::make_unique<Geometry>(*m_renderer, createSphereMesh(flatten(shadowVertexFormat)), shadowVertexFormat));
+        std::make_unique<Geometry>(*m_renderer, createSphereMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
     m_resourceContext->addGeometry(
         "floorShadow",
-        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(shadowVertexFormat)), shadowVertexFormat));
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
 
     createCommonTextures();
 
@@ -289,12 +288,9 @@ void ClusteredLightingScene::createShaderball() {
 }
 
 void ClusteredLightingScene::createPlane() {
-    const VertexLayoutDescription pbrVertexFormat = {
-        {VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent}};
-
     m_resourceContext->addGeometry(
         "floor",
-        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(pbrVertexFormat), 200.0f), pbrVertexFormat));
+        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 200.0f), kPbrVertexFormat));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

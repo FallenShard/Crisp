@@ -18,9 +18,8 @@ enum class VertexAttribute {
 
 template <VertexAttribute attribute>
 struct VertexAttributeTraits {
-    using GlmType = typename std::tuple_element<
-        static_cast<std::size_t>(attribute),
-        std::tuple<glm::vec3, glm::vec3, glm::vec2, glm::vec4>>::type;
+    using GlmType = std::
+        tuple_element_t<static_cast<std::size_t>(attribute), std::tuple<glm::vec3, glm::vec3, glm::vec2, glm::vec4>>;
     static constexpr std::size_t byteSize = sizeof(GlmType);
     static constexpr std::size_t numComponents = GlmType::length();
 };

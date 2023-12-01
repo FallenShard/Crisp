@@ -38,11 +38,6 @@ struct CascadedShadowMapData {
     std::array<RenderGraphResourceHandle, kCascadeCount> cascades;
 };
 
-const VertexLayoutDescription kPbrVertexFormat = {
-    {VertexAttribute::Position},
-    {VertexAttribute::Normal, VertexAttribute::TexCoord, VertexAttribute::Tangent},
-};
-
 void setPbrMaterialSceneParams(
     Material& material,
     const ResourceContext& resourceContext,
