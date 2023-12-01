@@ -20,7 +20,6 @@ add_cpp_static_library(CrispVulkan
     "VulkanDescriptorSet.hpp"
     "VulkanDevice.cpp"
     "VulkanDevice.hpp"
-    "VulkanFormatTraits.hpp"
     "VulkanFramebuffer.cpp"
     "VulkanFramebuffer.hpp"
     "VulkanImage.cpp"
@@ -58,11 +57,20 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::RendererConfig
     PUBLIC Crisp::Result
     PUBLIC Crisp::HashMap
-    PRIVATE Crisp::Logger
+    PUBLIC Crisp::Logger
     PUBLIC Crisp::Utils
     PUBLIC Crisp::Checks
+    PUBLIC Crisp::VulkanFormatTraits
     PUBLIC Crisp::VertexLayout
     PUBLIC Crisp::VulkanHeader)
+
+add_cpp_interface_library(CrispVulkanFormatTraits
+    "VulkanFormatTraits.hpp"
+)
+target_link_libraries(CrispVulkanFormatTraits
+    INTERFACE Crisp::Logger
+    INTERFACE Crisp::Checks
+    INTERFACE Crisp::VulkanHeader)
 
 add_cpp_static_library(CrispVulkanHeader
     "VulkanHeader.cpp"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp {
@@ -26,14 +26,12 @@ inline consteval uint32_t getNumChannels(VkFormat format) {
         return 4;
     case VK_FORMAT_R8_UNORM:
         return 1;
-
     default:
-        std::terminate();
-        return 0;
+        CRISP_FATAL("Could not determine number of channels for format: {}", static_cast<uint32_t>(format));
     }
 }
 
-static constexpr uint32_t getSizeOf(VkFormat format) {
+inline constexpr uint32_t getSizeOf(VkFormat format) {
     switch (format) {
     case VK_FORMAT_R32G32B32A32_SFLOAT:
         return 4 * sizeof(float);
@@ -42,10 +40,8 @@ static constexpr uint32_t getSizeOf(VkFormat format) {
     case VK_FORMAT_R32G32_SFLOAT:
         return 2 * sizeof(float);
     default:
-        spdlog::critical("Unknown format specified {}", static_cast<uint32_t>(format));
+        CRISP_FATAL("Could not determine byte size for format: {}", static_cast<uint32_t>(format));
     }
-
-    return ~0u;
 }
 
 // Retrieve byte size of a vulkan format
@@ -76,6 +72,9 @@ template <VkFormat F, VkFormat... Fs>
 struct FormatSizeof<F, Fs...> {
     static constexpr size_t value = FormatSizeof<F>::value + FormatSizeof<Fs...>::value;
 };
+
+template <VkFormat... Fs>
+inline constexpr size_t FormatSizeofValue = FormatSizeof<Fs...>::value;
 
 // Retrieve total byte size for passed types
 template <typename... Ts>
