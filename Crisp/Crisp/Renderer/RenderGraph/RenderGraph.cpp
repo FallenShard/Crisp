@@ -4,11 +4,13 @@
 #include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 
-#include <fstream>
 #include <ranges>
 
 namespace crisp::rg {
 namespace {
+
+const auto logger = createLoggerMt("RenderGraph");
+
 RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc) {
     return {
         .format = desc.format,
@@ -300,7 +302,7 @@ std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelin
     }
 
     for (auto&& [idx, t] : std::views::enumerate(timelines)) {
-        spdlog::warn(
+        logger->info(
             "{}. {}-{}: W: {} ({}), R: {} ({})",
             idx,
             m_resources[idx].name,
@@ -416,7 +418,7 @@ void RenderGraph::determineAliasedResurces() {
         }
     }
 
-    spdlog::info("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
+    logger->info("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
 }
 
 void RenderGraph::createPhysicalResources(
@@ -454,7 +456,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
     m_physicalPasses.clear();
     m_physicalPasses.reserve(m_passes.size());
     for (const auto& pass : m_passes) {
-        fmt::print("Building render pass: {}\n", pass.name);
+        logger->debug("Building render pass: {}\n", pass.name);
 
         VulkanRenderPassBuilder builder{};
         builder.setSubpassCount(1)

@@ -48,8 +48,8 @@ public:
     Material* createMaterial(std::string materialId, VulkanPipeline* pipeline);
     Material* getMaterial(std::string id) const;
 
-    Geometry& addGeometry(std::string id, std::unique_ptr<Geometry> geometry);
-    Geometry* getGeometry(std::string id) const;
+    Geometry& addGeometry(std::string_view id, Geometry&& geometry);
+    Geometry* getGeometry(std::string_view id) const;
 
     RenderNode* createPostProcessingEffectNode(
         std::string renderNodeId,
@@ -74,10 +74,10 @@ public:
 private:
     Renderer* m_renderer;
 
-    FlatHashMap<std::string, std::unique_ptr<Material>> m_materials;
-    FlatHashMap<std::string, std::unique_ptr<Geometry>> m_geometries;
-    FlatHashMap<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
-    FlatHashMap<std::string, std::unique_ptr<StorageBuffer>> m_storageBuffers;
+    FlatStringHashMap<std::unique_ptr<Material>> m_materials;
+    FlatStringHashMap<std::unique_ptr<Geometry>> m_geometries;
+    FlatStringHashMap<std::unique_ptr<UniformBuffer>> m_uniformBuffers;
+    FlatStringHashMap<std::unique_ptr<StorageBuffer>> m_storageBuffers;
     FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 };
 } // namespace crisp

@@ -58,21 +58,12 @@ public:
     glm::vec2 interpolateTexCoord(uint32_t triangleId, const glm::vec3& barycentric) const;
 
 private:
-    struct NameHash {
-        using is_transparent = void; // Enable heterogeneous overloads.
-        using is_avalanching = void; // Mark class as high quality avalanching hash.
-
-        [[nodiscard]] auto operator()(std::string_view str) const noexcept -> uint64_t {
-            return ankerl::unordered_dense::hash<std::string_view>{}(str);
-        }
-    };
-
     std::vector<glm::vec3> m_positions;
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
     std::vector<glm::vec4> m_tangents;
     std::vector<glm::vec4> m_colors;
-    ankerl::unordered_dense::map<std::string, VertexAttributeBuffer, NameHash, std::equal_to<>> m_customAttributes;
+    FlatStringHashMap<VertexAttributeBuffer> m_customAttributes;
 
     std::vector<glm::uvec3> m_triangles;
     std::vector<TriangleMeshView> m_views;

@@ -522,10 +522,9 @@ void ShadowMappingScene::createTrees() {
     TriangleMesh treeMesh(
         loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/white_oak/white_oak.obj", flatten(kPbrVertexFormat))
             .unwrap());
-    m_resourceContext->addGeometry("tree", std::make_unique<Geometry>(*m_renderer, treeMesh, kPbrVertexFormat));
-    m_resourceContext->addGeometry("treeShadow", std::make_unique<Geometry>(*m_renderer, treeMesh, kPosVertexFormat));
-    m_resourceContext->addGeometry(
-        "treeShadowAlpha", std::make_unique<Geometry>(*m_renderer, treeMesh, shadowAlphaVertexFormat));
+    m_resourceContext->addGeometry("tree", createFromMesh(*m_renderer, treeMesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry("treeShadow", createFromMesh(*m_renderer, treeMesh, kPosVertexFormat));
+    m_resourceContext->addGeometry("treeShadowAlpha", createFromMesh(*m_renderer, treeMesh, shadowAlphaVertexFormat));
 
     // Create the alpha-mask material
     auto alphaPipeline =
@@ -703,8 +702,7 @@ void ShadowMappingScene::createPlane() {
     // floor->pass(MainPass).material = material;
 
     m_resourceContext->addGeometry(
-        "floor",
-        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 200.0f), kPbrVertexFormat));
+        "floor", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 200.0f), kPbrVertexFormat));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

@@ -23,7 +23,7 @@ public:
 private:
     void updateRenderNode(const VulkanSampler& sampler, const VulkanImageView& cubeMapView);
 
-    std::unique_ptr<Geometry> m_cubeGeometry;
+    Geometry m_cubeGeometry;
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<Material> m_material;

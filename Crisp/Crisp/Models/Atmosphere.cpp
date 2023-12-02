@@ -331,7 +331,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         // Voxelized multiple scattering
         const std::vector<glm::vec2> vertices = {{-1.0f, -1.0f}, {+3.0f, -1.0f}, {-1.0f, +3.0f}};
         const std::vector<glm::uvec3> faces = {{0, 2, 1}};
-        resourceContext.addGeometry("fullScreenInstanced", std::make_unique<Geometry>(renderer, vertices, faces));
+        resourceContext.addGeometry("fullScreenInstanced", Geometry(renderer, vertices, faces));
         resourceContext.getGeometry("fullScreenInstanced")->setInstanceCount(32);
 
         createPostProcessingRenderNode(ViewVolumePass, material, pipeline);

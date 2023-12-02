@@ -134,13 +134,12 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
     m_resourceContext->addGeometry(
-        "floorPos",
-        std::make_unique<Geometry>(*m_renderer, createPlaneMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
+        "floorPos", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
 
     const VertexLayoutDescription vertexFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
     m_resourceContext->addGeometry(
         "sponza",
-        std::make_unique<Geometry>(
+        createFromMesh(
             *m_renderer,
             loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", flatten(vertexFormat))
                 .unwrap(),

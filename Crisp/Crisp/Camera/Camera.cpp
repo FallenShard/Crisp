@@ -183,4 +183,8 @@ void Camera::updateViewMatrix() {
     m_V = glm::transpose(rotationMat) * glm::translate(-m_position);
     m_invV = glm::translate(m_position) * rotationMat;
 }
+
+glm::vec3 getCameraPositionFromBoundingBox(const BoundingBox3& boundingBox) {
+    return boundingBox.getCenter() - glm::vec3(0.0f, 0.0f, -boundingBox.getExtents().z * 0.5f - 10.0f);
+}
 } // namespace crisp

@@ -46,11 +46,11 @@ Material* ResourceContext::getMaterial(std::string id) const {
     return m_materials.at(id).get();
 }
 
-Geometry& ResourceContext::addGeometry(std::string id, std::unique_ptr<Geometry> geometry) {
-    return *m_geometries.emplace(std::move(id), std::move(geometry)).first->second;
+Geometry& ResourceContext::addGeometry(const std::string_view id, Geometry&& geometry) {
+    return *m_geometries.emplace(id, std::make_unique<Geometry>(std::move(geometry))).first->second;
 }
 
-Geometry* ResourceContext::getGeometry(std::string id) const {
+Geometry* ResourceContext::getGeometry(const std::string_view id) const {
     return m_geometries.at(id).get();
 }
 

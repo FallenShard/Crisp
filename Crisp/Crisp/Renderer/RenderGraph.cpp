@@ -18,7 +18,7 @@
 
 namespace crisp {
 namespace {
-auto logger = createLoggerMt("RenderGraph");
+auto logger = createLoggerMt("RenderGraphOriginal");
 } // namespace
 
 RenderGraph::RenderGraph(Renderer* renderer)

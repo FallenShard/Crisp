@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Crisp/Math/BoundingBox.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 #include <array>
@@ -72,4 +73,7 @@ private:
 
     std::array<glm::vec4, kFrustumPlaneCount> m_frustumPlanes;
 };
+
+glm::vec3 getCameraPositionFromBoundingBox(const BoundingBox3& boundingBox);
+
 } // namespace crisp

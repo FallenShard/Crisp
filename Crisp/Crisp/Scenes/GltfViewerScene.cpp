@@ -311,8 +311,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
     addPbrTexturesToImageCache(
         renderObject.material.textures, renderObject.material.name, m_resourceContext->imageCache);
 
-    m_resourceContext->addGeometry(
-        entityName, std::make_unique<Geometry>(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
     gltfNode->geometry = m_resourceContext->getGeometry(entityName);
     gltfNode->pass(kForwardLightingPass).material = createPbrMaterial(
         entityName, renderObject.material.name, *m_resourceContext, renderObject.material.params, *m_transformBuffer);

@@ -8,6 +8,18 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 namespace crisp {
+namespace {
+const glm::mat4 kCubeFaceProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+const std::array<glm::mat4, kCubeMapFaceCount> kCubeMapViews = {
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+};
+} // namespace
+
 EnvironmentLight::EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& iblData) {
     auto equirectMap =
         createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
@@ -60,7 +72,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     }
 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
-    auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
+    const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
@@ -94,19 +106,19 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
 
             std::array<VkBufferMemoryBarrier, 2> barriers{};
             VkBufferMemoryBarrier& barrier = barriers[0];
-            barrier.buffer = unitCube->getIndexBuffer()->getHandle();
+            barrier.buffer = unitCube.getIndexBuffer()->getHandle();
             barrier.sType = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             barrier.offset = 0;
-            barrier.size = unitCube->getIndexBuffer()->getSize();
+            barrier.size = unitCube.getIndexBuffer()->getSize();
             VkBufferMemoryBarrier& barrier2 = barriers[1];
-            barrier2.buffer = unitCube->getVertexBuffer()->getHandle();
+            barrier2.buffer = unitCube.getVertexBuffer()->getHandle();
             barrier2.sType = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             barrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier2.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             barrier2.offset = 0;
-            barrier2.size = unitCube->getVertexBuffer()->getSize();
+            barrier2.size = unitCube.getVertexBuffer()->getSize();
             vkCmdPipelineBarrier(
                 cmdBuffer,
                 VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -139,7 +151,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
                 cubeMapPipelines[i]->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
 
                 cubeMapMaterial->bind(0, cmdBuffer);
-                unitCube->bindAndDraw(cmdBuffer);
+                unitCube.bindAndDraw(cmdBuffer);
 
                 if (i < 5) {
                     cubeMapPass->nextSubpass(cmdBuffer);
@@ -190,12 +202,12 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     auto convPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
     renderer->updateInitialLayouts(*convPass);
     std::vector<std::unique_ptr<VulkanPipeline>> convPipelines(kCubeMapFaceCount);
-    for (int i = 0; i < kCubeMapFaceCount; i++) {
+    for (uint32_t i = 0; i < kCubeMapFaceCount; i++) {
         convPipelines[i] = renderer->createPipeline("ConvolveDiffuse.json", *convPass, i);
     }
 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
-    auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
+    const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto convMaterial = std::make_unique<Material>(convPipelines[0].get());
@@ -203,27 +215,18 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     renderer->getDevice().flushDescriptorUpdates();
 
     renderer->enqueueResourceUpdate([&unitCube, &convPipelines, &convPass, &convMaterial](VkCommandBuffer cmdBuffer) {
-        glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-        glm::mat4 captureViews[] = {
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))};
-
         convPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
-        for (int i = 0; i < kCubeMapFaceCount; i++) {
-            glm::mat4 MVP = captureProjection * captureViews[i];
-            std::vector<char> pushConst(sizeof(glm::mat4));
+        for (uint32_t i = 0; i < kCubeMapFaceCount; i++) {
+            const glm::mat4 MVP = kCubeFaceProjection * kCubeMapViews[i];
+            std::array<char, sizeof(glm::mat4)> pushConst{};
             memcpy(pushConst.data(), glm::value_ptr(MVP), sizeof(glm::mat4));
 
             convPipelines[i]->bind(cmdBuffer);
             convPipelines[i]->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
 
             convMaterial->bind(0, cmdBuffer);
-            unitCube->bindAndDraw(cmdBuffer);
+            unitCube.bindAndDraw(cmdBuffer);
 
             if (i < kCubeMapFaceCount - 1) {
                 convPass->nextSubpass(cmdBuffer);
@@ -252,7 +255,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f);
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
-    auto unitCube = std::make_unique<Geometry>(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
+    const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
 
     auto environmentSpecularMap = RenderTargetBuilder()
                                       .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
@@ -264,17 +267,17 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                                       .setSize({cubeMapSize, cubeMapSize}, false)
                                       .create(renderer->getDevice());
 
-    for (int i = 0; i < static_cast<int>(kMipLevels); i++) {
-        float roughness = i / static_cast<float>(kMipLevels - 1);
+    for (int32_t i = 0; i < static_cast<int>(kMipLevels); i++) {
+        const float roughness = static_cast<float>(i) / static_cast<float>(kMipLevels - 1);
 
-        unsigned int w = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
-        unsigned int h = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
+        const auto w = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
+        const auto h = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
         std::shared_ptr<VulkanRenderPass> prefilterPass =
             createCubeMapPass(renderer->getDevice(), environmentSpecularMap.get(), VkExtent2D{w, h}, i);
         renderer->updateInitialLayouts(*prefilterPass);
 
         std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(kCubeMapFaceCount);
-        for (int j = 0; j < kCubeMapFaceCount; j++) {
+        for (uint32_t j = 0; j < kCubeMapFaceCount; j++) {
             filterPipelines[j] = renderer->createPipeline("PrefilterSpecular.json", *prefilterPass, j);
         }
 
@@ -283,35 +286,22 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
         renderer->getDevice().flushDescriptorUpdates();
 
         renderer->enqueueResourceUpdate(
-            [renderer, &unitCube, &filterPipelines, prefilterPass, filterMat, i, w, h, roughness](
-                VkCommandBuffer cmdBuffer) {
-                glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-                glm::mat4 captureViews[] = {
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-                    glm::lookAt(
-                        glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-                    glm::lookAt(
-                        glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-                    glm::lookAt(
-                        glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))};
-
+            [&unitCube, &filterPipelines, prefilterPass, filterMat, i, roughness](VkCommandBuffer cmdBuffer) {
                 prefilterPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
 
-                for (int j = 0; j < 6; j++) {
-                    glm::mat4 MVP = captureProjection * captureViews[j];
-                    std::vector<char> pushConst(sizeof(glm::mat4) + sizeof(float));
+                for (uint32_t j = 0; j < kCubeMapViews.size(); j++) {
+                    const glm::mat4 MVP = kCubeFaceProjection * kCubeMapViews[i];
+                    std::array<char, sizeof(glm::mat4) + sizeof(float)> pushConst{};
                     memcpy(pushConst.data(), glm::value_ptr(MVP), sizeof(glm::mat4));
-                    memcpy(pushConst.data() + sizeof(glm::mat4), &roughness, sizeof(float));
+                    memcpy(pushConst.data() + sizeof(glm::mat4), &roughness, sizeof(float)); // NOLINT
 
                     filterPipelines[j]->bind(cmdBuffer);
                     filterPipelines[j]->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
 
                     filterMat->bind(0, cmdBuffer);
-                    unitCube->bindAndDraw(cmdBuffer);
+                    unitCube.bindAndDraw(cmdBuffer);
 
-                    if (j < 5) {
+                    if (j < kCubeMapFaceCount - 1) {
                         prefilterPass->nextSubpass(cmdBuffer);
                     }
                 }

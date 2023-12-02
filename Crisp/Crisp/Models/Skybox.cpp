@@ -10,11 +10,11 @@ constexpr std::size_t NumCubeMapFaces = 6;
 const std::array<const std::string, NumCubeMapFaces> SideFilenames = {
     "left", "right", "top", "bottom", "back", "front"};
 
-Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder) {
-    m_cubeGeometry = std::make_unique<Geometry>(
-        *renderer,
-        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
-        kPosVertexFormat);
+Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder)
+    : m_cubeGeometry(createFromMesh(
+          *renderer,
+          loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
+          kPosVertexFormat)) {
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
     const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
@@ -55,11 +55,11 @@ Skybox::Skybox(
     Renderer* renderer,
     const VulkanRenderPass& renderPass,
     const VulkanImageView& cubeMapView,
-    const VulkanSampler& sampler) {
-    m_cubeGeometry = std::make_unique<Geometry>(
-        *renderer,
-        loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
-        kPosVertexFormat);
+    const VulkanSampler& sampler)
+    : m_cubeGeometry(createFromMesh(
+          *renderer,
+          loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
+          kPosVertexFormat)) {
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
     m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);
@@ -76,7 +76,7 @@ void Skybox::updateRenderNode(const VulkanSampler& sampler, const VulkanImageVie
     m_renderNode.transformBuffer = m_transformBuffer.get();
     m_renderNode.transformPack = &m_transformPack;
     m_renderNode.transformHandle.index = 0;
-    m_renderNode.geometry = m_cubeGeometry.get();
+    m_renderNode.geometry = &m_cubeGeometry;
     m_renderNode.pass("forwardPass").material = m_material.get();
 }
 

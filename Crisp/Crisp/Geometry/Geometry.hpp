@@ -15,22 +15,13 @@ namespace crisp {
 class Geometry {
 public:
     Geometry() = default;
-    Geometry(Renderer& renderer, const TriangleMesh& mesh, const VertexLayoutDescription& vertexLayoutDescription);
     Geometry(
         Renderer& renderer,
-        const TriangleMesh& mesh,
-        const VertexLayoutDescription& vertexLayoutDescription,
-        bool padToVec4,
-        VkBufferUsageFlags usageFlags);
-    Geometry(
-        Renderer& renderer,
-        const VertexLayout& vertexLayout,
-        std::vector<InterleavedVertexBuffer>&& interleavedVertexBuffers,
+        VertexLayout&& vertexLayout,
+        const std::vector<InterleavedVertexBuffer>& interleavedVertexBuffers,
         const std::vector<glm::uvec3>& faces,
         const std::vector<TriangleMeshView>& meshViews = {},
         VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-
-    Geometry(Renderer& renderer, uint32_t vertexCount, const std::vector<glm::uvec2>& faces);
 
     template <typename VertexType, typename IndexType>
     Geometry(Renderer& renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
@@ -51,6 +42,26 @@ public:
         renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
     }
 
+    uint32_t getIndexCount() const {
+        return m_indexCount;
+    }
+
+    uint32_t getVertexCount() const {
+        return m_vertexCount;
+    }
+
+    uint32_t getInstanceCount() const {
+        return m_instanceCount;
+    }
+
+    void setVertexCount(uint32_t vertexCount) {
+        m_vertexCount = vertexCount;
+    }
+
+    void setInstanceCount(uint32_t instanceCount) {
+        m_instanceCount = instanceCount;
+    }
+
     void addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer);
     void addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer);
 
@@ -60,43 +71,23 @@ public:
     void draw(VkCommandBuffer commandBuffer) const;
     void bindAndDraw(VkCommandBuffer commandBuffer) const;
 
-    inline VulkanBuffer* getVertexBuffer(const uint32_t index = 0) const {
+    VulkanBuffer* getVertexBuffer(const uint32_t index = 0) const {
         return m_vertexBuffers[index].get();
     }
 
-    inline VulkanBuffer* getIndexBuffer() const {
+    VulkanBuffer* getIndexBuffer() const {
         return m_indexBuffer.get();
     }
 
-    inline uint32_t getIndexCount() const {
-        return m_indexCount;
-    }
-
-    inline uint32_t getVertexCount() const {
-        return m_vertexCount;
-    }
-
-    inline uint32_t getInstanceCount() const {
-        return m_instanceCount;
-    }
-
-    inline void setVertexCount(uint32_t vertexCount) {
-        m_vertexCount = vertexCount;
-    }
-
-    inline void setInstanceCount(uint32_t instanceCount) {
-        m_instanceCount = instanceCount;
-    }
-
-    inline void setVertexBufferOffset(uint32_t bufferIndex, VkDeviceSize offset) {
+    void setVertexBufferOffset(uint32_t bufferIndex, VkDeviceSize offset) {
         m_offsets.at(bufferIndex) = offset;
     }
 
-    inline uint32_t getVertexBufferCount() const {
+    uint32_t getVertexBufferCount() const {
         return static_cast<uint32_t>(m_vertexBuffers.size());
     }
 
-    inline const VertexLayout& getVertexLayout() const {
+    const VertexLayout& getVertexLayout() const {
         return m_vertexLayout;
     }
 
@@ -130,4 +121,11 @@ private:
 
     std::vector<TriangleMeshView> m_meshViews;
 };
+
+Geometry createFromMesh(
+    Renderer& renderer,
+    const TriangleMesh& mesh,
+    const VertexLayoutDescription& vertexLayoutDescription,
+    VkBufferUsageFlags usageFlags = 0);
+
 } // namespace crisp

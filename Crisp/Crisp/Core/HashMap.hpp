@@ -9,6 +9,17 @@
 #include <ankerl/unordered_dense.h>
 
 namespace crisp {
+namespace detail {
+struct TransparentStringHash {
+    using is_transparent = void; // Enable heterogeneous overloads.
+    using is_avalanching = void; // Mark class as high quality avalanching hash.
+
+    [[nodiscard]] auto operator()(const std::string_view str) const noexcept -> uint64_t {
+        return ankerl::unordered_dense::hash<std::string_view>{}(str);
+    }
+};
+} // namespace detail
+
 template <typename Key, typename Value>
 using HashMap = robin_hood::unordered_map<Key, Value>;
 
@@ -20,4 +31,9 @@ using FlatHashMap = ankerl::unordered_dense::map<Key, Value, Hash>;
 
 template <typename Key>
 using FlatHashSet = ankerl::unordered_dense::set<Key>;
+
+template <typename Value>
+using FlatStringHashMap =
+    ankerl::unordered_dense::map<std::string, Value, detail::TransparentStringHash, std::equal_to<>>;
+
 } // namespace crisp

@@ -97,8 +97,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
         {VertexAttribute::Position}, {VertexAttribute::Normal}};
     TriangleMesh mesh = createGridMesh(flatten(vertexFormat), kGeometryPatchWorldSize, N);
     m_resourceContext->addGeometry(
-        "ocean",
-        std::make_unique<Geometry>(*m_renderer, mesh, vertexFormat, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+        "ocean", createFromMesh(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
     m_resourceContext->getGeometry("ocean")->setInstanceCount(kInstanceCount);
 
     auto displacementYImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);

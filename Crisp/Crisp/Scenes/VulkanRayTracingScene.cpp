@@ -72,12 +72,11 @@ std::unique_ptr<StorageBuffer> createAliasTableBuffer(Renderer& renderer, const 
 
 const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
 
-std::unique_ptr<Geometry> createRayTracingGeometry(Renderer& renderer, TriangleMesh&& mesh) {
-    return std::make_unique<Geometry>(
+Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) {
+    return createFromMesh(
         renderer,
-        std::move(mesh),
+        mesh,
         posFormat,
-        /*padToVec4=*/false,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
@@ -184,7 +183,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
         }
 
         auto& geometry = m_resourceContext->addGeometry(
-            fmt::format("{}_{}", meshName, idx), createRayTracingGeometry(*m_renderer, std::move(mesh)));
+            fmt::format("{}_{}", meshName, idx), createRayTracingGeometry(*m_renderer, mesh));
         m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
             m_renderer->getDevice(),
             createAccelerationStructureGeometry(geometry),

@@ -430,7 +430,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     m_shaderBallPbrMaterialKey = material.name;
     addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
 
-    m_resourceContext->addGeometry(entityName, std::make_unique<Geometry>(*m_renderer, mesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, mesh, kPbrVertexFormat));
     sceneObject->geometry = m_resourceContext->getGeometry(entityName);
     sceneObject->pass(kForwardLightingPass).material =
         createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
@@ -451,7 +451,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 void PbrScene::createPlane() {
     const std::string entityName{"floor"};
     const TriangleMesh planeMesh{createPlaneMesh(flatten(kPbrVertexFormat), 200.0f)};
-    m_resourceContext->addGeometry(entityName, std::make_unique<Geometry>(*m_renderer, planeMesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, planeMesh, kPbrVertexFormat));
 
     const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / "Grass"};
     PbrMaterial material{};
