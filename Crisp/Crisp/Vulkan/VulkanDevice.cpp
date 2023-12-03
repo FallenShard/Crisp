@@ -137,26 +137,26 @@ VkImage VulkanDevice::createImage(const VkImageCreateInfo& imageCreateInfo) cons
     return image;
 }
 
-void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo) {
-    m_bufferInfos.emplace_back(1, bufferInfo);
+void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo) { // NOLINT
+    m_bufferInfos.push_back({bufferInfo});
     m_descriptorWrites.emplace_back(write);
     m_descriptorWrites.back().pBufferInfo = m_bufferInfos.back().data();
 }
 
 void VulkanDevice::postDescriptorWrite(
-    VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos) {
+    VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos) { // NOLINT
     m_bufferInfos.emplace_back(std::move(bufferInfos));
     m_descriptorWrites.emplace_back(write);
     m_descriptorWrites.back().pBufferInfo = m_bufferInfos.back().data();
 }
 
-void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo) {
+void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo) { // NOLINT
     m_imageInfos.emplace_back(imageInfo);
     m_descriptorWrites.emplace_back(write);
     m_descriptorWrites.back().pImageInfo = &m_imageInfos.back();
 }
 
-void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write) {
+void VulkanDevice::postDescriptorWrite(VkWriteDescriptorSet&& write) { // NOLINT
     m_descriptorWrites.emplace_back(write);
 }
 
