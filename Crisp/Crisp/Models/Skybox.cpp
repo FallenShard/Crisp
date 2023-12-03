@@ -3,6 +3,7 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
+#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 namespace crisp {
@@ -14,7 +15,8 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
     : m_cubeGeometry(createFromMesh(
           *renderer,
           loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
-          kPosVertexFormat)) {
+          kPosVertexFormat))
+    , m_transformPack{} {
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
     const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
@@ -59,7 +61,8 @@ Skybox::Skybox(
     : m_cubeGeometry(createFromMesh(
           *renderer,
           loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
-          kPosVertexFormat)) {
+          kPosVertexFormat))
+    , m_transformPack{} {
     m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
 
     m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);
@@ -77,7 +80,7 @@ void Skybox::updateRenderNode(const VulkanSampler& sampler, const VulkanImageVie
     m_renderNode.transformPack = &m_transformPack;
     m_renderNode.transformHandle.index = 0;
     m_renderNode.geometry = &m_cubeGeometry;
-    m_renderNode.pass("forwardPass").material = m_material.get();
+    m_renderNode.pass(kForwardLightingPass).material = m_material.get();
 }
 
 void Skybox::updateTransforms(const glm::mat4& V, const glm::mat4& P) {

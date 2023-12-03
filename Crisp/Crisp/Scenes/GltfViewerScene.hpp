@@ -9,6 +9,7 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Mesh/SkinningData.hpp>
 #include <Crisp/Models/Skybox.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {
@@ -29,6 +30,9 @@ private:
     void loadGltf(const std::string& gltfAsset);
 
     void setupInput();
+
+    std::unique_ptr<rg::RenderGraph> m_rg;
+    std::vector<std::unique_ptr<VulkanImageView>> m_sceneImageViews;
 
     std::vector<ConnectionHandler> m_connectionHandlers;
 

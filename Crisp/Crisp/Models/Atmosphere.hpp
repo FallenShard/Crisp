@@ -1,12 +1,11 @@
 #pragma once
 
-#include <Crisp/Renderer/RenderNode.hpp>
-#include <Crisp/Renderer/RenderTargetCache.hpp>
-
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-#include <string>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
+#include <Crisp/Renderer/RenderNode.hpp>
+#include <Crisp/Renderer/RenderTargetCache.hpp>
 
 namespace crisp {
 class RenderGraph;
@@ -98,7 +97,7 @@ struct AtmosphereParameters {
     glm::vec3 cameraPosition = {0.00, 0.5, 1.0};
     int32_t multiScatteringLutResolution = 32;
 
-    glm::vec2 screenResolution;
+    glm::vec2 screenResolution = {};
     int32_t transmittanceLutWidth = 256;
     int32_t transmittanceLutHeight = 64;
 
@@ -114,5 +113,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     ResourceContext& resourceContext,
     RenderTargetCache& renderTargetCache,
     const std::string& dependentPass);
+
+void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer);
 
 } // namespace crisp

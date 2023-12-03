@@ -166,6 +166,10 @@ RenderGraphBlackboard& RenderGraph::Builder::getBlackboard() {
     return m_renderGraph.getBlackboard();
 }
 
+void RenderGraph::Builder::setType(PassType type) {
+    m_renderGraph.getPass(m_passHandle).type = type;
+}
+
 size_t RenderGraph::getPassCount() const {
     return m_passes.size();
 }
@@ -213,27 +217,31 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer) {
     RenderPassExecutionContext executionCtx{};
     executionCtx.cmdBuffer = cmdBuffer;
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
-        for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
-            const auto& res = getResource(pass.inputs[inIdx]);
+        if (pass.type == PassType::Rasterizer) {
+            for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
+                const auto& res = getResource(pass.inputs[inIdx]);
 
-            if (inputAccess.usageType == ResourceUsageType::Texture) {
-                const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
-                const bool isDepthAttachment = isDepthFormat(m_imageDescriptions[res.descriptionIndex].format);
-                physicalImage.image->transitionLayout(
-                    executionCtx.cmdBuffer,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
-                                      : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    inputAccess.pipelineStage);
+                if (inputAccess.usageType == ResourceUsageType::Texture) {
+                    const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
+                    const bool isDepthAttachment = isDepthFormat(m_imageDescriptions[res.descriptionIndex].format);
+                    physicalImage.image->transitionLayout(
+                        executionCtx.cmdBuffer,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+                                          : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        inputAccess.pipelineStage);
+                }
             }
+
+            auto& physPass = *m_physicalPasses.at(idx);
+            physPass.begin(executionCtx.cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+
+            pass.executeFunc(executionCtx);
+
+            physPass.end(executionCtx.cmdBuffer, 0);
+        } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
+            pass.executeFunc(executionCtx);
         }
-
-        auto& physPass = *m_physicalPasses.at(idx);
-        physPass.begin(executionCtx.cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-
-        pass.executeFunc(executionCtx);
-
-        physPass.end(executionCtx.cmdBuffer, 0);
     }
 }
 
@@ -456,6 +464,10 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
     m_physicalPasses.clear();
     m_physicalPasses.reserve(m_passes.size());
     for (const auto& pass : m_passes) {
+        if (pass.type != PassType::Rasterizer) {
+            logger->info("Skipping pass {} as it's not a rasterizer pass.", pass.name);
+            continue;
+        }
         logger->debug("Building render pass: {}\n", pass.name);
 
         VulkanRenderPassBuilder builder{};

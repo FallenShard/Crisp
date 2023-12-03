@@ -61,7 +61,7 @@ std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, {256, 64}, std::move(renderTargets));
+        .create(device, {256, 64}, renderTargets);
 }
 
 std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(
@@ -92,7 +92,7 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, {192, 108}, std::move(renderTargets));
+        .create(device, {192, 108}, renderTargets);
 }
 
 std::unique_ptr<VulkanRenderPass> createSkyVolumePass(
@@ -125,7 +125,7 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, {32, 32}, std::move(renderTargets));
+        .create(device, {32, 32}, renderTargets);
 }
 
 std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
@@ -155,7 +155,7 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, renderArea, std::move(renderTargets));
+        .create(device, renderArea, renderTargets);
 }
 
 std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, const glm::uvec3& workGroupSize) {
@@ -192,13 +192,13 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
     specInfo.pData = glm::value_ptr(workGroupSize);
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-    pipelineInfo.stage =
-        createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer.getShaderModule("sky-multiple-scattering.comp"));
+    pipelineInfo.stage = createShaderStageInfo(
+        VK_SHADER_STAGE_COMPUTE_BIT, renderer.getOrLoadShaderModule("sky-multiple-scattering.comp"));
     pipelineInfo.stage.pSpecializationInfo = &specInfo;
     pipelineInfo.layout = layout->getHandle();
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
-    VkPipeline pipeline;
+    VkPipeline pipeline = VK_NULL_HANDLE;
     vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
     return std::make_unique<VulkanPipeline>(
@@ -214,14 +214,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     ImageCache& imageCache = resourceContext.imageCache;
     const VulkanDevice& device = renderer.getDevice();
     FlatHashMap<std::string, std::unique_ptr<RenderNode>> renderNodes;
-    const auto createPostProcessingRenderNode =
-        [&renderNodes, &renderer](const std::string& renderPassName, Material* material, VulkanPipeline* pipeline) {
-            auto node =
-                renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
-            node->geometry = renderer.getFullScreenGeometry();
-            node->pass(renderPassName).material = material;
-            node->pass(renderPassName).pipeline = pipeline;
-        };
+
     const auto createPostProcessingRenderNode2 = [&renderNodes, &renderer, &renderGraph, &resourceContext](
                                                      const std::string& renderPassName,
                                                      std::unique_ptr<VulkanRenderPass> renderPass,
@@ -306,6 +299,15 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
                 barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
         });
 
+    const auto createPostProcessingRenderNode =
+        [&renderNodes, &renderer](const std::string& renderPassName, Material* material, VulkanPipeline* pipeline) {
+            auto node =
+                renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
+            node->geometry = renderer.getFullScreenGeometry();
+            node->pass(renderPassName).material = material;
+            node->pass(renderPassName).pipeline = pipeline;
+        };
+
     // Sky View LUT
     auto skyViewLutPipeline =
         resourceContext.createPipeline("skyViewLut", "SkyViewLut.json", renderGraph.getRenderPass(SkyViewLutPass), 0);
@@ -367,4 +369,140 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     return renderNodes;
 }
+
+struct TransmittanceLutData {
+    RenderGraphResourceHandle lut;
+};
+
+struct MultipleScatteringData {
+    RenderGraphResourceHandle tex;
+};
+
+struct SkyViewLutData {
+    RenderGraphResourceHandle lut;
+};
+
+struct SkyVolumeLutData {
+    RenderGraphResourceHandle lut;
+};
+
+struct RayMarchingPassData {
+    RenderGraphResourceHandle image;
+};
+
+void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
+    renderGraph.addPass(
+        TransmittanceLutPass,
+        [](rg::RenderGraph::Builder& builder) {
+            auto& data = builder.getBlackboard().insert<TransmittanceLutData>();
+            data.lut = builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::Absolute,
+                    .width = 256,
+                    .height = 64,
+                    .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                },
+                "transmittanceLut");
+        },
+        [&renderer, &resourceContext, &renderGraph](const RenderPassExecutionContext& ctx) {
+            VulkanPipeline* pipeline = resourceContext.pipelineCache.getPipeline("transmittanceLut");
+            if (pipeline == nullptr) {
+                pipeline = resourceContext.pipelineCache.loadPipeline(
+                    &renderer,
+                    "transmittanceLut",
+                    "SkyTransLut.json",
+                    renderGraph.getRenderPass(TransmittanceLutPass),
+                    0);
+            }
+
+            Material* material = resourceContext.createMaterial("transmittanceLut", pipeline);
+            material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+            renderer.getDevice().flushDescriptorUpdates();
+
+            material->bind(0, ctx.cmdBuffer);
+
+            // command.pipeline->bind(cmdBuffer.getHandle());
+            renderer.setDefaultViewport(ctx.cmdBuffer);
+            renderer.setDefaultScissor(ctx.cmdBuffer);
+
+            renderer.drawFullScreenQuad(ctx.cmdBuffer);
+
+            // command.pipeline->getPipelineLayout()->setPushConstants(
+            //     cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
+
+            // if (command.material) {
+            //     command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
+            // }
+        });
+    // resourceContext.createPipeline("TransmittanceLutPipeline", "SkyTransLut.json", m_rg->, 0);
+
+    renderGraph.addPass(
+        MultipleScatteringPass,
+        [](rg::RenderGraph::Builder& builder) {
+            builder.readAttachment(builder.getBlackboard().get<TransmittanceLutData>().lut);
+
+            auto& data = builder.getBlackboard().insert<MultipleScatteringData>();
+            data.tex = builder.createStorageImage(
+                {
+                    .sizePolicy = SizePolicy::Absolute,
+                    .width = 32,
+                    .height = 32,
+                    .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                },
+                "multiScatTex");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    renderGraph.addPass(
+        SkyViewLutPass,
+        [](rg::RenderGraph::Builder& builder) {
+            builder.readAttachment(builder.getBlackboard().get<TransmittanceLutData>().lut);
+            builder.readStorageImage(builder.getBlackboard().get<MultipleScatteringData>().tex);
+
+            auto& data = builder.getBlackboard().insert<SkyViewLutData>();
+            data.lut = builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::Absolute,
+                    .width = 192,
+                    .height = 108,
+                    .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                },
+                "skyViewLut");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    renderGraph.addPass(
+        ViewVolumePass,
+        [](rg::RenderGraph::Builder& builder) {
+            builder.readAttachment(builder.getBlackboard().get<SkyViewLutData>().lut);
+
+            auto& data = builder.getBlackboard().insert<SkyVolumeLutData>();
+            data.lut = builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::Absolute,
+                    .width = 32,
+                    .height = 32,
+                    .depth = 32,
+                    .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                },
+                "skyVolumeLut");
+        },
+        [](const RenderPassExecutionContext&) {});
+
+    renderGraph.addPass(
+        RayMarchingPass,
+        [](rg::RenderGraph::Builder& builder) {
+            builder.readAttachment(builder.getBlackboard().get<SkyVolumeLutData>().lut);
+
+            auto& data = builder.getBlackboard().insert<RayMarchingPassData>();
+            data.image = builder.createAttachment(
+                {
+                    .sizePolicy = SizePolicy::SwapChainRelative,
+                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                },
+                "rayMarchedImage");
+        },
+        [](const RenderPassExecutionContext&) {});
+}
+
 } // namespace crisp

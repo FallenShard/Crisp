@@ -19,24 +19,7 @@ namespace crisp {
 namespace {
 const auto logger = createLoggerMt("PbrScene");
 
-constexpr const char* kForwardLightingPass = "forwardPass";
-
 constexpr uint32_t kShadowMapSize = 1024;
-constexpr uint32_t kCascadeCount = 4;
-constexpr std::array<const char*, kCascadeCount> kCsmPasses = {
-    "csmPass0",
-    "csmPass1",
-    "csmPass2",
-    "csmPass3",
-};
-
-struct ForwardLightingData {
-    RenderGraphResourceHandle hdrImage;
-};
-
-struct CascadedShadowMapData {
-    std::array<RenderGraphResourceHandle, kCascadeCount> cascades;
-};
 
 void setPbrMaterialSceneParams(
     Material& material,
@@ -51,7 +34,7 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
-    for (uint32_t i = 0; i < kCascadeCount; ++i) {
+    for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
         for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
             const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
             material.writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
@@ -122,76 +105,34 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     m_rg = std::make_unique<rg::RenderGraph>();
 
-    for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
-        m_rg->addPass(
-            kCsmPasses[i],
-            [i](rg::RenderGraph::Builder& builder) {
-                auto& data = i == 0 ? builder.getBlackboard().insert<CascadedShadowMapData>()
-                                    : builder.getBlackboard().get<CascadedShadowMapData>();
-
-                data.cascades[i] = builder.createAttachment(
-                    {
-                        .sizePolicy = SizePolicy::Absolute,
-                        .width = kShadowMapSize,
-                        .height = kShadowMapSize,
-                        .format = VK_FORMAT_D32_SFLOAT,
-                    },
-                    fmt::format("cascaded-shadow-map-{}", i),
-                    VkClearValue{.depthStencil{1.0f, 0}});
-            },
-            [this, i](const RenderPassExecutionContext& ctx) {
-                const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
-                std::vector<DrawCommand> drawCommands{};
-                for (const auto& [id, renderNode] : m_renderNodes) {
-                    createDrawCommand(drawCommands, *renderNode, kCsmPasses[i], virtualFrameIndex);
-                }
-
-                const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
-                for (const auto& drawCommand : drawCommands) {
-                    RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
-                }
-            });
-    }
-
-    m_rg->addPass(
-        kForwardLightingPass,
-        [](rg::RenderGraph::Builder& builder) {
-            const auto& csmData = builder.getBlackboard().get<CascadedShadowMapData>();
-            for (const auto& shadowMap : csmData.cascades) {
-                builder.readTexture(shadowMap);
-            }
-
-            auto& data = builder.getBlackboard().insert<ForwardLightingData>();
-            data.hdrImage = builder.createAttachment(
-                {
-                    .sizePolicy = SizePolicy::SwapChainRelative,
-                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                },
-                "forward-pass-color");
-            builder.exportTexture(data.hdrImage);
-
-            builder.createAttachment(
-                {
-                    .sizePolicy = SizePolicy::SwapChainRelative,
-                    .format = VK_FORMAT_D32_SFLOAT,
-                },
-                "forward-pass-depth",
-                VkClearValue{.depthStencil{0.0f, 0}});
-        },
-        [this](const RenderPassExecutionContext& ctx) {
+    addCascadedShadowMapPasses(
+        *m_rg, kShadowMapSize, [this](const RenderPassExecutionContext& ctx, const uint32_t cascadeIndex) {
             const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
             std::vector<DrawCommand> drawCommands{};
             for (const auto& [id, renderNode] : m_renderNodes) {
-                createDrawCommand(drawCommands, *renderNode, kForwardLightingPass, virtualFrameIndex);
+                createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex], virtualFrameIndex);
             }
-
-            createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass, virtualFrameIndex);
 
             const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
             for (const auto& drawCommand : drawCommands) {
                 RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
             }
         });
+
+    addForwardLightingPass(*m_rg, [this](const RenderPassExecutionContext& ctx) {
+        const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
+        std::vector<DrawCommand> drawCommands{};
+        for (const auto& [id, renderNode] : m_renderNodes) {
+            createDrawCommand(drawCommands, *renderNode, kForwardLightingPass, virtualFrameIndex);
+        }
+
+        createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass, virtualFrameIndex);
+
+        const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
+        for (const auto& drawCommand : drawCommands) {
+            RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
+        }
+    });
 
     m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
         m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
@@ -210,7 +151,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         m_renderer,
         DirectionalLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5)),
         kShadowMapSize,
-        kCascadeCount);
+        kDefaultCascadeCount);
 
     // Object transforms
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
@@ -218,7 +159,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     createCommonTextures();
 
-    for (uint32_t i = 0; i < kCascadeCount; ++i) {
+    for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
         std::string key = "cascadedShadowMap" + std::to_string(i);
         auto* csmPipeline =
             m_resourceContext->createPipeline(key, "ShadowMap.json", m_rg->getRenderPass(kCsmPasses[i]), 0);
@@ -438,7 +379,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
         *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    for (uint32_t c = 0; c < kCascadeCount; ++c) {
+    for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
         auto& subpass = sceneObject->pass(kCsmPasses[c]);
         subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
         subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
@@ -491,7 +432,7 @@ void PbrScene::updateMaterialsWithRenderGraphResources() {
     const auto& imageCache = m_resourceContext->imageCache;
     for (auto&& [name, node] : m_renderNodes) {
         auto& material = node->pass(kForwardLightingPass).material;
-        for (uint32_t i = 0; i < kCascadeCount; ++i) {
+        for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
             for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
                 const auto& shadowMapView{m_rg->getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
                 material->writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));

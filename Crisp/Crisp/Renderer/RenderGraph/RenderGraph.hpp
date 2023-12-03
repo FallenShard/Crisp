@@ -34,6 +34,8 @@ public:
 
         RenderGraphBlackboard& getBlackboard();
 
+        void setType(PassType type);
+
     private:
         RenderGraph& m_renderGraph;
         RenderGraphPassHandle m_passHandle;
@@ -131,7 +133,7 @@ private:
 
     // The list of passes that are part of the render graph.
     std::vector<RenderGraphPass> m_passes;
-    FlatHashMap<std::string, RenderGraphPassHandle> m_passMap;
+    FlatStringHashMap<RenderGraphPassHandle> m_passMap;
 
     std::vector<RenderGraphImageDescription> m_imageDescriptions;
     std::vector<RenderGraphBufferDescription> m_bufferDescriptions;
