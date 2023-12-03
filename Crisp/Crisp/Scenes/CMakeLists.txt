@@ -29,6 +29,8 @@ add_cpp_static_library(CrispScenes
     "TestScene.hpp"
     "VulkanRayTracingScene.cpp"
     "VulkanRayTracingScene.hpp"
+    "RayTracingSceneParser.cpp"
+    "RayTracingSceneParser.hpp"
 )
 target_link_libraries(CrispScenes
     PUBLIC Crisp::Renderer

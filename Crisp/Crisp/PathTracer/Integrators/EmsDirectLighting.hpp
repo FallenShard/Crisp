@@ -8,7 +8,7 @@ struct Intersection;
 class EmsDirectLightingIntegrator : public Integrator {
 public:
     EmsDirectLightingIntegrator(const VariantMap& params = VariantMap());
-    virtual ~EmsDirectLightingIntegrator();
+    virtual ~EmsDirectLightingIntegrator() = default;
 
     virtual void preprocess(pt::Scene* scene) override;
     virtual Spectrum Li(

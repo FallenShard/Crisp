@@ -12,36 +12,6 @@
 namespace crisp {
 namespace {
 
-BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
-    return {
-        .albedo = albedo,
-        .type = 0,
-    };
-}
-
-BrdfParameters createDielectricBrdf(const float intIor) {
-    return {
-        .type = 1,
-        .intIor = intIor,
-    };
-}
-
-BrdfParameters createMirrorBrdf() {
-    return {
-        .type = 2,
-    };
-}
-
-BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha) {
-    return {
-        .type = 3,
-        .intIor = Fresnel::getIOR(IndexOfRefraction::Glass),
-        .kd = kd,
-        .ks = 1.0f - std::max(kd.x, std::max(kd.y, kd.z)),
-        .microfacetAlpha = alpha,
-    };
-}
-
 AliasTable createAliasTable(const TriangleMesh& mesh, bool addHeaderEntry = true) {
     std::vector<float> weights;
     weights.reserve(mesh.getTriangleCount());
@@ -60,8 +30,12 @@ AliasTable createAliasTable(const TriangleMesh& mesh, bool addHeaderEntry = true
     return table;
 }
 
-std::unique_ptr<StorageBuffer> createAliasTableBuffer(Renderer& renderer, const TriangleMesh& mesh) {
+void append(AliasTable& globalAliasTable, const TriangleMesh& mesh) {
     const auto aliasTable = createAliasTable(mesh);
+    globalAliasTable.insert(globalAliasTable.end(), aliasTable.begin(), aliasTable.end());
+}
+
+std::unique_ptr<StorageBuffer> createAliasTableBuffer(Renderer& renderer, const AliasTable& aliasTable) {
     return std::make_unique<StorageBuffer>(
         &renderer,
         aliasTable.size() * sizeof(AliasTable::value_type),
@@ -81,62 +55,9 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
 
-VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geometry& geometry) {
-    VkAccelerationStructureGeometryKHR geo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-    geo.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-    geo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-    geo.geometry = {};
-    geo.geometry.triangles = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
-    geo.geometry.triangles.vertexData.deviceAddress = geometry.getVertexBuffer()->getDeviceAddress();
-    geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT; // Positions format.
-    geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);      // Spacing between positions.
-    geo.geometry.triangles.maxVertex = geometry.getVertexCount() - 1;
-    geo.geometry.triangles.indexData.deviceAddress = geometry.getIndexBuffer()->getDeviceAddress();
-    geo.geometry.triangles.indexType = geometry.getIndexType();
-    return geo;
-}
-
-glm::vec3 parseVec3(const nlohmann::json& json) {
-    return {json[0].get<float>(), json[1].get<float>(), json[2].get<float>()};
-}
-
-std::vector<BrdfParameters> createBrdfs(const nlohmann::json& shapeList) {
-    std::vector<BrdfParameters> brdfs{};
-    for (const auto& shape : shapeList) {
-        const auto& brdf{shape["brdf"]};
-        const auto& type{brdf["type"]};
-        if (type == "lambertian") {
-            brdfs.push_back(createLambertianBrdf(parseVec3(brdf["albedo"])));
-        } else if (type == "dielectric") {
-            brdfs.push_back(createDielectricBrdf(brdf["intIOR"].get<float>()));
-        } else if (type == "mirror") {
-            brdfs.push_back(createMirrorBrdf());
-        }
-    }
-
-    return brdfs;
-}
-
-std::vector<std::string> getMeshFilenames(const nlohmann::json& shapeList) {
-    std::vector<std::string> filenames{};
-    for (const auto& shape : shapeList) {
-        filenames.push_back(shape["path"]);
-    }
-    return filenames;
-}
-
-std::vector<glm::mat4> getTransforms(const nlohmann::json& shapeList) {
-    std::vector<glm::mat4> transforms{};
-    for (const auto& shape : shapeList) {
-        const glm::mat4 translation =
-            shape.contains("translation") ? glm::translate(parseVec3(shape["translation"])) : glm::mat4(1.0f);
-        const glm::mat4 rotation = glm::mat4(1.0f);
-        const glm::mat4 scale =
-            shape.contains("scale") ? glm::scale(glm::vec3(shape["scale"].get<float>())) : glm::mat4(1.0f);
-
-        transforms.push_back(translation * rotation * scale);
-    }
-    return transforms;
+void setCameraParameters(const nlohmann::json& camera, FreeCameraController& cameraController) {
+    cameraController.setPosition(parseVec3(camera["position"]));
+    cameraController.setFovY(camera["fovY"].get<float>());
 }
 
 } // namespace
@@ -145,41 +66,47 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     : Scene(renderer, window) {
     setupInput();
 
-    auto json =
+    const auto json =
         loadJsonFromFile(renderer->getAssetPaths().resourceDir / "VesperScenes/Nori-PA-4/cbox-mats.json").unwrap();
+    m_sceneDesc = parseSceneDescription(json["shapes"]);
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
-    m_cameraController->setPosition(parseVec3(json["camera"]["position"]));
-    m_cameraController->setFovY(json["camera"]["fovY"].get<float>());
+    setCameraParameters(json["camera"], *m_cameraController);
     m_resourceContext->createUniformBuffer("camera", sizeof(ExtendedCameraParameters), BufferUpdatePolicy::PerFrame);
+
+    m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
+    m_integratorParams.lightCount = static_cast<int32_t>(m_sceneDesc.lights.size());
     m_resourceContext->createUniformBuffer("integrator", sizeof(IntegratorParameters), BufferUpdatePolicy::PerFrame);
 
-    const std::vector<std::string> meshNames = getMeshFilenames(json["shapes"]);
-    const std::vector<uint32_t> materialIds = {0, 1, 2, 3, 4, 6};
-    m_brdfParameters = createBrdfs(json["shapes"]);
-    m_brdfParameters.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
+    m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
     m_resourceContext->createStorageBuffer(
         "brdfParams",
-        sizeof(BrdfParameters) * m_brdfParameters.size(),
+        sizeof(BrdfParameters) * m_sceneDesc.brdfs.size(),
         0,
         BufferUpdatePolicy::PerFrame,
-        m_brdfParameters.data());
+        m_sceneDesc.brdfs.data());
 
     m_resourceContext->createStorageBuffer(
-        "materialIds", sizeof(uint32_t) * meshNames.size(), 0, BufferUpdatePolicy::Constant, materialIds.data());
+        "lightParams",
+        sizeof(LightParameters) * m_sceneDesc.lights.size(),
+        0,
+        BufferUpdatePolicy::PerFrame,
+        m_sceneDesc.lights.data());
 
-    const auto transforms = getTransforms(json["shapes"]);
     std::vector<VulkanAccelerationStructure*> blases;
-    for (auto&& [idx, meshName] : std::views::enumerate(meshNames)) {
+    AliasTable aliasTable{};
+    for (auto&& [idx, meshName] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         const std::filesystem::path relativePath = std::filesystem::path("Meshes") / meshName;
 
         auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath, flatten(posFormat)).unwrap()};
-        mesh.transform(transforms[idx]);
+        mesh.transform(m_sceneDesc.transforms[idx]);
 
-        if (idx == 3) {
-            m_resourceContext->addStorageBuffer("aliasTable", createAliasTableBuffer(*m_renderer, mesh));
+        if (m_sceneDesc.props[idx].lightId != -1) {
+            m_sceneDesc.props[idx].aliasTableOffset = static_cast<uint32_t>(aliasTable.size());
+            m_sceneDesc.props[idx].aliasTableCount = mesh.getTriangleCount();
+            append(aliasTable, mesh);
         }
 
         auto& geometry = m_resourceContext->addGeometry(
@@ -193,6 +120,14 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
+    m_resourceContext->addStorageBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
+
+    m_resourceContext->createStorageBuffer(
+        "materialIds",
+        sizeof(InstanceProperties) * m_sceneDesc.props.size(),
+        0,
+        BufferUpdatePolicy::Constant,
+        m_sceneDesc.props.data());
 
     m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -226,7 +161,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_material = std::make_unique<Material>(m_pipeline.get());
 
     updateDescriptorSets();
-    for (auto&& [idx, name] : std::views::enumerate(meshNames)) {
+    for (auto&& [idx, name] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         updateGeometryBufferDescriptors(
             *m_resourceContext->getGeometry(fmt::format("{}_{}", name, idx)), static_cast<uint32_t>(idx));
     }
@@ -252,7 +187,7 @@ void VulkanRayTracingScene::update(float dt) {
     const ExtendedCameraParameters cameraParams = m_cameraController->getExtendedCameraParameters();
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
     m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer(m_integratorParams);
-    m_resourceContext->getStorageBuffer("brdfParams")->updateStagingBufferFromVector(m_brdfParameters);
+    m_resourceContext->getStorageBuffer("brdfParams")->updateStagingBufferFromVector(m_sceneDesc.brdfs);
 }
 
 void VulkanRayTracingScene::render() {
@@ -299,12 +234,17 @@ void VulkanRayTracingScene::renderGui() {
     if (ImGui::InputInt("Samples per Frame", &m_integratorParams.sampleCount)) {
         m_integratorParams.frameIdx = 0;
     }
-    if (ImGui::SliderFloat("Int IOR", &m_brdfParameters[4].intIor, 1.0f, 10.0f)) {
+    bool useLightSampling{m_integratorParams.useEms == 1};
+    if (ImGui::Checkbox("Use Light Sampling", &useLightSampling)) {
+        m_integratorParams.useEms = useLightSampling ? 1 : 0;
         m_integratorParams.frameIdx = 0;
     }
-    if (ImGui::SliderFloat("Roughness IOR", &m_brdfParameters[6].microfacetAlpha, 1e-3f, 1.0f)) {
-        m_integratorParams.frameIdx = 0;
-    }
+    // if (ImGui::SliderFloat("Int IOR", &m_brdfParameters[4].intIor, 1.0f, 10.0f)) {
+    //     m_integratorParams.frameIdx = 0;
+    // }
+    // if (ImGui::SliderFloat("Roughness IOR", &m_brdfParameters[6].microfacetAlpha, 1e-3f, 1.0f)) {
+    //     m_integratorParams.frameIdx = 0;
+    // }
 
     ImGui::End();
 
@@ -316,7 +256,6 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
-        // {"path-trace-shadow-ray.rahit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
         {"path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
@@ -358,7 +297,8 @@ void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(0, 3, *m_resourceContext->getUniformBuffer("integrator"));
     m_material->writeDescriptor(1, 2, *m_resourceContext->getStorageBuffer("materialIds"));
     m_material->writeDescriptor(1, 3, *m_resourceContext->getStorageBuffer("brdfParams"));
-    m_material->writeDescriptor(1, 4, *m_resourceContext->getStorageBuffer("aliasTable"));
+    m_material->writeDescriptor(1, 4, *m_resourceContext->getStorageBuffer("lightParams"));
+    m_material->writeDescriptor(1, 5, *m_resourceContext->getStorageBuffer("aliasTable"));
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 

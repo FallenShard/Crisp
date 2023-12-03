@@ -22,14 +22,15 @@ layout(set = 1, binding = 0, scalar) buffer Vertices
 {
     float v[];
 } vertices[6];
+
 layout(set = 1, binding = 1, scalar) buffer Indices
 {
     uint i[];
 } indices[6];
 
-layout(set = 1, binding = 2, scalar) buffer MaterialIds
+layout(set = 1, binding = 2, scalar) buffer InstanceProps
 {
-    uint materialIds[];
+    InstanceProperties instanceProps[];
 };
 
 layout(set = 1, binding = 3) buffer BrdfParams
@@ -37,12 +38,17 @@ layout(set = 1, binding = 3) buffer BrdfParams
     BrdfParameters brdfParams[];
 };
 
-vec3 evalAreaLight(vec3 p, vec3 n)
+layout(set = 1, binding = 4, std430) buffer Lights
+{
+    LightParameters lights[];
+};
+
+vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance)
 {
     const vec3 ref = gl_WorldRayOriginEXT;
     const vec3 wi = p - ref;
     const float cosTheta = dot(n, normalize(-wi));
-    return cosTheta <= 0.0f ? vec3(0.0f) : vec3(15.0f);
+    return cosTheta <= 0.0f ? vec3(0.0f) : radiance;
 }
 
 const int kVertexComponentCount = 6;
@@ -107,6 +113,7 @@ void main()
 {
     // Grab the ID of the object that we just hit.
     const uint objId = gl_InstanceCustomIndexEXT;
+    const InstanceProperties props = instanceProps[objId];
 
     // Formulate the triangle at the hit.
     const ivec3 hitTriangle = ivec3(
@@ -122,20 +129,20 @@ void main()
     hitInfo.position = position;
     hitInfo.tHit = gl_HitTEXT;
 
-    const uint materialId = materialIds[objId];
-    const int brdfType = brdfParams[materialId].type;
+    
     // Determine sampled BRDF and the new path direction.
 
     const mat3 worldTransform = createCoordinateFrame(normal);
 
     bsdf.normal = toLocal(normal, worldTransform);
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
-    bsdf.materialId = materialId;
+    bsdf.materialId = props.materialId;
 
     const float r1 = rndFloat(hitInfo.rngSeed);
     const float r2 = rndFloat(hitInfo.rngSeed);
     bsdf.unitSample = vec2(r1, r2);
 
+    const int brdfType = brdfParams[props.materialId].type;
     executeCallableEXT(brdfType, 1);
     hitInfo.sampleDirection = toWorld(bsdf.sampleDirection, worldTransform);
     hitInfo.samplePdf = bsdf.samplePdf;
@@ -145,8 +152,8 @@ void main()
 
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);
-    if (objId == 3)
+    if (props.lightId != -1)
     {
-        hitInfo.Le = evalAreaLight(position, normal);
+        hitInfo.Le = evalAreaLight(position, normal, lights[props.lightId].radiance);
     }
 }

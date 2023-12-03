@@ -11,7 +11,6 @@
 const int kPayloadIndex = 0;
 
 layout(location = 0) rayPayloadEXT HitInfo hitInfo;
-layout(location = 1) rayPayloadEXT ShadowRayHitInfo shadowRayHitInfo;
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
@@ -31,16 +30,30 @@ layout(set = 0, binding = 3) uniform IntegratorParameters
     int maxBounces;
     int sampleCount;
     int frameIdx;
+    int lightCount;
+    int shapeCount;
+    int useEms;
 } integrator;
 
 layout(set = 1, binding = 0, scalar) buffer Vertices
 {
     float v[];
 } vertices[6];
+
 layout(set = 1, binding = 1, scalar) buffer Indices
 {
     uint i[];
 } indices[6];
+
+layout(set = 1, binding = 2, scalar) buffer InstanceProps
+{
+    InstanceProperties instanceProps[];
+};
+
+layout(set = 1, binding = 4, std430) buffer Lights
+{
+    LightParameters lights[];
+};
 
 struct AliasTableElement
 {
@@ -48,11 +61,10 @@ struct AliasTableElement
     uint j;
 };
 
-layout(set = 1, binding = 4, std430) buffer AliasTables
+layout(set = 1, binding = 5, std430) buffer AliasTables
 {
     AliasTableElement elements[];
 } aliasTable;
-
 
 void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
 {
@@ -191,14 +203,17 @@ vec3 getPosition(uint objectId, ivec3 ind, vec3 bary)
 
 float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal)
 {
-    const uint triCount = aliasTable.elements[0].j;
-    const uint elemIdx = clamp(1 + uint(rndFloat(seed) * float(triCount)), 1, triCount);
+    const uint aliasTableOffset = instanceProps[meshId].aliasTableOffset;
+    const uint triCount = aliasTable.elements[aliasTableOffset].j;
+    
+    //const uint triCount = instanceProps[meshId].aliasTableCount;
+    const uint elemIdx = 1 + rndRange(seed, triCount); // Add 1 to skip the header entry.
     const float rndVal = rndFloat(seed);
 
     uint sampledTriIdx = elemIdx - 1;
-    if (rndVal > aliasTable.elements[elemIdx].tau)
+    if (rndVal > aliasTable.elements[aliasTableOffset + elemIdx].tau)
     {
-        sampledTriIdx = aliasTable.elements[elemIdx].j;
+        sampledTriIdx = aliasTable.elements[aliasTableOffset + elemIdx].j;
     }
 
     const float r1 = rndFloat(seed);
@@ -212,14 +227,13 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
 
     position = getPosition(meshId, sampledTriangle, bary);
     normal = getNormal(meshId, sampledTriangle, bary);
-    return aliasTable.elements[0].tau;
+    return aliasTable.elements[aliasTableOffset].tau;
 }
 
-vec3 sampleLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir)
-{
+vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 refPoint, out vec3 shadowRayDir, out float lightPdf) {
     vec3 samplePos;
     vec3 sampleNormal;
-    const float shapePdf = sampleSurfaceCoord(seed, 3, samplePos, sampleNormal);
+    const float shapePdf = sampleSurfaceCoord(seed, meshId, samplePos, sampleNormal);
     
     const vec3 shadowRayOrg = refPoint;
     shadowRayDir = samplePos - refPoint;
@@ -231,9 +245,44 @@ vec3 sampleLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir)
     traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, shadowRayOrg.xyz, 1e-6, shadowRayDir.xyz, dist * 0.999, kPayloadIndex);
     seed = hitInfo.rngSeed;
 
-    const float lightSamplePdf = shapePdf * squaredDist / dot(sampleNormal, -shadowRayDir);
-    return vec3(15.0f) / lightSamplePdf;
+    lightPdf = shapePdf * squaredDist / dot(sampleNormal, -shadowRayDir);
+    return radiance / lightPdf;
 }
+
+vec3 sampleUniformLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir, out float lightPdf) {
+    const uint lightId = rndRange(seed, integrator.lightCount);
+    const float uniformPdf = 1.0f / float(integrator.lightCount);
+    const vec3 radiance = sampleAreaLight(seed, lights[lightId].meshId, lights[lightId].radiance, refPoint, shadowRayDir, lightPdf);
+    lightPdf *= uniformPdf;
+    return radiance / uniformPdf;
+}
+
+// vec3 sampleLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir)
+// {
+//     const vec3 center = vec3(0.0f, 0.0f, 0.0f);
+//     const float radius = 0.5f;
+
+//     const float invRad2 = 1.0f / (radius * radius);
+//     // Uniform sampling
+//     vec3 q = squareToUniformSphere(vec2(rndFloat(seed), rndFloat(seed)));
+
+//     vec3 samplePos = center + radius * q;
+//     vec3 sampleNormal = q;
+//     const float shapePdf = invRad2 * squareToUniformSpherePdf();
+
+//     const vec3 shadowRayOrg = refPoint;
+//     shadowRayDir = samplePos - refPoint;
+
+//     const float squaredDist = dot(shadowRayDir, shadowRayDir);
+//     const float dist = sqrt(squaredDist);
+//     shadowRayDir /= dist;
+//     hitInfo.rngSeed = seed;
+//     traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, shadowRayOrg.xyz, 1e-6, shadowRayDir.xyz, dist * 0.999, kPayloadIndex);
+//     seed = hitInfo.rngSeed;
+
+//     const float lightSamplePdf = shapePdf * squaredDist / dot(sampleNormal, -shadowRayDir);
+//     return vec3(5.0f) / lightSamplePdf;
+// }
 
 vec3 computeRadianceDirectLighting(inout uint seed)
 {
@@ -264,7 +313,8 @@ vec3 computeRadianceDirectLighting(inout uint seed)
     L += hitInfo.Le;
 
     vec3 shadowRayDir;
-    const vec3 radiance = sampleLight(seed, hitInfo.position, shadowRayDir);
+    float lightPdf;
+    const vec3 radiance = sampleUniformLight(seed, hitInfo.position, shadowRayDir, lightPdf);
     const vec3 brdfEval = hitInfo.bsdfEval * InvPI * dot(hitInfo.debugValue, shadowRayDir);
 
     if (hitInfo.tHit <= 0)
@@ -349,7 +399,12 @@ void main()
     const uint sampleCount = integrator.sampleCount;
     for (uint i = 0; i < sampleCount; ++i)
     {
-        L += computeRadianceDirectLighting(seed);
+        if (integrator.useEms == 1) {
+            L += computeRadianceDirectLighting(seed);
+        }
+        else {
+            L += computeRadiance(seed);
+        }
     }
     L /= sampleCount;
 

@@ -41,6 +41,11 @@ vec3 squareToUniformSphere(const vec2 unitSample)
     return cylinderToSphereSection(unitSample, 1.0f, -1.0f);
 }
 
+float squareToUniformSpherePdf()
+{
+    return 0.07957747154; // 1 / (4pi)
+}
+
 vec3 squareToUniformTriangle(const vec2 unitSample) {
     const float val = sqrt(unitSample.x);
     const float u = 1.0f - val;

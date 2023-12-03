@@ -18,9 +18,7 @@
 namespace crisp {
 namespace {
 auto logger = spdlog::stderr_color_mt("pt::Scene");
-}
 
-namespace {
 void logEmbreeError(void*, RTCError code, const char* str) {
     logger->error("Error code {} - {}", static_cast<uint32_t>(code), str);
 }
@@ -28,16 +26,15 @@ void logEmbreeError(void*, RTCError code, const char* str) {
 
 namespace pt {
 Scene::Scene()
-    : m_device(nullptr)
-    , m_scene(nullptr)
+    : m_device(rtcNewDevice(nullptr))
+    , m_scene(rtcNewScene(m_device))
     , m_sampler(nullptr)
     , m_integrator(nullptr)
     , m_camera(nullptr)
-    , m_envLight(nullptr) {
-    m_device = rtcNewDevice(nullptr);
+    , m_envLight(nullptr)
+    , m_imageSize{}
+    , m_boundingSphere{} {
     rtcSetDeviceErrorFunction(m_device, logEmbreeError, this);
-
-    m_scene = rtcNewScene(m_device);
 
     m_integrator = std::make_unique<NormalsIntegrator>();
     m_sampler = std::make_unique<IndependentSampler>();
@@ -103,7 +100,7 @@ void Scene::finishInitialization() {
 
     int err = rtcGetDeviceError(m_device);
     if (err != RTC_ERROR_NONE) {
-        std::cout << "Embree error: " << err << std::endl;
+        logger->error("Embree error: {}", err);
     }
 }
 
@@ -124,9 +121,13 @@ std::vector<std::unique_ptr<Shape>>& Scene::getShapes() {
 }
 
 Light* Scene::getRandomLight(float sample) const {
-    auto numLights = m_lights.size();
-    auto index = std::min(static_cast<size_t>(std::floor(numLights * sample)), numLights - 1);
-    return numLights == 0 ? nullptr : m_lights[index].get();
+    const auto numLights = m_lights.size();
+    if (numLights == 0) {
+        return nullptr;
+    }
+
+    const auto index = std::min(static_cast<size_t>(std::floor(static_cast<float>(numLights) * sample)), numLights - 1);
+    return m_lights[index].get();
 }
 
 float Scene::getLightPdf() const {
@@ -140,13 +141,13 @@ Light* Scene::getEnvironmentLight() const {
 Spectrum Scene::sampleLight(const Intersection& /*its*/, Sampler& sampler, Light::Sample& lightSample) const {
     auto light = getRandomLight(sampler.next1D());
     if (!light) {
-        return Spectrum(0.0f);
+        return {0.0f};
     }
 
     Spectrum lightContrib = light->sample(lightSample, sampler);
 
     if (lightSample.pdf == 0.0f) {
-        return Spectrum(0.0f);
+        return {0.0f};
     }
 
     lightContrib /= getLightPdf();
@@ -162,7 +163,7 @@ Spectrum Scene::evalEnvLight(const Ray3& ray) const {
 }
 
 bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const {
-    RTCRayHit rayHit;
+    RTCRayHit rayHit; // NOLINT
     rayHit.ray.org_x = ray.o.x;
     rayHit.ray.org_y = ray.o.y;
     rayHit.ray.org_z = ray.o.z;
@@ -193,7 +194,7 @@ bool Scene::rayIntersect(const Ray3& ray, Intersection& its) const {
 }
 
 bool Scene::rayIntersect(const Ray3& shadowRay) const {
-    RTCRay rtcRay;
+    RTCRay rtcRay; // NOLINT
     rtcRay.org_x = shadowRay.o.x;
     rtcRay.org_y = shadowRay.o.y;
     rtcRay.org_z = shadowRay.o.z;

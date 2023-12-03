@@ -41,6 +41,12 @@ float rndFloat(inout uint seed)
     return uintBitsToFloat(one | (msk & (xorshift32(seed) >> 9))) - 1;
 }
 
+uint rndRange(inout uint seed, uint upper)
+{
+  const float f = rndFloat(seed);
+  return clamp(uint(f * float(upper)), 0, upper - 1);
+}
+
 // float rndFloat(inout uint state)
 // {
 //     const uint one = 0x3f800000;

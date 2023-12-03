@@ -157,4 +157,19 @@ Geometry createFromMesh(
         usageFlags};
 }
 
+VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geometry& geometry) {
+    VkAccelerationStructureGeometryKHR geo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+    geo.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    geo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+    geo.geometry = {};
+    geo.geometry.triangles = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
+    geo.geometry.triangles.vertexData.deviceAddress = geometry.getVertexBuffer()->getDeviceAddress();
+    geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT; // Positions format.
+    geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);      // Spacing between positions.
+    geo.geometry.triangles.maxVertex = geometry.getVertexCount() - 1;
+    geo.geometry.triangles.indexData.deviceAddress = geometry.getIndexBuffer()->getDeviceAddress();
+    geo.geometry.triangles.indexType = geometry.getIndexType();
+    return geo;
+}
+
 } // namespace crisp

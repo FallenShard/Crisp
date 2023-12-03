@@ -66,4 +66,24 @@ struct BrdfParameters
     float pad1;
 };
 
+struct InstanceProperties {
+    int materialId;
+    int lightId;
+    uint vertexOffset;
+    uint indexOffset;
+    uint aliasTableOffset;
+    uint aliasTableCount;
+    uint pad0;
+    uint pad1;
+};
+
+struct LightParameters {
+    int type;
+    int meshId;
+    int pad0;
+    int pad1;
+    vec3 radiance;
+    float pad2;
+};
+
 #endif
