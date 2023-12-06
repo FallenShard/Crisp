@@ -32,7 +32,7 @@ layout(set = 0, binding = 3) uniform IntegratorParameters
     int frameIdx;
     int lightCount;
     int shapeCount;
-    int useEms;
+    int samplingMode;
 } integrator;
 
 layout(set = 1, binding = 0, scalar) buffer Vertices
@@ -66,6 +66,20 @@ layout(set = 1, binding = 5, std430) buffer AliasTables
     AliasTableElement elements[];
 } aliasTable;
 
+void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax)
+{
+    hitInfo.rngSeed = seed;
+    traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
+    seed = hitInfo.rngSeed;
+}
+
+void traceShadowRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax)
+{
+    hitInfo.rngSeed = seed;
+    traceRayEXT(sceneBvh, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
+    seed = hitInfo.rngSeed;
+}
+
 void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
 {
     const vec2 ndcSample = pixelSample / vec2(gl_LaunchSizeEXT.xy) * 2.0 - 1.0; // In [-1, 1].
@@ -77,87 +91,6 @@ void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
 
     direction = camera.invV * vec4(rayDirEyeSpace, 0.0f);
 }
-
-// vec3 computeRadianceMis(inout uint seed)
-// {
-//     // Sample a point on the screen and transform it into a ray.
-//     const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
-//     const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
-    
-//     vec4 rayOrigin;
-//     vec4 rayDirection;
-//     sampleRay(rayOrigin, rayDirection, pixelSample);
-//     const float tMin = 1e-4;
-//     const float tMax = camera.nearFar[1];
-
-//     // Accumulated radiance L for this path.
-//     vec3 L = vec3(0.0f);
-
-//     // Throughput of the current path, modulated by encountered BRDFs.
-//     vec3 throughput = vec3(1.0f);
-
-//     vec3 debugColor = vec3(0.0f);
-//     int bounceCount = 0;
-//     bool specularBounce = false;
-//     while (bounceCount < integrator.maxBounces)
-//     {
-//         hitInfo.bounceCount = bounceCount;
-//         hitInfo.rngSeed = seed;
-//         traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin.xyz, tMin, rayDirection.xyz, tMax, kPayloadIndex);
-//         seed = hitInfo.rngSeed;
-
-//         if (bounceCount == 0 || specularBounce) {
-//             if (hitInfo.tHit >= tMin) {
-//                 // Accumulate any emission from the hit surface (e.g. we hit a light).
-//                 L += throughput * hitInfo.Le;
-//             } else {
-//                 // L += throughput * texture(environmentMap, rayDirection);
-//             }
-//         }
-
-//         if (!(hitInfo.tHit >= tMin) || bounceCount >= integrator.maxBounces) {
-//             break;
-//         }
-
-//         if (hitInfo.sampleLobeType != kLobeDelta) {
-//             const vec3 lightMis = uniformSampleOneLight(seed, rayOrigin, rayDirection);
-//             L += throughput * lightMis;
-//         }
-
-//         throughput *= hitInfo.bsdfEval;
-
-//         specularBounce = hitInfo.sampleLobeType == Lobe::Delta;
-
-//         // if (hitInfo.tHit >= tMin)
-//         // {
-//         //     // Adjust throughput for the hit surface.
-//         //     throughput *= hitInfo.bsdfEval; // equal to f(wi) * cos(wo) / pdf(wo).
-
-//         // Setup the next ray.
-//         rayOrigin.xyz    = hitInfo.position;
-//         rayDirection.xyz = hitInfo.sampleDirection;
-
-//         //     debugColor = hitInfo.debugValue.xyz;
-//         // }
-//         // else // The ray missed, evaluate environment lighting and exit the loop.
-//         // {
-//         //     // 
-//         //     break;
-//         // }
-
-//         if (++bounceCount > 10) // Cut the path tracing with Russian roulette.
-//         {
-//             const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
-//             const float q = 1.0f - min(maxCoeff, 0.99f);
-//             if (rndFloat(seed) > q)
-//                 throughput /= 1.0f - q;
-//             else
-//                 break;
-//         }
-//     }
-
-//     return L;
-// }
 
 const int kVertexComponentCount = 6;
 const int kPositionComponentOffset = 0;
@@ -230,59 +163,45 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
     return aliasTable.elements[aliasTableOffset].tau;
 }
 
-vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 refPoint, out vec3 shadowRayDir, out float lightPdf) {
+vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
     vec3 samplePos;
     vec3 sampleNormal;
     const float shapePdf = sampleSurfaceCoord(seed, meshId, samplePos, sampleNormal);
     
-    const vec3 shadowRayOrg = refPoint;
     shadowRayDir = samplePos - refPoint;
 
     const float squaredDist = dot(shadowRayDir, shadowRayDir);
-    const float dist = sqrt(squaredDist);
-    shadowRayDir /= dist;
-    hitInfo.rngSeed = seed;
-    traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, shadowRayOrg.xyz, 1e-6, shadowRayDir.xyz, dist * 0.999, kPayloadIndex);
-    seed = hitInfo.rngSeed;
+    shadowRayLen = sqrt(squaredDist);
+    shadowRayDir /= shadowRayLen;
 
-    lightPdf = shapePdf * squaredDist / dot(sampleNormal, -shadowRayDir);
+    const float cosThetaO = dot(sampleNormal, -shadowRayDir);
+    if (cosThetaO <= 0.0f) {
+        return vec3(0.0f);
+    }
+
+    lightPdf = shapePdf * squaredDist / cosThetaO;
     return radiance / lightPdf;
 }
 
-vec3 sampleUniformLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir, out float lightPdf) {
+vec3 sampleUniformLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
     const uint lightId = rndRange(seed, integrator.lightCount);
     const float uniformPdf = 1.0f / float(integrator.lightCount);
-    const vec3 radiance = sampleAreaLight(seed, lights[lightId].meshId, lights[lightId].radiance, refPoint, shadowRayDir, lightPdf);
+    
+    const vec3 radiance = sampleAreaLight(seed, lights[lightId].meshId, lights[lightId].radiance, refPoint, shadowRayDir, shadowRayLen, lightPdf);
     lightPdf *= uniformPdf;
     return radiance / uniformPdf;
 }
 
-// vec3 sampleLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir)
-// {
-//     const vec3 center = vec3(0.0f, 0.0f, 0.0f);
-//     const float radius = 0.5f;
+float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
+    const int meshId = lights[lightId].meshId;
+    const uint aliasTableOffset = instanceProps[meshId].aliasTableOffset;
+    const float shapePdf = aliasTable.elements[aliasTableOffset].tau;
 
-//     const float invRad2 = 1.0f / (radius * radius);
-//     // Uniform sampling
-//     vec3 q = squareToUniformSphere(vec2(rndFloat(seed), rndFloat(seed)));
+    const float squaredDist = dot(hitVector, hitVector);
 
-//     vec3 samplePos = center + radius * q;
-//     vec3 sampleNormal = q;
-//     const float shapePdf = invRad2 * squareToUniformSpherePdf();
-
-//     const vec3 shadowRayOrg = refPoint;
-//     shadowRayDir = samplePos - refPoint;
-
-//     const float squaredDist = dot(shadowRayDir, shadowRayDir);
-//     const float dist = sqrt(squaredDist);
-//     shadowRayDir /= dist;
-//     hitInfo.rngSeed = seed;
-//     traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, shadowRayOrg.xyz, 1e-6, shadowRayDir.xyz, dist * 0.999, kPayloadIndex);
-//     seed = hitInfo.rngSeed;
-
-//     const float lightSamplePdf = shapePdf * squaredDist / dot(sampleNormal, -shadowRayDir);
-//     return vec3(5.0f) / lightSamplePdf;
-// }
+    const float uniformPdf = 1.0f / float(integrator.lightCount);
+    return uniformPdf * shapePdf * squaredDist / dot(hitNormal, -normalize(hitVector));
+}
 
 vec3 computeRadianceDirectLighting(inout uint seed)
 {
@@ -301,9 +220,7 @@ vec3 computeRadianceDirectLighting(inout uint seed)
 
     int bounceCount = 0;
     hitInfo.bounceCount = bounceCount;
-    hitInfo.rngSeed = seed;
-    traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin.xyz, tMin, rayDirection.xyz, tMax, kPayloadIndex);
-    seed = hitInfo.rngSeed;
+    traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0)
     {
@@ -312,14 +229,84 @@ vec3 computeRadianceDirectLighting(inout uint seed)
 
     L += hitInfo.Le;
 
+    const vec3 p = hitInfo.position;
+    const vec3 n = hitInfo.normal;
+    const vec3 f = hitInfo.bsdfEval;
+
     vec3 shadowRayDir;
+    float shadowRayLen;
     float lightPdf;
-    const vec3 radiance = sampleUniformLight(seed, hitInfo.position, shadowRayDir, lightPdf);
-    const vec3 brdfEval = hitInfo.bsdfEval * InvPI * dot(hitInfo.debugValue, shadowRayDir);
+    const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
+    traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
 
     if (hitInfo.tHit <= 0)
     {
+        const vec3 brdfEval = f * InvPI * dot(n, shadowRayDir);
         L += radiance * brdfEval;
+    }
+
+    return L;
+}
+
+float powerHeuristic(const float fPdf, const float gPdf) {
+    const float fPdf2 = fPdf * fPdf;
+    const float gPdf2 = gPdf * gPdf;
+    return fPdf2 / (fPdf2 + gPdf2);
+}
+
+vec3 computeRadianceMis(inout uint seed)
+{
+    // Sample a point on the screen and transform it into a ray.
+    const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
+    const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
+
+    vec4 rayOrigin;
+    vec4 rayDirection;
+    sampleRay(rayOrigin, rayDirection, pixelSample);
+    const float tMin = 1e-4;
+    const float tMax = camera.nearFar[1]; 
+
+    // Accumulated radiance L for this path.
+    vec3 L = vec3(0.0f);
+
+    int bounceCount = 0;
+    hitInfo.bounceCount = bounceCount;
+    traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
+
+    if (hitInfo.tHit == -1.0)
+    {
+        return L;
+    }
+
+    L += hitInfo.Le;
+
+    const vec3 p = hitInfo.position;
+    const vec3 n = hitInfo.normal;
+    const vec3 f = hitInfo.bsdfEval;
+
+    // BRDF sampling.
+    {
+        const float brdfPdf = hitInfo.samplePdf;
+        traceRay(seed, p, tMin, hitInfo.sampleDirection, tMax);
+
+        if (hitInfo.lightId != -1) {
+            const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
+            L += f * hitInfo.Le * powerHeuristic(brdfPdf, lightPdf);
+        }
+    }
+
+    // Light sampling.
+    vec3 shadowRayDir;
+    float shadowRayLen;
+    float lightPdf;
+    const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
+    traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
+
+    if (hitInfo.tHit <= 0) // The shadow ray has missed.
+    {
+        const float brdfPdf = InvPI * dot(n, shadowRayDir);
+        const vec3 brdfEval = f * brdfPdf;
+        L += radiance * brdfEval * powerHeuristic(lightPdf, brdfPdf);
     }
 
     return L;
@@ -345,12 +332,11 @@ vec3 computeRadiance(inout uint seed)
 
     vec3 debugColor = vec3(0.0f);
     int bounceCount = 0;
-    while (bounceCount < integrator.maxBounces)
+    // while (bounceCount < integrator.maxBounces)
+    while (bounceCount < 2)
     {
         hitInfo.bounceCount = bounceCount;
-        hitInfo.rngSeed = seed;
-        traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin.xyz, tMin, rayDirection.xyz, tMax, kPayloadIndex);
-        seed = hitInfo.rngSeed;
+        traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
         if (hitInfo.tHit >= tMin)
         {
@@ -363,19 +349,12 @@ vec3 computeRadiance(inout uint seed)
             // Setup the next ray.
             rayOrigin.xyz    = hitInfo.position;
             rayDirection.xyz = hitInfo.sampleDirection;
-
-            debugColor = hitInfo.debugValue.xyz;
         }
         else // The ray missed, evaluate environment lighting and exit the loop.
         {
             // L += throughput * texture(environmentMap, rayDirection);
             break;
         }
-
-        if (bounceCount == 0)
-            debugColor.r = hitInfo.debugValue.x;
-        else
-            debugColor.g = hitInfo.debugValue.x;
 
         if (++bounceCount > 10) // Cut the path tracing with Russian roulette.
         {
@@ -399,11 +378,14 @@ void main()
     const uint sampleCount = integrator.sampleCount;
     for (uint i = 0; i < sampleCount; ++i)
     {
-        if (integrator.useEms == 1) {
+        if (integrator.samplingMode == 0) {
             L += computeRadianceDirectLighting(seed);
         }
-        else {
+        else if (integrator.samplingMode == 1) {
             L += computeRadiance(seed);
+        }
+        else {
+            L += computeRadianceMis(seed);
         }
     }
     L /= sampleCount;

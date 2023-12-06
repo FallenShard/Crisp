@@ -128,7 +128,7 @@ void main()
     // Record the hit info for the calling shader.
     hitInfo.position = position;
     hitInfo.tHit = gl_HitTEXT;
-
+    hitInfo.normal = normal;
     
     // Determine sampled BRDF and the new path direction.
 
@@ -148,12 +148,12 @@ void main()
     hitInfo.samplePdf = bsdf.samplePdf;
     hitInfo.bsdfEval = bsdf.eval;
 
-    hitInfo.debugValue = normal;
-
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);
+    hitInfo.lightId = -1;
     if (props.lightId != -1)
     {
         hitInfo.Le = evalAreaLight(position, normal, lights[props.lightId].radiance);
+        hitInfo.lightId = props.lightId;
     }
 }

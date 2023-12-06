@@ -1,26 +1,13 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
+#extension GL_GOOGLE_include_directive : require
 
-struct HitInfo
-{
-    vec3 position;
-    float tHit;
-
-    vec3 sampleDirection;
-    float samplePdf;
-
-    vec3 Le;
-    uint bounceCount;
-
-    vec3 bsdfEval;
-    uint rngSeed;
-
-    vec4 debugValue;
-};
+#include "Parts/path-tracer-payload.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 
 void main()
 {
     hitInfo.tHit = -1;
+    hitInfo.lightId = -1;
 }

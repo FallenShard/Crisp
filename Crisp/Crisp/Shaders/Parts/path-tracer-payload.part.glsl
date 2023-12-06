@@ -6,20 +6,20 @@ const int kLobeGlossy = 1;
 
 struct HitInfo
 {
-    vec3 position;
-    float tHit;
+    vec3 position;        // Out.
+    float tHit;           // Out.
 
-    vec3 sampleDirection;
-    float samplePdf;
+    vec3 sampleDirection; // Out.
+    float samplePdf;      // Out.
 
-    vec3 Le;
-    uint bounceCount;
+    vec3 Le;              // Out.
+    uint bounceCount;     // Out, unnecessary.
 
-    vec3 bsdfEval;
-    uint rngSeed;
+    vec3 bsdfEval;        // Out.
+    uint rngSeed;         // In/out.
 
-    vec3 debugValue;
-    int sampleLobeType;
+    vec3 normal;          // Out.
+    int lightId;          // Out.
 };
 
 struct ShadowRayHitInfo

@@ -29,7 +29,7 @@ struct RgbSpectrum {
         , g(green)
         , b(blue) {}
 
-    RgbSpectrum(const glm::vec3& vec);
+    RgbSpectrum(const glm::vec3& vec); // NOLINT(single-arg)
 
     float& operator[](int index);
     const float& operator[](int index) const;
@@ -66,6 +66,10 @@ struct RgbSpectrum {
     bool isNaN() const;
 
     RgbSpectrum toSrgb() const;
+
+    constexpr static RgbSpectrum zero() {
+        return {0.0f};
+    }
 };
 
 RgbSpectrum operator+(float scalar, const RgbSpectrum& rgbSpectrum);

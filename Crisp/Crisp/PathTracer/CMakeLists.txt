@@ -86,7 +86,6 @@ add_cpp_static_library(PathTracerIntegrator
     "Integrators/DirectLighting.hpp"
     "Integrators/EmsDirectLighting.cpp"
     "Integrators/EmsDirectLighting.hpp"
-    "Integrators/Integrator.cpp"
     "Integrators/Integrator.hpp"
     "Integrators/IntegratorFactory.cpp"
     "Integrators/IntegratorFactory.hpp"

@@ -234,9 +234,17 @@ void VulkanRayTracingScene::renderGui() {
     if (ImGui::InputInt("Samples per Frame", &m_integratorParams.sampleCount)) {
         m_integratorParams.frameIdx = 0;
     }
-    bool useLightSampling{m_integratorParams.useEms == 1};
-    if (ImGui::Checkbox("Use Light Sampling", &useLightSampling)) {
-        m_integratorParams.useEms = useLightSampling ? 1 : 0;
+
+    if (ImGui::RadioButton("Use Light Sampling", m_integratorParams.samplingMode == 0)) {
+        m_integratorParams.samplingMode = 0;
+        m_integratorParams.frameIdx = 0;
+    }
+    if (ImGui::RadioButton("Use BRDF Sampling", m_integratorParams.samplingMode == 1)) {
+        m_integratorParams.samplingMode = 1;
+        m_integratorParams.frameIdx = 0;
+    }
+    if (ImGui::RadioButton("Use MIS", m_integratorParams.samplingMode == 2)) {
+        m_integratorParams.samplingMode = 2;
         m_integratorParams.frameIdx = 0;
     }
     // if (ImGui::SliderFloat("Int IOR", &m_brdfParameters[4].intIor, 1.0f, 10.0f)) {

@@ -51,7 +51,7 @@ private:
         int32_t frameIdx{0};
         int32_t lightCount{0};
         int32_t shapeCount{0};
-        int32_t useEms{0};
+        int32_t samplingMode{0};
     };
 
     SceneDescription m_sceneDesc;
