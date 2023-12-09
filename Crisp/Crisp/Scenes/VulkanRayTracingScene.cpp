@@ -95,13 +95,16 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
         BufferUpdatePolicy::PerFrame,
         m_sceneDesc.lights.data());
 
-    std::vector<VulkanAccelerationStructure*> blases;
     AliasTable aliasTable{};
+    TriangleMesh sceneMesh{};
     for (auto&& [idx, meshName] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         const std::filesystem::path relativePath = std::filesystem::path("Meshes") / meshName;
-
         auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath, flatten(posFormat)).unwrap()};
         mesh.transform(m_sceneDesc.transforms[idx]);
+
+        m_sceneDesc.props[idx].triangleOffset = sceneMesh.getTriangleCount();
+        m_sceneDesc.props[idx].vertexOffset = sceneMesh.getVertexCount();
+        m_sceneDesc.props[idx].triangleCount = mesh.getTriangleCount();
 
         if (m_sceneDesc.props[idx].lightId != -1) {
             m_sceneDesc.props[idx].aliasTableOffset = static_cast<uint32_t>(aliasTable.size());
@@ -109,14 +112,20 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
             append(aliasTable, mesh);
         }
 
-        auto& geometry = m_resourceContext->addGeometry(
-            fmt::format("{}_{}", meshName, idx), createRayTracingGeometry(*m_renderer, mesh));
+        sceneMesh.append(std::move(mesh));
+    }
+
+    auto& sceneGeometry =
+        m_resourceContext->addGeometry("scene-geometry", createRayTracingGeometry(*m_renderer, sceneMesh));
+
+    std::vector<VulkanAccelerationStructure*> blases;
+    for (auto&& [idx, _] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
             m_renderer->getDevice(),
-            createAccelerationStructureGeometry(geometry),
-            geometry.getIndexCount() / 3,
+            createAccelerationStructureGeometry(
+                sceneGeometry, m_sceneDesc.props[idx].triangleOffset * sizeof(glm::uvec3)),
+            m_sceneDesc.props[idx].triangleCount,
             glm::mat4(1.0f)));
-
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
@@ -132,11 +141,11 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         std::vector<VulkanAccelerationStructure*> blases;
         for (auto& blas : m_bottomLevelAccelStructures) {
-            blas->build(m_renderer->getDevice(), cmdBuffer, {});
+            blas->build(cmdBuffer);
             blases.push_back(blas.get());
         }
 
-        m_topLevelAccelStructure->build(m_renderer->getDevice(), cmdBuffer, blases);
+        m_topLevelAccelStructure->build(cmdBuffer);
     });
 
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -161,12 +170,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_material = std::make_unique<Material>(m_pipeline.get());
 
     updateDescriptorSets();
-    for (auto&& [idx, name] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
-        updateGeometryBufferDescriptors(
-            *m_resourceContext->getGeometry(fmt::format("{}_{}", name, idx)), static_cast<uint32_t>(idx));
-    }
-
-    m_renderer->getDevice().flushDescriptorUpdates();
 
     m_renderer->setSceneImageViews(m_rtImageViews);
 } // namespace crisp
@@ -303,16 +306,14 @@ void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(0, 1, m_rtImageViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     m_material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("camera"));
     m_material->writeDescriptor(0, 3, *m_resourceContext->getUniformBuffer("integrator"));
+    m_material->writeDescriptor(
+        1, 0, m_resourceContext->getGeometry("scene-geometry")->getVertexBuffer()->createDescriptorInfo());
+    m_material->writeDescriptor(
+        1, 1, m_resourceContext->getGeometry("scene-geometry")->getIndexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(1, 2, *m_resourceContext->getStorageBuffer("materialIds"));
     m_material->writeDescriptor(1, 3, *m_resourceContext->getStorageBuffer("brdfParams"));
     m_material->writeDescriptor(1, 4, *m_resourceContext->getStorageBuffer("lightParams"));
     m_material->writeDescriptor(1, 5, *m_resourceContext->getStorageBuffer("aliasTable"));
-    m_renderer->getDevice().flushDescriptorUpdates();
-}
-
-void VulkanRayTracingScene::updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx) {
-    m_material->writeDescriptor(1, 0, geometry.getVertexBuffer()->createDescriptorInfo(), idx);
-    m_material->writeDescriptor(1, 1, geometry.getIndexBuffer()->createDescriptorInfo(), idx);
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 

@@ -279,6 +279,9 @@ WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath) {
         }
 
         meshViews.back().indexCount = static_cast<uint32_t>(3 * mesh.triangles.size() - meshViews.back().firstIndex);
+    } else {
+        meshViews.emplace_back(
+            objFilePath.stem().generic_string(), 0, static_cast<uint32_t>(3 * mesh.triangles.size()));
     }
 
     const auto [begin, end] =

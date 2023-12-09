@@ -30,8 +30,6 @@ private:
 
     void setupInput();
 
-    void updateGeometryBufferDescriptors(const Geometry& geometry, uint32_t idx);
-
     std::unique_ptr<FreeCameraController> m_cameraController;
 
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;

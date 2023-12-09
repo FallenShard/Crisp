@@ -37,13 +37,13 @@ layout(set = 0, binding = 3) uniform IntegratorParameters
 
 layout(set = 1, binding = 0, scalar) buffer Vertices
 {
-    float v[];
-} vertices[6];
+    float data[];
+} vertices;
 
 layout(set = 1, binding = 1, scalar) buffer Indices
 {
-    uint i[];
-} indices[6];
+    uint data[];
+} indices;
 
 layout(set = 1, binding = 2, scalar) buffer InstanceProps
 {
@@ -92,54 +92,13 @@ void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
     direction = camera.invV * vec4(rayDirEyeSpace, 0.0f);
 }
 
-const int kVertexComponentCount = 6;
-const int kPositionComponentOffset = 0;
-const int kNormalComponentOffset = 3;
-
-vec3 getNormal(const uint objectId, const ivec3 ind, const vec3 bary)
-{
-    mat3 normals = mat3(
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.x + kNormalComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kNormalComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kNormalComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.y + kNormalComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kNormalComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kNormalComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.z + kNormalComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kNormalComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kNormalComponentOffset + 2])
-    );
-    return normalize(normals * bary);
-}
-
-vec3 getPosition(uint objectId, ivec3 ind, vec3 bary)
-{
-    mat3 positions = mat3(
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.x + kPositionComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kPositionComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kPositionComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.y + kPositionComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kPositionComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kPositionComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.z + kPositionComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kPositionComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kPositionComponentOffset + 2])
-    );
-    return positions * bary;
-}
+#include "Parts/path-tracer-vertex-pull.part.glsl"
 
 float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal)
 {
     const uint aliasTableOffset = instanceProps[meshId].aliasTableOffset;
     const uint triCount = aliasTable.elements[aliasTableOffset].j;
     
-    //const uint triCount = instanceProps[meshId].aliasTableCount;
     const uint elemIdx = 1 + rndRange(seed, triCount); // Add 1 to skip the header entry.
     const float rndVal = rndFloat(seed);
 
@@ -153,13 +112,15 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
     const float r2 = rndFloat(seed);
     const vec3 bary = squareToUniformTriangle(vec2(r1, r2));
 
+    const uint triangleOffset = instanceProps[meshId].indexOffset;
     const ivec3 sampledTriangle = ivec3(
-        indices[meshId].i[3 * sampledTriIdx + 0],
-        indices[meshId].i[3 * sampledTriIdx + 1],
-        indices[meshId].i[3 * sampledTriIdx + 2]);
+        indices.data[3 * (triangleOffset + sampledTriIdx) + 0],
+        indices.data[3 * (triangleOffset + sampledTriIdx) + 1],
+        indices.data[3 * (triangleOffset + sampledTriIdx) + 2]);
 
-    position = getPosition(meshId, sampledTriangle, bary);
-    normal = getNormal(meshId, sampledTriangle, bary);
+    position = interpolatePosition(sampledTriangle, bary);
+    normal = interpolateNormal(sampledTriangle, bary);
+
     return aliasTable.elements[aliasTableOffset].tau;
 }
 
@@ -332,12 +293,10 @@ vec3 computeRadiance(inout uint seed)
 
     vec3 debugColor = vec3(0.0f);
     int bounceCount = 0;
-    // while (bounceCount < integrator.maxBounces)
-    while (bounceCount < 2)
+    while (bounceCount < integrator.maxBounces)
     {
         hitInfo.bounceCount = bounceCount;
         traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
-
         if (hitInfo.tHit >= tMin)
         {
             // Accumulate any emission from the hit surface (e.g. we hit a light).

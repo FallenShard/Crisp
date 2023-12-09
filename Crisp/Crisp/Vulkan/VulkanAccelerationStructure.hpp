@@ -18,28 +18,31 @@ public:
     explicit VulkanAccelerationStructure(
         const VulkanDevice& device, const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures = {});
 
-    void build(
-        const VulkanDevice& device,
-        VkCommandBuffer cmdBuffer,
-        const std::vector<VulkanAccelerationStructure*>& bottomLevelAccelStructures);
+    void setPrimitiveCount(uint32_t count);
+    void setBuildRangeOffsets(uint32_t primitiveOffset, uint32_t firstVertex);
+
+    void build(VkCommandBuffer cmdBuffer);
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
 
 private:
     void createAccelerationStructure(const VulkanDevice& device);
 
-    uint64_t m_rawHandle;
+    // VRAM address of the acceleration structure object. Used for building TLAS from BLAS addresses.
     VkDeviceAddress m_address;
-    VulkanMemoryHeap::Allocation m_allocation;
-    VkAccelerationStructureInfoNV m_info;
 
+    // Transform matrix is used for transforming the BLASes to help with instancing.
     VkTransformMatrixKHR m_transformMatrix;
-    VkAccelerationStructureGeometryKHR m_geometry;
-    std::vector<VkAccelerationStructureInstanceKHR> m_instances;
-    VkAccelerationStructureBuildGeometryInfoKHR m_buildInfo;
-    VkAccelerationStructureBuildSizesInfoKHR m_buildSizesInfo;
 
-    uint32_t m_primitiveCount;
+    // Describes the geometry of AS primitives - a variant of triangles, AABB or instances.
+    VkAccelerationStructureGeometryKHR m_geometry;
+
+    // TLAS will be build from multiple BLASes, held by this vector.
+    std::vector<VkAccelerationStructureInstanceKHR> m_instances;
+
+    VkAccelerationStructureBuildGeometryInfoKHR m_buildInfo;
+    VkAccelerationStructureBuildSizesInfoKHR m_buildSizes;
+    VkAccelerationStructureBuildRangeInfoKHR m_buildRange;
 
     std::unique_ptr<VulkanBuffer> m_accelerationStructureBuffer;
     std::unique_ptr<VulkanBuffer> m_scratchBuffer;

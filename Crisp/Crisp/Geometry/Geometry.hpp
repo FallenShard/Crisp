@@ -128,6 +128,7 @@ Geometry createFromMesh(
     const VertexLayoutDescription& vertexLayoutDescription,
     VkBufferUsageFlags usageFlags = 0);
 
-VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(const Geometry& geometry);
+VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(
+    const Geometry& geometry, uint64_t indexByteOffset);
 
 } // namespace crisp

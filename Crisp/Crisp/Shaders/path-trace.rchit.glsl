@@ -20,13 +20,13 @@ hitAttributeEXT vec2 barycentric;
 
 layout(set = 1, binding = 0, scalar) buffer Vertices
 {
-    float v[];
-} vertices[6];
+    float data[];
+} vertices;
 
 layout(set = 1, binding = 1, scalar) buffer Indices
 {
-    uint i[];
-} indices[6];
+    uint data[];
+} indices;
 
 layout(set = 1, binding = 2, scalar) buffer InstanceProps
 {
@@ -51,47 +51,7 @@ vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance)
     return cosTheta <= 0.0f ? vec3(0.0f) : radiance;
 }
 
-const int kVertexComponentCount = 6;
-const int kPositionComponentOffset = 0;
-const int kNormalComponentOffset = 3;
-
-vec3 getNormal(const uint objectId, const ivec3 ind, const vec3 bary)
-{
-    mat3 normals = mat3(
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.x + kNormalComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kNormalComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kNormalComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.y + kNormalComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kNormalComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kNormalComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.z + kNormalComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kNormalComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kNormalComponentOffset + 2])
-    );
-    return normalize(normals * bary);
-}
-
-vec3 getPosition(uint objectId, ivec3 ind, vec3 bary)
-{
-    mat3 positions = mat3(
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.x + kPositionComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kPositionComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.x + kPositionComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.y + kPositionComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kPositionComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.y + kPositionComponentOffset + 2]),
-        vec3(
-            vertices[objectId].v[kVertexComponentCount * ind.z + kPositionComponentOffset],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kPositionComponentOffset + 1],
-            vertices[objectId].v[kVertexComponentCount * ind.z + kPositionComponentOffset + 2])
-    );
-    return positions * bary;
-}
+#include "Parts/path-tracer-vertex-pull.part.glsl"
 
 vec3 toLocal(const vec3 dir, const mat3 coordinateFrame)
 {
@@ -103,12 +63,6 @@ vec3 toWorld(const vec3 dir, const mat3 coordinateFrame)
     return coordinateFrame * dir;
 }
 
-float miWeight(float pdf1, float pdf2) {
-    pdf1 *= pdf1;
-    pdf2 *= pdf2;
-    return pdf1 / (pdf1 + pdf2);
-}
-
 void main()
 {
     // Grab the ID of the object that we just hit.
@@ -116,14 +70,14 @@ void main()
     const InstanceProperties props = instanceProps[objId];
 
     // Formulate the triangle at the hit.
-    const ivec3 hitTriangle = ivec3(
-        indices[objId].i[3 * gl_PrimitiveID + 0],
-        indices[objId].i[3 * gl_PrimitiveID + 1],
-        indices[objId].i[3 * gl_PrimitiveID + 2]);
+    const uvec3 hitTriangle = uvec3(
+        indices.data[3 * (props.indexOffset + gl_PrimitiveID) + 0],
+        indices.data[3 * (props.indexOffset + gl_PrimitiveID) + 1],
+        indices.data[3 * (props.indexOffset + gl_PrimitiveID) + 2]);
 
     const vec3 baryCoord = vec3(1.0 - barycentric.x - barycentric.y, barycentric.x, barycentric.y);
-    const vec3 normal   = getNormal(objId, hitTriangle, baryCoord);
-    const vec3 position = getPosition(objId, hitTriangle, baryCoord);
+    const vec3 normal   = interpolateNormal(hitTriangle, baryCoord);
+    const vec3 position = interpolatePosition(hitTriangle, baryCoord);
 
     // Record the hit info for the calling shader.
     hitInfo.position = position;

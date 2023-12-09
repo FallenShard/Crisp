@@ -26,6 +26,27 @@ public:
     const std::vector<glm::vec4>& getTangents() const;
     const std::vector<glm::uvec3>& getTriangles() const;
     const VertexAttributeBuffer& getCustomAttribute(std::string_view attributeName) const;
+
+    bool hasPositions() const {
+        return !m_positions.empty();
+    }
+
+    bool hasNormals() const {
+        return !m_normals.empty();
+    }
+
+    bool hasTexCoords() const {
+        return !m_texCoords.empty();
+    }
+
+    bool hasTangents() const {
+        return !m_tangents.empty();
+    }
+
+    bool hasTriangles() const {
+        return !m_triangles.empty();
+    }
+
     bool hasCustomAttribute(std::string_view attributeName) const;
 
     void setPositions(std::vector<glm::vec3>&& positions);
@@ -34,6 +55,8 @@ public:
     void setTangents(std::vector<glm::vec4>&& tangents);
     void setTriangles(std::vector<glm::uvec3>&& triangles);
     void setCustomAttribute(std::string_view attributeName, VertexAttributeBuffer&& attributeBuffer);
+
+    void append(TriangleMesh&& mesh);
 
     void computeVertexNormals();
     void computeTangentVectors();
@@ -57,12 +80,13 @@ public:
     glm::vec3 interpolateNormal(uint32_t triangleId, const glm::vec3& barycentric) const;
     glm::vec2 interpolateTexCoord(uint32_t triangleId, const glm::vec3& barycentric) const;
 
+    uint32_t computeMaximumVertex(uint32_t firstTriangle, uint32_t triangleCount) const;
+
 private:
     std::vector<glm::vec3> m_positions;
     std::vector<glm::vec3> m_normals;
     std::vector<glm::vec2> m_texCoords;
     std::vector<glm::vec4> m_tangents;
-    std::vector<glm::vec4> m_colors;
     FlatStringHashMap<VertexAttributeBuffer> m_customAttributes;
 
     std::vector<glm::uvec3> m_triangles;

@@ -33,7 +33,7 @@ struct InstanceProperties {
     uint32_t triangleOffset{0};
     uint32_t aliasTableOffset{0};
     uint32_t aliasTableCount{0};
-    uint32_t pad0{};
+    uint32_t triangleCount{0};
     uint32_t pad1{};
 };
 

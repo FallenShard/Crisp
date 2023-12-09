@@ -22,6 +22,12 @@ void fillInterleaved(
         memcpy(&interleavedBuffer[i * vertexSize + offset], &attribute[i], sizeof(T));
     }
 }
+
+template <typename T>
+void appendStdVector(std::vector<T>& a, std::vector<T>&& b) { // NOLINT
+    a.insert(a.end(), std::make_move_iterator(b.begin()), std::make_move_iterator(b.end()));
+}
+
 } // namespace
 
 TriangleMesh::TriangleMesh(
@@ -115,6 +121,29 @@ void TriangleMesh::setTriangles(std::vector<glm::uvec3>&& triangles) {
 
 void TriangleMesh::setCustomAttribute(const std::string_view attributeName, VertexAttributeBuffer&& attributeBuffer) {
     m_customAttributes.emplace(attributeName, std::move(attributeBuffer));
+}
+
+void TriangleMesh::append(TriangleMesh&& mesh) { // NOLINT
+    const uint32_t prevVertexCount = getVertexCount();
+    const uint32_t prevIndexCount = getIndexCount();
+
+    appendStdVector(m_positions, std::move(mesh.m_positions));
+    appendStdVector(m_normals, std::move(mesh.m_normals));
+    appendStdVector(m_texCoords, std::move(mesh.m_texCoords));
+    appendStdVector(m_tangents, std::move(mesh.m_tangents));
+
+    for (auto& view : mesh.m_views) {
+        m_views.push_back(view);
+        m_views.back().firstIndex += prevIndexCount;
+    }
+
+    for (const auto& tri : mesh.m_triangles) {
+        m_triangles.push_back(tri + glm::uvec3(prevVertexCount));
+    }
+
+    // TODO at another time. m_customAttributes.size(), mesh.m_customAttributes.size();
+
+    m_boundingBox.expandBy(mesh.getBoundingBox());
 }
 
 void TriangleMesh::computeVertexNormals() {
@@ -262,6 +291,18 @@ glm::vec2 TriangleMesh::interpolateTexCoord(const uint32_t triangleId, const glm
     const glm::vec2& tc1 = m_texCoords[m_triangles[triangleId][1]];
     const glm::vec2& tc2 = m_texCoords[m_triangles[triangleId][2]];
     return barycentric.x * tc0 + barycentric.y * tc1 + barycentric.z * tc2;
+}
+
+uint32_t TriangleMesh::computeMaximumVertex(uint32_t firstTriangle, uint32_t triangleCount) const {
+    CRISP_CHECK_GE_LT(firstTriangle, 0, m_triangles.size());
+    CRISP_CHECK_LE(firstTriangle + triangleCount, m_triangles.size());
+
+    uint32_t maxVertex = 0;
+    for (uint32_t i = firstTriangle; i < firstTriangle + triangleCount; ++i) {
+        maxVertex = std::max(std::max(m_triangles[i][0], m_triangles[i][1]), m_triangles[i][2]);
+    }
+
+    return maxVertex;
 }
 
 std::vector<glm::vec3> computeVertexNormals(
