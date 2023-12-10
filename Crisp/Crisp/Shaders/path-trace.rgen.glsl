@@ -273,6 +273,122 @@ vec3 computeRadianceMis(inout uint seed)
     return L;
 }
 
+vec3 computeRadianceMisPt(inout uint seed)
+{
+    // Sample a point on the screen and transform it into a ray.
+    const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
+    const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
+
+    vec4 rayOrigin;
+    vec4 rayDirection;
+    sampleRay(rayOrigin, rayDirection, pixelSample);
+    const float tMin = 1e-4;
+    const float tMax = camera.nearFar[1];
+
+    // Accumulated radiance L for this path.
+    vec3 L = vec3(0.0f);
+    vec3 throughput = vec3(1.0f);
+
+    bool specularBounce = false;
+    int bounceCount = 0;
+    while (bounceCount < integrator.maxBounces)
+    {
+        hitInfo.bounceCount = bounceCount;
+        traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
+        if (bounceCount == 0 || specularBounce) {
+            if (hitInfo.tHit >= tMin)
+            {
+                // Accumulate any emission from the hit surface (e.g. we hit a light).
+                L += throughput * hitInfo.Le;
+            }
+            else // The ray missed, evaluate environment lighting and exit the loop.
+            {
+                // L += throughput * texture(environmentMap, rayDirection);
+                break;
+            }
+        }
+
+        if (hitInfo.tHit < tMin) {
+            break;
+        }
+
+        const vec3 p = hitInfo.position;
+        const vec3 n = hitInfo.normal;
+        const vec3 f = hitInfo.bsdfEval;
+        const float brdfPdf = hitInfo.samplePdf;
+        const vec3 rayDir = hitInfo.sampleDirection;
+        // const bool specular = hitInfo.isSpecular;
+
+        // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
+        {
+            vec3 Ld = vec3(0.0f);
+            vec3 shadowRayDir;
+            float shadowRayLen;
+            float lightPdf;
+            const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
+            traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
+
+            if (hitInfo.tHit <= 0) // The shadow ray has missed.
+            {
+                const float brdfPdf = InvPI * dot(n, shadowRayDir);
+                const vec3 brdfEval = f * brdfPdf;
+                L += throughput * radiance * brdfEval * powerHeuristic(lightPdf, brdfPdf);
+            }
+        }
+
+        // If the light isn't a delta light (point or directional), do bsdf sampling.
+        {
+            // BRDF sampling.
+            // if not specular...
+            {
+                traceRay(seed, p, tMin, hitInfo.sampleDirection, tMax);
+
+                if (hitInfo.lightId != -1) {
+                    const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
+                    L += throughput * f * hitInfo.Le * powerHeuristic(brdfPdf, lightPdf);
+                }
+            }
+        }
+
+        // Adjust throughput for the hit surface.
+        throughput *= f; // equal to f(wi) * cos(wo) / pdf(wo).
+
+        // Setup the next ray.
+        rayOrigin.xyz    = p;
+        rayDirection.xyz = rayDir;
+
+
+        if (++bounceCount > 10) // Cut the path tracing with Russian roulette.
+        {
+            const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
+            const float q = 1.0f - min(maxCoeff, 0.99f);
+            if (rndFloat(seed) > q)
+                throughput /= 1.0f - q;
+            else
+                break;
+        }
+    }
+
+
+    
+
+    // // Light sampling.
+    // vec3 shadowRayDir;
+    // float shadowRayLen;
+    // float lightPdf;
+    // const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
+    // traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
+
+    // if (hitInfo.tHit <= 0) // The shadow ray has missed.
+    // {
+    //     const float brdfPdf = InvPI * dot(n, shadowRayDir);
+    //     const vec3 brdfEval = f * brdfPdf;
+    //     L += radiance * brdfEval * powerHeuristic(lightPdf, brdfPdf);
+    // }
+
+    return L;
+}
+
 vec3 computeRadiance(inout uint seed)
 {
     // Sample a point on the screen and transform it into a ray.
@@ -344,7 +460,7 @@ void main()
             L += computeRadiance(seed);
         }
         else {
-            L += computeRadianceMis(seed);
+            L += computeRadianceMisPt(seed);
         }
     }
     L /= sampleCount;
