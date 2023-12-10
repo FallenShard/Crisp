@@ -98,9 +98,10 @@ void main()
 
     const int brdfType = brdfParams[props.materialId].type;
     executeCallableEXT(brdfType, 1);
-    hitInfo.sampleDirection = toWorld(bsdf.sampleDirection, worldTransform);
-    hitInfo.samplePdf = bsdf.samplePdf;
-    hitInfo.bsdfEval = bsdf.eval;
+    hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
+    hitInfo.samplePdf = bsdf.pdf;
+    hitInfo.bsdfEval = bsdf.f;
+    hitInfo.sampleLobeType = brdfType == kMirrorShaderCallable ? 1 : 0;
 
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);

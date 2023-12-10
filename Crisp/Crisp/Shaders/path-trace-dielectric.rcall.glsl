@@ -57,14 +57,14 @@ void main()
 
     if (bsdf.unitSample[0] <= fresnel)
     {
-        bsdf.sampleDirection = reflect(-bsdf.wi, localNormal);
-        bsdf.samplePdf = fresnel;
-        bsdf.eval = vec3(1.0f);
+        bsdf.wo = reflect(-bsdf.wi, localNormal);
+        bsdf.pdf = fresnel;
+        bsdf.f = vec3(1.0f);
     }
     else
     {
-        bsdf.sampleDirection = refract(-bsdf.wi, localNormal, eta);
-        bsdf.samplePdf = 1.0f - fresnel;
-        bsdf.eval = vec3(eta * eta);
+        bsdf.wo = refract(-bsdf.wi, localNormal, eta);
+        bsdf.pdf = 1.0f - fresnel;
+        bsdf.f = vec3(eta * eta);
     }
 }

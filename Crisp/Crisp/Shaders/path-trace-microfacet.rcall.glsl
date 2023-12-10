@@ -116,10 +116,6 @@ vec3 eval(in vec3 wi, in vec3 wo, in vec3 kd, in float ks, in float extIor, in f
     const float cosThetaI = abs(wi.z);
     const float cosThetaO = abs(wo.z);
 
-    // if (bsdfSample.measure != Measure::SolidAngle || cosThetaI <= 0.0f || cosThetaO <= 0.0f) {
-    //     return Spectrum(0.0f);
-    // }
-
     const vec3 m = normalize(wi + wo);
 
     const vec3 diffuse = kd * InvPI;
@@ -144,24 +140,25 @@ void main()
     if (unitSample.x < ks) {
         unitSample.x /= ks;
         const vec3 dir = sampleNormal(unitSample, alpha);
-        bsdf.sampleDirection = 2.0f * dot(dir, bsdf.wi) * dir - bsdf.wi;
+        bsdf.wo = 2.0f * dot(dir, bsdf.wi) * dir - bsdf.wi;
     } else {
         unitSample.x = (unitSample.x - ks) / (1.0 - ks);
-        bsdf.sampleDirection = squareToCosineHemisphere(unitSample);
+        bsdf.wo = squareToCosineHemisphere(unitSample);
     }
 
-    if (bsdf.sampleDirection.z < 0.0f) {
-        bsdf.eval = vec3(0.0f);
+    if (bsdf.wo.z < 0.0f) {
+        bsdf.f = vec3(0.0f);
+        bsdf.pdf = 0.0f;
         return;
     }
 
-    bsdf.samplePdf = pdf(bsdf.wi, bsdf.sampleDirection, ks, alpha);
-    bsdf.eval = eval(
+    bsdf.pdf = pdf(bsdf.wi, bsdf.wo, ks, alpha);
+    bsdf.f = eval(
         bsdf.wi,
-        bsdf.sampleDirection,
+        bsdf.wo,
         brdfParams[bsdf.materialId].kd,
         ks,
         brdfParams[bsdf.materialId].extIor,
         brdfParams[bsdf.materialId].intIor,
-        alpha) / bsdf.samplePdf;
+        alpha) / bsdf.pdf;
 }

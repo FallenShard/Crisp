@@ -13,13 +13,13 @@ struct HitInfo
     float samplePdf;      // Out.
 
     vec3 Le;              // Out.
-    uint bounceCount;     // Out, unnecessary.
+    int lightId;          // Out.
 
     vec3 bsdfEval;        // Out.
     uint rngSeed;         // In/out.
 
     vec3 normal;          // Out.
-    int lightId;          // Out.
+    uint sampleLobeType;  // Out.
 };
 
 struct ShadowRayHitInfo
@@ -30,20 +30,20 @@ struct ShadowRayHitInfo
 
 struct BsdfSample
 {
-    vec2 unitSample;
-    vec2 pad0;
+    vec2 unitSample;      // In.
+    vec2 pad0;            // Unused.
 
-    vec3 normal;
-    uint materialId;
+    vec3 normal;          // In, local space.
+    uint materialId;      // In.
 
-    vec3 wi;
-    float pad2;
+    vec3 wi;              // In, local space.
+    float pad2;           // Unused.
 
-    vec3 sampleDirection;
-    float samplePdf;
+    vec3 wo;              // Out, local space.
+    float pdf;            // Out.
 
-    vec3 eval;
-    float pad1;
+    vec3 f;               // Out, eval * dot(n, wo) / pdf.
+    float pad1;           // Unused.
 };
 
 struct BrdfParameters

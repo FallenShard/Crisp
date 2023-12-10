@@ -36,10 +36,10 @@ Spectrum DielectricBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
     }
 
     // Normal to use for refraction direction formula
-    glm::vec3 n(0.0f, 0.0f, 1.0f);
+    const glm::vec3 n(0.0f, 0.0f, 1.0f);
 
     // If the angle is negative, we're coming from the inside
-    float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
+    const float eta = cosThetaI < 0.0f ? m_intIOR / m_extIOR : m_extIOR / m_intIOR;
 
     // Set outgoing direction
     bsdfSample.wo = n * (eta * cosThetaI - sign(cosThetaI) * cosThetaT) - eta * bsdfSample.wi;

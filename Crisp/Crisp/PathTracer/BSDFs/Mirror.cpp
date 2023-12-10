@@ -1,4 +1,4 @@
-#include "Mirror.hpp"
+#include <Crisp/PathTracer/BSDFs/Mirror.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Optics/Fresnel.hpp>
@@ -8,10 +8,8 @@ namespace crisp {
 MirrorBSDF::MirrorBSDF(const VariantMap& /*params*/)
     : BSDF(Lobe::Delta) {}
 
-MirrorBSDF::~MirrorBSDF() {}
-
 Spectrum MirrorBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const {
-    return Spectrum(0.0f);
+    return Spectrum::zero();
 }
 
 Spectrum MirrorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& /*sampler*/) const {
@@ -21,7 +19,7 @@ Spectrum MirrorBSDF::sample(BSDF::Sample& bsdfSample, Sampler& /*sampler*/) cons
     bsdfSample.sampledLobe = Lobe::Delta;
     bsdfSample.eta = 1.0f;
 
-    return Spectrum(1.0f);
+    return {1.0f};
 }
 
 float MirrorBSDF::pdf(const BSDF::Sample& /*bsdfSample*/) const {

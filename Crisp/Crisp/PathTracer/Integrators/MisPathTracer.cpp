@@ -46,10 +46,11 @@ Spectrum estimateDirect(
 
         if (!f.isZero() && bsdfSample.pdf > 0.0f) {
             float weight = 1.0f;
+            Intersection bsdfIts;
+            const Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
+            bool foundIntersection = scene.rayIntersect(bsdfRay, bsdfIts);
             if (!sampledSpecular) {
-                Intersection bsdfIts;
-                Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
-                if (!scene.rayIntersect(bsdfRay, bsdfIts)) {
+                if (!foundIntersection) {
                     if (scene.getEnvironmentLight()) {
                         Light::Sample envLightSample(its.p, bsdfIts.p, bsdfIts.shFrame.n);
                         envLightSample.wi = bsdfRay.d;
@@ -67,9 +68,6 @@ Spectrum estimateDirect(
                     return Ld;
                 }
             }
-            Intersection bsdfIts;
-            Ray3 bsdfRay(its.p, its.toWorld(bsdfSample.wo));
-            bool foundIntersection = scene.rayIntersect(bsdfRay, bsdfIts);
 
             Spectrum bLi(0.0f);
             if (foundIntersection) {
@@ -84,7 +82,7 @@ Spectrum estimateDirect(
                 bLi = scene.getEnvironmentLight()->eval(alightSample);
             }
 
-            if (!Li.isZero()) {
+            if (!bLi.isZero()) {
                 Ld += f * bLi * weight;
             }
         }

@@ -8,6 +8,8 @@
 #include "Parts/rng.part.glsl"
 #include "Parts/warp.part.glsl"
 
+const int kRussianRouletteCutoff = 3;
+
 const int kPayloadIndex = 0;
 
 layout(location = 0) rayPayloadEXT HitInfo hitInfo;
@@ -179,8 +181,6 @@ vec3 computeRadianceDirectLighting(inout uint seed)
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
 
-    int bounceCount = 0;
-    hitInfo.bounceCount = bounceCount;
     traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0)
@@ -230,8 +230,6 @@ vec3 computeRadianceMis(inout uint seed)
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
 
-    int bounceCount = 0;
-    hitInfo.bounceCount = bounceCount;
     traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0)
@@ -293,7 +291,6 @@ vec3 computeRadianceMisPt(inout uint seed)
     int bounceCount = 0;
     while (bounceCount < integrator.maxBounces)
     {
-        hitInfo.bounceCount = bounceCount;
         traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
         if (bounceCount == 0 || specularBounce) {
             if (hitInfo.tHit >= tMin)
@@ -317,9 +314,10 @@ vec3 computeRadianceMisPt(inout uint seed)
         const vec3 f = hitInfo.bsdfEval;
         const float brdfPdf = hitInfo.samplePdf;
         const vec3 rayDir = hitInfo.sampleDirection;
-        // const bool specular = hitInfo.isSpecular;
+        specularBounce = hitInfo.sampleLobeType == 1;
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
+        if (!specularBounce)
         {
             vec3 shadowRayDir;
             float shadowRayLen;
@@ -357,7 +355,7 @@ vec3 computeRadianceMisPt(inout uint seed)
         rayDirection.xyz = rayDir;
 
 
-        if (++bounceCount > 10) // Cut the path tracing with Russian roulette.
+        if (++bounceCount > kRussianRouletteCutoff) // Cut the path tracing with Russian roulette.
         {
             const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
             const float q = 1.0f - min(maxCoeff, 0.99f);
@@ -410,7 +408,6 @@ vec3 computeRadiance(inout uint seed)
     int bounceCount = 0;
     while (bounceCount < integrator.maxBounces)
     {
-        hitInfo.bounceCount = bounceCount;
         traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
         if (hitInfo.tHit >= tMin)
         {
@@ -430,7 +427,7 @@ vec3 computeRadiance(inout uint seed)
             break;
         }
 
-        if (++bounceCount > 10) // Cut the path tracing with Russian roulette.
+        if (++bounceCount > kRussianRouletteCutoff) // Cut the path tracing with Russian roulette.
         {
             const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
             const float q = 1.0f - min(maxCoeff, 0.99f);

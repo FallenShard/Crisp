@@ -8,7 +8,7 @@ layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main()
 {
-    bsdf.sampleDirection = reflect(-bsdf.wi, bsdf.normal);
-    bsdf.samplePdf = 0.0f;
-    bsdf.eval = vec3(1.0f);
+    bsdf.wo = reflect(-bsdf.wi, bsdf.normal);
+    bsdf.pdf = 0.0f;
+    bsdf.f = vec3(1.0f);
 }

@@ -15,7 +15,7 @@ layout(set = 1, binding = 3) buffer BrdfParams
 
 void main()
 {
-    bsdf.sampleDirection = squareToCosineHemisphere(bsdf.unitSample);
-    bsdf.samplePdf = InvTwoPI;
-    bsdf.eval = brdfParams[bsdf.materialId].albedo;
+    bsdf.wo = squareToCosineHemisphere(bsdf.unitSample);
+    bsdf.pdf = InvTwoPI;
+    bsdf.f = brdfParams[bsdf.materialId].albedo;
 }
