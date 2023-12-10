@@ -218,7 +218,7 @@ void ClusteredLightingScene::createCommonTextures() {
     auto hdrName = "GreenwichPark.hdr";
     auto envRefMap = createVulkanImage(
         *m_renderer,
-        loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipOnLoad::Y).unwrap(),
+        loadImage(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / hdrName, 4, FlipAxis::Y).unwrap(),
         VK_FORMAT_R32G32B32A32_SFLOAT);
     std::shared_ptr<VulkanImageView> envRefMapView = createView(*envRefMap, VK_IMAGE_VIEW_TYPE_2D);
 

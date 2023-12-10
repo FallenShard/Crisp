@@ -32,8 +32,8 @@ auto getStbComponentFormat(const int numComponents) {
 }
 } // namespace
 
-std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, FlipOnLoad flipOnLoad) {
-    const Image hcrossImage{loadImage(path, 4, flipOnLoad).unwrap()};
+std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, const FlipAxis flip) {
+    const Image hcrossImage{loadImage(path, 4, flip).unwrap()};
     const uint32_t cubeMapSize{hcrossImage.getWidth() / 4};
     CRISP_CHECK(
         cubeMapSize == hcrossImage.getHeight() / 3,
@@ -53,8 +53,8 @@ std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& 
     return cubeMapFaces;
 }
 
-Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipOnLoad flip) {
-    stbi_set_flip_vertically_on_load(flip == FlipOnLoad::Y);
+Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipAxis flip) {
+    stbi_set_flip_vertically_on_load(flip == FlipAxis::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
 
@@ -88,8 +88,8 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
 }
 
 Result<Image> loadImage(
-    const std::span<const uint8_t> imageFileContent, const int requestedChannels, const FlipOnLoad flip) {
-    stbi_set_flip_vertically_on_load(flip == FlipOnLoad::Y);
+    const std::span<const uint8_t> imageFileContent, const int requestedChannels, const FlipAxis flip) {
+    stbi_set_flip_vertically_on_load(flip == FlipAxis::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
     void* dataPtr = nullptr;

@@ -10,7 +10,7 @@ Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem:
 
     constexpr uint32_t kRequestedChannels{4};
     data.equirectangularEnvironmentMap =
-        loadImage(envMapDir / fmt::format("{}.hdr", envMapName), kRequestedChannels, FlipOnLoad::Y).unwrap();
+        loadImage(envMapDir / fmt::format("{}.hdr", envMapName), kRequestedChannels, FlipAxis::Y).unwrap();
 
     const std::filesystem::path diffMapPath{envMapDir / fmt::format("{}_irr.hdr", envMapName)};
     data.diffuseIrradianceCubeMap = loadCubeMapFacesFromHCrossImage(diffMapPath);

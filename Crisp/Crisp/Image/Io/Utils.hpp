@@ -2,22 +2,18 @@
 
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Image/Image.hpp>
+#include <Crisp/Image/Io/Common.hpp>
 
 #include <filesystem>
 #include <span>
 
 namespace crisp {
-enum class FlipOnLoad {
-    None,
-    Y,
-};
 
-std::vector<Image> loadCubeMapFacesFromHCrossImage(
-    const std::filesystem::path& path, FlipOnLoad flipOnLoad = FlipOnLoad::None);
+std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, FlipAxis flip = FlipAxis::None);
 
 Result<Image> loadImage(
-    const std::filesystem::path& filePath, int requestedChannels = 4, FlipOnLoad flip = FlipOnLoad::None);
+    const std::filesystem::path& filePath, int requestedChannels = 4, FlipAxis flip = FlipAxis::None);
 Result<Image> loadImage(
-    std::span<const uint8_t> imageFileContent, int requestedChannels = 4, FlipOnLoad flip = FlipOnLoad::None);
+    std::span<const uint8_t> imageFileContent, int requestedChannels = 4, FlipAxis flip = FlipAxis::None);
 
 } // namespace crisp

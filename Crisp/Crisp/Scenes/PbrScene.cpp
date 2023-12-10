@@ -361,7 +361,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
         material.name = "vokselia";
         material.textures = createDefaultPbrTextureGroup();
         material.textures.albedo =
-            loadImage(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.png", 4, FlipOnLoad::Y).unwrap();
+            loadImage(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.png", 4, FlipAxis::Y).unwrap();
 
         const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
         const float maxDimLength = mesh.getBoundingBox().getMaximumExtent();

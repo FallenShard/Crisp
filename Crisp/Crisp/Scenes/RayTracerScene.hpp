@@ -18,7 +18,6 @@ namespace crisp {
 class RayTracerScene : public Scene {
 public:
     RayTracerScene(Renderer* renderer, Window* window);
-    ~RayTracerScene();
 
     virtual void resize(int width, int height) override;
     virtual void update(float dt) override;

@@ -235,21 +235,21 @@ void NormalMappingScene::createPlane() {
             normalMapKey,
             createVulkanImage(
                 *m_renderer,
-                loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / normalMapFilename, 4, FlipOnLoad::Y)
+                loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / normalMapFilename, 4, FlipAxis::Y)
                     .unwrap(),
                 VK_FORMAT_R8G8B8A8_UNORM));
         m_resourceContext->imageCache.addImageWithView(
             diffuseMapKey,
             createVulkanImage(
                 *m_renderer,
-                loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / diffuseMapFilename, 4, FlipOnLoad::Y)
+                loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / diffuseMapFilename, 4, FlipAxis::Y)
                     .unwrap(),
                 VK_FORMAT_R8G8B8A8_SRGB));
         m_resourceContext->imageCache.addImageWithView(
             specularMapKey,
             createVulkanImage(
                 *m_renderer,
-                loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / specularMapFilename, 4, FlipOnLoad::Y)
+                loadImage(m_renderer->getResourcesPath() / "Textures/nanosuit" / specularMapFilename, 4, FlipAxis::Y)
                     .unwrap(),
                 VK_FORMAT_R8G8B8A8_UNORM));
 

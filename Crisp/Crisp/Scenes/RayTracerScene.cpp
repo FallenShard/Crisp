@@ -13,7 +13,7 @@
 #include <Crisp/GUI/Panel.hpp>
 #include <Crisp/GUI/Slider.hpp>
 #include <Crisp/IO/FileUtils.hpp>
-#include <Crisp/Image/Io/OpenEXRWriter.hpp>
+#include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
@@ -35,11 +35,6 @@ RayTracerScene::RayTracerScene(Renderer* renderer, Window* window)
     m_renderer->setSceneImageView(nullptr, 0);
 
     createGui();
-}
-
-RayTracerScene::~RayTracerScene() {
-    // m_app->getForm()->remove("vesperOptionsPanel");
-    // m_app->getForm()->remove("progressBarBg");
 }
 
 void RayTracerScene::resize(int width, int height) {
@@ -76,7 +71,7 @@ void RayTracerScene::render() {
 
 void RayTracerScene::openSceneFileFromDialog() {
     std::string openedFile = "D:/version-control/Crisp/Resources/VesperScenes/cbox-test-mis.xml"; // openFileDialog();
-    if (openedFile == "") {
+    if (openedFile.empty()) {
         return;
     }
 
@@ -95,9 +90,6 @@ void RayTracerScene::writeImageToExr() {
     const std::string outputDirectory = "Output";
     std::filesystem::create_directories(outputDirectory);
 
-    OpenEXRWriter writer;
-    const glm::ivec2 imageSize = m_rayTracer->getImageSize();
-
     std::filesystem::path filepath = fmt::format("{}/{}.exr", outputDirectory, m_projectName);
 
     // Avoid overwriting by providing a new filepath with an index
@@ -106,9 +98,9 @@ void RayTracerScene::writeImageToExr() {
         filepath = fmt::format("{}/{}_{}.exr", outputDirectory, ++i, m_projectName);
     }
 
-    std::cout << "Writing EXR image..." << std::endl;
-    writer.write(filepath.string(), m_imageData.data(), imageSize.x, imageSize.y, true);
-    // writer.write(filepath.string(), m_imageData.data(), 512, 512, true);
+    spdlog::info("Writing an EXR image at {}", filepath.string());
+    const glm::ivec2 imageSize = m_rayTracer->getImageSize();
+    saveExr(filepath, m_imageData, imageSize.x, imageSize.y, FlipAxis::Y).unwrap();
 }
 
 void RayTracerScene::openSceneFile(const std::filesystem::path& filename) {
@@ -195,7 +187,7 @@ void RayTracerScene::createGui() {
     label->setOrigin(gui::Origin::Center);
     label->setColor(glm::vec4(1.0f));
 
-    rayTracerProgressed += [form, label = label.get(), bar = progressBar.get()](float percentage, float timeSpent) {
+    rayTracerProgressed += [label = label.get(), bar = progressBar.get()](float percentage, float timeSpent) {
         float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
 
         std::stringstream stringStream;

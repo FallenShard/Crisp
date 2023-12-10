@@ -1,36 +1,27 @@
 #include <Crisp/PathTracer/Core/MipMap.hpp>
 
-#include <Crisp/Image/Io/OpenEXRReader.hpp>
+#include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 #include <algorithm>
 #include <filesystem>
-#include <iostream>
 #include <vector>
 
 namespace crisp {
 MipMap::MipMap(std::filesystem::path filePath) {
-    OpenEXRReader reader;
-    std::vector<float> data;
-    uint32_t width = 0;
-    uint32_t height = 0;
-    if (!reader.read(filePath, data, width, height)) {
-        width = 1;
-        height = 1;
-        data = {1.0f, 1.0f, 1.0f};
-    }
+    const auto exr = loadExr(filePath).unwrap();
 
     m_texels.resize(m_resolution.y * m_resolution.x);
-    for (uint32_t i = 0; i < height; ++i) {
-        for (uint32_t j = 0; i < width; ++j) {
-            const uint32_t idx = i * width + j;
-            m_texels[idx].r = data[3 * idx + 0];
-            m_texels[idx].g = data[3 * idx + 1];
-            m_texels[idx].b = data[3 * idx + 2];
+    for (uint32_t i = 0; i < exr.height; ++i) {
+        for (uint32_t j = 0; i < exr.width; ++j) {
+            const uint32_t idx = i * exr.width + j;
+            m_texels[idx].r = exr.pixelData[3 * idx + 0];
+            m_texels[idx].g = exr.pixelData[3 * idx + 1];
+            m_texels[idx].b = exr.pixelData[3 * idx + 2];
         }
     }
 
-    m_resolution = glm::ivec2(width, height);
+    m_resolution = glm::ivec2(exr.width, exr.height);
     m_invResolution = glm::vec2(1.0f / m_resolution.x, 1.0f / m_resolution.y);
 }
 

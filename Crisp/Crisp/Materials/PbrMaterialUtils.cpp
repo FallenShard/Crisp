@@ -4,7 +4,7 @@
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Image/Io/OpenEXRReader.hpp>
+#include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
 namespace crisp {
@@ -30,7 +30,7 @@ PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir) {
         [&materialDir](const std::string_view name, const uint32_t requestedChannels) -> std::optional<Image> {
         const auto& path = materialDir / fmt::format("{}.png", name);
         if (std::filesystem::exists(path)) {
-            return loadImage(path, static_cast<int32_t>(requestedChannels), FlipOnLoad::Y).unwrap();
+            return loadImage(path, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap();
         }
 
         logger->warn("Failed to load texture from {}.", path.string());
@@ -82,16 +82,12 @@ void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache&
 }
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir) {
-    OpenEXRReader reader;
-    std::vector<float> buffer;
-    uint32_t w{};
-    uint32_t h{};
-    reader.read(assetDir / "Textures/Sheen_E.exr", buffer, w, h);
+    const auto exr = loadExr(assetDir / "Textures/Sheen_E.exr").unwrap();
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;
     createInfo.imageType = VK_IMAGE_TYPE_2D;
     createInfo.format = VK_FORMAT_R32_SFLOAT;
-    createInfo.extent = {w, h, 1u};
+    createInfo.extent = {exr.width, exr.height, 1};
     createInfo.mipLevels = 1;
     createInfo.arrayLayers = 1;
     createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -99,8 +95,7 @@ std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::fi
     createInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    return createVulkanImage(renderer, buffer.size() * sizeof(float), buffer.data(), createInfo);
+    return createVulkanImage(renderer, exr.pixelData.size() * sizeof(float), exr.pixelData.data(), createInfo);
 }
 
 } // namespace crisp
