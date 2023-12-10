@@ -321,7 +321,6 @@ vec3 computeRadianceMisPt(inout uint seed)
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
         {
-            vec3 Ld = vec3(0.0f);
             vec3 shadowRayDir;
             float shadowRayLen;
             float lightPdf;
@@ -341,7 +340,7 @@ vec3 computeRadianceMisPt(inout uint seed)
             // BRDF sampling.
             // if not specular...
             {
-                traceRay(seed, p, tMin, hitInfo.sampleDirection, tMax);
+                traceRay(seed, p, tMin, rayDir, tMax);
 
                 if (hitInfo.lightId != -1) {
                     const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
