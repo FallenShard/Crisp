@@ -4,6 +4,7 @@
 #include <Crisp/GUI/ImGuiCameraUtils.hpp>
 #include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
+#include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
@@ -55,7 +56,7 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
 
-void setCameraParameters(const nlohmann::json& camera, FreeCameraController& cameraController) {
+void setCameraParameters(FreeCameraController& cameraController, const nlohmann::json& camera) {
     cameraController.setPosition(parseVec3(camera["position"]));
     cameraController.setFovY(camera["fovY"].get<float>());
 }
@@ -72,7 +73,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
-    setCameraParameters(json["camera"], *m_cameraController);
+    setCameraParameters(*m_cameraController, json["camera"]);
     m_resourceContext->createUniformBuffer("camera", sizeof(ExtendedCameraParameters), BufferUpdatePolicy::PerFrame);
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
@@ -157,7 +158,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     createInfo.arrayLayers = 1;
     createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
 
@@ -172,7 +173,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     updateDescriptorSets();
 
     m_renderer->setSceneImageViews(m_rtImageViews);
-} // namespace crisp
+}
 
 void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {
     /* m_cameraController->onViewportResized(width, height);
@@ -194,6 +195,13 @@ void VulkanRayTracingScene::update(float dt) {
 }
 
 void VulkanRayTracingScene::render() {
+    if (m_screenshotBuffer) {
+        m_renderer->enqueueResourceUpdate([this, buffer = std::move(m_screenshotBuffer)](VkCommandBuffer) {
+            const std::span<const float> pixelData(
+                buffer->getHostVisibleData<float>(), m_rtImage->getWidth() * m_rtImage->getHeight() * 4);
+            saveExr("D:/tex.exr", pixelData, m_rtImage->getWidth(), m_rtImage->getHeight()).unwrap();
+        });
+    }
     m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
         m_rtImage->transitionLayout(
             cmdBuffer,
@@ -217,6 +225,43 @@ void VulkanRayTracingScene::render() {
             extent.height,
             1);
 
+        m_integratorParams.frameIdx++;
+        if (m_screenshotRequested) {
+            m_screenshotRequested = false;
+            const auto imageRange = m_rtImage->getFullRange();
+
+            VkImageMemoryBarrier2 rtImageBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+            rtImageBarrier.image = m_rtImage->getHandle();
+            rtImageBarrier.subresourceRange = imageRange;
+            rtImageBarrier.dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+            rtImageBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+            rtImageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+            rtImageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+
+            VkDependencyInfo syncForTransfer{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+            syncForTransfer.pImageMemoryBarriers = &rtImageBarrier;
+            vkCmdPipelineBarrier2(cmdBuffer, &syncForTransfer);
+
+            VkDeviceSize size = m_rtImage->getWidth() * m_rtImage->getHeight() * 4 * sizeof(float);
+            m_screenshotBuffer =
+                std::make_shared<StagingVulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+            VkBufferImageCopy region{};
+            region.bufferOffset = 0;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
+            region.imageSubresource.mipLevel = 0;
+            region.imageOffset = {0, 0, 0};
+            region.imageExtent = {.width = m_rtImage->getWidth(), .height = m_rtImage->getHeight(), .depth = 1};
+            vkCmdCopyImageToBuffer(
+                cmdBuffer,
+                m_rtImage->getHandle(),
+                VK_IMAGE_LAYOUT_GENERAL,
+                m_screenshotBuffer->getHandle(),
+                1,
+                &region);
+        }
+
         m_rtImage->transitionLayout(
             cmdBuffer,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -224,7 +269,6 @@ void VulkanRayTracingScene::render() {
             1,
             VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        m_integratorParams.frameIdx++;
     });
 }
 
@@ -249,6 +293,9 @@ void VulkanRayTracingScene::renderGui() {
     if (ImGui::RadioButton("Use MIS", m_integratorParams.samplingMode == 2)) {
         m_integratorParams.samplingMode = 2;
         m_integratorParams.frameIdx = 0;
+    }
+    if (ImGui::Button("Take Screenshot")) {
+        m_screenshotRequested = true;
     }
     // if (ImGui::SliderFloat("Int IOR", &m_brdfParameters[4].intIor, 1.0f, 10.0f)) {
     //     m_integratorParams.frameIdx = 0;

@@ -37,6 +37,7 @@ private:
 
     std::unique_ptr<VulkanImage> m_rtImage;
     std::vector<std::unique_ptr<VulkanImageView>> m_rtImageViews;
+    std::shared_ptr<StagingVulkanBuffer> m_screenshotBuffer;
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<Material> m_material;
@@ -55,5 +56,7 @@ private:
     SceneDescription m_sceneDesc;
 
     IntegratorParameters m_integratorParams;
+
+    bool m_screenshotRequested = false;
 };
 } // namespace crisp
