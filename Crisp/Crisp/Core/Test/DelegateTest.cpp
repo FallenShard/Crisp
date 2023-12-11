@@ -1,10 +1,8 @@
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "../Crisp/Crisp/Core/Delegate.hpp"
+#include <Crisp/Core/Delegate.hpp>
 
-using namespace crisp;
-
-namespace {
+namespace crisp {
 struct DelegateTester {
     int state = 0;
     int triggerCounter = 0;
@@ -14,7 +12,6 @@ struct DelegateTester {
         ++triggerCounter;
     }
 };
-} // namespace
 
 TEST(DelegateTest, Basic) {
     DelegateTester tester;
@@ -52,3 +49,4 @@ TEST(DelegateTest, Comparison) {
     EXPECT_TRUE(del == del);
     EXPECT_TRUE(del2 == del2);
 }
+} // namespace crisp

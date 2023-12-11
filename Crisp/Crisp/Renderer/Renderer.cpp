@@ -21,24 +21,25 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     renderTargets[0]->info.isSwapChainDependent = true;
     renderTargets[0]->info.clearValue.color = {{0.0, 0.0f, 0.0f, 1.0f}};
 
-    auto renderPass = RenderPassBuilder()
-                          .setAllocateAttachmentViews(false)
+    auto renderPass =
+        RenderPassBuilder()
+            .setAllocateAttachmentViews(false)
 
-                          .setAttachmentCount(1)
-                          .setAttachmentMapping(0, 0)
-                          .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-                          .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+            .setAttachmentCount(1)
+            .setAttachmentMapping(0, 0)
+            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 
-                          .setNumSubpasses(1)
-                          .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-                          .addDependency(
-                              VK_SUBPASS_EXTERNAL,
-                              0,
-                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                              0,
-                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-                          .create(device, swapChain.getExtent(), renderTargets);
+            .setNumSubpasses(1)
+            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            .addDependency(
+                VK_SUBPASS_EXTERNAL,
+                0,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                0,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+            .create(device, swapChain.getExtent(), renderTargets);
     device.getDebugMarker().setObjectName(*renderPass, "Default Render Pass");
     return renderPass;
 }
@@ -59,8 +60,7 @@ Renderer::Renderer(
     : m_currentFrameIndex(0)
     , m_assetPaths(std::move(assetPaths))
     , m_defaultViewport()
-    , m_defaultScissor()
-    , m_coroCmdBuffer(VK_NULL_HANDLE) {
+    , m_defaultScissor() {
     recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
 
     std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
@@ -245,48 +245,6 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues) {
     m_resourceUpdates.clear();
 }
 
-void Renderer::flushCoroutines() {
-    if (m_cmdBufferCoroutines.empty()) {
-        return;
-    }
-
-    const VulkanQueue& generalQueue = m_device->getGeneralQueue();
-    const auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT); // NOLINT
-    VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = cmdPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
-    vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    m_coroCmdBuffer = commandBuffer;
-    for (auto& coro : m_cmdBufferCoroutines) {
-        coro.resume();
-    }
-
-    vkEndCommandBuffer(commandBuffer);
-
-    VkFence tempFence = m_device->createFence(0);
-    generalQueue.submit(commandBuffer, tempFence);
-    m_device->wait(tempFence);
-
-    finish();
-
-    vkDestroyFence(m_device->getHandle(), tempFence, nullptr);
-
-    vkFreeCommandBuffers(m_device->getHandle(), cmdPool, 1, &commandBuffer);
-    vkResetCommandPool(m_device->getHandle(), cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-    vkDestroyCommandPool(m_device->getHandle(), cmdPool, nullptr);
-
-    m_cmdBufferCoroutines.clear();
-}
-
 FrameContext Renderer::beginFrame() {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     // Obtain a frame that we can safely draw into
@@ -348,14 +306,6 @@ void Renderer::drawFrame() {
 void Renderer::finish() {
     logger->warn("Calling vkDeviceWaitIdle()");
     vkDeviceWaitIdle(m_device->getHandle());
-}
-
-void Renderer::fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset) {
-    auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(*m_device, size);
-    stagingBuffer->updateFromHost(data);
-    m_resourceUpdates.emplace_back([stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer) {
-        buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
-    });
 }
 
 void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex) {
@@ -468,12 +418,6 @@ void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
         update(cmdBuffer);
     }
 
-    m_coroCmdBuffer = cmdBuffer;
-    for (auto h : m_cmdBufferCoroutines) {
-        h.resume();
-    }
-    m_cmdBufferCoroutines.clear();
-
     for (const auto& drawCommand : m_drawCommands) {
         drawCommand(cmdBuffer);
     }
@@ -545,6 +489,15 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
 
     // Acquire ownership of the framebuffer used for the current image to be rendered.
     framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));
+}
+
+void fillDeviceBuffer(
+    Renderer& renderer, VulkanBuffer* buffer, const void* data, const VkDeviceSize size, const VkDeviceSize offset) {
+    auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(renderer.getDevice(), size);
+    stagingBuffer->updateFromHost(data);
+    renderer.enqueueResourceUpdate([stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer) {
+        buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
+    });
 }
 
 } // namespace crisp

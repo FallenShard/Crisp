@@ -18,11 +18,7 @@ VkDeviceSize getMinAlignment(const VkBufferUsageFlagBits bufferType, const Rende
 } // namespace
 
 VulkanRingBuffer::VulkanRingBuffer(
-    Renderer* renderer,
-    VkBufferUsageFlagBits bufferType,
-    size_t size,
-    BufferUpdatePolicy updatePolicy,
-    const void* data)
+    Renderer* renderer, VkBufferUsageFlagBits bufferType, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
     : m_renderer(renderer)
     , m_bufferType(bufferType)
     , m_updatePolicy(updatePolicy)
@@ -36,7 +32,7 @@ VulkanRingBuffer::VulkanRingBuffer(
         m_buffer = std::make_unique<VulkanBuffer>(device, m_size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (data != nullptr) {
-            m_renderer->fillDeviceBuffer(m_buffer.get(), data, m_size);
+            fillDeviceBuffer(*m_renderer, m_buffer.get(), data, m_size);
         }
     } else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) // Setup ring buffering
     {

@@ -62,7 +62,7 @@ VkDeviceAddress VulkanBuffer::getDeviceAddress() const {
     return m_address;
 }
 
-void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer) {
+void VulkanBuffer::copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer) const {
     VkBufferCopy copyRegion = {};
     copyRegion.srcOffset = 0;
     copyRegion.dstOffset = 0;
@@ -75,7 +75,7 @@ void VulkanBuffer::copyFrom(
     const VulkanBuffer& srcBuffer,
     const VkDeviceSize srcOffset,
     const VkDeviceSize dstOffset,
-    const VkDeviceSize size) {
+    const VkDeviceSize size) const {
     VkBufferCopy copyRegion = {};
     copyRegion.srcOffset = srcOffset;
     copyRegion.dstOffset = dstOffset;

@@ -19,11 +19,16 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: All
 AllowAllParametersOfDeclarationOnNextLine: true
 AlwaysBreakAfterDefinitionReturnType: None
-PenaltyReturnTypeOnItsOwnLine: 100
-PenaltyBreakOpenParenthesis: 1
-PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyBreakAssignment: 1
-#PenaltyIndentedWhitespace: 1
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 10
+PenaltyBreakFirstLessLess: 1
+PenaltyBreakOpenParenthesis: 1
+PenaltyBreakString: 1
+PenaltyBreakTemplateDeclaration: 1
+PenaltyExcessCharacter: 50
+PenaltyIndentedWhitespace: 10
+PenaltyReturnTypeOnItsOwnLine: 10000
 
 InsertBraces: true
 FixNamespaceComments: true

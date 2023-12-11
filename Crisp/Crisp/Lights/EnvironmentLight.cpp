@@ -21,8 +21,7 @@ const std::array<glm::mat4, kCubeMapFaceCount> kCubeMapViews = {
 } // namespace
 
 EnvironmentLight::EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& iblData) {
-    auto equirectMap =
-        createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto equirectMap = createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
     std::tie(m_cubeMap, m_cubeMapView) =
         convertEquirectToCubeMap(&renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D));
 
@@ -54,15 +53,16 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
     const auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
 
-    auto cubeMapRenderTarget = RenderTargetBuilder()
-                                   .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-                                   .setLayerAndMipLevelCount(kCubeMapFaceCount, mipmapCount)
-                                   .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-                                   .configureColorRenderTarget(
-                                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
-                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT | additionalFlags)
-                                   .setSize({cubeMapSize, cubeMapSize}, false)
-                                   .create(renderer->getDevice());
+    auto cubeMapRenderTarget =
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .setLayerAndMipLevelCount(kCubeMapFaceCount, mipmapCount)
+            .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+            .configureColorRenderTarget(
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                additionalFlags)
+            .setSize({cubeMapSize, cubeMapSize}, false)
+            .create(renderer->getDevice());
 
     auto cubeMapPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
     renderer->updateInitialLayouts(*cubeMapPass);
@@ -250,22 +250,22 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(
     Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize) {
     constexpr uint32_t kMipLevels = 5;
-    // auto filteredCubeMap = createMipmapCubeMap(renderer, cubeMapSize, cubeMapSize, mipLevels);
 
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f);
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
     const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
 
-    auto environmentSpecularMap = RenderTargetBuilder()
-                                      .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-                                      .setLayerAndMipLevelCount(kCubeMapFaceCount, kMipLevels)
-                                      .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-                                      .configureColorRenderTarget(
-                                          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
-                                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-                                      .setSize({cubeMapSize, cubeMapSize}, false)
-                                      .create(renderer->getDevice());
+    auto environmentSpecularMap =
+        RenderTargetBuilder()
+            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .setLayerAndMipLevelCount(kCubeMapFaceCount, kMipLevels)
+            .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+            .configureColorRenderTarget(
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+            .setSize({cubeMapSize, cubeMapSize}, false)
+            .create(renderer->getDevice());
 
     for (int32_t i = 0; i < static_cast<int>(kMipLevels); i++) {
         const float roughness = static_cast<float>(i) / static_cast<float>(kMipLevels - 1);
@@ -314,52 +314,14 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                         prefilterPass->getAttachmentView(k, 0).getSubresourceRange(),
                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-                    /*prefilterPass->getRenderTarget(0).transitionLayout(
-                        cmdBuffer,
-                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        prefilterPass->getRenderTargetView(k, 0).getSubresourceRange(),
-                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT);*/
                 }
             });
         renderer->flushResourceUpdates(true);
-
-        /*renderer->enqueueResourceUpdate(
-            [&environmentSpecularMap, i, &filteredCubeMap](VkCommandBuffer cmdBuffer)
-            {
-                filteredCubeMap->blit(cmdBuffer, *environmentSpecularMap->image, i);
-            });
-        renderer->flushResourceUpdates(true);*/
     }
 
-    auto view =
-        createView(*environmentSpecularMap->image, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, kMipLevels);
-    return std::make_pair(std::move(environmentSpecularMap->image), std::move(view));
+    auto view = createView(*environmentSpecularMap->image, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, kMipLevels);
+    return {std::move(environmentSpecularMap->image), std::move(view)};
 }
-
-// coro::Task<std::unique_ptr<VulkanImage>> integrateBrdfLutTask(Renderer* renderer)
-//{
-//     std::shared_ptr<VulkanRenderPass> texPass =
-//         createTexturePass(renderer->getDevice(), VkExtent2D{512, 512}, VK_FORMAT_R16G16_SFLOAT, false);
-//     std::shared_ptr<VulkanPipeline> pipeline = renderer->createPipeline("BrdfLut.lua", *texPass, 0);
-//
-//     VkCommandBuffer cmdBuffer = co_await renderer->getNextCommandBuffer();
-//     texPass->updateInitialLayouts(cmdBuffer);
-//
-//     texPass->begin(cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-//
-//     pipeline->bind(cmdBuffer);
-//     renderer->drawFullScreenQuad(cmdBuffer);
-//
-//     texPass->end(cmdBuffer, 0);
-//     texPass->getRenderTarget(0).transitionLayout(
-//         cmdBuffer,
-//         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-//         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-//         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-//
-//     co_return texPass->extractRenderTarget(0);
-// }
 
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer) {
     RenderTargetCache cache{};

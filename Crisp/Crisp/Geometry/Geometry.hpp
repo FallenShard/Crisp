@@ -30,7 +30,7 @@ public:
         , m_instanceCount(1) {
         if (!vertices.empty()) {
             auto vertexBuffer = createVertexBuffer(renderer.getDevice(), vertices.size() * sizeof(VertexType));
-            renderer.fillDeviceBuffer(vertexBuffer.get(), vertices);
+            fillDeviceBuffer(renderer, vertexBuffer.get(), vertices);
             m_vertexBuffers.push_back(std::move(vertexBuffer));
             m_vertexBufferHandles.push_back(m_vertexBuffers.back()->getHandle());
             m_offsets.push_back(0);
@@ -39,7 +39,7 @@ public:
         m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
 
         m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(IndexType));
-        renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
+        fillDeviceBuffer(renderer, m_indexBuffer.get(), faces);
     }
 
     uint32_t getIndexCount() const {

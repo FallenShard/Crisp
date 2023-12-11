@@ -44,15 +44,15 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     m_vertexBuffer = std::make_unique<StorageBuffer>(
         m_renderer, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     const std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
-    m_renderer->fillDeviceBuffer(m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, 0);
-    m_renderer->fillDeviceBuffer(
-        m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, vertexBufferSize);
+    fillDeviceBuffer(*m_renderer, m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, 0);
+    fillDeviceBuffer(
+        *m_renderer, m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, vertexBufferSize);
 
     m_colorBuffer = std::make_unique<StorageBuffer>(
         m_renderer, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     const auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
-    m_renderer->fillDeviceBuffer(m_colorBuffer->getDeviceBuffer(), colors.data(), vertexBufferSize, 0);
-    m_renderer->fillDeviceBuffer(m_colorBuffer->getDeviceBuffer(), colors.data(), vertexBufferSize, vertexBufferSize);
+    fillDeviceBuffer(*m_renderer, m_colorBuffer->getDeviceBuffer(), colors.data(), vertexBufferSize, 0);
+    fillDeviceBuffer(*m_renderer, m_colorBuffer->getDeviceBuffer(), colors.data(), vertexBufferSize, vertexBufferSize);
 
     m_reorderedPositionBuffer = std::make_unique<StorageBuffer>(m_renderer, vertexBufferSize);
 
@@ -76,7 +76,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     m_pressureBuffer = std::make_unique<StorageBuffer>(m_renderer, m_numParticles * sizeof(float));
     m_velocityBuffer = std::make_unique<StorageBuffer>(m_renderer, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
-    m_renderer->fillDeviceBuffer(m_velocityBuffer->getDeviceBuffer(), velocities.data(), vertexBufferSize, 0);
+    fillDeviceBuffer(*m_renderer, m_velocityBuffer->getDeviceBuffer(), velocities.data(), vertexBufferSize, 0);
     m_forcesBuffer = std::make_unique<StorageBuffer>(m_renderer, vertexBufferSize);
 
     // Clear Hash Grid
@@ -119,21 +119,17 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     computeCellCount.material->writeDescriptor(0, 1, *m_cellCountBuffer);
     computeCellCount.material->writeDescriptor(0, 2, *m_cellIdBuffer);
 
-    computeCellCount.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(),
-                VK_SHADER_STAGE_COMPUTE_BIT,
-                m_gridParams.dim,
-                m_gridParams.cellSize,
-                m_numParticles);
+    computeCellCount
+        .preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
+        node.pipeline->setPushConstants(
+            cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.dim, m_gridParams.cellSize, m_numParticles);
 
-            node.material->setDynamicOffset(frameIdx, 0, m_vertexBuffer->getDynamicOffset(m_prevSection));
-            node.material->setDynamicOffset(frameIdx, 1, m_cellCountBuffer->getDynamicOffset(m_currentSection));
-            node.material->setDynamicOffset(frameIdx, 2, m_cellIdBuffer->getDynamicOffset(m_currentSection));
+        node.material->setDynamicOffset(frameIdx, 0, m_vertexBuffer->getDynamicOffset(m_prevSection));
+        node.material->setDynamicOffset(frameIdx, 1, m_cellCountBuffer->getDynamicOffset(m_currentSection));
+        node.material->setDynamicOffset(frameIdx, 2, m_cellIdBuffer->getDynamicOffset(m_currentSection));
 
-            node.isEnabled = false;
-        };
+        node.isEnabled = false;
+    };
 
     renderGraph->addDependency(
         "compute-cell-count",
@@ -238,8 +234,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     // Input/Output
     scanCombine.material->writeDescriptor(0, 0, *m_cellCountBuffer);
     scanCombine.material->writeDescriptor(0, 1, *m_blockSumBuffer);
-    scanCombine.preDispatchCallback = [this](
-                                          RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
+    scanCombine.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
         node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
 
         node.material->setDynamicOffset(frameIdx, 0, m_cellCountBuffer->getDynamicOffset(m_currentSection));
@@ -371,8 +366,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     auto& computeForces = renderGraph->addComputePass("compute-forces");
     computeForces.isEnabled = false;
     setDispatchLayout(computeForces, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    computeForces.pipeline =
-        createComputePipeline(m_renderer, "compute-forces.comp", 7, 1, computeForces.workGroupSize);
+    computeForces.pipeline = createComputePipeline(m_renderer, "compute-forces.comp", 7, 1, computeForces.workGroupSize);
     computeForces.material = std::make_unique<Material>(computeForces.pipeline.get());
 
     // Input
@@ -410,8 +404,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     renderGraph->addDependency(
         "compute-forces",
         "integrate",
-        [this, vertexBufferSize](
-            const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+        [this,
+         vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             cmdBuffer.insertBufferMemoryBarrier(
                 m_forcesBuffer->createDescriptorInfoFromSection(m_currentSection),
                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -469,8 +463,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     renderGraph->addDependency(
         "integrate",
         "mainPass",
-        [this, vertexBufferSize](
-            const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
+        [this,
+         vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             std::array<VkBufferMemoryBarrier, 2> barriers;
             for (auto& barrier : barriers) {
                 barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
@@ -541,14 +535,14 @@ void SPH::reset() {
 
     const std::size_t vertexBufferSize = m_numParticles * sizeof(glm::vec4);
     const auto positions = createInitialPositions(m_fluidDim, m_particleRadius);
-    m_renderer->fillDeviceBuffer(m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, 0);
-    m_renderer->fillDeviceBuffer(
-        m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, vertexBufferSize);
+    fillDeviceBuffer(*m_renderer, m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, 0);
+    fillDeviceBuffer(
+        *m_renderer, m_vertexBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, vertexBufferSize);
 
     const auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
-    m_renderer->fillDeviceBuffer(m_velocityBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, 0);
-    m_renderer->fillDeviceBuffer(
-        m_velocityBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, vertexBufferSize);
+    fillDeviceBuffer(*m_renderer, m_velocityBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, 0);
+    fillDeviceBuffer(
+        *m_renderer, m_velocityBuffer->getDeviceBuffer(), positions.data(), vertexBufferSize, vertexBufferSize);
 
     m_currentSection = 0;
     m_prevSection = 0;
@@ -561,11 +555,11 @@ float SPH::getParticleRadius() const {
 VulkanBuffer* SPH::getVertexBuffer(std::string_view key) const {
     if (key == "position") {
         return m_vertexBuffer->getDeviceBuffer();
-    } else if (key == "color") {
-        return m_colorBuffer->getDeviceBuffer();
-    } else {
-        return nullptr;
     }
+    if (key == "color") {
+        return m_colorBuffer->getDeviceBuffer();
+    }
+    return nullptr;
 }
 
 uint32_t SPH::getParticleCount() const {

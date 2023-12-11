@@ -86,7 +86,7 @@ struct RenderNode {
         return matData;
     }
 
-    RenderNode();
+    RenderNode() = default;
     RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle);
     RenderNode(
         UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle);

@@ -38,11 +38,7 @@ void append(AliasTable& globalAliasTable, const TriangleMesh& mesh) {
 
 std::unique_ptr<StorageBuffer> createAliasTableBuffer(Renderer& renderer, const AliasTable& aliasTable) {
     return std::make_unique<StorageBuffer>(
-        &renderer,
-        aliasTable.size() * sizeof(AliasTable::value_type),
-        0,
-        BufferUpdatePolicy::Constant,
-        aliasTable.data());
+        &renderer, aliasTable.size() * sizeof(AliasTable::value_type), 0, BufferUpdatePolicy::Constant, aliasTable.data());
 }
 
 const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
@@ -254,12 +250,7 @@ void VulkanRayTracingScene::render() {
             region.imageOffset = {0, 0, 0};
             region.imageExtent = {.width = m_rtImage->getWidth(), .height = m_rtImage->getHeight(), .depth = 1};
             vkCmdCopyImageToBuffer(
-                cmdBuffer,
-                m_rtImage->getHandle(),
-                VK_IMAGE_LAYOUT_GENERAL,
-                m_screenshotBuffer->getHandle(),
-                1,
-                &region);
+                cmdBuffer, m_rtImage->getHandle(), VK_IMAGE_LAYOUT_GENERAL, m_screenshotBuffer->getHandle(), 1, &region);
         }
 
         m_rtImage->transitionLayout(

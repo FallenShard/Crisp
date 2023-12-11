@@ -16,7 +16,7 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy
         m_buffer = std::make_unique<VulkanBuffer>(device, size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (data != nullptr) {
-            m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);
+            fillDeviceBuffer(*m_renderer, m_buffer.get(), data, size);
         }
 
         m_singleRegionSize = size;
@@ -59,7 +59,7 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, bool isShaderStora
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (data != nullptr) {
-            m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);
+            fillDeviceBuffer(*m_renderer, m_buffer.get(), data, size);
         }
     }
 }
@@ -82,7 +82,7 @@ UniformBuffer::UniformBuffer(
         m_buffer = std::make_unique<VulkanBuffer>(device, size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (data != nullptr) {
-            m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);
+            fillDeviceBuffer(*m_renderer, m_buffer.get(), data, size);
         }
 
         m_singleRegionSize = size;

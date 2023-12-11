@@ -1,5 +1,11 @@
 #pragma once
 
+#include <filesystem>
+#include <memory>
+#include <optional>
+#include <span>
+#include <vector>
+
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
@@ -19,12 +25,6 @@
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
-
-#include <coroutine>
-#include <filesystem>
-#include <memory>
-#include <optional>
-#include <vector>
 
 namespace crisp {
 class UniformBuffer;
@@ -79,20 +79,12 @@ public:
     void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 
     void flushResourceUpdates(bool waitOnAllQueues);
-    void flushCoroutines();
 
     FrameContext beginFrame();
     void endFrame(const FrameContext& frameContext);
     void drawFrame();
 
     void finish();
-
-    void fillDeviceBuffer(VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
-
-    template <typename T>
-    inline void fillDeviceBuffer(VulkanBuffer* buffer, const std::vector<T>& data, VkDeviceSize offset = 0) {
-        fillDeviceBuffer(buffer, data.data(), data.size() * sizeof(T), offset);
-    }
 
     void setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex);
     void setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews);
@@ -111,26 +103,6 @@ public:
     template <typename... Args>
     std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args) {
         return std::make_unique<UniformBuffer>(this, std::forward<Args>(args)...);
-    }
-
-    auto getNextCommandBuffer() {
-        struct Awaitable {
-            Renderer* renderer{nullptr};
-
-            bool await_ready() const noexcept { // NOLINT
-                return false;
-            }
-
-            void await_suspend(std::coroutine_handle<> h) noexcept { // NOLINT
-                renderer->m_cmdBufferCoroutines.push_back(h);
-            }
-
-            VkCommandBuffer await_resume() const noexcept {
-                return renderer->m_coroCmdBuffer;
-            }
-        };
-
-        return Awaitable{this};
     }
 
     void updateInitialLayouts(VulkanRenderPass& renderPass);
@@ -191,12 +163,19 @@ private:
 
     std::vector<std::unique_ptr<VulkanWorker>> m_workers;
 
-    std::list<std::coroutine_handle<>> m_cmdBufferCoroutines;
-    VkCommandBuffer m_coroCmdBuffer;
-
     RenderTarget m_swapChainRenderTarget;
 
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
 };
+
+void fillDeviceBuffer(
+    Renderer& renderer, VulkanBuffer* buffer, const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
+
+template <typename T>
+inline void fillDeviceBuffer(
+    Renderer& renderer, VulkanBuffer* buffer, const std::vector<T>& data, VkDeviceSize offset = 0) {
+    fillDeviceBuffer(renderer, buffer, data.data(), data.size() * sizeof(T), offset);
+}
+
 } // namespace crisp

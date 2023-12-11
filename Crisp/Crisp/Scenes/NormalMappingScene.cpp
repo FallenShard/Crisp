@@ -44,8 +44,6 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Utils/Profiler.hpp>
 
-#include <thread>
-
 namespace crisp {
 namespace {
 static constexpr uint32_t ShadowMapSize = 2048;

@@ -11,9 +11,8 @@ StorageBuffer::StorageBuffer(
     const void* data)
     : m_renderer(renderer)
     , m_updatePolicy(updatePolicy)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount)
     , m_singleRegionSize(0)
-    , m_buffer(nullptr) {
+    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
     const VkBufferUsageFlags usageFlags =
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags | (data ? VK_BUFFER_USAGE_TRANSFER_DST_BIT : 0);
 
@@ -22,14 +21,11 @@ StorageBuffer::StorageBuffer(
             m_renderer->getDevice(), size, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (data != nullptr) {
-            m_renderer->fillDeviceBuffer(m_buffer.get(), data, size);
+            fillDeviceBuffer(*m_renderer, m_buffer.get(), data, size);
         }
 
         m_singleRegionSize = size;
-    } else if (
-        m_updatePolicy == BufferUpdatePolicy::PerFrame ||
-        m_updatePolicy == BufferUpdatePolicy::PerFrameGpu) // Setup ring buffering
-    {
+    } else if (m_updatePolicy == BufferUpdatePolicy::PerFrame || m_updatePolicy == BufferUpdatePolicy::PerFrameGpu) {
         m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minStorageBufferOffsetAlignment);
         m_buffer = std::make_unique<VulkanBuffer>(
             m_renderer->getDevice(),

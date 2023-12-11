@@ -33,7 +33,7 @@ Geometry::Geometry(
     , m_meshViews(meshViews) {
     for (const auto& buffer : interleavedVertexBuffers) {
         auto vertexBuffer = createVertexBuffer(renderer.getDevice(), buffer.buffer.size(), usageFlags);
-        renderer.fillDeviceBuffer(vertexBuffer.get(), buffer.buffer);
+        fillDeviceBuffer(renderer, vertexBuffer.get(), buffer.buffer);
         m_vertexBuffers.push_back(std::move(vertexBuffer));
     }
 
@@ -43,7 +43,7 @@ Geometry::Geometry(
     }
 
     m_indexBuffer = createIndexBuffer(renderer.getDevice(), faces.size() * sizeof(glm::uvec3), usageFlags);
-    renderer.fillDeviceBuffer(m_indexBuffer.get(), faces);
+    fillDeviceBuffer(renderer, m_indexBuffer.get(), faces);
 
     m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size()); // NOLINT
 }
