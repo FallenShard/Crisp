@@ -64,7 +64,7 @@ public:
         return m_dynamicBufferCount;
     }
 
-    inline uint32_t getDynamicBufferIndex(uint32_t setIndex, uint32_t binding) const {
+    inline uint32_t getDynamicBufferIndex(const uint32_t setIndex, const uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).dynamicBufferIndices.at(binding);
     }
 
@@ -72,7 +72,7 @@ public:
         return m_setAllocator.get();
     }
 
-    void swap(VulkanPipelineLayout& other);
+    void swap(VulkanPipelineLayout& other) noexcept;
 
     std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(
         VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);

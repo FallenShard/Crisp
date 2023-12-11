@@ -41,13 +41,11 @@ std::unique_ptr<StorageBuffer> createAliasTableBuffer(Renderer& renderer, const 
         &renderer, aliasTable.size() * sizeof(AliasTable::value_type), 0, BufferUpdatePolicy::Constant, aliasTable.data());
 }
 
-const VertexLayoutDescription posFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
-
 Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) {
     return createFromMesh(
         renderer,
         mesh,
-        posFormat,
+        {{VertexAttribute::Position, VertexAttribute::Normal}},
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
@@ -96,7 +94,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     TriangleMesh sceneMesh{};
     for (auto&& [idx, meshName] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         const std::filesystem::path relativePath = std::filesystem::path("Meshes") / meshName;
-        auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath, flatten(posFormat)).unwrap()};
+        auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath).unwrap()};
         mesh.transform(m_sceneDesc.transforms[idx]);
 
         m_sceneDesc.props[idx].triangleOffset = sceneMesh.getTriangleCount();

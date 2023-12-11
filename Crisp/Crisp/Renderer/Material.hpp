@@ -2,6 +2,7 @@
 
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
+#include <Crisp/Renderer/VulkanRingBuffer.hpp>
 #include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
@@ -18,7 +19,7 @@ public:
     Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator);
 
     // Methods to update a descriptor referencing an image.
-    void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo&& imageInfo);
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorImageInfo& imageInfo);
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler& sampler);
     void writeDescriptor(
@@ -42,7 +43,7 @@ public:
     void writeDescriptor(
         uint32_t setIndex,
         uint32_t binding,
-        uint32_t frameIdx,
+        uint32_t frameIndex,
         const VulkanImageView& imageView,
         const VulkanSampler* sampler);
     void writeDescriptor(
@@ -53,17 +54,26 @@ public:
         const VulkanImageView& imageView,
         const VulkanSampler* sampler);
 
-    void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo);
-    void writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo, uint32_t dstElement);
+    // Methods to update a descriptor referencing a buffer.
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorBufferInfo& bufferInfo);
+    void writeDescriptor(
+        uint32_t setIndex, uint32_t binding, const VkDescriptorBufferInfo& bufferInfo, uint32_t dstElement);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer);
     void writeDescriptor(
-        uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer, int elementSize, int elementCount);
+        uint32_t setIndex,
+        uint32_t binding,
+        const UniformBuffer& uniformBuffer,
+        uint32_t elementSize,
+        uint32_t elementCount);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer);
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanRingBuffer& buffer);
 
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo);
 
     void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
+    void setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicUniformBuffer, uint32_t offset);
+
     void bind(
         uint32_t frameIdx, VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
     void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
@@ -75,8 +85,6 @@ public:
     inline void setPipeline(VulkanPipeline* pipeline) {
         m_pipeline = pipeline;
     }
-
-    void setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicBuffer, uint32_t offset);
 
     inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const {
         return m_dynamicBufferViews;

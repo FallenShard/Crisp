@@ -63,7 +63,7 @@ VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const {
         m_descriptorSetLayouts.at(setIndex).handle, m_descriptorSetLayouts.at(setIndex).bindings);
 }
 
-void VulkanPipelineLayout::swap(VulkanPipelineLayout& other) {
+void VulkanPipelineLayout::swap(VulkanPipelineLayout& other) noexcept {
     std::swap(m_descriptorSetLayouts, other.m_descriptorSetLayouts);
     std::swap(m_pushConstants, other.m_pushConstants);
     std::swap(m_dynamicBufferCount, other.m_dynamicBufferCount);

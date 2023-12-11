@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <span>
 #include <vector>
 
 #include <Crisp/Core/ThreadPool.hpp>
@@ -14,6 +13,7 @@
 #include <Crisp/Renderer/RendererFrame.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
+#include <Crisp/Renderer/VulkanRingBuffer.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanContext.hpp>
@@ -95,6 +95,9 @@ public:
     void registerStreamingStorageBuffer(StorageBuffer* buffer);
     void unregisterStreamingStorageBuffer(StorageBuffer* buffer);
 
+    void registerStreamingRingBuffer(VulkanRingBuffer* buffer);
+    void unregisterStreamingRingBuffer(VulkanRingBuffer* buffer);
+
     Geometry* getFullScreenGeometry() const;
 
     std::unique_ptr<VulkanPipeline> createPipeline(
@@ -154,6 +157,7 @@ private:
 
     FlatHashSet<UniformBuffer*> m_streamingUniformBuffers;
     FlatHashSet<StorageBuffer*> m_streamingStorageBuffers;
+    FlatHashSet<VulkanRingBuffer*> m_streamingRingBuffers;
 
     std::unique_ptr<VulkanPipeline> m_scenePipeline;
     std::unique_ptr<VulkanSampler> m_linearClampSampler;

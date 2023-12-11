@@ -21,7 +21,7 @@ public:
         const std::string& id, const std::vector<T>& data, BufferUpdatePolicy updatePolicy) {
         m_uniformBuffers[id] =
             std::make_unique<UniformBuffer>(m_renderer, data.size() * sizeof(T), updatePolicy, data.data());
-        m_uniformBuffers[id]->m_renderer->getDebugMarker().setObjectName(m_uniformBuffers[id]->get(), id);
+        m_renderer->getDebugMarker().setObjectName(m_uniformBuffers[id]->get(), id);
 
         return m_uniformBuffers[id].get();
     }

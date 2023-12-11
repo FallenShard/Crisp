@@ -7,129 +7,130 @@ Material::Material(VulkanPipeline* pipeline)
 Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator)
     : m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice()))
     , m_pipeline(pipeline) {
-    const std::size_t setCount = m_pipeline->getPipelineLayout()->getDescriptorSetLayoutCount();
+    const auto& pipelineLayout{*m_pipeline->getPipelineLayout()};
+    const std::size_t setCount = pipelineLayout.getDescriptorSetLayoutCount();
 
-    for (auto& setVector : m_sets) {
-        setVector.resize(setCount);
+    for (auto& perFrameSets : m_sets) {
+        perFrameSets.resize(setCount);
     }
 
-    for (uint32_t i = 0; i < setCount; ++i) {
-        if (m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(i)) {
-            for (uint32_t j = 0; j < m_sets.size(); ++j) {
-                const VkDescriptorSetLayout setLayout = m_pipeline->getPipelineLayout()->getDescriptorSetLayout(i);
-                m_sets[j][i] = descriptorSetAllocator->allocate(
-                    setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(i));
+    for (uint32_t setIdx = 0; setIdx < setCount; ++setIdx) {
+        const VkDescriptorSetLayout setLayout = pipelineLayout.getDescriptorSetLayout(setIdx);
+
+        if (pipelineLayout.isDescriptorSetBuffered(setIdx)) {
+            for (auto& perFrameSets : m_sets) {
+                perFrameSets[setIdx] =
+                    descriptorSetAllocator->allocate(setLayout, pipelineLayout.getDescriptorSetLayoutBindings(setIdx));
             }
         } else {
-            const VkDescriptorSetLayout setLayout = m_pipeline->getPipelineLayout()->getDescriptorSetLayout(i);
             const VkDescriptorSet set = descriptorSetAllocator->allocate(
-                setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(i));
-            for (uint32_t j = 0; j < m_sets.size(); ++j) {
-                m_sets[j][i] = set;
+                setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(setIdx));
+            for (auto& perFrameSets : m_sets) {
+                perFrameSets[setIdx] = set;
             }
         }
     }
 
-    m_dynamicBufferViews.resize(m_pipeline->getPipelineLayout()->getDynamicBufferCount());
-
+    m_dynamicBufferViews.resize(pipelineLayout.getDynamicBufferCount());
     for (auto& perFrameOffsets : m_dynamicOffsets) {
         perFrameOffsets.resize(m_dynamicBufferViews.size());
     }
 }
 
-void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorImageInfo&& imageInfo) {
+void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const VkDescriptorImageInfo& imageInfo) {
     const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
         m_device->postDescriptorWrite(
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = m_sets[i][setIndex],
-                .dstBinding = binding,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = m_pipeline->getDescriptorType(setIndex, binding),
-            },
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[i][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
             imageInfo);
     }
 }
 
 void Material::writeDescriptor(
-    uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler& sampler) {
-    writeDescriptor(setIndex, binding, imageView.getDescriptorInfo(&sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+    const uint32_t setIndex, const uint32_t binding, const VulkanImageView& imageView, const VulkanSampler& sampler) {
+    writeDescriptor(setIndex, binding, imageView.getDescriptorInfo(&sampler));
 }
 
 void Material::writeDescriptor(
-    uint32_t setId,
-    uint32_t binding,
+    const uint32_t setIndex,
+    const uint32_t binding,
     const VulkanRenderPass& renderPass,
-    uint32_t renderTargetIndex,
+    const uint32_t renderTargetIndex,
     const VulkanSampler* sampler) {
-    uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? RendererConfig::VirtualFrameCount : 1;
+    const uint32_t setsToUpdate =
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setId];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setId, binding);
-        write.descriptorCount = 1;
         m_device->postDescriptorWrite(
-            std::move(write), renderPass.getAttachmentView(renderTargetIndex, i).getDescriptorInfo(sampler));
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[i][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            renderPass.getAttachmentView(renderTargetIndex, i).getDescriptorInfo(sampler));
     }
 }
 
 void Material::writeDescriptor(
-    uint32_t setIndex,
-    uint32_t binding,
+    const uint32_t setIndex,
+    const uint32_t binding,
     const std::vector<std::unique_ptr<VulkanImageView>>& imageViews,
     const VulkanSampler* sampler,
-    VkImageLayout imageLayout) {
+    const VkImageLayout imageLayout) {
     const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[i][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            imageViews[i]->getDescriptorInfo(sampler, imageLayout));
     }
 }
 
 void Material::writeDescriptor(
-    uint32_t setIndex,
-    uint32_t binding,
+    const uint32_t setIndex,
+    const uint32_t binding,
     const std::vector<VulkanImageView*>& imageViews,
     const VulkanSampler* sampler,
-    VkImageLayout imageLayout) {
+    const VkImageLayout imageLayout) {
     const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write), imageViews[i]->getDescriptorInfo(sampler, imageLayout));
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[i][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            imageViews[i]->getDescriptorInfo(sampler, imageLayout));
     }
 }
 
 void Material::writeDescriptor(
-    uint32_t setIndex,
-    uint32_t binding,
-    uint32_t frameIdx,
+    const uint32_t setIndex,
+    const uint32_t binding,
+    const uint32_t frameIndex,
     const VulkanImageView& imageView,
     const VulkanSampler* sampler) {
-    VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    write.dstSet = m_sets[frameIdx][setIndex];
-    write.dstBinding = binding;
-    write.dstArrayElement = 0;
-    write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-    write.descriptorCount = 1;
-    m_device->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
+    m_device->postDescriptorWrite(
+        {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = m_sets[frameIndex][setIndex],
+         .dstBinding = binding,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+        imageView.getDescriptorInfo(sampler));
 }
 
 void Material::writeDescriptor(
@@ -139,109 +140,138 @@ void Material::writeDescriptor(
     const uint32_t arrayIndex,
     const VulkanImageView& imageView,
     const VulkanSampler* sampler) {
-    VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    write.dstSet = m_sets[frameIndex][setIndex];
-    write.dstBinding = binding;
-    write.dstArrayElement = arrayIndex;
-    write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-    write.descriptorCount = 1;
-    m_device->postDescriptorWrite(std::move(write), imageView.getDescriptorInfo(sampler));
+    m_device->postDescriptorWrite(
+        {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = m_sets[frameIndex][setIndex],
+         .dstBinding = binding,
+         .dstArrayElement = arrayIndex,
+         .descriptorCount = 1,
+         .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+        imageView.getDescriptorInfo(sampler));
 }
 
-void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo) {
-    uint32_t setsToUpdate =
+void Material::writeDescriptor(
+    const uint32_t setIndex, const uint32_t binding, const VkDescriptorBufferInfo& bufferInfo) {
+    const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
-    for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write), bufferInfo);
+    for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[frameIndex][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            bufferInfo);
     }
 }
 
 void Material::writeDescriptor(
-    uint32_t setIndex, uint32_t binding, VkDescriptorBufferInfo&& bufferInfo, uint32_t dstElement) {
+    const uint32_t setIndex, const uint32_t binding, const VkDescriptorBufferInfo& bufferInfo, const uint32_t dstElement) {
     const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
-    for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.dstBinding = binding;
-        write.dstArrayElement = dstElement;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write), bufferInfo);
+    for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[frameIndex][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = dstElement,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            bufferInfo);
     }
 }
 
-void Material::writeDescriptor(uint32_t setId, uint32_t binding, const UniformBuffer& uniformBuffer) {
-    uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setId) ? RendererConfig::VirtualFrameCount : 1;
-    for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setId];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setId, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write), uniformBuffer.getDescriptorInfo());
+void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const UniformBuffer& uniformBuffer) {
+    const uint32_t setsToUpdate =
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+    for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[frameIndex][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            uniformBuffer.getDescriptorInfo());
     }
 
-    if (auto bufferIndex = m_pipeline->getPipelineLayout()->getDynamicBufferIndex(setId, binding); bufferIndex != -1) {
+    if (auto bufferIndex = m_pipeline->getPipelineLayout()->getDynamicBufferIndex(setIndex, binding);
+        bufferIndex != ~0u) {
         setDynamicBufferView(bufferIndex, uniformBuffer, 0);
     }
 }
 
 void Material::writeDescriptor(
-    uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer, int elementSize, int elementCount) {
-    uint32_t setsToUpdate =
+    const uint32_t setIndex,
+    const uint32_t binding,
+    const UniformBuffer& uniformBuffer,
+    const uint32_t elementSize,
+    const uint32_t elementCount) {
+    const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
-    for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = elementCount;
+    for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
 
         std::vector<VkDescriptorBufferInfo> infos;
         infos.reserve(elementCount);
-        for (int j = 0; j < elementCount; ++j) {
+        for (uint32_t j = 0; j < elementCount; ++j) {
             infos.emplace_back(uniformBuffer.getDescriptorInfo(elementSize * j, elementSize));
         }
 
-        m_device->postDescriptorWrite(std::move(write), std::move(infos));
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .dstSet = m_sets[frameIndex][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = elementCount,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
+            std::move(infos));
+    }
+
+    if (auto bufferIndex = m_pipeline->getPipelineLayout()->getDynamicBufferIndex(setIndex, binding);
+        bufferIndex != ~0u) {
+        setDynamicBufferView(bufferIndex, uniformBuffer, 0);
     }
 }
 
-void Material::writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer) {
+void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const StorageBuffer& storageBuffer) {
     writeDescriptor(setIndex, binding, storageBuffer.getDescriptorInfo());
 }
 
+void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const VulkanRingBuffer& buffer) {
+    writeDescriptor(setIndex, binding, buffer.getDescriptorInfo());
+}
+
 void Material::writeDescriptor(
-    uint32_t setIndex, uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo) {
-    uint32_t setsToUpdate =
+    const uint32_t setIndex, const uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo) {
+    const uint32_t setsToUpdate =
         m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
-    for (uint32_t i = 0; i < setsToUpdate; ++i) {
-        VkWriteDescriptorSet write = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        write.dstSet = m_sets[i][setIndex];
-        write.pNext = &asInfo;
-        write.dstBinding = binding;
-        write.dstArrayElement = 0;
-        write.descriptorType = m_pipeline->getDescriptorType(setIndex, binding);
-        write.descriptorCount = 1;
-        m_device->postDescriptorWrite(std::move(write));
+    for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
+        m_device->postDescriptorWrite(
+            {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+             .pNext = &asInfo,
+             .dstSet = m_sets[frameIndex][setIndex],
+             .dstBinding = binding,
+             .dstArrayElement = 0,
+             .descriptorCount = 1,
+             .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)});
     }
 }
 
-void Material::setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset) {
+void Material::setDynamicOffset(const uint32_t frameIdx, const uint32_t index, const uint32_t offset) {
     m_dynamicOffsets[frameIdx][index] = offset;
 }
 
-void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint) {
+void Material::setDynamicBufferView(
+    const uint32_t index, const UniformBuffer& dynamicUniformBuffer, const uint32_t offset) {
+    m_dynamicBufferViews.at(index) = {&dynamicUniformBuffer, offset};
+
+    for (uint32_t frameIndex = 0; frameIndex < RendererConfig::VirtualFrameCount; ++frameIndex) {
+        m_dynamicOffsets.at(frameIndex).at(index) = dynamicUniformBuffer.getDynamicOffset(frameIndex);
+    }
+}
+
+void Material::bind(const uint32_t frameIdx, const VkCommandBuffer cmdBuffer, const VkPipelineBindPoint bindPoint) {
     if (!m_sets[frameIdx].empty()) {
         vkCmdBindDescriptorSets(
             cmdBuffer,
@@ -255,7 +285,8 @@ void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, VkPipelineBind
     }
 }
 
-void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets) {
+void Material::bind(
+    const uint32_t frameIdx, const VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets) {
     if (!m_sets[frameIdx].empty()) {
         vkCmdBindDescriptorSets(
             cmdBuffer,
@@ -269,11 +300,4 @@ void Material::bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vec
     }
 }
 
-void Material::setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicUniformBuffer, uint32_t offset) {
-    m_dynamicBufferViews.at(index) = {&dynamicUniformBuffer, offset};
-
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
-        m_dynamicOffsets.at(i).at(index) = dynamicUniformBuffer.getDynamicOffset(i);
-    }
-}
 } // namespace crisp

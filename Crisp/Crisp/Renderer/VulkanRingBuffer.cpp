@@ -34,8 +34,7 @@ VulkanRingBuffer::VulkanRingBuffer(
         if (data != nullptr) {
             fillDeviceBuffer(*m_renderer, m_buffer.get(), data, m_size);
         }
-    } else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) // Setup ring buffering
-    {
+    } else if (m_updatePolicy == BufferUpdatePolicy::PerFrame || m_updatePolicy == BufferUpdatePolicy::PerFrameGpu) {
         const VkDeviceSize minAlignment{getMinAlignment(m_bufferType, *renderer)};
         const VkDeviceSize unitsOfAlignment = ((m_size - 1) / minAlignment) + 1;
         m_singleRegionSize = unitsOfAlignment * minAlignment;
@@ -50,13 +49,13 @@ VulkanRingBuffer::VulkanRingBuffer(
             updateStagingBuffer(data, m_size);
         }
 
-        // m_renderer->registerStreamingUniformBuffer(this);
+        m_renderer->registerStreamingRingBuffer(this);
     }
 }
 
 VulkanRingBuffer::~VulkanRingBuffer() {
     if (m_updatePolicy == BufferUpdatePolicy::PerFrame) {
-        // m_renderer->unregisterStreamingUniformBuffer(this);
+        m_renderer->registerStreamingRingBuffer(this);
     }
 }
 
@@ -76,7 +75,7 @@ void VulkanRingBuffer::updateDeviceBuffer(const VkCommandBuffer commandBuffer, c
     m_framesToUpdateOnGpu--;
 }
 
-uint32_t VulkanRingBuffer::getRegionOffset(uint32_t regionIndex) const {
+uint32_t VulkanRingBuffer::getRegionOffset(const uint32_t regionIndex) const {
     return static_cast<uint32_t>(regionIndex * m_singleRegionSize);
 }
 

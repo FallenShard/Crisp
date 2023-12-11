@@ -39,10 +39,10 @@ public:
         return *m_memoryAllocator;
     }
 
-    void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorBufferInfo bufferInfo);
-    void postDescriptorWrite(VkWriteDescriptorSet&& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
-    void postDescriptorWrite(VkWriteDescriptorSet&& write, VkDescriptorImageInfo imageInfo);
-    void postDescriptorWrite(VkWriteDescriptorSet&& write);
+    void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorBufferInfo& bufferInfo);
+    void postDescriptorWrite(const VkWriteDescriptorSet& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
+    void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorImageInfo& imageInfo);
+    void postDescriptorWrite(const VkWriteDescriptorSet& write);
     void flushDescriptorUpdates();
 
     VulkanResourceDeallocator& getResourceDeallocator() const {
@@ -60,11 +60,7 @@ public:
         }
 
         vkWaitForFences(
-            m_handle,
-            static_cast<uint32_t>(fences.size()),
-            fences.data(),
-            VK_TRUE,
-            std::numeric_limits<uint64_t>::max());
+            m_handle, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, std::numeric_limits<uint64_t>::max());
     }
 
     const VulkanDebugMarker& getDebugMarker() const {

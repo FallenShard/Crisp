@@ -355,6 +355,14 @@ void Renderer::unregisterStreamingStorageBuffer(StorageBuffer* buffer) {
     m_streamingStorageBuffers.erase(buffer);
 }
 
+void Renderer::registerStreamingRingBuffer(VulkanRingBuffer* buffer) {
+    m_streamingRingBuffers.insert(buffer);
+}
+
+void Renderer::unregisterStreamingRingBuffer(VulkanRingBuffer* buffer) {
+    m_streamingRingBuffers.erase(buffer);
+}
+
 Geometry* Renderer::getFullScreenGeometry() const {
     return m_fullScreenGeometry.get();
 }
@@ -404,6 +412,9 @@ void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
         uniformBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
     }
     for (auto& storageBuffer : m_streamingStorageBuffers) {
+        storageBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
+    }
+    for (auto& storageBuffer : m_streamingRingBuffers) {
         storageBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
     }
 
