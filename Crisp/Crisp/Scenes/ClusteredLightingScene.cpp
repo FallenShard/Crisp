@@ -40,7 +40,6 @@
 #include <Crisp/GUI/Slider.hpp>
 
 #include <Crisp/Math/Constants.hpp>
-#include <Crisp/Utils/Profiler.hpp>
 
 namespace crisp {
 namespace {

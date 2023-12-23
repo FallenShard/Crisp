@@ -51,7 +51,6 @@
 
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Utils/Profiler.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 
@@ -534,14 +533,12 @@ void ShadowMappingScene::createTrees() {
 
     auto& imageCache = m_resourceContext->imageCache;
     const Image image(
-        loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipAxis::Y)
-            .unwrap());
+        loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_D.png", 4, FlipAxis::Y).unwrap());
     imageCache.addImageWithView("leaves", createVulkanImage(*m_renderer, image, VK_FORMAT_R8G8B8A8_SRGB));
     alphaMaterial->writeDescriptor(1, 0, imageCache.getImageView("leaves"), imageCache.getSampler("linearClamp"));
 
     const Image normalMap(
-        loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipAxis::Y)
-            .unwrap());
+        loadImage(m_renderer->getResourcesPath() / "white_oak/T_White_Oak_Leaves_Hero_1_N.png", 4, FlipAxis::Y).unwrap());
     imageCache.addImageWithView("leavesNormalMap", createVulkanImage(*m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
     alphaMaterial->writeDescriptor(
         1, 1, imageCache.getImageView("leavesNormalMap"), imageCache.getSampler("linearClamp"));
@@ -558,39 +555,39 @@ void ShadowMappingScene::createTrees() {
     auto trunkPipeline =
         m_resourceContext->createPipeline("treeTrunk", "TreeTrunk.lua", m_renderGraph->getRenderPass(MainPass), 0);
 
-    auto createOpaqueMaterial = [this, trunkPipeline](
-                                    std::string materialKey,
-                                    std::string diffuseMapFilename,
-                                    std::string normalMapFilename) {
-        auto& imageCache = m_resourceContext->imageCache;
-        auto material = m_resourceContext->createMaterial(materialKey, trunkPipeline);
+    auto createOpaqueMaterial =
+        [this, trunkPipeline](std::string materialKey, std::string diffuseMapFilename, std::string normalMapFilename) {
+            auto& imageCache = m_resourceContext->imageCache;
+            auto material = m_resourceContext->createMaterial(materialKey, trunkPipeline);
 
-        material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+            material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-        const Image ambientMap =
-            loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipAxis::Y).unwrap();
-        imageCache.addImageWithView(
-            diffuseMapFilename, createVulkanImage(*m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
-        material->writeDescriptor(
-            1, 0, imageCache.getImageView(diffuseMapFilename), imageCache.getSampler("linearRepeat"));
+            const Image ambientMap =
+                loadImage(m_renderer->getResourcesPath() / diffuseMapFilename, 4, FlipAxis::Y).unwrap();
+            imageCache.addImageWithView(
+                diffuseMapFilename, createVulkanImage(*m_renderer, ambientMap, VK_FORMAT_R8G8B8A8_SRGB));
+            material->writeDescriptor(
+                1, 0, imageCache.getImageView(diffuseMapFilename), imageCache.getSampler("linearRepeat"));
 
-        const Image normalMap = loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipAxis::Y).unwrap();
-        imageCache.addImageWithView(
-            normalMapFilename, createVulkanImage(*m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
-        material->writeDescriptor(
-            1, 1, imageCache.getImageView(normalMapFilename), imageCache.getSampler("linearRepeat"));
+            const Image normalMap =
+                loadImage(m_renderer->getResourcesPath() / normalMapFilename, 4, FlipAxis::Y).unwrap();
+            imageCache.addImageWithView(
+                normalMapFilename, createVulkanImage(*m_renderer, normalMap, VK_FORMAT_R8G8B8A8_UNORM));
+            material->writeDescriptor(
+                1, 1, imageCache.getImageView(normalMapFilename), imageCache.getSampler("linearRepeat"));
 
-        material->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
-        material->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));
-        material->writeDescriptor(
-            1, 4, m_renderGraph->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
+            material->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
+            material->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));
+            material->writeDescriptor(
+                1, 4, m_renderGraph->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
 
-        material->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
-        material->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
-        material->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
+            material->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
+            material->writeDescriptor(
+                2, 1, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
+            material->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 
-        return material;
-    };
+            return material;
+        };
 
     auto trunkMaterial =
         createOpaqueMaterial("trunkMaterial", "white_oak/T_WhiteOakBark_D.png", "white_oak/T_WhiteOakBark_N.png");
@@ -610,9 +607,10 @@ void ShadowMappingScene::createTrees() {
             int id = i * colCount + j + 5;
             glm::vec3 jitter = glm::vec3(distrib(eng), 0.0f, distrib(eng));
             float rndScale = xi(eng);
-            transforms[id] = glm::translate(glm::vec3(spacing * i, 0.0f, -spacing * j) + jitter) *
-                             glm::rotate(distrib(eng), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                             glm::scale(glm::vec3(0.01f, 0.01f + 0.005f * rndScale, 0.01f));
+            transforms[id] =
+                glm::translate(glm::vec3(spacing * i, 0.0f, -spacing * j) + jitter) *
+                glm::rotate(distrib(eng), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                glm::scale(glm::vec3(0.01f, 0.01f + 0.005f * rndScale, 0.01f));
             auto trunk = createRenderNode("oakTrunk_" + std::to_string(id - 5), id);
 
             std::cout << "Setting model matrix: " << id << std::endl;

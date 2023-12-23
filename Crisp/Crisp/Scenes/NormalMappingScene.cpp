@@ -42,7 +42,6 @@
 
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Utils/Profiler.hpp>
 
 namespace crisp {
 namespace {

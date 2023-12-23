@@ -6,7 +6,6 @@
 #include <Crisp/GUI/Form.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/SceneContainer.hpp>
-#include <Crisp/Utils/Timer.hpp>
 
 #include <memory>
 

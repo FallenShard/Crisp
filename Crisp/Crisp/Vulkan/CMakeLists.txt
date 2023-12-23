@@ -60,9 +60,9 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::Result
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Logger
-    PUBLIC Crisp::Utils
     PUBLIC Crisp::Checks
     PUBLIC Crisp::VulkanHeader
+    PUBLIC Crisp::Math
 )
 
 add_cpp_static_library(CrispVulkanHeader

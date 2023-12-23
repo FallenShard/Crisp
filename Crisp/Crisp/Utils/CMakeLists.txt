@@ -14,21 +14,27 @@ add_cpp_test(CrispBitFlagsTest
     "Test/BitFlagsTest.cpp")
 target_link_libraries(CrispBitFlagsTest PRIVATE Crisp::BitFlags)
 
-add_cpp_interface_library(CrispUtils
+add_cpp_interface_library(CrispProfiler
     "ChromeProfiler.hpp"
-    "GlmFormatters.hpp"
     "Profiler.hpp"
-    "Timer.hpp"
-    "ZipIterator.hpp"
-    "Task.hpp"
 )
-target_link_libraries(CrispUtils
-    INTERFACE Crisp::Math
+target_link_libraries(CrispProfiler
     INTERFACE Crisp::Format
-    INTERFACE Crisp::Logger
 )
 
-add_cpp_test(CrispUtilsTest
+add_cpp_interface_library(CrispGlmFormat
+    "GlmFormat.hpp"
+)
+target_link_libraries(CrispGlmFormat
+    INTERFACE Crisp::Math
+    INTERFACE Crisp::Format
+)
+
+add_cpp_interface_library(CrispTimer
+    "Timer.hpp"
+)
+
+add_cpp_test(CrispGlmFormatTest
     "Test/GlmStructuredBindingsTest.cpp"
 )
-target_link_libraries(CrispUtilsTest PRIVATE Crisp::Utils)
+target_link_libraries(CrispGlmFormatTest PRIVATE Crisp::GlmFormat)

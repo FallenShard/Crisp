@@ -10,9 +10,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Utils/ChromeProfiler.hpp>
 
-#include <ranges>
 #include <stack>
 #include <string_view>
 
@@ -80,15 +78,17 @@ void RenderGraph::addDependency(
     auto& sourceNode{*m_nodes.at(srcPass)};
     const auto* dstNode{m_nodes.contains(dstPass) ? m_nodes.at(dstPass).get() : nullptr};
     const VkPipelineStageFlagBits dstStageFlags{
-        dstNode && dstNode->type == NodeType::Compute ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
-                                                      : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
+        dstNode && dstNode->type == NodeType::Compute
+            ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+            : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
 
     // We take the attachment aspect to determine if we are transitioning depth or color target.
     const VkImageAspectFlags attachmentAspect{
         sourceNode.renderPass->getAttachmentView(srcAttachmentIndex, 0).getSubresourceRange().aspectMask};
     const VkPipelineStageFlagBits srcStageFlags{
-        attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                                                      : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT};
+        attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT
+            ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+            : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT};
 
     sourceNode.dependencies[dstPass] =
         [srcAttachmentIndex, srcStageFlags, dstStageFlags](
@@ -250,8 +250,7 @@ void RenderGraph::executeDrawCommand(
     command.drawFunc(cmdBuffer.getHandle(), command.geometryView);
 }
 
-void RenderGraph::executeRenderPass(
-    VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const {
+void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const {
     bool useSecondaries = node.commands[0].size() > 100;
 
     node.renderPass->begin(

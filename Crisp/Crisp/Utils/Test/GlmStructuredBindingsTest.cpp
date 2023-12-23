@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Utils/GlmFormatters.hpp>
+#include <Crisp/Utils/GlmFormat.hpp>
 
 TEST(GlmStructuredBindingsTest, RValue) {
     const auto createVec = []() { return glm::vec3(10.0f, 20.0f, 30.0f); };

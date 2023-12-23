@@ -90,7 +90,6 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::ImageIo
     PUBLIC Crisp::Math
-    PUBLIC Crisp::Utils
     PUBLIC Crisp::Geometry
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Result

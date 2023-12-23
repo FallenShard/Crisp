@@ -20,6 +20,5 @@ add_cpp_static_library(CrispLights
 target_link_libraries(CrispLights
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Geometry
-    PUBLIC Crisp::Utils
     PRIVATE Crisp::Logger
 )

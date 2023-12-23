@@ -3,7 +3,7 @@
 #include <imgui.h>
 
 #include <Crisp/Core/Format.hpp>
-#include <Crisp/Utils/GlmFormatters.hpp>
+#include <Crisp/Utils/GlmFormat.hpp>
 
 namespace crisp {
 void drawCameraUi(const Camera& camera) {

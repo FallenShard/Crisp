@@ -57,9 +57,9 @@ target_link_libraries(CrispWindow
     PUBLIC Crisp::Math
     PUBLIC Crisp::Event
     PUBLIC Crisp::Input
-    PRIVATE Crisp::Logger
     PUBLIC glfw
     PUBLIC Vulkan::Headers
+    PRIVATE Crisp::Logger
 )
 
 add_cpp_test(CrispWindowTest
@@ -84,15 +84,15 @@ add_cpp_static_library(CrispApplicationEnvironment
     "ApplicationEnvironment.hpp"
 )
 target_link_libraries(CrispApplicationEnvironment
-    PUBLIC Crisp::Utils
-    PRIVATE Crisp::Logger
-    PRIVATE Crisp::Format
-    PRIVATE Crisp::CommandLineParser
     PUBLIC Crisp::JsonUtils
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::StringUtils
     PUBLIC glfw
     PUBLIC Vulkan::Headers
+    PRIVATE Crisp::Profiler
+    PRIVATE Crisp::Logger
+    PRIVATE Crisp::Format
+    PRIVATE Crisp::CommandLineParser
 )
 
 add_cpp_static_library(CrispCommandLineParser
@@ -125,14 +125,15 @@ target_link_libraries(CrispApplication
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Scenes
     PUBLIC Crisp::ImGui
+    PRIVATE Crisp::Timer
 )
 
 add_cpp_interface_library(CrispCoreUtils
     "ThreadPool.hpp"
 )
 target_link_libraries(CrispCoreUtils
-    INTERFACE Crisp::Utils
     INTERFACE MPMCQueue
+    INTERFACE Crisp::Profiler
 )
 
 add_cpp_interface_library(CrispEvent

@@ -65,5 +65,5 @@ add_cpp_static_library(CrispImGuiCameraUtils
 target_link_libraries(CrispImGuiCameraUtils
     PUBLIC ImGui
     PUBLIC Crisp::Camera
-    PUBLIC Crisp::Utils
+    PRIVATE Crisp::GlmFormat
 )

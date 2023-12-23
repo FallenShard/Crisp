@@ -16,7 +16,6 @@ target_link_libraries(CrispGlslUtils
     PUBLIC Crisp::Result
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::FileUtils
-    PUBLIC Crisp::Utils
     PUBLIC Vulkan::Headers
 )
 

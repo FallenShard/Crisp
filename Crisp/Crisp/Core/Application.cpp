@@ -2,7 +2,8 @@
 
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/GUI/ImGuiUtils.hpp>
-#include <Crisp/Utils/ChromeProfiler.hpp>
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Utils/Timer.hpp>
 
 #include <imgui.h>
 

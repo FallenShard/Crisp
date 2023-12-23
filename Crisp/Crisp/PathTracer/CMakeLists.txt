@@ -104,7 +104,6 @@ add_cpp_static_library(PathTracerIntegrator
 )
 target_link_libraries(PathTracerIntegrator
     PUBLIC PathTracerUtils
-    PUBLIC Crisp::Utils
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Spectrum
     PRIVATE Crisp::PathTracer

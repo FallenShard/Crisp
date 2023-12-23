@@ -2,9 +2,6 @@
 
 #include <chrono>
 #include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <mutex>
 #include <sstream>
 #include <string>
 
@@ -22,8 +19,6 @@ public:
         ~Scope() {
             end();
         }
-
-    private:
     };
 
     static void begin(const char* message) {
@@ -37,16 +32,13 @@ public:
 
     static void end() {
         getThreadStream() << fmt::format(
-            fmt::runtime("{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"E\"},\n"),
-            1,
-            getThreadName(),
-            getCurrentTime());
+            fmt::runtime("{\"pid\":{},\"tid\":\"{}\",\"ts\":{},\"ph\":\"E\"},\n"), 1, getThreadName(), getCurrentTime());
     }
 
     static void finalize() {
         std::ofstream& stream = getFileStream();
         stream << "],\n";
-        stream << "\"meta_user\":\"FallenShard\",\"meta_cpu_count\":\"12\"}";
+        stream << R"("meta_user":"FallenShard","meta_cpu_count":"12"})";
         stream.close();
     }
 
