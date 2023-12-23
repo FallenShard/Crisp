@@ -1,4 +1,4 @@
-#include <Crisp/Renderer/IO/JsonPipelineBuilder.hpp>
+#include <Crisp/Renderer/VulkanPipelineIo.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
@@ -12,10 +12,10 @@
 
 namespace crisp {
 namespace {
-auto logger = createLoggerMt("JsonPipelineBuilder");
+const auto logger = createLoggerMt("VulkanPipelineIo");
 
-Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohmann::json& json) {
-    HashMap<VkShaderStageFlagBits, std::string> shaderFiles;
+Result<FlatHashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohmann::json& json) {
+    FlatHashMap<VkShaderStageFlagBits, std::string> shaderFiles;
 
     const auto getPathIfExists = [&shaderFiles, &json](const std::string_view key, const VkShaderStageFlagBits stage) {
         if (json.contains(key)) {
@@ -33,7 +33,7 @@ Result<HashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohma
     return shaderFiles;
 }
 
-bool shaderStagesMatchTessellation(const HashMap<VkShaderStageFlagBits, std::string>& shaderFiles) {
+bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std::string>& shaderFiles) {
     return shaderFiles.contains(VK_SHADER_STAGE_VERTEX_BIT) &&
            shaderFiles.contains(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) &&
            shaderFiles.contains(VK_SHADER_STAGE_FRAGMENT_BIT) &&

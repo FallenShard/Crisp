@@ -1,19 +1,5 @@
 add_subdirectory(RenderGraph)
 
-add_cpp_static_library(CrispPipelineBuilder
-    "PipelineBuilder.cpp"
-    "PipelineBuilder.hpp"
-    "PipelineLayoutBuilder.cpp"
-    "PipelineLayoutBuilder.hpp"
-    "IO/JsonPipelineBuilder.cpp"
-    "IO/JsonPipelineBuilder.hpp"
-)
-target_link_libraries(CrispPipelineBuilder
-    PUBLIC Crisp::Vulkan
-    PUBLIC nlohmann_json::nlohmann_json
-    PUBLIC Crisp::CoreUtils
-)
-
 add_cpp_static_library(CrispShaderCache
     "ShaderCache.hpp"
     "ShaderCache.cpp"
@@ -23,6 +9,20 @@ target_link_libraries(CrispShaderCache
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Logger
     PRIVATE Crisp::FileUtils
+)
+
+add_cpp_static_library(CrispPipelineBuilder
+    "PipelineBuilder.cpp"
+    "PipelineBuilder.hpp"
+    "PipelineLayoutBuilder.cpp"
+    "PipelineLayoutBuilder.hpp"
+    "VulkanPipelineIo.cpp"
+    "VulkanPipelineIo.hpp"
+)
+target_link_libraries(CrispPipelineBuilder
+    PUBLIC Crisp::Vulkan
+    PUBLIC nlohmann_json::nlohmann_json
+    PUBLIC Crisp::CoreUtils
 )
 
 add_cpp_static_library(CrispRenderer

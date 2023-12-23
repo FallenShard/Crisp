@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Core/Result.hpp>
+#include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
@@ -18,9 +19,6 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     uint32_t subpassIndex = 0);
 
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJsonPath(
-    const std::filesystem::path& path,
-    Renderer& renderer,
-    const VulkanRenderPass& renderPass,
-    uint32_t subpassIndex = 0);
+    const std::filesystem::path& path, Renderer& renderer, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
 
 } // namespace crisp

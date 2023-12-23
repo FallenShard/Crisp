@@ -43,13 +43,13 @@ Material* createPbrMaterial(
     auto material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
 
-    const auto setMaterialTexture = [&material, &imageCache, &materialKey](
-                                        const uint32_t index, const std::string_view texName) {
-        const std::string key = fmt::format("{}-{}", materialKey, texName);
-        const std::string fallbackKey = fmt::format("default-{}", texName);
-        material->writeDescriptor(
-            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    };
+    const auto setMaterialTexture =
+        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
+            const std::string key = fmt::format("{}-{}", materialKey, texName);
+            const std::string fallbackKey = fmt::format("default-{}", texName);
+            material->writeDescriptor(
+                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+        };
 
     setMaterialTexture(0, "diffuse");
     setMaterialTexture(1, "metallic");
@@ -216,9 +216,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
     loadGltf("CesiumMan");
 
     m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
-        *m_renderer,
-        m_rg->getRenderPass(kForwardLightingPass),
-        m_resourceContext->imageCache.getSampler("linearClamp"));
+        *m_renderer, m_rg->getRenderPass(kForwardLightingPass), m_resourceContext->imageCache.getSampler("linearClamp"));
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }
@@ -332,8 +330,7 @@ void GltfViewerScene::createCommonTextures() {
 
     const std::string environmentMap = "TableMountain";
     m_lightSystem->setEnvironmentMap(
-        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMap)
-            .unwrap(),
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMap).unwrap(),
         environmentMap);
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
     imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
