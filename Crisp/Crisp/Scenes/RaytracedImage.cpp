@@ -1,8 +1,7 @@
-#include "RayTracedImage.hpp"
+#include <Crisp/Scenes/RaytracedImage.hpp>
 
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
@@ -69,11 +68,9 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
     renderer->getDevice().flushDescriptorUpdates();
 }
 
-RayTracedImage::~RayTracedImage() {}
-
 void RayTracedImage::postTextureUpdate(RayTracerUpdate update) {
     // Add an update that stretches over three frames
-    m_textureUpdates.emplace_back(std::make_pair(RendererConfig::VirtualFrameCount, update));
+    m_textureUpdates.emplace_back(RendererConfig::VirtualFrameCount, update);
 
     uint32_t rowSize = update.width * m_numChannels * sizeof(float);
     for (int i = 0; i < update.height; i++) {
@@ -160,8 +157,8 @@ void RayTracedImage::draw(Renderer* renderer) {
 }
 
 void RayTracedImage::resize(int width, int height) {
-    m_viewport.x = (width - static_cast<int>(m_extent.width)) / 2.0f;
-    m_viewport.y = (height - static_cast<int>(m_extent.height)) / 2.0f;
+    m_viewport.x = static_cast<float>(width - static_cast<int>(m_extent.width)) / 2.0f;
+    m_viewport.y = static_cast<float>(height - static_cast<int>(m_extent.height)) / 2.0f;
     m_viewport.width = static_cast<float>(m_extent.width);
     m_viewport.height = static_cast<float>(m_extent.height);
 }

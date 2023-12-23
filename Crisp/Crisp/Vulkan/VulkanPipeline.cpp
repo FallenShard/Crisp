@@ -6,7 +6,7 @@ VulkanPipeline::VulkanPipeline(
     const VkPipeline pipelineHandle,
     std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
     const VkPipelineBindPoint bindPoint,
-    VertexLayout&& vertexLayout,
+    VulkanVertexLayout&& vertexLayout,
     const PipelineDynamicStateFlags dynamicStateFlags)
     : VulkanResource(pipelineHandle, device.getResourceDeallocator())
     , m_pipelineLayout(std::move(pipelineLayout))

@@ -21,7 +21,7 @@ uint32_t getVertexCount(const std::vector<InterleavedVertexBuffer>& vertexBuffer
 
 Geometry::Geometry(
     Renderer& renderer,
-    VertexLayout&& vertexLayout,
+    VulkanVertexLayout&& vertexLayout,
     const std::vector<InterleavedVertexBuffer>& interleavedVertexBuffers,
     const std::vector<glm::uvec3>& faces,
     const std::vector<TriangleMeshView>& meshViews,
@@ -150,7 +150,7 @@ Geometry createFromMesh(
     const VkBufferUsageFlags usageFlags) {
     return {
         renderer,
-        VertexLayout::create(vertexLayoutDescription),
+        createVertexLayout(vertexLayoutDescription),
         interleaveVertexBuffers(mesh, vertexLayoutDescription, /*padToVec4=*/false),
         mesh.getTriangles(),
         mesh.getViews(),

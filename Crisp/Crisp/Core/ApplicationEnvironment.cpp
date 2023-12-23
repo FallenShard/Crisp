@@ -3,7 +3,6 @@
 #include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Utils/ChromeProfiler.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 #include <GLFW/glfw3.h>
 

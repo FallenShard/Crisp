@@ -1,7 +1,6 @@
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Image/Io/Exr.hpp>

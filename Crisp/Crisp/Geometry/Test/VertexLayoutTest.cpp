@@ -24,8 +24,7 @@ auto AttributeIs(const uint32_t binding, const uint32_t location, const uint32_t
 }
 
 TEST(VertexLayoutTest, Simple) {
-
-    VertexLayout layout{};
+    VulkanVertexLayout layout{};
     layout.addBinding<VK_FORMAT_R32G32B32_SFLOAT>();
     layout.addBinding<VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT>();
 

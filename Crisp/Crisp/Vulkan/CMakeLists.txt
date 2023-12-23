@@ -3,7 +3,6 @@ add_cpp_static_library(CrispVulkan
     "DescriptorSetAllocator.hpp"
     "VulkanAccelerationStructure.cpp"
     "VulkanAccelerationStructure.hpp"
-    "VulkanGetDeviceProc.hpp"
     "VulkanBuffer.cpp"
     "VulkanBuffer.hpp"
     "VulkanChecks.cpp"
@@ -20,6 +19,9 @@ add_cpp_static_library(CrispVulkan
     "VulkanDescriptorSet.hpp"
     "VulkanDevice.cpp"
     "VulkanDevice.hpp"
+    "VulkanEnumToString.hpp"
+    "VulkanEnumToString.cpp"
+    "VulkanFormatTraits.hpp"
     "VulkanFramebuffer.cpp"
     "VulkanFramebuffer.hpp"
     "VulkanImage.cpp"
@@ -49,8 +51,8 @@ add_cpp_static_library(CrispVulkan
     "VulkanSampler.hpp"
     "VulkanSwapChain.cpp"
     "VulkanSwapChain.hpp"
-    "VulkanEnumToString.hpp"
-    "VulkanEnumToString.cpp"
+    "VulkanVertexLayout.cpp"
+    "VulkanVertexLayout.hpp"
 )
 target_link_libraries(CrispVulkan
     PUBLIC Crisp::BitFlags
@@ -60,17 +62,8 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::Logger
     PUBLIC Crisp::Utils
     PUBLIC Crisp::Checks
-    PUBLIC Crisp::VulkanFormatTraits
-    PUBLIC Crisp::VertexLayout
-    PUBLIC Crisp::VulkanHeader)
-
-add_cpp_interface_library(CrispVulkanFormatTraits
-    "VulkanFormatTraits.hpp"
+    PUBLIC Crisp::VulkanHeader
 )
-target_link_libraries(CrispVulkanFormatTraits
-    INTERFACE Crisp::Logger
-    INTERFACE Crisp::Checks
-    INTERFACE Crisp::VulkanHeader)
 
 add_cpp_static_library(CrispVulkanHeader
     "VulkanHeader.cpp"
@@ -78,7 +71,8 @@ add_cpp_static_library(CrispVulkanHeader
 )
 target_link_libraries(CrispVulkanHeader
     PUBLIC Vulkan::Headers
-    PRIVATE Crisp::Checks)
+    PRIVATE Crisp::Checks
+)
 
 add_cpp_interface_library(CrispVulkanTestUtils
     "Test/VulkanTest.hpp")

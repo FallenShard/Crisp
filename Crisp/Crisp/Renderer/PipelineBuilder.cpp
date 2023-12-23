@@ -8,10 +8,7 @@ namespace {
 enum class VertexAttributeLayout { Interleaved, Concatenated };
 
 std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(
-    uint32_t locationOffset,
-    uint32_t binding,
-    const std::vector<VkFormat>& formats,
-    const VertexAttributeLayout layout) {
+    uint32_t locationOffset, uint32_t binding, const std::vector<VkFormat>& formats, const VertexAttributeLayout layout) {
     std::vector<VkVertexInputAttributeDescription> vertexAttribs(formats.size());
 
     uint32_t offset = 0;
@@ -252,7 +249,7 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
         pipeline,
         std::move(pipelineLayout),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        VertexLayout(m_vertexLayout),
+        VulkanVertexLayout(m_vertexLayout),
         createDynamicStateFlags());
 }
 

@@ -19,65 +19,10 @@ Result<VkFormat> getFormat(const VertexAttribute attribute) {
     }
     return resultError("Failed to convert attribute {} into vulkan format!", static_cast<uint32_t>(attribute));
 }
-
-bool operator==(const VkVertexInputBindingDescription& a, const VkVertexInputBindingDescription& b) {
-    return a.binding == b.binding && a.inputRate == b.inputRate && a.stride == b.stride;
-}
-
-bool operator!=(const VkVertexInputBindingDescription& a, const VkVertexInputBindingDescription& b) {
-    return !(a == b);
-}
-
-bool operator==(const VkVertexInputAttributeDescription& a, const VkVertexInputAttributeDescription& b) {
-    return a.binding == b.binding && a.format == b.format && a.location == b.location && a.offset == b.offset;
-}
-
-bool operator!=(const VkVertexInputAttributeDescription& a, const VkVertexInputAttributeDescription& b) {
-    return !(a == b);
-}
-
 } // namespace
 
-bool VertexLayout::operator==(const VertexLayout& rhs) const {
-    if (rhs.bindings.size() != bindings.size() || rhs.attributes.size() != attributes.size()) {
-        return false;
-    }
-
-    for (uint32_t i = 0; i < bindings.size(); ++i) {
-        if (bindings[i] != rhs.bindings[i]) {
-            return false;
-        }
-    }
-
-    for (uint32_t i = 0; i < attributes.size(); ++i) {
-        if (attributes[i] != rhs.attributes[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool VertexLayout::isSubsetOf(const VertexLayout& rhs) const {
-    if (rhs.bindings.size() < bindings.size() || rhs.attributes.size() < attributes.size()) {
-        return false;
-    }
-
-    for (uint32_t i = 0; i < bindings.size(); ++i) {
-        if (bindings[i] != rhs.bindings[i]) {
-            return false;
-        }
-    }
-
-    for (uint32_t i = 0; i < attributes.size(); ++i) {
-        if (attributes[i] != rhs.attributes[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-VertexLayout VertexLayout::create(const VertexLayoutDescription& vertexLayoutDescription) {
-    VertexLayout layout{};
+VulkanVertexLayout createVertexLayout(const VertexLayoutDescription& vertexLayoutDescription) {
+    VulkanVertexLayout layout{};
     layout.bindings.resize(vertexLayoutDescription.size(), {});
     uint32_t location{0};
     for (uint32_t i = 0; i < vertexLayoutDescription.size(); ++i) {

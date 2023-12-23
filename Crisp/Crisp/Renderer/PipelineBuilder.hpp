@@ -2,7 +2,6 @@
 
 #include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
 #include <memory>
@@ -80,7 +79,7 @@ private:
 
     std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
-    VertexLayout m_vertexLayout;
+    VulkanVertexLayout m_vertexLayout;
     VkPipelineVertexInputStateCreateInfo m_vertexInputState;
 
     VkPipelineInputAssemblyStateCreateInfo m_inputAssemblyState;

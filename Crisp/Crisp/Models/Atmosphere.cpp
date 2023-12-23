@@ -95,8 +95,7 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(
         .create(device, {192, 108}, renderTargets);
 }
 
-std::unique_ptr<VulkanRenderPass> createSkyVolumePass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache) {
+std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device, RenderTargetCache& renderTargetCache) {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         "SkyVolumeLut",
@@ -201,8 +200,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
     VkPipeline pipeline = VK_NULL_HANDLE;
     vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
-    return std::make_unique<VulkanPipeline>(
-        device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
+    return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
 }
 
 FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
@@ -215,19 +213,20 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     const VulkanDevice& device = renderer.getDevice();
     FlatHashMap<std::string, std::unique_ptr<RenderNode>> renderNodes;
 
-    const auto createPostProcessingRenderNode2 = [&renderNodes, &renderer, &renderGraph, &resourceContext](
-                                                     const std::string& renderPassName,
-                                                     std::unique_ptr<VulkanRenderPass> renderPass,
-                                                     const std::string& luaPipelineFile) {
-        renderGraph.addRenderPass(renderPassName, std::move(renderPass));
+    const auto createPostProcessingRenderNode2 =
+        [&renderNodes, &renderer, &renderGraph, &resourceContext](
+            const std::string& renderPassName,
+            std::unique_ptr<VulkanRenderPass> renderPass,
+            const std::string& luaPipelineFile) {
+            renderGraph.addRenderPass(renderPassName, std::move(renderPass));
 
-        auto node = renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
-        node->geometry = renderer.getFullScreenGeometry();
-        node->pass(renderPassName).pipeline = resourceContext.createPipeline(
-            renderPassName + "Pipeline", luaPipelineFile, renderGraph.getRenderPass(renderPassName), 0);
-        node->pass(renderPassName).material =
-            resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
-    };
+            auto node = renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
+            node->geometry = renderer.getFullScreenGeometry();
+            node->pass(renderPassName).pipeline = resourceContext.createPipeline(
+                renderPassName + "Pipeline", luaPipelineFile, renderGraph.getRenderPass(renderPassName), 0);
+            node->pass(renderPassName).material =
+                resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
+        };
 
     resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParameters), BufferUpdatePolicy::PerFrame);
 
@@ -258,10 +257,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     renderer.enqueueResourceUpdate([tex = &imageCache.getImage("multiScatTex")](VkCommandBuffer cmdBuffer) {
         tex->transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_GENERAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     });
 
     auto& multiScatPass = renderGraph.addComputePass(MultipleScatteringPass);
@@ -286,8 +282,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     renderGraph.addDependency(
         MultipleScatteringPass,
         SkyViewLutPass,
-        [tex = &imageCache.getImage("multiScatTex"), views](
-            const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
+        [tex = &imageCache.getImage("multiScatTex"),
+         views](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
             VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -301,8 +297,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     const auto createPostProcessingRenderNode =
         [&renderNodes, &renderer](const std::string& renderPassName, Material* material, VulkanPipeline* pipeline) {
-            auto node =
-                renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
+            auto node = renderNodes.emplace(renderPassName + "Node", std::make_unique<RenderNode>()).first->second.get();
             node->geometry = renderer.getFullScreenGeometry();
             node->pass(renderPassName).material = material;
             node->pass(renderPassName).pipeline = pipeline;
@@ -337,8 +332,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         resourceContext.getGeometry("fullScreenInstanced")->setInstanceCount(32);
 
         createPostProcessingRenderNode(ViewVolumePass, material, pipeline);
-        renderNodes[ViewVolumePass + std::string("Node")]->geometry =
-            resourceContext.getGeometry("fullScreenInstanced");
+        renderNodes[ViewVolumePass + std::string("Node")]->geometry = resourceContext.getGeometry("fullScreenInstance"
+                                                                                                  "d");
     }
 
     {
@@ -408,11 +403,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             VulkanPipeline* pipeline = resourceContext.pipelineCache.getPipeline("transmittanceLut");
             if (pipeline == nullptr) {
                 pipeline = resourceContext.pipelineCache.loadPipeline(
-                    &renderer,
-                    "transmittanceLut",
-                    "SkyTransLut.json",
-                    renderGraph.getRenderPass(TransmittanceLutPass),
-                    0);
+                    &renderer, "transmittanceLut", "SkyTransLut.json", renderGraph.getRenderPass(TransmittanceLutPass), 0);
             }
 
             Material* material = resourceContext.createMaterial("transmittanceLut", pipeline);

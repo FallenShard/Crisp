@@ -18,9 +18,8 @@ add_cpp_static_library(CrispVertexLayout
     "VertexLayout.hpp"
 )
 target_link_libraries(CrispVertexLayout
-    PUBLIC Crisp::VulkanHeader
+    PUBLIC Crisp::Vulkan
     PUBLIC Crisp::Mesh
-    PUBLIC Crisp::VulkanFormatTraits
     PRIVATE Crisp::Logger
     PRIVATE Crisp::Result
 )

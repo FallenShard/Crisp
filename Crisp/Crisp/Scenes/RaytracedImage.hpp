@@ -21,7 +21,6 @@ class VulkanImage;
 class RayTracedImage {
 public:
     RayTracedImage(uint32_t width, uint32_t height, Renderer* renderer);
-    ~RayTracedImage();
 
     void postTextureUpdate(RayTracerUpdate rayTracerUpdate);
 

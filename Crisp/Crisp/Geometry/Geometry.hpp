@@ -17,7 +17,7 @@ public:
     Geometry() = default;
     Geometry(
         Renderer& renderer,
-        VertexLayout&& vertexLayout,
+        VulkanVertexLayout&& vertexLayout,
         const std::vector<InterleavedVertexBuffer>& interleavedVertexBuffers,
         const std::vector<glm::uvec3>& faces,
         const std::vector<TriangleMeshView>& meshViews = {},
@@ -87,7 +87,7 @@ public:
         return static_cast<uint32_t>(m_vertexBuffers.size());
     }
 
-    const VertexLayout& getVertexLayout() const {
+    const VulkanVertexLayout& getVertexLayout() const {
         return m_vertexLayout;
     }
 
@@ -100,7 +100,7 @@ public:
     ListGeometryView createListGeometryView() const;
 
 private:
-    VertexLayout m_vertexLayout;
+    VulkanVertexLayout m_vertexLayout;
 
     // The geometry owns the buffers that contain vertex attributes.
     std::vector<std::unique_ptr<VulkanBuffer>> m_vertexBuffers;

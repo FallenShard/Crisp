@@ -17,7 +17,7 @@ glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline) {
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device, VkPipeline pipelineHandle, std::unique_ptr<VulkanPipelineLayout> pipelineLayout) {
     return std::make_unique<VulkanPipeline>(
-        device, pipelineHandle, std::move(pipelineLayout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
+        device, pipelineHandle, std::move(pipelineLayout), VK_PIPELINE_BIND_POINT_COMPUTE);
 }
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
@@ -88,10 +88,11 @@ std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* rend
     VulkanDevice& device = renderer->getDevice();
     auto layout = layoutBuilder.create(device);
 
-    std::vector<VkSpecializationMapEntry> specEntries = {//   id,               offset,             size
-                                                         {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-                                                         {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-                                                         {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}};
+    std::vector<VkSpecializationMapEntry> specEntries = {
+        //   id,               offset,             size
+        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
+        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
+        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)}};
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());

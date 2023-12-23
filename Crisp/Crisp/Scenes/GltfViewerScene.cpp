@@ -87,8 +87,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     specInfo.pData = glm::value_ptr(workGroupSize);
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-    pipelineInfo.stage =
-        createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getOrLoadShaderModule(shaderName));
+    pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getOrLoadShaderModule(shaderName));
     pipelineInfo.stage.pSpecializationInfo = &specInfo;
     pipelineInfo.layout = layout->getHandle();
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -96,8 +95,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     VkPipeline pipeline{VK_NULL_HANDLE};
     vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
-    return std::make_unique<VulkanPipeline>(
-        device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
+    return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
 }
 
 std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {

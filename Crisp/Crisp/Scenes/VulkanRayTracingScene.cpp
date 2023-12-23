@@ -330,11 +330,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
 
     return std::make_unique<VulkanPipeline>(
-        m_renderer->getDevice(),
-        pipeline,
-        std::move(pipelineLayout),
-        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        VertexLayout{});
+        m_renderer->getDevice(), pipeline, std::move(pipelineLayout), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
 }
 
 void VulkanRayTracingScene::updateDescriptorSets() {

@@ -58,7 +58,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     vkCreateComputePipelines(renderer->getDevice().getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
     return std::make_unique<VulkanPipeline>(
-        renderer->getDevice(), pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE, VertexLayout{});
+        renderer->getDevice(), pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
 }
 
 VkImageMemoryBarrier createImageMemoryReadBarrier(const VkImage imageHandle, const uint32_t layerIdx) {

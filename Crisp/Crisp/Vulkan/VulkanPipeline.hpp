@@ -1,15 +1,14 @@
 #pragma once
 
-#include <Crisp/Geometry/VertexLayout.hpp>
+#include <filesystem>
+#include <utility>
+
 #include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-
-#include <filesystem>
-#include <utility>
+#include <Crisp/Vulkan/VulkanVertexLayout.hpp>
 
 namespace crisp {
 enum class PipelineDynamicState { None = 0x00, Viewport = 0x01, Scissor = 0x02 };
@@ -22,7 +21,7 @@ public:
         VkPipeline pipelineHandle,
         std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
         VkPipelineBindPoint bindPoint,
-        VertexLayout&& vertexLayout,
+        VulkanVertexLayout&& vertexLayout = {},
         PipelineDynamicStateFlags dynamicStateFlags = PipelineDynamicState::None);
 
     inline VulkanPipelineLayout* getPipelineLayout() const {
@@ -44,11 +43,8 @@ public:
     }
 
     inline void setPushConstant(
-        VkCommandBuffer cmdBuffer,
-        VkShaderStageFlags shaderStages,
-        uint32_t offset,
-        uint32_t size,
-        const char* value) const {
+        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, uint32_t size, const char* value)
+        const {
         vkCmdPushConstants(
             cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset); // NOLINT
     }
@@ -63,7 +59,7 @@ public:
         return m_dynamicStateFlags;
     }
 
-    inline const VertexLayout& getVertexLayout() const {
+    inline const VulkanVertexLayout& getVertexLayout() const {
         return m_vertexLayout;
     }
 
@@ -86,7 +82,7 @@ protected:
 
     std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;
     PipelineDynamicStateFlags m_dynamicStateFlags;
-    VertexLayout m_vertexLayout;
+    VulkanVertexLayout m_vertexLayout;
 
     std::filesystem::path m_configPath; // Config file where the pipeline is described.
     const VkPipelineBindPoint m_bindPoint;
