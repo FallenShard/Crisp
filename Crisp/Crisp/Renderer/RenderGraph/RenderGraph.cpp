@@ -227,8 +227,9 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer) {
                     physicalImage.image->transitionLayout(
                         executionCtx.cmdBuffer,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
-                                          : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        isDepthAttachment
+                            ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+                            : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                         inputAccess.pipelineStage);
                 }
             }
@@ -399,8 +400,7 @@ void RenderGraph::determineAliasedResurces() {
                     continue;
                 }
                 if (resource.type == m_resources[j].type) {
-                    if (descriptions[resource.descriptionIndex].canAlias(
-                            descriptions[m_resources[j].descriptionIndex])) {
+                    if (descriptions[resource.descriptionIndex].canAlias(descriptions[m_resources[j].descriptionIndex])) {
                         lastReadPassIdx = timelines[j].lastRead;
                         m_resources[j].physicalResourceIndex = resource.physicalResourceIndex;
                         processed[j] = true;
@@ -482,9 +482,10 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
             const auto& colorAttachment{getResource(resourceId)};
             const auto& colorDescription{getImageDescription(resourceId)};
-            const VkImageLayout initialLayout = colorDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                                                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                                                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            const VkImageLayout initialLayout =
+                colorDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             builder
                 .setAttachment(
                     static_cast<int32_t>(attachmentIndex),
@@ -512,17 +513,17 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                 m_physicalImages[colorAttachment.physicalResourceIndex].image.get());
             renderPassParams.attachmentMappings.push_back(
                 {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(
-                colorDescription.clearValue ? *colorDescription.clearValue : VkClearValue{});
+            attachmentClearValues.push_back(colorDescription.clearValue ? *colorDescription.clearValue : VkClearValue{});
             ++attachmentIndex;
         }
 
         if (pass.depthStencilAttachment) {
             const auto& res{getResource(*pass.depthStencilAttachment)};
             const auto& depthDescription{getImageDescription(*pass.depthStencilAttachment)};
-            const VkImageLayout initialLayout = depthDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                                                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                                                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            const VkImageLayout initialLayout =
+                depthDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             const VkAttachmentLoadOp loadOp =
                 depthDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -552,8 +553,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
             renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
             renderPassParams.attachmentMappings.push_back(
                 {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(
-                depthDescription.clearValue ? *depthDescription.clearValue : VkClearValue{});
+            attachmentClearValues.push_back(depthDescription.clearValue ? *depthDescription.clearValue : VkClearValue{});
 
             // Ensure that we are synchronizing the load.
             if (loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {

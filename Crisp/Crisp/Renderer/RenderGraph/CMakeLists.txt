@@ -13,6 +13,15 @@ target_link_libraries(CrispRenderGraph
     PRIVATE Crisp::Renderer
 )
 
+add_cpp_static_library(CrispRenderGraphGui
+    "RenderGraphGui.cpp"
+    "RenderGraphGui.hpp"
+)
+target_link_libraries(CrispRenderGraphGui
+    PUBLIC Crisp::RenderGraph
+    PRIVATE ImGui
+)
+
 add_cpp_test(CrispRenderGraphTest
     "Test/RenderGraphTest.cpp"
 )

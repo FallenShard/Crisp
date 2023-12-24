@@ -25,8 +25,7 @@ public:
             std::string&& name,
             std::optional<VkClearValue> clearValue = std::nullopt);
 
-        RenderGraphResourceHandle createStorageImage(
-            const RenderGraphImageDescription& description, std::string&& name);
+        RenderGraphResourceHandle createStorageImage(const RenderGraphImageDescription& description, std::string&& name);
 
         RenderGraphResourceHandle createBuffer(const RenderGraphBufferDescription& description, std::string&& name);
 
