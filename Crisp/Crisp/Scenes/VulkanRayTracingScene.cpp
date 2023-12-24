@@ -76,19 +76,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
-    m_resourceContext->createStorageBuffer(
-        "brdfParams",
-        sizeof(BrdfParameters) * m_sceneDesc.brdfs.size(),
-        0,
-        BufferUpdatePolicy::PerFrame,
-        m_sceneDesc.brdfs.data());
-
-    m_resourceContext->createStorageBuffer(
-        "lightParams",
-        sizeof(LightParameters) * m_sceneDesc.lights.size(),
-        0,
-        BufferUpdatePolicy::PerFrame,
-        m_sceneDesc.lights.data());
+    m_resourceContext->createStorageBufferFromStdVec("brdfParams", m_sceneDesc.brdfs, BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createStorageBufferFromStdVec("lightParams", m_sceneDesc.lights, BufferUpdatePolicy::PerFrame);
 
     AliasTable aliasTable{};
     TriangleMesh sceneMesh{};
@@ -126,12 +115,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
     m_resourceContext->addStorageBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
-    m_resourceContext->createStorageBuffer(
-        "materialIds",
-        sizeof(InstanceProperties) * m_sceneDesc.props.size(),
-        0,
-        BufferUpdatePolicy::Constant,
-        m_sceneDesc.props.data());
+    m_resourceContext->createStorageBufferFromStdVec("materialIds", m_sceneDesc.props, BufferUpdatePolicy::Constant);
 
     m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -185,7 +169,8 @@ void VulkanRayTracingScene::update(float dt) {
     const ExtendedCameraParameters cameraParams = m_cameraController->getExtendedCameraParameters();
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
     m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer(m_integratorParams);
-    m_resourceContext->getStorageBuffer("brdfParams")->updateStagingBufferFromVector(m_sceneDesc.brdfs);
+    m_resourceContext->getRingBuffer("brdfParams")->updateStagingBufferFromStdVec(m_sceneDesc.brdfs);
+    m_resourceContext->getRingBuffer("lightParams")->updateStagingBufferFromStdVec(m_sceneDesc.lights);
 }
 
 void VulkanRayTracingScene::render() {
@@ -271,6 +256,25 @@ void VulkanRayTracingScene::renderGui() {
         m_integratorParams.frameIdx = 0;
     }
 
+    ImGui::Separator();
+
+    if (!m_sceneDesc.lights.empty()) {
+        if (ImGui::SliderFloat("Light R", &m_sceneDesc.lights[0].radiance[0], 0.0f, 50.0f)) {
+            m_integratorParams.frameIdx = 0;
+        }
+        if (ImGui::SliderFloat("Light G", &m_sceneDesc.lights[0].radiance[1], 0.0f, 50.0f)) {
+            m_integratorParams.frameIdx = 0;
+        }
+        if (ImGui::SliderFloat("Light B", &m_sceneDesc.lights[0].radiance[2], 0.0f, 50.0f)) {
+            m_integratorParams.frameIdx = 0;
+        }
+    }
+    if (m_sceneDesc.brdfs.size() > 5 && ImGui::SliderFloat("Int IOR", &m_sceneDesc.brdfs[5].intIor, 1.0f, 10.0f)) {
+        m_integratorParams.frameIdx = 0;
+    }
+
+    ImGui::Separator();
+
     if (ImGui::RadioButton("Use Light Sampling", m_integratorParams.samplingMode == 0)) {
         m_integratorParams.samplingMode = 0;
         m_integratorParams.frameIdx = 0;
@@ -286,12 +290,6 @@ void VulkanRayTracingScene::renderGui() {
     if (ImGui::Button("Take Screenshot")) {
         m_screenshotRequested = true;
     }
-    // if (ImGui::SliderFloat("Int IOR", &m_brdfParameters[4].intIor, 1.0f, 10.0f)) {
-    //     m_integratorParams.frameIdx = 0;
-    // }
-    // if (ImGui::SliderFloat("Roughness IOR", &m_brdfParameters[6].microfacetAlpha, 1e-3f, 1.0f)) {
-    //     m_integratorParams.frameIdx = 0;
-    // }
 
     ImGui::End();
 
@@ -342,9 +340,9 @@ void VulkanRayTracingScene::updateDescriptorSets() {
         1, 0, m_resourceContext->getGeometry("scene-geometry")->getVertexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(
         1, 1, m_resourceContext->getGeometry("scene-geometry")->getIndexBuffer()->createDescriptorInfo());
-    m_material->writeDescriptor(1, 2, *m_resourceContext->getStorageBuffer("materialIds"));
-    m_material->writeDescriptor(1, 3, *m_resourceContext->getStorageBuffer("brdfParams"));
-    m_material->writeDescriptor(1, 4, *m_resourceContext->getStorageBuffer("lightParams"));
+    m_material->writeDescriptor(1, 2, *m_resourceContext->getRingBuffer("materialIds"));
+    m_material->writeDescriptor(1, 3, *m_resourceContext->getRingBuffer("brdfParams"));
+    m_material->writeDescriptor(1, 4, *m_resourceContext->getRingBuffer("lightParams"));
     m_material->writeDescriptor(1, 5, *m_resourceContext->getStorageBuffer("aliasTable"));
     m_renderer->getDevice().flushDescriptorUpdates();
 }

@@ -5,7 +5,6 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Optics/Fresnel.hpp>
 #include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -50,7 +49,7 @@ private:
         int32_t frameIdx{0};
         int32_t lightCount{0};
         int32_t shapeCount{0};
-        int32_t samplingMode{0};
+        int32_t samplingMode{2};
     };
 
     SceneDescription m_sceneDesc;

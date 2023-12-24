@@ -3,13 +3,13 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/path-tracer-payload.part.glsl"
+#include "Parts/path-trace-payload.part.glsl"
 #include "Parts/math-constants.part.glsl"
 #include "Parts/rng.part.glsl"
 #include "Parts/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
-layout(location = 1) callableDataEXT BsdfSample bsdf;
+layout(location = 1) callableDataEXT BrdfSample bsdf;
 
 const uint kLambertianShaderCallable = 0;
 const uint kDielectricShaderCallable = 1;
@@ -51,7 +51,7 @@ vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance)
     return cosTheta <= 0.0f ? vec3(0.0f) : radiance;
 }
 
-#include "Parts/path-tracer-vertex-pull.part.glsl"
+#include "Parts/path-trace-vertex-pull.part.glsl"
 
 vec3 toLocal(const vec3 dir, const mat3 coordinateFrame)
 {
@@ -101,7 +101,7 @@ void main()
     hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
     hitInfo.samplePdf = bsdf.pdf;
     hitInfo.bsdfEval = bsdf.f;
-    hitInfo.sampleLobeType = brdfType == kMirrorShaderCallable ? 1 : 0;
+    hitInfo.sampleLobeType = bsdf.lobeType;
 
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);

@@ -1,11 +1,12 @@
 #ifndef PATH_TRACER_PAYLOAD_PART_GLSL
 #define PATH_TRACER_PAYLOAD_PART_GLSL
 
-const int kLobeDelta = 0;
-const int kLobeGlossy = 1;
+const int kLobeTypeDiffuse = 1 << 0;
+const int kLobeTypeDelta   = 1 << 1;
+const int kLobeTypeGlossy  = 1 << 2;
 
-struct HitInfo
-{
+// This structure is used to communicate hit information across path tracing shaders.
+struct HitInfo {
     vec3 position;        // Out.
     float tHit;           // Out.
 
@@ -22,14 +23,8 @@ struct HitInfo
     uint sampleLobeType;  // Out.
 };
 
-struct ShadowRayHitInfo
-{
-    vec3 position;
-    float tHit;
-};
-
-struct BsdfSample
-{
+// This structure is used to communicate BRDF sampling across hit and callable shaders.
+struct BrdfSample {
     vec2 unitSample;      // In.
     vec2 pad0;            // Unused.
 
@@ -43,11 +38,21 @@ struct BsdfSample
     float pdf;            // Out.
 
     vec3 f;               // Out, eval * dot(n, wo) / pdf.
-    float pad1;           // Unused.
+    uint lobeType;        // Out, diffuse or specular.
 };
 
-struct BrdfParameters
-{
+struct InstanceProperties {
+    int materialId;
+    int lightId;
+    uint vertexOffset;
+    uint indexOffset;
+    uint aliasTableOffset;
+    uint aliasTableCount;
+    uint pad0;
+    uint pad1;
+};
+
+struct BrdfParameters {
     vec3 albedo;
     int type;
 
@@ -64,17 +69,6 @@ struct BrdfParameters
 
     vec3 complexIorK;
     float pad1;
-};
-
-struct InstanceProperties {
-    int materialId;
-    int lightId;
-    uint vertexOffset;
-    uint indexOffset;
-    uint aliasTableOffset;
-    uint aliasTableCount;
-    uint pad0;
-    uint pad1;
 };
 
 struct LightParameters {

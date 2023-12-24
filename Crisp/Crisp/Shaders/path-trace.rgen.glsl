@@ -3,7 +3,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/path-tracer-payload.part.glsl"
+#include "Parts/path-trace-payload.part.glsl"
 #include "Parts/math-constants.part.glsl"
 #include "Parts/rng.part.glsl"
 #include "Parts/warp.part.glsl"
@@ -46,6 +46,8 @@ layout(set = 1, binding = 1, scalar) buffer Indices
 {
     uint data[];
 } indices;
+
+#include "Parts/path-trace-vertex-pull.part.glsl"
 
 layout(set = 1, binding = 2, scalar) buffer InstanceProps
 {
@@ -93,8 +95,6 @@ void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
 
     direction = camera.invV * vec4(rayDirEyeSpace, 0.0f);
 }
-
-#include "Parts/path-tracer-vertex-pull.part.glsl"
 
 float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal)
 {
@@ -314,7 +314,7 @@ vec3 computeRadianceMisPt(inout uint seed)
         const vec3 f = hitInfo.bsdfEval;
         const float brdfPdf = hitInfo.samplePdf;
         const vec3 rayDir = hitInfo.sampleDirection;
-        specularBounce = hitInfo.sampleLobeType == 1;
+        specularBounce = hitInfo.sampleLobeType == kLobeTypeDelta;
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
         if (!specularBounce)
@@ -327,23 +327,18 @@ vec3 computeRadianceMisPt(inout uint seed)
 
             if (hitInfo.tHit <= 0) // The shadow ray has missed.
             {
-                const float brdfPdf = InvPI * dot(n, shadowRayDir);
-                const vec3 brdfEval = f * brdfPdf;
-                L += throughput * radiance * brdfEval * powerHeuristic(lightPdf, brdfPdf);
+                const float brdfPdf = InvPI * dot(n, shadowRayDir); // This is only correct for Diffuse BRDFs.
+                L += throughput * f * radiance * brdfPdf * powerHeuristic(lightPdf, brdfPdf);
             }
         }
 
         // If the light isn't a delta light (point or directional), do bsdf sampling.
         {
-            // BRDF sampling.
-            // if not specular...
-            {
-                traceRay(seed, p, tMin, rayDir, tMax);
+            traceRay(seed, p, tMin, rayDir, tMax);
 
-                if (hitInfo.lightId != -1) {
-                    const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-                    L += throughput * f * hitInfo.Le * powerHeuristic(brdfPdf, lightPdf);
-                }
+            if (hitInfo.lightId != -1) {
+                const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
+                L += throughput * f * hitInfo.Le * powerHeuristic(brdfPdf, lightPdf);
             }
         }
 

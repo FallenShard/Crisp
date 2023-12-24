@@ -2,10 +2,10 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/path-tracer-payload.part.glsl"
+#include "Parts/path-trace-payload.part.glsl"
 #include "Parts/math-constants.part.glsl"
 
-layout(location = 0) callableDataInEXT BsdfSample bsdf;
+layout(location = 0) callableDataInEXT BrdfSample brdf;
 
 layout(set = 1, binding = 3) buffer BrdfParams
 {
@@ -45,26 +45,27 @@ float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float
 
 void main()
 {
-    const float intIOR = brdfParams[bsdf.materialId].intIor;
-    const float extIOR = brdfParams[bsdf.materialId].extIor;
+    const float intIOR = brdfParams[brdf.materialId].intIor;
+    const float extIOR = brdfParams[brdf.materialId].extIor;
     const float etaRatio = intIOR / extIOR;
-    const float cosThetaI = dot(bsdf.normal, bsdf.wi);
-    const vec3 localNormal = cosThetaI < 0.0f ? -bsdf.normal : bsdf.normal;
+    const float cosThetaI = dot(brdf.normal, brdf.wi);
+    const vec3 localNormal = cosThetaI < 0.0f ? -brdf.normal : brdf.normal;
     const float eta        = cosThetaI < 0.0f ? etaRatio : 1.0f / etaRatio;
     const float cosine     = cosThetaI < 0.0f ? etaRatio * cosThetaI : -cosThetaI;
     float cosThetaT = 0.0f;
     const float fresnel = fresnelDielectric(cosThetaI, extIOR, intIOR, cosThetaT);
 
-    if (bsdf.unitSample[0] <= fresnel)
+    brdf.lobeType = kLobeTypeDelta;
+    if (brdf.unitSample[0] <= fresnel)
     {
-        bsdf.wo = reflect(-bsdf.wi, localNormal);
-        bsdf.pdf = fresnel;
-        bsdf.f = vec3(1.0f);
+        brdf.wo = reflect(-brdf.wi, localNormal);
+        brdf.pdf = fresnel;
+        brdf.f = vec3(1.0f);
     }
     else
     {
-        bsdf.wo = refract(-bsdf.wi, localNormal, eta);
-        bsdf.pdf = 1.0f - fresnel;
-        bsdf.f = vec3(eta * eta);
+        brdf.wo = refract(-brdf.wi, localNormal, eta);
+        brdf.pdf = 1.0f - fresnel;
+        brdf.f = vec3(eta * eta);
     }
 }

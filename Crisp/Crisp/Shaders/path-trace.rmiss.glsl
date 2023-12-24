@@ -2,7 +2,7 @@
 #extension GL_EXT_ray_tracing : enable
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/path-tracer-payload.part.glsl"
+#include "Parts/path-trace-payload.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 
