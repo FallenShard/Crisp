@@ -3,61 +3,51 @@
   "configurePresets": [
     {
       "name": "windows-base",
-      "description": "Target Windows with the Visual Studio development environment.",
+      "description": "Target Windows with the VS development environment.",
       "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "cl.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_C_COMPILER"             : "cl.exe",
+        "CMAKE_CXX_COMPILER"           : "cl.exe",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       },
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-      "toolset": {
-        "value": "host=x64",
-        "strategy": "external"
-      },
+      "architecture": { "value": "x64", "strategy": "external" },
+      "toolset": { "value": "host=x64", "strategy": "external" },
       "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
+        "type": "equals"           ,
+        "lhs" : "${hostSystemName}",
+        "rhs" : "Windows"
       }
     },
     {
       "name": "x64-debug",
-      "displayName": "x64 Debug",
-      "description": "Target Windows (64-bit) with the Visual Studio development environment. (Debug)",
+      "displayName": "Debug",
+      "description": "Target Windows (64-bit) with the VS development environment. (Debug)",
       "inherits": "windows-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
     },
     {
       "name": "x64-release",
-      "displayName": "x64 Release",
-      "description": "Target Windows (64-bit) with the Visual Studio development environment. (RelWithDebInfo)",
-      "inherits": "x64-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
+      "displayName": "Release",
+      "description": "Target Windows (64-bit) with the VS development environment. (Release)",
+      "inherits": "windows-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }
   ],
   "buildPresets": [
     {
       "name": "x64-debug-build",
       "displayName": "Debug",
-      "description": "Target Windows with the Visual Studio development environment.",
+      "description": "Target Windows (64-bit) with the VS development environment. (Debug)",
       "configurePreset": "x64-debug",
       "inheritConfigureEnvironment": true
     },
     {
       "name": "x64-release-build",
       "displayName": "Release",
-      "description": "Target Windows with the Visual Studio development environment.",
+      "description": "Target Windows (64-bit) with the VS development environment. (Release)",
       "configurePreset": "x64-release",
       "inheritConfigureEnvironment": true
     }
@@ -67,9 +57,7 @@
       "name": "test-windows",
       "description": "Enable output on failure",
       "configurePreset": "x64-debug",
-      "output": {
-        "outputOnFailure": true
-      }
+      "output": { "outputOnFailure": true }
     }
   ]
 }
