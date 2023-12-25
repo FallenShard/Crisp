@@ -9,15 +9,18 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v3
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+    - name: Set Build Output Path
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+    - name: Configure
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release
+

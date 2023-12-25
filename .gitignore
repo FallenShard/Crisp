@@ -283,3 +283,8 @@ Intermediate/
 
 # Clang stuff
 .cache/
+
+# ImGui
+imgui.ini
+Args.json
+profile.json
