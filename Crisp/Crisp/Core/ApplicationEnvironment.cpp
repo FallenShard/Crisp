@@ -36,6 +36,14 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     : m_arguments(std::move(parameters)) {
     ChromeProfiler::setThreadName("Main Thread");
 
+    m_config = loadJsonFromFile(m_arguments.configPath).unwrap();
+    m_resourcesPath = m_config["resourcesPath"].get<std::string>();
+    m_shaderSourcesPath = m_config["shaderSourcesPath"].get<std::string>();
+    m_arguments.scene = m_config["scene"].get<std::string>();
+    m_arguments.sceneArgs = m_config["sceneArgs"];
+    m_arguments.enableRayTracingExtension = getIfExists<bool>(m_config, "enableVulkanRayTracing").value_or(false);
+    m_arguments.logLevel = getIfExists<std::string>(m_config, "logLevel").value_or("info");
+
     spdlog::set_pattern("%^[%T.%e][%t][%n][%l]:%$ %v");
     setSpdlogLevel(m_arguments.logLevel);
     logger->info("Current path: {}", std::filesystem::current_path().string());
@@ -45,13 +53,6 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
         logger->critical("Could not initialize GLFW library!\n");
         std::terminate();
     }
-
-    m_config = loadJsonFromFile(m_arguments.configPath).unwrap();
-    m_resourcesPath = m_config["resourcesPath"].get<std::string>();
-    m_shaderSourcesPath = m_config["shaderSourcesPath"].get<std::string>();
-    m_arguments.scene = m_config["scene"].get<std::string>();
-    m_arguments.sceneArgs = m_config["sceneArgs"];
-    m_arguments.enableRayTracingExtension = getIfExists<bool>(m_config, "enableVulkanRayTracing").value_or(false);
 }
 
 ApplicationEnvironment::~ApplicationEnvironment() {

@@ -6,7 +6,7 @@ int main(int argc, char** argv) {
         crisp::ApplicationEnvironment environment(crisp::parse(argc, argv).unwrap());
         crisp::Application application(environment);
         application.run();
-        spdlog::info("Application finished successfully.");
+        spdlog::info("Application shut down successfully.");
     }
     return EXIT_SUCCESS;
 }
