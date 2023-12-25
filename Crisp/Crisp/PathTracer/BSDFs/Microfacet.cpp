@@ -9,7 +9,7 @@
 namespace crisp {
 MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)
     : BSDF(LobeFlags(Lobe::Diffuse | Lobe::Glossy)) {
-    std::string distribType = params.get<std::string>("distribution", "beckmann");
+    auto distribType = params.get<std::string>("distribution", "beckmann");
     m_distrib = MicrofacetDistributionFactory::create(distribType, params);
 
     m_intIOR = params.get<float>("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
@@ -19,14 +19,12 @@ MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)
     m_ks = 1.0f - m_kd.maxCoeff();
 }
 
-MicrofacetBSDF::~MicrofacetBSDF() {}
-
 Spectrum MicrofacetBSDF::eval(const BSDF::Sample& bsdfSample) const {
     auto cosThetaI = CoordinateFrame::cosTheta(bsdfSample.wi);
     auto cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
 
     if (bsdfSample.measure != Measure::SolidAngle || cosThetaI <= 0.0f || cosThetaO <= 0.0f) {
-        return Spectrum(0.0f);
+        return Spectrum::zero();
     }
 
     glm::vec3 m = glm::normalize(bsdfSample.wi + bsdfSample.wo);
@@ -44,7 +42,7 @@ Spectrum MicrofacetBSDF::eval(const BSDF::Sample& bsdfSample) const {
 
 Spectrum MicrofacetBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) const {
     if (CoordinateFrame::cosTheta(bsdfSample.wi) <= 0.0f) {
-        return Spectrum(0.0f);
+        return Spectrum::zero();
     }
 
     bsdfSample.measure = Measure::SolidAngle;
@@ -68,7 +66,7 @@ Spectrum MicrofacetBSDF::sample(BSDF::Sample& bsdfSample, Sampler& sampler) cons
 
     cosThetaO = CoordinateFrame::cosTheta(bsdfSample.wo);
     if (cosThetaO < 0.0f) {
-        return Spectrum(0.0f);
+        return Spectrum::zero();
     }
 
     bsdfSample.pdf = pdf(bsdfSample);

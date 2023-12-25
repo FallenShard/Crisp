@@ -52,11 +52,17 @@ public:
 
     ~VulkanRingBuffer();
 
-    inline VkBuffer get() const {
+    inline VkBuffer getHandle() const {
         return m_buffer->getHandle();
     }
 
     void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
+
+    template <typename T>
+    void updateStagingBufferFromStdVec(const std::vector<T>& data) {
+        updateStagingBuffer(data.data(), sizeof(T) * data.size(), 0);
+    }
+
     void updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex);
 
     uint32_t getRegionOffset(uint32_t regionIndex) const;

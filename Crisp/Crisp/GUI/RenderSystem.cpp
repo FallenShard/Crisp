@@ -205,7 +205,7 @@ unsigned int RenderSystem::registerTextResource(std::string text, unsigned int f
         BufferUpdatePolicy::PerFrame);
     textRes->firstBinding = 0;
     textRes->bindingCount = 1;
-    textRes->buffers = {textRes->vertexBuffer->get()};
+    textRes->buffers = {textRes->vertexBuffer->getHandle()};
     textRes->offsets = {0};
     textRes->indexBufferOffset = 0;
     textRes->indexCount = 32;
@@ -624,7 +624,7 @@ void RenderSystem::TextGeometryResource::updateStagingBuffer(std::string text, c
 
 void RenderSystem::TextGeometryResource::drawIndexed(VkCommandBuffer cmdBuffer) const {
     vkCmdBindVertexBuffers(cmdBuffer, firstBinding, bindingCount, buffers.data(), offsets.data());
-    vkCmdBindIndexBuffer(cmdBuffer, indexBuffer->get(), indexBufferOffset, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(cmdBuffer, indexBuffer->getHandle(), indexBufferOffset, VK_INDEX_TYPE_UINT16);
     vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);
 }
 } // namespace crisp::gui

@@ -5,7 +5,7 @@ Material::Material(VulkanPipeline* pipeline)
     : Material(pipeline, pipeline->getPipelineLayout()->getDescriptorSetAllocator()) {}
 
 Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator)
-    : m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice()))
+    : m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice())) // NOLINT
     , m_pipeline(pipeline) {
     const auto& pipelineLayout{*m_pipeline->getPipelineLayout()};
     const std::size_t setCount = pipelineLayout.getDescriptorSetLayoutCount();

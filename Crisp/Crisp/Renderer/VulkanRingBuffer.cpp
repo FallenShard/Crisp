@@ -18,7 +18,11 @@ VkDeviceSize getMinAlignment(const VkBufferUsageFlagBits bufferType, const Rende
 } // namespace
 
 VulkanRingBuffer::VulkanRingBuffer(
-    Renderer* renderer, VkBufferUsageFlagBits bufferType, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
+    Renderer* renderer,
+    const VkBufferUsageFlagBits bufferType,
+    const size_t size,
+    const BufferUpdatePolicy updatePolicy,
+    const void* data)
     : m_renderer(renderer)
     , m_bufferType(bufferType)
     , m_updatePolicy(updatePolicy)

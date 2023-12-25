@@ -10,6 +10,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
+#include <Crisp/Renderer/VulkanRingBuffer.hpp>
 
 namespace crisp {
 class ResourceContext {
@@ -41,6 +42,19 @@ public:
 
     StorageBuffer* addStorageBuffer(std::string id, std::unique_ptr<StorageBuffer> uniformBuffer);
     StorageBuffer* getStorageBuffer(const std::string& id) const;
+
+    template <typename T>
+    VulkanRingBuffer* createStorageBufferFromStdVec(
+        const std::string& id, const std::vector<T>& data, const BufferUpdatePolicy updatePolicy) {
+        auto buffer = std::make_unique<VulkanRingBuffer>(
+            m_renderer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(T) * data.size(), updatePolicy, data.data());
+        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
+    }
+
+    VulkanRingBuffer* getRingBuffer(const std::string_view id) const {
+        return m_ringBuffers.at(id).get();
+    }
 
     VulkanPipeline* createPipeline(
         std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex);
@@ -78,6 +92,7 @@ private:
     FlatStringHashMap<std::unique_ptr<Geometry>> m_geometries;
     FlatStringHashMap<std::unique_ptr<UniformBuffer>> m_uniformBuffers;
     FlatStringHashMap<std::unique_ptr<StorageBuffer>> m_storageBuffers;
+    FlatStringHashMap<std::unique_ptr<VulkanRingBuffer>> m_ringBuffers;
     FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 };
 } // namespace crisp

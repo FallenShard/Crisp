@@ -16,7 +16,8 @@ struct ComplexIOR {
 class Fresnel {
 public:
     inline static float dielectric(float cosThetaI, float extIOR, float intIOR, float& cosThetaT) {
-        float etaI = extIOR, etaT = intIOR;
+        float etaI = extIOR;
+        float etaT = intIOR;
 
         // If indices of refraction are the same, no fresnel effects
         if (extIOR == intIOR) {
@@ -45,7 +46,8 @@ public:
     }
 
     inline static float dielectric(float cosThetaI, float extIOR, float intIOR) {
-        float etaI = extIOR, etaT = intIOR;
+        float etaI = extIOR;
+        float etaT = intIOR;
 
         // If indices of refraction are the same, no fresnel effects
         if (extIOR == intIOR) {
@@ -94,7 +96,7 @@ public:
         }
     };
 
-    inline static ComplexIOR getComplexIOR(std::string name) {
+    inline static ComplexIOR getComplexIOR(const std::string& name) {
         static const std::map<std::string, ComplexIOR> complexIorMap = {
             {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f}, {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
             {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f}, {4.8283433224f, 3.1222459278f, 2.1469504455f}}},

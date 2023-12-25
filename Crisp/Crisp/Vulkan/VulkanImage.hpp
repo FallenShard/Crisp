@@ -5,7 +5,6 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
-#include <memory>
 #include <vector>
 
 namespace crisp {
@@ -77,11 +76,14 @@ public:
 
     const VulkanDevice& getDevice() const;
 
+    VkDeviceSize getSizeInBytes() const {
+        return m_allocation.size;
+    }
+
 private:
     bool matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const;
     bool isSameLayoutInRange(const VkImageSubresourceRange& range) const;
-    std::pair<VkAccessFlags, VkAccessFlags> determineAccessMasks(
-        VkImageLayout oldLayout, VkImageLayout newLayout) const;
+    std::pair<VkAccessFlags, VkAccessFlags> determineAccessMasks(VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
     VulkanMemoryHeap::Allocation m_allocation;
     const VulkanDevice* m_device;

@@ -8,7 +8,7 @@ namespace crisp {
 class MicrofacetBSDF : public BSDF {
 public:
     MicrofacetBSDF(const VariantMap& params);
-    ~MicrofacetBSDF();
+    ~MicrofacetBSDF() = default;
 
     virtual Spectrum eval(const BSDF::Sample& bsdfSample) const override;
     virtual Spectrum sample(BSDF::Sample& bsdfSample, Sampler& sampler) const override;
