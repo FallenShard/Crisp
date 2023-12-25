@@ -1,13 +1,13 @@
 #pragma once
 
+#include <filesystem>
+
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Materials/PbrMaterial.hpp>
 #include <Crisp/Mesh/Io/ModelData.hpp>
 
-#include <filesystem>
-
 namespace crisp {
 
-Result<std::vector<ModelData>> loadGltfModel(const std::filesystem::path& path);
+Result<SceneData> loadGltfModel(const std::filesystem::path& path);
 
 } // namespace crisp

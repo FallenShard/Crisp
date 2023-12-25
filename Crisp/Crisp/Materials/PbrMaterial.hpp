@@ -28,6 +28,7 @@ struct PbrTextureGroup {
 struct PbrMaterial {
     std::string name;
     PbrTextureGroup textures;
+    std::array<int32_t, 6> textureIndices = {-1, -1, -1, -1, -1, -1};
     PbrParams params;
 };
 

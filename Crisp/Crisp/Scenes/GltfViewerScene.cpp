@@ -338,7 +338,7 @@ void GltfViewerScene::createCommonTextures() {
 
 void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
     const std::string gltfRelativePath{fmt::format("glTFSamples/2.0/{}/glTF/{}.gltf", gltfAsset, gltfAsset)};
-    auto renderObjects = loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath).unwrap();
+    auto [images, renderObjects] = loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath).unwrap();
 
     auto& renderObject = renderObjects.at(0);
     renderObject.material.name = gltfAsset;

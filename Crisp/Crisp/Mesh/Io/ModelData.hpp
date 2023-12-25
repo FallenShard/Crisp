@@ -16,4 +16,17 @@ struct ModelData {
 
     std::vector<AnimationData> animations;
 };
+
+struct TextureData {
+    enum class Format { sRGB, Linear };
+
+    Format format = Format::Linear;
+    Image image;
+};
+
+struct SceneData {
+    std::vector<TextureData> textures;
+    std::vector<ModelData> models;
+};
+
 } // namespace crisp

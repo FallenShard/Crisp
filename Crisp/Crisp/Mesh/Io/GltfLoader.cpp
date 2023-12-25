@@ -27,33 +27,46 @@ constexpr bool isValidGltfIndex(const int32_t index) {
 }
 
 template <typename T>
-//, size_t Size, typename Scalar>
-concept GlmVec = requires(T v) {
-    { T::length() } -> std::same_as<glm::length_t>;
-    typename T::value_type;
-};
-
-template <typename T>
 concept ScalarAttrib = std::floating_point<T> || (std::integral<T> && sizeof(T) <= 4);
 
 template <typename T>
-concept GltfAttrib = ScalarAttrib<T> || GlmVec<T>;
+struct IsGlmVec : public std::false_type {};
+
+template <typename T>
+struct IsGlmQuat : public std::false_type {};
+
+template <glm::length_t L, typename T>
+struct IsGlmVec<glm::vec<L, T, glm::defaultp>> : public std::true_type {};
+
+template <typename T>
+struct IsGlmQuat<glm::qua<T, glm::defaultp>> : public std::true_type {};
+
+template <typename T>
+concept GlmVector = IsGlmVec<T>::value;
+
+template <typename T>
+concept GlmQuaternion = IsGlmQuat<T>::value;
+
+template <typename T>
+concept GltfAttrib = ScalarAttrib<T> || GlmVector<T> || GlmQuaternion<T>;
 
 template <GltfAttrib T>
-struct ComponentTypeHelper;
-
-template <GlmVec T>
-struct ComponentTypeHelper<T> {
-    using ComponentType = typename T::value_type;
+struct ComponentTypeHelper {
+    using Type = typename T::value_type;
+    static constexpr int32_t kCount = T::length();
 };
 
 template <ScalarAttrib T>
 struct ComponentTypeHelper<T> {
-    using ComponentType = T;
+    using Type = T;
+    static constexpr int32_t kCount = 1;
 };
 
 template <GltfAttrib T>
-using ComponentType = typename ComponentTypeHelper<T>::ComponentType;
+using ComponentType = typename ComponentTypeHelper<T>::Type;
+
+template <GltfAttrib T>
+constexpr int32_t ComponentCount = ComponentTypeHelper<T>::kCount;
 
 template <ScalarAttrib T>
 int32_t determineGltfComponentType() {
@@ -81,15 +94,6 @@ int32_t determineGltfComponentType() {
     }
 }
 
-template <GltfAttrib T>
-int32_t getComponentCount() {
-    if constexpr (std::is_floating_point_v<T>) {
-        return 1;
-    } else {
-        return T::length();
-    }
-}
-
 Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor) {
     const auto& bufferView{model.bufferViews.at(accessor.bufferView)};
     const auto& buffer{model.buffers.at(bufferView.buffer)};
@@ -108,13 +112,14 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, co
 
     std::vector<glm::uvec3> indices(triangleCount);
     if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && byteStride == attributeByteSize) {
-        std::memcpy(indices.data(), buffer.data.data() + bufferView.byteOffset, accessor.count * attributeByteSize);
+        std::memcpy(
+            indices.data(), buffer.data.data() + bufferView.byteOffset, accessor.count * attributeByteSize); // NOLINT
     } else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
         glm::u16vec3 temp{};
         for (size_t i = 0; i < indices.size(); ++i) {
             for (uint32_t j = 0; j < 3; ++j) {
                 const size_t offset{bufferRangeStart + (i * 3 + j) * byteStride};
-                std::memcpy(&temp[j], buffer.data.data() + offset, attributeByteSize);
+                std::memcpy(&temp[j], buffer.data.data() + offset, attributeByteSize); // NOLINT
             }
             indices[i] = glm::uvec3(temp.x, temp.y, temp.z);
         }
@@ -131,7 +136,7 @@ Result<std::vector<DstType>> createBuffer(const tinygltf::Model& model, const ti
     CRISP_CHECK_EQ(accessor.componentType, determineGltfComponentType<ComponentType<SrcType>>());
 
     const int32_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
-    CRISP_CHECK_EQ(componentCount, getComponentCount<SrcType>());
+    CRISP_CHECK_EQ(componentCount, ComponentCount<SrcType>);
 
     const int32_t attributeByteSize = componentCount * componentByteSize;
     CRISP_CHECK_EQ(attributeByteSize, sizeof(SrcType));
@@ -176,7 +181,8 @@ Result<std::vector<DstType>> createBuffer(
 
 struct GltfImageLoader {
     const std::filesystem::path baseDir;
-    std::vector<std::pair<std::string, Image>> loadedImages;
+    std::vector<TextureData> loadedTextures;
+    uint64_t bytesTotal{0};
 };
 
 bool loadImageFromGltf(
@@ -200,7 +206,8 @@ bool loadImageFromGltf(
 
     GltfImageLoader& imageLoader{*static_cast<GltfImageLoader*>(userPtr)};
     const std::filesystem::path fullPath{imageLoader.baseDir / image->uri};
-    imageLoader.loadedImages.emplace_back(image->uri, loadImage(fullPath).unwrap());
+    imageLoader.bytesTotal += size;
+    imageLoader.loadedTextures.emplace_back(TextureData::Format::Linear, loadImage(fullPath).unwrap());
     return true;
 }
 
@@ -248,50 +255,50 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 
 } // namespace
 
-PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Material& material, GltfImageLoader& imageLoader) {
+PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Model& model, const tinygltf::Material& material) {
     PbrMaterial pbrMat{};
-
-    const auto getTexture = [&imageLoader](std::optional<Image>& image, const int32_t textureIndex) {
-        if (textureIndex != GltfInvalidIdx) {
-            image = imageLoader.loadedImages.at(textureIndex).second;
+    const auto getTexture = [&model](int32_t& index, const int32_t textureIndex) {
+        if (isValidGltfIndex(textureIndex)) {
+            const int32_t sourceIndex = model.textures.at(textureIndex).source;
+            index = sourceIndex;
+            // image = imageLoader.loadedImages.at(sourceIndex).second;
+            return true;
         }
+        return false;
     };
 
-    // Base color (albedo).
-    getTexture(pbrMat.textures.albedo, material.pbrMetallicRoughness.baseColorTexture.index);
+    getTexture(pbrMat.textureIndices[0], material.pbrMetallicRoughness.baseColorTexture.index);
     pbrMat.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
 
-    getTexture(pbrMat.textures.normal, material.normalTexture.index);
-    getTexture(pbrMat.textures.emissive, material.emissiveTexture.index);
-
-    // Metallic and roughness.
-    if (material.pbrMetallicRoughness.metallicRoughnessTexture.index != GltfInvalidIdx) {
-        const auto& imageNamePair{
-            imageLoader.loadedImages.at(material.pbrMetallicRoughness.metallicRoughnessTexture.index)};
-
-        pbrMat.textures.roughness = imageNamePair.second.createFromChannel(RoughnessMapChannel);
-        pbrMat.textures.metallic = imageNamePair.second.createFromChannel(MetallicMapChannel);
+    if (getTexture(pbrMat.textureIndices[2], material.pbrMetallicRoughness.metallicRoughnessTexture.index)) {
+        pbrMat.textureIndices[3] = pbrMat.textureIndices[2];
     }
     pbrMat.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
     pbrMat.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
 
-    // Occlusion.
-    if (material.occlusionTexture.index != GltfInvalidIdx) {
-        pbrMat.textures.occlusion =
-            imageLoader.loadedImages.at(material.occlusionTexture.index).second.createFromChannel(OcclusionMapChannel);
-    }
+    getTexture(pbrMat.textureIndices[1], material.normalTexture.index);
+
+    getTexture(pbrMat.textureIndices[4], material.occlusionTexture.index);
     pbrMat.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
+
+    getTexture(pbrMat.textureIndices[5], material.emissiveTexture.index);
 
     return pbrMat;
 }
 
 TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinygltf::Primitive& primitive) {
+    CRISP_CHECK_EQ(primitive.mode, TINYGLTF_MODE_TRIANGLES);
+
+    if (!primitive.targets.empty()) {
+        logger->info("Encountered morph targets in primitive will be skipped.");
+    }
+
     std::vector<glm::vec3> positions{createBuffer<glm::vec3>(model, primitive, "POSITION").unwrap()};
     std::vector<glm::vec3> normals{createBuffer<glm::vec3>(model, primitive, "NORMAL").unwrap()};
     std::vector<glm::vec2> texCoords{createBuffer<glm::vec2>(model, primitive, "TEXCOORD_0").unwrap()};
     std::vector<glm::vec4> tangents{createBuffer<glm::vec4>(model, primitive, "TANGENT").unwrap()};
 
-    CRISP_CHECK_GE(primitive.indices, 0);
+    CRISP_CHECK_GE_LT(primitive.indices, 0, static_cast<int32_t>(model.accessors.size()));
     std::vector<glm::uvec3> indices{loadIndexBuffer(model, model.accessors.at(primitive.indices)).unwrap()};
 
     TriangleMesh triangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(indices)};
@@ -372,30 +379,28 @@ void createModelDataFromNode(
     }
 
     if (isValidGltfIndex(node.mesh)) {
-        const auto& currMesh{model.meshes.at(node.mesh)};
+        const auto& mesh{model.meshes.at(node.mesh)};
         CRISP_CHECK(node.weights.empty(), "Morph targets are not supported!");
 
-        // We also assume the mesh has only 1 primitive. In GLTF parlance, that's a submesh.
-        const auto& currPrimitive{currMesh.primitives.at(0)};
+        for (const auto& primitive : mesh.primitives) {
+            modelData.transform = getNodeTransform(node);
+            modelData.mesh = createMeshFromPrimitive(model, primitive);
 
-        modelData.transform = getNodeTransform(node);
-        modelData.mesh = createMeshFromPrimitive(model, currPrimitive);
+            modelData.mesh.setCustomAttribute(
+                "weights0",
+                createCustomVertexAttributeBuffer<glm::vec4>(
+                    createBuffer<glm::vec4>(model, primitive, "WEIGHTS_0").unwrap()));
+            modelData.mesh.setCustomAttribute(
+                "indices0",
+                createCustomVertexAttributeBuffer<glm::uvec4>(
+                    createBuffer<glm::uvec4, glm::u16vec4>(model, primitive, "JOINTS_0").unwrap()));
 
-        modelData.mesh.setCustomAttribute(
-            "weights0",
-            createCustomVertexAttributeBuffer<glm::vec4>(
-                createBuffer<glm::vec4>(model, currPrimitive, "WEIGHTS_0").unwrap()));
-        modelData.mesh.setCustomAttribute(
-            "indices0",
-            createCustomVertexAttributeBuffer<glm::uvec4>(
-                createBuffer<glm::uvec4, glm::u16vec4>(model, currPrimitive, "JOINTS_0").unwrap()));
+            if (isValidGltfIndex(primitive.material)) {
+                modelData.material = createPbrMaterialFromGltfMaterial(model, model.materials.at(primitive.material));
+            }
 
-        if (isValidGltfIndex(currPrimitive.material)) {
-            modelData.material =
-                createPbrMaterialFromGltfMaterial(model.materials.at(currPrimitive.material), imageLoader);
+            models.push_back(std::move(modelData));
         }
-
-        models.push_back(std::move(modelData));
     }
 
     for (const uint32_t childIdx : node.children) {
@@ -438,7 +443,7 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
     return anim;
 }
 
-Result<std::vector<ModelData>> loadGltfModel(const std::filesystem::path& path) {
+Result<SceneData> loadGltfModel(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
         return resultError("GLTF path '{}' doesn't exist!", path.string());
     }
@@ -452,6 +457,7 @@ Result<std::vector<ModelData>> loadGltfModel(const std::filesystem::path& path) 
     std::string err{};
     std::string warn{};
     const bool success{loader.LoadASCIIFromFile(&model, &err, &warn, path.string())};
+    logger->trace("{} MB for images.", (imageLoader.bytesTotal >> 20) + 1);
 
     if (!warn.empty()) {
         logger->warn("GLTF warning from {}: {}", path.string(), warn);
@@ -468,11 +474,11 @@ Result<std::vector<ModelData>> loadGltfModel(const std::filesystem::path& path) 
 
     CRISP_CHECK_EQ(model.scenes.size(), 1, "Multi-scene GLTF is unsupported.");
     CRISP_CHECK_EQ(model.defaultScene, 0);
-    const auto& gltfScene{model.scenes.at(model.defaultScene)};
+    const auto& scene{model.scenes.at(model.defaultScene)};
 
-    std::vector<ModelData> modelData{};
-    for (const int32_t nodeIndex : gltfScene.nodes) {
-        createModelDataFromNode(model, model.nodes[nodeIndex], imageLoader, modelData);
+    SceneData sceneData{};
+    for (const int32_t nodeIndex : scene.nodes) {
+        createModelDataFromNode(model, model.nodes[nodeIndex], imageLoader, sceneData.models);
     }
 
     std::vector<AnimationData> animations{};
@@ -481,12 +487,13 @@ Result<std::vector<ModelData>> loadGltfModel(const std::filesystem::path& path) 
 
         // Check if animation matches the skeleton.
         for (auto& channel : animations.back().channels) {
-            channel.targetNode = modelData.back().skinningData.modelNodeToLinearIdx[channel.targetNode]; // NOLINT
+            channel.targetNode = sceneData.models.back().skinningData.modelNodeToLinearIdx[channel.targetNode]; // NOLINT
         }
     }
-    modelData.back().animations = std::move(animations);
+    sceneData.models.back().animations = std::move(animations);
+    sceneData.textures = std::move(imageLoader.loadedTextures);
 
-    return modelData;
+    return sceneData;
 }
 
 } // namespace crisp

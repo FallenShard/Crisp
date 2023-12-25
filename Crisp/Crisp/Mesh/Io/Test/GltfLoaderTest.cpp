@@ -6,8 +6,8 @@ namespace crisp {
 namespace {
 const std::filesystem::path ResourceDir("D:/Projects/Crisp/Resources/glTFSamples/2.0");
 
-std::filesystem::path getGltfPath(std::string&& gltfName) {
-    return ResourceDir / gltfName / "glTF" / (gltfName + ".gltf");
+std::filesystem::path getGltfPath(const std::string_view gltfName) {
+    return ResourceDir / gltfName / "glTF" / gltfName / ".gltf";
 }
 
 MATCHER(HasValue, "") {
@@ -24,7 +24,7 @@ TEST(GltfLoaderTest, LoadAvocado) {
     auto meshResult = loadGltfModel(getGltfPath("Avocado"));
     EXPECT_THAT(meshResult, HasValue());
     const auto mesh = meshResult.unwrap();
-    EXPECT_EQ(mesh[0].mesh.getVertexCount(), 406);
+    EXPECT_EQ(mesh.models[0].mesh.getVertexCount(), 406);
 }
 
 } // namespace

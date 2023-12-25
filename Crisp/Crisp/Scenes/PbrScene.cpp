@@ -10,6 +10,7 @@
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
@@ -71,13 +72,13 @@ Material* createPbrMaterial(
     auto* material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
 
-    const auto setMaterialTexture = [&material, &imageCache, &materialKey](
-                                        const uint32_t index, const std::string_view texName) {
-        const std::string key = fmt::format("{}-{}", materialKey, texName);
-        const std::string fallbackKey = fmt::format("default-{}", texName);
-        material->writeDescriptor(
-            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    };
+    const auto setMaterialTexture =
+        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
+            const std::string key = fmt::format("{}-{}", materialKey, texName);
+            const std::string fallbackKey = fmt::format("default-{}", texName);
+            material->writeDescriptor(
+                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+        };
 
     setMaterialTexture(0, "diffuse");
     setMaterialTexture(1, "metallic");
@@ -136,14 +137,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
         m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-
-        const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-        m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
-        for (auto& sv : m_sceneImageViews) {
-            sv = m_rg->createViewFromResource(data.hdrImage);
-        }
-
-        m_renderer->setSceneImageViews(m_sceneImageViews);
+        updateSceneViews();
     });
     m_renderer->flushResourceUpdates(true);
 
@@ -154,7 +148,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         kDefaultCascadeCount);
 
     // Object transforms
-    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
+    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 5000);
     m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->get(), "transformBuffer");
 
     createCommonTextures();
@@ -168,13 +162,11 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
     }
 
-    createPlane();
+    // createPlane();
     createSceneObject(args["modelPath"]);
 
     m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
-        *m_renderer,
-        m_rg->getRenderPass(kForwardLightingPass),
-        m_resourceContext->imageCache.getSampler("linearClamp"));
+        *m_renderer, m_rg->getRenderPass(kForwardLightingPass), m_resourceContext->imageCache.getSampler("linearClamp"));
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
@@ -190,14 +182,7 @@ void PbrScene::resize(int width, int height) {
     m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
         m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
         updateMaterialsWithRenderGraphResources();
-
-        const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-        m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
-        for (auto& sv : m_sceneImageViews) {
-            sv = m_rg->createViewFromResource(data.hdrImage);
-        }
-
-        m_renderer->setSceneImageViews(m_sceneImageViews);
+        updateSceneViews();
     });
     m_renderer->flushResourceUpdates(true);
 }
@@ -213,7 +198,7 @@ void PbrScene::update(float dt) {
     m_lightSystem->update(m_cameraController->getCamera(), dt);
     m_skybox->updateTransforms(camParams.V, camParams.P);
 
-    m_resourceContext->getUniformBuffer("sceneObject-params")->updateStagingBuffer(m_uniformMaterialParams);
+    // m_resourceContext->getUniformBuffer("sceneObject-params")->updateStagingBuffer(m_uniformMaterialParams);
 }
 
 void PbrScene::render() {
@@ -222,6 +207,9 @@ void PbrScene::render() {
 
 void PbrScene::renderGui() {
     drawCameraUi(m_cameraController->getCamera());
+    ImGui::Begin("Render Graph");
+    drawGui(*m_rg);
+    ImGui::End();
     // ImGui::Begin("Settings");
     // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness,
     // 0.0f, 1.0f); ImGui::SliderFloat("Metallic",
@@ -272,13 +260,13 @@ void PbrScene::onMaterialSelected(const std::string& materialName) {
     auto* shaderBallMaterial = m_resourceContext->getMaterial("pbrTexshaderBall");
 
     auto& imageCache{m_resourceContext->imageCache};
-    const auto setMaterialTexture = [&shaderBallMaterial, &imageCache, &pbrMaterial](
-                                        const uint32_t index, const std::string_view texName) {
-        const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
-        const std::string fallbackKey = fmt::format("default-{}", texName);
-        shaderBallMaterial->writeDescriptor(
-            2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    };
+    const auto setMaterialTexture =
+        [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName) {
+            const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
+            const std::string fallbackKey = fmt::format("default-{}", texName);
+            shaderBallMaterial->writeDescriptor(
+                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+        };
 
     if (pbrMaterial.name != "Grass") {
         addPbrTexturesToImageCache(loadPbrTextureGroup(materialPath), pbrMaterial.name, imageCache);
@@ -333,25 +321,124 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
 void PbrScene::createSceneObject(const std::filesystem::path& path) {
     // m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
 
-    const std::string entityName{"sceneObject"};
-    auto* sceneObject = createRenderNode(entityName, true);
-    TriangleMesh mesh{};
-    PbrMaterial material{};
     if (path.extension() == ".gltf") {
-        const std::filesystem::path fullPath{m_renderer->getResourcesPath() / path};
-        auto renderObjects = loadGltfModel(fullPath).unwrap();
+        const std::filesystem::path fullPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
+        auto [images, renderObjects] = loadGltfModel(fullPath).unwrap();
         logger->info("Loaded {} objects from {}.", renderObjects.size(), fullPath.generic_string());
 
-        mesh = std::move(renderObjects.at(0).mesh);
+        FlatHashSet<int32_t> metallicRoughnessMaps;
+        for (const auto& renderObject : renderObjects) {
+            if (renderObject.material.textureIndices[2] != -1) {
+                metallicRoughnessMaps.insert(renderObject.material.textureIndices[2]);
+            }
+        }
 
-        material = std::move(renderObjects.at(0).material);
-        material.name = path.stem().generic_string();
-        m_uniformMaterialParams = material.params;
+        for (const auto& [idx, data] : std::views::enumerate(images)) {
+            const std::string key = fmt::format("IMAGE-{}", idx);
+            if (metallicRoughnessMaps.contains(static_cast<int32_t>(idx))) {
+                m_resourceContext->imageCache.addImageWithView(
+                    fmt::format("IMAGE-M-{}", idx),
+                    createVulkanImage(*m_renderer, data.image.createFromChannel(2), VK_FORMAT_R8G8B8A8_UNORM));
+                m_resourceContext->imageCache.addImageWithView(
+                    fmt::format("IMAGE-R-{}", idx),
+                    createVulkanImage(*m_renderer, data.image.createFromChannel(1), VK_FORMAT_R8G8B8A8_UNORM));
+            } else {
+                m_resourceContext->imageCache.addImageWithView(
+                    key,
+                    createVulkanImage(
+                        *m_renderer,
+                        data.image,
+                        data.format == TextureData::Format::sRGB ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM));
+            }
+        }
 
-        const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-        sceneObject->transformPack->M = translation;
+        // mesh = std::move(renderObjects.at(0).mesh);
+
+        // material = std::move(renderObjects.at(0).material);
+        // material.name = path.stem().generic_string();
+        // m_uniformMaterialParams = material.params;
+
+        const auto makeMaterial =
+            [](const std::string& materialId,
+               const std::array<int32_t, 6>& textureIndices,
+               ResourceContext& resourceContext,
+               const PbrParams& params,
+               const TransformBuffer& transformBuffer) {
+                auto& imageCache = resourceContext.imageCache;
+
+                auto* material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
+                material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
+
+                const auto setMaterialTexture =
+                    [&material,
+                     &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
+                        const std::string fallbackKey = fmt::format("default-{}", texName);
+                        material->writeDescriptor(
+                            2,
+                            index,
+                            imageCache.getImageView(texKey, fallbackKey),
+                            imageCache.getSampler("linearRepeat"));
+                    };
+
+                setMaterialTexture(0, "diffuse", fmt::format("IMAGE-{}", textureIndices[0]));
+                setMaterialTexture(1, "metallic", fmt::format("IMAGE-M-{}", textureIndices[2]));
+                setMaterialTexture(2, "roughness", fmt::format("IMAGE-R-{}", textureIndices[3]));
+                setMaterialTexture(3, "normal", fmt::format("IMAGE-{}", textureIndices[1]));
+                setMaterialTexture(4, "ao", fmt::format("IMAGE-{}", textureIndices[4]));
+                setMaterialTexture(5, "emissive", fmt::format("IMAGE-{}", textureIndices[5]));
+
+                const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
+                material->writeDescriptor(
+                    2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
+
+                return material;
+            };
+
+        for (auto&& [idx, renderObject] : std::views::enumerate(renderObjects)) {
+            const std::string materialName = fmt::format("material_{}", idx);
+            const std::string entityName = fmt::format("renderObject_{}", idx);
+            m_shaderBallPbrMaterialKey = fmt::format("material_{}", idx);
+            // addPbrTexturesToImageCache(renderObject.material.textures, materialName, m_resourceContext->imageCache);
+
+            logger->info("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
+
+            m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+
+            auto* sceneObject = createRenderNode(entityName, true);
+            sceneObject->geometry = m_resourceContext->getGeometry(entityName);
+            sceneObject->transformPack->M = renderObject.transform;
+            sceneObject->pass(kForwardLightingPass).material = makeMaterial(
+                entityName,
+                renderObject.material.textureIndices,
+                *m_resourceContext,
+                renderObject.material.params,
+                *m_transformBuffer);
+            setPbrMaterialSceneParams(
+                *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
+            m_renderer->getDevice().flushDescriptorUpdates();
+
+            for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
+                auto& subpass = sceneObject->pass(kCsmPasses[c]);
+                subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
+                subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
+                CRISP_CHECK(
+                    subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
+            }
+        }
+
+        m_renderer->getDevice().flushDescriptorUpdates();
+
+        // const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
+        // sceneObject->transformPack->M = translation;
         // translation * glm::rotate(glm::pi<float>() * 0.5f, glm ::vec3(1.0f, 0.0f, 0.0f));
-    } else {
+    }
+
+    else {
+        const std::string entityName{"sceneObject"};
+        auto* sceneObject = createRenderNode(entityName, true);
+        TriangleMesh mesh{};
+        PbrMaterial material{};
+
         auto [triMesh, materials] =
             loadTriangleMeshAndMaterial(
                 m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(kPbrVertexFormat))
@@ -368,25 +455,25 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
         sceneObject->transformPack->M = translation * glm::scale(glm::vec3(10.0f / maxDimLength));
     }
 
-    m_shaderBallPbrMaterialKey = material.name;
-    addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
+    // m_shaderBallPbrMaterialKey = material.name;
+    // addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
 
-    m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, mesh, kPbrVertexFormat));
-    sceneObject->geometry = m_resourceContext->getGeometry(entityName);
-    sceneObject->pass(kForwardLightingPass).material =
-        createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
-    setPbrMaterialSceneParams(
-        *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
-    m_renderer->getDevice().flushDescriptorUpdates();
+    // m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, mesh, kPbrVertexFormat));
+    // sceneObject->geometry = m_resourceContext->getGeometry(entityName);
+    // sceneObject->pass(kForwardLightingPass).material =
+    //     createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
+    // setPbrMaterialSceneParams(
+    //     *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
+    // m_renderer->getDevice().flushDescriptorUpdates();
 
-    for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-        auto& subpass = sceneObject->pass(kCsmPasses[c]);
-        subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
-        subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
-        CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
-    }
+    // for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
+    //     auto& subpass = sceneObject->pass(kCsmPasses[c]);
+    //     subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
+    //     subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
+    //     CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
+    // }
 
-    m_renderer->getDevice().flushDescriptorUpdates();
+    // m_renderer->getDevice().flushDescriptorUpdates();
 }
 
 void PbrScene::createPlane() {
@@ -408,10 +495,11 @@ void PbrScene::createPlane() {
         createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
     setPbrMaterialSceneParams(*floor->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
 
-    CRISP_CHECK(floor->pass(kForwardLightingPass)
-                    .material->getPipeline()
-                    ->getVertexLayout()
-                    .isSubsetOf(floor->geometry->getVertexLayout()));
+    CRISP_CHECK(
+        floor->pass(kForwardLightingPass)
+            .material->getPipeline()
+            ->getVertexLayout()
+            .isSubsetOf(floor->geometry->getVertexLayout()));
 }
 
 void PbrScene::setupInput() {
@@ -442,4 +530,15 @@ void PbrScene::updateMaterialsWithRenderGraphResources() {
     //*sceneObject->pass(kForwardLightingPass).material, *m_resourceContext,
     //*m_lightSystem, *m_rg
 }
+
+void PbrScene::updateSceneViews() {
+    const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
+    m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+    for (auto& sv : m_sceneImageViews) {
+        sv = m_rg->createViewFromResource(data.hdrImage);
+    }
+
+    m_renderer->setSceneImageViews(m_sceneImageViews);
+}
+
 } // namespace crisp
