@@ -96,15 +96,6 @@ Result<Image> loadImage(
     int32_t width = 0;
     int32_t height = 0;
     int32_t channelCount = 0;
-    /*const std::string filePathString = filePath.string();
-    if (filePath.extension().string() == ".hdr")
-    {
-        elementSize = sizeof(float);
-        dataPtr = stbi_loadf(
-            filePathString.c_str(), &width, &height, &channelCount, getStbComponentFormat(requestedChannels));
-    }
-    else
-    {*/
     dataPtr = stbi_load_from_memory(
         imageFileContent.data(),
         static_cast<int32_t>(imageFileContent.size()),
@@ -112,7 +103,6 @@ Result<Image> loadImage(
         &height,
         &channelCount,
         getStbComponentFormat(requestedChannels));
-    //}
     stbi_set_flip_vertically_on_load(false);
 
     if (!dataPtr) {
@@ -123,15 +113,7 @@ Result<Image> loadImage(
     const uint32_t imageHeight = static_cast<uint32_t>(height);
 
     std::vector<uint8_t> pixelData(imageWidth * imageHeight * requestedChannels * elementSize);
-    for (uint32_t i = 0; i < imageHeight; ++i) {
-        for (uint32_t j = 0; j < imageWidth; ++j) {
-            const std::size_t copySize = std::min(channelCount, requestedChannels) * elementSize;
-            uint8_t* dstPtr = &pixelData[(imageWidth * i + j) * requestedChannels * elementSize];
-            const uint8_t* srcPtr =
-                &(static_cast<uint8_t*>(dataPtr)[(imageWidth * i + j) * channelCount * elementSize]);
-            std::memcpy(dstPtr, srcPtr, copySize);
-        }
-    }
+    memcpy(pixelData.data(), dataPtr, pixelData.size());
     stbi_image_free(dataPtr);
 
     return Image(std::move(pixelData), imageWidth, imageHeight, requestedChannels, requestedChannels * elementSize);

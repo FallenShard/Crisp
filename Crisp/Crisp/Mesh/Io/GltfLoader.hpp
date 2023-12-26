@@ -8,6 +8,6 @@
 
 namespace crisp {
 
-Result<SceneData> loadGltfModel(const std::filesystem::path& path);
+Result<SceneData> loadGltfAsset(const std::filesystem::path& path);
 
 } // namespace crisp

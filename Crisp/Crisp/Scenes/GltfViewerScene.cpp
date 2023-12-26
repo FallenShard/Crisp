@@ -18,7 +18,7 @@ const auto logger = createLoggerMt("GltfViewerScene");
 
 constexpr uint32_t kShadowMapSize = 1024;
 
-void setPbrMaterialSceneParams(
+[[maybe_unused]] void setPbrMaterialSceneParams(
     Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem) {
     const auto& imageCache = resourceContext.imageCache;
     const auto& envLight = *lightSystem.getEnvironmentLight();
@@ -32,7 +32,7 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(1, 6, 1, imageCache.getImageView("csmFrame1"), &imageCache.getSampler("nearestNeighbor"));
 }
 
-Material* createPbrMaterial(
+[[maybe_unused]] Material* createPbrMaterial(
     const std::string& materialId,
     const std::string& materialKey,
     ResourceContext& resourceContext,
@@ -338,27 +338,28 @@ void GltfViewerScene::createCommonTextures() {
 
 void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
     const std::string gltfRelativePath{fmt::format("glTFSamples/2.0/{}/glTF/{}.gltf", gltfAsset, gltfAsset)};
-    auto [images, renderObjects] = loadGltfModel(m_renderer->getResourcesPath() / gltfRelativePath).unwrap();
+    auto [images, renderObjects] = loadGltfAsset(m_renderer->getResourcesPath() / gltfRelativePath).unwrap();
 
     auto& renderObject = renderObjects.at(0);
-    renderObject.material.name = gltfAsset;
+    // renderObject.material.name = gltfAsset;
 
-    m_cameraController->setTarget(renderObject.mesh.getBoundingBox().getCenter());
-    // m_cameraController->setOrientation(glm::pi<float>() * 0.25f, -glm::pi<float>() * 0.25f);
-    m_cameraController->setDistance(glm::length(renderObject.mesh.getBoundingBox().getExtents()) * 2.0f);
+    // m_cameraController->setTarget(renderObject.mesh.getBoundingBox().getCenter());
+    // // m_cameraController->setOrientation(glm::pi<float>() * 0.25f, -glm::pi<float>() * 0.25f);
+    // m_cameraController->setDistance(glm::length(renderObject.mesh.getBoundingBox().getExtents()) * 2.0f);
 
     const std::string entityName{"gltfNode"};
     auto gltfNode = createRenderNode(entityName, true);
-    gltfNode->transformPack->M = renderObject.transform;
+    // gltfNode->transformPack->M = renderObject.transform;
 
-    addPbrTexturesToImageCache(
-        renderObject.material.textures, renderObject.material.name, m_resourceContext->imageCache);
+    // addPbrTexturesToImageCache(
+    //     renderObject.material.textures, renderObject.material.name, m_resourceContext->imageCache);
 
-    m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
-    gltfNode->geometry = m_resourceContext->getGeometry(entityName);
-    gltfNode->pass(kForwardLightingPass).material = createPbrMaterial(
-        entityName, renderObject.material.name, *m_resourceContext, renderObject.material.params, *m_transformBuffer);
-    setPbrMaterialSceneParams(*gltfNode->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem);
+    // m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+    // gltfNode->geometry = m_resourceContext->getGeometry(entityName);
+    // gltfNode->pass(kForwardLightingPass).material = createPbrMaterial(
+    //     entityName, renderObject.material.name, *m_resourceContext, renderObject.material.params,
+    //     *m_transformBuffer);
+    // setPbrMaterialSceneParams(*gltfNode->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem);
 
     for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
         auto& subpass = gltfNode->pass(kCsmPasses[c]);

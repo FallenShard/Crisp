@@ -1,7 +1,6 @@
 #include <Crisp/Mesh/Io/GltfLoader.hpp>
 
-#include <Crisp/Core/Checks.hpp>
-#include <Crisp/Image/Io/Utils.hpp>
+#include <ranges>
 
 #pragma warning(push)
 #pragma warning(disable : 4018) // Signed/unsigned comparison.
@@ -12,13 +11,15 @@
 #include <tiny_gltf.h>
 #pragma warning(pop)
 
+#include <Crisp/Core/Checks.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
+
 namespace crisp {
 namespace {
 const auto logger = createLoggerMt("GltfLoader");
 
-constexpr uint32_t OcclusionMapChannel{0};
-constexpr uint32_t RoughnessMapChannel{1};
-constexpr uint32_t MetallicMapChannel{2};
+constexpr uint32_t kRoughnessMapChannel{1};
+constexpr uint32_t kMetallicMapChannel{2};
 
 constexpr int32_t GltfInvalidIdx{-1};
 
@@ -32,11 +33,11 @@ concept ScalarAttrib = std::floating_point<T> || (std::integral<T> && sizeof(T) 
 template <typename T>
 struct IsGlmVec : public std::false_type {};
 
-template <typename T>
-struct IsGlmQuat : public std::false_type {};
-
 template <glm::length_t L, typename T>
 struct IsGlmVec<glm::vec<L, T, glm::defaultp>> : public std::true_type {};
+
+template <typename T>
+struct IsGlmQuat : public std::false_type {};
 
 template <typename T>
 struct IsGlmQuat<glm::qua<T, glm::defaultp>> : public std::true_type {};
@@ -48,7 +49,10 @@ template <typename T>
 concept GlmQuaternion = IsGlmQuat<T>::value;
 
 template <typename T>
-concept GltfAttrib = ScalarAttrib<T> || GlmVector<T> || GlmQuaternion<T>;
+concept GlmAttrib = GlmVector<T> || GlmQuaternion<T>;
+
+template <typename T>
+concept GltfAttrib = ScalarAttrib<T> || GlmAttrib<T>;
 
 template <GltfAttrib T>
 struct ComponentTypeHelper {
@@ -181,7 +185,7 @@ Result<std::vector<DstType>> createBuffer(
 
 struct GltfImageLoader {
     const std::filesystem::path baseDir;
-    std::vector<TextureData> loadedTextures;
+    std::vector<ImageData> loadedImages;
     uint64_t bytesTotal{0};
 };
 
@@ -190,28 +194,27 @@ bool loadImageFromGltf(
     const int32_t imageIdx,
     std::string* err,
     std::string* warn,
-    const int32_t reqWidth,
-    const int32_t reqHeight,
+    const int32_t /*reqWidth*/,
+    const int32_t /*reqHeight*/,
     const uint8_t* bytes,
     const int32_t size,
     void* userPtr) {
-    logger->info("Index {}, Uri: {}, required size: {} x {}", imageIdx, image->uri, reqWidth, reqHeight);
-    logger->info("Size {}, bytes {}", size, bytes ? "available" : "empty");
+    CRISP_CHECK(image != nullptr);
+    logger->info("Loading image {:>4} '{}', byte size {} from {}.", imageIdx, image->name, size, image->uri);
     if (err && !err->empty()) {
-        logger->error("Error while loading GLTF texture: {}", *err);
+        logger->error("Error while loading GLTF image: {}", *err);
     }
     if (warn && !warn->empty()) {
-        logger->warn("Warning while loading GLTF texture: {}", *warn);
+        logger->warn("Warning while loading GLTF image: {}", *warn);
     }
 
     GltfImageLoader& imageLoader{*static_cast<GltfImageLoader*>(userPtr)};
-    const std::filesystem::path fullPath{imageLoader.baseDir / image->uri};
     imageLoader.bytesTotal += size;
-    imageLoader.loadedTextures.emplace_back(TextureData::Format::Linear, loadImage(fullPath).unwrap());
+    imageLoader.loadedImages.emplace_back(loadImage(std::span(bytes, size)).unwrap(), image->name);
     return true;
 }
 
-template <typename GlmType, typename T>
+template <GlmAttrib GlmType, typename T>
 GlmType toGlm(const std::vector<T>& values) {
     CRISP_CHECK_EQ(values.size(), GlmType::length());
     GlmType glmValue{};
@@ -255,35 +258,37 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 
 } // namespace
 
-PbrMaterial createPbrMaterialFromGltfMaterial(const tinygltf::Model& model, const tinygltf::Material& material) {
-    PbrMaterial pbrMat{};
-    const auto getTexture = [&model](int32_t& index, const int32_t textureIndex) {
+MaterialData createPbrMaterialFromGltfMaterial(
+    const tinygltf::Model& model, const tinygltf::Material& material, GltfImageLoader& loader) {
+    MaterialData data{};
+    const auto getTexture = [&model, &loader, &data](const int32_t index, const int32_t textureIndex) {
         if (isValidGltfIndex(textureIndex)) {
             const int32_t sourceIndex = model.textures.at(textureIndex).source;
-            index = sourceIndex;
-            // image = imageLoader.loadedImages.at(sourceIndex).second;
+            data.textureIndices[index] = sourceIndex;
+            loader.loadedImages[sourceIndex].accessTypes[index] = true;
             return true;
         }
         return false;
     };
 
-    getTexture(pbrMat.textureIndices[0], material.pbrMetallicRoughness.baseColorTexture.index);
-    pbrMat.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
+    getTexture(0, material.pbrMetallicRoughness.baseColorTexture.index);
+    data.pbr.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
 
-    if (getTexture(pbrMat.textureIndices[2], material.pbrMetallicRoughness.metallicRoughnessTexture.index)) {
-        pbrMat.textureIndices[3] = pbrMat.textureIndices[2];
+    if (getTexture(2, material.pbrMetallicRoughness.metallicRoughnessTexture.index)) {
+        data.textureIndices[3] = data.textureIndices[2];
+        loader.loadedImages[data.textureIndices[3]].accessTypes[3] = true;
     }
-    pbrMat.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-    pbrMat.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+    data.pbr.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+    data.pbr.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
 
-    getTexture(pbrMat.textureIndices[1], material.normalTexture.index);
+    getTexture(1, material.normalTexture.index);
 
-    getTexture(pbrMat.textureIndices[4], material.occlusionTexture.index);
-    pbrMat.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
+    getTexture(4, material.occlusionTexture.index);
+    data.pbr.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
 
-    getTexture(pbrMat.textureIndices[5], material.emissiveTexture.index);
+    getTexture(5, material.emissiveTexture.index);
 
-    return pbrMat;
+    return data;
 }
 
 TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinygltf::Primitive& primitive) {
@@ -396,7 +401,8 @@ void createModelDataFromNode(
                     createBuffer<glm::uvec4, glm::u16vec4>(model, primitive, "JOINTS_0").unwrap()));
 
             if (isValidGltfIndex(primitive.material)) {
-                modelData.material = createPbrMaterialFromGltfMaterial(model, model.materials.at(primitive.material));
+                modelData.material =
+                    createPbrMaterialFromGltfMaterial(model, model.materials.at(primitive.material), imageLoader);
             }
 
             models.push_back(std::move(modelData));
@@ -443,7 +449,54 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
     return anim;
 }
 
-Result<SceneData> loadGltfModel(const std::filesystem::path& path) {
+PbrImageData createPbrImageData(const std::span<ImageData> images, const std::span<ModelData> models) {
+    PbrImageData imageData{};
+    std::vector<int32_t> remappedIndices(images.size(), -1);
+
+    const auto appendImage = [&remappedIndices](std::vector<Image>& images, Image&& image, const size_t idx) {
+        images.push_back(std::move(image));
+        remappedIndices[idx] = static_cast<int32_t>(images.size()) - 1;
+    };
+
+    for (auto&& [idx, image] : std::views::enumerate(images)) {
+        if (image.accessTypes[0]) {
+            CRISP_CHECK(image.hasSingleAccessType());
+            appendImage(imageData.albedoMaps, std::move(image.image), idx);
+            continue;
+        }
+        if (image.accessTypes[1]) {
+            CRISP_CHECK(image.hasSingleAccessType());
+            appendImage(imageData.normalMaps, std::move(image.image), idx);
+            continue;
+        }
+        if (image.accessTypes[2]) {
+            appendImage(imageData.roughnessMaps, image.image.createFromChannel(kRoughnessMapChannel), idx);
+        }
+        if (image.accessTypes[3]) {
+            appendImage(imageData.metallicMaps, image.image.createFromChannel(kMetallicMapChannel), idx);
+        }
+        if (image.accessTypes[4]) {
+            CRISP_CHECK(image.hasSingleAccessType());
+            appendImage(imageData.occlusionMaps, std::move(image.image), idx);
+        }
+        if (image.accessTypes[5]) {
+            CRISP_CHECK(image.hasSingleAccessType());
+            appendImage(imageData.emissiveMaps, std::move(image.image), idx);
+        }
+    }
+
+    for (auto& model : models) {
+        for (auto& index : model.material.textureIndices) {
+            if (index != -1) {
+                index = remappedIndices[index];
+            }
+        }
+    }
+
+    return imageData;
+}
+
+Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
         return resultError("GLTF path '{}' doesn't exist!", path.string());
     }
@@ -491,7 +544,8 @@ Result<SceneData> loadGltfModel(const std::filesystem::path& path) {
         }
     }
     sceneData.models.back().animations = std::move(animations);
-    sceneData.textures = std::move(imageLoader.loadedTextures);
+
+    sceneData.images = createPbrImageData(imageLoader.loadedImages, sceneData.models);
 
     return sceneData;
 }

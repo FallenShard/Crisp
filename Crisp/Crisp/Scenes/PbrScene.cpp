@@ -323,40 +323,33 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 
     if (path.extension() == ".gltf") {
         const std::filesystem::path fullPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
-        auto [images, renderObjects] = loadGltfModel(fullPath).unwrap();
+        auto [images, renderObjects] = loadGltfAsset(fullPath).unwrap();
         logger->info("Loaded {} objects from {}.", renderObjects.size(), fullPath.generic_string());
 
-        FlatHashSet<int32_t> metallicRoughnessMaps;
-        for (const auto& renderObject : renderObjects) {
-            if (renderObject.material.textureIndices[2] != -1) {
-                metallicRoughnessMaps.insert(renderObject.material.textureIndices[2]);
-            }
+        for (const auto& [idx, data] : std::views::enumerate(images.albedoMaps)) {
+            m_resourceContext->imageCache.addImageWithView(
+                fmt::format("IMAGE-ALBEDO-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_SRGB));
         }
-
-        for (const auto& [idx, data] : std::views::enumerate(images)) {
-            const std::string key = fmt::format("IMAGE-{}", idx);
-            if (metallicRoughnessMaps.contains(static_cast<int32_t>(idx))) {
-                m_resourceContext->imageCache.addImageWithView(
-                    fmt::format("IMAGE-M-{}", idx),
-                    createVulkanImage(*m_renderer, data.image.createFromChannel(2), VK_FORMAT_R8G8B8A8_UNORM));
-                m_resourceContext->imageCache.addImageWithView(
-                    fmt::format("IMAGE-R-{}", idx),
-                    createVulkanImage(*m_renderer, data.image.createFromChannel(1), VK_FORMAT_R8G8B8A8_UNORM));
-            } else {
-                m_resourceContext->imageCache.addImageWithView(
-                    key,
-                    createVulkanImage(
-                        *m_renderer,
-                        data.image,
-                        data.format == TextureData::Format::sRGB ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM));
-            }
+        for (const auto& [idx, data] : std::views::enumerate(images.normalMaps)) {
+            m_resourceContext->imageCache.addImageWithView(
+                fmt::format("IMAGE-NORMAL-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_UNORM));
         }
-
-        // mesh = std::move(renderObjects.at(0).mesh);
-
-        // material = std::move(renderObjects.at(0).material);
-        // material.name = path.stem().generic_string();
-        // m_uniformMaterialParams = material.params;
+        for (const auto& [idx, data] : std::views::enumerate(images.roughnessMaps)) {
+            m_resourceContext->imageCache.addImageWithView(
+                fmt::format("IMAGE-ROUGHNESS-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8_UNORM));
+        }
+        for (const auto& [idx, data] : std::views::enumerate(images.metallicMaps)) {
+            m_resourceContext->imageCache.addImageWithView(
+                fmt::format("IMAGE-METALLIC-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8_UNORM));
+        }
+        for (const auto& [idx, data] : std::views::enumerate(images.occlusionMaps)) {
+            m_resourceContext->imageCache.addImageWithView(
+                fmt::format("IMAGE-AO-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_UNORM));
+        }
+        for (const auto& [idx, data] : std::views::enumerate(images.emissiveMaps)) {
+            m_resourceContext->imageCache.addImageWithView(
+                fmt::format("IMAGE-EMISSIVE-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_SRGB));
+        }
 
         const auto makeMaterial =
             [](const std::string& materialId,
@@ -380,12 +373,12 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
                             imageCache.getSampler("linearRepeat"));
                     };
 
-                setMaterialTexture(0, "diffuse", fmt::format("IMAGE-{}", textureIndices[0]));
-                setMaterialTexture(1, "metallic", fmt::format("IMAGE-M-{}", textureIndices[2]));
-                setMaterialTexture(2, "roughness", fmt::format("IMAGE-R-{}", textureIndices[3]));
-                setMaterialTexture(3, "normal", fmt::format("IMAGE-{}", textureIndices[1]));
-                setMaterialTexture(4, "ao", fmt::format("IMAGE-{}", textureIndices[4]));
-                setMaterialTexture(5, "emissive", fmt::format("IMAGE-{}", textureIndices[5]));
+                setMaterialTexture(0, "diffuse", fmt::format("IMAGE-ALBEDO-{}", textureIndices[0]));
+                setMaterialTexture(1, "metallic", fmt::format("IMAGE-METALLIC-{}", textureIndices[2]));
+                setMaterialTexture(2, "roughness", fmt::format("IMAGE-ROUGHNESS-{}", textureIndices[3]));
+                setMaterialTexture(3, "normal", fmt::format("IMAGE-NORMAL-{}", textureIndices[1]));
+                setMaterialTexture(4, "ao", fmt::format("IMAGE-AO-{}", textureIndices[4]));
+                setMaterialTexture(5, "emissive", fmt::format("IMAGE-EMISSIVE-{}", textureIndices[5]));
 
                 const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
                 material->writeDescriptor(
@@ -411,7 +404,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
                 entityName,
                 renderObject.material.textureIndices,
                 *m_resourceContext,
-                renderObject.material.params,
+                renderObject.material.pbr.params,
                 *m_transformBuffer);
             setPbrMaterialSceneParams(
                 *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
