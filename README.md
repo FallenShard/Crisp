@@ -1,5 +1,7 @@
 # Crisp
 
+[![Windows](https://github.com/FallenShard/Crisp/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/FallenShard/Crisp/actions/workflows/c-cpp.yml)
+
 ![crisp-banner](https://user-images.githubusercontent.com/5392742/147391331-3e1fee1c-9f5b-4696-96b2-efcbb2b63c0c.png)
 
 This project contains a small application that showcases reference implementations of various algorithms for ray tracing and
