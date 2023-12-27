@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Crisp/Core/Logger.hpp>
-
 #include <expected>
 #include <source_location>
+
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp {
 namespace detail {
@@ -106,7 +106,7 @@ private:
 inline constexpr Result<void> kResultSuccess;
 
 template <typename... Args>
-std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args) {
+std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args) { // NOLINT
     std::string errorMessage = fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...);
     spdlog::error(
         "File: {}\n[Function: {}][Line {}, Column {}] Error:\n {}",

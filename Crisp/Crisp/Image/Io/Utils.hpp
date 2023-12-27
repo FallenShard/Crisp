@@ -1,11 +1,11 @@
 #pragma once
 
+#include <filesystem>
+#include <span>
+
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Image/Image.hpp>
 #include <Crisp/Image/Io/Common.hpp>
-
-#include <filesystem>
-#include <span>
 
 namespace crisp {
 

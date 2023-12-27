@@ -1,12 +1,13 @@
 ---
 CompileFlags:
     Add: [
-      "-x c++",
+      #"-x c++",
       "/std:c++latest",
       "-D_HAS_CXX17=1",
       "-D_HAS_CXX20=1",
       "-D_HAS_CXX23=1",
       "-D__cpp_consteval",
+      "-D__cpp_lib_concepts",
       "-Wno-missing-field-initializers"
     ]
     Compiler: clang-cl

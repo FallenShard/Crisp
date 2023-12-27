@@ -74,11 +74,11 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
     stbi_set_flip_vertically_on_load(false);
 
     if (!dataPtr) {
-        return resultError("Failed to load image from {}. STB error: ", filePathString, stbi_failure_reason());
+        return resultError("Failed to load image from {}. STB error: {}.", filePathString, stbi_failure_reason());
     }
 
-    const uint32_t imageWidth = static_cast<uint32_t>(width);
-    const uint32_t imageHeight = static_cast<uint32_t>(height);
+    const auto imageWidth = static_cast<uint32_t>(width);
+    const auto imageHeight = static_cast<uint32_t>(height);
 
     std::vector<uint8_t> pixelData(imageWidth * imageHeight * requestedChannels * elementSize);
     memcpy(pixelData.data(), dataPtr, pixelData.size());
@@ -106,11 +106,11 @@ Result<Image> loadImage(
     stbi_set_flip_vertically_on_load(false);
 
     if (!dataPtr) {
-        return resultError("Failed to load image from memory. STB error: ", stbi_failure_reason());
+        return resultError("Failed to load image from memory. STB error: {}.", stbi_failure_reason());
     }
 
-    const uint32_t imageWidth = static_cast<uint32_t>(width);
-    const uint32_t imageHeight = static_cast<uint32_t>(height);
+    const auto imageWidth = static_cast<uint32_t>(width);
+    const auto imageHeight = static_cast<uint32_t>(height);
 
     std::vector<uint8_t> pixelData(imageWidth * imageHeight * requestedChannels * elementSize);
     memcpy(pixelData.data(), dataPtr, pixelData.size());

@@ -188,20 +188,12 @@ set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SPIRV-Reflect)
 
-# FetchContent_Declare(tinyexr
-# GIT_REPOSITORY https://github.com/syoyo/tinyexr.git
-# GIT_TAG        v1.0.1
-# )
-# set(TINYEXR_BUILD_SAMPLE OFF CACHE BOOL "" FORCE)
-# FetchContent_MakeAvailable(tinyexr)
-
 # List all used third-party libraries
 add_subdirectory(Externals/imgui)
 add_subdirectory(Externals/stb)
 add_subdirectory(Externals/tinyexr)
 add_subdirectory(Externals/rapidxml)
 add_subdirectory(Externals/freetype)
-
 add_subdirectory(Crisp)
 
 # Set the start-up project to be the main executable CrispMain
