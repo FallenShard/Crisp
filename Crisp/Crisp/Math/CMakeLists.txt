@@ -23,3 +23,16 @@ add_cpp_test(CrispIFFTTest
     "Test/IFFTTest.cpp")
 target_link_libraries(CrispIFFTTest
     PRIVATE Crisp::Math)
+
+add_cpp_interface_library(CrispGlmFormat
+    "GlmFormat.hpp"
+)
+target_link_libraries(CrispGlmFormat
+    INTERFACE Crisp::Math
+    INTERFACE Crisp::Format
+)
+
+add_cpp_test(CrispGlmFormatTest
+    "Test/GlmStructuredBindingsTest.cpp"
+)
+target_link_libraries(CrispGlmFormatTest PRIVATE Crisp::GlmFormat)

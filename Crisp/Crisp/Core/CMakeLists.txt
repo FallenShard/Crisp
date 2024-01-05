@@ -170,3 +170,15 @@ add_cpp_test(CrispSlotMapTest
 target_link_libraries(CrispSlotMapTest
     PRIVATE Crisp::SlotMap
 )
+
+add_cpp_interface_library(CrispProfiler
+    "ChromeProfiler.hpp"
+    "Profiler.hpp"
+)
+target_link_libraries(CrispProfiler
+    INTERFACE Crisp::Format
+)
+
+add_cpp_interface_library(CrispTimer
+    "Timer.hpp"
+)

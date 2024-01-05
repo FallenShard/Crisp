@@ -1,8 +1,9 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
+#include <Crisp/Core/ChromeProfiler.hpp>
 #include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Utils/ChromeProfiler.hpp>
+
 
 #include <GLFW/glfw3.h>
 

@@ -1,9 +1,9 @@
 #include <Crisp/Core/Application.hpp>
 
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/Timer.hpp>
 #include <Crisp/GUI/ImGuiUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Utils/Timer.hpp>
 
 #include <imgui.h>
 
@@ -26,11 +26,11 @@ Window createWindow(const char* title, const glm::ivec2& size) {
 }
 
 AssetPaths createAssetPaths(const ApplicationEnvironment& environment) {
-    AssetPaths assetPaths{};
-    assetPaths.shaderSourceDir = environment.getShaderSourceDirectory();
-    assetPaths.resourceDir = environment.getResourcesPath();
-    assetPaths.spvShaderDir = environment.getResourcesPath() / "Shaders";
-    return assetPaths;
+    return {
+        .shaderSourceDir = environment.getShaderSourceDirectory(),
+        .resourceDir = environment.getResourcesPath(),
+        .spvShaderDir = environment.getResourcesPath() / "Shaders",
+    };
 }
 
 } // namespace
@@ -70,7 +70,7 @@ void Application::run() {
         updateFrameStatistics(timeDelta);
         timeSinceLastUpdate += timeDelta;
 
-        WindowEventGuard eventGuard(
+        const WindowEventGuard eventGuard(
             m_window, ImGui::GetIO().WantCaptureMouse ? EventType::AllMouseEvents : EventType::None);
 
         Window::pollEvents();
