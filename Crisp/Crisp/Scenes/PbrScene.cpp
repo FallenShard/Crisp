@@ -39,6 +39,7 @@ void setPbrMaterialSceneParams(
         for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
             const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
             material.writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
+            material.getRenderPassBindings().emplace_back(1, 6, k, i, kCsmPasses[i], 0, "nearestNeighbor");
         }
     }
 }
@@ -323,30 +324,30 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 
     if (path.extension() == ".gltf") {
         const std::filesystem::path fullPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
-        auto [images, renderObjects] = loadGltfAsset(fullPath).unwrap();
-        logger->info("Loaded {} objects from {}.", renderObjects.size(), fullPath.generic_string());
+        auto [images, models] = loadGltfAsset(fullPath).unwrap();
+        logger->info("Loaded {} models and {} images from {}.", models.size(), images.size(), fullPath.generic_string());
 
-        for (const auto& [idx, data] : std::views::enumerate(images.albedoMaps)) {
+        for (auto&& [idx, data] : std::views::enumerate(images.albedoMaps)) {
             m_resourceContext->imageCache.addImageWithView(
                 fmt::format("IMAGE-ALBEDO-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_SRGB));
         }
-        for (const auto& [idx, data] : std::views::enumerate(images.normalMaps)) {
+        for (auto&& [idx, data] : std::views::enumerate(images.normalMaps)) {
             m_resourceContext->imageCache.addImageWithView(
                 fmt::format("IMAGE-NORMAL-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_UNORM));
         }
-        for (const auto& [idx, data] : std::views::enumerate(images.roughnessMaps)) {
+        for (auto&& [idx, data] : std::views::enumerate(images.roughnessMaps)) {
             m_resourceContext->imageCache.addImageWithView(
                 fmt::format("IMAGE-ROUGHNESS-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8_UNORM));
         }
-        for (const auto& [idx, data] : std::views::enumerate(images.metallicMaps)) {
+        for (auto&& [idx, data] : std::views::enumerate(images.metallicMaps)) {
             m_resourceContext->imageCache.addImageWithView(
                 fmt::format("IMAGE-METALLIC-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8_UNORM));
         }
-        for (const auto& [idx, data] : std::views::enumerate(images.occlusionMaps)) {
+        for (auto&& [idx, data] : std::views::enumerate(images.occlusionMaps)) {
             m_resourceContext->imageCache.addImageWithView(
                 fmt::format("IMAGE-AO-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_UNORM));
         }
-        for (const auto& [idx, data] : std::views::enumerate(images.emissiveMaps)) {
+        for (auto&& [idx, data] : std::views::enumerate(images.emissiveMaps)) {
             m_resourceContext->imageCache.addImageWithView(
                 fmt::format("IMAGE-EMISSIVE-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_SRGB));
         }
@@ -387,7 +388,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
                 return material;
             };
 
-        for (auto&& [idx, renderObject] : std::views::enumerate(renderObjects)) {
+        for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
             const std::string materialName = fmt::format("material_{}", idx);
             const std::string entityName = fmt::format("renderObject_{}", idx);
             m_shaderBallPbrMaterialKey = fmt::format("material_{}", idx);
@@ -513,15 +514,18 @@ void PbrScene::updateMaterialsWithRenderGraphResources() {
     const auto& imageCache = m_resourceContext->imageCache;
     for (auto&& [name, node] : m_renderNodes) {
         auto& material = node->pass(kForwardLightingPass).material;
-        for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-            for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
-                const auto& shadowMapView{m_rg->getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
-                material->writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
-            }
+        for (const auto& renderPassBinding : material->getRenderPassBindings()) {
+            const auto& renderTargetView{
+                m_rg->getRenderPass(renderPassBinding.renderPass).getAttachmentView(0, renderPassBinding.frameIndex)};
+            material->writeDescriptor(
+                renderPassBinding.setIndex,
+                renderPassBinding.bindingIndex,
+                renderPassBinding.frameIndex,
+                renderPassBinding.arrayIndex,
+                renderTargetView,
+                &imageCache.getSampler(renderPassBinding.sampler));
         }
     }
-    //*sceneObject->pass(kForwardLightingPass).material, *m_resourceContext,
-    //*m_lightSystem, *m_rg
 }
 
 void PbrScene::updateSceneViews() {

@@ -94,6 +94,20 @@ public:
         return m_sets.at(frameIndex).at(setIndex);
     }
 
+    struct RenderPassBindingData {
+        uint32_t setIndex{0};
+        uint32_t bindingIndex{0};
+        uint32_t frameIndex{0};
+        uint32_t arrayIndex{0};
+        std::string renderPass;
+        uint32_t attachmentIndex{0};
+        std::string sampler;
+    };
+
+    std::vector<RenderPassBindingData>& getRenderPassBindings() {
+        return m_renderPassBindings;
+    }
+
 private:
     std::array<std::vector<VkDescriptorSet>, kRendererVirtualFrameCount> m_sets;
     std::array<std::vector<uint32_t>, kRendererVirtualFrameCount> m_dynamicOffsets;
@@ -101,5 +115,7 @@ private:
 
     VulkanDevice* m_device;
     VulkanPipeline* m_pipeline;
+
+    std::vector<RenderPassBindingData> m_renderPassBindings;
 };
 } // namespace crisp
