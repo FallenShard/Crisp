@@ -43,6 +43,11 @@ struct PbrImageData {
     std::vector<Image> metallicMaps;
     std::vector<Image> occlusionMaps;
     std::vector<Image> emissiveMaps;
+
+    std::size_t size() const {
+        return albedoMaps.size() + normalMaps.size() + roughnessMaps.size() + metallicMaps.size() +
+               occlusionMaps.size() + emissiveMaps.size();
+    }
 };
 
 struct SceneData {

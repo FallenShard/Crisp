@@ -100,8 +100,8 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     // Initialize resources to support dynamic addition of MVP transform resources
 
-    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> transformAndColorSets; // NOLINT
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++) {
+    std::array<VkDescriptorSet, kRendererVirtualFrameCount> transformAndColorSets; // NOLINT
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; i++) {
         transformAndColorSets[i] = m_colorQuadPipeline->allocateDescriptorSet(0).getHandle();
     }
     m_transforms = std::make_unique<DynamicUniformBufferResource>(
@@ -112,8 +112,8 @@ RenderSystem::RenderSystem(Renderer* renderer)
         m_renderer, transformAndColorSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
     // Initialize resources to support dynamic addition of textured controls
-    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> tcSets; // NOLINT
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; i++) {
+    std::array<VkDescriptorSet, kRendererVirtualFrameCount> tcSets; // NOLINT
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; i++) {
         tcSets[i] = m_texQuadPipeline->allocateDescriptorSet(1).getHandle();
     }
 
@@ -271,7 +271,7 @@ void RenderSystem::submitDrawCommands() {
         for (auto& textResource : m_textResources) {
             auto textRes = textResource.get();
             if (!textRes->isUpdatedOnDevice) {
-                textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % RendererConfig::VirtualFrameCount;
+                textRes->updatedBufferIndex = (textRes->updatedBufferIndex + 1) % kRendererVirtualFrameCount;
                 textRes->offsets[0] =
                     textRes->updatedBufferIndex * textRes->allocatedVertexCount * sizeof(glm::vec4); // NOLINT
                 textRes->indexBufferOffset =

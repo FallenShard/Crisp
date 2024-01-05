@@ -135,11 +135,11 @@ private:
     //
     // std::unique_ptr<BlurPass> m_blurPass;
     // std::unique_ptr<BlurPipeline> m_blurPipeline;
-    // std::array<DescriptorSetGroup, RendererConfig::VirtualFrameCount> m_blurDescGroups;
+    // std::array<DescriptorSetGroup, kRendererVirtualFrameCount> m_blurDescGroups;
     //
     // std::unique_ptr<BlurPass> m_vertBlurPass;
     // std::unique_ptr<BlurPipeline> m_vertBlurPipeline;
-    // std::array<DescriptorSetGroup, RendererConfig::VirtualFrameCount> m_vertBlurDescGroups;
+    // std::array<DescriptorSetGroup, kRendererVirtualFrameCount> m_vertBlurDescGroups;
     //
     // std::unique_ptr<VarianceShadowMapPass> m_vsmPass;
     // std::unique_ptr<VarianceShadowMapPipeline> m_vsmPipeline;

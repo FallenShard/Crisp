@@ -101,7 +101,7 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device
         "SkyVolumeLut",
         RenderTargetBuilder()
             .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-            .setDepthSliceCount(32 * RendererConfig::VirtualFrameCount)
+            .setDepthSliceCount(32 * kRendererVirtualFrameCount)
             .setCreateFlags(VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
             .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
@@ -332,8 +332,9 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         resourceContext.getGeometry("fullScreenInstanced")->setInstanceCount(32);
 
         createPostProcessingRenderNode(ViewVolumePass, material, pipeline);
-        renderNodes[ViewVolumePass + std::string("Node")]->geometry = resourceContext.getGeometry("fullScreenInstance"
-                                                                                                  "d");
+        renderNodes[ViewVolumePass + std::string("Node")]->geometry = resourceContext.getGeometry(
+            "fullScreenInstance"
+            "d");
     }
 
     {

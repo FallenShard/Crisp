@@ -27,7 +27,7 @@ VulkanRingBuffer::VulkanRingBuffer(
     , m_bufferType(bufferType)
     , m_updatePolicy(updatePolicy)
     , m_size(size)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
+    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount) {
     const auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | m_bufferType;
     auto& device = m_renderer->getDevice();
 
@@ -43,10 +43,7 @@ VulkanRingBuffer::VulkanRingBuffer(
         const VkDeviceSize unitsOfAlignment = ((m_size - 1) / minAlignment) + 1;
         m_singleRegionSize = unitsOfAlignment * minAlignment;
         m_buffer = std::make_unique<VulkanBuffer>(
-            device,
-            RendererConfig::VirtualFrameCount * m_singleRegionSize,
-            usageFlags,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            device, kRendererVirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, m_singleRegionSize);
 
         if (data) {
@@ -65,7 +62,7 @@ VulkanRingBuffer::~VulkanRingBuffer() {
 
 void VulkanRingBuffer::updateStagingBuffer(const void* data, const VkDeviceSize size, const VkDeviceSize offset) {
     m_stagingBuffer->updateFromHost(data, size, offset);
-    m_framesToUpdateOnGpu = RendererConfig::VirtualFrameCount;
+    m_framesToUpdateOnGpu = kRendererVirtualFrameCount;
 }
 
 void VulkanRingBuffer::updateDeviceBuffer(const VkCommandBuffer commandBuffer, const uint32_t currentFrameIndex) {

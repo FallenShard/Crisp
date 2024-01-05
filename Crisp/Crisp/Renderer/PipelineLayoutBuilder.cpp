@@ -127,7 +127,7 @@ std::vector<uint32_t> PipelineLayoutBuilder::getNumCopiesPerSet(uint32_t numCopi
     std::vector<uint32_t> numCopiesPerSet;
     numCopiesPerSet.reserve(m_setBuffered.size());
     for (bool setBuffered : m_setBuffered) {
-        numCopiesPerSet.push_back(setBuffered ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
+        numCopiesPerSet.push_back(setBuffered ? numCopies * kRendererVirtualFrameCount : numCopies);
     }
     return numCopiesPerSet;
 }

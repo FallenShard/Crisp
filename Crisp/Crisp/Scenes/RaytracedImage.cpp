@@ -28,13 +28,13 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
     m_image = std::make_unique<VulkanImage>(
         renderer->getDevice(),
         m_extent,
-        RendererConfig::VirtualFrameCount,
+        kRendererVirtualFrameCount,
         1,
         VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         0);
 
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
         renderer->enqueueResourceUpdate(
             [this, i, size = byteSize, stagingBuffer = m_stagingBuffer.get()](VkCommandBuffer cmdBuffer) {
                 m_image->transitionLayout(
@@ -62,7 +62,7 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
 
     m_pipeline = renderer->createPipeline("Tonemapping.lua", renderer->getDefaultRenderPass(), 0);
     m_material = std::make_unique<Material>(m_pipeline.get());
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
         m_material->writeDescriptor(0, 0, i, *m_imageViews[i], m_sampler.get());
     }
     renderer->getDevice().flushDescriptorUpdates();
@@ -70,7 +70,7 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
 
 void RayTracedImage::postTextureUpdate(RayTracerUpdate update) {
     // Add an update that stretches over three frames
-    m_textureUpdates.emplace_back(RendererConfig::VirtualFrameCount, update);
+    m_textureUpdates.emplace_back(kRendererVirtualFrameCount, update);
 
     uint32_t rowSize = update.width * m_numChannels * sizeof(float);
     for (int i = 0; i < update.height; i++) {

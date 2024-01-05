@@ -39,7 +39,7 @@ Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorS
 
 void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const VkDescriptorImageInfo& imageInfo) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -64,7 +64,7 @@ void Material::writeDescriptor(
     const uint32_t renderTargetIndex,
     const VulkanSampler* sampler) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -84,7 +84,7 @@ void Material::writeDescriptor(
     const VulkanSampler* sampler,
     const VkImageLayout imageLayout) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -104,7 +104,7 @@ void Material::writeDescriptor(
     const VulkanSampler* sampler,
     const VkImageLayout imageLayout) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t i = 0; i < setsToUpdate; ++i) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -153,7 +153,7 @@ void Material::writeDescriptor(
 void Material::writeDescriptor(
     const uint32_t setIndex, const uint32_t binding, const VkDescriptorBufferInfo& bufferInfo) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -169,7 +169,7 @@ void Material::writeDescriptor(
 void Material::writeDescriptor(
     const uint32_t setIndex, const uint32_t binding, const VkDescriptorBufferInfo& bufferInfo, const uint32_t dstElement) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -184,7 +184,7 @@ void Material::writeDescriptor(
 
 void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const UniformBuffer& uniformBuffer) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -209,7 +209,7 @@ void Material::writeDescriptor(
     const uint32_t elementSize,
     const uint32_t elementCount) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
 
         std::vector<VkDescriptorBufferInfo> infos;
@@ -245,7 +245,7 @@ void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, 
 void Material::writeDescriptor(
     const uint32_t setIndex, const uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo) {
     const uint32_t setsToUpdate =
-        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? RendererConfig::VirtualFrameCount : 1;
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
     for (uint32_t frameIndex = 0; frameIndex < setsToUpdate; ++frameIndex) {
         m_device->postDescriptorWrite(
             {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -266,7 +266,7 @@ void Material::setDynamicBufferView(
     const uint32_t index, const UniformBuffer& dynamicUniformBuffer, const uint32_t offset) {
     m_dynamicBufferViews.at(index) = {&dynamicUniformBuffer, offset};
 
-    for (uint32_t frameIndex = 0; frameIndex < RendererConfig::VirtualFrameCount; ++frameIndex) {
+    for (uint32_t frameIndex = 0; frameIndex < kRendererVirtualFrameCount; ++frameIndex) {
         m_dynamicOffsets.at(frameIndex).at(index) = dynamicUniformBuffer.getDynamicOffset(frameIndex);
     }
 }

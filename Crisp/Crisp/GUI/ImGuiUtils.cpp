@@ -44,8 +44,8 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
     initInfo.Device = renderer.getDevice().getHandle();
     initInfo.Queue = renderer.getDevice().getGeneralQueue().getHandle();
     initInfo.DescriptorPool = imGuiPool;
-    initInfo.MinImageCount = RendererConfig::VirtualFrameCount;
-    initInfo.ImageCount = RendererConfig::VirtualFrameCount;
+    initInfo.MinImageCount = kRendererVirtualFrameCount;
+    initInfo.ImageCount = kRendererVirtualFrameCount;
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     ImGui_ImplVulkan_LoadFunctions(
         [](const char* funcName, void* userData) {
@@ -76,7 +76,8 @@ void prepareImGuiFrame() {
 
 void renderImGuiFrame(Renderer& renderer) {
     ImGui::Render();
-    renderer.enqueueDefaultPassDrawCommand(
-        [](VkCommandBuffer cmdBuffer) { ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer); });
+    renderer.enqueueDefaultPassDrawCommand([](VkCommandBuffer cmdBuffer) {
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
+    });
 }
 } // namespace crisp::gui

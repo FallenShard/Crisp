@@ -15,7 +15,7 @@ class DynamicUniformBufferResource {
 public:
     DynamicUniformBufferResource(
         Renderer* renderer,
-        const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets,
+        const std::array<VkDescriptorSet, kRendererVirtualFrameCount>& sets,
         uint32_t resourceSize,
         uint32_t descBinding);
     ~DynamicUniformBufferResource();
@@ -41,8 +41,8 @@ private:
     uint32_t m_binding;
 
     std::unique_ptr<UniformMultiBuffer> m_buffer;
-    std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount> m_sets;
-    std::array<bool, RendererConfig::VirtualFrameCount> m_isSetUpdated;
+    std::array<VkDescriptorSet, kRendererVirtualFrameCount> m_sets;
+    std::array<bool, kRendererVirtualFrameCount> m_isSetUpdated;
 
     std::set<uint32_t> m_idPool;
     unsigned int m_numRegistered;

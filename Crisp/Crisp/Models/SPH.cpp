@@ -485,7 +485,7 @@ SPH::~SPH() {}
 void SPH::update(float dt) {
     m_timeDelta = dt;
     m_prevSection = m_currentSection;
-    m_currentSection = (m_currentSection + 1) % RendererConfig::VirtualFrameCount;
+    m_currentSection = (m_currentSection + 1) % kRendererVirtualFrameCount;
 
     /*if (!m_runSimulation)
         return;

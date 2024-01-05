@@ -95,8 +95,8 @@ public:
     }
 
 private:
-    std::array<std::vector<VkDescriptorSet>, RendererConfig::VirtualFrameCount> m_sets;
-    std::array<std::vector<uint32_t>, RendererConfig::VirtualFrameCount> m_dynamicOffsets;
+    std::array<std::vector<VkDescriptorSet>, kRendererVirtualFrameCount> m_sets;
+    std::array<std::vector<uint32_t>, kRendererVirtualFrameCount> m_dynamicOffsets;
     std::vector<DynamicBufferView> m_dynamicBufferViews;
 
     VulkanDevice* m_device;

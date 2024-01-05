@@ -6,7 +6,7 @@ namespace crisp {
 UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
     : m_renderer(renderer)
     , m_updatePolicy(updatePolicy)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount)
+    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount)
     , m_singleRegionSize(0)
     , m_buffer(nullptr) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -26,10 +26,7 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy
         const VkDeviceSize unitsOfAlignment = ((size - 1) / minAlignment) + 1;
         m_singleRegionSize = unitsOfAlignment * minAlignment;
         m_buffer = std::make_unique<VulkanBuffer>(
-            device,
-            RendererConfig::VirtualFrameCount * m_singleRegionSize,
-            usageFlags,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            device, kRendererVirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, m_singleRegionSize);
 
         if (data) {
@@ -45,7 +42,7 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, bool isShaderStora
     , m_updatePolicy(BufferUpdatePolicy::PerFrame)
     , m_singleRegionSize(0)
     , m_buffer(nullptr)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
+    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     auto& device = m_renderer->getDevice();
 
@@ -53,10 +50,7 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, bool isShaderStora
         usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minStorageBufferOffsetAlignment);
         m_buffer = std::make_unique<VulkanBuffer>(
-            device,
-            RendererConfig::VirtualFrameCount * m_singleRegionSize,
-            usageFlags,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            device, kRendererVirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (data != nullptr) {
             fillDeviceBuffer(*m_renderer, m_buffer.get(), data, size);
@@ -70,7 +64,7 @@ UniformBuffer::UniformBuffer(
     , m_updatePolicy(updatePolicy)
     , m_singleRegionSize(0)
     , m_buffer(nullptr)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
+    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     if (isShaderStorageBuffer) {
         usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -90,10 +84,7 @@ UniformBuffer::UniformBuffer(
     {
         m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment);
         m_buffer = std::make_unique<VulkanBuffer>(
-            device,
-            RendererConfig::VirtualFrameCount * m_singleRegionSize,
-            usageFlags,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            device, kRendererVirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, size);
 
         // if (data)
@@ -111,7 +102,7 @@ UniformBuffer::~UniformBuffer() {
 
 void UniformBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
     m_stagingBuffer->updateFromHost(data, size, offset);
-    m_framesToUpdateOnGpu = RendererConfig::VirtualFrameCount;
+    m_framesToUpdateOnGpu = kRendererVirtualFrameCount;
 }
 
 void UniformBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex) {

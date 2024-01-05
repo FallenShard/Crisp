@@ -75,7 +75,7 @@ std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSe
         std::vector<uint32_t> numCopiesPerSet;
         numCopiesPerSet.reserve(m_descriptorSetLayouts.size());
         for (const auto& layout : m_descriptorSetLayouts) {
-            numCopiesPerSet.push_back(layout.isBuffered ? numCopies * RendererConfig::VirtualFrameCount : numCopies);
+            numCopiesPerSet.push_back(layout.isBuffered ? numCopies * kRendererVirtualFrameCount : numCopies);
         }
         return numCopiesPerSet;
     };

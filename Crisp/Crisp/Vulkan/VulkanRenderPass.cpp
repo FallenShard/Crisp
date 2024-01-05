@@ -146,7 +146,7 @@ void VulkanRenderPass::updateInitialLayouts(VkCommandBuffer cmdBuffer) {
 }
 
 void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice& device) {
-    m_attachmentViews.resize(RendererConfig::VirtualFrameCount);
+    m_attachmentViews.resize(kRendererVirtualFrameCount);
     for (const auto& [frameIdx, frameAttachmentViews] : std::views::enumerate(m_attachmentViews)) {
         // Typically 1, but for depth slice rendering, we need to modify it.
         uint32_t framebufferLayerCount{1};
@@ -157,9 +157,10 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
             auto& renderTarget = *m_params.renderTargets.at(mapping.renderTargetIndex);
             if (mapping.bufferOverDepthSlices) {
                 // TODO(nemanjab): fix this to have similar interface to layer-based buffering.
-                framebufferLayerCount = renderTargetInfo.buffered
-                                            ? renderTargetInfo.depthSlices / RendererConfig::VirtualFrameCount
-                                            : renderTargetInfo.depthSlices;
+                framebufferLayerCount =
+                    renderTargetInfo.buffered
+                        ? renderTargetInfo.depthSlices / kRendererVirtualFrameCount
+                        : renderTargetInfo.depthSlices;
                 const uint32_t frameDepthOffset =
                     renderTargetInfo.buffered ? static_cast<uint32_t>(frameIdx) * framebufferLayerCount : 0;
                 const VkImageViewType type =
@@ -192,7 +193,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
 }
 
 void VulkanRenderPass::createResources(const VulkanDevice& device) {
-    m_framebuffers.resize(RendererConfig::VirtualFrameCount);
+    m_framebuffers.resize(kRendererVirtualFrameCount);
     if (m_params.allocateAttachmentViews) {
         createRenderTargetViewsAndFramebuffers(device);
     }

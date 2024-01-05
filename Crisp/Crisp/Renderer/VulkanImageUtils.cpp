@@ -9,12 +9,7 @@ void fillImageLayer(VulkanImage& image, Renderer& renderer, const void* data, Vk
 }
 
 void fillImageLayers(
-    VulkanImage& image,
-    Renderer& renderer,
-    const void* data,
-    VkDeviceSize size,
-    uint32_t layerIdx,
-    uint32_t numLayers) {
+    VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx, uint32_t numLayers) {
     std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer.getDevice(), size, data);
     renderer.enqueueResourceUpdate([&image, layerIdx, numLayers, stagingBuffer](VkCommandBuffer cmdBuffer) {
         image.transitionLayout(
@@ -175,29 +170,28 @@ void updateCubeMap(
     for (uint32_t i = 0; i < cubeMapFaces.size(); ++i) {
         std::shared_ptr<VulkanBuffer> stagingBuffer =
             createStagingBuffer(renderer.getDevice(), cubeMapFaces[i].getByteSize(), cubeMapFaces[i].getData());
-        renderer.enqueueResourceUpdate(
-            [&image, layer = i, mipLevel, mipSize, stagingBuffer](VkCommandBuffer cmdBuffer) {
-                const VkExtent3D extent{mipSize, mipSize, 1};
-                image.transitionLayout(
-                    cmdBuffer,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    layer,
-                    1,
-                    mipLevel,
-                    1,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT);
-                image.copyFrom(cmdBuffer, *stagingBuffer, extent, layer, 1, mipLevel);
-                image.transitionLayout(
-                    cmdBuffer,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    layer,
-                    1,
-                    mipLevel,
-                    1,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-            });
+        renderer.enqueueResourceUpdate([&image, layer = i, mipLevel, mipSize, stagingBuffer](VkCommandBuffer cmdBuffer) {
+            const VkExtent3D extent{mipSize, mipSize, 1};
+            image.transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                layer,
+                1,
+                mipLevel,
+                1,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT);
+            image.copyFrom(cmdBuffer, *stagingBuffer, extent, layer, 1, mipLevel);
+            image.transitionLayout(
+                cmdBuffer,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                layer,
+                1,
+                mipLevel,
+                1,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        });
     }
 }
 
@@ -226,7 +220,7 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
     createInfo.format = format;
     createInfo.extent = extent;
     createInfo.mipLevels = 1;
-    createInfo.arrayLayers = RendererConfig::VirtualFrameCount;
+    createInfo.arrayLayers = kRendererVirtualFrameCount;
     createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -235,11 +229,7 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
 }
 
 std::unique_ptr<VulkanImage> createStorageImage(
-    VulkanDevice& device,
-    const uint32_t layerCount,
-    const uint32_t width,
-    const uint32_t height,
-    const VkFormat format) {
+    VulkanDevice& device, const uint32_t layerCount, const uint32_t width, const uint32_t height, const VkFormat format) {
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     createInfo.flags = 0;
     createInfo.imageType = VK_IMAGE_TYPE_2D;

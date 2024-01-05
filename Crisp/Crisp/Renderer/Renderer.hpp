@@ -33,7 +33,7 @@ class Material;
 
 class Renderer {
 public:
-    static constexpr uint32_t NumVirtualFrames = RendererConfig::VirtualFrameCount;
+    static constexpr uint32_t NumVirtualFrames = kRendererVirtualFrameCount;
 
     Renderer(
         std::vector<std::string>&& requiredVulkanInstanceExtensions,

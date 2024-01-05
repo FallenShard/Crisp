@@ -60,7 +60,7 @@ Grass::Grass(
     // m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(0, 0),
     // cameraBuffer->getDescriptorInfo());
     // m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(0, 1),
-    // csm->getLightTransformBuffer()->getDescriptorInfo()); for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount;
+    // csm->getLightTransformBuffer()->getDescriptorInfo()); for (uint32_t i = 0; i < kRendererVirtualFrameCount;
     // i++)
     //     for (int c = 0; c < 4; c++)
     //         m_renderer->getDevice()->postDescriptorWrite(m_material->makeDescriptorWrite(1, 0, c, i),

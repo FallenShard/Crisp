@@ -70,7 +70,7 @@ public:
     }
 
     inline void setDeferredDestruction(bool isEnabled) {
-        m_framesToLive = isEnabled ? RendererConfig::VirtualFrameCount : 0;
+        m_framesToLive = isEnabled ? kRendererVirtualFrameCount : 0;
     }
 
     inline void setTag(std::string tag) const { // NOLINT
@@ -80,6 +80,6 @@ public:
 protected:
     T m_handle;
     VulkanResourceDeallocator* m_deallocator;
-    int32_t m_framesToLive = RendererConfig::VirtualFrameCount;
+    int32_t m_framesToLive = kRendererVirtualFrameCount;
 };
 } // namespace crisp

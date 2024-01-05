@@ -74,9 +74,7 @@ Renderer::Renderer(
     m_physicalDevice =
         std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(
-        *m_physicalDevice,
-        createDefaultQueueConfiguration(*m_context, *m_physicalDevice),
-        RendererConfig::VirtualFrameCount);
+        *m_physicalDevice, createDefaultQueueConfiguration(*m_context, *m_physicalDevice), kRendererVirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(
         *m_device, *m_physicalDevice, m_context->getSurface(), TripleBuffering::Disabled);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
@@ -85,8 +83,8 @@ Renderer::Renderer(
     m_defaultScissor = m_swapChain->getScissorRect();
 
     // Create frame resources, such as command buffer, fence and semaphores
-    m_virtualFrames.reserve(RendererConfig::VirtualFrameCount);
-    for (int32_t i = 0; i < static_cast<int32_t>(RendererConfig::VirtualFrameCount); ++i) {
+    m_virtualFrames.reserve(kRendererVirtualFrameCount);
+    for (int32_t i = 0; i < static_cast<int32_t>(kRendererVirtualFrameCount); ++i) {
         m_virtualFrames.emplace_back(*m_device, i);
     }
 
@@ -311,7 +309,7 @@ void Renderer::finish() {
 void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex) {
     if (renderPass) {
         m_sceneImageViews = renderPass->getAttachmentViews(renderTargetIndex);
-        for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
+        for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
             m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
         }
 
@@ -325,8 +323,8 @@ void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t re
 void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews) {
     m_sceneImageViews.clear();
 
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
-        if (imageViews.size() == RendererConfig::VirtualFrameCount) {
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
+        if (imageViews.size() == kRendererVirtualFrameCount) {
             m_sceneImageViews.push_back(imageViews[i].get());
         } else {
             m_sceneImageViews.push_back(imageViews.front().get());

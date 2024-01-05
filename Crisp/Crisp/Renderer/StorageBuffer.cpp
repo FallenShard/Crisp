@@ -12,7 +12,7 @@ StorageBuffer::StorageBuffer(
     : m_renderer(renderer)
     , m_updatePolicy(updatePolicy)
     , m_singleRegionSize(0)
-    , m_framesToUpdateOnGpu(RendererConfig::VirtualFrameCount) {
+    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount) {
     const VkBufferUsageFlags usageFlags =
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags | (data ? VK_BUFFER_USAGE_TRANSFER_DST_BIT : 0);
 
@@ -29,7 +29,7 @@ StorageBuffer::StorageBuffer(
         m_singleRegionSize = std::max(size, renderer->getPhysicalDevice().getLimits().minStorageBufferOffsetAlignment);
         m_buffer = std::make_unique<VulkanBuffer>(
             m_renderer->getDevice(),
-            RendererConfig::VirtualFrameCount * m_singleRegionSize,
+            kRendererVirtualFrameCount * m_singleRegionSize,
             usageFlags,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -51,7 +51,7 @@ StorageBuffer::~StorageBuffer() {
 
 void StorageBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
     m_stagingBuffer->updateFromHost(data, size, offset);
-    m_framesToUpdateOnGpu = RendererConfig::VirtualFrameCount;
+    m_framesToUpdateOnGpu = kRendererVirtualFrameCount;
 }
 
 void StorageBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex) {

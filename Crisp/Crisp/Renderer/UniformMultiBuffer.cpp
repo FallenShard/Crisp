@@ -7,7 +7,7 @@ UniformMultiBuffer::UniformMultiBuffer(
     Renderer* renderer, VkDeviceSize initialSize, VkDeviceSize /*resSize*/, const void* /*data*/)
     : m_renderer(renderer)
     , m_singleRegionSize(initialSize)
-    , m_buffers(RendererConfig::VirtualFrameCount) {
+    , m_buffers(kRendererVirtualFrameCount) {
     for (auto& buffer : m_buffers) {
         buffer = std::make_unique<VulkanBuffer>(
             m_renderer->getDevice(),

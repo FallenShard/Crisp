@@ -167,7 +167,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
         m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
 
         const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-        m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+        m_sceneImageViews.resize(kRendererVirtualFrameCount);
         for (auto& sv : m_sceneImageViews) {
             sv = m_rg->createViewFromResource(data.hdrImage);
         }
@@ -230,7 +230,7 @@ void GltfViewerScene::resize(int width, int height) {
         for (auto&& [name, node] : m_renderNodes) {
             auto& material = node->pass(kForwardLightingPass).material;
             for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-                for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
+                for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
                     const auto& shadowMapView{m_rg->getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
                     material->writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
                 }
@@ -238,7 +238,7 @@ void GltfViewerScene::resize(int width, int height) {
         }
 
         const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-        m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+        m_sceneImageViews.resize(kRendererVirtualFrameCount);
         for (auto& sv : m_sceneImageViews) {
             sv = m_rg->createViewFromResource(data.hdrImage);
         }

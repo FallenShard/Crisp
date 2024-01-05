@@ -9,7 +9,7 @@
 namespace crisp::gui {
 DynamicUniformBufferResource::DynamicUniformBufferResource(
     Renderer* renderer,
-    const std::array<VkDescriptorSet, RendererConfig::VirtualFrameCount>& sets,
+    const std::array<VkDescriptorSet, kRendererVirtualFrameCount>& sets,
     uint32_t resourceSize,
     uint32_t descBinding)
     : m_renderer(renderer)
@@ -32,7 +32,7 @@ DynamicUniformBufferResource::DynamicUniformBufferResource(
     // data/desc set
     m_buffer = std::make_unique<UniformMultiBuffer>(renderer, m_bufferGranularity * multiplier, m_bufferGranularity);
 
-    for (unsigned int i = 0; i < RendererConfig::VirtualFrameCount; i++) {
+    for (unsigned int i = 0; i < kRendererVirtualFrameCount; i++) {
         updateSet(i);
     }
 }

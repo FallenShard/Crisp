@@ -21,7 +21,7 @@ auto logger = createLoggerMt("RenderGraphOriginal");
 
 RenderGraph::RenderGraph(Renderer* renderer)
     : m_renderer(renderer) {
-    m_secondaryCommandBuffers.resize(RendererConfig::VirtualFrameCount);
+    m_secondaryCommandBuffers.resize(kRendererVirtualFrameCount);
     for (auto& perFrameCtx : m_secondaryCommandBuffers) {
         perFrameCtx.resize(std::thread::hardware_concurrency());
         for (auto& ctx : perFrameCtx) {

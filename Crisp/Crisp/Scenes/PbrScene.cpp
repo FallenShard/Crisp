@@ -36,7 +36,7 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-        for (uint32_t k = 0; k < RendererConfig::VirtualFrameCount; ++k) {
+        for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
             const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
             material.writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
         }
@@ -526,7 +526,7 @@ void PbrScene::updateMaterialsWithRenderGraphResources() {
 
 void PbrScene::updateSceneViews() {
     const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-    m_sceneImageViews.resize(RendererConfig::VirtualFrameCount);
+    m_sceneImageViews.resize(kRendererVirtualFrameCount);
     for (auto& sv : m_sceneImageViews) {
         sv = m_rg->createViewFromResource(data.hdrImage);
     }

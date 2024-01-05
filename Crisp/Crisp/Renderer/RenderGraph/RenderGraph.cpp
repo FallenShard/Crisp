@@ -264,7 +264,7 @@ void RenderGraph::resize(
         }
 
         const auto usageFlags = determineUsageFlags(image.aliasedResourceIndices);
-        const uint32_t layerMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
+        const uint32_t layerMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
         image.image = std::make_unique<VulkanImage>(
             device,
             calculateImageExtent(desc, swapChainExtent),
@@ -435,7 +435,7 @@ void RenderGraph::createPhysicalResources(
         const auto& desc = m_imageDescriptions[res.descriptionIndex];
         const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
 
-        const uint32_t layerMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
+        const uint32_t layerMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
         res.image = std::make_unique<VulkanImage>(
             device,
             calculateImageExtent(desc, swapChainExtent),
@@ -454,7 +454,7 @@ void RenderGraph::createPhysicalResources(
     for (auto& res : m_physicalBuffers) {
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
 
-        const uint32_t sizeMultiplier = 1; // buffered ? RendererConfig::VirtualFrameCount : 1;
+        const uint32_t sizeMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
         res.buffer = std::make_unique<VulkanBuffer>(
             device, desc.size * sizeMultiplier, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }

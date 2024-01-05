@@ -139,16 +139,13 @@ void LightClustering::configure(
         VK_FORMAT_R32G32_UINT,
         VkExtent3D{static_cast<uint32_t>(m_gridSize.x), static_cast<uint32_t>(m_gridSize.y), 1u});
 
-    for (uint32_t i = 0; i < RendererConfig::VirtualFrameCount; ++i) {
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
         m_lightGridViews.emplace_back(createView(*m_lightGrid, VK_IMAGE_VIEW_TYPE_2D, i, 1));
     }
 
     renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         m_lightGrid->transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_GENERAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     });
 }
 

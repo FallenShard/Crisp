@@ -3,7 +3,5 @@
 #include <cstdint>
 
 namespace crisp {
-struct RendererConfig {
-    static constexpr uint32_t VirtualFrameCount = 2;
-};
+inline constexpr uint32_t kRendererVirtualFrameCount = 2;
 } // namespace crisp
