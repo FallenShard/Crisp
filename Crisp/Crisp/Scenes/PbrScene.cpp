@@ -22,28 +22,6 @@ const auto logger = createLoggerMt("PbrScene");
 
 constexpr uint32_t kShadowMapSize = 1024;
 
-void setPbrMaterialSceneParams(
-    Material& material,
-    const ResourceContext& resourceContext,
-    const LightSystem& lightSystem,
-    const rg::RenderGraph& rg) {
-    const auto& imageCache = resourceContext.imageCache;
-    const auto& envLight = *lightSystem.getEnvironmentLight();
-    material.writeDescriptor(1, 0, *resourceContext.getUniformBuffer("camera"));
-    material.writeDescriptor(1, 1, *lightSystem.getCascadedDirectionalLightBuffer());
-    material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
-    material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
-    for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-        for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
-            const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
-            material.writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
-            material.getRenderPassBindings().emplace_back(1, 6, k, i, kCsmPasses[i], 0, "nearestNeighbor");
-        }
-    }
-}
-
 void createDrawCommand(
     std::vector<DrawCommand>& drawCommands,
     const RenderNode& renderNode,
@@ -62,39 +40,6 @@ void createDrawCommand(
     }
 }
 
-Material* createPbrMaterial(
-    const std::string& materialId,
-    const std::string& materialKey,
-    ResourceContext& resourceContext,
-    const PbrParams& params,
-    const TransformBuffer& transformBuffer) {
-    auto& imageCache = resourceContext.imageCache;
-
-    auto* material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
-    material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
-
-    const auto setMaterialTexture =
-        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", materialKey, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            material->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
-
-    setMaterialTexture(0, "diffuse");
-    setMaterialTexture(1, "metallic");
-    setMaterialTexture(2, "roughness");
-    setMaterialTexture(3, "normal");
-    setMaterialTexture(4, "ao");
-    setMaterialTexture(5, "emissive");
-
-    const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-    material->writeDescriptor(
-        2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
-
-    return material;
-}
-
 } // namespace
 
 PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& args)
@@ -111,7 +56,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         *m_rg, kShadowMapSize, [this](const RenderPassExecutionContext& ctx, const uint32_t cascadeIndex) {
             const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
             std::vector<DrawCommand> drawCommands{};
-            for (const auto& [id, renderNode] : m_renderNodes) {
+            for (const auto& [id, renderNode] : m_renderNodes.values()) {
                 createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex], virtualFrameIndex);
             }
 
@@ -154,8 +99,8 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     createCommonTextures();
 
-    for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-        std::string key = "cascadedShadowMap" + std::to_string(i);
+    for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
+        const std::string key = fmt::format("cascadedShadowMap{}", i);
         auto* csmPipeline =
             m_resourceContext->createPipeline(key, "ShadowMap.json", m_rg->getRenderPass(kCsmPasses[i]), 0);
         auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
@@ -286,7 +231,7 @@ void PbrScene::onMaterialSelected(const std::string& materialName) {
     m_shaderBallPbrMaterialKey = pbrMaterial.name;
 }
 
-RenderNode* PbrScene::createRenderNode(std::string id, bool hasTransform) {
+RenderNode* PbrScene::createRenderNode(const std::string_view id, const bool hasTransform) {
     if (!hasTransform) {
         return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
     }
@@ -352,42 +297,6 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
                 fmt::format("IMAGE-EMISSIVE-{}", idx), createVulkanImage(*m_renderer, data, VK_FORMAT_R8G8B8A8_SRGB));
         }
 
-        const auto makeMaterial =
-            [](const std::string& materialId,
-               const std::array<int32_t, 6>& textureIndices,
-               ResourceContext& resourceContext,
-               const PbrParams& params,
-               const TransformBuffer& transformBuffer) {
-                auto& imageCache = resourceContext.imageCache;
-
-                auto* material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
-                material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
-
-                const auto setMaterialTexture =
-                    [&material,
-                     &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
-                        const std::string fallbackKey = fmt::format("default-{}", texName);
-                        material->writeDescriptor(
-                            2,
-                            index,
-                            imageCache.getImageView(texKey, fallbackKey),
-                            imageCache.getSampler("linearRepeat"));
-                    };
-
-                setMaterialTexture(0, "diffuse", fmt::format("IMAGE-ALBEDO-{}", textureIndices[0]));
-                setMaterialTexture(1, "metallic", fmt::format("IMAGE-METALLIC-{}", textureIndices[2]));
-                setMaterialTexture(2, "roughness", fmt::format("IMAGE-ROUGHNESS-{}", textureIndices[3]));
-                setMaterialTexture(3, "normal", fmt::format("IMAGE-NORMAL-{}", textureIndices[1]));
-                setMaterialTexture(4, "ao", fmt::format("IMAGE-AO-{}", textureIndices[4]));
-                setMaterialTexture(5, "emissive", fmt::format("IMAGE-EMISSIVE-{}", textureIndices[5]));
-
-                const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-                material->writeDescriptor(
-                    2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
-
-                return material;
-            };
-
         for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
             const std::string materialName = fmt::format("material_{}", idx);
             const std::string entityName = fmt::format("renderObject_{}", idx);
@@ -401,7 +310,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
             auto* sceneObject = createRenderNode(entityName, true);
             sceneObject->geometry = m_resourceContext->getGeometry(entityName);
             sceneObject->transformPack->M = renderObject.transform;
-            sceneObject->pass(kForwardLightingPass).material = makeMaterial(
+            sceneObject->pass(kForwardLightingPass).material = createPbrMaterial(
                 entityName,
                 renderObject.material.textureIndices,
                 *m_resourceContext,
@@ -471,22 +380,22 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 }
 
 void PbrScene::createPlane() {
-    const std::string entityName{"floor"};
+    constexpr std::string_view kNodeName{"floor"};
     const TriangleMesh planeMesh{createPlaneMesh(flatten(kPbrVertexFormat), 200.0f)};
-    m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, planeMesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry(kNodeName, createFromMesh(*m_renderer, planeMesh, kPbrVertexFormat));
 
-    const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / "Grass"};
+    const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass"};
     PbrMaterial material{};
     material.name = materialPath.stem().string();
     material.params.uvScale = glm::vec2(100.0f, 100.0f);
     material.textures = loadPbrTextureGroup(materialPath);
     addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
 
-    auto* floor = createRenderNode(entityName, true);
+    auto* floor = createRenderNode(kNodeName, true);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
-    floor->geometry = m_resourceContext->getGeometry(entityName);
+    floor->geometry = m_resourceContext->getGeometry(kNodeName);
     floor->pass(kForwardLightingPass).material =
-        createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
+        createPbrMaterial(kNodeName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
     setPbrMaterialSceneParams(*floor->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
 
     CRISP_CHECK(

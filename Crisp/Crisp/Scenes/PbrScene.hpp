@@ -24,7 +24,7 @@ public:
     void onMaterialSelected(const std::string& material);
 
 private:
-    RenderNode* createRenderNode(std::string nodeId, bool hasTransform);
+    RenderNode* createRenderNode(std::string_view nodeId, bool hasTransform);
 
     void createCommonTextures();
     void setEnvironmentMap(const std::string& envMapName);
@@ -45,7 +45,7 @@ private:
 
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
 
     PbrParams m_uniformMaterialParams;
     std::unique_ptr<Skybox> m_skybox;

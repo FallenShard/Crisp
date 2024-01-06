@@ -18,53 +18,6 @@ const auto logger = createLoggerMt("GltfViewerScene");
 
 constexpr uint32_t kShadowMapSize = 1024;
 
-[[maybe_unused]] void setPbrMaterialSceneParams(
-    Material& material, const ResourceContext& resourceContext, const LightSystem& lightSystem) {
-    const auto& imageCache = resourceContext.imageCache;
-    const auto& envLight = *lightSystem.getEnvironmentLight();
-    material.writeDescriptor(1, 0, *resourceContext.getUniformBuffer("camera"));
-    material.writeDescriptor(1, 1, *lightSystem.getCascadedDirectionalLightBuffer());
-    material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
-    material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 6, 0, imageCache.getImageView("csmFrame0"), &imageCache.getSampler("nearestNeighbor"));
-    material.writeDescriptor(1, 6, 1, imageCache.getImageView("csmFrame1"), &imageCache.getSampler("nearestNeighbor"));
-}
-
-[[maybe_unused]] Material* createPbrMaterial(
-    const std::string& materialId,
-    const std::string& materialKey,
-    ResourceContext& resourceContext,
-    const PbrParams& params,
-    const TransformBuffer& transformBuffer) {
-    auto& imageCache = resourceContext.imageCache;
-
-    auto material = resourceContext.createMaterial("pbrTex" + materialId, "pbrTex");
-    material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
-
-    const auto setMaterialTexture =
-        [&material, &imageCache, &materialKey](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", materialKey, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            material->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
-
-    setMaterialTexture(0, "diffuse");
-    setMaterialTexture(1, "metallic");
-    setMaterialTexture(2, "roughness");
-    setMaterialTexture(3, "normal");
-    setMaterialTexture(4, "ao");
-    setMaterialTexture(5, "emissive");
-
-    const std::string paramsBufferKey{fmt::format("{}Params", materialId)};
-    material->writeDescriptor(
-        2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
-
-    return material;
-}
-
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer,
     const glm::uvec3& workGroupSize,
