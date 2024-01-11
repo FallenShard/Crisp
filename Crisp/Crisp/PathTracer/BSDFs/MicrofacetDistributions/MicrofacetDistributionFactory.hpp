@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "MicrofacetDistribution.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistribution.hpp>
 
 namespace crisp {
 class MicrofacetDistributionFactory {

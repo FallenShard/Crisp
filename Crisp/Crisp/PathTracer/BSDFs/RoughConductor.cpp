@@ -1,10 +1,10 @@
-#include "RoughConductor.hpp"
+#include <Crisp/PathTracer/BSDFs/RoughConductor.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Optics/Fresnel.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-#include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistributionFactory.hpp>
 
 namespace crisp {
 RoughConductorBSDF::RoughConductorBSDF(const VariantMap& params)

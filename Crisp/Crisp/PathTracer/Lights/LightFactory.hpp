@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "Light.hpp"
+#include <Crisp/PathTracer/Lights/Light.hpp>
 
 namespace crisp {
 class LightFactory {

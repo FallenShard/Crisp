@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Light.hpp"
+#include <Crisp/PathTracer/Lights/Light.hpp>
 
 namespace crisp {
 class AreaLight : public Light {

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "BSSRDF.hpp"
+#include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "IrradianceTree.hpp"
 #include <Crisp/Math/Octree.hpp>
+#include <Crisp/PathTracer/BSSRDFs/IrradianceTree.hpp>
 
 namespace crisp {
 class DipoleBSSRDF : public BSSRDF {

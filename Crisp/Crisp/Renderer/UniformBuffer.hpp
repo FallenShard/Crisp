@@ -33,8 +33,8 @@ public:
     }
 
     template <typename T>
-    void updateStagingBuffer(T&& data) {
-        using BaseType = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+    void updateStagingBuffer(const T& data) {
+        using BaseType = typename std::remove_cvref_t<T>;
         updateStagingBuffer(&data, sizeof(BaseType), 0);
     }
 

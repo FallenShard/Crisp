@@ -5,11 +5,10 @@
 #include <string>
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
-
-#include "CheckerboardTexture.hpp"
-#include "ConstantTexture.hpp"
-#include "Texture.hpp"
-#include "UVTexture.hpp"
+#include <Crisp/PathTracer/Textures/CheckerboardTexture.hpp>
+#include <Crisp/PathTracer/Textures/ConstantTexture.hpp>
+#include <Crisp/PathTracer/Textures/Texture.hpp>
+#include <Crisp/PathTracer/Textures/UVTexture.hpp>
 
 namespace crisp {
 class TextureFactory {

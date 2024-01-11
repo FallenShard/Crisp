@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "BSSRDF.hpp"
+#include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>
 
 namespace crisp {
 class BSSRDFFactory {

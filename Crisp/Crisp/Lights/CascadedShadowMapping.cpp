@@ -1,4 +1,3 @@
-#include "CascadedShadowMapping.hpp"
 #include <Crisp/Lights/CascadedShadowMapping.hpp>
 
 namespace crisp {
@@ -14,6 +13,12 @@ void CascadedShadowMapping::setCascadeCount(
         std::make_unique<UniformBuffer>(renderer, cascadeCount * sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
 }
 
+void CascadedShadowMapping::updateDirectionalLight(const DirectionalLight& light) {
+    for (auto& cascade : cascades) {
+        cascade.light = light;
+    }
+}
+
 void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float zFar) {
     if (cascades.empty()) {
         return;
@@ -25,7 +30,7 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
     cascades[0].zNear = zNear;
     cascades[cascades.size() - 1].zFar = zFar;
     for (uint32_t i = 0; i < cascades.size() - 1; i++) {
-        const float p = (i + 1) / static_cast<float>(cascades.size());
+        const float p = static_cast<float>(i + 1) / static_cast<float>(cascades.size());
         const float logSplit = zNear * std::pow(ratio, p);
         const float linSplit = zNear + range * p;
         const float splitPos = splitLambda * (logSplit - linSplit) + linSplit;

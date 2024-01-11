@@ -1,6 +1,6 @@
-#include "BSSRDFFactory.hpp"
+#include <Crisp/PathTracer/BSSRDFs/BSSRDFFactory.hpp>
 
-#include "DipoleBSSRDF.hpp"
+#include <Crisp/PathTracer/BSSRDFs/DipoleBSSRDF.hpp>
 
 namespace crisp {
 std::unique_ptr<BSSRDF> BSSRDFFactory::create(std::string type, VariantMap parameters) {

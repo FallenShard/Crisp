@@ -1,4 +1,4 @@
-#include "DielectricBSDF.hpp"
+#include <Crisp/PathTracer/BSDFs/DielectricBSDF.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Optics/Fresnel.hpp>

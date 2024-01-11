@@ -1,4 +1,4 @@
-#include "Homogeneous.hpp"
+#include <Crisp/PathTracer/Media/Homogeneous.hpp>
 
 namespace crisp {
 HomogeneousMedium::HomogeneousMedium(const VariantMap& params) {

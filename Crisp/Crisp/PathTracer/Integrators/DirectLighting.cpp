@@ -1,4 +1,4 @@
-#include "DirectLighting.hpp"
+#include <Crisp/PathTracer/Integrators/DirectLighting.hpp>
 
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>

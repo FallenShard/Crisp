@@ -1,17 +1,16 @@
-#include "Scene.hpp"
+#include <Crisp/PathTracer/Core/Scene.hpp>
 
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
+#include <Crisp/PathTracer/Cameras/Perspective.hpp>
 #include <Crisp/PathTracer/Core/Intersection.hpp>
 #include <Crisp/PathTracer/Core/Scene.hpp>
-#include <Crisp/PathTracer/Lights/Light.hpp>
-#include <Crisp/PathTracer/Samplers/Sampler.hpp>
-#include <Crisp/PathTracer/Shapes/Shape.hpp>
-
-#include <Crisp/PathTracer/Cameras/Perspective.hpp>
 #include <Crisp/PathTracer/Integrators/Normals.hpp>
+#include <Crisp/PathTracer/Lights/Light.hpp>
 #include <Crisp/PathTracer/Lights/PointLight.hpp>
 #include <Crisp/PathTracer/Samplers/Independent.hpp>
+#include <Crisp/PathTracer/Samplers/Sampler.hpp>
 #include <Crisp/PathTracer/Shapes/Mesh.hpp>
+#include <Crisp/PathTracer/Shapes/Shape.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 

@@ -1,9 +1,8 @@
-#include "SPH.hpp"
-
-#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Models/SPH.hpp>
 
 #include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp {
 namespace {

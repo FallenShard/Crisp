@@ -1,4 +1,4 @@
-#include "Independent.hpp"
+#include <Crisp/PathTracer/Samplers/Independent.hpp>
 
 namespace crisp {
 IndependentSampler::IndependentSampler(const VariantMap& attribs)

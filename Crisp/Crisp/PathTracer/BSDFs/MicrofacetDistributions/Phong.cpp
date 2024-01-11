@@ -1,4 +1,4 @@
-#include "Phong.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/Phong.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Operations.hpp>

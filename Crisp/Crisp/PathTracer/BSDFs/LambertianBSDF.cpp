@@ -1,4 +1,4 @@
-#include "LambertianBSDF.hpp"
+#include <Crisp/PathTracer/BSDFs/LambertianBSDF.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Warp.hpp>

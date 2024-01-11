@@ -1,4 +1,4 @@
-#include "EmsDirectLighting.hpp"
+#include <Crisp/PathTracer/Integrators/EmsDirectLighting.hpp>
 
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>

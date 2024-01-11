@@ -1,4 +1,4 @@
-#include "BSDF.hpp"
+#include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 
 namespace crisp {
 BSDF::BSDF(LobeFlags lobeFlags)

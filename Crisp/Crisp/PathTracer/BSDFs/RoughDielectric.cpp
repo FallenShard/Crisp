@@ -1,11 +1,11 @@
-#include "RoughDielectric.hpp"
+#include <Crisp/PathTracer/BSDFs/RoughDielectric.hpp>
 
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/Optics/Fresnel.hpp>
 
-#include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistributionFactory.hpp>
 
 namespace crisp {
 namespace {

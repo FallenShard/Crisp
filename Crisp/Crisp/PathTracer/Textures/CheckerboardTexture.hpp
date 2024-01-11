@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include "Texture.hpp"
+#include <Crisp/PathTracer/Textures/Texture.hpp>
 
 namespace crisp {
 namespace internal {

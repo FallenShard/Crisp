@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 
+#include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "BSDF.hpp"
 
 namespace crisp {
 class BSDFFactory {

@@ -1,4 +1,4 @@
-#include "Fixed.hpp"
+#include <Crisp/PathTracer/Samplers/Fixed.hpp>
 
 namespace crisp {
 FixedSampler::FixedSampler(const VariantMap& /*attribs*/)

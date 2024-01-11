@@ -1,9 +1,9 @@
-#include "LightFactory.hpp"
+#include <Crisp/PathTracer/Lights/LightFactory.hpp>
 
-#include "AreaLight.hpp"
-#include "DirectionalLight.hpp"
-#include "EnvironmentLight.hpp"
-#include "PointLight.hpp"
+#include <Crisp/PathTracer/Lights/AreaLight.hpp>
+#include <Crisp/PathTracer/Lights/DirectionalLight.hpp>
+#include <Crisp/PathTracer/Lights/EnvironmentLight.hpp>
+#include <Crisp/PathTracer/Lights/PointLight.hpp>
 
 namespace crisp {
 std::unique_ptr<Light> LightFactory::create(std::string type, VariantMap parameters) {

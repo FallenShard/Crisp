@@ -1,9 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <vector>
 
 namespace crisp {
 

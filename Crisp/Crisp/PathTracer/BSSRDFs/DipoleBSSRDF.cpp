@@ -1,4 +1,4 @@
-#include "DipoleBSSRDF.hpp"
+#include <Crisp/PathTracer/BSSRDFs/DipoleBSSRDF.hpp>
 
 #include <functional>
 #include <iostream>
@@ -6,12 +6,11 @@
 #include <thread>
 #include <vector>
 
-#include "IrradianceTree.hpp"
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Math/Octree.hpp>
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
-#include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>
+#include <Crisp/PathTracer/BSSRDFs/IrradianceTree.hpp>
 #include <Crisp/PathTracer/Cameras/Camera.hpp>
 #include <Crisp/PathTracer/Core/Intersection.hpp>
 #include <Crisp/PathTracer/Core/Scene.hpp>
@@ -51,8 +50,10 @@ struct DipoleIrradianceQuery {
         Spectrum c1 = zPos * (dPos * sigmaTr + Spectrum(1.0f));
         Spectrum c2 = zNeg * (dNeg * sigmaTr + Spectrum(1.0f));
 
-        Spectrum radiance = InvFourPI<> * ((c1 * (-sigmaTr * dPos).exp()) / (dPos * dPos * dPos) +
-                                           (c2 * (-sigmaTr * dNeg).exp()) / (dNeg * dNeg * dNeg));
+        Spectrum radiance =
+            InvFourPI<> *
+            ((c1 * (-sigmaTr * dPos).exp()) / (dPos * dPos * dPos) +
+             (c2 * (-sigmaTr * dNeg).exp()) / (dNeg * dNeg * dNeg));
         return radiance.clamp();
     }
 

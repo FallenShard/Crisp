@@ -1,8 +1,8 @@
-#include "SamplerFactory.hpp"
+#include <Crisp/PathTracer/Samplers/SamplerFactory.hpp>
 
-#include "Fixed.hpp"
-#include "Independent.hpp"
-#include "Sampler.hpp"
+#include <Crisp/PathTracer/Samplers/Fixed.hpp>
+#include <Crisp/PathTracer/Samplers/Independent.hpp>
+#include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
 namespace crisp {
 std::unique_ptr<Sampler> SamplerFactory::create(std::string type, VariantMap parameters) {

@@ -23,8 +23,9 @@ struct CascadedShadowMapping {
     std::unique_ptr<UniformBuffer> cascadedLightBuffer;
 
     void setCascadeCount(Renderer* renderer, const DirectionalLight& light, uint32_t cascadeCount);
+    void updateDirectionalLight(const DirectionalLight& light);
     void updateSplitIntervals(float zNear, float zFar);
-    void updateTransforms(const Camera& viewCamera, const uint32_t shadowMapSize);
+    void updateTransforms(const Camera& viewCamera, uint32_t shadowMapSize);
 
     std::array<glm::vec3, Camera::kFrustumPointCount> getFrustumPoints(uint32_t cascadeIndex) const;
 };

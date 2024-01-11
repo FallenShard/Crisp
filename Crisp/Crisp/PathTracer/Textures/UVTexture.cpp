@@ -1,4 +1,4 @@
-#include "UVTexture.hpp"
+#include <Crisp/PathTracer/Textures/UVTexture.hpp>
 
 namespace crisp {
 UVTexture::UVTexture(const VariantMap& params)

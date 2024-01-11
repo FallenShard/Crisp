@@ -1,10 +1,10 @@
-#include "StatusBar.hpp"
+#include <Crisp/GUI/StatusBar.hpp>
 
 #include <iomanip>
 #include <sstream>
 
-#include "Form.hpp"
-#include "Label.hpp"
+#include <Crisp/GUI/Form.hpp>
+#include <Crisp/GUI/Label.hpp>
 
 namespace crisp::gui {
 StatusBar::StatusBar(Form* parentForm)

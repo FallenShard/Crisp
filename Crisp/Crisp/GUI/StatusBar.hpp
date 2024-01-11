@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Panel.hpp"
+#include <Crisp/GUI/Panel.hpp>
 
 namespace crisp::gui {
 class Form;

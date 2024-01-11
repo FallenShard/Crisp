@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Lights/CascadedShadowMapping.hpp>
 #include <Crisp/Lights/DirectionalLight.hpp>
@@ -7,9 +10,6 @@
 #include <Crisp/Lights/LightClustering.hpp>
 #include <Crisp/Lights/LightDescriptor.hpp>
 #include <Crisp/Lights/PointLight.hpp>
-
-#include <memory>
-#include <vector>
 
 namespace crisp {
 class Renderer;

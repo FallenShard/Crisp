@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "Ray.hpp"
+#include <Crisp/Math/Ray.hpp>
 
 namespace crisp {
 template <typename PointType>

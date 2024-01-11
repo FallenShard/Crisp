@@ -1,4 +1,4 @@
-#include "GGX.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/GGX.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Operations.hpp>

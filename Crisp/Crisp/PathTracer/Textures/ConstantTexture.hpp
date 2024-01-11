@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Texture.hpp"
+#include <Crisp/PathTracer/Textures/Texture.hpp>
 
 namespace crisp {
 template <typename T>

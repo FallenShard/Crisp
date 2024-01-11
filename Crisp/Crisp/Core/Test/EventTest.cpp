@@ -1,7 +1,7 @@
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "Crisp/Core/Delegate.hpp"
-#include "Crisp/Core/Event.hpp"
+#include <Crisp/Core/Delegate.hpp>
+#include <Crisp/Core/Event.hpp>
 
 using namespace crisp;
 

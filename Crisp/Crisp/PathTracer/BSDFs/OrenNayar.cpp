@@ -1,10 +1,10 @@
-// #include "OrenNayar.hpp"
+// #include <Crisp/PathTracer/OrenNayar.hpp>
 //
-// #include "Math/CoordinateFrame.hpp"
-// #include "Math/Warp.hpp"
-// #include "Samplers/Sampler.hpp"
+// #include <Crisp/PathTracer/Math/CoordinateFrame.hpp>
+// #include <Crisp/PathTracer/Math/Warp.hpp>
+// #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 //
-// #include "Textures/TextureFactory.hpp"
+// #include <Crisp/PathTracer/Textures/TextureFactory.hpp>
 //
 // namespace crisp
 //{

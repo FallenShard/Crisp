@@ -1,4 +1,4 @@
-#include "Sphere.hpp"
+#include <Crisp/PathTracer/Shapes/Sphere.hpp>
 
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>

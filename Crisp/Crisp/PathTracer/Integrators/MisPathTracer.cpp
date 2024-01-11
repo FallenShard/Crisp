@@ -1,4 +1,4 @@
-#include "MisPathTracer.hpp"
+#include <Crisp/PathTracer/Integrators/MisPathTracer.hpp>
 
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 #include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>
@@ -16,12 +16,7 @@ inline float miWeight(float pdf1, float pdf2) {
 }
 
 Spectrum estimateDirect(
-    const pt::Scene& scene,
-    Sampler& sampler,
-    const Ray3& ray,
-    const Intersection& its,
-    const Light& light,
-    bool specular) {
+    const pt::Scene& scene, Sampler& sampler, const Ray3& ray, const Intersection& its, const Light& light, bool specular) {
     LobeFlags lobe = specular ? LobeFlags(Lobe::Delta | Lobe::Smooth) : LobeFlags(Lobe::Smooth);
     Spectrum Ld(0.0f);
 

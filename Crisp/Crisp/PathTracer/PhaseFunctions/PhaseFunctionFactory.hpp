@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "PhaseFunction.hpp"
+#include <Crisp/PathTracer/PhaseFunctions/PhaseFunction.hpp>
 
 namespace crisp {
 class PhaseFunctionFactory {

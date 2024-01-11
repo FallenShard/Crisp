@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "Shape.hpp"
+#include <Crisp/PathTracer/Shapes/Shape.hpp>
 
 namespace crisp {
 class ShapeFactory {

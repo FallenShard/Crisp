@@ -3,7 +3,7 @@
 #include <array>
 #include <random>
 
-#include "Sampler.hpp"
+#include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
 namespace crisp {
 class FixedSampler : public Sampler {

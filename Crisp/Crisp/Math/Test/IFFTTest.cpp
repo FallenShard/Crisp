@@ -1,9 +1,9 @@
-#include "gtest/gtest.h"
-
-#include <Crisp/Math/Headers.hpp>
+#include <gtest/gtest.h>
 
 #include <complex>
 #include <random>
+
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp {
 constexpr size_t Size = 8;

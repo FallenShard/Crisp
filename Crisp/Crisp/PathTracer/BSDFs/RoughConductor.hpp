@@ -1,9 +1,9 @@
 #pragma once
 
-#include "BSDF.hpp"
 #include <Crisp/Optics/Fresnel.hpp>
+#include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 
-#include "MicrofacetDistributions/MicrofacetDistribution.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistribution.hpp>
 
 namespace crisp {
 class RoughConductorBSDF : public BSDF {

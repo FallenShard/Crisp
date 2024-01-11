@@ -1,4 +1,4 @@
-#include "Form.hpp"
+#include <Crisp/GUI/Form.hpp>
 
 #include <iostream>
 
@@ -9,7 +9,7 @@
 #include <Crisp/Gui/RenderSystem.hpp>
 #include <Crisp/Gui/StopWatch.hpp>
 
-#include "Panel.hpp"
+#include <Crisp/GUI/Panel.hpp>
 
 namespace {
 auto logger = spdlog::stderr_color_mt("Form");
@@ -177,8 +177,9 @@ void Form::validateControls() {
         if (control && control->needsValidation()) {
             Control* iter = control->getParent();
             while (iter) {
-                bool resizedWithChildren = iter->getHorizontalSizingPolicy() == SizingPolicy::WrapContent ||
-                                           iter->getVerticalSizingPolicy() == SizingPolicy::WrapContent;
+                bool resizedWithChildren =
+                    iter->getHorizontalSizingPolicy() == SizingPolicy::WrapContent ||
+                    iter->getVerticalSizingPolicy() == SizingPolicy::WrapContent;
                 if (iter->needsValidation() || resizedWithChildren) {
                     control = iter;
                 }
@@ -192,8 +193,9 @@ void Form::validateControls() {
 }
 
 std::unique_ptr<Control> Form::fadeIn(std::unique_ptr<Control> control, float /*duration*/) {
-    auto anim = std::make_shared<PropertyAnimation<float>>(
-        0.3, 0.0f, 1.0f, [this, con = control.get()](const auto& t) { con->setOpacity(t); });
+    auto anim = std::make_shared<PropertyAnimation<float>>(0.3, 0.0f, 1.0f, [this, con = control.get()](const auto& t) {
+        con->setOpacity(t);
+    });
     m_animator->add(anim);
 
     return control;

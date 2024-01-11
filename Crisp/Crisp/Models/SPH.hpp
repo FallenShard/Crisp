@@ -3,13 +3,11 @@
 #include <memory>
 
 #include <Crisp/Math/Headers.hpp>
-
+#include <Crisp/Models/FluidSimulation.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
-
-#include "FluidSimulation.hpp"
 
 namespace crisp {
 class VulkanPipeline;

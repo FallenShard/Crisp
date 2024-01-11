@@ -1,7 +1,7 @@
 #pragma once
 
-#include "BSDF.hpp"
-#include "MicrofacetDistributions/MicrofacetDistribution.hpp"
+#include <Crisp/PathTracer/BSDFs/BSDF.hpp>
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistribution.hpp>
 #include <Crisp/PathTracer/Textures/Texture.hpp>
 
 namespace crisp {

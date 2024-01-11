@@ -1,15 +1,13 @@
-#include "LightSystem.hpp"
-
-#include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
-
-#include <Crisp/Camera/Camera.hpp>
-
-#include <Crisp/Renderer/RenderGraph.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Lights/LightSystem.hpp>
 
 #include <random>
+
+#include <Crisp/Camera/Camera.hpp>
+#include <Crisp/Renderer/RenderGraph.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Renderer/UniformBuffer.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/VulkanImage.hpp>
 
 namespace crisp {
 LightSystem::LightSystem(
@@ -45,6 +43,7 @@ void LightSystem::update(const Camera& camera, float /*dt*/) {
 void LightSystem::setDirectionalLight(const DirectionalLight& dirLight) {
     m_directionalLight = dirLight;
     m_directionalLightBuffer->updateStagingBuffer(m_directionalLight.createDescriptor());
+    m_cascadedShadowMapping.updateDirectionalLight(m_directionalLight);
 }
 
 void LightSystem::setSplitLambda(const float splitLambda) {
@@ -131,7 +130,7 @@ std::vector<PointLight> createRandomPointLights(const uint32_t count) {
     constexpr glm::vec3 kDomainExtent{kWidth, kHeight, kDepth};
     const int32_t gridX = 16;
     const int32_t gridZ = 8;
-    const int32_t gridY = count / gridX / gridZ;
+    const int32_t gridY = static_cast<int32_t>(count) / gridX / gridZ;
 
     std::vector<PointLight> pointLights{};
     pointLights.reserve(count);
@@ -148,8 +147,7 @@ std::vector<PointLight> createRandomPointLights(const uint32_t count) {
                 /*const glm::vec3 position =
                     glm::vec3((normJ - 0.5f) * width, 1.0f + normK * height, (normI - 0.5f) * depth);*/
 
-                const glm::vec3 stratifiedPos =
-                    glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * kDomainExtent;
+                const glm::vec3 stratifiedPos = glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * kDomainExtent;
                 pointLights.emplace_back(spectrum, stratifiedPos, glm::vec3(0.0f, 1.0f, 0.0f)).calculateRadius();
             }
         }

@@ -1,4 +1,4 @@
-#include "Shape.hpp"
+#include <Crisp/PathTracer/Shapes/Shape.hpp>
 
 #include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>
 

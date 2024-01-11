@@ -1,4 +1,4 @@
-#include "EnvironmentLight.hpp"
+#include <Crisp/PathTracer/Lights/EnvironmentLight.hpp>
 
 #include <Crisp/Math/Distribution1D.hpp>
 #include <Crisp/Math/Operations.hpp>
@@ -165,9 +165,10 @@ Spectrum EnvironmentLight::sample(Light::Sample& sample, Sampler& sampler) const
     Spectrum val2 = m_probe->fetch(xPos, yPos + 1) * dx2 * dy1 + m_probe->fetch(xPos + 1, yPos + 1) * dx1 * dy1;
 
     Spectrum val = (val1 + val2) * m_scale;
-    float pdf = (val1.getLuminance() * m_rowWeights[clamp(yPos, 0, m_probe->getHeight())] +
-                 val2.getLuminance() * m_rowWeights[clamp(yPos + 1, 0, m_probe->getHeight())]) *
-                m_normalization;
+    float pdf =
+        (val1.getLuminance() * m_rowWeights[clamp(yPos, 0, m_probe->getHeight())] +
+         val2.getLuminance() * m_rowWeights[clamp(yPos + 1, 0, m_probe->getHeight())]) *
+        m_normalization;
 
     auto theta = PI<> * (pos.y + 0.5f) / m_probe->getHeight();
 
@@ -227,9 +228,10 @@ float EnvironmentLight::pdf(const Light::Sample& sample) const {
 
     float sinTheta = sqrt(1.0f - sample.wi.y * sample.wi.y);
 
-    float pdf = (val1.getLuminance() * m_rowWeights[clamp(yPos, 0, m_probe->getHeight())] +
-                 val2.getLuminance() * m_rowWeights[clamp(yPos + 1, 0, m_probe->getHeight())]) *
-                m_normalization;
+    float pdf =
+        (val1.getLuminance() * m_rowWeights[clamp(yPos, 0, m_probe->getHeight())] +
+         val2.getLuminance() * m_rowWeights[clamp(yPos + 1, 0, m_probe->getHeight())]) *
+        m_normalization;
 
     pdf /= std::max(std::abs(sinTheta), Ray3::Epsilon);
 

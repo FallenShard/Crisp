@@ -1,7 +1,7 @@
 // #pragma once
 //
-// #include "BSDF.hpp"
-// #include "Textures/Texture.hpp"
+// #include <Crisp/PathTracer/BSDF.hpp>
+// #include <Crisp/PathTracer/Textures/Texture.hpp>
 //
 // namespace crisp
 //{

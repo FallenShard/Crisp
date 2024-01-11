@@ -1,4 +1,4 @@
-#include "Grass.hpp"
+#include <Crisp/Models/Grass.hpp>
 
 #include <random>
 

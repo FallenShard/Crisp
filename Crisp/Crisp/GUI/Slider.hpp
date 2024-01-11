@@ -7,11 +7,12 @@
 
 #include <Crisp/Core/Event.hpp>
 
-#include "Control.hpp"
-#include "Form.hpp"
-#include "Label.hpp"
-#include "Panel.hpp"
 #include <Crisp/Animation/PropertyAnimation.hpp>
+#include <Crisp/GUI/Control.hpp>
+#include <Crisp/GUI/Form.hpp>
+#include <Crisp/GUI/Label.hpp>
+#include <Crisp/GUI/Panel.hpp>
+
 
 namespace crisp::gui {
 template <typename T>
@@ -114,13 +115,14 @@ public:
     }
 
     float getNormalizedValue() const {
-        return !m_discreteValues.empty() ? static_cast<float>(m_indexValue) / (getValueCount() - 1)
-                                         : std::max(
-                                               0.0f,
-                                               std::min(
-                                                   1.0f,
-                                                   static_cast<float>(m_indexValue * m_increment) /
-                                                       static_cast<float>(m_maxValue - m_minValue)));
+        return !m_discreteValues.empty()
+                   ? static_cast<float>(m_indexValue) / (getValueCount() - 1)
+                   : std::max(
+                         0.0f,
+                         std::min(
+                             1.0f,
+                             static_cast<float>(m_indexValue * m_increment) /
+                                 static_cast<float>(m_maxValue - m_minValue)));
     }
 
     std::string getValueString() const {

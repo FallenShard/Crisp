@@ -1,4 +1,4 @@
-#include "VolumePathTracer.hpp"
+#include <Crisp/PathTracer/Integrators/VolumePathTracer.hpp>
 
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 #include <Crisp/PathTracer/Core/Intersection.hpp>
@@ -123,8 +123,7 @@ Spectrum findLight(
             break;
         }
 
-        if (hasIntersected && !(its->shape->getBSDF()->getLobeType() & Lobe::Passthrough) &&
-            !(its->shape->getLight())) {
+        if (hasIntersected && !(its->shape->getBSDF()->getLobeType() & Lobe::Passthrough) && !(its->shape->getLight())) {
             break;
         }
 

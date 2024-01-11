@@ -1,11 +1,11 @@
-// #include "PositionBasedFluid.hpp"
+// #include <Crisp/Math/PositionBasedFluid.hpp>
 //
-// #include "Renderer/Renderer.hpp"
+// #include <Crisp/Math/Renderer/Renderer.hpp>
 //
-// #include "Renderer/Pipelines/ComputePipeline.hpp"
+// #include <Crisp/Math/Renderer/Pipelines/ComputePipeline.hpp>
 //
 //
-// #include "glfw/glfw3.h"
+// #include <Crisp/Math/glfw/glfw3.h>
 //
 //  namespace crisp
 //{

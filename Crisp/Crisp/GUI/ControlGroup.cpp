@@ -1,5 +1,5 @@
 #define NOMINMAX
-#include "ControlGroup.hpp"
+#include <Crisp/GUI/ControlGroup.hpp>
 
 #include <algorithm>
 #include <iostream>

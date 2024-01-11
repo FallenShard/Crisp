@@ -1,10 +1,10 @@
-#include "Microfacet.hpp"
+#include <Crisp/PathTracer/BSDFs/Microfacet.hpp>
 
-#include "MicrofacetDistributions/MicrofacetDistributionFactory.hpp"
 #include <Crisp/Math/Constants.hpp>
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/Optics/Fresnel.hpp>
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistributionFactory.hpp>
 
 namespace crisp {
 MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)

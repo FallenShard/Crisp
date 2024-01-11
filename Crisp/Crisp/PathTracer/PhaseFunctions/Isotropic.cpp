@@ -1,4 +1,4 @@
-#include "Isotropic.hpp"
+#include <Crisp/PathTracer/PhaseFunctions/Isotropic.hpp>
 
 #include <Crisp/Math/Warp.hpp>
 

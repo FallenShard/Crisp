@@ -4,11 +4,11 @@
 //
 // #include <Crisp/Math/Headers.hpp>
 //
-// #include "Renderer/DescriptorSetGroup.hpp"
+// #include <Crisp/Math/Renderer/DescriptorSetGroup.hpp>
 //
-// #include "Renderer/Renderer.hpp"
-// #include "FluidSimulation.hpp"
-// #include "vulkan/VulkanBuffer.hpp"
+// #include <Crisp/Math/Renderer/Renderer.hpp>
+// #include <Crisp/Math/FluidSimulation.hpp>
+// #include <Crisp/Math/vulkan/VulkanBuffer.hpp>
 //
 //  namespace crisp
 //{

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Constants.hpp"
-#include "Headers.hpp"
+#include <Crisp/Math/Constants.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp {
 inline static float degToRad(float value) {

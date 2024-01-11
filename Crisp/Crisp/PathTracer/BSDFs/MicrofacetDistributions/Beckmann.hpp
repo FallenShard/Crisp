@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MicrofacetDistribution.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistribution.hpp>
 
 namespace crisp {
 class BeckmannDistribution : public MicrofacetDistribution {

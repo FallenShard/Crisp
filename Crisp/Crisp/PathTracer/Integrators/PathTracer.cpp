@@ -1,4 +1,4 @@
-#include "PathTracer.hpp"
+#include <Crisp/PathTracer/Integrators/PathTracer.hpp>
 
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 #include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>

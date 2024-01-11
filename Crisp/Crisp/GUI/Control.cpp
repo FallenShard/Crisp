@@ -1,13 +1,13 @@
-#include "Control.hpp"
+#include <Crisp/GUI/Control.hpp>
 
-#include "Form.hpp"
+#include <Crisp/GUI/Form.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 #include <sstream>
 
 namespace crisp::gui {
 namespace {
-static uint32_t UniqueIdCounter = 0;
+uint32_t UniqueIdCounter = 0;
 }
 
 Control::Control(Form* form)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Medium.hpp"
+#include <Crisp/PathTracer/Media/Medium.hpp>
 
 namespace crisp {
 class HomogeneousMedium : public Medium {

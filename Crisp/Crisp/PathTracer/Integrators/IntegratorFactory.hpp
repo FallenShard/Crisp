@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "Integrator.hpp"
+#include <Crisp/PathTracer/Integrators/Integrator.hpp>
 
 namespace crisp {
 class IntegratorFactory {

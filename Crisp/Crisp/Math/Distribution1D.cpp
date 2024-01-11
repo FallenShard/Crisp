@@ -1,4 +1,4 @@
-#include "Distribution1D.hpp"
+#include <Crisp/Math/Distribution1D.hpp>
 
 #include <algorithm>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BSDF.hpp"
+#include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 
 namespace crisp {
 class LambertianBSDF : public BSDF {

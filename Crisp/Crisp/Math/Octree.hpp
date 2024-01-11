@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BoundingBox.hpp"
+#include <Crisp/Math/BoundingBox.hpp>
 #include <array>
 #include <memory>
 #include <vector>

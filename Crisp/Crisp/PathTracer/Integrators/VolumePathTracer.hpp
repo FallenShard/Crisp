@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Integrator.hpp"
+#include <Crisp/PathTracer/Integrators/Integrator.hpp>
 
 namespace crisp {
 struct Intersection;
@@ -12,10 +12,7 @@ public:
 
     virtual void preprocess(pt::Scene* scene) override;
     virtual Spectrum Li(
-        const pt::Scene* scene,
-        Sampler& sampler,
-        Ray3& ray,
-        IlluminationFlags flags = Illumination::Full) const override;
+        const pt::Scene* scene, Sampler& sampler, Ray3& ray, IlluminationFlags flags = Illumination::Full) const override;
 
 private:
     unsigned int m_rrDepth;

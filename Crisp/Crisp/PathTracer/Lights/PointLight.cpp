@@ -1,4 +1,4 @@
-#include "PointLight.hpp"
+#include <Crisp/PathTracer/Lights/PointLight.hpp>
 
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Math/Operations.hpp>

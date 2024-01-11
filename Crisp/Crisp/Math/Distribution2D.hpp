@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Distribution1D.hpp"
+#include <Crisp/Math/Distribution1D.hpp>
 
 namespace crisp {
 class Distribution2D {

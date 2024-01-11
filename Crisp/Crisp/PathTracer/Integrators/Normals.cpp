@@ -1,4 +1,4 @@
-#include "Normals.hpp"
+#include <Crisp/PathTracer/Integrators/Normals.hpp>
 
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
 #include <Crisp/PathTracer/BSSRDFs/BSSRDF.hpp>

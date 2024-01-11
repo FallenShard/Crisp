@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Ray.hpp"
+#include <Crisp/Math/Ray.hpp>
 
 namespace crisp {
 struct Transform {

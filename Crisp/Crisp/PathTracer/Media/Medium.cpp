@@ -1,4 +1,4 @@
-#include "Medium.hpp"
+#include <Crisp/PathTracer/Media/Medium.hpp>
 
 namespace crisp {
 Medium::Medium() {}

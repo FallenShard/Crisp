@@ -1,8 +1,8 @@
-#include "ShapeFactory.hpp"
+#include <Crisp/PathTracer/Shapes/ShapeFactory.hpp>
 
-#include "Mesh.hpp"
-#include "Shape.hpp"
-#include "Sphere.hpp"
+#include <Crisp/PathTracer/Shapes/Mesh.hpp>
+#include <Crisp/PathTracer/Shapes/Shape.hpp>
+#include <Crisp/PathTracer/Shapes/Sphere.hpp>
 
 namespace crisp {
 std::unique_ptr<Shape> ShapeFactory::create(std::string type, VariantMap parameters) {

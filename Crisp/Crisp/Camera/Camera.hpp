@@ -1,9 +1,9 @@
 #pragma once
 
+#include <array>
+
 #include <Crisp/Math/BoundingBox.hpp>
 #include <Crisp/Math/Headers.hpp>
-
-#include <array>
 
 namespace crisp {
 struct CameraParameters {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PhaseFunction.hpp"
+#include <Crisp/PathTracer/PhaseFunctions/PhaseFunction.hpp>
 
 namespace crisp {
 class IsotropicPhaseFunction : public PhaseFunction {

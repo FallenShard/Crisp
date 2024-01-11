@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/Math/Headers.hpp>
-
 #include <algorithm>
+
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp {
 struct LightDescriptor {

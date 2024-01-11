@@ -1,4 +1,4 @@
-#include "DirectionalLight.hpp"
+#include <Crisp/PathTracer/Lights/DirectionalLight.hpp>
 
 #include <Crisp/Math/Operations.hpp>
 

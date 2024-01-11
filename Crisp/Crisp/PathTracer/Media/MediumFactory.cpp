@@ -1,6 +1,6 @@
-#include "MediumFactory.hpp"
+#include <Crisp/PathTracer/Media/MediumFactory.hpp>
 
-#include "Homogeneous.hpp"
+#include <Crisp/PathTracer/Media/Homogeneous.hpp>
 
 namespace crisp {
 std::unique_ptr<Medium> MediumFactory::create(std::string type, VariantMap parameters) {

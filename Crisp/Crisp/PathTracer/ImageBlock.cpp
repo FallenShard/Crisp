@@ -1,5 +1,5 @@
-#include "ImageBlock.hpp"
-#include "ReconstructionFilters/ReconstructionFilter.hpp"
+#include <Crisp/PathTracer/ImageBlock.hpp>
+#include <Crisp/PathTracer/ReconstructionFilters/ReconstructionFilter.hpp>
 
 #include <iostream>
 

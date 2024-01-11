@@ -1,4 +1,4 @@
-#include "Distribution2D.hpp"
+#include <Crisp/Math/Distribution2D.hpp>
 
 namespace crisp {
 Distribution2D::Distribution2D() {}

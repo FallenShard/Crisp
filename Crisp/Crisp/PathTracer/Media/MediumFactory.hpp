@@ -6,7 +6,7 @@
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 
-#include "Medium.hpp"
+#include <Crisp/PathTracer/Media/Medium.hpp>
 
 namespace crisp {
 class MediumFactory {

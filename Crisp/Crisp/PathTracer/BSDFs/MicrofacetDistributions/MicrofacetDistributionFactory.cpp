@@ -1,8 +1,8 @@
-#include "MicrofacetDistributionFactory.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistributionFactory.hpp>
 
-#include "Beckmann.hpp"
-#include "GGX.hpp"
-#include "Phong.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/Beckmann.hpp>
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/GGX.hpp>
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/Phong.hpp>
 
 namespace crisp {
 std::unique_ptr<MicrofacetDistribution> MicrofacetDistributionFactory::create(std::string type, VariantMap params) {

@@ -1,4 +1,4 @@
-#include "RayTracer.hpp"
+#include <Crisp/PathTracer/RayTracer.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -9,12 +9,12 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
-#include "Cameras/Camera.hpp"
-#include "Core/Scene.hpp"
-#include "Integrators/Integrator.hpp"
-#include "Samplers/Sampler.hpp"
+#include <Crisp/PathTracer/Cameras/Camera.hpp>
+#include <Crisp/PathTracer/Core/Scene.hpp>
+#include <Crisp/PathTracer/Integrators/Integrator.hpp>
+#include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-#include "Core/XmlSceneParser.hpp"
+#include <Crisp/PathTracer/Core/XmlSceneParser.hpp>
 
 namespace crisp {
 namespace {

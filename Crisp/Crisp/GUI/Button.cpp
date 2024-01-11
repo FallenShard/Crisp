@@ -1,13 +1,11 @@
-#include "Button.hpp"
+#include <Crisp/GUI/Button.hpp>
 
-#include <iostream>
-
-#include "Form.hpp"
-#include "Label.hpp"
+#include <Crisp/GUI/Form.hpp>
+#include <Crisp/GUI/Label.hpp>
 
 namespace crisp::gui {
 namespace {
-static constexpr double kAnimationDuration = 0.5;
+constexpr double kAnimationDuration = 0.5;
 }
 
 Button::Button(Form* parentForm, std::string text)

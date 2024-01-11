@@ -1,10 +1,10 @@
-#include "DebugRect.hpp"
+#include <Crisp/GUI/DebugRect.hpp>
 
 #include <iostream>
 #include <random>
 #include <sstream>
 
-#include "Label.hpp"
+#include <Crisp/GUI/Label.hpp>
 
 namespace crisp::gui {
 namespace {

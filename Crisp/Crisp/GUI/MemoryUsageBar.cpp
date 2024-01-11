@@ -1,4 +1,4 @@
-#include "MemoryUsageBar.hpp"
+#include <Crisp/GUI/MemoryUsageBar.hpp>
 
 #include <iomanip>
 #include <sstream>
@@ -65,22 +65,25 @@ MemoryUsageBar::MemoryUsageBar(Form* parentForm)
         };
 
         std::ostringstream bufferMemStream;
-        bufferMemStream << "Buffer Memory: " << transformToMb(metrics.bufferMemoryUsed) << " / "
-                        << std::to_string(metrics.bufferMemorySize >> 20) << " MB";
+        bufferMemStream
+            << "Buffer Memory: " << transformToMb(metrics.bufferMemoryUsed) << " / "
+            << std::to_string(metrics.bufferMemorySize >> 20) << " MB";
         m_bufferMemoryUsageLabel->setText(bufferMemStream.str());
         m_bufferMemoryUsageLabel->setColor(interpolateColor(
             static_cast<float>(metrics.bufferMemoryUsed) / static_cast<float>(metrics.bufferMemorySize)));
 
         std::ostringstream imageMemStream;
-        imageMemStream << "Image Memory: " << std::to_string(metrics.imageMemoryUsed >> 20) << " / "
-                       << std::to_string(metrics.imageMemorySize >> 20) << " MB";
+        imageMemStream
+            << "Image Memory: " << std::to_string(metrics.imageMemoryUsed >> 20) << " / "
+            << std::to_string(metrics.imageMemorySize >> 20) << " MB";
         m_imageMemoryUsageLabel->setText(imageMemStream.str());
         m_imageMemoryUsageLabel->setColor(interpolateColor(
             static_cast<float>(metrics.imageMemoryUsed) / static_cast<float>(metrics.imageMemorySize)));
 
         std::ostringstream stagingMemStream;
-        stagingMemStream << "Staging Memory: " << std::to_string(metrics.stagingMemoryUsed >> 20) << " / "
-                         << std::to_string(metrics.stagingMemorySize >> 20) << " MB";
+        stagingMemStream
+            << "Staging Memory: " << std::to_string(metrics.stagingMemoryUsed >> 20) << " / "
+            << std::to_string(metrics.stagingMemorySize >> 20) << " MB";
         m_stagingMemoryUsageLabel->setText(stagingMemStream.str());
         m_stagingMemoryUsageLabel->setColor(interpolateColor(
             static_cast<float>(metrics.stagingMemoryUsed) / static_cast<float>(metrics.stagingMemorySize)));

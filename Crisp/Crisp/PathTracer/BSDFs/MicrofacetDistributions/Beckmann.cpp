@@ -1,4 +1,4 @@
-#include "Beckmann.hpp"
+#include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/Beckmann.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Math/Operations.hpp>

@@ -1,4 +1,4 @@
-#include "AreaLight.hpp"
+#include <Crisp/PathTracer/Lights/AreaLight.hpp>
 
 #include <Crisp/Math/Operations.hpp>
 #include <Crisp/Math/Warp.hpp>

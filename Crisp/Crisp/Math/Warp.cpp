@@ -1,9 +1,9 @@
-#include "Warp.hpp"
+#include <Crisp/Math/Warp.hpp>
 
 #include <algorithm>
 
-#include "Constants.hpp"
-#include "Headers.hpp"
+#include <Crisp/Math/Constants.hpp>
+#include <Crisp/Math/Headers.hpp>
 
 namespace crisp {
 namespace {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Headers.hpp"
-#include "Operations.hpp"
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Math/Operations.hpp>
 
 namespace crisp {
 struct CoordinateFrame {

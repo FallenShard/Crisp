@@ -4,8 +4,8 @@
 
 #include <Crisp/Animation/PropertyAnimation.hpp>
 
-#include "Control.hpp"
-#include "DrawComponents/RectDrawComponent.hpp"
+#include <Crisp/GUI/Control.hpp>
+#include <Crisp/GUI/DrawComponents/RectDrawComponent.hpp>
 
 namespace crisp::gui {
 class Label;

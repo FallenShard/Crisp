@@ -8,8 +8,8 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include "ImageBlock.hpp"
-#include "RayTracerUpdate.hpp"
+#include <Crisp/PathTracer/ImageBlock.hpp>
+#include <Crisp/PathTracer/RayTracerUpdate.hpp>
 
 namespace crisp {
 namespace pt {

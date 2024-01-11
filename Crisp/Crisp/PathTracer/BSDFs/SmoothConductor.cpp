@@ -1,4 +1,4 @@
-#include "SmoothConductor.hpp"
+#include <Crisp/PathTracer/BSDFs/SmoothConductor.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
 #include <Crisp/Optics/Fresnel.hpp>

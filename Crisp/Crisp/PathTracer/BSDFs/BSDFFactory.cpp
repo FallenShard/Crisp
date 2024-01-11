@@ -1,13 +1,13 @@
-#include "BSDFFactory.hpp"
+#include <Crisp/PathTracer/BSDFs/BSDFFactory.hpp>
 
-#include "BSDF.hpp"
-#include "DielectricBSDF.hpp"
-#include "LambertianBSDF.hpp"
-#include "Microfacet.hpp"
-#include "Mirror.hpp"
-#include "RoughConductor.hpp"
-#include "RoughDielectric.hpp"
-#include "SmoothConductor.hpp"
+#include <Crisp/PathTracer/BSDFs/BSDF.hpp>
+#include <Crisp/PathTracer/BSDFs/DielectricBSDF.hpp>
+#include <Crisp/PathTracer/BSDFs/LambertianBSDF.hpp>
+#include <Crisp/PathTracer/BSDFs/Microfacet.hpp>
+#include <Crisp/PathTracer/BSDFs/Mirror.hpp>
+#include <Crisp/PathTracer/BSDFs/RoughConductor.hpp>
+#include <Crisp/PathTracer/BSDFs/RoughDielectric.hpp>
+#include <Crisp/PathTracer/BSDFs/SmoothConductor.hpp>
 
 namespace crisp {
 std::unique_ptr<BSDF> BSDFFactory::create(std::string type, VariantMap parameters) {

@@ -1,9 +1,7 @@
-#include "ComboBoxItem.hpp"
+#include <Crisp/GUI/ComboBoxItem.hpp>
 
-#include <iostream>
-
-#include "Form.hpp"
-#include "Label.hpp"
+#include <Crisp/GUI/Form.hpp>
+#include <Crisp/GUI/Label.hpp>
 
 namespace crisp::gui {
 ComboBoxItem::ComboBoxItem(Form* parentForm, std::string text)
