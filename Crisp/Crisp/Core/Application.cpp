@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Core/Timer.hpp>
-#include <Crisp/GUI/ImGuiUtils.hpp>
+#include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 #include <imgui.h>

@@ -1,4 +1,4 @@
-#include <Crisp/GUI/MemoryUsageBar.hpp>
+#include <Crisp/Gui/MemoryUsageBar.hpp>
 
 #include <iomanip>
 #include <sstream>

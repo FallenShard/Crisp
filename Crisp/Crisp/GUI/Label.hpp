@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include <Crisp/GUI/Control.hpp>
+#include <Crisp/Gui/Control.hpp>
 
-#include <Crisp/GUI/DrawComponents/TextDrawComponent.hpp>
+#include <Crisp/Gui/DrawComponents/TextDrawComponent.hpp>
 
 namespace crisp::gui {
 class Label : public Control {

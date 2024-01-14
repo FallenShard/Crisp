@@ -1,9 +1,9 @@
-#include <Crisp/GUI/Label.hpp>
+#include <Crisp/Gui/Label.hpp>
 
 #include <iostream>
 #include <vector>
 
-#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Gui/Form.hpp>
 
 namespace crisp::gui {
 Label::Label(Form* parentForm, const std::string& text, unsigned int fontSize)

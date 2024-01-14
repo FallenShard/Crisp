@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <Crisp/GUI/Control.hpp>
+#include <Crisp/Gui/Control.hpp>
 
 namespace crisp::gui {
 enum class LayoutType {

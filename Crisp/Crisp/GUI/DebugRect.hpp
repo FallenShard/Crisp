@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/GUI/Panel.hpp>
+#include <Crisp/Gui/Panel.hpp>
 
 namespace crisp::gui {
 class DebugRect : public Panel {

@@ -32,12 +32,12 @@
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 
-#include <Crisp/GUI/Button.hpp>
-#include <Crisp/GUI/CheckBox.hpp>
-#include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Slider.hpp>
+#include <Crisp/Gui/Button.hpp>
+#include <Crisp/Gui/CheckBox.hpp>
+#include <Crisp/Gui/ComboBox.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
+#include <Crisp/Gui/Slider.hpp>
 
 #include <Crisp/Math/Constants.hpp>
 

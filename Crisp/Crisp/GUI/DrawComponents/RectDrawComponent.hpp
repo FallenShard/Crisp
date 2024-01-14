@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/GUI/RenderSystem.hpp>
+#include <Crisp/Gui/RenderSystem.hpp>
 
 namespace crisp::gui {
 struct RectDrawComponent {

@@ -1,10 +1,10 @@
-#include <Crisp/GUI/CheckBox.hpp>
+#include <Crisp/Gui/CheckBox.hpp>
 
 #include <iostream>
 #include <vector>
 
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
 
 namespace crisp::gui {
 CheckBox::CheckBox(Form* parentForm)

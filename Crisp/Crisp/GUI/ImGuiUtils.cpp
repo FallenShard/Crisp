@@ -1,4 +1,4 @@
-#include <Crisp/GUI/ImGuiUtils.hpp>
+#include <Crisp/Gui/ImGuiUtils.hpp>
 
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>

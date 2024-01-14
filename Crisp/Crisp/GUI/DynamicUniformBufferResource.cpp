@@ -1,4 +1,4 @@
-#include <Crisp/GUI/DynamicUniformBufferResource.hpp>
+#include <Crisp/Gui/DynamicUniformBufferResource.hpp>
 
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/Renderer.hpp>

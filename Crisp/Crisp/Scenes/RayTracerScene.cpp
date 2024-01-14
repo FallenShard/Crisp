@@ -4,14 +4,14 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/GUI/Button.hpp>
-#include <Crisp/GUI/ComboBox.hpp>
-#include <Crisp/GUI/Control.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/MemoryUsageBar.hpp>
-#include <Crisp/GUI/Panel.hpp>
-#include <Crisp/GUI/Slider.hpp>
+#include <Crisp/Gui/Button.hpp>
+#include <Crisp/Gui/ComboBox.hpp>
+#include <Crisp/Gui/Control.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
+#include <Crisp/Gui/MemoryUsageBar.hpp>
+#include <Crisp/Gui/Panel.hpp>
+#include <Crisp/Gui/Slider.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
@@ -191,8 +191,9 @@ void RayTracerScene::createGui() {
         float remainingPct = percentage == 0.0f ? 0.0f : (1.0f - percentage) / percentage * timeSpent / 8.0f;
 
         std::stringstream stringStream;
-        stringStream << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100
-                     << " %    ETA: " << remainingPct << " s";
+        stringStream
+            << std::fixed << std::setprecision(2) << std::setfill('0') << percentage * 100
+            << " %    ETA: " << remainingPct << " s";
         label->setText(stringStream.str());
         bar->setHorizontalSizingPolicy(gui::SizingPolicy::FillParent, percentage);
     };

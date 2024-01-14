@@ -1,10 +1,10 @@
 #define NOMINMAX
-#include <Crisp/GUI/ControlGroup.hpp>
+#include <Crisp/Gui/ControlGroup.hpp>
 
 #include <algorithm>
 #include <iostream>
 
-#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Gui/Form.hpp>
 
 namespace crisp::gui {
 ControlGroup::ControlGroup(Form* parentForm)

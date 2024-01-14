@@ -7,7 +7,7 @@
 
 #include <Crisp/Animation/Animator.hpp>
 #include <Crisp/Core/Mouse.hpp>
-#include <Crisp/GUI/ControlGroup.hpp>
+#include <Crisp/Gui/ControlGroup.hpp>
 #include <Crisp/Math/Headers.hpp>
 
 namespace crisp::gui {

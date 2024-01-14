@@ -2,8 +2,8 @@
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/GUI/ImGuiCameraUtils.hpp>
-#include <Crisp/GUI/ImGuiUtils.hpp>
+#include <Crisp/Gui/ImGuiCameraUtils.hpp>
+#include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Image/Io/Utils.hpp>

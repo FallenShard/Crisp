@@ -32,9 +32,9 @@
 #include <Crisp/Lights/ShadowMapper.hpp>
 #include <Crisp/Models/BoxVisualizer.hpp>
 
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Panel.hpp>
-#include <Crisp/GUI/Slider.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Panel.hpp>
+#include <Crisp/Gui/Slider.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>

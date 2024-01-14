@@ -2,8 +2,8 @@
 
 #include <functional>
 
-#include <Crisp/GUI/ControlGroup.hpp>
-#include <Crisp/GUI/DrawComponents/RectDrawComponent.hpp>
+#include <Crisp/Gui/ControlGroup.hpp>
+#include <Crisp/Gui/DrawComponents/RectDrawComponent.hpp>
 
 namespace crisp {
 namespace gui {

@@ -17,10 +17,10 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
-#include <Crisp/GUI/Button.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Slider.hpp>
+#include <Crisp/Gui/Button.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
+#include <Crisp/Gui/Slider.hpp>
 
 #include <Crisp/Renderer/RenderGraph.hpp>
 
@@ -147,12 +147,15 @@ void FluidSimulationScene::createGui() {
         return sliderPtr;
     };
 
-    addLabeledSlider("Gravity X", 0.0, -10.0, +10.0)->valueChanged +=
-        [this](double val) { m_fluidSimulation->setGravityX(static_cast<float>(val)); };
-    addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged +=
-        [this](double val) { m_fluidSimulation->setGravityY(static_cast<float>(val)); };
-    addLabeledSlider("Gravity Z", 0.0, -10.0, +10.0)->valueChanged +=
-        [this](double val) { m_fluidSimulation->setGravityZ(static_cast<float>(val)); };
+    addLabeledSlider("Gravity X", 0.0, -10.0, +10.0)->valueChanged += [this](double val) {
+        m_fluidSimulation->setGravityX(static_cast<float>(val));
+    };
+    addLabeledSlider("Gravity Y", -9.8, -10.0, +10.0)->valueChanged += [this](double val) {
+        m_fluidSimulation->setGravityY(static_cast<float>(val));
+    };
+    addLabeledSlider("Gravity Z", 0.0, -10.0, +10.0)->valueChanged += [this](double val) {
+        m_fluidSimulation->setGravityZ(static_cast<float>(val));
+    };
 
     auto viscoLabel = std::make_unique<Label>(form, "Viscosity");
     viscoLabel->setPosition({0, y});
@@ -184,8 +187,9 @@ void FluidSimulationScene::createGui() {
     surfaceTensionSlider->setMaxValue(50);
     surfaceTensionSlider->setMinValue(1);
     surfaceTensionSlider->setValue(1);
-    surfaceTensionSlider->valueChanged +=
-        [this](int value) { m_fluidSimulation->setSurfaceTension(static_cast<float>(value)); };
+    surfaceTensionSlider->valueChanged += [this](int value) {
+        m_fluidSimulation->setSurfaceTension(static_cast<float>(value));
+    };
     panel->addControl(std::move(surfaceTensionSlider));
     y += 30;
 

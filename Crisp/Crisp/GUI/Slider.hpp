@@ -8,11 +8,10 @@
 #include <Crisp/Core/Event.hpp>
 
 #include <Crisp/Animation/PropertyAnimation.hpp>
-#include <Crisp/GUI/Control.hpp>
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
-#include <Crisp/GUI/Panel.hpp>
-
+#include <Crisp/Gui/Control.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
+#include <Crisp/Gui/Panel.hpp>
 
 namespace crisp::gui {
 template <typename T>

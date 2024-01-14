@@ -3,7 +3,7 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 #include <Crisp/Core/Event.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Gui/Form.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/SceneContainer.hpp>
 

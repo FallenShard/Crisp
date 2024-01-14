@@ -1,6 +1,6 @@
-#include <Crisp/GUI/Control.hpp>
+#include <Crisp/Gui/Control.hpp>
 
-#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Gui/Form.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 #include <sstream>
@@ -8,13 +8,13 @@
 namespace crisp::gui {
 namespace {
 uint32_t UniqueIdCounter = 0;
-}
+} // namespace
 
 Control::Control(Form* form)
     : m_id("Control_" + std::to_string(UniqueIdCounter++))
     , m_parent(nullptr)
-    , m_anchor(Anchor::TopLeft)
     , m_origin(Origin::TopLeft)
+    , m_anchor(Anchor::TopLeft)
     , m_horizontalSizingPolicy(SizingPolicy::Fixed)
     , m_verticalSizingPolicy(SizingPolicy::Fixed)
     , m_parentSizePercent(1.0f, 1.0f)
@@ -22,15 +22,15 @@ Control::Control(Form* form)
     , m_sizeHint(50.0f)
     , m_paddingX(0.0f)
     , m_paddingY(0.0f)
-    , m_depthOffset(1.0f)
-    , m_color(glm::vec4(1.0f))
-    , m_opacity(1.0f)
+    , m_M()
     , m_scale(1.0f)
+    , m_depthOffset(1.0f)
     , m_needsValidation(true)
-    //, m_validationFlags(Validation::All)
     , m_form(form)
+    //, m_validationFlags(Validation::All)
     , m_renderSystem(form->getRenderSystem())
-    , m_M() {}
+    , m_color(glm::vec4(1.0f))
+    , m_opacity(1.0f) {}
 
 Control::~Control() {
     spdlog::debug("Destroying control: {}", m_id);
@@ -38,7 +38,7 @@ Control::~Control() {
 }
 
 void Control::setId(std::string&& id) {
-    m_id = id;
+    m_id = std::move(id);
 }
 
 std::string Control::getId() const {

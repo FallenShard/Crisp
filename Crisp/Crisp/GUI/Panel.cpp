@@ -1,6 +1,5 @@
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Panel.hpp>
-
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Panel.hpp>
 
 #include <iostream>
 

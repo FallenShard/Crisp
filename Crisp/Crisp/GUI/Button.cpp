@@ -1,7 +1,7 @@
-#include <Crisp/GUI/Button.hpp>
+#include <Crisp/Gui/Button.hpp>
 
-#include <Crisp/GUI/Form.hpp>
-#include <Crisp/GUI/Label.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
 
 namespace crisp::gui {
 namespace {

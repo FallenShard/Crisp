@@ -1,8 +1,8 @@
 
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
-#include <Crisp/GUI/ImGuiCameraUtils.hpp>
-#include <Crisp/GUI/ImGuiUtils.hpp>
+#include <Crisp/Gui/ImGuiCameraUtils.hpp>
+#include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/IO/JsonUtils.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Math/AliasTable.hpp>

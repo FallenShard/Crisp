@@ -1,6 +1,6 @@
-#include <Crisp/GUI/ListBox.hpp>
+#include <Crisp/Gui/ListBox.hpp>
 
-#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Gui/Form.hpp>
 
 namespace crisp::gui {
 // ListBox::ListBox(Form* parentForm)

@@ -1,4 +1,4 @@
-#include <Crisp/GUI/RenderSystem.hpp>
+#include <Crisp/Gui/RenderSystem.hpp>
 #define NOMINMAX
 
 #include <algorithm>
@@ -17,7 +17,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/Texture.hpp>
 
-#include <Crisp/GUI/DynamicUniformBufferResource.hpp>
+#include <Crisp/Gui/DynamicUniformBufferResource.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 

@@ -1,4 +1,4 @@
-#include <Crisp/GUI/Form.hpp>
+#include <Crisp/Gui/Form.hpp>
 
 #include <iostream>
 
@@ -9,7 +9,7 @@
 #include <Crisp/Gui/RenderSystem.hpp>
 #include <Crisp/Gui/StopWatch.hpp>
 
-#include <Crisp/GUI/Panel.hpp>
+#include <Crisp/Gui/Panel.hpp>
 
 namespace {
 auto logger = spdlog::stderr_color_mt("Form");

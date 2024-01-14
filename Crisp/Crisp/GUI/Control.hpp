@@ -6,8 +6,8 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Math/Rect.hpp>
 
-#include <Crisp/GUI/GuiEnums.hpp>
-#include <Crisp/GUI/RenderSystem.hpp>
+#include <Crisp/Gui/GuiEnums.hpp>
+#include <Crisp/Gui/RenderSystem.hpp>
 
 namespace crisp::gui {
 class Form;
