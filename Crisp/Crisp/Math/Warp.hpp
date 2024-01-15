@@ -2,8 +2,7 @@
 
 #include <Crisp/Math/Headers.hpp>
 
-namespace crisp {
-namespace warp {
+namespace crisp::warp {
 glm::vec2 squareToUniformSquare(const glm::vec2& sample);
 float squareToUniformSquarePdf();
 
@@ -23,5 +22,6 @@ glm::vec3 squareToCosineHemisphere(const glm::vec2& sample);
 float squareToCosineHemispherePdf(const glm::vec3& v);
 
 glm::vec3 squareToUniformTriangle(const glm::vec2& sample);
-} // namespace warp
-} // namespace crisp
+
+glm::vec3 cubeToUniformHemisphereVolume(const glm::vec3& sample);
+} // namespace crisp::warp

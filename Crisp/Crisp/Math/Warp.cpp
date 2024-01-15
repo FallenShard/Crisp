@@ -11,13 +11,13 @@ glm::vec3 squareToUniformCylinder(const glm::vec2& sample, float cosThetaMin, fl
     float z = cosThetaMin + sample.y * (cosThetaMax - cosThetaMin);
     float phi = 2.0f * PI<> * sample.x;
 
-    return glm::vec3(cosf(phi), sinf(phi), z);
+    return {cosf(phi), sinf(phi), z};
 }
 
 glm::vec3 cylinderToSphereSection(const glm::vec2& sample, float cosThetaMin, float cosThetaMax) {
     glm::vec3 cylinderPt = squareToUniformCylinder(sample, cosThetaMin, cosThetaMax);
     float radius = sqrtf(1.0f - cylinderPt.z * cylinderPt.z);
-    return glm::vec3(cylinderPt.x * radius, cylinderPt.y * radius, cylinderPt.z);
+    return {cylinderPt.x * radius, cylinderPt.y * radius, cylinderPt.z};
 }
 } // namespace
 
@@ -81,7 +81,11 @@ glm::vec3 squareToUniformTriangle(const glm::vec2& sample) {
     float val = sqrtf(sample.x);
     float u = 1.0f - val;
     float v = sample.y * val;
-    return glm::vec3(u, v, 1.f - u - v);
+    return {u, v, 1.f - u - v};
+}
+
+glm::vec3 cubeToUniformHemisphereVolume(const glm::vec3& sample) {
+    return std::sqrt(sample.z) * warp::squareToUniformHemisphere(glm::vec2(sample.x, sample.y));
 }
 } // namespace warp
 } // namespace crisp
