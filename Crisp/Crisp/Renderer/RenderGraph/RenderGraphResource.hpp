@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -35,9 +34,9 @@ struct RenderGraphResource {
 };
 
 enum class ResourceUsageType {
-    Storage,
-    Attachment,
-    Texture,
+    Storage,    // For compute, non-sampled use.
+    Attachment, // For render pass attachments/render targets.
+    Texture,    // For sampled images.
 };
 
 struct ResourceAccessState {

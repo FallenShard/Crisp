@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
@@ -15,7 +16,8 @@ enum class PassType {
 };
 
 struct RenderPassExecutionContext {
-    VkCommandBuffer cmdBuffer;
+    const VulkanCommandBuffer cmdBuffer;
+    uint32_t virtualFrameIndex;
 };
 
 struct RenderGraphPass {
@@ -30,7 +32,6 @@ struct RenderGraphPass {
     std::vector<ResourceAccessState> outputAccesses; // How the output resource is accessed in this pass.
 
     // Computed during compilation phase.
-    std::vector<RenderGraphPassHandle> edges; // Other passes that have a data dependency with this pass.
     std::vector<RenderGraphResourceHandle> colorAttachments;
     std::optional<RenderGraphResourceHandle> depthStencilAttachment;
 

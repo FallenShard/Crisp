@@ -233,7 +233,9 @@ void GltfViewerScene::update(float dt) {
 }
 
 void GltfViewerScene::render() {
-    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) { m_rg->execute(cmdBuffer); });
+    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
+        m_rg->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex());
+    });
 }
 
 void GltfViewerScene::renderGui() {

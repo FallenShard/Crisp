@@ -23,6 +23,41 @@ RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc) {
         .isSwapChainDependent = desc.sizePolicy == SizePolicy::SwapChainRelative,
     };
 }
+
+VkAttachmentDescription toColorAttachmentDescription(
+    const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
+    return {
+        .format = imageDescription.format,
+        .samples = imageDescription.sampleCount,
+        .loadOp = imageDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .storeOp = resource.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout =
+            imageDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+}
+
+VkAttachmentDescription toDepthAttachmentDescription(
+    const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
+    return {
+        .format = imageDescription.format,
+        .samples = imageDescription.sampleCount,
+        .loadOp = imageDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .storeOp = resource.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout =
+            imageDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
+                ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+}
+
 } // namespace
 
 RenderGraph::Builder::Builder(RenderGraph& renderGraph, const RenderGraphPassHandle passHandle)
@@ -213,9 +248,8 @@ void RenderGraph::compile(
     createPhysicalPasses(device, swapChainExtent);
 }
 
-void RenderGraph::execute(const VkCommandBuffer cmdBuffer) {
-    RenderPassExecutionContext executionCtx{};
-    executionCtx.cmdBuffer = cmdBuffer;
+void RenderGraph::execute(const VkCommandBuffer cmdBuffer, const uint32_t virtualFrameIndex) {
+    const RenderPassExecutionContext executionCtx{VulkanCommandBuffer{cmdBuffer}, virtualFrameIndex};
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         if (pass.type == PassType::Rasterizer) {
             for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
@@ -225,7 +259,7 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer) {
                     const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
                     const bool isDepthAttachment = isDepthFormat(m_imageDescriptions[res.descriptionIndex].format);
                     physicalImage.image->transitionLayout(
-                        executionCtx.cmdBuffer,
+                        executionCtx.cmdBuffer.getHandle(),
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         isDepthAttachment
                             ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
@@ -235,11 +269,9 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer) {
             }
 
             auto& physPass = *m_physicalPasses.at(idx);
-            physPass.begin(executionCtx.cmdBuffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-
+            physPass.begin(executionCtx.cmdBuffer.getHandle(), 0, VK_SUBPASS_CONTENTS_INLINE);
             pass.executeFunc(executionCtx);
-
-            physPass.end(executionCtx.cmdBuffer, 0);
+            physPass.end(executionCtx.cmdBuffer.getHandle(), 0);
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
             pass.executeFunc(executionCtx);
         }
@@ -480,37 +512,22 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         RenderPassParameters renderPassParams{};
         std::vector<VkClearValue> attachmentClearValues{};
         for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
-            const auto& colorAttachment{getResource(resourceId)};
+            const auto& colorImageResource{getResource(resourceId)};
             const auto& colorDescription{getImageDescription(resourceId)};
-            const VkImageLayout initialLayout =
-                colorDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             builder
                 .setAttachment(
                     static_cast<int32_t>(attachmentIndex),
-                    {
-                        .format = m_imageDescriptions[colorAttachment.descriptionIndex].format,
-                        .samples = m_imageDescriptions[colorAttachment.descriptionIndex].sampleCount,
-                        .loadOp =
-                            colorDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .storeOp = colorAttachment.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE
-                                                                      : VK_ATTACHMENT_STORE_OP_STORE,
-                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                        .initialLayout = initialLayout,
-                        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    })
+                    toColorAttachmentDescription(colorImageResource, colorDescription))
                 .addColorAttachmentRef(0, attachmentIndex);
 
-            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[colorAttachment.descriptionIndex]);
+            auto rtInfo = toRenderTargetInfo(colorDescription);
             rtInfo.usage = colorDescription.imageUsageFlags;
             rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             rtInfo.buffered = false;
 
             renderPassParams.renderTargetInfos.push_back(rtInfo);
             renderPassParams.renderTargets.push_back(
-                m_physicalImages[colorAttachment.physicalResourceIndex].image.get());
+                m_physicalImages[colorImageResource.physicalResourceIndex].image.get());
             renderPassParams.attachmentMappings.push_back(
                 {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
             attachmentClearValues.push_back(colorDescription.clearValue ? *colorDescription.clearValue : VkClearValue{});
@@ -520,31 +537,13 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         if (pass.depthStencilAttachment) {
             const auto& res{getResource(*pass.depthStencilAttachment)};
             const auto& depthDescription{getImageDescription(*pass.depthStencilAttachment)};
-            const VkImageLayout initialLayout =
-                depthDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            const VkAttachmentLoadOp loadOp =
-                depthDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            const VkAttachmentStoreOp storeOp =
-                res.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE;
             builder
                 .setAttachment(
-                    static_cast<int32_t>(attachmentIndex),
-                    {
-                        .format = m_imageDescriptions[res.descriptionIndex].format,
-                        .samples = m_imageDescriptions[res.descriptionIndex].sampleCount,
-                        .loadOp = loadOp,
-                        .storeOp = storeOp,
-                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                        .initialLayout = initialLayout,
-                        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    })
+                    static_cast<int32_t>(attachmentIndex), toDepthAttachmentDescription(res, depthDescription))
                 .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-            auto rtInfo = toRenderTargetInfo(m_imageDescriptions[res.descriptionIndex]);
+            auto rtInfo = toRenderTargetInfo(depthDescription);
             rtInfo.usage = depthDescription.imageUsageFlags;
             rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             rtInfo.buffered = false;
@@ -556,6 +555,8 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
             attachmentClearValues.push_back(depthDescription.clearValue ? *depthDescription.clearValue : VkClearValue{});
 
             // Ensure that we are synchronizing the load.
+            const VkAttachmentLoadOp loadOp =
+                depthDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             if (loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                 builder.addDependency({
                     .srcSubpass = VK_SUBPASS_EXTERNAL,

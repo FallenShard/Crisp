@@ -1,11 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
-
-#include <memory>
 
 namespace crisp {
 class Renderer;

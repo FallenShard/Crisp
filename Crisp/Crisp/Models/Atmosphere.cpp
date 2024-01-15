@@ -411,13 +411,14 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
             renderer.getDevice().flushDescriptorUpdates();
 
-            material->bind(0, ctx.cmdBuffer);
+            const VkCommandBuffer cmdBufferHandle = ctx.cmdBuffer.getHandle();
+            material->bind(0, cmdBufferHandle);
 
             // command.pipeline->bind(cmdBuffer.getHandle());
-            renderer.setDefaultViewport(ctx.cmdBuffer);
-            renderer.setDefaultScissor(ctx.cmdBuffer);
+            renderer.setDefaultViewport(cmdBufferHandle);
+            renderer.setDefaultScissor(cmdBufferHandle);
 
-            renderer.drawFullScreenQuad(ctx.cmdBuffer);
+            renderer.drawFullScreenQuad(cmdBufferHandle);
 
             // command.pipeline->getPipelineLayout()->setPushConstants(
             //     cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));

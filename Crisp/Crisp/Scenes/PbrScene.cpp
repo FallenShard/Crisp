@@ -148,7 +148,9 @@ void PbrScene::update(float dt) {
 }
 
 void PbrScene::render() {
-    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) { m_rg->execute(cmdBuffer); });
+    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
+        m_rg->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex());
+    });
 }
 
 void PbrScene::renderGui() {

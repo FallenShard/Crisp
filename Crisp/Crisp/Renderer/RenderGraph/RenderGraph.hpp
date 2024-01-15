@@ -68,7 +68,7 @@ public:
 
     void compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent, VkCommandBuffer cmdBuffer);
 
-    void execute(VkCommandBuffer cmdBuffer);
+    void execute(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex);
 
     RenderGraphBlackboard& getBlackboard();
 
