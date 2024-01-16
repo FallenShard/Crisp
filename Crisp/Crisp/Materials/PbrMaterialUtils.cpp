@@ -15,69 +15,100 @@ struct TexInfo {
     VkFormat defaultFormat;
 };
 
-constexpr TexInfo kAlbedoTex = {"diffuse", VK_FORMAT_R8G8B8A8_SRGB};
-constexpr TexInfo kNormalTex = {"normal", VK_FORMAT_R8G8B8A8_UNORM};
-constexpr TexInfo kMetallicTex = {"metallic", VK_FORMAT_R8_UNORM};
-constexpr TexInfo kRoughnessTex = {"roughness", VK_FORMAT_R8_UNORM};
-constexpr TexInfo kOcclusionTex = {"ao", VK_FORMAT_R8_UNORM};
-constexpr TexInfo kEmissionTex = {"emissive", VK_FORMAT_R8G8B8A8_UNORM};
+consteval auto createTexInfos() {
+    std::array<TexInfo, kPbrMapTypeCount> texInfos{};
+    for (uint32_t i = 0; i < kPbrMapTypeCount; ++i) {
+        texInfos[i].name = kPbrMapNames[i];
+    }
+    texInfos[kPbrAlbedoMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    texInfos[kPbrNormalMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    texInfos[kPbrMetallicMapIndex].defaultFormat = VK_FORMAT_R8_UNORM;
+    texInfos[kPbrRoughnessMapIndex].defaultFormat = VK_FORMAT_R8_UNORM;
+    texInfos[kPbrOcclusionMapIndex].defaultFormat = VK_FORMAT_R8_UNORM;
+    texInfos[kPbrEmissiveMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    return texInfos;
+}
+
+constexpr std::array<TexInfo, kPbrMapTypeCount> kTexInfos = createTexInfos();
 
 } // namespace
 
-PbrTextureGroup loadPbrTextureGroup(const std::filesystem::path& materialDir) {
-    const auto loadTextureOpt =
-        [&materialDir](const std::string_view name, const uint32_t requestedChannels) -> std::optional<Image> {
-        const auto& path = materialDir / fmt::format("{}.png", name);
-        if (std::filesystem::exists(path)) {
-            return loadImage(path, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap();
-        }
+PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::string name) {
+    const auto loadImageIfExists =
+        [&materialDir](std::vector<Image>& images, const std::string_view filename, const uint32_t requestedChannels) {
+            const auto& path = materialDir / fmt::format("{}.png", filename);
+            if (std::filesystem::exists(path)) {
+                images.push_back(loadImage(path, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
+            }
 
-        logger->warn("Failed to load texture from {}.", path.string());
-        return std::nullopt;
+            logger->warn("Image does not exist at path: '{}'.", path.string());
+        };
+
+    PbrImageGroup group{};
+    group.name = std::move(name);
+    std::array<std::vector<Image>*, kPbrMapTypeCount> mapArrays{
+        &group.albedoMaps,
+        &group.normalMaps,
+        &group.roughnessMaps,
+        &group.metallicMaps,
+        &group.occlusionMaps,
+        &group.emissiveMaps,
     };
-
-    PbrTextureGroup textureGroup{};
-    textureGroup.albedo = loadTextureOpt(kAlbedoTex.name, getNumChannels(kAlbedoTex.defaultFormat));
-    textureGroup.normal = loadTextureOpt(kNormalTex.name, getNumChannels(kNormalTex.defaultFormat));
-    textureGroup.roughness = loadTextureOpt(kRoughnessTex.name, getNumChannels(kRoughnessTex.defaultFormat));
-    textureGroup.metallic = loadTextureOpt(kMetallicTex.name, getNumChannels(kMetallicTex.defaultFormat));
-    textureGroup.occlusion = loadTextureOpt(kOcclusionTex.name, getNumChannels(kOcclusionTex.defaultFormat));
-    textureGroup.emissive = loadTextureOpt(kEmissionTex.name, getNumChannels(kEmissionTex.defaultFormat));
-    return textureGroup;
+    for (auto&& [idx, mapArray] : std::views::enumerate(mapArrays)) {
+        loadImageIfExists(*mapArray, kTexInfos[idx].name, getNumChannels(kTexInfos[idx].defaultFormat));
+    }
+    return group;
 }
 
-void addPbrTexturesToImageCache(
-    const PbrTextureGroup& texGroup, const std::string& materialKey, ImageCache& imageCache) {
-    const auto addTex = [&imageCache, &materialKey](const std::optional<Image>& texture, const TexInfo& texInfo) {
-        if (texture) {
-            const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
+std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::path& materialDir) {
+
+    PbrMaterial material{.name = materialDir.stem().string()};
+
+    auto group = loadPbrImageGroup(materialDir, material.name);
+    const PbrImageKeyCreator keyCreator{group.name};
+    material.textureKeys[0] = group.albedoMaps.empty() ? "" : keyCreator.createAlbedoMapKey(0);
+    material.textureKeys[1] = group.normalMaps.empty() ? "" : keyCreator.createNormalMapKey(0);
+    material.textureKeys[2] = group.roughnessMaps.empty() ? "" : keyCreator.createRoughnessMapKey(0);
+    material.textureKeys[3] = group.metallicMaps.empty() ? "" : keyCreator.createMetallicMapKey(0);
+    material.textureKeys[4] = group.occlusionMaps.empty() ? "" : keyCreator.createOcclusionMapKey(0);
+    material.textureKeys[5] = group.emissiveMaps.empty() ? "" : keyCreator.createEmissiveMapKey(0);
+
+    return {std::move(material), std::move(group)};
+}
+
+void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& imageCache) {
+    auto& renderer = *imageCache.getRenderer();
+    const PbrImageKeyCreator keyCreator{imageGroup.name};
+    std::array<const std::vector<Image>*, kPbrMapTypeCount> mapArrays{
+        &imageGroup.albedoMaps,
+        &imageGroup.normalMaps,
+        &imageGroup.roughnessMaps,
+        &imageGroup.metallicMaps,
+        &imageGroup.occlusionMaps,
+        &imageGroup.emissiveMaps,
+    };
+
+    for (auto&& [typeIdx, maps] : std::views::enumerate(mapArrays)) {
+        const uint32_t mapTypeIdx{static_cast<uint32_t>(typeIdx)};
+        for (auto&& [idx, data] : std::views::enumerate(*maps)) {
             imageCache.addImageWithView(
-                key, createVulkanImage(*imageCache.getRenderer(), *texture, texInfo.defaultFormat));
+                keyCreator.createMapKey(mapTypeIdx, static_cast<uint32_t>(idx)),
+                createVulkanImage(renderer, data, kTexInfos[typeIdx].defaultFormat));
         }
     };
-
-    addTex(texGroup.albedo, kAlbedoTex);
-    addTex(texGroup.normal, kNormalTex);
-    addTex(texGroup.roughness, kRoughnessTex);
-    addTex(texGroup.metallic, kMetallicTex);
-    addTex(texGroup.occlusion, kOcclusionTex);
-    addTex(texGroup.emissive, kEmissionTex);
 }
 
-void removePbrTexturesFromImageCache(const std::string& materialKey, ImageCache& imageCache) {
-    logger->info("Removing PBR textures with key: {}", materialKey);
-    const auto removeTexAndView = [&imageCache, &materialKey](const TexInfo& texInfo) {
-        const std::string key = fmt::format("{}-{}", materialKey, texInfo.name);
+void removePbrTexturesFromImageCache(const std::string& imageGroupName, ImageCache& imageCache) {
+    logger->info("Removing PBR images with key: {}", imageGroupName);
+    const auto removeTexAndView = [&imageCache, &imageGroupName](const std::string_view mapName) {
+        const std::string key = fmt::format("{}-{}-0", imageGroupName, mapName);
         imageCache.removeImage(key);
         imageCache.removeImageView(key);
     };
 
-    removeTexAndView(kAlbedoTex);
-    removeTexAndView(kNormalTex);
-    removeTexAndView(kRoughnessTex);
-    removeTexAndView(kMetallicTex);
-    removeTexAndView(kOcclusionTex);
-    removeTexAndView(kEmissionTex);
+    for (const auto& mapName : kPbrMapNames) {
+        removeTexAndView(mapName);
+    }
 }
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir) {
@@ -99,42 +130,8 @@ std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::fi
 
 Material* createPbrMaterial(
     const std::string_view materialId,
-    const std::string_view pbrTexturePrefix,
+    const PbrMaterial& pbrMaterial,
     ResourceContext& resourceContext,
-    const PbrParams& params,
-    const TransformBuffer& transformBuffer) {
-    auto& imageCache = resourceContext.imageCache;
-
-    auto* material = resourceContext.createMaterial(fmt::format("pbrTex{}", materialId), "pbrTex");
-    material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
-
-    const auto setMaterialTexture =
-        [&material, &imageCache, &pbrTexturePrefix](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", pbrTexturePrefix, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            material->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
-
-    setMaterialTexture(0, "diffuse");
-    setMaterialTexture(1, "metallic");
-    setMaterialTexture(2, "roughness");
-    setMaterialTexture(3, "normal");
-    setMaterialTexture(4, "ao");
-    setMaterialTexture(5, "emissive");
-
-    const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-    material->writeDescriptor(
-        2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
-
-    return material;
-}
-
-Material* createPbrMaterial(
-    const std::string_view materialId,
-    const std::array<int32_t, 6>& textureIndices,
-    ResourceContext& resourceContext,
-    const PbrParams& params,
     const TransformBuffer& transformBuffer) {
     auto& imageCache = resourceContext.imageCache;
 
@@ -143,24 +140,52 @@ Material* createPbrMaterial(
 
     const auto setMaterialTexture =
         [&material, &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
-            const std::string fallbackKey = fmt::format("default-{}", texName);
+            const std::string fallbackKey = fmt::format("default-{}-0", texName);
             material->writeDescriptor(
                 2, index, imageCache.getImageView(texKey, fallbackKey), imageCache.getSampler("linearRepeat"));
         };
 
-    setMaterialTexture(0, "diffuse", fmt::format("IMAGE-ALBEDO-{}", textureIndices[0]));
-    setMaterialTexture(1, "metallic", fmt::format("IMAGE-METALLIC-{}", textureIndices[2]));
-    setMaterialTexture(2, "roughness", fmt::format("IMAGE-ROUGHNESS-{}", textureIndices[3]));
-    setMaterialTexture(3, "normal", fmt::format("IMAGE-NORMAL-{}", textureIndices[1]));
-    setMaterialTexture(4, "ao", fmt::format("IMAGE-AO-{}", textureIndices[4]));
-    setMaterialTexture(5, "emissive", fmt::format("IMAGE-EMISSIVE-{}", textureIndices[5]));
+    for (uint32_t i = 0; i < kPbrMapTypeCount; ++i) {
+        setMaterialTexture(i, kPbrMapNames[i], pbrMaterial.textureKeys[i]);
+    }
 
     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
     material->writeDescriptor(
-        2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
+        2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, pbrMaterial.params, BufferUpdatePolicy::PerFrame));
 
     return material;
-};
+}
+
+// Material* createPbrMaterial(
+//     const std::string_view materialId,
+//     const std::string_view imageGroupName,
+//     const std::array<int32_t, kPbrMapTypeCount>& textureIndices,
+//     ResourceContext& resourceContext,
+//     const PbrParams& params,
+//     const TransformBuffer& transformBuffer) {
+//     auto& imageCache = resourceContext.imageCache;
+
+//     auto* material = resourceContext.createMaterial(fmt::format("pbrTex{}", materialId), "pbrTex");
+//     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
+
+//     const auto setMaterialTexture =
+//         [&material, &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
+//             const std::string fallbackKey = fmt::format("default-{}-0", texName);
+//             material->writeDescriptor(
+//                 2, index, imageCache.getImageView(texKey, fallbackKey), imageCache.getSampler("linearRepeat"));
+//         };
+
+//     const PbrImageKeyCreator keyCreator{std::string(imageGroupName)};
+//     for (uint32_t i = 0; i < kPbrMapTypeCount; ++i) {
+//         setMaterialTexture(i, kPbrMapNames[i], keyCreator.createMapKey(i, textureIndices[i]));
+//     }
+
+//     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
+//     material->writeDescriptor(
+//         2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
+
+//     return material;
+// };
 
 void setPbrMaterialSceneParams(
     Material& material,

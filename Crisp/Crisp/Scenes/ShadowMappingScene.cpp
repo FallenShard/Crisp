@@ -351,7 +351,7 @@ void ShadowMappingScene::createCommonTextures() {
             11.0f));
 
     // For textured pbr
-    addPbrTexturesToImageCache(createDefaultPbrTextureGroup(), "default", imageCache);
+    addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
     // Environment map
     auto hdrName = "GreenwichPark.hdr";

@@ -3,7 +3,8 @@ add_cpp_static_library(CrispMaterial
     "PbrMaterial.cpp")
 target_link_libraries(CrispMaterial
     PUBLIC Crisp::Math
-    PUBLIC Crisp::Image)
+    PUBLIC Crisp::Image
+    PUBLIC Crisp::Format)
 
 add_cpp_static_library(CrispMaterialUtils
     "PbrMaterialUtils.hpp"

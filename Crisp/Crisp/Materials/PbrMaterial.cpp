@@ -25,13 +25,15 @@ Image createDefaultEmissiveMap() {
     return {std::vector<uint8_t>{0, 0, 0, 0}, 1, 1, 4, 4 * sizeof(uint8_t)};
 }
 
-PbrTextureGroup createDefaultPbrTextureGroup() {
+PbrImageGroup createDefaultPbrImageGroup() {
     return {
-        .albedo = createDefaultAlbedoMap(std::array<uint8_t, 4>{255, 255, 255, 255}),
-        .normal = createDefaultNormalMap(),
-        .roughness = createDefaultRoughnessMap(),
-        .metallic = createDefaultMetallicMap(),
-        .occlusion = createDefaultAmbientOcclusionMap(),
-        .emissive = createDefaultEmissiveMap()};
+        .name = "default",
+        .albedoMaps = {createDefaultAlbedoMap(std::array<uint8_t, 4>{255, 255, 255, 255})},
+        .normalMaps = {createDefaultNormalMap()},
+        .roughnessMaps = {createDefaultRoughnessMap()},
+        .metallicMaps = {createDefaultMetallicMap()},
+        .occlusionMaps = {createDefaultAmbientOcclusionMap()},
+        .emissiveMaps = {createDefaultEmissiveMap()},
+    };
 }
 } // namespace crisp

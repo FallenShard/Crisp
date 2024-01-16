@@ -47,9 +47,9 @@ layout(set = 1, binding = 6) uniform sampler2D cascadedShadowMaps[4];
 
 // Material-specific parameters.
 layout(set = 2, binding = 0) uniform sampler2D diffuseTex;
-layout(set = 2, binding = 1) uniform sampler2D metallicTex;
+layout(set = 2, binding = 1) uniform sampler2D normalTex;
 layout(set = 2, binding = 2) uniform sampler2D roughnessTex;
-layout(set = 2, binding = 3) uniform sampler2D normalTex;
+layout(set = 2, binding = 3) uniform sampler2D metallicTex;
 layout(set = 2, binding = 4) uniform sampler2D aoTex;
 layout(set = 2, binding = 5) uniform sampler2D emissiveTex;
 layout(set = 2, binding = 6) uniform Material
@@ -131,7 +131,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
     const vec3 specular = prefilter * (F * brdf.x + brdf.y);
 
-    return (kD * diffuse + specular) * ao;
+    return kD * diffuse * ao + specular;
 }
 
 vec3 computeEnvRadianceShadow(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow)
@@ -150,7 +150,7 @@ vec3 computeEnvRadianceShadow(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F
     const vec3 specular = prefilter * (F * brdf.x + brdf.y);
 
     //return vec3(F);
-    return (kD * diffuse + specular * shadow) * ao;
+    return kD * diffuse * ao + specular;
 }
 
 vec3 decodeNormal(in vec2 uv)
@@ -342,26 +342,10 @@ void main()
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
     float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
-    // float shadowCoeff = 1.0f;
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
-    
+    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
 
-    const vec3 Lenv = computeEnvRadianceShadow(eyeN, eyeV, kD, albedo, F, roughness, ao, shadowCoeff);
-    //  * (0.5 + 0.5 * sqrt(shadowCoeff))
     fragColor = vec4(Lenv + Li * shadowCoeff + emission, 1.0f);
-    //fragColor = vec4(vec3(specularity), 1.0f);
-    //fragColor = vec4(Li * shadowCoeff + emission, 1.0f);
-    //fragColor = vec4(Li, 1);
-    //fragColor = vec4(vec3(ao), 1.0f);
-    //fragColor = vec4(vec3(metallic), 1.0f);
-    //fragColor = vec4(Li, 1.0f);
-    //fragColor = vec4(Lenv * 0.5f + vec3(shadowCoeff), 1.0f);
-    //fragColor = vec4(inTexCoord, 0.0f, 1.0f);
-    //fragColor = vec4(mod(uvCoord, vec2(1.0)), 0, 1);
-    //fragColor = vec4(worldPos, 1.0);
-    //fragColor = vec4(Lenv, 1.0f);
-    //fragColor = vec4(vec3(G), 1.0f);
-    //fragColor = vec4(1, 0, 0, 1);
-    //fragColor = vec4(vec3(ao), 1.0);
+    fragColor = vec4(vec3(shadowCoeff), 1.0f);
 }

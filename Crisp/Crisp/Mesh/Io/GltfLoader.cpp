@@ -258,13 +258,13 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 
 } // namespace
 
-MaterialData createPbrMaterialFromGltfMaterial(
+PbrMaterial createPbrMaterialFromGltfMaterial(
     const tinygltf::Model& model, const tinygltf::Material& material, GltfImageLoader& loader) {
-    MaterialData data{};
-    const auto getTexture = [&model, &loader, &data](const int32_t index, const int32_t textureIndex) {
+    PbrMaterial pbrMaterial{};
+    const auto getTexture = [&model, &loader, &pbrMaterial](const int32_t index, const int32_t textureIndex) {
         if (isValidGltfIndex(textureIndex)) {
             const int32_t sourceIndex = model.textures.at(textureIndex).source;
-            data.textureIndices[index] = sourceIndex;
+            pbrMaterial.textureKeys[index] = fmt::format("{}", sourceIndex);
             loader.loadedImages[sourceIndex].accessTypes[index] = true;
             return true;
         }
@@ -272,23 +272,20 @@ MaterialData createPbrMaterialFromGltfMaterial(
     };
 
     getTexture(0, material.pbrMetallicRoughness.baseColorTexture.index);
-    data.pbr.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
-
-    if (getTexture(2, material.pbrMetallicRoughness.metallicRoughnessTexture.index)) {
-        data.textureIndices[3] = data.textureIndices[2];
-        loader.loadedImages[data.textureIndices[3]].accessTypes[3] = true;
-    }
-    data.pbr.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-    data.pbr.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
-
     getTexture(1, material.normalTexture.index);
-
+    if (getTexture(2, material.pbrMetallicRoughness.metallicRoughnessTexture.index)) {
+        pbrMaterial.textureKeys[3] = pbrMaterial.textureKeys[2];
+        loader.loadedImages[std::stoi(pbrMaterial.textureKeys[3])].accessTypes[3] = true;
+    }
     getTexture(4, material.occlusionTexture.index);
-    data.pbr.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
-
     getTexture(5, material.emissiveTexture.index);
 
-    return data;
+    pbrMaterial.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
+    pbrMaterial.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+    pbrMaterial.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+    pbrMaterial.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
+
+    return pbrMaterial;
 }
 
 TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinygltf::Primitive& primitive) {
@@ -449,8 +446,9 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
     return anim;
 }
 
-PbrImageData createPbrImageData(const std::span<ImageData> images, const std::span<ModelData> models) {
-    PbrImageData imageData{};
+PbrImageGroup createPbrImageData(
+    std::string name, const std::span<ImageData> images, const std::span<ModelData> models) {
+    PbrImageGroup imageData{.name = std::move(name)};
     std::vector<int32_t> remappedIndices(images.size(), -1);
 
     const auto appendImage = [&remappedIndices](std::vector<Image>& images, Image&& image, const size_t idx) {
@@ -478,6 +476,7 @@ PbrImageData createPbrImageData(const std::span<ImageData> images, const std::sp
         if (image.accessTypes[4]) {
             CRISP_CHECK(image.hasSingleAccessType());
             appendImage(imageData.occlusionMaps, std::move(image.image), idx);
+            continue;
         }
         if (image.accessTypes[5]) {
             CRISP_CHECK(image.hasSingleAccessType());
@@ -485,10 +484,11 @@ PbrImageData createPbrImageData(const std::span<ImageData> images, const std::sp
         }
     }
 
+    PbrImageKeyCreator creator{imageData.name};
     for (auto& model : models) {
-        for (auto& index : model.material.textureIndices) {
-            if (index != -1) {
-                index = remappedIndices[index];
+        for (auto&& [idx, index] : std::views::enumerate(model.material.textureKeys)) {
+            if (!index.empty()) {
+                index = creator.createMapKey(static_cast<uint32_t>(idx), remappedIndices[std::stoi(index)]);
             }
         }
     }
@@ -545,7 +545,7 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     }
     sceneData.models.back().animations = std::move(animations);
 
-    sceneData.images = createPbrImageData(imageLoader.loadedImages, sceneData.models);
+    sceneData.images = createPbrImageData(path.stem().string(), imageLoader.loadedImages, sceneData.models);
 
     return sceneData;
 }

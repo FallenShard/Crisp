@@ -279,7 +279,7 @@ void GltfViewerScene::createCommonTextures() {
     imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), Anisotropy));
     imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), Anisotropy, MaxLod));
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), Anisotropy));
-    addPbrTexturesToImageCache(createDefaultPbrTextureGroup(), "default", imageCache);
+    addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
     m_resourceContext->createPipeline("pbrTex", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
 

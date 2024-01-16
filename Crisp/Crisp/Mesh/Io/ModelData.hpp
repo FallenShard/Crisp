@@ -8,15 +8,10 @@
 
 namespace crisp {
 
-struct MaterialData {
-    PbrMaterial pbr;
-    std::array<int32_t, 6> textureIndices;
-};
-
 struct ModelData {
     TriangleMesh mesh;
 
-    MaterialData material;
+    PbrMaterial material;
 
     glm::mat4 transform;
 
@@ -31,27 +26,17 @@ struct ImageData {
 
     std::bitset<6> accessTypes{};
 
-    inline bool hasSingleAccessType() const {
+    bool hasSingleAccessType() const {
         return accessTypes.count() == 1;
     }
-};
 
-struct PbrImageData {
-    std::vector<Image> albedoMaps;
-    std::vector<Image> normalMaps;
-    std::vector<Image> roughnessMaps;
-    std::vector<Image> metallicMaps;
-    std::vector<Image> occlusionMaps;
-    std::vector<Image> emissiveMaps;
-
-    std::size_t size() const {
-        return albedoMaps.size() + normalMaps.size() + roughnessMaps.size() + metallicMaps.size() +
-               occlusionMaps.size() + emissiveMaps.size();
+    bool hasTwoAccessTypes() const {
+        return accessTypes.count() == 2;
     }
 };
 
 struct SceneData {
-    PbrImageData images;
+    PbrImageGroup images;
     std::vector<ModelData> models;
 };
 
