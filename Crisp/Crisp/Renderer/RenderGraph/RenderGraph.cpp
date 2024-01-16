@@ -13,19 +13,24 @@ const auto logger = createLoggerMt("RenderGraph");
 
 RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc) {
     return {
+        .initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         .format = desc.format,
         .sampleCount = desc.sampleCount,
         .layerCount = desc.layerCount,
         .mipmapCount = desc.mipLevelCount,
         .depthSlices = desc.depth,
         .createFlags = desc.createFlags,
+        .usage = desc.imageUsageFlags,
+        .buffered = false,
         .size = {desc.width, desc.height},
         .isSwapChainDependent = desc.sizePolicy == SizePolicy::SwapChainRelative,
     };
 }
 
-VkAttachmentDescription toColorAttachmentDescription(
-    const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
+VkAttachmentDescription toAttachmentDescription(
+    const RenderGraphResource& resource,
+    const RenderGraphImageDescription& imageDescription,
+    const VkImageLayout optimalAttachmentLayout) {
     return {
         .format = imageDescription.format,
         .samples = imageDescription.sampleCount,
@@ -36,26 +41,19 @@ VkAttachmentDescription toColorAttachmentDescription(
         .initialLayout =
             imageDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
                 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                : optimalAttachmentLayout,
+        .finalLayout = optimalAttachmentLayout,
     };
+}
+
+VkAttachmentDescription toColorAttachmentDescription(
+    const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
+    return toAttachmentDescription(resource, imageDescription, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
 VkAttachmentDescription toDepthAttachmentDescription(
     const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
-    return {
-        .format = imageDescription.format,
-        .samples = imageDescription.sampleCount,
-        .loadOp = imageDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .storeOp = resource.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout =
-            imageDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    };
+    return toAttachmentDescription(resource, imageDescription, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 } // namespace
@@ -268,10 +266,10 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer, const uint32_t virtua
                 }
             }
 
-            auto& physPass = *m_physicalPasses.at(idx);
-            physPass.begin(executionCtx.cmdBuffer.getHandle(), 0, VK_SUBPASS_CONTENTS_INLINE);
+            auto& renderPass = *m_physicalPasses.at(m_physicalPassIndices.at(idx));
+            renderPass.begin(executionCtx.cmdBuffer.getHandle(), 0, VK_SUBPASS_CONTENTS_INLINE);
             pass.executeFunc(executionCtx);
-            physPass.end(executionCtx.cmdBuffer.getHandle(), 0);
+            renderPass.end(executionCtx.cmdBuffer.getHandle(), 0);
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
             pass.executeFunc(executionCtx);
         }
@@ -283,7 +281,7 @@ RenderGraphBlackboard& RenderGraph::getBlackboard() {
 }
 
 const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) const {
-    return *m_physicalPasses[m_passMap.at(name).id];
+    return *m_physicalPasses.at(m_physicalPassIndices.at(m_passMap.at(name).id));
 }
 
 void RenderGraph::resize(
@@ -493,9 +491,11 @@ void RenderGraph::createPhysicalResources(
 }
 
 void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent) {
+    m_physicalPassIndices.clear();
+    m_physicalPassIndices.resize(m_passes.size(), -1);
     m_physicalPasses.clear();
     m_physicalPasses.reserve(m_passes.size());
-    for (const auto& pass : m_passes) {
+    for (auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         if (pass.type != PassType::Rasterizer) {
             logger->info("Skipping pass {} as it's not a rasterizer pass.", pass.name);
             continue;
@@ -514,18 +514,10 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
             const auto& colorImageResource{getResource(resourceId)};
             const auto& colorDescription{getImageDescription(resourceId)};
-            builder
-                .setAttachment(
-                    static_cast<int32_t>(attachmentIndex),
-                    toColorAttachmentDescription(colorImageResource, colorDescription))
+            builder.setAttachment(attachmentIndex, toColorAttachmentDescription(colorImageResource, colorDescription))
                 .addColorAttachmentRef(0, attachmentIndex);
 
-            auto rtInfo = toRenderTargetInfo(colorDescription);
-            rtInfo.usage = colorDescription.imageUsageFlags;
-            rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            rtInfo.buffered = false;
-
-            renderPassParams.renderTargetInfos.push_back(rtInfo);
+            renderPassParams.renderTargetInfos.push_back(toRenderTargetInfo(colorDescription));
             renderPassParams.renderTargets.push_back(
                 m_physicalImages[colorImageResource.physicalResourceIndex].image.get());
             renderPassParams.attachmentMappings.push_back(
@@ -535,21 +527,13 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         }
 
         if (pass.depthStencilAttachment) {
-            const auto& res{getResource(*pass.depthStencilAttachment)};
+            const auto& depthResource{getResource(*pass.depthStencilAttachment)};
             const auto& depthDescription{getImageDescription(*pass.depthStencilAttachment)};
-
-            builder
-                .setAttachment(
-                    static_cast<int32_t>(attachmentIndex), toDepthAttachmentDescription(res, depthDescription))
+            builder.setAttachment(attachmentIndex, toDepthAttachmentDescription(depthResource, depthDescription))
                 .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-            auto rtInfo = toRenderTargetInfo(depthDescription);
-            rtInfo.usage = depthDescription.imageUsageFlags;
-            rtInfo.initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            rtInfo.buffered = false;
-
-            renderPassParams.renderTargetInfos.push_back(rtInfo);
-            renderPassParams.renderTargets.push_back(m_physicalImages[res.physicalResourceIndex].image.get());
+            renderPassParams.renderTargetInfos.push_back(toRenderTargetInfo(depthDescription));
+            renderPassParams.renderTargets.push_back(m_physicalImages[depthResource.physicalResourceIndex].image.get());
             renderPassParams.attachmentMappings.push_back(
                 {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
             attachmentClearValues.push_back(depthDescription.clearValue ? *depthDescription.clearValue : VkClearValue{});
@@ -587,6 +571,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
 
         auto& physicalPass = m_physicalPasses.emplace_back(std::make_unique<VulkanRenderPass>(
             device, passHandle, std::move(renderPassParams), std::move(attachmentClearValues)));
+        m_physicalPassIndices[idx] = static_cast<int32_t>(m_physicalPasses.size()) - 1;
 
         device.getDebugMarker().setObjectName(physicalPass->getHandle(), pass.name.c_str());
     }

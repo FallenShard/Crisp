@@ -9,7 +9,7 @@ class VulkanRenderPassBuilder {
 public:
     // Attachment configuration
     VulkanRenderPassBuilder& setAttachmentCount(uint32_t count);
-    VulkanRenderPassBuilder& setAttachment(int32_t attachmentIndex, const VkAttachmentDescription& description);
+    VulkanRenderPassBuilder& setAttachment(uint32_t attachmentIndex, const VkAttachmentDescription& description);
 
     // Subpass configuration
     VulkanRenderPassBuilder& setSubpassCount(uint32_t numSubpasses);

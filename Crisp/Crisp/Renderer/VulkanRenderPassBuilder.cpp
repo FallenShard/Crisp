@@ -10,7 +10,7 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentCount(const uint3
 }
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachment(
-    const int32_t attachmentIndex, const VkAttachmentDescription& description) {
+    const uint32_t attachmentIndex, const VkAttachmentDescription& description) {
     m_attachments.at(attachmentIndex) = description;
     return *this;
 }

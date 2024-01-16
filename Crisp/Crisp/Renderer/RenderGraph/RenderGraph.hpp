@@ -133,6 +133,7 @@ private:
     // The list of passes that are part of the render graph.
     std::vector<RenderGraphPass> m_passes;
     FlatStringHashMap<RenderGraphPassHandle> m_passMap;
+    std::vector<int32_t> m_physicalPassIndices;
 
     std::vector<RenderGraphImageDescription> m_imageDescriptions;
     std::vector<RenderGraphBufferDescription> m_bufferDescriptions;
