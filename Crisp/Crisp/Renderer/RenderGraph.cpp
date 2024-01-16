@@ -220,7 +220,10 @@ const VulkanRenderPass& RenderGraph::getRenderPass(std::string name) {
 }
 
 void RenderGraph::executeDrawCommand(
-    const DrawCommand& command, Renderer& renderer, const VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex) {
+    const DrawCommand& command,
+    const Renderer& renderer,
+    const VulkanCommandBuffer& cmdBuffer,
+    uint32_t virtualFrameIndex) {
     command.pipeline->bind(cmdBuffer.getHandle());
     const auto dynamicState = command.pipeline->getDynamicStateFlags();
     if (dynamicState & PipelineDynamicState::Viewport) {

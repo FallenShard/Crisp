@@ -3,6 +3,7 @@
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
+#include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 
@@ -26,5 +27,7 @@ protected:
 
     std::unique_ptr<ResourceContext> m_resourceContext;
     std::unique_ptr<RenderGraph> m_renderGraph;
+
+    FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
 };
 } // namespace crisp

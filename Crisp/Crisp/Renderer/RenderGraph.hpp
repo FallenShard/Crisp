@@ -73,7 +73,7 @@ public:
 
     static void executeDrawCommand(
         const DrawCommand& command,
-        Renderer& renderer,
+        const Renderer& renderer,
         const VulkanCommandBuffer& cmdBuffer,
         uint32_t virtualFrameIndex);
 

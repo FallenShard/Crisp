@@ -77,7 +77,7 @@ public:
         return pipelineCache.getDescriptorAllocator(pipelineLayout);
     }
 
-    inline const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& getRenderNodes() const {
+    inline const FlatStringHashMap<std::unique_ptr<RenderNode>>& getRenderNodes() const {
         return m_renderNodes;
     }
 
@@ -93,6 +93,6 @@ private:
     FlatStringHashMap<std::unique_ptr<UniformBuffer>> m_uniformBuffers;
     FlatStringHashMap<std::unique_ptr<StorageBuffer>> m_storageBuffers;
     FlatStringHashMap<std::unique_ptr<VulkanRingBuffer>> m_ringBuffers;
-    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
 };
 } // namespace crisp
