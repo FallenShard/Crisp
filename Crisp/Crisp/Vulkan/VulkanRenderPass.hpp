@@ -1,13 +1,13 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-
-#include <memory>
-#include <vector>
 
 namespace crisp {
 struct RenderTargetInfo {

@@ -1,12 +1,11 @@
 #pragma once
 
+#include <vector>
+
+#include <Crisp/Core/Result.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-
-#include <Crisp/Core/Result.hpp>
-
-#include <vector>
 
 namespace crisp {
 enum class TripleBuffering { Enabled, Disabled };

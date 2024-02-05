@@ -1,12 +1,12 @@
 #pragma once
 
-#include <Crisp/Core/HashMap.hpp>
-#include <Crisp/Core/Result.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
 #include <list>
 #include <map>
 #include <string>
+
+#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Core/Result.hpp>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp {
 class VulkanMemoryHeap {

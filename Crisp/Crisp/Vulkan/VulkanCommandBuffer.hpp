@@ -1,12 +1,12 @@
 #pragma once
 
+#include <span>
+#include <vector>
+
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <span>
-#include <vector>
 
 namespace crisp {
 struct MemoryRegion {
@@ -44,10 +44,8 @@ public:
 
     void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
     void insertMemoryBarrier(
-        VkPipelineStageFlags srcStage,
-        VkAccessFlags srcAccess,
-        VkPipelineStageFlags dstStage,
-        VkAccessFlags dstAccess) const;
+        VkPipelineStageFlags srcStage, VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess)
+        const;
     void insertBufferMemoryBarrier(
         const VkDescriptorBufferInfo& bufferInfo,
         VkPipelineStageFlags srcStage,

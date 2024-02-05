@@ -1,9 +1,5 @@
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-
-#include <stdexcept>
-
 namespace crisp {
 namespace {
 QueueTypeFlags getQueueFamilyType(
@@ -54,8 +50,7 @@ Result<uint32_t> findQueueFamilyIndex(
     // Check for exact family match
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
-        const auto familyType =
-            getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+        const auto familyType = getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
         if (familyType == queueType && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }
@@ -64,8 +59,7 @@ Result<uint32_t> findQueueFamilyIndex(
     // Find a more general family for the queueType
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
-        const auto familyType =
-            getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+        const auto familyType = getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
         if ((familyType & queueType) && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }
@@ -88,8 +82,7 @@ Result<std::vector<QueueIdentifier>> findQueueIds(
 
     for (uint32_t i = 0; i < requestedQueueTypes.size(); ++i) {
         const auto familyIndex =
-            findQueueFamilyIndex(
-                requestedQueueTypes[i], context, physicalDevice, exposedQueueFamilies, usedFamilyCounts)
+            findQueueFamilyIndex(requestedQueueTypes[i], context, physicalDevice, exposedQueueFamilies, usedFamilyCounts)
                 .unwrap();
 
         queueIds[i].familyIndex = familyIndex;

@@ -1,10 +1,10 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
+#include <unordered_set>
+
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
-
-#include <unordered_set>
 
 namespace crisp {
 namespace {

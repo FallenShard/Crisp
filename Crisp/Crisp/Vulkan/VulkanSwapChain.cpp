@@ -1,9 +1,9 @@
 #include <Crisp/Vulkan/VulkanSwapChain.hpp>
 
+#include <array>
+
 #include <Crisp/Vulkan/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
-
-#include <array>
 
 namespace crisp {
 VulkanSwapChain::VulkanSwapChain(

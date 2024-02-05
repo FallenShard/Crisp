@@ -1,7 +1,8 @@
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 
-#include <Crisp/Core/Logger.hpp>
 #include <utility>
+
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp {
 namespace {
@@ -162,8 +163,7 @@ void VulkanMemoryHeap::AllocationBlock::coalesce() {
     }
 }
 
-std::pair<uint64_t, uint64_t> VulkanMemoryHeap::AllocationBlock::findFreeChunk(
-    uint64_t size, uint64_t alignment) const {
+std::pair<uint64_t, uint64_t> VulkanMemoryHeap::AllocationBlock::findFreeChunk(uint64_t size, uint64_t alignment) const {
     for (const auto& freeChunk : freeChunks) {
         const uint64_t chunkOffset = freeChunk.first;
         const uint64_t chunkSize = freeChunk.second;

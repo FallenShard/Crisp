@@ -1,12 +1,11 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-
-#include <Crisp/Core/Result.hpp>
-
 #include <cstdint>
 #include <memory>
+
+#include <Crisp/Core/Result.hpp>
+#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 
 namespace crisp {
 struct DeviceMemoryMetrics {

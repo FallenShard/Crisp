@@ -1,11 +1,11 @@
 #pragma once
 
+#include <vector>
+
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-
-#include <vector>
 
 namespace crisp {
 class VulkanImage : public VulkanResource<VkImage> {

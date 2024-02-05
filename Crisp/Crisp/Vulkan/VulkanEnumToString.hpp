@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
 #include <string>
+
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp {
 

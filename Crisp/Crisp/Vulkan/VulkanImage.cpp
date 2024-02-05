@@ -95,8 +95,7 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& cr
     , m_device(&device)
     , m_createInfo(createInfo)
     , m_aspect(determineImageAspect(m_createInfo.format))
-    , m_layouts(
-          m_createInfo.arrayLayers, std::vector<VkImageLayout>(m_createInfo.mipLevels, VK_IMAGE_LAYOUT_UNDEFINED)) {
+    , m_layouts(m_createInfo.arrayLayers, std::vector<VkImageLayout>(m_createInfo.mipLevels, VK_IMAGE_LAYOUT_UNDEFINED)) {
     // Assign the image to the proper memory heap
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);

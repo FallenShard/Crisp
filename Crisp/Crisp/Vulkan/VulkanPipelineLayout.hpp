@@ -1,11 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
-
-#include <memory>
-#include <vector>
 
 namespace crisp {
 struct DescriptorSetLayout {
@@ -25,6 +25,12 @@ public:
         std::vector<bool> descriptorSetBufferedStatus,
         std::unique_ptr<DescriptorSetAllocator> setAllocator);
     ~VulkanPipelineLayout() override;
+
+    VulkanPipelineLayout(const VulkanPipelineLayout&) = delete;
+    VulkanPipelineLayout& operator=(const VulkanPipelineLayout&) = delete;
+
+    VulkanPipelineLayout(VulkanPipelineLayout&&) noexcept = default;
+    VulkanPipelineLayout& operator=(VulkanPipelineLayout&&) noexcept = default;
 
     inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).bindings.at(binding).descriptorType;

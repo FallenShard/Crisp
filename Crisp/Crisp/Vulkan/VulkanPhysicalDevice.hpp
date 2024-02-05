@@ -1,12 +1,11 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <Crisp/Core/Result.hpp>
-
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <Crisp/Core/Result.hpp>
+#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp {
 struct QueueFamilyIndices {
