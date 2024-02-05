@@ -4,7 +4,6 @@
 #include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
 
-
 #include <GLFW/glfw3.h>
 
 namespace crisp {

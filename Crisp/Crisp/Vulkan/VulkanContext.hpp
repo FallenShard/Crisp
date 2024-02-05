@@ -1,11 +1,11 @@
 #pragma once
 
+#include <functional>
+#include <vector>
+
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
-
-#include <functional>
-#include <vector>
 
 namespace crisp {
 using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)>;
@@ -13,9 +13,7 @@ using SurfaceCreator = std::function<VkResult(VkInstance, const VkAllocationCall
 class VulkanContext {
 public:
     VulkanContext(
-        const SurfaceCreator& surfaceCreator,
-        std::vector<std::string>&& platformExtensions,
-        bool enableValidationLayers);
+        const SurfaceCreator& surfaceCreator, std::vector<std::string>&& platformExtensions, bool enableValidationLayers);
     ~VulkanContext();
 
     VulkanContext(const VulkanContext& other) = delete;

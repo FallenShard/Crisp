@@ -1,7 +1,6 @@
 #include <Crisp/Vulkan/VulkanVertexLayout.hpp>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Core/Result.hpp>
 
 namespace crisp {
 namespace {

@@ -1,3 +1,13 @@
+add_cpp_static_library(CrispVulkanHeader
+    "VulkanHeader.cpp"
+    "VulkanHeader.hpp"
+)
+target_link_libraries(CrispVulkanHeader
+    PUBLIC Vulkan::Headers
+    PUBLIC volk::volk_headers
+    PRIVATE Crisp::Checks
+)
+
 add_cpp_static_library(CrispVulkan
     "DescriptorSetAllocator.cpp"
     "DescriptorSetAllocator.hpp"
@@ -63,15 +73,6 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::Checks
     PUBLIC Crisp::VulkanHeader
     PUBLIC Crisp::Math
-)
-
-add_cpp_static_library(CrispVulkanHeader
-    "VulkanHeader.cpp"
-    "VulkanHeader.hpp"
-)
-target_link_libraries(CrispVulkanHeader
-    PUBLIC Vulkan::Headers
-    PRIVATE Crisp::Checks
 )
 
 add_cpp_interface_library(CrispVulkanTestUtils

@@ -58,7 +58,7 @@ target_link_libraries(CrispWindow
     PUBLIC Crisp::Event
     PUBLIC Crisp::Input
     PUBLIC glfw
-    PUBLIC Vulkan::Headers
+    PUBLIC Crisp::VulkanHeader
     PRIVATE Crisp::Logger
 )
 
@@ -88,7 +88,6 @@ target_link_libraries(CrispApplicationEnvironment
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::StringUtils
     PUBLIC glfw
-    PUBLIC Vulkan::Headers
     PRIVATE Crisp::Profiler
     PRIVATE Crisp::Logger
     PRIVATE Crisp::Format

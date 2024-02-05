@@ -179,6 +179,14 @@ FetchContent_Declare(vulkan
 )
 FetchContent_MakeAvailable(vulkan)
 
+FetchContent_Declare(volk
+    GIT_REPOSITORY https://github.com/zeux/volk.git
+    GIT_TAG 1.3.270
+)
+set(VOLK_HEADERS_ONLY ON CACHE BOOL "" FORCE)
+set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(volk)
+
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
     GIT_TAG vulkan-sdk-1.3.268.0

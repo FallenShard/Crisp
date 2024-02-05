@@ -8,6 +8,7 @@ CompileFlags:
       "-D_HAS_CXX23=1",
       "-D__cpp_consteval",
       "-D__cpp_lib_concepts",
+      "-D__cpp_lib_ranges",
       "-Wno-missing-field-initializers"
     ]
     Compiler: clang-cl
