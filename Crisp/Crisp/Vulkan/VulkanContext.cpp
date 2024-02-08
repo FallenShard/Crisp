@@ -1,5 +1,6 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
+#include <ranges>
 #include <unordered_set>
 
 #include <Crisp/Core/Logger.hpp>
@@ -81,12 +82,9 @@ VkInstance createInstance(
         reqPlatformExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    std::vector<const char*> enabledExtensions;
-    std::transform(
-        reqPlatformExtensions.begin(),
-        reqPlatformExtensions.end(),
-        std::back_inserter(enabledExtensions),
-        [](const auto& ext) { return ext.c_str(); });
+    const auto enabledExtensions =
+        std::views::transform(reqPlatformExtensions, [](const auto& ext) { return ext.c_str(); }) |
+        std::ranges::to<std::vector<const char*>>();
 
     VkInstanceCreateInfo createInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     createInfo.pApplicationInfo = &appInfo;
