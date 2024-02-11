@@ -11,6 +11,12 @@
 namespace crisp {
 struct ShaderUniformInputMetadata {
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
+
+    struct BindingInfo {
+        bool isVariableArray{false};
+    };
+
+    std::vector<std::vector<BindingInfo>> bindingInfos;
     std::vector<VkPushConstantRange> pushConstants;
 
     void merge(const ShaderUniformInputMetadata& rhs);

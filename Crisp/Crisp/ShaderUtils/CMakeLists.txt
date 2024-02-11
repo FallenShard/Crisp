@@ -16,7 +16,7 @@ target_link_libraries(CrispGlslUtils
     PUBLIC Crisp::Result
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::FileUtils
-    PUBLIC Vulkan::Headers
+    PUBLIC Crisp::VulkanHeader
 )
 
 add_cpp_test(CrispGlslUtilsTest
@@ -34,7 +34,7 @@ add_cpp_static_library(CrispShaderType
 target_link_libraries(CrispShaderType
     PUBLIC Crisp::Result
     PRIVATE Crisp::HashMap
-    PUBLIC Vulkan::Headers
+    PUBLIC Crisp::VulkanHeader
 )
 
 add_cpp_static_library(CrispShaderCompiler

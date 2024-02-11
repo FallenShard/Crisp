@@ -24,7 +24,7 @@ VulkanPipeline* PipelineCache::loadPipeline(
     pipeline->setTag(id);
 
     auto layout = pipeline->getPipelineLayout();
-    m_descriptorAllocators[layout] = layout->createDescriptorSetAllocator(renderer->getDevice());
+    m_descriptorAllocators[layout] = layout->createVulkanDescriptorSetAllocator(renderer->getDevice());
 
     return pipeline.get();
 }

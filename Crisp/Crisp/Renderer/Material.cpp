@@ -2,10 +2,10 @@
 
 namespace crisp {
 Material::Material(VulkanPipeline* pipeline)
-    : Material(pipeline, pipeline->getPipelineLayout()->getDescriptorSetAllocator()) {}
+    : Material(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator()) {}
 
-Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator)
-    : m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice())) // NOLINT
+Material::Material(VulkanPipeline* pipeline, VulkanDescriptorSetAllocator* VulkanDescriptorSetAllocator)
+    : m_device(const_cast<VulkanDevice*>(&VulkanDescriptorSetAllocator->getDevice())) // NOLINT
     , m_pipeline(pipeline) {
     const auto& pipelineLayout{*m_pipeline->getPipelineLayout()};
     const std::size_t setCount = pipelineLayout.getDescriptorSetLayoutCount();
@@ -19,11 +19,11 @@ Material::Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorS
 
         if (pipelineLayout.isDescriptorSetBuffered(setIdx)) {
             for (auto& perFrameSets : m_sets) {
-                perFrameSets[setIdx] =
-                    descriptorSetAllocator->allocate(setLayout, pipelineLayout.getDescriptorSetLayoutBindings(setIdx));
+                perFrameSets[setIdx] = VulkanDescriptorSetAllocator->allocate(
+                    setLayout, pipelineLayout.getDescriptorSetLayoutBindings(setIdx));
             }
         } else {
-            const VkDescriptorSet set = descriptorSetAllocator->allocate(
+            const VkDescriptorSet set = VulkanDescriptorSetAllocator->allocate(
                 setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(setIdx));
             for (auto& perFrameSets : m_sets) {
                 perFrameSets[setIdx] = set;
@@ -49,6 +49,16 @@ void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, 
              .descriptorCount = 1,
              .descriptorType = m_pipeline->getDescriptorType(setIndex, binding)},
             imageInfo);
+    }
+}
+
+void Material::writeDescriptor(
+    const uint32_t setIndex, VkWriteDescriptorSet write, const VkDescriptorImageInfo& imageInfo) {
+    const uint32_t setsToUpdate =
+        m_pipeline->getPipelineLayout()->isDescriptorSetBuffered(setIndex) ? kRendererVirtualFrameCount : 1;
+    for (uint32_t i = 0; i < setsToUpdate; ++i) {
+        write.dstSet = m_sets[i][setIndex];
+        m_device->postDescriptorWrite(write, imageInfo);
     }
 }
 

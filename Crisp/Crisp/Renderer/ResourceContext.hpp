@@ -73,7 +73,7 @@ public:
 
     void recreatePipelines();
 
-    inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
+    inline VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return pipelineCache.getDescriptorAllocator(pipelineLayout);
     }
 

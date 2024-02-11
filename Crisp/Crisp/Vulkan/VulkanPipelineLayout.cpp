@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
 
+#include <ranges>
+
 namespace crisp {
 namespace {
 VkPipelineLayout createHandle(
@@ -24,7 +26,7 @@ VulkanPipelineLayout::VulkanPipelineLayout(
     std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
     std::vector<VkPushConstantRange>&& pushConstants,
     std::vector<bool> descriptorSetBufferedStatus,
-    std::unique_ptr<DescriptorSetAllocator> setAllocator)
+    std::unique_ptr<VulkanDescriptorSetAllocator> setAllocator)
     : VulkanResource(createHandle(device.getHandle(), setLayouts, pushConstants), device.getResourceDeallocator())
     , m_descriptorSetLayouts(setLayouts.size())
     , m_pushConstants(std::move(pushConstants))
@@ -69,22 +71,28 @@ void VulkanPipelineLayout::swap(VulkanPipelineLayout& other) noexcept {
     std::swap(m_dynamicBufferCount, other.m_dynamicBufferCount);
 }
 
-std::unique_ptr<DescriptorSetAllocator> VulkanPipelineLayout::createDescriptorSetAllocator(
+std::unique_ptr<VulkanDescriptorSetAllocator> VulkanPipelineLayout::createVulkanDescriptorSetAllocator(
     VulkanDevice& device, uint32_t numCopies, VkDescriptorPoolCreateFlags flags) {
-    auto getNumCopiesPerSet = [this](uint32_t numCopies) {
-        std::vector<uint32_t> numCopiesPerSet;
-        numCopiesPerSet.reserve(m_descriptorSetLayouts.size());
-        for (const auto& layout : m_descriptorSetLayouts) {
-            numCopiesPerSet.push_back(layout.isBuffered ? numCopies * kRendererVirtualFrameCount : numCopies);
-        }
-        return numCopiesPerSet;
-    };
+    const auto isSetBuffered =
+        std::ranges::transform_view(m_descriptorSetLayouts, [](const auto& layout) { return layout.isBuffered; }) |
+        std::ranges::to<std::vector<bool>>();
 
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> bindings(m_descriptorSetLayouts.size());
     for (uint32_t i = 0; i < bindings.size(); ++i) {
         bindings[i] = m_descriptorSetLayouts[i].bindings;
     }
 
-    return std::make_unique<DescriptorSetAllocator>(device, bindings, getNumCopiesPerSet(numCopies), flags);
+    return std::make_unique<VulkanDescriptorSetAllocator>(
+        device, bindings, computeCopiesPerSet(isSetBuffered, numCopies), flags);
 }
+
+std::vector<uint32_t> computeCopiesPerSet(const std::vector<bool>& isSetBuffered, uint32_t numCopies) {
+    std::vector<uint32_t> numCopiesPerSet;
+    numCopiesPerSet.reserve(isSetBuffered.size());
+    for (const bool setBuffered : isSetBuffered) {
+        numCopiesPerSet.push_back(setBuffered ? numCopies * kRendererVirtualFrameCount : numCopies);
+    }
+    return numCopiesPerSet;
+}
+
 } // namespace crisp

@@ -9,8 +9,6 @@ target_link_libraries(CrispVulkanHeader
 )
 
 add_cpp_static_library(CrispVulkan
-    "DescriptorSetAllocator.cpp"
-    "DescriptorSetAllocator.hpp"
     "VulkanAccelerationStructure.cpp"
     "VulkanAccelerationStructure.hpp"
     "VulkanBuffer.cpp"
@@ -27,6 +25,8 @@ add_cpp_static_library(CrispVulkan
     "VulkanDebugUtils.hpp"
     "VulkanDescriptorSet.cpp"
     "VulkanDescriptorSet.hpp"
+    "VulkanDescriptorSetAllocator.cpp"
+    "VulkanDescriptorSetAllocator.hpp"
     "VulkanDevice.cpp"
     "VulkanDevice.hpp"
     "VulkanEnumToString.hpp"

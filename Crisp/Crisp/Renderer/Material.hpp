@@ -3,7 +3,7 @@
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanRingBuffer.hpp>
-#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
@@ -16,10 +16,11 @@ namespace crisp {
 class Material {
 public:
     explicit Material(VulkanPipeline* pipeline);
-    Material(VulkanPipeline* pipeline, DescriptorSetAllocator* descriptorSetAllocator);
+    Material(VulkanPipeline* pipeline, VulkanDescriptorSetAllocator* VulkanDescriptorSetAllocator);
 
     // Methods to update a descriptor referencing an image.
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorImageInfo& imageInfo);
+    void writeDescriptor(uint32_t setIndex, VkWriteDescriptorSet write, const VkDescriptorImageInfo& imageInfo);
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler& sampler);
     void writeDescriptor(

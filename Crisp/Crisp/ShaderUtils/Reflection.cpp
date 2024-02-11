@@ -194,6 +194,14 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
             binding.descriptorType = toVulkanDescriptorType(spvBinding->descriptor_type).unwrap();
             binding.stageFlags = stageFlags;
             binding.pImmutableSamplers = nullptr;
+
+            // const VkDescriptorBindingFlags bindlessFlags =
+            //     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT |
+            //     VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+            // VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info{
+            //     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO, nullptr};
+            // extended_info.bindingCount = 1;
+            // extended_info.pBindingFlags = &bindlessFlags;
         }
     }
 

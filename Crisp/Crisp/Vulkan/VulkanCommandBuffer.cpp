@@ -68,10 +68,7 @@ void VulkanCommandBuffer::transferOwnership(
 }
 
 void VulkanCommandBuffer::insertMemoryBarrier(
-    VkPipelineStageFlags srcStage,
-    VkAccessFlags srcAccess,
-    VkPipelineStageFlags dstStage,
-    VkAccessFlags dstAccess) const {
+    VkPipelineStageFlags srcStage, VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const {
     VkMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
     barrier.srcStageMask = srcStage;
     barrier.srcAccessMask = srcAccess;
@@ -113,16 +110,7 @@ void VulkanCommandBuffer::insertBufferMemoryBarrier(
 void VulkanCommandBuffer::insertBufferMemoryBarriers(
     std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const {
     vkCmdPipelineBarrier(
-        m_handle,
-        srcStage,
-        dstStage,
-        0,
-        0,
-        nullptr,
-        static_cast<uint32_t>(barriers.size()),
-        barriers.data(),
-        0,
-        nullptr);
+        m_handle, srcStage, dstStage, 0, 0, nullptr, static_cast<uint32_t>(barriers.size()), barriers.data(), 0, nullptr);
 }
 
 void VulkanCommandBuffer::insertImageMemoryBarrier(

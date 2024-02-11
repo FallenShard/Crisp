@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Renderer/AssetPaths.hpp>
-#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
@@ -25,7 +25,7 @@ public:
 
     void recreatePipelines(Renderer& renderer);
 
-    inline DescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
+    inline VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return m_descriptorAllocators.at(pipelineLayout).get();
     }
 
@@ -40,6 +40,6 @@ private:
 
     FlatHashMap<std::string, PipelineInfo> m_pipelineInfos;
     FlatHashMap<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;
-    FlatHashMap<VulkanPipelineLayout*, std::unique_ptr<DescriptorSetAllocator>> m_descriptorAllocators;
+    FlatHashMap<VulkanPipelineLayout*, std::unique_ptr<VulkanDescriptorSetAllocator>> m_descriptorAllocators;
 };
 } // namespace crisp

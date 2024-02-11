@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <Crisp/Vulkan/DescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
@@ -23,7 +23,7 @@ public:
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
         std::vector<VkPushConstantRange>&& pushConstants,
         std::vector<bool> descriptorSetBufferedStatus,
-        std::unique_ptr<DescriptorSetAllocator> setAllocator);
+        std::unique_ptr<VulkanDescriptorSetAllocator> setAllocator);
     ~VulkanPipelineLayout() override;
 
     VulkanPipelineLayout(const VulkanPipelineLayout&) = delete;
@@ -74,13 +74,13 @@ public:
         return m_descriptorSetLayouts.at(setIndex).dynamicBufferIndices.at(binding);
     }
 
-    inline DescriptorSetAllocator* getDescriptorSetAllocator() {
+    inline VulkanDescriptorSetAllocator* getVulkanDescriptorSetAllocator() {
         return m_setAllocator.get();
     }
 
     void swap(VulkanPipelineLayout& other) noexcept;
 
-    std::unique_ptr<DescriptorSetAllocator> createDescriptorSetAllocator(
+    std::unique_ptr<VulkanDescriptorSetAllocator> createVulkanDescriptorSetAllocator(
         VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
 
 private:
@@ -89,6 +89,9 @@ private:
 
     uint32_t m_dynamicBufferCount;
 
-    std::unique_ptr<DescriptorSetAllocator> m_setAllocator;
+    std::unique_ptr<VulkanDescriptorSetAllocator> m_setAllocator;
 };
+
+std::vector<uint32_t> computeCopiesPerSet(const std::vector<bool>& isSetBuffered, uint32_t numCopies);
+
 } // namespace crisp

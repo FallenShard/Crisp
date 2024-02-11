@@ -25,11 +25,11 @@ public:
             }
 
             if (m_framesToLive == 0) {
-                destroyDeferred(m_handle, m_deallocator, getDestroyFunc<T>());
+                destroyVulkanHandle(m_handle, m_deallocator, getDestroyFunc<T>());
             } else {
                 m_deallocator->deferDestruction(
                     m_framesToLive, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
-                        destroyDeferred(handle, deallocator, getDestroyFunc<T>());
+                        destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
                     });
             }
         } else {
@@ -53,7 +53,7 @@ public:
     }
 
     template <typename DestroyFunc>
-    static void destroyDeferred(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
+    static void destroyVulkanHandle(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
         spdlog::debug("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
         func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
         deallocator->removeTag(handle);

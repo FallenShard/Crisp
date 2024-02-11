@@ -1,21 +1,23 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-
 #include <memory>
 #include <vector>
 
+#include <Crisp/Vulkan/VulkanDevice.hpp>
+
 namespace crisp {
-class DescriptorSetAllocator {
+class VulkanDescriptorSetAllocator {
 public:
-    DescriptorSetAllocator(
+    VulkanDescriptorSetAllocator(
         const VulkanDevice& device,
         const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings,
         const std::vector<uint32_t>& numCopiesPerSet,
         VkDescriptorPoolCreateFlags flags = 0);
-    ~DescriptorSetAllocator();
+    ~VulkanDescriptorSetAllocator();
 
     VkDescriptorSet allocate(
+        VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+    VkDescriptorSet allocateBindless(
         VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
 
     const VulkanDevice& getDevice() const;
@@ -33,6 +35,10 @@ private:
         void deductPoolSizes(const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
 
         VkDescriptorSet allocate(
+            VkDevice device,
+            VkDescriptorSetLayout setLayout,
+            const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+        VkDescriptorSet allocateBindless(
             VkDevice device,
             VkDescriptorSetLayout setLayout,
             const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
