@@ -7,6 +7,12 @@
 
 namespace crisp {
 
+struct PostProcessingDrawCommand {
+    VulkanPipeline* pipeline{nullptr};
+    Material* material{nullptr};
+    PushConstantView pushConstantView;
+};
+
 class AmbientOcclusionScene : public Scene {
 public:
     AmbientOcclusionScene(Renderer* renderer, Window* window);
@@ -39,5 +45,7 @@ private:
 
     std::unique_ptr<RenderNode> m_floorNode;
     std::unique_ptr<RenderNode> m_sponzaNode;
+
+    FlatStringHashMap<PostProcessingDrawCommand> m_postProcessingCommands;
 };
 } // namespace crisp

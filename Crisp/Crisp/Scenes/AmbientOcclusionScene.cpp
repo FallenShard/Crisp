@@ -3,14 +3,13 @@
 #include <random>
 
 #include <Crisp/Core/Application.hpp>
+#include <Crisp/Gui/ImGuiCameraUtils.hpp>
+#include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Math/Warp.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-
-#include <Crisp/Gui/ImGuiCameraUtils.hpp>
-#include <Crisp/Gui/ImGuiUtils.hpp>
 
 namespace crisp {
 namespace {
@@ -27,7 +26,7 @@ struct BlurVerticalPassData {
     RenderGraphResourceHandle image;
 };
 
-glm::vec4 pc(0.2f, 0.0f, 0.0f, 1.0f);
+constexpr glm::vec4 kColorPushConstant(0.2f, 0.0f, 0.0f, 1.0f);
 
 struct BlurParams {
     float dirX;
@@ -58,44 +57,42 @@ void createDrawCommand(
 }
 
 void drawPostProcessEffect(
-    std::string_view renderPassName,
-    const RenderPassExecutionContext& ctx,
-    const ResourceContext& resourceContext,
-    const Renderer& renderer) {
-    std::vector<DrawCommand> drawCommands{};
-    createDrawCommand(
-        drawCommands, *resourceContext.getRenderNodes().at(renderPassName), renderPassName, ctx.virtualFrameIndex);
-    const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
-    for (const auto& drawCommand : drawCommands) {
-        RenderGraph::executeDrawCommand(drawCommand, renderer, commandBuffer, ctx.virtualFrameIndex);
+    Renderer& renderer, const PostProcessingDrawCommand& command, const RenderPassExecutionContext& ctx) {
+    command.pipeline->bind(ctx.cmdBuffer.getHandle());
+    const auto dynamicState = command.pipeline->getDynamicStateFlags();
+    if (dynamicState & PipelineDynamicState::Viewport) {
+        renderer.setDefaultViewport(ctx.cmdBuffer.getHandle());
     }
+
+    if (dynamicState & PipelineDynamicState::Scissor) {
+        renderer.setDefaultScissor(ctx.cmdBuffer.getHandle());
+    }
+
+    command.pipeline->getPipelineLayout()->setPushConstants(
+        ctx.cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
+
+    if (command.material) {
+        const auto& dynamicBufferViews = command.material->getDynamicBufferViews();
+        std::vector<uint32_t> dynamicBufferOffsets(dynamicBufferViews.size());
+        for (std::size_t i = 0; i < dynamicBufferOffsets.size(); ++i) {
+            dynamicBufferOffsets[i] =
+                dynamicBufferViews[i].buffer->getDynamicOffset(ctx.virtualFrameIndex) + dynamicBufferViews[i].subOffset;
+        }
+        command.material->bind(ctx.virtualFrameIndex, ctx.cmdBuffer.getHandle(), dynamicBufferOffsets);
+    }
+
+    renderer.getFullScreenGeometry()->bindAndDraw(ctx.cmdBuffer.getHandle());
 }
 
-} // namespace
-
-AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window)
-    , m_ssaoParams{128, 0.5f} {
-    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
-    /*m_cameraController->getCamera().setRotation(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
-    m_cameraController->getCamera().setPosition(glm::vec3(0.0f, 2.0f, 1.0f));*/
-    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-
-    std::default_random_engine randomEngine(42);
-    std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
-    std::array<glm::vec4, 512> samples; // NOLINT
-    for (auto& sample : samples) {
-        float x = distribution(randomEngine);
-        float y = distribution(randomEngine);
-        float r = distribution(randomEngine);
-        sample = glm::vec4(warp::cubeToUniformHemisphereVolume({x, y, r}), 1.0f);
-    }
+std::unique_ptr<VulkanImage> createRandomRotationImage(Renderer& renderer) {
+    std::default_random_engine rng(43);
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
     std::vector<glm::vec4> noiseTexData;
+    noiseTexData.reserve(16);
     for (int i = 0; i < 16; i++) {
-        glm::vec3 s(distribution(randomEngine) * 2.0f - 1.0f, distribution(randomEngine) * 2.0f - 1.0f, 0.0f);
-        s = glm::normalize(s);
-        noiseTexData.emplace_back(s, 1.0f);
+        noiseTexData.emplace_back(
+            glm::normalize(glm::vec3{dist(rng) * 2.0f - 1.0f, dist(rng) * 2.0f - 1.0f, 0.0f}), 1.0f);
     }
 
     VkImageCreateInfo noiseTexInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -110,15 +107,40 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     noiseTexInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     noiseTexInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     noiseTexInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    return createVulkanImage(renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo);
+}
+
+std::unique_ptr<UniformBuffer> createHemisphereSampleBuffer(Renderer* renderer) {
+    std::default_random_engine randomEngine(42);
+    std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+    std::array<glm::vec4, 512> samples; // NOLINT
+    for (auto& sample : samples) {
+        float x = distribution(randomEngine);
+        float y = distribution(randomEngine);
+        float r = distribution(randomEngine);
+        sample = glm::vec4(warp::cubeToUniformHemisphereVolume({x, y, r}), 1.0f);
+    }
+
+    return std::make_unique<UniformBuffer>(renderer, sizeof(samples), BufferUpdatePolicy::Constant, samples.data());
+}
+
+} // namespace
+
+AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
+    : Scene(renderer, window)
+    , m_ssaoParams{128, 0.5f} {
+    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
+    m_cameraController->setPosition(glm::vec3(0.0f, 2.0f, -1.0f));
+    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+
     auto& imageCache = m_resourceContext->imageCache;
-    imageCache.addImageWithView(
-        "noise",
-        createVulkanImage(*m_renderer, noiseTexData.size() * sizeof(glm::vec4), noiseTexData.data(), noiseTexInfo));
+    imageCache.addImageWithView("noise", createRandomRotationImage(*m_renderer));
     imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice()));
     imageCache.addSampler("nearestClamp", createNearestClampSampler(m_renderer->getDevice()));
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice()));
 
-    m_resourceContext->createUniformBuffer("samples", sizeof(samples), BufferUpdatePolicy::Constant, samples.data());
+    m_resourceContext->addUniformBuffer("samples", createHemisphereSampleBuffer(renderer));
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 2);
 
@@ -166,7 +188,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
                 fmt::format("{}-image", "ssao"));
         },
         [this](const RenderPassExecutionContext& ctx) {
-            drawPostProcessEffect("ssao", ctx, *m_resourceContext, *m_renderer);
+            drawPostProcessEffect(*m_renderer, m_postProcessingCommands["ssao"], ctx);
         });
 
     m_rg->addPass(
@@ -182,7 +204,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
                 fmt::format("{}-image", "blur-h"));
         },
         [this](const RenderPassExecutionContext& ctx) {
-            drawPostProcessEffect("blur-h", ctx, *m_resourceContext, *m_renderer);
+            drawPostProcessEffect(*m_renderer, m_postProcessingCommands["blur-h"], ctx);
         });
 
     m_rg->addPass(
@@ -202,7 +224,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
             builder.exportTexture(data.image);
         },
         [this](const RenderPassExecutionContext& ctx) {
-            drawPostProcessEffect("blur-v", ctx, *m_resourceContext, *m_renderer);
+            drawPostProcessEffect(*m_renderer, m_postProcessingCommands["blur-v"], ctx);
         });
 
     m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
@@ -217,33 +239,27 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     });
     m_renderer->flushResourceUpdates(true);
 
-    auto ssaoNode =
-        m_resourceContext->createPostProcessingEffectNode("ssao", "Ssao.json", m_rg->getRenderPass("ssao"), "ssao");
-    ssaoNode->pass("ssao").material->writeDescriptor(
+    auto& ssao = m_postProcessingCommands["ssao"];
+    ssao.pipeline = m_resourceContext->createPipeline("ssao", "Ssao.json", m_rg->getRenderPass("ssao"), 0);
+    ssao.material = m_resourceContext->createMaterial("ssao", ssao.pipeline);
+    ssao.material->writeDescriptor(
         0, 0, m_rg->getRenderPass(kForwardLightingPass), 0, &imageCache.getSampler("nearestClamp"));
-    ssaoNode->pass("ssao").material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
-    ssaoNode->pass("ssao").material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("samples"));
-    ssaoNode->pass("ssao").material->writeDescriptor(
-        0, 3, imageCache.getImageView("noise"), imageCache.getSampler("linearRepeat"));
-    ssaoNode->pass("ssao").setPushConstantView(m_ssaoParams);
+    ssao.material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
+    ssao.material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("samples"));
+    ssao.material->writeDescriptor(0, 3, imageCache.getImageView("noise"), imageCache.getSampler("linearRepeat"));
+    ssao.pushConstantView.set(m_ssaoParams);
 
-    m_renderer->getDevice().flushDescriptorUpdates();
+    auto& blurH = m_postProcessingCommands["blur-h"];
+    blurH.pipeline = m_resourceContext->createPipeline("blur-h", "GaussianBlur.json", m_rg->getRenderPass("blur-h"), 0);
+    blurH.material = m_resourceContext->createMaterial("blur-h", blurH.pipeline);
+    blurH.material->writeDescriptor(0, 0, m_rg->getRenderPass("ssao"), 0, &imageCache.getSampler("linearClamp"));
+    blurH.pushConstantView.set(kBlurH);
 
-    auto blurHNode = m_resourceContext->createPostProcessingEffectNode(
-        "blur-h", "GaussianBlur.json", m_rg->getRenderPass("blur-h"), "blur-h");
-    blurHNode->pass("blur-h").material->writeDescriptor(
-        0, 0, m_rg->getRenderPass("ssao"), 0, &imageCache.getSampler("linearClamp"));
-    blurHNode->pass("blur-h").setPushConstantView(kBlurH);
-
-    m_renderer->getDevice().flushDescriptorUpdates();
-
-    auto blurVNode = m_resourceContext->createPostProcessingEffectNode(
-        "blur-v", "GaussianBlur.json", m_rg->getRenderPass("blur-v"), "blur-v");
-    blurVNode->pass("blur-v").material->writeDescriptor(
-        0, 0, m_rg->getRenderPass("blur-h"), 0, &imageCache.getSampler("linearClamp"));
-    blurVNode->pass("blur-v").setPushConstantView(kBlurV);
-
-    m_renderer->getDevice().flushDescriptorUpdates();
+    auto& blurV = m_postProcessingCommands["blur-v"];
+    blurV.pipeline = m_resourceContext->createPipeline("blur-v", "GaussianBlur.json", m_rg->getRenderPass("blur-v"), 0);
+    blurV.material = m_resourceContext->createMaterial("blur-v", blurV.pipeline);
+    blurV.material->writeDescriptor(0, 0, m_rg->getRenderPass("blur-h"), 0, &imageCache.getSampler("linearClamp"));
+    blurV.pushConstantView.set(kBlurV);
 
     VulkanPipeline* colorPipeline =
         m_resourceContext->createPipeline("color", "UniformColor.json", m_rg->getRenderPass(kForwardLightingPass), 0);
@@ -277,18 +293,15 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     m_floorNode->geometry = m_resourceContext->getGeometry("floorPos");
     m_floorNode->pass(kForwardLightingPass).material = colorMaterial;
     m_floorNode->pass(kForwardLightingPass).pipeline = colorPipeline;
-    m_floorNode->pass(kForwardLightingPass).setPushConstantView(pc);
+    m_floorNode->pass(kForwardLightingPass).setPushConstantView(kColorPushConstant);
 
     m_sponzaNode = std::make_unique<RenderNode>(*m_transformBuffer, m_transformBuffer->getNextIndex());
-    m_sponzaNode->transformPack->M = glm::mat4(1.0f);
+    m_sponzaNode->transformPack->M = glm::scale(glm::vec3(0.01f));
     m_sponzaNode->geometry = m_resourceContext->getGeometry("sponza");
     m_sponzaNode->pass(kForwardLightingPass).material = normalMaterial;
     m_sponzaNode->pass(kForwardLightingPass).pipeline = normalPipeline;
-    m_sponzaNode->pass(kForwardLightingPass).setPushConstantView(pc);
 
     // // mainPassNode.renderNodes.push_back(m_skybox->createRenderNode());
-
-    // createGui();
 }
 
 void AmbientOcclusionScene::resize(int width, int height) {
@@ -323,6 +336,8 @@ void AmbientOcclusionScene::renderGui() {
     ImGui::SliderInt("Sample Count", &m_ssaoParams.sampleCount, 1, 512);
     ImGui::SliderFloat("Radius", &m_ssaoParams.radius, 0.1f, 2.0f);
     ImGui::End();
+
+    drawCameraUi(m_cameraController->getCamera());
 }
 
 } // namespace crisp
