@@ -7,8 +7,6 @@ add_cpp_static_library(CrispModels
     "FluidSimulationParams.hpp"
     "Grass.cpp"
     "Grass.hpp"
-    "PositionBasedFluid.cpp"
-    "PositionBasedFluid.hpp"
     "Skybox.cpp"
     "Skybox.hpp"
     "Ocean.cpp"
