@@ -1,13 +1,15 @@
-#include "FluidSimulationScene.hpp"
-
-#include <Crisp/Models/FluidSimulation.hpp>
-#include <Crisp/Models/PositionBasedFluid.hpp>
-#include <Crisp/Models/SPH.hpp>
+#include <Crisp/Scenes/FluidSimulationScene.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
-
+#include <Crisp/Gui/Button.hpp>
+#include <Crisp/Gui/Form.hpp>
+#include <Crisp/Gui/Label.hpp>
+#include <Crisp/Gui/Slider.hpp>
+#include <Crisp/Models/FluidSimulation.hpp>
+#include <Crisp/Models/SPH.hpp>
+#include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
@@ -16,13 +18,6 @@
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
-
-#include <Crisp/Gui/Button.hpp>
-#include <Crisp/Gui/Form.hpp>
-#include <Crisp/Gui/Label.hpp>
-#include <Crisp/Gui/Slider.hpp>
-
-#include <Crisp/Renderer/RenderGraph.hpp>
 
 namespace crisp {
 namespace {

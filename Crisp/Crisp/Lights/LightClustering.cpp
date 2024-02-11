@@ -63,6 +63,16 @@ std::vector<TileFrustum> createTileFrusta(
     return tilePlanes;
 }
 
+std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
+    return createComputePipeline(*renderer, "light-culling.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
+        builder.setDescriptorDynamic(0, 1, true);
+        builder.setDescriptorDynamic(0, 2, true);
+        builder.setDescriptorDynamic(0, 3, true);
+        builder.setDescriptorDynamic(0, 4, true);
+        builder.setDescriptorSetBuffering(1, true);
+    });
+}
+
 void addToRenderGraph(
     Renderer* renderer,
     RenderGraph& renderGraph,

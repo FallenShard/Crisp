@@ -14,7 +14,7 @@ TEST_F(PipelineLayoutBuilderTest, BasicUsage) {
         false,
         {
             {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            {1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
         });
     const auto bindings = builder.getDescriptorSetLayoutBindings();
     ASSERT_EQ(bindings.size(), 1);

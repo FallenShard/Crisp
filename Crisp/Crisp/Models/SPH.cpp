@@ -6,23 +6,27 @@
 
 namespace crisp {
 namespace {
-static constexpr uint32_t ScanBlockSize = 256;
-static constexpr uint32_t ScanElementsPerThread = 2;
-static constexpr uint32_t ScanElementsPerBlock = ScanBlockSize * ScanElementsPerThread;
+constexpr uint32_t kScanBlockSize = 256;
+constexpr uint32_t kScanElementsPerThread = 2;
+constexpr uint32_t kScanElementsPerBlock = kScanBlockSize * kScanElementsPerThread;
 
 void setDispatchLayout(RenderGraph::Node& computeNode, const glm::ivec3& workGroupSize, const glm::ivec3& items) {
     computeNode.workGroupSize = workGroupSize;
     computeNode.numWorkGroups = (items - 1) / workGroupSize + 1;
 }
 
+std::unique_ptr<VulkanPipeline> createComputePipeline(
+    Renderer* renderer, const std::string& shaderName, const int32_t dynamicBuffers, glm::uvec3 workGroupSize) {
+    return createComputePipeline(*renderer, shaderName, workGroupSize, [dynamicBuffers](PipelineLayoutBuilder& builder) {
+        for (int32_t i = 0; i < dynamicBuffers; ++i) {
+            builder.setDescriptorDynamic(0, i, true);
+        }
+    });
+}
+
 void createMaterial(
-    RenderGraph::Node& computeNode,
-    Renderer* renderer,
-    std::string shaderName,
-    uint32_t dynamicBuffers,
-    uint32_t sets = 1) {
-    computeNode.pipeline =
-        createComputePipeline(renderer, std::move(shaderName), dynamicBuffers, sets, computeNode.workGroupSize);
+    RenderGraph::Node& computeNode, Renderer* renderer, const std::string& shaderName, int32_t dynamicBuffers) {
+    computeNode.pipeline = createComputePipeline(renderer, shaderName, dynamicBuffers, computeNode.workGroupSize);
     computeNode.material = std::make_unique<Material>(computeNode.pipeline.get());
 }
 
@@ -31,13 +35,13 @@ void createMaterial(
 SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     : m_renderer(renderer)
     , m_particleRadius(0.01f)
-    , m_currentSection(0)
-    , m_prevSection(0)
+    , m_fluidDim(32, 64, 32)
     , m_timeDelta(0.0f)
-    , m_renderGraph(renderGraph)
-    , m_runSimulation{true} {
-    m_fluidDim = glm::uvec3(32, 64, 32);
-    m_numParticles = m_fluidDim.x * m_fluidDim.y * m_fluidDim.z;
+    , m_prevSection(0)
+    , m_currentSection(0)
+    , m_numParticles(m_fluidDim.x * m_fluidDim.y * m_fluidDim.z)
+    , m_runSimulation{true}
+    , m_renderGraph(renderGraph) {
 
     const VkDeviceSize vertexBufferSize = m_numParticles * sizeof(glm::vec4);
     m_vertexBuffer = std::make_unique<StorageBuffer>(
@@ -68,7 +72,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     m_indexBuffer = std::make_unique<StorageBuffer>(m_renderer, m_numParticles * sizeof(uint32_t));
 
     m_blockSumRegionSize =
-        static_cast<uint32_t>(std::max(m_gridParams.numCells / ScanElementsPerBlock * sizeof(uint32_t), 32ull));
+        static_cast<uint32_t>(std::max(m_gridParams.numCells / kScanElementsPerBlock * sizeof(uint32_t), 32ull));
     m_blockSumBuffer = std::make_unique<StorageBuffer>(m_renderer, m_blockSumRegionSize);
 
     m_densityBuffer = std::make_unique<StorageBuffer>(m_renderer, m_numParticles * sizeof(float));
@@ -154,8 +158,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     // Scan for individual blocks
     auto& scan = renderGraph->addComputePass("scan");
     scan.isEnabled = false;
-    setDispatchLayout(scan, glm::ivec3(256, 1, 1), glm::ivec3(m_gridParams.numCells / ScanElementsPerThread, 1, 1));
-    scan.pipeline = createComputePipeline(m_renderer, "scan.comp", 2, 1, scan.workGroupSize);
+    setDispatchLayout(scan, glm::ivec3(256, 1, 1), glm::ivec3(m_gridParams.numCells / kScanElementsPerThread, 1, 1));
+    scan.pipeline = createComputePipeline(m_renderer, "scan.comp", 2, scan.workGroupSize);
     scan.material = std::make_unique<Material>(scan.pipeline.get());
 
     scan.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
@@ -189,8 +193,8 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     setDispatchLayout(
         scanBlock,
         glm::ivec3(256, 1, 1),
-        glm::ivec3(m_gridParams.numCells / ScanElementsPerBlock / ScanElementsPerThread, 1, 1));
-    scanBlock.pipeline = createComputePipeline(m_renderer, "scan.comp", 2, 1, scanBlock.workGroupSize);
+        glm::ivec3(m_gridParams.numCells / kScanElementsPerBlock / kScanElementsPerThread, 1, 1));
+    scanBlock.pipeline = createComputePipeline(m_renderer, "scan.comp", 2, scanBlock.workGroupSize);
     scanBlock.material = std::make_unique<Material>(scanBlock.pipeline.get());
 
     // Input/Output
@@ -198,7 +202,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     scanBlock.material->writeDescriptor(0, 1, *m_blockSumBuffer);
     scanBlock.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
         node.pipeline->setPushConstants(
-            cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells / ScanElementsPerBlock);
+            cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells / kScanElementsPerBlock);
 
         node.material->setDynamicOffset(frameIdx, 0, m_blockSumBuffer->getDynamicOffset(m_currentSection));
         node.material->setDynamicOffset(frameIdx, 1, m_blockSumBuffer->getDynamicOffset(m_currentSection));
@@ -227,7 +231,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     auto& scanCombine = renderGraph->addComputePass("scan-combine");
     scanCombine.isEnabled = false;
     setDispatchLayout(scanCombine, glm::ivec3(512, 1, 1), glm::ivec3(m_gridParams.numCells, 1, 1));
-    scanCombine.pipeline = createComputePipeline(m_renderer, "scan-combine.comp", 2, 1, scanCombine.workGroupSize);
+    scanCombine.pipeline = createComputePipeline(m_renderer, "scan-combine.comp", 2, scanCombine.workGroupSize);
     scanCombine.material = std::make_unique<Material>(scanCombine.pipeline.get());
 
     // Input/Output
@@ -267,7 +271,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     auto& reindex = renderGraph->addComputePass("reindex");
     reindex.isEnabled = false;
     setDispatchLayout(reindex, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    reindex.pipeline = createComputePipeline(m_renderer, "reindex-particles.comp", 5, 1, reindex.workGroupSize);
+    reindex.pipeline = createComputePipeline(m_renderer, "reindex-particles.comp", 5, reindex.workGroupSize);
     reindex.material = std::make_unique<Material>(reindex.pipeline.get());
 
     // Input
@@ -317,7 +321,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     computePressure.isEnabled = false;
     setDispatchLayout(computePressure, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
     computePressure.pipeline =
-        createComputePipeline(m_renderer, "compute-density-and-pressure.comp", 5, 1, computePressure.workGroupSize);
+        createComputePipeline(m_renderer, "compute-density-and-pressure.comp", 5, computePressure.workGroupSize);
     computePressure.material = std::make_unique<Material>(computePressure.pipeline.get());
 
     // Input
@@ -365,7 +369,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     auto& computeForces = renderGraph->addComputePass("compute-forces");
     computeForces.isEnabled = false;
     setDispatchLayout(computeForces, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    computeForces.pipeline = createComputePipeline(m_renderer, "compute-forces.comp", 7, 1, computeForces.workGroupSize);
+    computeForces.pipeline = createComputePipeline(m_renderer, "compute-forces.comp", 7, computeForces.workGroupSize);
     computeForces.material = std::make_unique<Material>(computeForces.pipeline.get());
 
     // Input
@@ -416,7 +420,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     auto& integrateNode = renderGraph->addComputePass("integrate");
     integrateNode.isEnabled = false;
     setDispatchLayout(integrateNode, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    integrateNode.pipeline = createComputePipeline(m_renderer, "integrate.comp", 6, 1, integrateNode.workGroupSize);
+    integrateNode.pipeline = createComputePipeline(m_renderer, "integrate.comp", 6, integrateNode.workGroupSize);
     integrateNode.material = std::make_unique<Material>(integrateNode.pipeline.get());
 
     // .createComputePass("integrate.comp", ...);

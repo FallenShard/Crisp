@@ -28,38 +28,6 @@ constexpr float kGravity = 9.81f;
 constexpr float kGeometryPatchWorldSize = 20.0f;
 constexpr uint32_t kInstanceCount = 64;
 
-std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer* renderer, const glm::uvec3& workGroupSize, const std::string& shaderName) {
-    const auto spirvContents = readSpirvFile(renderer->getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap();
-    PipelineLayoutBuilder layoutBuilder(reflectUniformMetadataFromSpirvShader(spirvContents).unwrap());
-
-    auto layout = layoutBuilder.create(renderer->getDevice());
-
-    const std::array<VkSpecializationMapEntry, 3> specEntries = {
-        //                            id,               offset,             size
-        VkSpecializationMapEntry{0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-        VkSpecializationMapEntry{1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        VkSpecializationMapEntry{2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
-    };
-
-    VkSpecializationInfo specInfo = {};
-    specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
-    specInfo.pMapEntries = specEntries.data();
-    specInfo.dataSize = sizeof(workGroupSize);
-    specInfo.pData = glm::value_ptr(workGroupSize);
-
-    VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-    pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getShaderModule(shaderName));
-    pipelineInfo.stage.pSpecializationInfo = &specInfo;
-    pipelineInfo.layout = layout->getHandle();
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.basePipelineIndex = -1;
-    VkPipeline pipeline{VK_NULL_HANDLE};
-    vkCreateComputePipelines(renderer->getDevice().getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-
-    return std::make_unique<VulkanPipeline>(
-        renderer->getDevice(), pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
-}
 
 VkImageMemoryBarrier createImageMemoryReadBarrier(const VkImage imageHandle, const uint32_t layerIdx) {
     VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
@@ -151,7 +119,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     auto& oscillationPass = m_renderGraph->addComputePass(kSpectrumPass);
     oscillationPass.workGroupSize = glm::ivec3(16, 16, 1);
     oscillationPass.numWorkGroups = computeWorkGroupCount(glm::uvec3(N, N, 1), oscillationPass.workGroupSize);
-    oscillationPass.pipeline = createComputePipeline(m_renderer, oscillationPass.workGroupSize, "ocean-spectrum.comp");
+    oscillationPass.pipeline = createComputePipeline(*m_renderer, "ocean-spectrum.comp", oscillationPass.workGroupSize);
     oscillationPass.material = std::make_unique<Material>(oscillationPass.pipeline.get());
     oscillationPass.material->writeDescriptor(
         0, 0, imageCache.getImageView("randImageView").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -200,7 +168,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     auto& geometryPass = m_renderGraph->addComputePass(kGeometryPass);
     geometryPass.workGroupSize = glm::ivec3(16, 16, 1);
     geometryPass.numWorkGroups = computeWorkGroupCount(glm::uvec3(N + 1, N + 1, 1), geometryPass.workGroupSize);
-    geometryPass.pipeline = createComputePipeline(m_renderer, geometryPass.workGroupSize, "ocean-geometry.comp");
+    geometryPass.pipeline = createComputePipeline(*m_renderer, "ocean-geometry.comp", geometryPass.workGroupSize);
     geometryPass.material = std::make_unique<Material>(geometryPass.pipeline.get());
     geometryPass.material->writeDescriptor(
         0, 0, m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->createDescriptorInfo());
@@ -313,7 +281,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     m_renderer->flushResourceUpdates(true);
 
     VulkanPipeline* pipeline =
-        m_resourceContext->createPipeline("ocean", "ocean.lua", m_renderGraph->getRenderPass(kMainPass), 0);
+        m_resourceContext->createPipeline("ocean", "ocean.json", m_renderGraph->getRenderPass(kMainPass), 0);
     Material* material = m_resourceContext->createMaterial("ocean", pipeline);
     material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     material->writeDescriptor(
@@ -448,7 +416,7 @@ int OceanScene::applyFFT(std::string image) {
         bitReversePass.workGroupSize = glm::ivec3(16, 16, 1);
         bitReversePass.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
         bitReversePass.pipeline =
-            createComputePipeline(m_renderer, bitReversePass.workGroupSize, "ocean-reverse-bits.comp");
+            createComputePipeline(*m_renderer, "ocean-reverse-bits.comp", bitReversePass.workGroupSize);
         bitReversePass.material = std::make_unique<Material>(bitReversePass.pipeline.get());
         bitReversePass.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -485,7 +453,7 @@ int OceanScene::applyFFT(std::string image) {
         auto& fftPass = m_renderGraph->addComputePass(name);
         fftPass.workGroupSize = glm::ivec3(16, 16, 1);
         fftPass.numWorkGroups = glm::ivec3(N / 2 / 16, N / 16, 1);
-        fftPass.pipeline = createComputePipeline(m_renderer, fftPass.workGroupSize, "ifft-hori.comp");
+        fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-hori.comp", fftPass.workGroupSize);
         fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
         fftPass.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -539,7 +507,7 @@ int OceanScene::applyFFT(std::string image) {
         bitReversePass2.workGroupSize = glm::ivec3(16, 16, 1);
         bitReversePass2.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
         bitReversePass2.pipeline =
-            createComputePipeline(m_renderer, bitReversePass2.workGroupSize, "ocean-reverse-bits.comp");
+            createComputePipeline(*m_renderer, "ocean-reverse-bits.comp", bitReversePass2.workGroupSize);
         bitReversePass2.material = std::make_unique<Material>(bitReversePass2.pipeline.get());
         bitReversePass2.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -578,7 +546,7 @@ int OceanScene::applyFFT(std::string image) {
         auto& fftPass = m_renderGraph->addComputePass(name);
         fftPass.workGroupSize = glm::ivec3(16, 16, 1);
         fftPass.numWorkGroups = glm::ivec3(N / 16, N / 16 / 2, 1);
-        fftPass.pipeline = createComputePipeline(m_renderer, fftPass.workGroupSize, "ifft-vert.comp");
+        fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-vert.comp", fftPass.workGroupSize);
         fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
         fftPass.material->writeDescriptor(
             0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));

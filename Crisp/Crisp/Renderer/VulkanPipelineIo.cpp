@@ -260,7 +260,12 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJsonPath(
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
     const auto absolutePath{renderer.getResourcesPath() / "Pipelines" / path};
-    auto result = createPipelineFromJson(loadJsonFromFile(absolutePath).unwrap(), renderer, renderPass, subpassIndex);
+    auto maybeJson = loadJsonFromFile(absolutePath);
+    if (!maybeJson) {
+        return resultError("Failed to open json config at {}", path.generic_string());
+    }
+
+    auto result = createPipelineFromJson(maybeJson.unwrap(), renderer, renderPass, subpassIndex);
     if (result) {
         renderer.getDevice().getDebugMarker().setObjectName(
             (*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));

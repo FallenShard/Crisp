@@ -1,19 +1,19 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <functional>
 
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Vulkan/VulkanPipeline.hpp>
 
 namespace crisp {
 class Renderer;
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer* renderer,
-    std::string&& shaderName,
-    uint32_t numDynamicStorageBuffers,
-    uint32_t numDescriptorSets,
-    const glm::uvec3& workGroupSize);
-std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize);
+    Renderer& renderer,
+    const std::string& shaderName,
+    const glm::uvec3& workGroupSize,
+    const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {});
 
 glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline);
 

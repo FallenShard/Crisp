@@ -9,7 +9,6 @@ namespace crisp {
 class PipelineLayoutBuilder {
 public:
     PipelineLayoutBuilder() = default;
-
     explicit PipelineLayoutBuilder(ShaderUniformInputMetadata&& metadata);
 
     PipelineLayoutBuilder& defineDescriptorSet(

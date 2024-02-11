@@ -4,6 +4,7 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
+#include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
@@ -18,45 +19,11 @@ const auto logger = createLoggerMt("GltfViewerScene");
 
 constexpr uint32_t kShadowMapSize = 1024;
 
-std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer* renderer,
-    const glm::uvec3& workGroupSize,
-    const PipelineLayoutBuilder& layoutBuilder,
-    const std::string& shaderName) {
-    const VulkanDevice& device = renderer->getDevice();
-    auto layout = layoutBuilder.create(device);
-
-    const std::vector<VkSpecializationMapEntry> specEntries = {
-        //  id,               offset,             size
-        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
-    };
-
-    VkSpecializationInfo specInfo = {};
-    specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
-    specInfo.pMapEntries = specEntries.data();
-    specInfo.dataSize = sizeof(workGroupSize);
-    specInfo.pData = glm::value_ptr(workGroupSize);
-
-    VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-    pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer->getOrLoadShaderModule(shaderName));
-    pipelineInfo.stage.pSpecializationInfo = &specInfo;
-    pipelineInfo.layout = layout->getHandle();
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.basePipelineIndex = -1;
-    VkPipeline pipeline{VK_NULL_HANDLE};
-    vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-
-    return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
-}
-
 std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
-    PipelineLayoutBuilder layoutBuilder(
-        reflectUniformMetadataFromSpirvPath(renderer->getAssetPaths().spvShaderDir / "linear-blend-skinning.comp.spv")
-            .unwrap());
-    layoutBuilder.setDescriptorDynamic(0, 3, true);
-    return createComputePipeline(renderer, workGroupSize, layoutBuilder, "linear-blend-skinning.comp");
+    return createComputePipeline(
+        *renderer, "linear-blend-skinning.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
+            builder.setDescriptorDynamic(0, 3, true);
+        });
 }
 
 void createDrawCommand(

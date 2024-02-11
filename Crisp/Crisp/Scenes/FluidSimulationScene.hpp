@@ -3,12 +3,11 @@
 #include <memory>
 #include <unordered_map>
 
-#include "Scene.hpp"
-
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
+#include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {
 class FluidSimulation;
