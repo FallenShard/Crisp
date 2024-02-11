@@ -1,4 +1,4 @@
-#include "LightShaftPass.hpp"
+#include <Crisp/Renderer/RenderPasses/LightShaftPass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>

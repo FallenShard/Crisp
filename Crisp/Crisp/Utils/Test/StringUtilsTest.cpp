@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <Crisp/Utils/StringUtils.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace crisp;
 

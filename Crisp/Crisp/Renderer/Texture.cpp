@@ -1,4 +1,4 @@
-#include "Texture.hpp"
+#include <Crisp/Renderer/Texture.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>

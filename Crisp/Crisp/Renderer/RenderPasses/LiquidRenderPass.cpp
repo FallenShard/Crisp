@@ -1,4 +1,4 @@
-#include "LiquidRenderPass.hpp"
+#include <Crisp/Renderer/RenderPasses/LiquidRenderPass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>

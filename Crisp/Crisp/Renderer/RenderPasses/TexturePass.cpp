@@ -1,4 +1,4 @@
-#include "TexturePass.hpp"
+#include <Crisp/Renderer/RenderPasses/TexturePass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanDevice.hpp>

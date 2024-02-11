@@ -1,4 +1,4 @@
-#include "StringUtils.hpp"
+#include <Crisp/Utils/StringUtils.hpp>
 
 namespace crisp {
 std::vector<std::string> tokenize(const std::string_view string, const std::string& delimiter) {

@@ -1,15 +1,14 @@
 #pragma once
 
-#include "Scene.hpp"
-#include <Crisp/Renderer/Renderer.hpp>
-
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {
 namespace gui {
 class Form;
-}
+} // namespace gui
 
 class FreeCameraController;
 

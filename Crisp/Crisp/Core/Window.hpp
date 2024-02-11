@@ -1,15 +1,14 @@
 #pragma once
 
+#include <string>
+
+#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <GLFW/glfw3.h>
+
 #include <Crisp/Core/Event.hpp>
 #include <Crisp/Core/Keyboard.hpp>
 #include <Crisp/Core/Mouse.hpp>
 #include <Crisp/Math/Headers.hpp>
-
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-
-#include <string>
-
-#include <GLFW/glfw3.h>
 
 namespace crisp {
 enum class CursorState {

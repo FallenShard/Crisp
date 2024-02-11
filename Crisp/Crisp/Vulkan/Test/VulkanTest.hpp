@@ -15,7 +15,7 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
-#include <glfw/glfw3.h>
+#include <GLFW/glfw3.h>
 
 namespace crisp {
 MATCHER(HandleIsValid, "Checks whether the handle is not null.") {

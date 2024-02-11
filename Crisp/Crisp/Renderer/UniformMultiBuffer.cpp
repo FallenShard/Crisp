@@ -1,4 +1,4 @@
-#include "UniformMultiBuffer.hpp"
+#include <Crisp/Renderer/UniformMultiBuffer.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
 

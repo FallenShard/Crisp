@@ -45,7 +45,7 @@ target_link_libraries(CrispGui
     PUBLIC Crisp::FontIo
     PUBLIC Crisp::Geometry
     PUBLIC glfw
-    PUBLIC Vulkan::Headers
+    PUBLIC Crisp::VulkanHeader
     PRIVATE Crisp::ImageIo)
 
 add_cpp_static_library(CrispImGui

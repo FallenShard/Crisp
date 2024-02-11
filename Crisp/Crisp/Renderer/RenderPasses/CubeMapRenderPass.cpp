@@ -1,4 +1,4 @@
-#include "CubeMapRenderPass.hpp"
+#include <Crisp/Renderer/RenderPasses/CubeMapRenderPass.hpp>
 
 #include <Crisp/Image/Image.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>

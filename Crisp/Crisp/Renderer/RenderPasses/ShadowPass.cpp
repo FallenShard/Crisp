@@ -1,4 +1,4 @@
-#include "ShadowPass.hpp"
+#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>

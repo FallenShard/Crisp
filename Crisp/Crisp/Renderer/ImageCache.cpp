@@ -1,6 +1,5 @@
 #include <Crisp/Renderer/ImageCache.hpp>
 
-#include "ImageCache.hpp"
 #include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp {

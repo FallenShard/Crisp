@@ -1,4 +1,4 @@
-#include "NormalMappingScene.hpp"
+#include <Crisp/Scenes/NormalMappingScene.hpp>
 
 #include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>

@@ -4,14 +4,12 @@
 #include <memory>
 #include <vector>
 
-#include "Scene.hpp"
-#include <Crisp/Renderer/Renderer.hpp>
-
+#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>
 #include <Crisp/Lights/LightDescriptor.hpp>
 #include <Crisp/Renderer/Material.hpp>
-
-#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {
 namespace gui {

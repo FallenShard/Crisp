@@ -1,4 +1,4 @@
-#include "ForwardLightingPass.hpp"
+#include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>

@@ -1,4 +1,4 @@
-#include "BlurPass.hpp"
+#include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
