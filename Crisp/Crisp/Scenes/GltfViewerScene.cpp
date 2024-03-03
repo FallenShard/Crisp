@@ -89,7 +89,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
         const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
         m_sceneImageViews.resize(kRendererVirtualFrameCount);
         for (auto& sv : m_sceneImageViews) {
-            sv = m_rg->createViewFromResource(data.hdrImage);
+            sv = m_rg->createViewFromResource(m_renderer->getDevice(), data.hdrImage);
         }
 
         m_renderer->setSceneImageViews(m_sceneImageViews);
@@ -100,6 +100,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
     imageCache.addImageView(
         "csmFrame0",
         createView(
+            m_renderer->getDevice(),
             *m_resourceContext->renderTargetCache.get("ShadowMap")->image,
             VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             0,
@@ -107,6 +108,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
     imageCache.addImageView(
         "csmFrame1",
         createView(
+            m_renderer->getDevice(),
             *m_resourceContext->renderTargetCache.get("ShadowMap")->image,
             VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             kDefaultCascadeCount,
@@ -160,7 +162,7 @@ void GltfViewerScene::resize(int width, int height) {
         const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
         m_sceneImageViews.resize(kRendererVirtualFrameCount);
         for (auto& sv : m_sceneImageViews) {
-            sv = m_rg->createViewFromResource(data.hdrImage);
+            sv = m_rg->createViewFromResource(m_renderer->getDevice(), data.hdrImage);
         }
 
         m_renderer->setSceneImageViews(m_sceneImageViews);

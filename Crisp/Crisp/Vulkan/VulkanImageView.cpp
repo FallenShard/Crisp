@@ -35,12 +35,12 @@ VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sa
     return {sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout};
 }
 
-std::unique_ptr<VulkanImageView> createView(VulkanImage& image, VkImageViewType type) {
-    return std::make_unique<VulkanImageView>(
-        image.getDevice(), image, type, 0, image.getLayerCount(), 0, image.getMipLevels());
+std::unique_ptr<VulkanImageView> createView(const VulkanDevice& device, VulkanImage& image, VkImageViewType type) {
+    return std::make_unique<VulkanImageView>(device, image, type, 0, image.getLayerCount(), 0, image.getMipLevels());
 }
 
 std::unique_ptr<VulkanImageView> createView(
+    const VulkanDevice& device,
     VulkanImage& image,
     VkImageViewType type,
     uint32_t baseLayer,
@@ -50,8 +50,7 @@ std::unique_ptr<VulkanImageView> createView(
     if (type == VK_IMAGE_VIEW_TYPE_CUBE) {
         numLayers = 6;
     }
-    return std::make_unique<VulkanImageView>(
-        image.getDevice(), image, type, baseLayer, numLayers, baseMipLevel, mipLevels);
+    return std::make_unique<VulkanImageView>(device, image, type, baseLayer, numLayers, baseMipLevel, mipLevels);
 }
 
 } // namespace crisp

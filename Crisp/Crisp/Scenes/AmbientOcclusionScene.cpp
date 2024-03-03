@@ -232,7 +232,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
         const auto& data = m_rg->getBlackboard().get<BlurVerticalPassData>();
         m_sceneImageViews.resize(kRendererVirtualFrameCount);
         for (auto& sv : m_sceneImageViews) {
-            sv = m_rg->createViewFromResource(data.image);
+            sv = m_rg->createViewFromResource(m_renderer->getDevice(), data.image);
         }
 
         m_renderer->setSceneImageViews(m_sceneImageViews);

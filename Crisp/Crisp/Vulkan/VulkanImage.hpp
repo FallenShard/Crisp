@@ -74,8 +74,6 @@ public:
 
     VkImageSubresourceRange getFullRange() const;
 
-    const VulkanDevice& getDevice() const;
-
     VkDeviceSize getSizeInBytes() const {
         return m_allocation.size;
     }
@@ -86,7 +84,6 @@ private:
     std::pair<VkAccessFlags, VkAccessFlags> determineAccessMasks(VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
     VulkanMemoryHeap::Allocation m_allocation;
-    const VulkanDevice* m_device;
     VkImageCreateInfo m_createInfo;
     VkImageAspectFlags m_aspect;
 

@@ -141,7 +141,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
 
     for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-        m_rtImageViews.emplace_back(createView(*m_rtImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+        m_rtImageViews.emplace_back(createView(m_renderer->getDevice(), *m_rtImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     }
 
     m_pipeline = createPipeline();

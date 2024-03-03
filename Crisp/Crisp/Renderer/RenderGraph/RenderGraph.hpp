@@ -60,7 +60,8 @@ public:
     size_t getPassCount() const;
     size_t getResourceCount() const;
 
-    std::unique_ptr<VulkanImageView> createViewFromResource(RenderGraphResourceHandle handle) const;
+    std::unique_ptr<VulkanImageView> createViewFromResource(
+        const VulkanDevice& device, RenderGraphResourceHandle handle) const;
 
     const RenderGraphBlackboard& getBlackboard() const;
 

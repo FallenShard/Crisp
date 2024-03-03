@@ -416,7 +416,7 @@ void PbrScene::updateSceneViews() {
     const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
     m_sceneImageViews.resize(kRendererVirtualFrameCount);
     for (auto& sv : m_sceneImageViews) {
-        sv = m_rg->createViewFromResource(data.hdrImage);
+        sv = m_rg->createViewFromResource(m_renderer->getDevice(), data.hdrImage);
     }
 
     m_renderer->setSceneImageViews(m_sceneImageViews);

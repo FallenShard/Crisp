@@ -92,7 +92,6 @@ std::string toString(VkImageUsageFlags flags) {
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)
     : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
     , m_allocation{}
-    , m_device(&device)
     , m_createInfo(createInfo)
     , m_aspect(determineImageAspect(m_createInfo.format))
     , m_layouts(m_createInfo.arrayLayers, std::vector<VkImageLayout>(m_createInfo.mipLevels, VK_IMAGE_LAYOUT_UNDEFINED)) {
@@ -114,7 +113,6 @@ VulkanImage::VulkanImage(
     const VkImageCreateFlags createFlags)
     : VulkanResource(device.getResourceDeallocator())
     , m_allocation{}
-    , m_device(&device)
     , m_createInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO}
     , m_aspect(determineImageAspect(format))
     , m_layouts(numLayers, std::vector<VkImageLayout>(numMipmaps, VK_IMAGE_LAYOUT_UNDEFINED)) {

@@ -211,9 +211,11 @@ size_t RenderGraph::getResourceCount() const {
     return m_resources.size();
 }
 
-std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(const RenderGraphResourceHandle handle) const {
+std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(
+    const VulkanDevice& device, const RenderGraphResourceHandle handle) const {
     const auto& res{getResource(handle)};
-    return createView(*m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
+    return createView(device, *m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
+}
 }
 
 const RenderGraphBlackboard& RenderGraph::getBlackboard() const {

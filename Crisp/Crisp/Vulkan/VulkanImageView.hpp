@@ -38,8 +38,9 @@ private:
     VkImageSubresourceRange m_subresourceRange;
 };
 
-std::unique_ptr<VulkanImageView> createView(VulkanImage& image, VkImageViewType type);
+std::unique_ptr<VulkanImageView> createView(const VulkanDevice& device, VulkanImage& image, VkImageViewType type);
 std::unique_ptr<VulkanImageView> createView(
+    const VulkanDevice& device,
     VulkanImage& image,
     VkImageViewType type,
     uint32_t baseLayer,

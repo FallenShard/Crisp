@@ -166,7 +166,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
                 const VkImageViewType type =
                     framebufferLayerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                 frameAttachmentViews[attachmentIdx] =
-                    createView(renderTarget, type, frameDepthOffset, framebufferLayerCount);
+                    createView(device, renderTarget, type, frameDepthOffset, framebufferLayerCount);
             } else {
                 // This handles the case where the render target isn't buffered. In that case, we create another
                 // image view that essentially points to the same region as the virtual frame 0.
@@ -176,6 +176,7 @@ void VulkanRenderPass::createRenderTargetViewsAndFramebuffers(const VulkanDevice
                 const uint32_t layerCount = mapping.subresource.layerCount;
                 const VkImageViewType type = layerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                 frameAttachmentViews[attachmentIdx] = createView(
+                    device,
                     renderTarget,
                     type,
                     firstLayer,

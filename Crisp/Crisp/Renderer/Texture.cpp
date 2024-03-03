@@ -205,6 +205,6 @@ void Texture::fill(const VulkanBuffer& buffer, VkDeviceSize /*size*/, uint32_t b
 
 std::unique_ptr<VulkanImageView> Texture::createView(
     VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel, uint32_t mipLevels) {
-    return ::crisp::createView(*m_image, type, baseLayer, numLayers, baseMipLevel, mipLevels);
+    return ::crisp::createView(m_renderer->getDevice(), *m_image, type, baseLayer, numLayers, baseMipLevel, mipLevels);
 }
 } // namespace crisp

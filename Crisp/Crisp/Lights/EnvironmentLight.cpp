@@ -23,15 +23,15 @@ const std::array<glm::mat4, kCubeMapFaceCount> kCubeMapViews = {
 EnvironmentLight::EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& iblData) {
     auto equirectMap = createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
     std::tie(m_cubeMap, m_cubeMapView) =
-        convertEquirectToCubeMap(&renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D));
+        convertEquirectToCubeMap(&renderer, createView(renderer.getDevice(), *equirectMap, VK_IMAGE_VIEW_TYPE_2D));
 
     m_diffuseEnvironmentMap =
         createVulkanCubeMap(renderer, {std::move(iblData.diffuseIrradianceCubeMap)}, VK_FORMAT_R32G32B32A32_SFLOAT);
-    m_diffuseEnvironmentMapView = createView(*m_diffuseEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
+    m_diffuseEnvironmentMapView = createView(renderer.getDevice(), *m_diffuseEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
 
     m_specularEnvironmentMap =
         createVulkanCubeMap(renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
-    m_specularEnvironmentMapView = createView(*m_specularEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
+    m_specularEnvironmentMapView = createView(renderer.getDevice(), *m_specularEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
 }
 
 void EnvironmentLight::update(Renderer& renderer, ImageBasedLightingData&& iblData) {
@@ -183,7 +183,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     });
     renderer->flushResourceUpdates(true);
 
-    auto cubeMapView = createView(*cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, cubeMap->getMipLevels());
+    auto cubeMapView = createView(
+        renderer->getDevice(), *cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, cubeMap->getMipLevels());
     return std::make_pair(std::move(cubeMap), std::move(cubeMapView));
 }
 
@@ -243,7 +244,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     renderer->flushResourceUpdates(true);
 
     const std::string key = "envIrrMap";
-    auto imageView = createView(convPass->getRenderTarget(0), VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount);
+    auto imageView =
+        createView(renderer->getDevice(), convPass->getRenderTarget(0), VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount);
     return std::make_pair(std::move(cubeMapRenderTarget->image), std::move(imageView));
 }
 
@@ -319,7 +321,14 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
         renderer->flushResourceUpdates(true);
     }
 
-    auto view = createView(*environmentSpecularMap->image, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, kMipLevels);
+    auto view = createView(
+        renderer->getDevice(),
+        *environmentSpecularMap->image,
+        VK_IMAGE_VIEW_TYPE_CUBE,
+        0,
+        kCubeMapFaceCount,
+        0,
+        kMipLevels);
     return {std::move(environmentSpecularMap->image), std::move(view)};
 }
 

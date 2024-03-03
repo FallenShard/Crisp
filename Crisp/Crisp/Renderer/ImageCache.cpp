@@ -11,7 +11,7 @@ void ImageCache::addImageWithView(
     const std::string& key, std::unique_ptr<VulkanImage> image, VkImageViewType imageViewType) {
     auto& cachedView = m_imageViews[key];
     if (!cachedView) {
-        cachedView = createView(*image, imageViewType);
+        cachedView = createView(m_renderer->getDevice(), *image, imageViewType);
     }
 
     auto& cachedImage = m_images[key];
