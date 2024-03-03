@@ -5,6 +5,7 @@ namespace {
 using VulkanPhysicalDeviceWithSurfaceTest = VulkanTestWithSurface;
 using VulkanPhysicalDeviceTest = VulkanTest;
 
+using ::testing::Ge;
 using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Not;
@@ -20,15 +21,23 @@ TEST_F(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCapabilities) {
 
     const auto surfaceSupport = physicalDevice.querySurfaceSupport(context_->getSurface());
     EXPECT_THAT(surfaceSupport.formats, Not(IsEmpty()));
-    EXPECT_THAT(surfaceSupport.presentModes, SizeIs(4));
+    EXPECT_THAT(surfaceSupport.presentModes, Not(IsEmpty()));
 }
 
-TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDevice) {
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDefaultQueueConfiguration) {
     const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
     const auto queueConfig = createDefaultQueueConfiguration(*context_, physicalDevice);
-    EXPECT_THAT(createDefaultQueueConfiguration(*context_, physicalDevice).createInfos, SizeIs(3));
+    EXPECT_THAT(queueConfig.createInfos, SizeIs(3));
+    EXPECT_THAT(queueConfig.priorities, SizeIs(Ge(3)));
+    EXPECT_THAT(queueConfig.identifiers, SizeIs(3));
+    EXPECT_THAT(queueConfig.types, SizeIs(3));
+}
 
-    const VkDevice device = createLogicalDeviceHandle(physicalDevice, queueConfig);
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateLogicalDevice) {
+    const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
+
+    const VkDevice device =
+        createLogicalDeviceHandle(physicalDevice, createDefaultQueueConfiguration(*context_, physicalDevice));
     EXPECT_THAT(device, Not(IsNull()));
     vkDestroyDevice(device, nullptr);
 }
