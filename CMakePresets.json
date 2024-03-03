@@ -15,11 +15,7 @@
       },
       "architecture": { "value": "x64", "strategy": "external" },
       "toolset": { "value": "host=x64", "strategy": "external" },
-      "condition": {
-        "type": "equals"           ,
-        "lhs" : "${hostSystemName}",
-        "rhs" : "Windows"
-      }
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
     {
       "name": "x64-debug",

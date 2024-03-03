@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.28)
 project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -14,9 +14,9 @@ function(enable_default_cpp_compile_options targetName optionType)
     target_compile_features(${targetName} ${optionType} cxx_std_23)
 
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
-        target_compile_options(${targetName} ${optionType} /MP /JMC /Zi /W4 /WX /Zc:preprocessor)
+        target_compile_options(${targetName} ${optionType} /MP /JMC /Zi /W4 /Zc:preprocessor)
     else()
-        target_compile_options(${targetName} ${optionType} -W -Wall -Werror)
+        target_compile_options(${targetName} ${optionType} -W -Wall)
     endif()
 endfunction()
 
