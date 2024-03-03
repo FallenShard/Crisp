@@ -17,9 +17,9 @@ Result<> assertRequiredExtensionSupport(
     const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions) {
     std::unordered_set<std::string> pendingExtensions;
 
-    logger->info("Identified {} required Vulkan extensions:", requiredExtensions.size());
+    logger->trace("Identified {} required Vulkan extensions:", requiredExtensions.size());
     for (const auto* const extensionName : requiredExtensions) {
-        logger->info("\t{}", extensionName);
+        logger->trace("    {}", extensionName);
         pendingExtensions.insert(std::string(extensionName));
     }
 
@@ -33,7 +33,7 @@ Result<> assertRequiredExtensionSupport(
     if (!pendingExtensions.empty()) {
         logger->error("The following required extensions are not supported:");
         for (const auto& ext : pendingExtensions) {
-            logger->error("{}", ext);
+            logger->error("    {}", ext);
         }
 
         return resultError("Failed to support required extensions. Aborting the application.");
