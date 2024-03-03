@@ -74,7 +74,7 @@ public:
 
     void resize(int width, int height);
 
-    void enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate);
+    void enqueueResourceUpdate(const std::function<void(VkCommandBuffer)>& resourceUpdate);
     void enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
     void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 
@@ -149,7 +149,6 @@ private:
     std::unique_ptr<ShaderCache> m_shaderCache;
 
     using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
-    FunctionVector m_resourceUpdates;
     FunctionVector m_drawCommands;
     FunctionVector m_defaultPassDrawCommands;
 

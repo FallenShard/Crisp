@@ -63,9 +63,15 @@ public:
             m_handle, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, std::numeric_limits<uint64_t>::max());
     }
 
+    void waitIdle() const;
+
     const VulkanDebugMarker& getDebugMarker() const {
         return *m_debugMarker;
     }
+
+    void postResourceUpdate(const std::function<void(VkCommandBuffer)>& resourceUpdateFunc);
+    void executeResourceUpdates(VkCommandBuffer cmdBuffer);
+    void flushResourceUpdates(bool waitOnAllQueues = false);
 
 private:
     VkDevice m_handle;
@@ -86,6 +92,9 @@ private:
     std::vector<VkWriteDescriptorSet> m_descriptorWrites;
 
     std::unique_ptr<VulkanResourceDeallocator> m_resourceDeallocator;
+
+    using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
+    FunctionVector m_resourceUpdates;
 };
 
 VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config);

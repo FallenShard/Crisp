@@ -188,8 +188,8 @@ void Renderer::resize(int /*width*/, int /*height*/) {
     flushResourceUpdates(true);
 }
 
-void Renderer::enqueueResourceUpdate(std::function<void(VkCommandBuffer)> resourceUpdate) {
-    m_resourceUpdates.emplace_back(std::move(resourceUpdate));
+void Renderer::enqueueResourceUpdate(const std::function<void(VkCommandBuffer)>& resourceUpdate) {
+    m_device->postResourceUpdate(resourceUpdate);
 }
 
 void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction) {
@@ -201,46 +201,7 @@ void Renderer::enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawActio
 }
 
 void Renderer::flushResourceUpdates(bool waitOnAllQueues) {
-    if (m_resourceUpdates.empty()) {
-        return;
-    }
-
-    const VulkanQueue& generalQueue = m_device->getGeneralQueue();
-    auto cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = cmdPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
-    vkAllocateCommandBuffers(m_device->getHandle(), &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    for (const auto& update : m_resourceUpdates) {
-        update(commandBuffer);
-    }
-
-    vkEndCommandBuffer(commandBuffer);
-
-    VkFence tempFence = m_device->createFence(0);
-    generalQueue.submit(commandBuffer, tempFence);
-    m_device->wait(tempFence);
-
-    if (waitOnAllQueues) {
-        finish();
-    }
-
-    vkDestroyFence(m_device->getHandle(), tempFence, nullptr);
-
-    vkFreeCommandBuffers(m_device->getHandle(), cmdPool, 1, &commandBuffer);
-    vkResetCommandPool(m_device->getHandle(), cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-    vkDestroyCommandPool(m_device->getHandle(), cmdPool, nullptr);
-
-    m_resourceUpdates.clear();
+    m_device->flushResourceUpdates(waitOnAllQueues);
 }
 
 FrameContext Renderer::beginFrame() {
@@ -284,7 +245,6 @@ void Renderer::endFrame(const FrameContext& frameContext) {
 
     present(frame, frameContext.swapChainImageIndex);
 
-    m_resourceUpdates.clear();
     m_drawCommands.clear();
     m_defaultPassDrawCommands.clear();
 
@@ -303,7 +263,7 @@ void Renderer::drawFrame() {
 
 void Renderer::finish() {
     logger->warn("Calling vkDeviceWaitIdle()");
-    vkDeviceWaitIdle(m_device->getHandle());
+    m_device->waitIdle();
 }
 
 void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex) {
@@ -314,8 +274,8 @@ void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t re
         }
 
         m_device->flushDescriptorUpdates();
-    } else // Prevent rendering any scene output to the screen
-    {
+    } else {
+        // Prevent rendering any scene output to the screen
         m_sceneImageViews.clear();
     }
 }
@@ -423,9 +383,7 @@ void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
         VK_ACCESS_SHADER_READ_BIT);
 
-    for (const auto& update : m_resourceUpdates) {
-        update(cmdBuffer);
-    }
+    m_device->executeResourceUpdates(cmdBuffer);
 
     for (const auto& drawCommand : m_drawCommands) {
         drawCommand(cmdBuffer);
