@@ -111,3 +111,11 @@ target_link_libraries(CrispVulkanSwapChainTest PRIVATE Crisp::VulkanTestUtils)
 add_cpp_test(CrispVulkanResourceDeallocatorTest
     "Test/VulkanResourceDeallocatorTest.cpp")
 target_link_libraries(CrispVulkanResourceDeallocatorTest PRIVATE Crisp::VulkanTestUtils)
+
+add_cpp_test(CrispVulkanImageTest
+    "Test/VulkanImageTest.cpp")
+target_link_libraries(CrispVulkanImageTest PRIVATE Crisp::VulkanTestUtils)
+
+add_cpp_test(CrispVulkanVertexLayoutTest
+    "Test/VulkanVertexLayoutTest.cpp")
+target_link_libraries(CrispVulkanVertexLayoutTest PRIVATE Crisp::VulkanTestUtils)

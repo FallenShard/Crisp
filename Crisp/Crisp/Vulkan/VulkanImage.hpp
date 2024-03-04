@@ -27,6 +27,16 @@ public:
     VulkanImage(VulkanImage&&) noexcept = default;
     VulkanImage& operator=(VulkanImage&&) noexcept = default;
 
+    uint32_t getMipLevels() const;
+    uint32_t getWidth() const;
+    uint32_t getHeight() const;
+    VkImageAspectFlags getAspectMask() const;
+    VkFormat getFormat() const;
+    uint32_t getLayerCount() const;
+
+    VkImageSubresourceRange getFullRange() const;
+    VkImageLayout getLayout() const;
+
     void setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range);
     void transitionLayout(
         VkCommandBuffer buffer, VkImageLayout newLayout, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
@@ -52,6 +62,13 @@ public:
         VkImageSubresourceRange subresRange,
         VkPipelineStageFlags srcStage,
         VkPipelineStageFlags dstStage);
+    void transitionLayoutDirect(
+        VkCommandBuffer cmdBuffer,
+        VkImageLayout newLayout,
+        VkPipelineStageFlags srcStage,
+        VkAccessFlags srcAccessMask,
+        VkPipelineStageFlags dstStage,
+        VkAccessFlags dstAccessMask);
 
     void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer);
     void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers);
@@ -62,21 +79,9 @@ public:
         uint32_t baseLayer,
         uint32_t numLayers,
         uint32_t mipLevel);
+    void copyTo(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers);
     void buildMipmaps(VkCommandBuffer commandBuffer);
     void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t mipLevel);
-
-    uint32_t getMipLevels() const;
-    uint32_t getWidth() const;
-    uint32_t getHeight() const;
-    VkImageAspectFlags getAspectMask() const;
-    VkFormat getFormat() const;
-    uint32_t getLayerCount() const;
-
-    VkImageSubresourceRange getFullRange() const;
-
-    VkDeviceSize getSizeInBytes() const {
-        return m_allocation.size;
-    }
 
 private:
     bool matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const;
@@ -84,11 +89,19 @@ private:
     std::pair<VkAccessFlags, VkAccessFlags> determineAccessMasks(VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
     VulkanMemoryHeap::Allocation m_allocation;
-    VkImageCreateInfo m_createInfo;
+
+    VkImageType m_imageType;
+
+    VkExtent3D m_extent;
+    uint32_t m_mipLevelCount;
+    uint32_t m_layerCount;
+
+    VkFormat m_format;
+    VkSampleCountFlagBits m_sampleCount;
+
     VkImageAspectFlags m_aspect;
 
-    // Tracks layouts across all layers and mip levels.
-    // Indexed as [layer][mipLevel].
+    // Tracks layouts across all layers and mip levels. Indexed as [layer][mipLevel].
     std::vector<std::vector<VkImageLayout>> m_layouts;
 };
 
