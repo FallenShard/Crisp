@@ -54,6 +54,11 @@ struct FormatSizeof<> {
 };
 
 template <>
+struct FormatSizeof<VK_FORMAT_R32_SFLOAT> {
+    static constexpr size_t value = sizeof(float);
+};
+
+template <>
 struct FormatSizeof<VK_FORMAT_R32G32_SFLOAT> {
     static constexpr size_t value = 2 * sizeof(float);
 };
