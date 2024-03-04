@@ -9,10 +9,10 @@
 namespace crisp::gui {
 namespace {
 VkDescriptorPool imGuiPool{VK_NULL_HANDLE};
-}
+} // namespace
 
-void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string> fontPath) {
-    VkDescriptorPoolSize poolSizes[] = {
+void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string>& fontPath) {
+    VkDescriptorPoolSize poolSizes[] = /* NOLINT */ {
         {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
@@ -31,7 +31,7 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     poolInfo.maxSets = 1000;
     poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
-    poolInfo.pPoolSizes = poolSizes;
+    poolInfo.pPoolSizes = poolSizes; // NOLINT
 
     VK_CHECK(vkCreateDescriptorPool(renderer.getDevice().getHandle(), &poolInfo, nullptr, &imGuiPool));
 
@@ -58,8 +58,9 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
         ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->c_str(), 16);
     }
 
-    renderer.enqueueResourceUpdate([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
-    renderer.finish();
+    auto& device = renderer.getDevice();
+    device.postResourceUpdate([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
+    device.waitIdle();
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 

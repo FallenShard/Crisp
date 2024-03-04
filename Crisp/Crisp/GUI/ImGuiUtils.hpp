@@ -1,21 +1,21 @@
 #pragma once
 
-#include <Crisp/Core/Window.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
+#include <span>
 
 #include <imgui.h>
 
-#include <span>
+#include <Crisp/Core/Window.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
 
 namespace crisp::gui {
-void initImGui(GLFWwindow* window, Renderer& renderer, std::optional<std::string> fontPath);
+void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string>& fontPath);
 void shutdownImGui(Renderer& renderer);
 void prepareImGuiFrame();
 void renderImGuiFrame(Renderer& renderer);
 
 template <typename F>
 inline void drawComboBox(
-    const char* name, const std::string& currentItem, const std::span<const std::string> items, F&& func) {
+    const char* name, const std::string& currentItem, const std::span<const std::string> items, const F& func) {
     if (ImGui::BeginCombo(name, currentItem.c_str())) {
         for (const auto& item : items) {
             const bool isSelected{item == currentItem};
