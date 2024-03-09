@@ -95,13 +95,13 @@ include(FetchContent)
 # Grab readily available third parties from external repositories.
 FetchContent_Declare(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 0.9.9.8
+    GIT_TAG 1.0.1
 )
 FetchContent_MakeAvailable(glm)
 
 FetchContent_Declare(glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.3.8
+    GIT_TAG 3.4
 )
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -111,7 +111,7 @@ FetchContent_MakeAvailable(glfw)
 
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.2
+    GIT_TAG v3.11.3
 )
 FetchContent_MakeAvailable(json)
 
@@ -123,13 +123,13 @@ FetchContent_MakeAvailable(robin_hood)
 
 FetchContent_Declare(unordered_dense
     GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-    GIT_TAG v4.1.2
+    GIT_TAG v4.4.0
 )
 FetchContent_MakeAvailable(unordered_dense)
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG 10.1.1
+    GIT_TAG 10.2.1
 )
 set(FMT_OS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(fmt)
@@ -161,7 +161,7 @@ FetchContent_MakeAvailable(benchmark)
 
 FetchContent_Declare(tinygltf
     GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
-    GIT_TAG v2.8.18
+    GIT_TAG v2.8.21
 )
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
@@ -185,7 +185,7 @@ set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(embree
     GIT_REPOSITORY https://github.com/embree/embree.git
-    GIT_TAG v4.3.0
+    GIT_TAG v4.3.1
 )
 set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
 set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
@@ -193,7 +193,7 @@ FetchContent_MakeAvailable(embree)
 
 FetchContent_Declare(vulkan
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.3.270
+    GIT_TAG v1.3.280
 )
 FetchContent_MakeAvailable(vulkan)
 
@@ -207,7 +207,7 @@ FetchContent_MakeAvailable(volk)
 
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
-    GIT_TAG vulkan-sdk-1.3.268.0
+    GIT_TAG vulkan-sdk-1.3.275.0
 )
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
 set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)
