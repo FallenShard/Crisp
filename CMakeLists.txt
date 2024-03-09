@@ -69,6 +69,15 @@ macro(add_cpp_test targetName)
     add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
 endmacro()
 
+# Creates a C++ binary benchmark target.
+macro(add_cpp_benchmark targetName)
+    add_executable(${targetName} ${ARGN})
+    enable_default_cpp_compile_options(${targetName} PUBLIC)
+    target_link_libraries(${targetName} PRIVATE benchmark::benchmark)
+
+    add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
+endmacro()
+
 # Copies a list of shared libraries into the designated target's directory. TO be used with DLL dependencies.
 function(copy_shared_libs targetName)
     foreach(sharedLib ${ARGN})
@@ -140,6 +149,15 @@ FetchContent_Declare(googletest
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 # set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
+
+FetchContent_Declare(benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG v1.8.3
+)
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(benchmark)
 
 FetchContent_Declare(tinygltf
     GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
