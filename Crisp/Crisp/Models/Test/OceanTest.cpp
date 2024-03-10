@@ -14,11 +14,8 @@ using ::testing::Not;
 
 TEST_F(OceanTest, PatchConstruction) {
     constexpr float kSize = 5.0;
-    const std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
-        {VertexAttribute::Position}, {VertexAttribute::Normal}};
-
     for (const int32_t N : {64, 128, 256}) {
-        const TriangleMesh mesh = createGridMesh(flatten(vertexFormat), kSize, N - 1);
+        const TriangleMesh mesh = createGridMesh(kSize, N - 1);
         EXPECT_EQ(mesh.getVertexCount(), N * N);
 
         const auto boundingBox = mesh.getBoundingBox();

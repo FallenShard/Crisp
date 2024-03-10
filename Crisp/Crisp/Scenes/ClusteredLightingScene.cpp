@@ -89,14 +89,10 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
 
     // Geometry setup
     const VertexLayoutDescription cubeFormat{{VertexAttribute::Position, VertexAttribute::Normal}};
-    m_resourceContext->addGeometry(
-        "cubeRT", createFromMesh(*m_renderer, createCubeMesh(flatten(cubeFormat)), cubeFormat));
-    m_resourceContext->addGeometry(
-        "cubeShadow", createFromMesh(*m_renderer, createCubeMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
-    m_resourceContext->addGeometry(
-        "sphereShadow", createFromMesh(*m_renderer, createSphereMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
-    m_resourceContext->addGeometry(
-        "floorShadow", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
+    m_resourceContext->addGeometry("cubeRT", createFromMesh(*m_renderer, createCubeMesh(), cubeFormat));
+    m_resourceContext->addGeometry("cubeShadow", createFromMesh(*m_renderer, createCubeMesh(), kPosVertexFormat));
+    m_resourceContext->addGeometry("sphereShadow", createFromMesh(*m_renderer, createSphereMesh(), kPosVertexFormat));
+    m_resourceContext->addGeometry("floorShadow", createFromMesh(*m_renderer, createPlaneMesh(), kPosVertexFormat));
 
     createCommonTextures();
 
@@ -286,7 +282,7 @@ void ClusteredLightingScene::createShaderball() {
 
 void ClusteredLightingScene::createPlane() {
     m_resourceContext->addGeometry(
-        "floor", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 200.0f), kPbrVertexFormat));
+        "floor", createFromMesh(*m_renderer, createPlaneMesh(200.0f, 200.0f), kPbrVertexFormat));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

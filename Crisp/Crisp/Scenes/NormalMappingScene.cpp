@@ -144,8 +144,7 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
 
 void NormalMappingScene::createPlane() {
     auto& imageCache = m_resourceContext->imageCache;
-    m_resourceContext->addGeometry(
-        "floor", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 10.0f), kPbrVertexFormat));
+    m_resourceContext->addGeometry("floor", createFromMesh(*m_renderer, createPlaneMesh(10.0f, 1.0f), kPbrVertexFormat));
 
     imageCache.addSampler(
         "linearRepeat",

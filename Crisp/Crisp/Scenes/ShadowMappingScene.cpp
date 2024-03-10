@@ -701,7 +701,7 @@ void ShadowMappingScene::createPlane() {
     // floor->pass(MainPass).material = material;
 
     m_resourceContext->addGeometry(
-        "floor", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPbrVertexFormat), 200.0f), kPbrVertexFormat));
+        "floor", createFromMesh(*m_renderer, createPlaneMesh(200.0f, 200.0f), kPbrVertexFormat));
 
     auto floor = createRenderNode("floor", 0);
     floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));

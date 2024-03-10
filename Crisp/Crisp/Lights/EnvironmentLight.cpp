@@ -72,7 +72,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     }
 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
-    const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
+    const auto unitCube = createFromMesh(*renderer, createCubeMesh(), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
@@ -208,7 +208,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     }
 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
-    const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
+    const auto unitCube = createFromMesh(*renderer, createCubeMesh(), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto convMaterial = std::make_unique<Material>(convPipelines[0].get());
@@ -256,7 +256,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, 16.0f, 5.0f);
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
-    const auto unitCube = createFromMesh(*renderer, createCubeMesh(flatten(vertexLayout)), vertexLayout);
+    const auto unitCube = createFromMesh(*renderer, createCubeMesh(), vertexLayout);
 
     auto environmentSpecularMap =
         RenderTargetBuilder()

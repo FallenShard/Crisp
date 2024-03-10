@@ -3,10 +3,10 @@
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
 namespace crisp {
-TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size = 1.0f);
-TriangleMesh createGridMesh(
-    const std::vector<VertexAttributeDescriptor>& vertexAttributes, float size, int tessellation);
-TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
-TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
-TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes);
+TriangleMesh createPlaneMesh(float sizeX = 1.0f, float sizeZ = 1.0f);
+TriangleMesh createGridMesh(float size, int tessellation);
+TriangleMesh createCubeMesh();
+TriangleMesh createSphereMesh();
+
+TriangleMesh createGrassBlade();
 } // namespace crisp

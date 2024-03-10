@@ -273,8 +273,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    m_resourceContext->addGeometry(
-        "floorPos", createFromMesh(*m_renderer, createPlaneMesh(flatten(kPosVertexFormat)), kPosVertexFormat));
+    m_resourceContext->addGeometry("floorPos", createFromMesh(*m_renderer, createPlaneMesh(), kPosVertexFormat));
 
     const VertexLayoutDescription vertexFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
     m_resourceContext->addGeometry(

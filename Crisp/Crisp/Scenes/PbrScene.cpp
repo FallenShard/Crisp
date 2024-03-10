@@ -358,8 +358,8 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 
 void PbrScene::createPlane() {
     constexpr std::string_view kNodeName{"floor"};
-    const TriangleMesh planeMesh{createPlaneMesh(flatten(kPbrVertexFormat), 200.0f)};
-    m_resourceContext->addGeometry(kNodeName, createFromMesh(*m_renderer, planeMesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry(
+        kNodeName, createFromMesh(*m_renderer, createPlaneMesh(200.0f, 200.0f), kPbrVertexFormat));
 
     const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass"};
     auto [material, images] = loadPbrMaterial(materialPath);

@@ -3,13 +3,12 @@
 #include <Crisp/Math/Constants.hpp>
 
 namespace crisp {
-TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes, const float size) {
-    (void)vertexAttributes;
+TriangleMesh createPlaneMesh(const float sizeX, const float sizeZ) {
     std::vector<glm::vec3> positions = {
-        glm::vec3(-size, 0.0f, +size),
-        glm::vec3(+size, 0.0f, +size),
-        glm::vec3(+size, 0.0f, -size),
-        glm::vec3(-size, 0.0f, -size),
+        glm::vec3(-sizeX, 0.0f, +sizeZ),
+        glm::vec3(+sizeX, 0.0f, +sizeZ),
+        glm::vec3(+sizeX, 0.0f, -sizeZ),
+        glm::vec3(-sizeX, 0.0f, -sizeZ),
     };
 
     std::vector<glm::vec3> normals = {
@@ -34,9 +33,7 @@ TriangleMesh createPlaneMesh(const std::vector<VertexAttributeDescriptor>& verte
     return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
-TriangleMesh createGridMesh(
-    const std::vector<VertexAttributeDescriptor>& vertexAttributes, const float size, const int tessellation) {
-    (void)vertexAttributes;
+TriangleMesh createGridMesh(const float size, const int tessellation) {
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;
@@ -66,8 +63,7 @@ TriangleMesh createGridMesh(
     return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
-TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
-    (void)vertexAttributes;
+TriangleMesh createGrassBlade() {
     std::vector<glm::vec3> positions = {
         glm::vec3(-0.05f, 0.0f, +0.0f),
         glm::vec3(+0.05f, 0.0f, +0.0f),
@@ -102,11 +98,10 @@ TriangleMesh createGrassBlade(const std::vector<VertexAttributeDescriptor>& vert
         glm::uvec3(2, 5, 4),
     };
 
-    return TriangleMesh(std::move(positions), std::move(normals), std::move(texCoords), std::move(faces));
+    return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
-TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
-    (void)vertexAttributes;
+TriangleMesh createSphereMesh() {
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;
@@ -145,8 +140,7 @@ TriangleMesh createSphereMesh(const std::vector<VertexAttributeDescriptor>& vert
     return TriangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(faces)};
 }
 
-TriangleMesh createCubeMesh(const std::vector<VertexAttributeDescriptor>& vertexAttributes) {
-    (void)vertexAttributes;
+TriangleMesh createCubeMesh() {
     std::vector<glm::vec3> positions = {
         // Front
         glm::vec3(-0.5f, -0.5f, +0.5f),
