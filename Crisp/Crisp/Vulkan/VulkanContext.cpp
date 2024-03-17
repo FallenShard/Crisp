@@ -1,6 +1,7 @@
 #include <Crisp/Vulkan/VulkanContext.hpp>
 
 #include <ranges>
+#include <span>
 #include <unordered_set>
 
 #include <Crisp/Core/Logger.hpp>
@@ -11,19 +12,23 @@ namespace crisp {
 namespace {
 auto logger = createLoggerMt("VulkanContext");
 
-const std::vector<const char*> kValidationLayers = {"VK_LAYER_KHRONOS_validation"};
+const std::vector<const char*> kValidationLayers = {"VK_LAYER_KHRONOS_validation", "VK_LAYER_KHRONOS_synchronization2"};
 
-Result<> assertRequiredExtensionSupport(
-    const std::vector<const char*>& requiredExtensions, const std::vector<VkExtensionProperties>& supportedExtensions) {
+Result<> assertRequiredExtensionSupport(const std::span<const char* const> requiredExtensions) {
+    logger->trace("Requesting {} instance extensions:", requiredExtensions.size());
     std::unordered_set<std::string> pendingExtensions;
-
-    logger->trace("Identified {} required Vulkan extensions:", requiredExtensions.size());
     for (const auto* const extensionName : requiredExtensions) {
         logger->trace("    {}", extensionName);
         pendingExtensions.insert(std::string(extensionName));
     }
 
-    for (const auto& ext : supportedExtensions) {
+    uint32_t extensionCount = 0;
+    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr));
+
+    std::vector<VkExtensionProperties> extensionProps(extensionCount);
+    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data()));
+
+    for (const auto& ext : extensionProps) {
         pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any. // NOLINT
     }
 
@@ -42,34 +47,40 @@ Result<> assertRequiredExtensionSupport(
     return {};
 }
 
-Result<> assertValidationLayerSupport(const bool validationLayersEnabled) {
-    if (!validationLayersEnabled) {
-        return {};
+Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredLayers) {
+    logger->trace("Requesting {} instance layers:", requiredLayers.size());
+    std::unordered_set<std::string> pendingLayers;
+    for (const auto* const layerName : requiredLayers) {
+        logger->trace("    {}", layerName);
+        pendingLayers.insert(std::string(layerName));
     }
 
     uint32_t layerCount{0};
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
 
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()));
+    std::vector<VkLayerProperties> instanceLayers(layerCount);
+    VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, instanceLayers.data()));
 
-    std::unordered_set<std::string> availableLayersSet;
-    for (const auto& layer : availableLayers) {
-        availableLayersSet.insert(layer.layerName); // NOLINT
+    for (const auto& layer : instanceLayers) {
+        pendingLayers.erase(layer.layerName); // NOLINT
     }
 
-    for (const auto& validationLayer : kValidationLayers) {
-        if (availableLayersSet.find(validationLayer) == availableLayersSet.end()) {
-            return resultError("Validation layer {} is requested, but not supported!", validationLayer);
+    const size_t supportedAndRequiredLayerCount{requiredLayers.size() - pendingLayers.size()};
+    logger->info("{}/{} required layers supported.", supportedAndRequiredLayerCount, requiredLayers.size());
+
+    if (!pendingLayers.empty()) {
+        logger->error("The following required layers are not supported:");
+        for (const auto& ext : pendingLayers) {
+            logger->error("    {}", ext);
         }
+
+        return resultError("Failed to support required layers. Aborting...");
     }
 
-    logger->info("Validation layers are supported!");
     return {};
 }
 
-VkInstance createInstance(
-    std::vector<std::string>&& reqPlatformExtensions, const bool enableValidationLayers) { // NOLINT
+VkInstance createInstance(std::vector<std::string>&& requiredExtensions, const bool enableValidationLayers) { // NOLINT
     loadVulkanLoaderFunctions();
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     appInfo.pApplicationName = "Crisp";
@@ -79,31 +90,27 @@ VkInstance createInstance(
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
     if (enableValidationLayers) {
-        reqPlatformExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        requiredExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
     const auto enabledExtensions =
-        std::views::transform(reqPlatformExtensions, [](const auto& ext) { return ext.c_str(); }) |
+        std::views::transform(requiredExtensions, [](const auto& ext) { return ext.c_str(); }) |
         std::ranges::to<std::vector<const char*>>();
+    assertRequiredExtensionSupport(enabledExtensions).unwrap();
+
+    const std::vector<const char*> requiredLayers =
+        enableValidationLayers ? kValidationLayers : std::vector<const char*>{};
+    assertRequiredLayerSupport(requiredLayers).unwrap();
 
     VkInstanceCreateInfo createInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-    createInfo.enabledLayerCount = enableValidationLayers ? static_cast<uint32_t>(kValidationLayers.size()) : 0;
-    createInfo.ppEnabledLayerNames = enableValidationLayers ? kValidationLayers.data() : nullptr;
+    createInfo.enabledLayerCount = static_cast<uint32_t>(requiredLayers.size());
+    createInfo.ppEnabledLayerNames = requiredLayers.data();
 
     VkInstance instance{VK_NULL_HANDLE};
     VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
-
-    uint32_t extensionCount = 0;
-    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr));
-
-    std::vector<VkExtensionProperties> extensionProps(extensionCount);
-    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data()));
-
-    assertRequiredExtensionSupport(enabledExtensions, extensionProps).unwrap();
-    assertValidationLayerSupport(enableValidationLayers).unwrap();
 
     loadVulkanInstanceFunctions(instance);
     return instance;
