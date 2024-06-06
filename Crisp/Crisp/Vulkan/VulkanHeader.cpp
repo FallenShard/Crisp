@@ -8,14 +8,13 @@ VkResult loadVulkanLoaderFunctions() {
     return volkInitialize();
 }
 
-VkResult loadVulkanInstanceFunctions(VkInstance instance) {
+VkResult loadVulkanInstanceFunctions(const VkInstance instance) {
     volkLoadInstanceOnly(instance);
     return VK_SUCCESS;
 }
 
-VkResult loadVulkanDeviceFunctions(VkDevice device) {
+VkResult loadVulkanDeviceFunctions(const VkDevice device) {
     volkLoadDevice(device);
     return VK_SUCCESS;
 }
-
 } // namespace crisp

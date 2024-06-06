@@ -67,6 +67,10 @@ public:
         m_configPath = std::move(path);
     }
 
+    VkPipelineBindPoint getBindPoint() const {
+        return m_bindPoint;
+    }
+
     void swapAll(VulkanPipeline& other);
 
 protected:

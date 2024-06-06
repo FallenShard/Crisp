@@ -49,12 +49,12 @@ void VulkanQueue::submit(const VkCommandBuffer cmdBuffer, const VkFence fence) c
 }
 
 VkResult VulkanQueue::present(
-    const VkSemaphore waitSemaphore, const VkSwapchainKHR VulkanSwapChain, const uint32_t imageIndex) const {
+    const VkSemaphore waitSemaphore, const VkSwapchainKHR swapChain, const uint32_t imageIndex) const {
     VkPresentInfoKHR presentInfo = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &waitSemaphore;
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &VulkanSwapChain;
+    presentInfo.pSwapchains = &swapChain;
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
     return vkQueuePresentKHR(m_handle, &presentInfo);

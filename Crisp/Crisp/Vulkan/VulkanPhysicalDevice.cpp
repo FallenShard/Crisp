@@ -254,10 +254,10 @@ void VulkanPhysicalDevice::initFeaturesAndProperties() {
     m_rayTracingFeatures.pNext = &m_accelerationStructureFeatures;
     vkGetPhysicalDeviceFeatures2(m_handle, &m_features);
 
-    m_properties.pNext = &m_rayTracingPipelineProperties;
-    m_rayTracingPipelineProperties.pNext = &m_properties11;
+    m_properties.pNext = &m_properties11;
     m_properties11.pNext = &m_properties12;
     m_properties12.pNext = &m_properties13;
+    m_properties13.pNext = &m_rayTracingPipelineProperties;
     vkGetPhysicalDeviceProperties2(m_handle, &m_properties);
 
     vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_memoryProperties);
