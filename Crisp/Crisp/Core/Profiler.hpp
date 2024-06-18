@@ -1,34 +1,40 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
-#include <string>
-#include <utility>
+
+#include <Crisp/Core/Logger.hpp>
 
 namespace crisp {
-class Profiler {
+
+class LiteralWrapper {
 public:
-    Profiler()
-        : m_timePoint(std::chrono::high_resolution_clock::now()) {}
+    template <size_t N>
+    consteval LiteralWrapper(const char (&literal)[N]) // NOLINT
+        : literal(literal) {}
 
-    explicit Profiler(std::string sectionName)
+    const char* literal;
+};
+
+class ScopeProfiler {
+public:
+    explicit ScopeProfiler(LiteralWrapper scopeName)
         : m_timePoint(std::chrono::high_resolution_clock::now())
-        , m_sectionName(std::move(sectionName)) {}
+        , m_scopeName(scopeName) {}
 
-    ~Profiler() {
-        double elapsed =
-            std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - m_timePoint).count();
-        std::cout << m_sectionName << " Profiler: " << elapsed << " ms\n";
+    ~ScopeProfiler() {
+        const double elapsed =
+            std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - m_timePoint).count();
+        spdlog::info("{} took {:.3f} seconds.", m_scopeName.literal, elapsed);
     }
 
-    Profiler(const Profiler&) = delete;
-    Profiler& operator=(const Profiler&) = delete;
+    ScopeProfiler(const ScopeProfiler&) = delete;
+    ScopeProfiler& operator=(const ScopeProfiler&) = delete;
 
-    Profiler(Profiler&&) = delete;
-    Profiler& operator=(Profiler&&) = delete;
+    ScopeProfiler(ScopeProfiler&&) = delete;
+    ScopeProfiler& operator=(ScopeProfiler&&) = delete;
 
 private:
     std::chrono::time_point<std::chrono::high_resolution_clock> m_timePoint;
-    std::string m_sectionName;
+    LiteralWrapper m_scopeName;
 };
 } // namespace crisp

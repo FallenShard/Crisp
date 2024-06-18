@@ -175,7 +175,7 @@ add_cpp_interface_library(CrispProfiler
     "Profiler.hpp"
 )
 target_link_libraries(CrispProfiler
-    INTERFACE Crisp::Format
+    INTERFACE Crisp::Logger
 )
 
 add_cpp_interface_library(CrispTimer

@@ -1,11 +1,12 @@
 #include <Crisp/Core/Application.hpp>
 
+#include <imgui.h>
+
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/Profiler.hpp>
 #include <Crisp/Core/Timer.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
-
-#include <imgui.h>
 
 namespace crisp {
 namespace {
@@ -37,6 +38,7 @@ AssetPaths createAssetPaths(const ApplicationEnvironment& environment) {
 
 Application::Application(const ApplicationEnvironment& environment)
     : m_window(createWindow(kTitle, kDefaultWindowSize)) {
+    const ScopeProfiler scope("Application constructor");
     m_renderer = std::make_unique<Renderer>(
         ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
         m_window.createSurfaceCallback(),
