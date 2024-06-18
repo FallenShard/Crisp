@@ -4,6 +4,6 @@
 
 namespace crisp {
 
-void drawCameraUi(const Camera& camera);
+void drawCameraUi(const Camera& camera, bool isSeparateWindow = true);
 
 } // namespace crisp
