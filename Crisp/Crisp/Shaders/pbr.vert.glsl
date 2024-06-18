@@ -12,7 +12,7 @@ layout(location = 3) out vec3 eyeTangent;
 layout(location = 4) out vec3 eyeBitangent;
 layout(location = 5) out vec3 worldPos;
 
-layout(set = 0, binding = 0) uniform Transforms
+layout(set = 2, binding = 0) uniform Transforms
 {
     mat4 MVP;
     mat4 MV;

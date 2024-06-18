@@ -128,6 +128,10 @@ add_cpp_test(CrispPipelineLayoutBuilderTest
     "Test/PipelineLayoutBuilderTest.cpp")
 target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
 
+add_cpp_test(CrispDescriptorUpdaterTest
+    "Test/DescriptorUpdaterTest.cpp")
+target_link_libraries(CrispDescriptorUpdaterTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
+
 add_cpp_static_library(CrispVulkanRenderPassBuilder
     "VulkanRenderPassBuilder.hpp"
     "VulkanRenderPassBuilder.cpp"

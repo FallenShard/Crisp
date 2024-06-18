@@ -43,14 +43,15 @@ VulkanDescriptorSetAllocator::VulkanDescriptorSetAllocator(
     const std::vector<std::vector<VkDescriptorSetLayoutBinding>>& setBindings,
     const std::vector<uint32_t>& numCopiesPerSet,
     VkDescriptorPoolCreateFlags flags)
-    : m_device(&device) {
+    : m_device(&device)
+    , m_createFlags(flags) {
     auto pool = std::make_unique<DescriptorPool>();
     pool->currentAllocations = 0;
     pool->maxAllocations = std::accumulate(numCopiesPerSet.begin(), numCopiesPerSet.end(), 0u);
     pool->freeSizes = calculateMinimumPoolSizes(setBindings, numCopiesPerSet);
     if (pool->maxAllocations > 0) {
         VkDescriptorPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-        poolInfo.flags = flags;
+        poolInfo.flags = m_createFlags;
         poolInfo.poolSizeCount = static_cast<uint32_t>(pool->freeSizes.size());
         poolInfo.pPoolSizes = pool->freeSizes.data();
         poolInfo.maxSets = pool->maxAllocations;
@@ -67,13 +68,15 @@ VulkanDescriptorSetAllocator::~VulkanDescriptorSetAllocator() {
 }
 
 VkDescriptorSet VulkanDescriptorSetAllocator::allocate(
-    VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings) {
+    VkDescriptorSetLayout setLayout,
+    const std::vector<VkDescriptorSetLayoutBinding>& setBindings,
+    const std::vector<uint32_t>& bindlessBindings) {
     for (auto& pool : m_descriptorPools) {
         if (pool->currentAllocations >= pool->maxAllocations || !pool->canAllocateSet(setBindings)) {
             continue;
         }
 
-        return pool->allocate(m_device->getHandle(), setLayout, setBindings);
+        return pool->allocate(m_device->getHandle(), setLayout, setBindings, bindlessBindings);
     }
 
     auto pool = std::make_unique<DescriptorPool>();
@@ -82,7 +85,7 @@ VkDescriptorSet VulkanDescriptorSetAllocator::allocate(
     pool->freeSizes = calculateMinimumPoolSizes({setBindings}, {kAllocationCount});
 
     VkDescriptorPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-    poolInfo.flags = 0;
+    poolInfo.flags = m_createFlags;
     poolInfo.poolSizeCount = static_cast<uint32_t>(pool->freeSizes.size());
     poolInfo.pPoolSizes = pool->freeSizes.data();
     poolInfo.maxSets = pool->maxAllocations;
@@ -90,34 +93,7 @@ VkDescriptorSet VulkanDescriptorSetAllocator::allocate(
 
     m_descriptorPools.push_back(std::move(pool));
 
-    return m_descriptorPools.back()->allocate(m_device->getHandle(), setLayout, setBindings);
-}
-
-VkDescriptorSet VulkanDescriptorSetAllocator::allocateBindless(
-    VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings) {
-    for (auto& pool : m_descriptorPools) {
-        if (pool->currentAllocations >= pool->maxAllocations || !pool->canAllocateSet(setBindings)) {
-            continue;
-        }
-
-        return pool->allocateBindless(m_device->getHandle(), setLayout, setBindings);
-    }
-
-    auto pool = std::make_unique<DescriptorPool>();
-    pool->currentAllocations = 0;
-    pool->maxAllocations = kAllocationCount;
-    pool->freeSizes = calculateMinimumPoolSizes({setBindings}, {kAllocationCount});
-
-    VkDescriptorPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-    poolInfo.flags = 0;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(pool->freeSizes.size());
-    poolInfo.pPoolSizes = pool->freeSizes.data();
-    poolInfo.maxSets = pool->maxAllocations;
-    vkCreateDescriptorPool(m_device->getHandle(), &poolInfo, nullptr, &pool->handle);
-
-    m_descriptorPools.push_back(std::move(pool));
-
-    return m_descriptorPools.back()->allocateBindless(m_device->getHandle(), setLayout, setBindings);
+    return m_descriptorPools.back()->allocate(m_device->getHandle(), setLayout, setBindings, bindlessBindings);
 }
 
 const VulkanDevice& VulkanDescriptorSetAllocator::getDevice() const {
@@ -161,22 +137,10 @@ void VulkanDescriptorSetAllocator::DescriptorPool::deductPoolSizes(
 }
 
 VkDescriptorSet VulkanDescriptorSetAllocator::DescriptorPool::allocate(
-    VkDevice device, VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings) {
-    currentAllocations++;
-    deductPoolSizes(setBindings);
-
-    VkDescriptorSetAllocateInfo descSetInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-    descSetInfo.descriptorPool = handle;
-    descSetInfo.descriptorSetCount = 1;
-    descSetInfo.pSetLayouts = &setLayout;
-
-    VkDescriptorSet descSet{VK_NULL_HANDLE};
-    VK_CHECK(vkAllocateDescriptorSets(device, &descSetInfo, &descSet));
-    return descSet;
-}
-
-VkDescriptorSet VulkanDescriptorSetAllocator::DescriptorPool::allocateBindless(
-    VkDevice device, VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings) {
+    VkDevice device,
+    VkDescriptorSetLayout setLayout,
+    const std::vector<VkDescriptorSetLayoutBinding>& setBindings,
+    const std::vector<uint32_t>& bindlessBindings) {
     currentAllocations++;
     deductPoolSizes(setBindings);
 
@@ -187,10 +151,16 @@ VkDescriptorSet VulkanDescriptorSetAllocator::DescriptorPool::allocateBindless(
 
     VkDescriptorSetVariableDescriptorCountAllocateInfo info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO};
-    info.descriptorSetCount = 1;
-    const uint32_t maxBindings = 100;
-    info.pDescriptorCounts = &maxBindings;
-    descSetInfo.pNext = &info;
+    std::vector<uint32_t> descriptorCounts{};
+    if (!bindlessBindings.empty()) {
+        descriptorCounts.reserve(bindlessBindings.size());
+        for (const auto& binding : bindlessBindings) {
+            descriptorCounts.push_back(setBindings[binding].descriptorCount);
+        }
+        info.descriptorSetCount = static_cast<uint32_t>(descriptorCounts.size());
+        info.pDescriptorCounts = descriptorCounts.data();
+        descSetInfo.pNext = &info;
+    }
 
     VkDescriptorSet descSet{VK_NULL_HANDLE};
     VK_CHECK(vkAllocateDescriptorSets(device, &descSetInfo, &descSet));

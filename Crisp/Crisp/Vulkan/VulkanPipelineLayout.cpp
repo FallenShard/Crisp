@@ -26,6 +26,7 @@ VulkanPipelineLayout::VulkanPipelineLayout(
     std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
     std::vector<VkPushConstantRange>&& pushConstants,
     std::vector<bool> descriptorSetBufferedStatus,
+    std::vector<std::vector<uint32_t>> bindlessIndices,
     std::unique_ptr<VulkanDescriptorSetAllocator> setAllocator)
     : VulkanResource(createHandle(device.getHandle(), setLayouts, pushConstants), device.getResourceDeallocator())
     , m_descriptorSetLayouts(setLayouts.size())
@@ -38,12 +39,14 @@ VulkanPipelineLayout::VulkanPipelineLayout(
         m_descriptorSetLayouts[s].bindings = std::move(setBindings[s]);
         m_descriptorSetLayouts[s].dynamicBufferIndices.resize(bindingCount, ~0u);
         m_descriptorSetLayouts[s].isBuffered = descriptorSetBufferedStatus[s];
+        m_descriptorSetLayouts[s].bindlessIndices = bindlessIndices[s];
 
         for (std::size_t b = 0; b < m_descriptorSetLayouts[s].bindings.size(); ++b) {
             const auto& binding = m_descriptorSetLayouts[s].bindings[b];
             if (binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
                 binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                 m_descriptorSetLayouts[s].dynamicBufferIndices[b] = m_dynamicBufferCount++;
+                m_descriptorSetLayouts[s].dynamicBufferCount++;
             }
         }
     }
@@ -62,7 +65,9 @@ VulkanPipelineLayout::~VulkanPipelineLayout() {
 
 VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const {
     return m_setAllocator->allocate(
-        m_descriptorSetLayouts.at(setIndex).handle, m_descriptorSetLayouts.at(setIndex).bindings);
+        m_descriptorSetLayouts.at(setIndex).handle,
+        m_descriptorSetLayouts.at(setIndex).bindings,
+        m_descriptorSetLayouts.at(setIndex).bindlessIndices);
 }
 
 void VulkanPipelineLayout::swap(VulkanPipelineLayout& other) noexcept {

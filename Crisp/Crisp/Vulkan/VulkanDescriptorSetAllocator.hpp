@@ -15,10 +15,16 @@ public:
         VkDescriptorPoolCreateFlags flags = 0);
     ~VulkanDescriptorSetAllocator();
 
+    VulkanDescriptorSetAllocator(const VulkanDescriptorSetAllocator&) = delete;
+    VulkanDescriptorSetAllocator& operator=(const VulkanDescriptorSetAllocator&) = delete;
+
+    VulkanDescriptorSetAllocator(VulkanDescriptorSetAllocator&&) noexcept = default;
+    VulkanDescriptorSetAllocator& operator=(VulkanDescriptorSetAllocator&&) noexcept = delete;
+
     VkDescriptorSet allocate(
-        VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
-    VkDescriptorSet allocateBindless(
-        VkDescriptorSetLayout setLayout, const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+        VkDescriptorSetLayout setLayout,
+        const std::vector<VkDescriptorSetLayoutBinding>& setBindings,
+        const std::vector<uint32_t>& bindlessBindings);
 
     const VulkanDevice& getDevice() const;
 
@@ -37,14 +43,12 @@ private:
         VkDescriptorSet allocate(
             VkDevice device,
             VkDescriptorSetLayout setLayout,
-            const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
-        VkDescriptorSet allocateBindless(
-            VkDevice device,
-            VkDescriptorSetLayout setLayout,
-            const std::vector<VkDescriptorSetLayoutBinding>& setBindings);
+            const std::vector<VkDescriptorSetLayoutBinding>& setBindings,
+            const std::vector<uint32_t>& bindlessBindings);
     };
 
     const VulkanDevice* m_device;
     std::vector<std::unique_ptr<DescriptorPool>> m_descriptorPools;
+    const VkDescriptorPoolCreateFlags m_createFlags;
 };
 } // namespace crisp

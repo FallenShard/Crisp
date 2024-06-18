@@ -12,6 +12,10 @@ struct DescriptorSetLayout {
     VkDescriptorSetLayout handle;
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     std::vector<uint32_t> dynamicBufferIndices;
+    uint32_t dynamicBufferCount{0};
+
+    std::vector<uint32_t> bindlessIndices;
+
     bool isBuffered{false};
 };
 
@@ -23,6 +27,7 @@ public:
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
         std::vector<VkPushConstantRange>&& pushConstants,
         std::vector<bool> descriptorSetBufferedStatus,
+        std::vector<std::vector<uint32_t>> bindlessIndices,
         std::unique_ptr<VulkanDescriptorSetAllocator> setAllocator);
     ~VulkanPipelineLayout() override;
 
@@ -50,8 +55,8 @@ public:
         }
     }
 
-    inline std::size_t getDescriptorSetLayoutCount() const {
-        return m_descriptorSetLayouts.size();
+    inline uint32_t getDescriptorSetLayoutCount() const {
+        return static_cast<uint32_t>(m_descriptorSetLayouts.size());
     }
 
     inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setIndex) const {
@@ -62,12 +67,20 @@ public:
         return m_descriptorSetLayouts.at(setIndex).bindings;
     }
 
+    inline const std::vector<uint32_t>& getDescriptorSetBindlessBindings(uint32_t setIndex) const {
+        return m_descriptorSetLayouts.at(setIndex).bindlessIndices;
+    }
+
     inline bool isDescriptorSetBuffered(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).isBuffered;
     }
 
-    inline std::size_t getDynamicBufferCount() const {
+    inline uint32_t getDynamicBufferCount() const {
         return m_dynamicBufferCount;
+    }
+
+    inline uint32_t getDynamicBufferCount(const uint32_t setIndex) const {
+        return static_cast<uint32_t>(m_descriptorSetLayouts.at(setIndex).dynamicBufferCount);
     }
 
     inline uint32_t getDynamicBufferIndex(const uint32_t setIndex, const uint32_t binding) const {

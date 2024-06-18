@@ -28,31 +28,25 @@ struct LightDescriptor
 };
 
 // View-specific parameters.
-layout(set = 1, binding = 0) uniform Camera
+layout(set = 0, binding = 0) uniform Camera
 {
     mat4 V;
     mat4 P;
     vec2 screenSize;
     vec2 nearFar;
 };
-layout(set = 1, binding = 1) uniform CascadedLight
+layout(set = 0, binding = 1) uniform CascadedLight
 {
     LightDescriptor cascadedLight[4];
 };
-layout(set = 1, binding = 2) uniform samplerCube diffuseIrradianceMap;
-layout(set = 1, binding = 3) uniform samplerCube specularReflectanceMap;
-layout(set = 1, binding = 4) uniform sampler2D brdfLut;
-layout(set = 1, binding = 5) uniform sampler2D sheenLut;
-layout(set = 1, binding = 6) uniform sampler2D cascadedShadowMaps[4];
+layout(set = 0, binding = 2) uniform samplerCube diffuseIrradianceMap;
+layout(set = 0, binding = 3) uniform samplerCube specularReflectanceMap;
+layout(set = 0, binding = 4) uniform sampler2D cascadedShadowMaps[4];
+layout(set = 0, binding = 5) uniform sampler2D brdfLut;
+layout(set = 0, binding = 6) uniform sampler2D sheenLut;
 
 // Material-specific parameters.
-layout(set = 2, binding = 0) uniform sampler2D diffuseTex;
-layout(set = 2, binding = 1) uniform sampler2D normalTex;
-layout(set = 2, binding = 2) uniform sampler2D roughnessTex;
-layout(set = 2, binding = 3) uniform sampler2D metallicTex;
-layout(set = 2, binding = 4) uniform sampler2D aoTex;
-layout(set = 2, binding = 5) uniform sampler2D emissiveTex;
-layout(set = 2, binding = 6) uniform Material
+layout(set = 1, binding = 0) uniform Material
 {
     vec4 albedo;
     vec2 uvScale;
@@ -60,6 +54,7 @@ layout(set = 2, binding = 6) uniform Material
     float roughness;
     float aoStrength;
 } material;
+layout(set = 1, binding = 1) uniform sampler2D textures[];
 
 
 vec3 evalDirectionalLightRadiance(out vec3 eyeL)
@@ -166,7 +161,7 @@ vec3 decodeNormal(in vec2 uv)
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
 
-    vec3 n = texture(normalTex, uv).xyz;
+    vec3 n = texture(textures[1], uv).xyz;
     return normalize(TBN * normalize(n * 2.0f - 1.0f));
 }
 
@@ -320,12 +315,12 @@ void main()
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     // Material properties
-    const vec3 albedo = texture(diffuseTex, uvCoord).rgb * material.albedo.rgb;
-    float roughness = texture(roughnessTex, uvCoord).r * material.roughness;
+    const vec3 albedo = texture(textures[0], uvCoord).rgb * material.albedo.rgb;
+    float roughness = texture(textures[2], uvCoord).r * material.roughness;
     roughness *= roughness;
-    const float metallic = texture(metallicTex, uvCoord).r * material.metallic;
-    const float ao = texture(aoTex, uvCoord).r;
-    const vec3 emission = texture(emissiveTex, uvCoord).rgb;
+    const float metallic = texture(textures[3], uvCoord).r * material.metallic;
+    const float ao = texture(textures[4], uvCoord).r;
+    const vec3 emission = texture(textures[5], uvCoord).rgb;
 
     // BRDF diffuse (Light source independent)
     const vec3 F0 = mix(vec3(0.04), albedo, metallic);
@@ -341,11 +336,10 @@ void main()
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
-    float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
+    const float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
     const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
 
     fragColor = vec4(Lenv + Li * shadowCoeff + emission, 1.0f);
-    fragColor = vec4(vec3(shadowCoeff), 1.0f);
 }

@@ -9,7 +9,7 @@ namespace crisp {
 class PipelineLayoutBuilder {
 public:
     PipelineLayoutBuilder() = default;
-    explicit PipelineLayoutBuilder(ShaderUniformInputMetadata&& metadata);
+    explicit PipelineLayoutBuilder(PipelineLayoutMetadata&& metadata);
 
     PipelineLayoutBuilder& defineDescriptorSet(
         uint32_t set,
@@ -28,13 +28,18 @@ public:
 
     std::size_t getDescriptorSetLayoutCount() const;
 
-    void setDescriptorSetBuffering(int index, bool isBuffered);
-    void setDescriptorDynamic(int setIndex, int binding, bool isDynamic);
+    std::vector<std::vector<uint32_t>> getBindlessBindings() const;
+
+    void setDescriptorSetBuffering(uint32_t setIndex, bool isBuffered);
+    void setDescriptorDynamic(uint32_t setIndex, uint32_t binding, bool isDynamic);
+    void setDescriptorBindless(uint32_t setIndex, uint32_t binding, uint32_t maxDescriptorCount);
 
 private:
-    ShaderUniformInputMetadata m_metadata;
+    PipelineLayoutMetadata m_metadata;
 
     std::vector<VkDescriptorSetLayoutCreateFlags> m_createFlags;
+    std::vector<bool> m_setBindless;
     std::vector<bool> m_setBuffered;
+    std::vector<std::vector<uint32_t>> m_bindlessBindings;
 };
 } // namespace crisp
