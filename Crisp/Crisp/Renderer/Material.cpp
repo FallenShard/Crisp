@@ -2,38 +2,61 @@
 
 namespace crisp {
 Material::Material(VulkanPipeline* pipeline)
-    : Material(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator()) {}
+    : Material(
+          pipeline,
+          pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(),
+          0,
+          pipeline->getPipelineLayout()->getDescriptorSetLayoutCount()) {}
 
-Material::Material(VulkanPipeline* pipeline, VulkanDescriptorSetAllocator* VulkanDescriptorSetAllocator)
-    : m_device(const_cast<VulkanDevice*>(&VulkanDescriptorSetAllocator->getDevice())) // NOLINT
+Material::Material(VulkanPipeline* pipeline, VulkanDescriptorSetAllocator* descriptorSetAllocator)
+    : Material(pipeline, descriptorSetAllocator, 0, pipeline->getPipelineLayout()->getDescriptorSetLayoutCount()) {}
+
+Material::Material(VulkanPipeline* pipeline, const uint32_t firstSet, const uint32_t setCount)
+    : Material(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), firstSet, setCount) {}
+
+Material::Material(
+    VulkanPipeline* pipeline,
+    VulkanDescriptorSetAllocator* descriptorSetAllocator,
+    const uint32_t firstSet,
+    const uint32_t setCount)
+    : m_firstSet(firstSet)
+    , m_setCount(setCount)
+    , m_device(const_cast<VulkanDevice*>(&descriptorSetAllocator->getDevice())) // NOLINT
     , m_pipeline(pipeline) {
     const auto& pipelineLayout{*m_pipeline->getPipelineLayout()};
-    const std::size_t setCount = pipelineLayout.getDescriptorSetLayoutCount();
 
     for (auto& perFrameSets : m_sets) {
-        perFrameSets.resize(setCount);
+        perFrameSets.resize(m_setCount);
     }
 
-    for (uint32_t setIdx = 0; setIdx < setCount; ++setIdx) {
+    for (uint32_t setIdx = 0; setIdx < m_setCount; ++setIdx) {
         const VkDescriptorSetLayout setLayout = pipelineLayout.getDescriptorSetLayout(setIdx);
 
         if (pipelineLayout.isDescriptorSetBuffered(setIdx)) {
             for (auto& perFrameSets : m_sets) {
-                perFrameSets[setIdx] = VulkanDescriptorSetAllocator->allocate(
-                    setLayout, pipelineLayout.getDescriptorSetLayoutBindings(setIdx));
+                perFrameSets[setIdx] = descriptorSetAllocator->allocate(
+                    setLayout,
+                    pipelineLayout.getDescriptorSetLayoutBindings(setIdx),
+                    m_pipeline->getPipelineLayout()->getDescriptorSetBindlessBindings(setIdx));
             }
         } else {
-            const VkDescriptorSet set = VulkanDescriptorSetAllocator->allocate(
-                setLayout, m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(setIdx));
+            const VkDescriptorSet set = descriptorSetAllocator->allocate(
+                setLayout,
+                m_pipeline->getPipelineLayout()->getDescriptorSetLayoutBindings(setIdx),
+                m_pipeline->getPipelineLayout()->getDescriptorSetBindlessBindings(setIdx));
             for (auto& perFrameSets : m_sets) {
                 perFrameSets[setIdx] = set;
             }
         }
     }
 
-    m_dynamicBufferViews.resize(pipelineLayout.getDynamicBufferCount());
+    m_dynamicOffsetCount = 0;
+    for (uint32_t i = m_firstSet; i < m_firstSet + m_setCount; ++i) {
+        m_dynamicOffsetCount += pipelineLayout.getDynamicBufferCount(i);
+    }
+    m_dynamicBufferViews.resize(m_dynamicOffsetCount);
     for (auto& perFrameOffsets : m_dynamicOffsets) {
-        perFrameOffsets.resize(m_dynamicBufferViews.size());
+        perFrameOffsets.resize(m_dynamicOffsetCount);
     }
 }
 
@@ -281,17 +304,17 @@ void Material::setDynamicBufferView(
     }
 }
 
-void Material::bind(const uint32_t frameIdx, const VkCommandBuffer cmdBuffer, const VkPipelineBindPoint bindPoint) {
+void Material::bind(const uint32_t frameIdx, const VkCommandBuffer cmdBuffer) {
     if (!m_sets[frameIdx].empty()) {
         vkCmdBindDescriptorSets(
             cmdBuffer,
-            bindPoint,
+            m_pipeline->getBindPoint(),
             m_pipeline->getPipelineLayout()->getHandle(),
-            0,
-            static_cast<uint32_t>(m_sets[frameIdx].size()),
-            m_sets[frameIdx].data(),
-            static_cast<uint32_t>(m_dynamicOffsets[frameIdx].size()),
-            m_dynamicOffsets[frameIdx].data());
+            m_firstSet,
+            m_setCount,
+            m_sets[frameIdx].data() + m_firstSet, // NOLINT
+            m_dynamicOffsetCount,
+            m_dynamicOffsets[frameIdx].data() + m_firstDynamicOffset); // NOLINT
     }
 }
 
@@ -300,13 +323,13 @@ void Material::bind(
     if (!m_sets[frameIdx].empty()) {
         vkCmdBindDescriptorSets(
             cmdBuffer,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_pipeline->getBindPoint(),
             m_pipeline->getPipelineLayout()->getHandle(),
-            0,
-            static_cast<uint32_t>(m_sets[frameIdx].size()),
-            m_sets[frameIdx].data(),
-            static_cast<uint32_t>(dynamicBufferOffsets.size()),
-            dynamicBufferOffsets.data());
+            m_firstSet,
+            m_setCount,
+            m_sets[frameIdx].data() + m_firstSet, // NOLINT
+            m_dynamicOffsetCount,
+            dynamicBufferOffsets.data() + m_firstDynamicOffset); // NOLINT
     }
 }
 

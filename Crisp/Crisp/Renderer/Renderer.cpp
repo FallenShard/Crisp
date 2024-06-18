@@ -95,9 +95,6 @@ Renderer::Renderer(
         w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
     }
 
-    // Creates a map of all shaders
-    // loadShaders(m_assetPaths.spvShaderDir);
-
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipelineFromJsonPath("GammaCorrect.json", *this, getDefaultRenderPass(), 0).unwrap();
@@ -435,7 +432,7 @@ void Renderer::recreateSwapChain() {
     m_defaultRenderPass->recreate(*m_device, m_swapChain->getExtent());
 }
 
-void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView) {
+void Renderer::updateSwapChainRenderPass(const uint32_t virtualFrameIndex, const VkImageView swapChainImageView) {
     auto& framebuffer = m_defaultRenderPass->getFramebuffer(virtualFrameIndex);
     if (framebuffer && framebuffer->getAttachment(0) == swapChainImageView) {
         return;
@@ -454,8 +451,20 @@ void Renderer::updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView
         framebuffer.swap(m_swapChainFramebuffers.at(framebuffer->getAttachment(0)));
     }
 
-    // Acquire ownership of the framebuffer used for the current image to be rendered.
-    framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));
+    if (m_swapChainFramebuffers.at(swapChainImageView)) {
+        // Acquire ownership of the framebuffer used for the current image to be rendered.
+        framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));
+    } else {
+        // If the requested framebuffer is empty because it has already been grabbed, find it in that list and
+        // reclaim ownership. This can happen if the same image is requested twice in a row.
+        for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
+            auto& otherFramebuffer = m_defaultRenderPass->getFramebuffer(i);
+            if (otherFramebuffer && otherFramebuffer->getAttachment(0) == swapChainImageView) {
+                framebuffer.swap(otherFramebuffer);
+                break;
+            }
+        }
+    }
 }
 
 void fillDeviceBuffer(

@@ -27,12 +27,16 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
     }
 
     if (renderNode.transformBuffer) {
-        drawCommand.dynamicBufferViews[0] = {
+        drawCommand.dynamicBufferViews[transformBufferDynamicIndex] = {
             renderNode.transformBuffer, static_cast<uint32_t>(renderNode.transformHandle.index * sizeof(TransformPack))};
     }
 
     drawCommand.dynamicBufferOffsets.resize(drawCommand.dynamicBufferViews.size());
     for (std::size_t i = 0; i < drawCommand.dynamicBufferOffsets.size(); ++i) {
+        // This buffer is not provided for this command.
+        if (!drawCommand.dynamicBufferViews[i].buffer) {
+            continue;
+        }
         drawCommand.dynamicBufferOffsets[i] =
             drawCommand.dynamicBufferViews[i].buffer->getDynamicOffset(frameIndex) +
             drawCommand.dynamicBufferViews[i].subOffset;

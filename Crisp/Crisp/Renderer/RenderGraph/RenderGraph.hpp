@@ -27,6 +27,7 @@ public:
 
         RenderGraphResourceHandle createStorageImage(const RenderGraphImageDescription& description, std::string&& name);
 
+        RenderGraphResourceHandle importBuffer(const RenderGraphBufferDescription& description, std::string&& name);
         RenderGraphResourceHandle createBuffer(const RenderGraphBufferDescription& description, std::string&& name);
 
         RenderGraphResourceHandle writeAttachment(RenderGraphResourceHandle handle);
@@ -62,6 +63,7 @@ public:
 
     std::unique_ptr<VulkanImageView> createViewFromResource(
         const VulkanDevice& device, RenderGraphResourceHandle handle) const;
+    const VulkanImageView& getResourceImageView(RenderGraphResourceHandle handle) const;
 
     const RenderGraphBlackboard& getBlackboard() const;
 
@@ -69,7 +71,7 @@ public:
 
     void compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent, VkCommandBuffer cmdBuffer);
 
-    void execute(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex);
+    void execute(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, VkDevice device = VK_NULL_HANDLE);
 
     RenderGraphBlackboard& getBlackboard();
 
@@ -97,7 +99,8 @@ private:
 
     std::vector<ResourceTimeline> calculateResourceTimelines();
     RenderGraphResourceHandle addImageResource(const RenderGraphImageDescription& description, std::string&& name);
-    RenderGraphResourceHandle addBufferResource(const RenderGraphBufferDescription& description, std::string&& name);
+    RenderGraphResourceHandle addBufferResource(
+        const RenderGraphBufferDescription& description, std::string&& name, bool isExternal);
 
     RenderGraphPass& getPass(const RenderGraphPassHandle handle) {
         return m_passes.at(handle.id);
@@ -121,7 +124,7 @@ private:
 
     VkImageUsageFlags determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const;
     VkImageCreateFlags determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const;
-    std::tuple<VkImageLayout, VkPipelineStageFlagBits> determineInitialLayout(
+    std::tuple<VkImageLayout, VkAccessFlagBits, VkPipelineStageFlagBits> determineInitialLayout(
         const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags);
 
     void determineAliasedResurces();
@@ -142,7 +145,10 @@ private:
     // Physical resources, built during compilation.
     std::vector<RenderGraphPhysicalImage> m_physicalImages;
     std::vector<RenderGraphPhysicalBuffer> m_physicalBuffers;
+    std::vector<RenderGraphImportedBuffer> m_importedBuffers;
     std::vector<std::unique_ptr<VulkanRenderPass>> m_physicalPasses;
+
+    FlatHashMap<uint32_t, std::unique_ptr<VulkanImageView>> m_imageViews;
 
     // Used to facilitate communication of pass dependencies across the codebase.
     RenderGraphBlackboard m_blackboard;

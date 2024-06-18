@@ -37,6 +37,7 @@ struct RenderNode {
         int bufferCount = -1;
         Material* material = nullptr;
         VulkanPipeline* pipeline = nullptr;
+        uint32_t transformBufferDynamicIndex = 0;
 
         std::vector<unsigned char> pushConstantBuffer;
         PushConstantView pushConstantView;

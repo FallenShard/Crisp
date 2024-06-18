@@ -46,5 +46,8 @@ target_link_libraries(CrispMeshIo
 add_cpp_test(CrispWavefrontObjLoaderTest "Test/WavefrontObjLoaderTest.cpp")
 target_link_libraries(CrispWavefrontObjLoaderTest PRIVATE Crisp::WavefrontObjLoader)
 
+add_cpp_benchmark(CrispWavefrontObjLoaderBenchmark "Benchmark/WavefrontObjLoaderBenchmark.cpp")
+target_link_libraries(CrispWavefrontObjLoaderBenchmark PRIVATE Crisp::WavefrontObjLoader)
+
 add_cpp_test(CrispGltfLoaderTest "Test/GltfLoaderTest.cpp")
 target_link_libraries(CrispGltfLoaderTest PRIVATE Crisp::GltfLoader)

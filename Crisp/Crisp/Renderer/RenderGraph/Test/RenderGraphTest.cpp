@@ -165,7 +165,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
 
     {
         ScopeCommandExecutor executor(*device_);
-        rg.execute(executor.cmdBuffer.getHandle());
+        rg.execute(executor.cmdBuffer.getHandle(), 0);
     }
 
     toGraphViz(rg, "D:/graph_small.dot").unwrap();

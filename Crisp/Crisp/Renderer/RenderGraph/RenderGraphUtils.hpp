@@ -28,8 +28,7 @@ struct RenderGraphPass {
     std::vector<RenderGraphResourceHandle> inputs;  // Input resources for the pass (either attached or in shader).
     std::vector<ResourceAccessState> inputAccesses; // How the input resource is accessed in this pass.
 
-    std::vector<RenderGraphResourceHandle> outputs;  // Outputs for the pass.
-    std::vector<ResourceAccessState> outputAccesses; // How the output resource is accessed in this pass.
+    std::vector<RenderGraphResourceHandle> outputs; // Outputs for the pass.
 
     // Computed during compilation phase.
     std::vector<RenderGraphResourceHandle> colorAttachments;
@@ -73,6 +72,7 @@ struct RenderGraphBufferDescription {
     VkFormat formatHint;
     VkDeviceSize size;
     VkBufferUsageFlags usageFlags;
+    VkBuffer externalBuffer;
 
     bool canAlias(const RenderGraphBufferDescription& desc) const {
         return size == desc.size && formatHint == desc.formatHint;
@@ -102,6 +102,11 @@ struct RenderGraphPhysicalBuffer {
     uint32_t descriptionIndex{};
     std::unique_ptr<VulkanBuffer> buffer;
     std::vector<uint32_t> aliasedResourceIndices;
+};
+
+struct RenderGraphImportedBuffer {
+    uint32_t descriptionIndex{};
+    VulkanBuffer* buffer{nullptr};
 };
 
 } // namespace crisp
