@@ -36,4 +36,6 @@ template <typename Value>
 using FlatStringHashMap =
     ankerl::unordered_dense::map<std::string, Value, detail::TransparentStringHash, std::equal_to<>>;
 
+using FlatStringHashSet = ankerl::unordered_dense::set<std::string, detail::TransparentStringHash, std::equal_to<>>;
+
 } // namespace crisp
