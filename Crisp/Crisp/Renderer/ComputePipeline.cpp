@@ -21,7 +21,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     const std::function<void(PipelineLayoutBuilder&)>& builderOverride) {
     const VulkanDevice& device = renderer.getDevice();
     PipelineLayoutBuilder layoutBuilder(
-        reflectUniformMetadataFromSpirvPath(renderer.getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap());
+        reflectPipelineLayoutFromSpirvPath(renderer.getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap());
     if (builderOverride) {
         builderOverride(layoutBuilder);
     }

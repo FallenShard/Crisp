@@ -90,7 +90,7 @@ private:
 
 } // namespace
 
-void ShaderUniformInputMetadata::merge(const ShaderUniformInputMetadata& rhs) {
+void PipelineLayoutMetadata::merge(const PipelineLayoutMetadata& rhs) {
     // Resize current, if necessary
     if (rhs.descriptorSetLayoutBindings.size() > descriptorSetLayoutBindings.size()) {
         descriptorSetLayoutBindings.resize(rhs.descriptorSetLayoutBindings.size());
@@ -160,7 +160,7 @@ Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span
     return metadata;
 }
 
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const std::span<const char> spirvShader) {
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvShader(const std::span<const char> spirvShader) {
     SpvReflectShaderModule module;
     CRISP_SPV_TRY(spvReflectCreateShaderModule(spirvShader.size(), spirvShader.data(), &module));
     SpirvShaderReflectionModuleGuard moduleGuard(module);
@@ -175,7 +175,7 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
         totalSetCount = std::max(totalSetCount, descSet.set + 1);
     }
 
-    ShaderUniformInputMetadata metadata{};
+    PipelineLayoutMetadata metadata{};
     metadata.descriptorSetLayoutBindings.resize(totalSetCount);
 
     for (const auto& descSet : descriptorSetSpan) {
@@ -215,19 +215,18 @@ Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(const s
     return metadata;
 }
 
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath) {
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPath(const std::filesystem::path& filePath) {
     const auto spirvFile{readSpirvFile(filePath)};
     if (!spirvFile) {
         return resultError("Failed to load spirv file from: {}", filePath.string());
     }
-    return reflectUniformMetadataFromSpirvShader(*spirvFile);
+    return reflectPipelineLayoutFromSpirvShader(*spirvFile);
 }
 
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPaths(
-    std::span<const std::filesystem::path> filePaths) {
-    ShaderUniformInputMetadata data{};
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPaths(std::span<const std::filesystem::path> filePaths) {
+    PipelineLayoutMetadata data{};
     for (const auto& path : filePaths) {
-        auto result{reflectUniformMetadataFromSpirvPath(path)};
+        auto result{reflectPipelineLayoutFromSpirvPath(path)};
         if (!result) {
             return resultError("Could not parse reflection data from '{}'", path.string());
         }

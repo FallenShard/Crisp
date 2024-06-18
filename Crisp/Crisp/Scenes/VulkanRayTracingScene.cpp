@@ -191,7 +191,7 @@ void VulkanRayTracingScene::render() {
             VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 
         m_pipeline->bind(cmdBuffer);
-        m_material->bind(m_renderer->getCurrentVirtualFrameIndex(), cmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+        m_material->bind(m_renderer->getCurrentVirtualFrameIndex(), cmdBuffer);
 
         const auto extent = m_renderer->getSwapChainExtent();
         vkCmdTraceRaysKHR(
@@ -311,7 +311,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     for (const auto& name : shaderInfos) {
         shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getSpvShaderPath(name.first));
     }
-    PipelineLayoutBuilder builder{reflectUniformMetadataFromSpirvPaths(shaderSpvPaths).unwrap()};
+    PipelineLayoutBuilder builder{reflectPipelineLayoutFromSpirvPaths(shaderSpvPaths).unwrap()};
     builder.setDescriptorSetBuffering(0, true);
     builder.setDescriptorDynamic(0, 2, true);
     builder.setDescriptorDynamic(0, 3, true);

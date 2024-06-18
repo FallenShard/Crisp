@@ -9,7 +9,7 @@
 #include <vector>
 
 namespace crisp {
-struct ShaderUniformInputMetadata {
+struct PipelineLayoutMetadata {
     std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorSetLayoutBindings;
 
     struct BindingInfo {
@@ -19,7 +19,7 @@ struct ShaderUniformInputMetadata {
     std::vector<std::vector<BindingInfo>> bindingInfos;
     std::vector<VkPushConstantRange> pushConstants;
 
-    void merge(const ShaderUniformInputMetadata& rhs);
+    void merge(const PipelineLayoutMetadata& rhs);
 };
 
 struct ShaderVertexInputMetadata {
@@ -34,8 +34,7 @@ struct ShaderVertexInputMetadata {
 Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath);
 
 Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span<const char> spirvShader);
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvShader(std::span<const char> spirvShader);
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPath(const std::filesystem::path& filePath);
-Result<ShaderUniformInputMetadata> reflectUniformMetadataFromSpirvPaths(
-    std::span<const std::filesystem::path> filePaths);
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvShader(std::span<const char> spirvShader);
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPath(const std::filesystem::path& filePath);
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPaths(std::span<const std::filesystem::path> filePaths);
 } // namespace crisp

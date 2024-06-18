@@ -242,6 +242,12 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
         CRISP_CHECK(hasField<JsonType::Boolean>(json[i], "buffered"));
         layoutBuilder.setDescriptorSetBuffering(i, json[i]["buffered"].get<bool>());
 
+        if (hasField<JsonType::Array>(json[i], "bindless")) {
+            CRISP_CHECK_EQ(json[i]["bindless"].size(), 2);
+            const auto& arr = json[i]["bindless"];
+            layoutBuilder.setDescriptorBindless(i, arr[0].get<uint32_t>(), arr[1].get<uint32_t>());
+        }
+
         if (hasField<JsonType::Array>(json[i], "dynamicBuffers")) {
             for (int32_t j = 0; j < static_cast<int32_t>(json[i]["dynamicBuffers"].size()); ++j) {
                 CRISP_CHECK(json[i]["dynamicBuffers"][j].is_number_unsigned());
@@ -283,12 +289,12 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
     const auto shaderFiles{readShaderFiles(pipelineJson["shaders"]).unwrap()};
 
-    ShaderUniformInputMetadata shaderMetadata{};
+    PipelineLayoutMetadata shaderMetadata{};
     PipelineBuilder builder{};
     for (const auto& [stageFlag, fileStem] : shaderFiles) {
         builder.addShaderStage(createShaderStageInfo(stageFlag, renderer.getOrLoadShaderModule(fileStem)));
         const auto spvFile = readSpirvFile(renderer.getAssetPaths().spvShaderDir / (fileStem + ".spv")).unwrap();
-        shaderMetadata.merge(reflectUniformMetadataFromSpirvShader(spvFile).unwrap());
+        shaderMetadata.merge(reflectPipelineLayoutFromSpirvShader(spvFile).unwrap());
     }
 
     if (shaderStagesMatchTessellation(shaderFiles)) {
