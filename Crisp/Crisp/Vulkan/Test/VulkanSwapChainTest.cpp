@@ -17,7 +17,7 @@ TEST_F(VulkanSwapChainTest, Constructor) {
     VulkanSwapChain swapChain(createSwapChain());
     EXPECT_THAT(swapChain, HandleIsValid());
 
-    // Self-move assign
+    // Move construction.
     const auto anotherSwapChain = std::move(swapChain);
     EXPECT_THAT(anotherSwapChain, HandleIsValid());
     EXPECT_THAT(swapChain, HandleIsNull());
