@@ -26,24 +26,6 @@ VulkanSwapChain::~VulkanSwapChain() {
     }
 }
 
-VulkanSwapChain::VulkanSwapChain(VulkanSwapChain&& other) noexcept
-    : VulkanResource(std::move(other))
-    , m_images(std::move(other.m_images))
-    , m_imageViews(std::move(other.m_imageViews))
-    , m_imageFormat(other.m_imageFormat)
-    , m_extent(other.m_extent)
-    , m_presentationMode(other.m_presentationMode) {}
-
-VulkanSwapChain& VulkanSwapChain::operator=(VulkanSwapChain&& other) noexcept {
-    VulkanResource::operator=(std::move(other));
-    m_images = std::move(other.m_images);
-    m_imageViews = std::move(other.m_imageViews);
-    m_imageFormat = other.m_imageFormat;
-    m_extent = other.m_extent;
-    m_presentationMode = other.m_presentationMode;
-    return *this;
-}
-
 VkFormat VulkanSwapChain::getImageFormat() const {
     return m_imageFormat;
 }

@@ -22,8 +22,8 @@ public:
     VulkanSwapChain(const VulkanSwapChain& other) = delete;
     VulkanSwapChain& operator=(const VulkanSwapChain& other) = delete;
 
-    VulkanSwapChain(VulkanSwapChain&& other) noexcept;
-    VulkanSwapChain& operator=(VulkanSwapChain&& other) noexcept;
+    VulkanSwapChain(VulkanSwapChain&& other) noexcept = default;
+    VulkanSwapChain& operator=(VulkanSwapChain&& other) noexcept = default;
 
     VkFormat getImageFormat() const;
     VkExtent2D getExtent() const;
