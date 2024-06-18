@@ -14,6 +14,7 @@ namespace crisp {
 enum class CursorState {
     Disabled,
     Normal,
+    Hidden,
 };
 
 enum class WindowVisibility {

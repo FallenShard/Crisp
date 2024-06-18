@@ -6,6 +6,17 @@
 namespace crisp {
 namespace {
 auto logger = createLoggerMt("Window");
+
+int32_t toGlfw(const CursorState state) {
+    if (state == CursorState::Disabled) {
+        return GLFW_CURSOR_DISABLED;
+    }
+    if (state == CursorState::Hidden) {
+        return GLFW_CURSOR_HIDDEN;
+    }
+    return GLFW_CURSOR_NORMAL;
+}
+
 } // namespace
 
 Window::Window(
@@ -98,8 +109,7 @@ void Window::close() {
 }
 
 void Window::setCursorState(CursorState cursorState) {
-    const int value = cursorState == CursorState::Normal ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
-    glfwSetInputMode(m_window, GLFW_CURSOR, value);
+    glfwSetInputMode(m_window, GLFW_CURSOR, toGlfw(cursorState));
 }
 
 void Window::setCursorPosition(const glm::vec2& position) {

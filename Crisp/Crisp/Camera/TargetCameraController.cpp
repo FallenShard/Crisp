@@ -80,7 +80,7 @@ const Camera& TargetCameraController::getCamera() const {
 void TargetCameraController::update(const float /*dt*/) {}
 
 void TargetCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs) {
-    if (mouseEventArgs.button == MouseButton::Right) {
+    if (mouseEventArgs.button == MouseButton::Left) {
         m_isDragging = true;
         m_window->setCursorState(CursorState::Disabled);
 
@@ -90,7 +90,7 @@ void TargetCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs
 }
 
 void TargetCameraController::onMouseReleased(const MouseEventArgs& mouseEventArgs) {
-    if (mouseEventArgs.button == MouseButton::Right) {
+    if (mouseEventArgs.button == MouseButton::Left) {
         m_isDragging = false;
         m_window->setCursorState(CursorState::Normal);
 

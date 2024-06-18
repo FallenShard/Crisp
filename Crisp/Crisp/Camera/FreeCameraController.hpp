@@ -12,6 +12,12 @@ public:
     FreeCameraController(int32_t viewportWidth, int32_t viewportHeight);
     ~FreeCameraController();
 
+    FreeCameraController(const FreeCameraController&) = default;
+    FreeCameraController& operator=(const FreeCameraController&) = default;
+
+    FreeCameraController(FreeCameraController&&) = default;
+    FreeCameraController& operator=(FreeCameraController&&) = default;
+
     void setPosition(float x, float y, float z);
     void setPosition(const glm::vec3& position);
     void setSpeed(float speed);
