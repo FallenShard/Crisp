@@ -1,20 +1,13 @@
 #include <Crisp/Scenes/PbrScene.hpp>
 
-#include <Crisp/Core/Application.hpp>
-#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
-#include <Crisp/IO/FileUtils.hpp>
-#include <Crisp/IO/JsonUtils.hpp>
-#include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 namespace crisp {
 namespace {
@@ -40,44 +33,77 @@ void createDrawCommand(
     }
 }
 
+void executeDrawCommand(
+    const DrawCommand& command,
+    const Renderer& renderer,
+    const VulkanCommandBuffer& cmdBuffer,
+    const uint32_t virtualFrameIndex) {
+    command.pipeline->bind(cmdBuffer.getHandle());
+    if (command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Viewport) {
+        if (command.viewport.width != 0.0f) {
+            vkCmdSetViewport(cmdBuffer.getHandle(), 0, 1, &command.viewport);
+        } else {
+            renderer.setDefaultViewport(cmdBuffer.getHandle());
+        }
+    }
+    if (command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Scissor) {
+        if (command.scissor.extent.width != 0) {
+            vkCmdSetScissor(cmdBuffer.getHandle(), 0, 1, &command.scissor);
+        } else {
+            renderer.setDefaultScissor(cmdBuffer.getHandle());
+        }
+    }
+
+    command.pipeline->getPipelineLayout()->setPushConstants(
+        cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
+
+    if (command.material) {
+        command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
+    }
+
+    command.geometry->bindVertexBuffers(cmdBuffer.getHandle(), command.firstBuffer, command.bufferCount);
+    command.drawFunc(cmdBuffer.getHandle(), command.geometryView);
+}
+
 } // namespace
 
 PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& args)
     : Scene(renderer, window) {
     setupInput();
 
-    m_cameraController = std::make_unique<FreeCameraController>(*m_window);
+    m_cameraController = std::make_unique<TargetCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-    m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
 
     m_rg = std::make_unique<rg::RenderGraph>();
 
     addCascadedShadowMapPasses(
         *m_rg, kShadowMapSize, [this](const RenderPassExecutionContext& ctx, const uint32_t cascadeIndex) {
-            const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
             std::vector<DrawCommand> drawCommands{};
-            for (const auto& [id, renderNode] : m_renderNodes.values()) {
-                createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex], virtualFrameIndex);
+            for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes.values()) {
+                if (idx++ >= m_nodesToDraw) {
+                    break;
+                }
+                createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex], ctx.virtualFrameIndex);
             }
 
-            const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
             for (const auto& drawCommand : drawCommands) {
-                RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
+                executeDrawCommand(drawCommand, *m_renderer, ctx.cmdBuffer, ctx.virtualFrameIndex);
             }
         });
 
     addForwardLightingPass(*m_rg, [this](const RenderPassExecutionContext& ctx) {
-        const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
         std::vector<DrawCommand> drawCommands{};
-        for (const auto& [id, renderNode] : m_renderNodes) {
-            createDrawCommand(drawCommands, *renderNode, kForwardLightingPass, virtualFrameIndex);
+        for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes) {
+            if (idx++ >= m_nodesToDraw) {
+                break;
+            }
+            createDrawCommand(drawCommands, *renderNode, kForwardLightingPass, ctx.virtualFrameIndex);
         }
+        createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass, ctx.virtualFrameIndex);
 
-        createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass, virtualFrameIndex);
-
-        const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
+        m_forwardPassMaterial->bind(ctx.virtualFrameIndex, ctx.cmdBuffer.getHandle());
         for (const auto& drawCommand : drawCommands) {
-            RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
+            executeDrawCommand(drawCommand, *m_renderer, ctx.cmdBuffer, ctx.virtualFrameIndex);
         }
     });
 
@@ -108,7 +134,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
     }
 
-    // createPlane();
+    createPlane();
     createSceneObject(args["modelPath"]);
 
     m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
@@ -125,9 +151,9 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 void PbrScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
+    m_renderer->getDevice().postResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
         m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-        updateMaterialsWithRenderGraphResources();
+        updateRenderPassMaterials();
         updateSceneViews();
     });
     m_renderer->flushResourceUpdates(true);
@@ -154,9 +180,28 @@ void PbrScene::render() {
 }
 
 void PbrScene::renderGui() {
-    drawCameraUi(m_cameraController->getCamera());
+    ImGui::Begin("Scene");
+    if (ImGui::CollapsingHeader("Camera")) {
+        drawCameraUi(m_cameraController->getCamera(), /*isSeparateWindow=*/false);
+    }
+    if (ImGui::CollapsingHeader("Light")) {
+        DirectionalLight light = m_lightSystem->getDirectionalLight();
+        glm::vec3 direction = light.getDirection();
+        ImGui::SliderFloat("Direction X", &direction.x, -1.0, 1.0);
+        ImGui::SliderFloat("Direction Y", &direction.y, -1.0, 1.0);
+        ImGui::SliderFloat("Direction Z", &direction.z, -1.0, 1.0);
+        light.setDirection(glm::normalize(direction));
+        m_lightSystem->setDirectionalLight(light);
+    }
+    ImGui::End();
+
     ImGui::Begin("Render Graph");
-    drawGui(*m_rg);
+    if (ImGui::CollapsingHeader("Overview")) {
+        drawGui(*m_rg);
+    }
+    if (ImGui::CollapsingHeader("Nodes")) {
+        ImGui::SliderInt("Nodes to Draw", &m_nodesToDraw, 0, static_cast<int32_t>(m_renderNodes.size()));
+    }
     ImGui::End();
     // ImGui::Begin("Settings");
     // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness,
@@ -257,11 +302,16 @@ void PbrScene::createCommonTextures() {
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy));
     addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
-    m_resourceContext->createPipeline("pbrTex", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
+    auto pipeline =
+        m_resourceContext->createPipeline("pbr", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
     imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
+
+    m_forwardPassMaterial =
+        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 0, 1);
+    setPbrMaterialSceneParams(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
 }
 
 void PbrScene::setEnvironmentMap(const std::string& envMapName) {
@@ -291,8 +341,8 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
             sceneObject->transformPack->M = renderObject.transform;
             sceneObject->pass(kForwardLightingPass).material =
                 createPbrMaterial(entityName, renderObject.material, *m_resourceContext, *m_transformBuffer);
-            setPbrMaterialSceneParams(
-                *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
+            sceneObject->pass(kForwardLightingPass).transformBufferDynamicIndex = 2;
+            sceneObject->pass(kForwardLightingPass).material->setBindRange(1, 2, 2, 1);
             m_renderer->getDevice().flushDescriptorUpdates();
 
             for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
@@ -359,19 +409,20 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 void PbrScene::createPlane() {
     constexpr std::string_view kNodeName{"floor"};
     m_resourceContext->addGeometry(
-        kNodeName, createFromMesh(*m_renderer, createPlaneMesh(200.0f, 200.0f), kPbrVertexFormat));
+        kNodeName, createFromMesh(*m_renderer, createPlaneMesh(10.0f, 10.0f), kPbrVertexFormat));
 
     const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass"};
     auto [material, images] = loadPbrMaterial(materialPath);
-    material.params.uvScale = glm::vec2(100.0f, 100.0f);
+    material.params.uvScale = glm::vec2(10.0f, 10.0f);
     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
     auto* floor = createRenderNode(kNodeName, true);
-    floor->transformPack->M = glm::scale(glm::vec3(1.0, 1.0f, 1.0f));
+    floor->transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f));
     floor->geometry = m_resourceContext->getGeometry(kNodeName);
     floor->pass(kForwardLightingPass).material =
         createPbrMaterial(kNodeName, material, *m_resourceContext, *m_transformBuffer);
-    setPbrMaterialSceneParams(*floor->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
+    floor->pass(kForwardLightingPass).transformBufferDynamicIndex = 2;
+    floor->pass(kForwardLightingPass).material->setBindRange(1, 2, 2, 1);
 
     CRISP_CHECK(
         floor->pass(kForwardLightingPass)
@@ -394,22 +445,8 @@ void PbrScene::setupInput() {
     }));
 }
 
-void PbrScene::updateMaterialsWithRenderGraphResources() {
-    const auto& imageCache = m_resourceContext->imageCache;
-    for (auto&& [name, node] : m_renderNodes) {
-        auto& material = node->pass(kForwardLightingPass).material;
-        for (const auto& renderPassBinding : material->getRenderPassBindings()) {
-            const auto& renderTargetView{
-                m_rg->getRenderPass(renderPassBinding.renderPass).getAttachmentView(0, renderPassBinding.frameIndex)};
-            material->writeDescriptor(
-                renderPassBinding.setIndex,
-                renderPassBinding.bindingIndex,
-                renderPassBinding.frameIndex,
-                renderPassBinding.arrayIndex,
-                renderTargetView,
-                &imageCache.getSampler(renderPassBinding.sampler));
-        }
-    }
+void PbrScene::updateRenderPassMaterials() {
+    setPbrMaterialSceneParams(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
 }
 
 void PbrScene::updateSceneViews() {

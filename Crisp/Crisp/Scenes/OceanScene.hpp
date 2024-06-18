@@ -5,6 +5,7 @@
 #include <Crisp/Lights/EnvironmentLight.hpp>
 #include <Crisp/Models/Ocean.hpp>
 #include <Crisp/Models/Skybox.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
@@ -21,6 +22,9 @@ public:
 private:
     std::unique_ptr<VulkanImage> createInitialSpectrum();
     int applyFFT(std::string image);
+    void buildNewFFT();
+
+    std::unique_ptr<rg::RenderGraph> m_rg;
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<TransformBuffer> m_transformBuffer;

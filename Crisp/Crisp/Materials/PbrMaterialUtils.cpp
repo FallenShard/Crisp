@@ -31,14 +31,33 @@ consteval auto createTexInfos() {
 
 constexpr std::array<TexInfo, kPbrMapTypeCount> kTexInfos = createTexInfos();
 
+const std::vector<FlatStringHashSet> kTextureFileAliases = {
+    {"diffuse"},
+    {},
+    {},
+    {},
+    {"ao"},
+    {},
+};
+
 } // namespace
 
 PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::string name) {
     const auto loadImageIfExists =
-        [&materialDir](std::vector<Image>& images, const std::string_view filename, const uint32_t requestedChannels) {
+        [&materialDir](
+            std::vector<Image>& images,
+            const std::string_view filename,
+            const FlatStringHashSet& aliases,
+            const uint32_t requestedChannels) {
             const auto& path = materialDir / fmt::format("{}.png", filename);
             if (std::filesystem::exists(path)) {
                 images.push_back(loadImage(path, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
+                return;
+            }
+            for (const auto& alias : aliases) {
+                const auto& aliasPath = materialDir / fmt::format("{}.png", alias);
+                images.push_back(loadImage(aliasPath, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
+                return;
             }
 
             logger->warn("Image does not exist at path: '{}'.", path.string());
@@ -55,7 +74,8 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
         &group.emissiveMaps,
     };
     for (auto&& [idx, mapArray] : std::views::enumerate(mapArrays)) {
-        loadImageIfExists(*mapArray, kTexInfos[idx].name, getNumChannels(kTexInfos[idx].defaultFormat));
+        loadImageIfExists(
+            *mapArray, kTexInfos[idx].name, kTextureFileAliases[idx], getNumChannels(kTexInfos[idx].defaultFormat));
     }
     return group;
 }
@@ -135,14 +155,24 @@ Material* createPbrMaterial(
     const TransformBuffer& transformBuffer) {
     auto& imageCache = resourceContext.imageCache;
 
-    auto* material = resourceContext.createMaterial(fmt::format("pbrTex{}", materialId), "pbrTex");
-    material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
+    auto* material = resourceContext.createMaterial(fmt::format("pbr-{}", materialId), "pbr");
+    material->writeDescriptor(2, 0, transformBuffer.getDescriptorInfo());
 
     const auto setMaterialTexture =
         [&material, &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
             const std::string fallbackKey = fmt::format("default-{}-0", texName);
+            // material->writeDescriptor(
+            //     1, index, imageCache.getImageView(texKey, fallbackKey), imageCache.getSampler("linearRepeat"));
+            VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+            write.descriptorCount = 1;
+            write.dstArrayElement = index;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write.dstBinding = 1;
+
             material->writeDescriptor(
-                2, index, imageCache.getImageView(texKey, fallbackKey), imageCache.getSampler("linearRepeat"));
+                1,
+                write,
+                imageCache.getImageView(texKey, fallbackKey).getDescriptorInfo(&imageCache.getSampler("linearRepeat")));
         };
 
     for (uint32_t i = 0; i < kPbrMapTypeCount; ++i) {
@@ -151,41 +181,10 @@ Material* createPbrMaterial(
 
     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
     material->writeDescriptor(
-        2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, pbrMaterial.params, BufferUpdatePolicy::PerFrame));
+        1, 0, *resourceContext.createUniformBuffer(paramsBufferKey, pbrMaterial.params, BufferUpdatePolicy::PerFrame));
 
     return material;
 }
-
-// Material* createPbrMaterial(
-//     const std::string_view materialId,
-//     const std::string_view imageGroupName,
-//     const std::array<int32_t, kPbrMapTypeCount>& textureIndices,
-//     ResourceContext& resourceContext,
-//     const PbrParams& params,
-//     const TransformBuffer& transformBuffer) {
-//     auto& imageCache = resourceContext.imageCache;
-
-//     auto* material = resourceContext.createMaterial(fmt::format("pbrTex{}", materialId), "pbrTex");
-//     material->writeDescriptor(0, 0, transformBuffer.getDescriptorInfo());
-
-//     const auto setMaterialTexture =
-//         [&material, &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
-//             const std::string fallbackKey = fmt::format("default-{}-0", texName);
-//             material->writeDescriptor(
-//                 2, index, imageCache.getImageView(texKey, fallbackKey), imageCache.getSampler("linearRepeat"));
-//         };
-
-//     const PbrImageKeyCreator keyCreator{std::string(imageGroupName)};
-//     for (uint32_t i = 0; i < kPbrMapTypeCount; ++i) {
-//         setMaterialTexture(i, kPbrMapNames[i], keyCreator.createMapKey(i, textureIndices[i]));
-//     }
-
-//     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-//     material->writeDescriptor(
-//         2, 6, *resourceContext.createUniformBuffer(paramsBufferKey, params, BufferUpdatePolicy::PerFrame));
-
-//     return material;
-// };
 
 void setPbrMaterialSceneParams(
     Material& material,
@@ -194,17 +193,17 @@ void setPbrMaterialSceneParams(
     const rg::RenderGraph& rg) {
     const auto& imageCache = resourceContext.imageCache;
     const auto& envLight = *lightSystem.getEnvironmentLight();
-    material.writeDescriptor(1, 0, *resourceContext.getUniformBuffer("camera"));
-    material.writeDescriptor(1, 1, *lightSystem.getCascadedDirectionalLightBuffer());
-    material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
-    material.writeDescriptor(1, 4, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 5, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(0, 0, *resourceContext.getUniformBuffer("camera"));
+    material.writeDescriptor(0, 1, *lightSystem.getCascadedDirectionalLightBuffer());
+    material.writeDescriptor(0, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(0, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
+    material.writeDescriptor(0, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(0, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
         for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
             const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
-            material.writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
-            material.getRenderPassBindings().emplace_back(1, 6, k, i, kCsmPasses[i], 0, "nearestNeighbor");
+            material.writeDescriptor(0, 4, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
+            material.getRenderPassBindings().emplace_back(0, 4, k, i, kCsmPasses[i], 0, "nearestNeighbor");
         }
     }
 }

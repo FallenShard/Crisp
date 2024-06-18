@@ -1,10 +1,10 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 
+#include <ranges>
+
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/VulkanChecks.hpp>
-
-#include <ranges>
 
 namespace crisp::rg {
 namespace {
@@ -136,11 +136,10 @@ RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
-    auto& accessState = pass.outputAccesses.emplace_back();
-    accessState.usageType = ResourceUsageType::Attachment;
-    accessState.pipelineStage =
+    resource.producerAccess.usageType = ResourceUsageType::Attachment;
+    resource.producerAccess.pipelineStage =
         isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    accessState.access =
+    resource.producerAccess.access =
         isDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     if (isDepthAttachment) {
         pass.depthStencilAttachment = handle;
@@ -155,31 +154,52 @@ RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
     const auto handle = m_renderGraph.addImageResource(description, std::move(name));
     auto& resource = m_renderGraph.getResource(handle);
     resource.producer = m_passHandle;
+    resource.producerAccess = {
+        .usageType = ResourceUsageType::Storage,
+        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        .access = VK_ACCESS_SHADER_WRITE_BIT,
+    };
+
     m_renderGraph.getImageDescription(handle).imageUsageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
-    pass.outputAccesses.push_back({
+
+    return handle;
+}
+
+RenderGraphResourceHandle RenderGraph::Builder::importBuffer(
+    const RenderGraphBufferDescription& description, std::string&& name) {
+    CRISP_CHECK_NE(description.externalBuffer, VK_NULL_HANDLE);
+
+    const auto handle = m_renderGraph.addBufferResource(description, std::move(name), /*isExternal=*/true);
+    m_renderGraph.getResource(handle).producer = m_passHandle;
+
+    auto& pass = m_renderGraph.getPass(m_passHandle);
+    pass.outputs.push_back(handle);
+    m_renderGraph.getResource(handle).producerAccess = {
         .usageType = ResourceUsageType::Storage,
         .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         .access = VK_ACCESS_SHADER_WRITE_BIT,
-    });
+    };
 
     return handle;
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createBuffer(
     const RenderGraphBufferDescription& description, std::string&& name) {
-    const auto handle = m_renderGraph.addBufferResource(description, std::move(name));
+    CRISP_CHECK_EQ(description.externalBuffer, VK_NULL_HANDLE);
+
+    const auto handle = m_renderGraph.addBufferResource(description, std::move(name), /*isExternal=*/false);
     m_renderGraph.getResource(handle).producer = m_passHandle;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
-    pass.outputAccesses.push_back({
+    m_renderGraph.getResource(handle).producerAccess = {
         .usageType = ResourceUsageType::Storage,
         .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         .access = VK_ACCESS_SHADER_WRITE_BIT,
-    });
+    };
 
     return handle;
 }
@@ -216,6 +236,11 @@ std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(
     const auto& res{getResource(handle)};
     return createView(device, *m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
 }
+
+const VulkanImageView& RenderGraph::getResourceImageView(RenderGraphResourceHandle handle) const {
+    const auto& res{getResource(handle)};
+    CRISP_CHECK_EQ(res.type, ResourceType::Image);
+    return *m_imageViews.at(res.physicalResourceIndex);
 }
 
 const RenderGraphBlackboard& RenderGraph::getBlackboard() const {
@@ -248,31 +273,120 @@ void RenderGraph::compile(
     createPhysicalPasses(device, swapChainExtent);
 }
 
-void RenderGraph::execute(const VkCommandBuffer cmdBuffer, const uint32_t virtualFrameIndex) {
-    const RenderPassExecutionContext executionCtx{VulkanCommandBuffer{cmdBuffer}, virtualFrameIndex};
-    for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
-        if (pass.type == PassType::Rasterizer) {
+std::vector<VkPipelineStageFlags> glastPipelineStage;
+std::vector<VkPipelineStageFlags> glastAccessFlags;
+
+void RenderGraph::execute(const VkCommandBuffer cmdBuffer, const uint32_t virtualFrameIndex, VkDevice device) {
+    std::vector<bool> isInReadState(m_resources.size(), false);
+    // VkPipelineStageFlags m_lastSynchronizedPipelineStage{0};
+    // VkPipelineStageFlags m_lastSynchronizedAccessStage{0};
+
+    const auto synchronizeInputResources =
+        [this, &isInReadState](const RenderGraphPass& pass, const RenderPassExecutionContext& ctx) {
             for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
+                // if (isInReadState.at(pass.inputs[inIdx].id)) {
+                //     continue;
+                // }
+                // isInReadState.at(pass.inputs[inIdx].id) = true;
+
                 const auto& res = getResource(pass.inputs[inIdx]);
 
-                if (inputAccess.usageType == ResourceUsageType::Texture) {
+                if (res.type == ResourceType::Image) {
                     const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
-                    const bool isDepthAttachment = isDepthFormat(m_imageDescriptions[res.descriptionIndex].format);
-                    physicalImage.image->transitionLayout(
-                        executionCtx.cmdBuffer.getHandle(),
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        isDepthAttachment
-                            ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
-                            : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        inputAccess.pipelineStage);
+                    if (inputAccess.usageType == ResourceUsageType::Texture) {
+                        physicalImage.image->transitionLayoutDirect(
+                            ctx.cmdBuffer.getHandle(),
+                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                            glastPipelineStage[res.physicalResourceIndex],
+                            glastAccessFlags[res.physicalResourceIndex],
+                            // res.producerAccess.pipelineStage,
+                            // res.producerAccess.access,
+                            inputAccess.pipelineStage,
+                            inputAccess.access);
+                    } else if (inputAccess.usageType == ResourceUsageType::Storage) {
+                        physicalImage.image->transitionLayoutDirect(
+                            ctx.cmdBuffer.getHandle(),
+                            // glayouts[res.physicalResourceIndex],
+                            VK_IMAGE_LAYOUT_GENERAL,
+                            glastPipelineStage[res.physicalResourceIndex],
+                            glastAccessFlags[res.physicalResourceIndex],
+                            // res.producerAccess.pipelineStage,
+                            // res.producerAccess.access,
+                            inputAccess.pipelineStage,
+                            inputAccess.access);
+                    }
+                    glastPipelineStage[res.physicalResourceIndex] = inputAccess.pipelineStage;
+                    glastAccessFlags[res.physicalResourceIndex] = inputAccess.access;
+                } else if (res.type == ResourceType::Buffer) {
+                    const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
+                    ctx.cmdBuffer.insertBufferMemoryBarrier(
+                        physicalBuffer.buffer->createDescriptorInfo(),
+                        res.producerAccess.pipelineStage,
+                        res.producerAccess.access,
+                        inputAccess.pipelineStage,
+                        inputAccess.access);
                 }
             }
+        };
+
+    const RenderPassExecutionContext executionCtx{VulkanCommandBuffer{cmdBuffer}, virtualFrameIndex};
+    for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
+        // logger->info("Executing {}, pass: {}", virtualFrameIndex, pass.name);
+        if (pass.type == PassType::Rasterizer) {
+            synchronizeInputResources(pass, executionCtx);
 
             auto& renderPass = *m_physicalPasses.at(m_physicalPassIndices.at(idx));
             renderPass.begin(executionCtx.cmdBuffer.getHandle(), 0, VK_SUBPASS_CONTENTS_INLINE);
             pass.executeFunc(executionCtx);
             renderPass.end(executionCtx.cmdBuffer.getHandle(), 0);
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
+            for (const auto resHandle : pass.outputs) {
+                const auto& res = getResource(resHandle);
+                const auto& outputAccess = res.producerAccess;
+
+                if (res.type == ResourceType::Image) {
+                    const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
+                    if (outputAccess.usageType == ResourceUsageType::Texture) {
+                        physicalImage.image->transitionLayoutDirect(
+                            executionCtx.cmdBuffer.getHandle(),
+                            // glayouts[res.physicalResourceIndex],
+                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                            glastPipelineStage[res.physicalResourceIndex],
+                            glastAccessFlags[res.physicalResourceIndex],
+                            // res.producerAccess.pipelineStage,
+                            // res.producerAccess.access,
+                            outputAccess.pipelineStage,
+                            outputAccess.access);
+                    } else if (outputAccess.usageType == ResourceUsageType::Storage) {
+                        physicalImage.image->transitionLayoutDirect(
+                            executionCtx.cmdBuffer.getHandle(),
+                            // glayouts[res.physicalResourceIndex],
+                            VK_IMAGE_LAYOUT_GENERAL,
+                            glastPipelineStage[res.physicalResourceIndex],
+                            glastAccessFlags[res.physicalResourceIndex],
+                            // res.producerAccess.pipelineStage,
+                            // res.producerAccess.access,
+                            outputAccess.pipelineStage,
+                            outputAccess.access);
+                    }
+                    // glayouts[res.physicalResourceIndex] =
+                    //     outputAccess.usageType == ResourceUsageType::Texture
+                    //         ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    //         : VK_IMAGE_LAYOUT_GENERAL;
+                    glastPipelineStage[res.physicalResourceIndex] = outputAccess.pipelineStage;
+                    glastAccessFlags[res.physicalResourceIndex] = outputAccess.access;
+                } else if (res.type == ResourceType::Buffer) {
+                    const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
+                    executionCtx.cmdBuffer.insertBufferMemoryBarrier(
+                        physicalBuffer.buffer->createDescriptorInfo(),
+                        res.producerAccess.pipelineStage,
+                        res.producerAccess.access,
+                        outputAccess.pipelineStage,
+                        outputAccess.access);
+                }
+            }
+
+            synchronizeInputResources(pass, executionCtx);
             pass.executeFunc(executionCtx);
         }
     }
@@ -289,34 +403,9 @@ const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) cons
 void RenderGraph::resize(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) // NOLINT
 {
-    for (auto& image : m_physicalImages) {
-        const auto& desc = m_imageDescriptions.at(image.descriptionIndex);
-        if (desc.sizePolicy == SizePolicy::Absolute) {
-            continue;
-        }
-
-        const auto usageFlags = determineUsageFlags(image.aliasedResourceIndices);
-        const uint32_t layerMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
-        image.image = std::make_unique<VulkanImage>(
-            device,
-            calculateImageExtent(desc, swapChainExtent),
-            desc.layerCount * layerMultiplier,
-            desc.mipLevelCount,
-            desc.format,
-            usageFlags,
-            determineCreateFlags(image.aliasedResourceIndices));
-
-        const auto [initialLayout, pipelineStage] = determineInitialLayout(image, usageFlags);
-        image.image->transitionLayout(cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, pipelineStage);
-        device.getDebugMarker().setObjectName(
-            image.image->getHandle(), m_resources[image.aliasedResourceIndices[0]].name.c_str());
-    }
-
+    determineAliasedResurces();
+    createPhysicalResources(device, swapChainExtent, cmdBuffer);
     createPhysicalPasses(device, swapChainExtent);
-    // for (auto& pass : m_physicalPasses)
-    // {
-    //     pass->recreate(device, swapChainExtent);
-    // }
 }
 
 std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines() {
@@ -370,13 +459,14 @@ RenderGraphResourceHandle RenderGraph::addImageResource(
 }
 
 RenderGraphResourceHandle RenderGraph::addBufferResource(
-    const RenderGraphBufferDescription& description, std::string&& name) {
+    const RenderGraphBufferDescription& description, std::string&& name, const bool isExternal) {
     m_bufferDescriptions.push_back(description);
 
     auto& res = m_resources.emplace_back();
     res.type = ResourceType::Buffer;
     res.name = std::move(name);
     res.descriptionIndex = static_cast<uint16_t>(m_bufferDescriptions.size()) - 1;
+    res.isExternal = isExternal;
 
     return {static_cast<uint32_t>(m_resources.size()) - 1};
 }
@@ -397,20 +487,27 @@ VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>
     return flags;
 };
 
-std::tuple<VkImageLayout, VkPipelineStageFlagBits> RenderGraph::determineInitialLayout(
+std::tuple<VkImageLayout, VkAccessFlagBits, VkPipelineStageFlagBits> RenderGraph::determineInitialLayout(
     const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags) {
     if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        return {VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
+        return {
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
     }
     if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT) {
-        return {VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+        return {VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
     }
 
     if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format)) {
-        return {VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT};
+        return {
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT};
     }
 
-    return {VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    return {
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 };
 
 void RenderGraph::determineAliasedResurces() {
@@ -425,9 +522,16 @@ void RenderGraph::determineAliasedResurces() {
 
         processed[idx] = true;
 
+        if (resource.isExternal) {
+            continue;
+        }
+
         const auto findResourcesToAlias = [&](const auto& descriptions, auto& physicalResource) {
             uint32_t lastReadPassIdx = timelines[idx].lastRead;
             for (uint32_t j = static_cast<uint32_t>(idx) + 1; j < m_resources.size(); ++j) {
+                if (m_resources[j].isExternal) {
+                    continue;
+                }
                 if (lastReadPassIdx >= timelines[j].firstWrite) {
                     continue;
                 }
@@ -463,6 +567,9 @@ void RenderGraph::determineAliasedResurces() {
 
 void RenderGraph::createPhysicalResources(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
+    int imgIdx = 0;
+    glastPipelineStage.resize(m_physicalImages.size());
+    glastAccessFlags.resize(m_physicalImages.size());
     for (auto& res : m_physicalImages) {
         const auto& desc = m_imageDescriptions[res.descriptionIndex];
         const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
@@ -476,11 +583,24 @@ void RenderGraph::createPhysicalResources(
             desc.format,
             usageFlags,
             determineCreateFlags(res.aliasedResourceIndices));
-
-        const auto [initialLayout, pipelineStage] = determineInitialLayout(res, usageFlags);
-        res.image->transitionLayout(cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, pipelineStage);
+        res.image->setTag(m_resources[res.aliasedResourceIndices[0]].name);
         device.getDebugMarker().setObjectName(
             res.image->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
+
+        const auto lastUsageFlags = getImageDescription({res.aliasedResourceIndices.back()}).imageUsageFlags;
+        const auto [initialLayout, access, pipelineStage] = determineInitialLayout(res, lastUsageFlags);
+        res.image->transitionLayoutDirect(
+            cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, pipelineStage, access);
+        glastPipelineStage[imgIdx] = pipelineStage;
+        glastAccessFlags[imgIdx] = access;
+        imgIdx++;
+    }
+
+    for (const auto& res : m_resources) {
+        if (res.type == ResourceType::Image) {
+            m_imageViews[res.physicalResourceIndex] =
+                createView(device, *m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
+        }
     }
 
     for (auto& res : m_physicalBuffers) {
@@ -489,6 +609,8 @@ void RenderGraph::createPhysicalResources(
         const uint32_t sizeMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
         res.buffer = std::make_unique<VulkanBuffer>(
             device, desc.size * sizeMultiplier, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        device.getDebugMarker().setObjectName(
+            res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
     }
 }
 

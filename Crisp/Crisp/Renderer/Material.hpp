@@ -10,13 +10,17 @@
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-#include <vector>
-
 namespace crisp {
 class Material {
 public:
     explicit Material(VulkanPipeline* pipeline);
+    Material(VulkanPipeline* pipeline, uint32_t firstSet, uint32_t setCount);
     Material(VulkanPipeline* pipeline, VulkanDescriptorSetAllocator* VulkanDescriptorSetAllocator);
+    Material(
+        VulkanPipeline* pipeline,
+        VulkanDescriptorSetAllocator* VulkanDescriptorSetAllocator,
+        uint32_t firstSet,
+        uint32_t setCount);
 
     // Methods to update a descriptor referencing an image.
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorImageInfo& imageInfo);
@@ -75,16 +79,11 @@ public:
     void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
     void setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicUniformBuffer, uint32_t offset);
 
-    void bind(
-        uint32_t frameIdx, VkCommandBuffer cmdBuffer, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
+    void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer);
     void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
 
     inline VulkanPipeline* getPipeline() const {
         return m_pipeline;
-    }
-
-    inline void setPipeline(VulkanPipeline* pipeline) {
-        m_pipeline = pipeline;
     }
 
     inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const {
@@ -93,6 +92,13 @@ public:
 
     VkDescriptorSet getDescriptorSet(const uint32_t setIndex, const uint32_t frameIndex) const {
         return m_sets.at(frameIndex).at(setIndex);
+    }
+
+    void setBindRange(uint32_t firstSet, uint32_t setCount, uint32_t firstDynamicOffset, uint32_t dynamicOffsetCount) {
+        m_firstSet = firstSet;
+        m_setCount = setCount;
+        m_firstDynamicOffset = firstDynamicOffset;
+        m_dynamicOffsetCount = dynamicOffsetCount;
     }
 
     struct RenderPassBindingData {
@@ -113,6 +119,11 @@ private:
     std::array<std::vector<VkDescriptorSet>, kRendererVirtualFrameCount> m_sets;
     std::array<std::vector<uint32_t>, kRendererVirtualFrameCount> m_dynamicOffsets;
     std::vector<DynamicBufferView> m_dynamicBufferViews;
+
+    uint32_t m_firstSet{0};
+    uint32_t m_setCount{0};
+    uint32_t m_firstDynamicOffset{0};
+    uint32_t m_dynamicOffsetCount{0};
 
     VulkanDevice* m_device;
     VulkanPipeline* m_pipeline;

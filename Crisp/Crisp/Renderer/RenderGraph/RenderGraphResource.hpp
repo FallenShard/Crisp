@@ -14,6 +14,18 @@ enum class ResourceType : uint8_t {
     Unknown,
 };
 
+enum class ResourceUsageType {
+    Storage,    // For compute, non-sampled use.
+    Attachment, // For render pass attachments/render targets.
+    Texture,    // For sampled images.
+};
+
+struct ResourceAccessState {
+    ResourceUsageType usageType;
+    VkPipelineStageFlags pipelineStage;
+    VkAccessFlags access;
+};
+
 struct RenderGraphResource {
     static constexpr uint16_t kInvalidIndex{std::numeric_limits<uint16_t>::max()};
 
@@ -28,21 +40,12 @@ struct RenderGraphResource {
     // Index into the array that holds the actual physical resource - a VkImage or a VkBuffer.
     uint16_t physicalResourceIndex{kInvalidIndex};
 
-    RenderGraphPassHandle producer; // Pass that created and/or wrote to this resource.
+    RenderGraphPassHandle producer;     // Pass that created and/or wrote to this resource.
+    ResourceAccessState producerAccess; // How the producer created this resource.
 
     std::string name; // Symbolic name of the resource. Useful for debugging and logging.
-};
 
-enum class ResourceUsageType {
-    Storage,    // For compute, non-sampled use.
-    Attachment, // For render pass attachments/render targets.
-    Texture,    // For sampled images.
-};
-
-struct ResourceAccessState {
-    ResourceUsageType usageType;
-    VkPipelineStageFlags pipelineStage;
-    VkAccessFlags access;
+    bool isExternal{false}; // Indicates whether the resource is managed externally.
 };
 
 } // namespace crisp

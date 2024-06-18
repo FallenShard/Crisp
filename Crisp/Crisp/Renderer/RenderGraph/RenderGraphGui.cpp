@@ -5,6 +5,8 @@
 namespace crisp {
 
 void drawGui(const rg::RenderGraph& renderGraph) {
+    ImGui::LabelText("Passes", "%zu", renderGraph.getPassCount());        // NOLINT
+    ImGui::LabelText("Resources", "%zu", renderGraph.getResourceCount()); // NOLINT
 
     for (const auto& pass : renderGraph.getPasses()) {
         if (ImGui::TreeNode(pass.name.c_str())) {

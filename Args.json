@@ -3,9 +3,20 @@
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
   "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/DinPro.ttf",
   "validationLayersInRelease": true,
-  "enableVulkanRayTracing": true,
-  "scene": "vulkan-ray-tracer",
-  "scene__": "pbr",
-  "scene_": "ocean",
-  "logLevel": "trace"
+  "enableVulkanRayTracing": false,
+  "scene_": "ambient-occlusion",
+  "scene": "pbr",
+  "scene__": "vulkan-ray-tracer",
+  "scene___": "ocean",
+  "logLevel": "info",
+  "sceneArgs": {
+    "modelPath_" : "D:/Download/bistro/bistro.gltf"         ,
+    "modelPath"  : "Meshes/DamagedHelmet/DamagedHelmet.gltf",
+    "modelPath__": "glTFSamples/2.0/Box/glTF/Box.gltf"
+  },
+  "scene_names": [
+    "ambient-occlusion" , "fluid-simulation"  , "shadow-mapping"    , "ray-tracer"        , "pbr"               ,
+    "clustered-lighting", "normal-mapping"    , "vulkan-ray-tracer" , "ocean"             , "gltf-viewer"       ,
+    "atmosphere"
+  ]
 }

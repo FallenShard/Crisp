@@ -34,18 +34,21 @@ private:
 
     void setupInput();
 
-    void updateMaterialsWithRenderGraphResources();
+    void updateRenderPassMaterials();
     void updateSceneViews();
 
+    int32_t m_nodesToDraw = 2500;
     std::unique_ptr<rg::RenderGraph> m_rg;
     std::vector<std::unique_ptr<VulkanImageView>> m_sceneImageViews;
 
-    std::unique_ptr<FreeCameraController> m_cameraController;
+    std::unique_ptr<TargetCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
 
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
     FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
+
+    std::unique_ptr<Material> m_forwardPassMaterial;
 
     PbrParams m_uniformMaterialParams;
     std::unique_ptr<Skybox> m_skybox;

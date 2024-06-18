@@ -312,7 +312,7 @@ void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t vi
         return;*/
 
     node.pipeline->bind(cmdBuffer.getHandle());
-    node.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), VK_PIPELINE_BIND_POINT_COMPUTE);
+    node.material->bind(virtualFrameIndex, cmdBuffer.getHandle());
     if (node.preDispatchCallback) {
         node.preDispatchCallback(node, cmdBuffer, virtualFrameIndex);
     }
