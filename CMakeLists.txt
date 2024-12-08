@@ -74,8 +74,6 @@ macro(add_cpp_benchmark targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE benchmark::benchmark)
-
-    add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
 endmacro()
 
 # Copies a list of shared libraries into the designated target's directory. TO be used with DLL dependencies.

@@ -20,14 +20,14 @@
     {
       "name": "x64-debug",
       "displayName": "Debug",
-      "description": "Target Windows (64-bit) with the VS development environment. (Debug)",
+      "description": "Windows MSVC Debug 64-bit",
       "inherits": "windows-base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
     },
     {
       "name": "x64-release",
       "displayName": "Release",
-      "description": "Target Windows (64-bit) with the VS development environment. (Release)",
+      "description": "Windows MSVC Release 64-bit",
       "inherits": "windows-base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }
@@ -36,23 +36,31 @@
     {
       "name": "x64-debug-build",
       "displayName": "Debug",
-      "description": "Target Windows (64-bit) with the VS development environment. (Debug)",
+      "description": "Windows MSVC Debug 64-bit",
       "configurePreset": "x64-debug",
       "inheritConfigureEnvironment": true
     },
     {
       "name": "x64-release-build",
       "displayName": "Release",
-      "description": "Target Windows (64-bit) with the VS development environment. (Release)",
+      "description": "Windows MSVC Release 64-bit",
       "configurePreset": "x64-release",
       "inheritConfigureEnvironment": true
     }
   ],
   "testPresets": [
     {
-      "name": "test-windows",
-      "description": "Enable output on failure",
+      "name": "test-windows-debug",
+      "displayName": "Test Suite (Debug)",
+      "description": "Run all available unit tests with output on failure",
       "configurePreset": "x64-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-windows-release",
+      "displayName": "Test Suite (Release)",
+      "description": "Run all available unit tests with output on failure",
+      "configurePreset": "x64-release",
       "output": { "outputOnFailure": true }
     }
   ]

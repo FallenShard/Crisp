@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Crisp: Build Main",
+            "type": "cmake",
+            "command": "build",
+            "preset": "${command:cmake.activeBuildPresetName}",
+            "detail": "Builds the main app target.",
+            "targets": [ "CrispMain" ]
+        },
+        {
+            "label": "Crisp: Build All",
+            "type": "cmake",
+            "command": "build",
+            "preset": "${command:cmake.activeBuildPresetName}",
+            "detail": "Builds all the targets in the project.",
+            "targets": [ "all" ],
+            "problemMatcher": [],
+            "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "Build Project",
+            "type": "shell",
+            "command": "echo",
+            "args": [ "Hello, world!" ],
+            "group": { "kind": "build" },
+            "problemMatcher": []
+        }
+    ]
+}
