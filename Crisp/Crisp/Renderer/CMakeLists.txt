@@ -22,7 +22,7 @@ add_cpp_static_library(CrispPipelineBuilder
 target_link_libraries(CrispPipelineBuilder
     PUBLIC Crisp::Vulkan
     PUBLIC nlohmann_json::nlohmann_json
-    PUBLIC Crisp::CoreUtils
+    PUBLIC Crisp::ThreadPool
 )
 
 add_cpp_static_library(CrispRenderer
@@ -93,7 +93,7 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::Geometry
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Result
-    PUBLIC Crisp::CoreUtils
+    PUBLIC Crisp::ThreadPool
     PUBLIC Crisp::RendererConfig
     PUBLIC Crisp::FrameContext
     PUBLIC tbb

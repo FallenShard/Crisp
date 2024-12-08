@@ -127,12 +127,26 @@ target_link_libraries(CrispApplication
     PRIVATE Crisp::Timer
 )
 
-add_cpp_interface_library(CrispCoreUtils
+add_cpp_interface_library(CrispThreadPool
     "ThreadPool.hpp"
 )
-target_link_libraries(CrispCoreUtils
+target_link_libraries(CrispThreadPool
     INTERFACE MPMCQueue
     INTERFACE Crisp::Profiler
+)
+
+add_cpp_test(CrispThreadPoolTest
+    "Test/ThreadPoolTest.cpp"
+)
+target_link_libraries(CrispThreadPoolTest
+    PRIVATE Crisp::ThreadPool
+)
+
+add_cpp_benchmark(CrispThreadPoolBenchmark
+    "Benchmark/ThreadPoolBenchmark.cpp"
+)
+target_link_libraries(CrispThreadPoolBenchmark
+    PRIVATE Crisp::ThreadPool
 )
 
 add_cpp_interface_library(CrispEvent

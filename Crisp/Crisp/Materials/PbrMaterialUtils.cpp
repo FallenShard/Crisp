@@ -1,5 +1,7 @@
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 
+#include <ranges>
+
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Image/Io/Utils.hpp>

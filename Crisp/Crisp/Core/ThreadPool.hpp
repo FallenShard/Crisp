@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Crisp/Core/ChromeProfiler.hpp>
-
-#include <rigtorp/MPMCQueue.h>
-
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <queue>
 #include <thread>
+
+#include <rigtorp/MPMCQueue.h>
+
+#include <Crisp/Core/ChromeProfiler.hpp>
 
 namespace crisp {
 
@@ -52,10 +52,9 @@ class ThreadPool {
 public:
     using TaskType = std::function<void()>;
 
-    ThreadPool()
+    explicit ThreadPool(std::optional<uint32_t> threadCount = std::nullopt)
         : m_taskQueue()
-        , m_workers(std::thread::hardware_concurrency())
-        , m_jobCount(0) {
+        , m_workers(threadCount ? *threadCount : std::thread::hardware_concurrency()) {
         for (std::size_t i = 0; i < m_workers.size(); ++i) {
             auto& worker = m_workers[i];
             worker.index = static_cast<int32_t>(i);
@@ -110,6 +109,16 @@ public:
         }
     }
 
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
+
+    ThreadPool(ThreadPool&&) = delete;
+    ThreadPool& operator=(ThreadPool&&) = delete;
+
+    std::size_t getThreadCount() const {
+        return m_workers.size();
+    }
+
     void schedule(TaskType&& taskType) {
         m_taskQueue.push(std::move(taskType));
     }
@@ -125,7 +134,7 @@ public:
         for (std::size_t i = 0; i < jobsToSchedule; ++i) {
             const std::size_t iterCount = iterationsPerJob + (remaining > i ? 1 : 0);
 
-            m_taskQueue.push([this, i, cb = std::move(iterationCallback), start, end = start + iterCount] {
+            m_taskQueue.push([this, i, cb = std::forward<F>(iterationCallback), start, end = start + iterCount] {
                 for (std::size_t k = start; k < end; ++k) {
                     cb(k, i);
                 }
@@ -156,7 +165,7 @@ public:
         for (std::size_t i = 0; i < jobsToSchedule; ++i) {
             std::size_t iterCount = iterationsPerJob + (remaining > i ? 1 : 0);
 
-            m_taskQueue.push([this, i, cb = std::move(jobCallback), start, end = start + iterCount] {
+            m_taskQueue.push([this, i, cb = std::forward<F>(jobCallback), start, end = start + iterCount] {
                 cb(start, end, i);
 
                 std::unique_lock lock(m_jobMutex);
@@ -187,7 +196,7 @@ private:
 
     std::vector<Worker> m_workers;
 
-    std::size_t m_jobCount;
+    std::size_t m_jobCount{0};
     std::mutex m_jobMutex;
     std::condition_variable m_jobCondVar;
 };

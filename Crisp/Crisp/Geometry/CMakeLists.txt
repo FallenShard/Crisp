@@ -10,7 +10,7 @@ target_link_libraries(CrispGeometry
     PUBLIC Crisp::Math
     PUBLIC Crisp::Mesh
     PUBLIC Crisp::Renderer
-    PUBLIC Crisp::CoreUtils
+    PUBLIC Crisp::ThreadPool
     PUBLIC Crisp::VertexLayout)
 
 add_cpp_static_library(CrispVertexLayout
