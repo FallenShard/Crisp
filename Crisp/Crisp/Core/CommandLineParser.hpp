@@ -55,6 +55,6 @@ public:
     Result<> parse(const std::vector<std::string_view>& tokens);
 
 private:
-    FlatHashMap<std::string, Argument> m_argMap{};
+    FlatHashMap<std::string, Argument> m_argMap;
 };
 } // namespace crisp

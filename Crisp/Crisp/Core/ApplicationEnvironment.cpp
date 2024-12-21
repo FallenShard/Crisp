@@ -1,10 +1,10 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 
+#include <GLFW/glfw3.h>
+
 #include <Crisp/Core/ChromeProfiler.hpp>
 #include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
-
-#include <GLFW/glfw3.h>
 
 namespace crisp {
 namespace {

@@ -9,9 +9,9 @@ class ApplicationEnvironment // NOLINT
 {
 public:
     struct Parameters {
-        std::string configPath{};
+        std::string configPath;
         std::string scene{"ocean"};
-        nlohmann::json sceneArgs{};
+        nlohmann::json sceneArgs;
         bool enableRayTracingExtension{false};
         std::string logLevel{"info"};
     };

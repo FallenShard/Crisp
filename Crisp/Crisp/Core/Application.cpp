@@ -33,7 +33,6 @@ AssetPaths createAssetPaths(const ApplicationEnvironment& environment) {
         .spvShaderDir = environment.getResourcesPath() / "Shaders",
     };
 }
-
 } // namespace
 
 Application::Application(const ApplicationEnvironment& environment)

@@ -20,6 +20,7 @@ Result<> CommandLineParser::parse(const std::string_view commandLine) {
 }
 
 Result<> CommandLineParser::parse(const std::vector<std::string_view>& tokens) {
+    // The first token is the executable name, so we skip it.
     std::size_t i = 1;
     while (i < tokens.size()) {
         // Found a case of 'variable=value'
@@ -31,8 +32,8 @@ Result<> CommandLineParser::parse(const std::vector<std::string_view>& tokens) {
             }
 
             ++i;
-        } else // Else apply the rule 'variable value'
-        {
+        } else {
+            // Else apply the rule 'variable value'
             if (i + 1 >= tokens.size()) {
                 break;
             }
