@@ -9,11 +9,12 @@ class ApplicationEnvironment // NOLINT
 {
 public:
     struct Parameters {
-        std::string configPath;
+        std::filesystem::path configPath;
         std::string scene{"ocean"};
         nlohmann::json sceneArgs;
         bool enableRayTracingExtension{false};
         std::string logLevel{"info"};
+        std::filesystem::path outputDir{"D:/Projects/Crisp/Output"};
     };
 
     explicit ApplicationEnvironment(Parameters&& parameters);
@@ -32,6 +33,8 @@ public:
     const Parameters& getParameters() const;
 
     const nlohmann::json& getConfig() const;
+
+    const std::filesystem::path& getOutputDirectory() const;
 
 private:
     std::filesystem::path m_resourcesPath;

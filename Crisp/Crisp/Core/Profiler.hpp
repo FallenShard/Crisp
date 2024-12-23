@@ -12,7 +12,11 @@ public:
     consteval LiteralWrapper(const char (&literal)[N]) // NOLINT
         : literal(literal) {}
 
-    const char* literal;
+    const char* literal{nullptr};
+
+    bool operator==(const std::string_view& other) const {
+        return other == std::string_view(literal);
+    }
 };
 
 class ScopeProfiler {

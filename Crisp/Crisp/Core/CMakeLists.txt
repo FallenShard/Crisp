@@ -88,7 +88,7 @@ target_link_libraries(CrispApplicationEnvironment
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::StringUtils
     PUBLIC glfw
-    PRIVATE Crisp::Profiler
+    PRIVATE Crisp::ChromeEventTracer
     PRIVATE Crisp::Logger
     PRIVATE Crisp::Format
     PRIVATE Crisp::CommandLineParser
@@ -132,7 +132,7 @@ add_cpp_interface_library(CrispThreadPool
 )
 target_link_libraries(CrispThreadPool
     INTERFACE MPMCQueue
-    INTERFACE Crisp::Profiler
+    INTERFACE Crisp::ScopeProfiler
 )
 
 add_cpp_test(CrispThreadPoolTest
@@ -184,11 +184,25 @@ target_link_libraries(CrispSlotMapTest
     PRIVATE Crisp::SlotMap
 )
 
-add_cpp_interface_library(CrispProfiler
-    "ChromeProfiler.hpp"
+add_cpp_static_library(CrispChromeEventTracer
+    "ChromeEventTracer.cpp"
+    "ChromeEventTracer.hpp"
+)
+target_link_libraries(CrispChromeEventTracer
+    PUBLIC Crisp::Format
+    PUBLIC Crisp::ScopeProfiler
+)
+add_cpp_test(CrispChromeEventTracerTest
+    "Test/ChromeEventTracerTest.cpp"
+)
+target_link_libraries(CrispChromeEventTracerTest
+    PRIVATE Crisp::ChromeEventTracer
+)
+
+add_cpp_interface_library(CrispScopeProfiler
     "Profiler.hpp"
 )
-target_link_libraries(CrispProfiler
+target_link_libraries(CrispScopeProfiler
     INTERFACE Crisp::Logger
 )
 

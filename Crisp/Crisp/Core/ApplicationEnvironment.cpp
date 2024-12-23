@@ -2,7 +2,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include <Crisp/Core/ChromeProfiler.hpp>
+#include <Crisp/Core/ChromeEventTracer.hpp>
 #include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
 
@@ -34,8 +34,6 @@ void setSpdlogLevel(const std::string_view level) {
 
 ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
     : m_arguments(std::move(parameters)) {
-    ChromeProfiler::setThreadName("Main Thread");
-
     m_config = loadJsonFromFile(m_arguments.configPath).unwrap();
     m_resourcesPath = m_config["resourcesPath"].get<std::string>();
     m_shaderSourcesPath = m_config["shaderSourcesPath"].get<std::string>();
@@ -58,8 +56,7 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
 ApplicationEnvironment::~ApplicationEnvironment() {
     glfwTerminate();
 
-    ChromeProfiler::flushThreadBuffer();
-    ChromeProfiler::finalize();
+    serializeTracedEvents(getOutputDirectory() / "profiler.json");
 }
 
 const std::filesystem::path& ApplicationEnvironment::getResourcesPath() const {
@@ -90,13 +87,18 @@ const nlohmann::json& ApplicationEnvironment::getConfig() const {
     return m_config;
 }
 
+const std::filesystem::path& ApplicationEnvironment::getOutputDirectory() const {
+    return m_arguments.outputDir;
+}
+
 Result<ApplicationEnvironment::Parameters> parse(const int32_t argc, char** argv) {
     ApplicationEnvironment::Parameters args{};
     CommandLineParser parser{};
-    parser.addOption("config", args.configPath, true);
+    parser.addOption("config", args.configPath, /*isRequired=*/true);
     parser.addOption("scene", args.scene);
     parser.addOption("enable_ray_tracing", args.enableRayTracingExtension);
     parser.addOption("log_level", args.logLevel);
+    parser.addOption("output_dir", args.outputDir);
     if (!parser.parse(argc, argv).isValid()) {
         return resultError("Failed to parse input arguments!");
     }

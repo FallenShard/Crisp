@@ -295,3 +295,6 @@ profile.json
 
 # RenderDoc
 *.cap
+
+# Output folder
+Output/*
