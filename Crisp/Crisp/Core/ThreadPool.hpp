@@ -3,12 +3,11 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 
 #include <rigtorp/MPMCQueue.h>
-
-#include <Crisp/Core/ChromeProfiler.hpp>
 
 namespace crisp {
 
@@ -59,8 +58,6 @@ public:
             auto& worker = m_workers[i];
             worker.index = static_cast<int32_t>(i);
             worker.thread = std::thread([this, i]() {
-                auto& context = m_workers.at(i);
-                ChromeProfiler::setThreadName("Worker " + std::to_string(context.index));
                 while (true) {
                     TaskType task = m_taskQueue.pop();
                     if (task == nullptr) {
@@ -96,8 +93,6 @@ public:
                     //    }*/
                     //}
                 }
-
-                ChromeProfiler::flushThreadBuffer();
             });
         }
     }
