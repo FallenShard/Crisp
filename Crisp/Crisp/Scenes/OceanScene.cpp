@@ -607,7 +607,7 @@ int OceanScene::applyFFT(std::string image) {
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
             });
-        logger->info("{} R: {} W: {}", image + "BitReversePass0", imageLayerRead, imageLayerWrite);
+        CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass0", imageLayerRead, imageLayerWrite);
 
         std::swap(imageLayerRead, imageLayerWrite);
     }
@@ -634,7 +634,7 @@ int OceanScene::applyFFT(std::string image) {
                     cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
             };
 
-        logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
+        CRISP_LOGI("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
         if (i == 0) {
             m_renderGraph->addDependency(
@@ -688,7 +688,7 @@ int OceanScene::applyFFT(std::string image) {
                     cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{1, logN});
             };
 
-        logger->info("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
+        CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
 
         m_renderGraph->addDependency(
             image + "TrueFFTPass" + std::to_string(logN - 1),
@@ -721,7 +721,7 @@ int OceanScene::applyFFT(std::string image) {
         fftPass.material->writeDescriptor(
             0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-        logger->info("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
+        CRISP_LOGI("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
         fftPass.preDispatchCallback =
             [i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {

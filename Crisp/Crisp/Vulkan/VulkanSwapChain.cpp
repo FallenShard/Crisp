@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
 namespace crisp {

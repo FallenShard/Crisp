@@ -57,7 +57,7 @@ void Form::add(std::unique_ptr<Control> control, bool /*useFadeInAnimation*/) {
 void Form::remove(std::string controlId, float /*duration*/) {
     auto control = m_rootControlGroup->getControlById(controlId);
     if (!control) {
-        logger->warn("Attempt to delete a non-existing control with id: {}", controlId);
+        CRISP_LOGW("Attempt to delete a non-existing control with id: {}", controlId);
         return;
     }
 
@@ -129,9 +129,9 @@ void Form::resize(int width, int height) {
 void Form::setFocusedControl(Control* control) {
     m_focusedControl = control;
     if (m_focusedControl) {
-        logger->debug("Focused control is: {}", control->getId());
+        CRISP_LOGD("Focused control is: {}", control->getId());
     } else {
-        logger->debug("Focus cleared.");
+        CRISP_LOGD("Focus cleared.");
     }
 }
 

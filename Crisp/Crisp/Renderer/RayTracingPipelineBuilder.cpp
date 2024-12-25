@@ -2,7 +2,7 @@
 
 #include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
 RayTracingPipelineBuilder::RayTracingPipelineBuilder(Renderer& renderer)
@@ -63,25 +63,26 @@ VkPipeline RayTracingPipelineBuilder::createHandle(const VkPipelineLayout pipeli
 ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkPipeline rayTracingPipeline) {
     const VkDeviceSize baseAlignment =
         m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
-    const auto createShaderHandleBuffer = [this, baseAlignment](
-                                              const VkPipeline rayTracingPipeline, const uint32_t groupCount) {
-        const uint32_t handleSize =
-            m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupHandleSize;
-        std::vector<uint8_t> shaderHandleBuffer(groupCount * baseAlignment); // NOLINT
+    const auto createShaderHandleBuffer =
+        [this, baseAlignment](const VkPipeline rayTracingPipeline, const uint32_t groupCount) {
+            const uint32_t handleSize =
+                m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupHandleSize;
+            std::vector<uint8_t> shaderHandleBuffer(groupCount * baseAlignment); // NOLINT
 
-        vkGetRayTracingShaderGroupHandlesKHR(
-            m_renderer.getDevice().getHandle(),
-            rayTracingPipeline,
-            0,
-            groupCount,
-            shaderHandleBuffer.size(),
-            shaderHandleBuffer.data());
+            vkGetRayTracingShaderGroupHandlesKHR(
+                m_renderer.getDevice().getHandle(),
+                rayTracingPipeline,
+                0,
+                groupCount,
+                shaderHandleBuffer.size(),
+                shaderHandleBuffer.data());
 
-        for (int32_t i = static_cast<int32_t>(groupCount) - 1; i >= 0; --i) {
-            memcpy(&shaderHandleBuffer[i * baseAlignment], &shaderHandleBuffer[i * handleSize], handleSize); // NOLINT
-        }
-        return shaderHandleBuffer;
-    };
+            for (int32_t i = static_cast<int32_t>(groupCount) - 1; i >= 0; --i) {
+                memcpy(
+                    &shaderHandleBuffer[i * baseAlignment], &shaderHandleBuffer[i * handleSize], handleSize); // NOLINT
+            }
+            return shaderHandleBuffer;
+        };
 
     std::vector<uint8_t> shaderHandleStorage(
         createShaderHandleBuffer(rayTracingPipeline, static_cast<uint32_t>(m_groups.size())));

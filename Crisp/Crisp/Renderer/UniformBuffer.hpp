@@ -3,8 +3,9 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
-#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+
 
 namespace crisp {
 class UniformBuffer {
@@ -33,19 +34,16 @@ public:
     }
 
     template <typename T>
-    void updateStagingBuffer(const T& data) {
+    void updateStagingBuffer2(const T& data, const uint32_t regionIndex) {
         using BaseType = typename std::remove_cvref_t<T>;
-        updateStagingBuffer(&data, sizeof(BaseType), 0);
+        updateStagingBuffer2(&data, sizeof(BaseType), 0, regionIndex);
     }
 
-    void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
-    void updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex);
+    void updateStagingBuffer2(const void* data, VkDeviceSize size, VkDeviceSize offset, uint32_t regionIndex);
+    void updateDeviceBuffer(VkCommandBuffer commandBuffer);
 
-    uint32_t getDynamicOffset(uint32_t currentFrameIndex) const;
     VkDescriptorBufferInfo getDescriptorInfo() const;
     VkDescriptorBufferInfo getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const;
-
-    VkDescriptorBufferInfo getDescriptorInfo(uint32_t currentFrameIndex) const;
 
 private:
     Renderer* m_renderer;
@@ -55,7 +53,8 @@ private:
     std::unique_ptr<VulkanBuffer> m_buffer;
     std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
 
-    uint32_t m_framesToUpdateOnGpu;
+    bool m_hasUpdate{false};
+    uint32_t m_lastUpdatedRegion{~0u};
 };
 
 struct DynamicBufferView {

@@ -4,9 +4,9 @@
 #include <vector>
 
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
 
 namespace crisp {
 struct MemoryRegion {

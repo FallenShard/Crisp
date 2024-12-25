@@ -7,7 +7,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp {
 constexpr const char* DepthPrePass = "depthPrePass";

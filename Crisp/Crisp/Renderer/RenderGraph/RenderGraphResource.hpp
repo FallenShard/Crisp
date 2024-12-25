@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
 

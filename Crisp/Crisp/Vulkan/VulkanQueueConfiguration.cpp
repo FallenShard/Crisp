@@ -3,13 +3,13 @@
 namespace crisp {
 namespace {
 QueueTypeFlags getQueueFamilyType(
-    const VulkanContext& context,
+    const VulkanInstance& instance,
     const VulkanPhysicalDevice& physicalDevice,
     uint32_t familyIndex,
     VkQueueFlags queueFlags) {
     QueueTypeFlags familyType;
 
-    if (physicalDevice.supportsPresentation(familyIndex, context.getSurface())) {
+    if (physicalDevice.supportsPresentation(familyIndex, instance.getSurface())) {
         familyType |= QueueType::Present;
     }
 
@@ -30,7 +30,7 @@ QueueTypeFlags getQueueFamilyType(
 
 Result<uint32_t> findQueueFamilyIndex(
     const QueueTypeFlags queueType,
-    const VulkanContext& context,
+    const VulkanInstance& instance,
     const VulkanPhysicalDevice& physicalDevice,
     const std::vector<VkQueueFamilyProperties>& exposedQueueFamilies,
     const std::vector<uint32_t>& usedQueueFamilyCounts) {
@@ -39,7 +39,7 @@ Result<uint32_t> findQueueFamilyIndex(
         for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
             const auto& family = exposedQueueFamilies.at(i);
             const auto familyType =
-                getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+                getQueueFamilyType(instance, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
             if (((familyType & QueueType::AsyncCompute) == QueueType::AsyncCompute) &&
                 !(familyType & QueueType::Graphics)) {
                 return i;
@@ -50,7 +50,8 @@ Result<uint32_t> findQueueFamilyIndex(
     // Check for exact family match
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
-        const auto familyType = getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+        const auto familyType =
+            getQueueFamilyType(instance, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
         if (familyType == queueType && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }
@@ -59,7 +60,8 @@ Result<uint32_t> findQueueFamilyIndex(
     // Find a more general family for the queueType
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
-        const auto familyType = getQueueFamilyType(context, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+        const auto familyType =
+            getQueueFamilyType(instance, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
         if ((familyType & queueType) && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }
@@ -70,7 +72,7 @@ Result<uint32_t> findQueueFamilyIndex(
 
 Result<std::vector<QueueIdentifier>> findQueueIds(
     const std::vector<QueueTypeFlags>& requestedQueueTypes,
-    const VulkanContext& context,
+    const VulkanInstance& instance,
     const VulkanPhysicalDevice& physicalDevice) {
     // Get the queue families that our current physical device has
     const auto exposedQueueFamilies = physicalDevice.queryQueueFamilyProperties();
@@ -82,7 +84,8 @@ Result<std::vector<QueueIdentifier>> findQueueIds(
 
     for (uint32_t i = 0; i < requestedQueueTypes.size(); ++i) {
         const auto familyIndex =
-            findQueueFamilyIndex(requestedQueueTypes[i], context, physicalDevice, exposedQueueFamilies, usedFamilyCounts)
+            findQueueFamilyIndex(
+                requestedQueueTypes[i], instance, physicalDevice, exposedQueueFamilies, usedFamilyCounts)
                 .unwrap();
 
         queueIds[i].familyIndex = familyIndex;
@@ -95,11 +98,11 @@ Result<std::vector<QueueIdentifier>> findQueueIds(
 
 VulkanQueueConfiguration createQueueConfiguration(
     const std::vector<QueueTypeFlags>& requestedQueueTypes,
-    const VulkanContext& context,
+    const VulkanInstance& instance,
     const VulkanPhysicalDevice& physicalDevice) {
     VulkanQueueConfiguration config;
     config.types = requestedQueueTypes;
-    config.identifiers = findQueueIds(requestedQueueTypes, context, physicalDevice).unwrap();
+    config.identifiers = findQueueIds(requestedQueueTypes, instance, physicalDevice).unwrap();
 
     const auto queueFamilies = physicalDevice.queryQueueFamilyProperties();
     std::vector<uint32_t> familyQueueCounts(queueFamilies.size(), 0);
@@ -126,14 +129,14 @@ VulkanQueueConfiguration createQueueConfiguration(
 }
 
 VulkanQueueConfiguration createDefaultQueueConfiguration(
-    const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice) {
+    const VulkanInstance& instance, const VulkanPhysicalDevice& physicalDevice) {
     return createQueueConfiguration(
         {
             QueueType::GeneralWithPresent,
             QueueType::AsyncCompute,
             QueueType::Transfer,
         },
-        context,
+        instance,
         physicalDevice);
 }
 } // namespace crisp

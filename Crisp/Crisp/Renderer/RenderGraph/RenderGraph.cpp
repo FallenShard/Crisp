@@ -4,7 +4,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp::rg {
 namespace {
@@ -331,7 +331,7 @@ void RenderGraph::execute(const VkCommandBuffer cmdBuffer, const uint32_t virtua
 
     const RenderPassExecutionContext executionCtx{VulkanCommandBuffer{cmdBuffer}, virtualFrameIndex};
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
-        // logger->info("Executing {}, pass: {}", virtualFrameIndex, pass.name);
+        // CRISP_LOGI("Executing {}, pass: {}", virtualFrameIndex, pass.name);
         if (pass.type == PassType::Rasterizer) {
             synchronizeInputResources(pass, executionCtx);
 
@@ -432,7 +432,7 @@ std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelin
     }
 
     for (auto&& [idx, t] : std::views::enumerate(timelines)) {
-        logger->info(
+        CRISP_LOGI(
             "{}. {}-{}: W: {} ({}), R: {} ({})",
             idx,
             m_resources[idx].name,
@@ -562,7 +562,7 @@ void RenderGraph::determineAliasedResurces() {
         }
     }
 
-    logger->info("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
+    CRISP_LOGI("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
 }
 
 void RenderGraph::createPhysicalResources(
@@ -621,10 +621,10 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
     m_physicalPasses.reserve(m_passes.size());
     for (auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         if (pass.type != PassType::Rasterizer) {
-            logger->info("Skipping pass {} as it's not a rasterizer pass.", pass.name);
+            CRISP_LOGI("Skipping pass {} as it's not a rasterizer pass.", pass.name);
             continue;
         }
-        logger->debug("Building render pass: {}\n", pass.name);
+        CRISP_LOGD("Building render pass: {}\n", pass.name);
 
         VulkanRenderPassBuilder builder{};
         builder.setSubpassCount(1)

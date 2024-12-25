@@ -11,7 +11,7 @@ namespace {
 auto logger = spdlog::stdout_color_mt("ApplicationEnvironment");
 
 void glfwErrorHandler(int errorCode, const char* message) {
-    logger->error("GLFW error code: {}. Message: {}", errorCode, message);
+    CRISP_LOGE("GLFW error code: {}. Message: {}", errorCode, message);
 }
 
 void setSpdlogLevel(const std::string_view level) {
@@ -44,11 +44,11 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
 
     spdlog::set_pattern("%^[%T.%e][%t][%n][%l]:%$ %v");
     setSpdlogLevel(m_arguments.logLevel);
-    logger->info("Current path: {}", std::filesystem::current_path().string());
+    CRISP_LOGI("Current path: {}", std::filesystem::current_path().string());
 
     glfwSetErrorCallback(glfwErrorHandler);
     if (glfwInit() == GLFW_FALSE) {
-        logger->critical("Could not initialize GLFW library!\n");
+        CRISP_LOGF("Could not initialize GLFW library!\n");
         std::terminate();
     }
 }

@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 #include <Crisp/PathTracer/RayTracerUpdate.hpp>
 

@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
 
 #include <utility>
 
@@ -42,7 +42,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
     }
 
     if (!allocationBlock) {
-        logger->info("[{}] Allocating a block of size: {} MB.", m_tag, (m_blockSize >> 20));
+        CRISP_LOGI("[{}] Allocating a block of size: {} MB.", m_tag, (m_blockSize >> 20));
         m_allocationBlocks.push_back(allocateBlock(m_blockSize));
         std::tie(foundChunkOffset, foundChunkSize) = m_allocationBlocks.back().findFreeChunk(size, alignment);
         if (foundChunkSize == 0) {
@@ -59,7 +59,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
         foundChunkOffset + ((alignment - (foundChunkOffset & (alignment - 1))) & (alignment - 1));
 
     const Allocation allocation{allocationBlock, alignedOffset, size};
-    logger->debug(
+    CRISP_LOGD(
         "[{}] Suballocating at [{}, {}] with alignment {}.", m_tag, allocation.offset, allocation.size, alignment);
 
     m_usedSize += allocation.size;
@@ -71,7 +71,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
 
     // Possibly add the left chunk
     if (allocation.offset > foundChunkOffset) {
-        logger->debug(
+        CRISP_LOGD(
             "[{}] Freeing before-aligned chunk at [{}, {}].",
             m_tag,
             foundChunkOffset,
@@ -83,7 +83,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
     const uint64_t allocationEnd{allocation.offset + allocation.size};
     const uint64_t foundChunkEnd{foundChunkOffset + foundChunkSize};
     if (foundChunkEnd > allocationEnd) {
-        logger->debug(
+        CRISP_LOGD(
             "[{}] Readding free chunk at offset {} with size {}.", m_tag, allocationEnd, foundChunkEnd - allocationEnd);
         freeChunks[allocationEnd] = foundChunkEnd - allocationEnd;
     }
@@ -94,7 +94,7 @@ Result<VulkanMemoryHeap::Allocation> VulkanMemoryHeap::allocate(uint64_t size, u
 
 void VulkanMemoryHeap::free(const Allocation& allocation) {
     AllocationBlock& block = *allocation.allocationBlock;
-    logger->debug("[{}] Freeing a suballocation [{}, {}]", m_tag, allocation.offset, allocation.size);
+    CRISP_LOGD("[{}] Freeing a suballocation [{}, {}]", m_tag, allocation.offset, allocation.size);
     m_usedSize -= allocation.size;
     block.freeChunks[allocation.offset] = allocation.size;
     block.usedChunks.erase(allocation.offset);
@@ -104,14 +104,14 @@ void VulkanMemoryHeap::free(const Allocation& allocation) {
     }
 
     if (block.freeChunks.size() > 10) {
-        logger->debug("[{}] Possible memory fragmentation - free chunks: {}", m_tag, block.freeChunks.size());
+        CRISP_LOGD("[{}] Possible memory fragmentation - free chunks: {}", m_tag, block.freeChunks.size());
     }
 
     if (block.freeChunks.size() == 1 && block.freeChunks.begin()->second == m_blockSize) {
         freeBlock(block);
         m_allocationBlocks.remove(block);
 
-        logger->debug("[{}] Freed a memory block.", m_tag);
+        CRISP_LOGD("[{}] Freed a memory block.", m_tag);
     }
 }
 

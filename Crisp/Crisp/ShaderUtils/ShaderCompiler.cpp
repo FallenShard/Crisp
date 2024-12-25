@@ -19,16 +19,16 @@ auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 
 void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir) {
     if (!std::filesystem::exists(inputDir)) {
-        logger->error("Specified input directory {} doesn't exist!", inputDir.string());
+        CRISP_LOGE("Specified input directory {} doesn't exist!", inputDir.string());
         return;
     }
 
-    logger->info("Processing and compiling shaders from: {}", inputDir.string());
-    logger->info("Saving .spv modules in: {}", outputDir.string());
+    CRISP_LOGI("Processing and compiling shaders from: {}", inputDir.string());
+    CRISP_LOGI("Saving .spv modules in: {}", outputDir.string());
 
     if (!std::filesystem::exists(outputDir)) {
         if (!std::filesystem::create_directories(outputDir)) {
-            logger->error("Failed to create output directory {}", outputDir.string());
+            CRISP_LOGE("Failed to create output directory {}", outputDir.string());
             return;
         }
     }
@@ -47,16 +47,16 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         }
 
         if (inputPath.extension() != kGlslExtension) {
-            logger->warn("{} has no .glsl extension!", inputPath.string());
+            CRISP_LOGW("{} has no .glsl extension!", inputPath.string());
             continue;
         }
 
         // shader-name.<stage>.glsl is the file name format
         // First getting the stem and then its "extension" will give us the stage name
-        const std::string shaderType =
-            inputPath.stem().extension().string().substr(1); // Extension starts with a ., which we skip here
+        const std::string shaderType = inputPath.stem().extension().string().substr(1); // Extension starts with a .,
+                                                                                        // which we skip here
         if (!isGlslShaderExtension(shaderType)) {
-            logger->warn("{} is not a valid glsl shader type!", shaderType);
+            CRISP_LOGW("{} is not a valid glsl shader type!", shaderType);
             continue;
         }
 
@@ -65,18 +65,19 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
         auto maybeGlslSource{preprocessGlslSource(inputPath)};
         if (!maybeGlslSource.hasValue()) {
-            logger->error(maybeGlslSource.getError());
+            CRISP_LOGE(maybeGlslSource.getError());
             continue;
         }
         const auto glslSource{std::move(maybeGlslSource).unwrap()};
-        const std::filesystem::file_time_type outputModifiedTs = std::filesystem::exists(outputPath)
-                                                                     ? std::filesystem::last_write_time(outputPath)
-                                                                     : std::filesystem::file_time_type{};
+        const std::filesystem::file_time_type outputModifiedTs =
+            std::filesystem::exists(outputPath)
+                ? std::filesystem::last_write_time(outputPath)
+                : std::filesystem::file_time_type{};
         if (glslSource.lastModifiedRecursive > outputModifiedTs) {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
             const std::filesystem::path tempInputPath = inputDir / "temp.glsl";
 
-            logger->info("Compiling {}", inputPath.filename().string());
+            CRISP_LOGI("Compiling {}", inputPath.filename().string());
 
             stringToFile(tempInputPath, glslSource.sourceCode).unwrap();
 
@@ -89,7 +90,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             // Open a subprocess to compile this shader
             FILE* pipe = _popen(command.c_str(), "rt");
             if (!pipe) {
-                logger->error("Failed to open the pipe for {}", command);
+                CRISP_LOGE("Failed to open the pipe for {}", command);
                 _pclose(pipe);
                 continue;
             }
@@ -100,14 +101,14 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe)) {
                 const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
                 if (view.substr(0, 5) == "ERROR") {
-                    logger->error("{}", view);
+                    CRISP_LOGE("{}", view);
                     ++errorCount;
                 } else if (view.substr(0, 7) == "WARNING") {
-                    logger->warn("{}", view);
+                    CRISP_LOGW("{}", view);
                 }
             }
             if (errorCount > 0) {
-                logger->critical("Encountered errors while compiling: {}", inputPath.stem().string());
+                CRISP_LOGF("Encountered errors while compiling: {}", inputPath.stem().string());
                 std::filesystem::remove(tempInputPath);
                 std::abort();
             }
@@ -124,10 +125,10 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
                     std::filesystem::rename(tempOutputPath, outputPath);
                 } else {
-                    logger->error("Pipe process returned: {}", retVal);
+                    CRISP_LOGE("Pipe process returned: {}", retVal);
                 }
             } else {
-                logger->error("Failed to read the pipe to the end.");
+                CRISP_LOGE("Failed to read the pipe to the end.");
             }
 
             std::filesystem::remove(tempInputPath);
@@ -137,7 +138,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             ++shadersSkipped;
         }
     }
-    logger->info("{} shaders recompiled, {} shaders skipped.", shadersRecompiled, shadersSkipped);
+    CRISP_LOGI("{} shaders recompiled, {} shaders skipped.", shadersRecompiled, shadersSkipped);
 }
 
 Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath) {

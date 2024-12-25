@@ -88,7 +88,7 @@ const char* toString(const VkImageLayout layout) {
     case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR:
         return "FragmentShadingRateAttachment";
     default:
-        logger->critical("Unknown layout encountered: {}.", static_cast<uint32_t>(layout));
+        CRISP_LOGF("Unknown layout encountered: {}.", static_cast<uint32_t>(layout));
         return "Unknown";
     }
 }
@@ -173,7 +173,7 @@ VulkanImage::~VulkanImage() {
 
 void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range) {
     adaptSubresouceRange(m_imageType, range);
-    // logger->info(
+    // CRISP_LOGI(
     //     "Transitioned {}: {} - {} from {} to {}",
     //     m_deallocator->getTag(m_handle),
     //     static_cast<void*>(m_handle),
@@ -247,7 +247,7 @@ void VulkanImage::transitionLayout(
     subresRange.layerCount = m_imageType == VK_IMAGE_TYPE_3D ? 1 : subresRange.layerCount;
 
     if (matchesLayout(newLayout, subresRange)) {
-        // logger->info(
+        // CRISP_LOGI(
         //     "Matching {} : {} - {} from {} to {}",
         //     m_deallocator->getTag(m_handle),
         //     static_cast<void*>(m_handle),
@@ -596,7 +596,7 @@ std::pair<VkAccessFlags, VkAccessFlags> VulkanImage::determineAccessMasks(
         }
     }
 
-    logger->critical("Unsupported layout transition: {} to {}!", toString(oldLayout), toString(newLayout));
+    CRISP_LOGF("Unsupported layout transition: {} to {}!", toString(oldLayout), toString(newLayout));
     std::exit(-1);
 }
 

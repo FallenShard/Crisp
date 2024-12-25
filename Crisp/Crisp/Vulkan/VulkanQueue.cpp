@@ -1,6 +1,6 @@
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 VulkanQueue::VulkanQueue(

@@ -6,12 +6,13 @@
 #include <Crisp/IO/FontLoader.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
+
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -84,13 +85,13 @@ RenderSystem::RenderSystem(Renderer* renderer)
 
     // Create pipelines for different types of drawable objects
     createPipelines();
-    logger->info("Pipelines initialized");
+    CRISP_LOGI("Pipelines initialized");
 
     // Gui texture atlas
     loadTextureAtlas();
     m_linearClampSampler = std::make_unique<VulkanSampler>(
         m_renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-    logger->info("Texture initialized");
+    CRISP_LOGI("Texture initialized");
 
     // Initialize gui render target rendering resources
     initGuiRenderTargetResources();
@@ -133,7 +134,7 @@ RenderSystem::RenderSystem(Renderer* renderer)
     m_tcTransforms =
         std::make_unique<DynamicUniformBufferResource>(m_renderer, tcSets, static_cast<uint32_t>(sizeof(glm::vec4)), 1);
 
-    logger->info("Initialized");
+    CRISP_LOGI("Initialized");
 }
 
 RenderSystem::~RenderSystem() {}

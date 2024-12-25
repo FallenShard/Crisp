@@ -4,8 +4,8 @@
 #include <memory>
 
 #include <Crisp/Core/Result.hpp>
-#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 
 namespace crisp {
 struct DeviceMemoryMetrics {

@@ -3,7 +3,7 @@
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 #include <vector>
 

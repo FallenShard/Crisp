@@ -220,7 +220,7 @@ FrameContext Renderer::beginFrame() {
 
     const std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
     if (!swapImageIndex.has_value()) {
-        logger->error("Failed to acquire swap chain image!");
+        CRISP_LOGE("Failed to acquire swap chain image!");
         return {};
     }
 
@@ -259,7 +259,7 @@ void Renderer::drawFrame() {
 }
 
 void Renderer::finish() {
-    logger->warn("Calling vkDeviceWaitIdle()");
+    CRISP_LOGW("Calling vkDeviceWaitIdle()");
     m_device->waitIdle();
 }
 
@@ -343,16 +343,16 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
         VK_NULL_HANDLE,
         &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        logger->warn("Swap chain is 'out of date'");
+        CRISP_LOGW("Swap chain is 'out of date'");
         recreateSwapChain();
         return std::nullopt;
     }
     if (result == VK_SUBOPTIMAL_KHR) {
-        logger->warn("Unable to acquire optimal VulkanSwapChain image!");
+        CRISP_LOGW("Unable to acquire optimal VulkanSwapChain image!");
         return std::nullopt;
     }
     if (result != VK_SUCCESS) {
-        logger->critical("Encountered an unknown error with vkAcquireNextImageKHR!");
+        CRISP_LOGF("Encountered an unknown error with vkAcquireNextImageKHR!");
         return std::nullopt;
     }
 

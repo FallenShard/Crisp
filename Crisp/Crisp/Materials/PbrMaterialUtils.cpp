@@ -62,7 +62,7 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
                 return;
             }
 
-            logger->warn("Image does not exist at path: '{}'.", path.string());
+            CRISP_LOGW("Image does not exist at path: '{}'.", path.string());
         };
 
     PbrImageGroup group{};
@@ -121,7 +121,7 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
 }
 
 void removePbrTexturesFromImageCache(const std::string& imageGroupName, ImageCache& imageCache) {
-    logger->info("Removing PBR images with key: {}", imageGroupName);
+    CRISP_LOGI("Removing PBR images with key: {}", imageGroupName);
     const auto removeTexAndView = [&imageCache, &imageGroupName](const std::string_view mapName) {
         const std::string key = fmt::format("{}-{}-0", imageGroupName, mapName);
         imageCache.removeImage(key);

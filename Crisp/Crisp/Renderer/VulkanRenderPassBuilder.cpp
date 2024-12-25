@@ -1,6 +1,6 @@
 #include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
 // Retrieve number of channels for a given format

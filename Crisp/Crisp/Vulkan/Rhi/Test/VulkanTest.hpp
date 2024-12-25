@@ -7,15 +7,13 @@
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Core/Test/ResultTestUtils.hpp>
 #include <Crisp/Core/Window.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 #include <Crisp/Vulkan/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
-
-#include <GLFW/glfw3.h>
 
 namespace crisp {
 MATCHER(HandleIsValid, "Checks whether the handle is not null.") {
@@ -49,24 +47,24 @@ protected:
                 glm::ivec2{0, 0}, glm::ivec2{kDefaultWidth, kDefaultHeight}, "unit_test", WindowVisibility::Hidden);
         }
 
-        context_ = std::make_unique<VulkanContext>(
+        instance_ = std::make_unique<VulkanInstance>(
             surfacePolicy == SurfacePolicy::HiddenWindow ? window_->createSurfaceCallback() : nullptr,
             ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
             true);
         physicalDevice_ = std::make_unique<VulkanPhysicalDevice>(
-            context_->selectPhysicalDevice(createDefaultDeviceExtensions()).unwrap());
+            selectPhysicalDevice(*instance_, createDefaultDeviceExtensions()).unwrap());
         device_ = std::make_unique<VulkanDevice>(
             *physicalDevice_,
             surfacePolicy == SurfacePolicy::HiddenWindow
-                ? createDefaultQueueConfiguration(*context_, *physicalDevice_)
-                : createQueueConfiguration({QueueType::General}, *context_, *physicalDevice_),
+                ? createDefaultQueueConfiguration(*instance_, *physicalDevice_)
+                : createQueueConfiguration({QueueType::General}, *instance_, *physicalDevice_),
             kRendererVirtualFrameCount);
     }
 
     static void TearDownTestSuite() {
         device_.reset();
         physicalDevice_.reset();
-        context_.reset();
+        instance_.reset();
 
         glfwTerminate();
     }
@@ -81,7 +79,7 @@ protected:
     inline static constexpr uint32_t kDefaultHeight = 200;
 
     inline static std::unique_ptr<Window> window_;
-    inline static std::unique_ptr<VulkanContext> context_;
+    inline static std::unique_ptr<VulkanInstance> instance_;
     inline static std::unique_ptr<VulkanPhysicalDevice> physicalDevice_;
     inline static std::unique_ptr<VulkanDevice> device_;
 };

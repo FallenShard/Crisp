@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 namespace crisp {
 namespace {
@@ -11,22 +11,29 @@ using ::testing::IsNull;
 using ::testing::Not;
 using ::testing::SizeIs;
 
+TEST(VulkanPhysicalDeviceSelectionTest, DeviceSelection) {
+    const VulkanInstance instance(nullptr, {}, false);
+    EXPECT_THAT(instance.getSurface(), IsNull());
+    EXPECT_THAT(instance.getHandle(), Not(IsNull()));
+    EXPECT_THAT(selectPhysicalDevice(instance, {}), Not(HasError()));
+}
+
 TEST_F(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCapabilities) {
-    const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
-    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(context_->getSurface());
+    const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}).unwrap());
+    const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(instance_->getSurface());
     EXPECT_TRUE(queueFamilies.presentFamily.has_value());
     EXPECT_TRUE(queueFamilies.graphicsFamily.has_value());
     EXPECT_TRUE(queueFamilies.computeFamily.has_value());
     EXPECT_TRUE(queueFamilies.transferFamily.has_value());
 
-    const auto surfaceSupport = physicalDevice.querySurfaceSupport(context_->getSurface());
+    const auto surfaceSupport = physicalDevice.querySurfaceSupport(instance_->getSurface());
     EXPECT_THAT(surfaceSupport.formats, Not(IsEmpty()));
     EXPECT_THAT(surfaceSupport.presentModes, Not(IsEmpty()));
 }
 
 TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDefaultQueueConfiguration) {
-    const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
-    const auto queueConfig = createDefaultQueueConfiguration(*context_, physicalDevice);
+    const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}).unwrap());
+    const auto queueConfig = createDefaultQueueConfiguration(*instance_, physicalDevice);
     EXPECT_THAT(queueConfig.createInfos, SizeIs(3));
     EXPECT_THAT(queueConfig.priorities, SizeIs(Ge(3)));
     EXPECT_THAT(queueConfig.identifiers, SizeIs(3));
@@ -34,17 +41,16 @@ TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDefaultQueueConfiguration) {
 }
 
 TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateLogicalDevice) {
-    const VulkanPhysicalDevice physicalDevice(context_->selectPhysicalDevice({}).unwrap());
+    const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}).unwrap());
 
     const VkDevice device =
-        createLogicalDeviceHandle(physicalDevice, createDefaultQueueConfiguration(*context_, physicalDevice));
+        createLogicalDeviceHandle(physicalDevice, createDefaultQueueConfiguration(*instance_, physicalDevice));
     EXPECT_THAT(device, Not(IsNull()));
     vkDestroyDevice(device, nullptr);
 }
 
 TEST_F(VulkanPhysicalDeviceTest, Features) {
-    const auto& features = physicalDevice_->getFeatures();
-    EXPECT_TRUE(features.tessellationShader);
+    EXPECT_TRUE(physicalDevice_->getFeatures().tessellationShader);
 }
 
 TEST_F(VulkanPhysicalDeviceTest, FindDepthFormat) {

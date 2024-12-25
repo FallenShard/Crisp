@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp {

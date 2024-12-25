@@ -35,7 +35,7 @@ const std::vector<std::string> kSceneNames = {
 
 std::unique_ptr<Scene> createScene(
     const std::string& name, Renderer* renderer, Window* window, const nlohmann::json& args) {
-    logger->info("Creating Scene: {}", name);
+    CRISP_LOGI("Creating Scene: {}", name);
     if (name == kSceneNames[0]) {
         return std::make_unique<AmbientOcclusionScene>(renderer, window);
     }

@@ -3,7 +3,7 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 #include <Crisp/ShaderUtils/Reflection.hpp>
 

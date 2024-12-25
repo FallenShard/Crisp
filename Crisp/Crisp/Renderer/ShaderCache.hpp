@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 #include <filesystem>
 #include <optional>

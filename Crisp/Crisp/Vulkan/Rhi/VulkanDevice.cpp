@@ -1,7 +1,9 @@
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+
+#include <ranges>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 namespace {

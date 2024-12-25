@@ -1,7 +1,7 @@
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 
-#include <Crisp/Vulkan/VulkanChecks.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 

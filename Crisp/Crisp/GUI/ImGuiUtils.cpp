@@ -1,7 +1,7 @@
 #include <Crisp/Gui/ImGuiUtils.hpp>
 
-#include <Crisp/Vulkan/VulkanChecks.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
@@ -65,8 +65,10 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
 }
 
 void shutdownImGui(Renderer& renderer) {
-    vkDestroyDescriptorPool(renderer.getDevice().getHandle(), imGuiPool, nullptr);
-    ImGui_ImplVulkan_Shutdown();
+    if (imGuiPool) {
+        vkDestroyDescriptorPool(renderer.getDevice().getHandle(), imGuiPool, nullptr);
+        ImGui_ImplVulkan_Shutdown();
+    }
 }
 
 void prepareImGuiFrame() {

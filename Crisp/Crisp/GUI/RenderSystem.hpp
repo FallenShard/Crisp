@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
 #include <Crisp/IO/FontLoader.hpp>
@@ -65,10 +65,7 @@ public:
     void drawQuad(unsigned int transformId, uint32_t colorResourceId, float depth) const;
     void drawTexture(unsigned int transformId, unsigned int colorId, unsigned int texCoordId, float depth) const;
     void drawText(
-        unsigned int textRenderResourceId,
-        unsigned int transformResourceId,
-        uint32_t colorResourceId,
-        float depth) const;
+        unsigned int textRenderResourceId, unsigned int transformResourceId, uint32_t colorResourceId, float depth) const;
     void drawDebugRect(Rect<float> rect, glm::vec4 color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)) const;
 
     void submitDrawCommands();

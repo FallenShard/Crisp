@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp::detail {
 const char* toString(VkResult result) noexcept;

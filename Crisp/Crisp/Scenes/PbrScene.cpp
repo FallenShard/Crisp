@@ -324,7 +324,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
     if (absPath.extension() == ".gltf") {
         auto [images, models] = loadGltfAsset(absPath).unwrap();
-        logger->info("Loaded {} models and {} images from {}.", models.size(), images.size(), absPath.generic_string());
+        CRISP_LOGI("Loaded {} models and {} images from {}.", models.size(), images.size(), absPath.generic_string());
         addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
         for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
@@ -332,7 +332,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
             const std::string entityName = fmt::format("renderObject_{}", idx);
             m_shaderBallPbrMaterialKey = fmt::format("material_{}", idx);
 
-            logger->info("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
+            CRISP_LOGI("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
 
             m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
 

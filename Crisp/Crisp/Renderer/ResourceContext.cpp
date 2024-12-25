@@ -1,6 +1,6 @@
 #include <Crisp/Renderer/ResourceContext.hpp>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp {
 ResourceContext::ResourceContext(Renderer* renderer)

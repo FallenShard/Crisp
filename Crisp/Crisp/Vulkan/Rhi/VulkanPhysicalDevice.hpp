@@ -5,7 +5,8 @@
 #include <vector>
 
 #include <Crisp/Core/Result.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 
 namespace crisp {
 struct QueueFamilyIndices {
@@ -33,36 +34,37 @@ public:
     ~VulkanPhysicalDevice() = default;
 
     VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
-    VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept;
     VulkanPhysicalDevice& operator=(const VulkanPhysicalDevice& other) = delete;
-    VulkanPhysicalDevice& operator=(VulkanPhysicalDevice&& other) noexcept;
+
+    VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept = default;
+    VulkanPhysicalDevice& operator=(VulkanPhysicalDevice&& other) noexcept = default;
 
     inline VkPhysicalDevice getHandle() const {
         return m_handle;
     }
 
     inline const VkPhysicalDeviceFeatures& getFeatures() const {
-        return m_features.features;
+        return m_properties->features.features;
     }
 
     inline const VkPhysicalDeviceFeatures2& getFeatures2() const {
-        return m_features;
+        return m_properties->features;
     }
 
     inline const VkPhysicalDeviceProperties& getProperties() const {
-        return m_properties.properties;
+        return m_properties->properties.properties;
     }
 
     inline const VkPhysicalDeviceLimits& getLimits() const {
-        return m_properties.properties.limits;
+        return m_properties->properties.properties.limits;
     }
 
     inline const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const {
-        return m_rayTracingPipelineProperties;
+        return m_properties->rayTracingProperties;
     }
 
     inline const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
-        return m_memoryProperties.memoryProperties;
+        return m_properties->memoryProperties.memoryProperties;
     }
 
     bool isSuitable(VkSurfaceKHR surface, const std::vector<std::string>& deviceExtensions) const;
@@ -93,30 +95,36 @@ private:
 
     bool supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const;
 
-    VkPhysicalDevice m_handle; // Implicitly cleaned up with VkInstance
+    VkPhysicalDevice m_handle{VK_NULL_HANDLE}; // Implicitly cleaned up with VkInstance
 
-    VkPhysicalDeviceFeatures2 m_features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-    VkPhysicalDeviceVulkan11Features m_features11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
-    VkPhysicalDeviceVulkan12Features m_features12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
-    VkPhysicalDeviceVulkan13Features m_features13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR m_rayTracingFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
+    struct Properties {
+        VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+        VkPhysicalDeviceVulkan11Features features11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+        VkPhysicalDeviceVulkan12Features features12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+        VkPhysicalDeviceVulkan13Features features13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
 
-    VkPhysicalDeviceProperties2 m_properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-    VkPhysicalDeviceVulkan11Properties m_properties11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES};
-    VkPhysicalDeviceVulkan12Properties m_properties12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES};
-    VkPhysicalDeviceVulkan13Properties m_properties13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES};
-    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+        VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        VkPhysicalDeviceVulkan11Properties properties11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES};
+        VkPhysicalDeviceVulkan12Properties properties12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES};
+        VkPhysicalDeviceVulkan13Properties properties13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES};
+        VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingProperties{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
 
-    VkPhysicalDeviceMemoryProperties2 m_memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+        VkPhysicalDeviceMemoryProperties2 memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+    };
 
+    std::unique_ptr<Properties> m_properties;
     std::vector<std::string> m_deviceExtensions;
 };
 
 std::vector<std::string> createDefaultDeviceExtensions();
 void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions);
+
+Result<VulkanPhysicalDevice> selectPhysicalDevice(
+    const VulkanInstance& instance, std::vector<std::string>&& deviceExtensions);
 
 } // namespace crisp

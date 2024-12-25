@@ -2,9 +2,9 @@
 
 #include <memory>
 
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 
 namespace crisp {

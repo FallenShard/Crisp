@@ -3,8 +3,8 @@
 #include <vector>
 
 #include <Crisp/Core/Result.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 
 namespace crisp {

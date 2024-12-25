@@ -2,7 +2,7 @@
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
@@ -40,7 +40,7 @@ RenderGraph::Node& RenderGraph::addRenderPass(const std::string& name, std::uniq
 
     const auto& [iter, inserted] = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
     m_renderer->enqueueResourceUpdate([node = iter->second.get()](VkCommandBuffer cmdBuffer) {
-        logger->info("Initializing render target layouts for {}", node->name);
+        CRISP_LOGI("Initializing render target layouts for {}", node->name);
         node->renderPass->updateInitialLayouts(cmdBuffer);
     });
     return *iter->second;
@@ -146,7 +146,7 @@ Result<> RenderGraph::sortRenderPasses() {
 
 void RenderGraph::printExecutionOrder() {
     for (uint32_t i = 0; i < m_executionOrder.size(); ++i) {
-        logger->info("{}. {}", i, m_executionOrder[i]->name);
+        CRISP_LOGI("{}. {}", i, m_executionOrder[i]->name);
     }
 }
 
@@ -174,7 +174,7 @@ void RenderGraph::addToCommandLists(const RenderNode& renderNode) {
 
 void RenderGraph::buildCommandLists(const FlatHashMap<std::string, std::unique_ptr<RenderNode>>& renderNodes) {
     for (const auto& [id, renderNode] : renderNodes) {
-        // logger->info("Building commands for {}.", id);
+        // CRISP_LOGI("Building commands for {}.", id);
         addToCommandLists(*renderNode);
     }
 }

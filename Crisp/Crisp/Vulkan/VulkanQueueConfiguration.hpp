@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Crisp/Utils/BitFlags.hpp>
-#include <Crisp/Vulkan/VulkanContext.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 
 namespace crisp {
 enum class QueueType {
@@ -30,8 +30,8 @@ struct VulkanQueueConfiguration {
 
 VulkanQueueConfiguration createQueueConfiguration(
     const std::vector<QueueTypeFlags>& requestedQueueTypes,
-    const VulkanContext& context,
+    const VulkanInstance& instance,
     const VulkanPhysicalDevice& physicalDevice);
 VulkanQueueConfiguration createDefaultQueueConfiguration(
-    const VulkanContext& context, const VulkanPhysicalDevice& physicalDevice);
+    const VulkanInstance& instance, const VulkanPhysicalDevice& physicalDevice);
 } // namespace crisp

@@ -7,7 +7,7 @@
 #include <Crisp/Gui/Label.hpp>
 #include <Crisp/Gui/StopWatch.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp::gui {
 namespace {

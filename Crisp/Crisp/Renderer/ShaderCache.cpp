@@ -26,7 +26,7 @@ VkShaderModule ShaderCache::getOrLoadShaderModule(const std::filesystem::path& s
             return existingItem->second.handle;
         }
 
-        logger->info("Reloading shader module: {}", shaderKey);
+        CRISP_LOGI("Reloading shader module: {}", shaderKey);
         vkDestroyShaderModule(m_device->getHandle(), existingItem->second.handle, nullptr);
     }
 

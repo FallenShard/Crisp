@@ -71,7 +71,7 @@ struct ObjVertexHasher {
 
 FlatHashMap<std::string, WavefrontObjMaterial> loadMaterials(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
-        logger->warn("OBJ material at {} does not exist!", path.string());
+        CRISP_LOGW("OBJ material at {} does not exist!", path.string());
         return {};
     }
 
@@ -280,12 +280,12 @@ WavefrontObjMesh loadWavefrontObj(const std::filesystem::path& objFilePath) {
 
         meshViews.back().indexCount = static_cast<uint32_t>(3 * mesh.triangles.size() - meshViews.back().firstIndex);
     } else {
-        meshViews.emplace_back(
-            objFilePath.stem().generic_string(), 0, static_cast<uint32_t>(3 * mesh.triangles.size()));
+        meshViews.emplace_back(objFilePath.stem().generic_string(), 0, static_cast<uint32_t>(3 * mesh.triangles.size()));
     }
 
-    const auto [begin, end] =
-        std::ranges::remove_if(meshViews, [](const TriangleMeshView& part) { return part.indexCount == 0; });
+    const auto [begin, end] = std::ranges::remove_if(meshViews, [](const TriangleMeshView& part) {
+        return part.indexCount == 0;
+    });
     meshViews.erase(begin, end);
 
     mesh.views = std::move(meshViews);

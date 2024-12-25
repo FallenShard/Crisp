@@ -19,7 +19,7 @@ namespace {
 auto logger = spdlog::stderr_color_mt("pt::Scene");
 
 void logEmbreeError(void*, RTCError code, const char* str) {
-    logger->error("Error code {} - {}", static_cast<uint32_t>(code), str);
+    CRISP_LOGE("Error code {} - {}", static_cast<uint32_t>(code), str);
 }
 } // namespace
 
@@ -99,7 +99,7 @@ void Scene::finishInitialization() {
 
     int err = rtcGetDeviceError(m_device);
     if (err != RTC_ERROR_NONE) {
-        logger->error("Embree error: {}", err);
+        CRISP_LOGE("Embree error: {}", err);
     }
 }
 

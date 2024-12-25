@@ -1,10 +1,9 @@
 #pragma once
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
-VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance);
 
 template <typename T>
 concept VulkanWrapperType = requires(T t) { t.getHandle(); };

@@ -6,9 +6,7 @@ namespace crisp {
 UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy updatePolicy, const void* data)
     : m_renderer(renderer)
     , m_updatePolicy(updatePolicy)
-    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount)
-    , m_singleRegionSize(0)
-    , m_buffer(nullptr) {
+    , m_singleRegionSize(size) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     auto& device = m_renderer->getDevice();
 
@@ -20,17 +18,16 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, BufferUpdatePolicy
         }
 
         m_singleRegionSize = size;
-    } else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) // Setup ring buffering
-    {
-        const VkDeviceSize minAlignment = renderer->getPhysicalDevice().getLimits().minUniformBufferOffsetAlignment;
-        const VkDeviceSize unitsOfAlignment = ((size - 1) / minAlignment) + 1;
-        m_singleRegionSize = unitsOfAlignment * minAlignment;
+    } else if (m_updatePolicy == BufferUpdatePolicy::PerFrame) {
+        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, kRendererVirtualFrameCount * size);
         m_buffer = std::make_unique<VulkanBuffer>(
             device, kRendererVirtualFrameCount * m_singleRegionSize, usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, m_singleRegionSize);
 
         if (data) {
-            updateStagingBuffer(data, size);
+            updateStagingBuffer2(data, size, 0, renderer->getCurrentVirtualFrameIndex());
+            renderer->enqueueResourceUpdate([this](VkCommandBuffer commandBuffer) {
+                updateDeviceBuffer(commandBuffer);
+            });
         }
 
         m_renderer->registerStreamingUniformBuffer(this);
@@ -41,8 +38,7 @@ UniformBuffer::UniformBuffer(Renderer* renderer, size_t size, bool isShaderStora
     : m_renderer(renderer)
     , m_updatePolicy(BufferUpdatePolicy::PerFrame)
     , m_singleRegionSize(0)
-    , m_buffer(nullptr)
-    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount) {
+    , m_buffer(nullptr) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     auto& device = m_renderer->getDevice();
 
@@ -63,8 +59,7 @@ UniformBuffer::UniformBuffer(
     : m_renderer(renderer)
     , m_updatePolicy(updatePolicy)
     , m_singleRegionSize(0)
-    , m_buffer(nullptr)
-    , m_framesToUpdateOnGpu(kRendererVirtualFrameCount) {
+    , m_buffer(nullptr) {
     auto usageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     if (isShaderStorageBuffer) {
         usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -100,24 +95,21 @@ UniformBuffer::~UniformBuffer() {
     }
 }
 
-void UniformBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
+void UniformBuffer::updateStagingBuffer2(
+    const void* data, const VkDeviceSize size, const VkDeviceSize offset, const uint32_t regionIndex) {
     m_stagingBuffer->updateFromHost(data, size, offset);
-    m_framesToUpdateOnGpu = kRendererVirtualFrameCount;
+
+    m_hasUpdate = true;
+    m_lastUpdatedRegion = regionIndex;
 }
 
-void UniformBuffer::updateDeviceBuffer(VkCommandBuffer commandBuffer, uint32_t currentFrameIndex) {
-    if (m_framesToUpdateOnGpu == 0) {
+void UniformBuffer::updateDeviceBuffer(const VkCommandBuffer commandBuffer) {
+    if (!m_hasUpdate) {
         return;
     }
 
-    m_buffer->copyFrom(
-        commandBuffer, *m_stagingBuffer, 0, currentFrameIndex * m_singleRegionSize, m_stagingBuffer->getSize());
-
-    m_framesToUpdateOnGpu--;
-}
-
-uint32_t UniformBuffer::getDynamicOffset(uint32_t currentFrameIndex) const {
-    return static_cast<uint32_t>(currentFrameIndex * m_singleRegionSize);
+    m_buffer->copyFrom(commandBuffer, *m_stagingBuffer, m_lastUpdatedRegion * m_singleRegionSize, 0, m_singleRegionSize);
+    m_hasUpdate = false;
 }
 
 VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo() const {
@@ -126,10 +118,6 @@ VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo() const {
 
 VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const {
     return {m_buffer->getHandle(), offset, range};
-}
-
-VkDescriptorBufferInfo UniformBuffer::getDescriptorInfo(uint32_t currentFrameIndex) const {
-    return {m_buffer->getHandle(), getDynamicOffset(currentFrameIndex), m_singleRegionSize};
 }
 
 } // namespace crisp

@@ -13,7 +13,7 @@ namespace {
 const auto logger = createLoggerMt("Application");
 
 [[maybe_unused]] void logFps(double frameTime, double fps) {
-    logger->debug("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
+    CRISP_LOGD("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
 }
 
 ImVec4 interpolateColor(const float t) {
@@ -43,7 +43,6 @@ Application::Application(const ApplicationEnvironment& environment)
         m_window.createSurfaceCallback(),
         createAssetPaths(environment),
         environment.getParameters().enableRayTracingExtension);
-    logger->trace("Renderer created!");
 
     m_window.resized.subscribe<&Application::onResize>(this);
     m_window.minimized.subscribe<&Application::onMinimize>(this);

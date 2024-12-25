@@ -3,7 +3,7 @@
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphBlackboard.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphUtils.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 #include <Crisp/Vulkan/VulkanRenderPass.hpp>
 

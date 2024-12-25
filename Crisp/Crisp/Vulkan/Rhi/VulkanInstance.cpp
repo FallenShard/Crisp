@@ -1,24 +1,58 @@
-#include <Crisp/Vulkan/VulkanContext.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 
 #include <ranges>
 #include <span>
 #include <unordered_set>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Vulkan/VulkanChecks.hpp>
-#include <Crisp/Vulkan/VulkanDebugUtils.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 namespace {
-auto logger = createLoggerMt("VulkanContext");
+CRISP_MAKE_LOGGER_ST("VulkanInstance");
 
 const std::vector<const char*> kValidationLayers = {"VK_LAYER_KHRONOS_validation", "VK_LAYER_KHRONOS_synchronization2"};
 
+bool printAllDebugMessages{false};
+
+VkBool32 debugMessengerCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT* data,
+    void* /*userData*/) {
+    const char* typeStr = "Unknown";
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+        typeStr = "General";
+    }
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+        typeStr = "Performance";
+    }
+    if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+        typeStr = "Validation";
+    }
+    if (strcmp(typeStr, "General") == 0 && !printAllDebugMessages) {
+        return VK_FALSE;
+    }
+
+    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+        CRISP_LOGD("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
+    } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        CRISP_LOGI("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
+    } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        CRISP_LOGW("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
+    } else {
+        CRISP_LOGE("{} {} {} \n{}", typeStr, data->messageIdNumber, data->pMessageIdName, data->pMessage);
+        // std::terminate();
+    }
+
+    return VK_FALSE;
+}
+
 Result<> assertRequiredExtensionSupport(const std::span<const char* const> requiredExtensions) {
-    logger->trace("Requesting {} instance extensions:", requiredExtensions.size());
+    CRISP_LOGI("Requesting {} instance extensions.", requiredExtensions.size());
     std::unordered_set<std::string> pendingExtensions;
     for (const auto* const extensionName : requiredExtensions) {
-        logger->trace("    {}", extensionName);
+        CRISP_LOGI(" - {}", extensionName);
         pendingExtensions.insert(std::string(extensionName));
     }
 
@@ -32,13 +66,12 @@ Result<> assertRequiredExtensionSupport(const std::span<const char* const> requi
         pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any. // NOLINT
     }
 
-    const size_t numSupportedReqExts{requiredExtensions.size() - pendingExtensions.size()};
-    logger->info("{}/{} required extensions supported.", numSupportedReqExts, requiredExtensions.size());
-
     if (!pendingExtensions.empty()) {
-        logger->error("The following required extensions are not supported:");
+        const size_t numSupportedReqExts{requiredExtensions.size() - pendingExtensions.size()};
+        CRISP_LOGW("{}/{} required extensions supported.", numSupportedReqExts, requiredExtensions.size());
+        CRISP_LOGE("The following required extensions are not supported:");
         for (const auto& ext : pendingExtensions) {
-            logger->error("    {}", ext);
+            CRISP_LOGE(" - {}", ext);
         }
 
         return resultError("Failed to support required extensions. Aborting the application.");
@@ -48,10 +81,10 @@ Result<> assertRequiredExtensionSupport(const std::span<const char* const> requi
 }
 
 Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredLayers) {
-    logger->trace("Requesting {} instance layers:", requiredLayers.size());
+    CRISP_LOGI("Requesting {} instance layers.", requiredLayers.size());
     std::unordered_set<std::string> pendingLayers;
     for (const auto* const layerName : requiredLayers) {
-        logger->trace("    {}", layerName);
+        CRISP_LOGI(" - {}", layerName);
         pendingLayers.insert(std::string(layerName));
     }
 
@@ -65,13 +98,12 @@ Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredL
         pendingLayers.erase(layer.layerName); // NOLINT
     }
 
-    const size_t supportedAndRequiredLayerCount{requiredLayers.size() - pendingLayers.size()};
-    logger->info("{}/{} required layers supported.", supportedAndRequiredLayerCount, requiredLayers.size());
-
     if (!pendingLayers.empty()) {
-        logger->error("The following required layers are not supported:");
+        const size_t supportedAndRequiredLayerCount{requiredLayers.size() - pendingLayers.size()};
+        CRISP_LOGW("{}/{} required layers supported.", supportedAndRequiredLayerCount, requiredLayers.size());
+        CRISP_LOGE("The following required layers are not supported:");
         for (const auto& ext : pendingLayers) {
-            logger->error("    {}", ext);
+            CRISP_LOGE(" - {}", ext);
         }
 
         return resultError("Failed to support required layers. Aborting...");
@@ -116,6 +148,22 @@ VkInstance createInstance(std::vector<std::string>&& requiredExtensions, const b
     return instance;
 }
 
+VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance) {
+    VkDebugUtilsMessengerCreateInfoEXT createInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    createInfo.flags = 0;
+    createInfo.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    createInfo.pfnUserCallback = debugMessengerCallback;
+
+    VkDebugUtilsMessengerEXT callback{VK_NULL_HANDLE};
+    vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback);
+    return callback;
+}
+
 VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator& surfaceCreator) {
     VkSurfaceKHR surface{VK_NULL_HANDLE};
     VK_CHECK(surfaceCreator(instance, nullptr, &surface));
@@ -123,57 +171,34 @@ VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator& surf
 }
 } // namespace
 
-VulkanContext::VulkanContext(
+VulkanInstance::VulkanInstance(
     const SurfaceCreator& surfaceCreator,
     std::vector<std::string>&& platformExtensions,
     const bool enableValidationLayers)
-    : m_instance(createInstance(std::move(platformExtensions), enableValidationLayers))
-    , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_instance) : VK_NULL_HANDLE)
-    , m_surface(surfaceCreator ? createSurface(m_instance, surfaceCreator) : VK_NULL_HANDLE) {}
+    : m_handle(createInstance(std::move(platformExtensions), enableValidationLayers))
+    , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_handle) : VK_NULL_HANDLE)
+    , m_surface(surfaceCreator ? createSurface(m_handle, surfaceCreator) : VK_NULL_HANDLE) {}
 
-VulkanContext::~VulkanContext() {
-    if (m_instance == VK_NULL_HANDLE) {
+VulkanInstance::~VulkanInstance() {
+    if (m_handle == VK_NULL_HANDLE) {
         return;
     }
 
     if (m_surface) {
-        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+        vkDestroySurfaceKHR(m_handle, m_surface, nullptr);
     }
     if (m_debugMessenger) {
-        vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+        vkDestroyDebugUtilsMessengerEXT(m_handle, m_debugMessenger, nullptr);
     }
-    vkDestroyInstance(m_instance, nullptr);
+    vkDestroyInstance(m_handle, nullptr);
 }
 
-Result<VulkanPhysicalDevice> VulkanContext::selectPhysicalDevice(std::vector<std::string>&& deviceExtensions) const {
-    uint32_t deviceCount = 0;
-    VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr));
-    CRISP_CHECK_GE(deviceCount, 0, "Vulkan found no physical devices.");
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    VK_CHECK(vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data()));
-
-    if (m_surface == VK_NULL_HANDLE) {
-        return VulkanPhysicalDevice(devices.front());
-    }
-
-    for (const auto& device : devices) {
-        VulkanPhysicalDevice physicalDevice(device);
-        if (physicalDevice.isSuitable(m_surface, deviceExtensions)) {
-            physicalDevice.setDeviceExtensions(std::move(deviceExtensions));
-            return physicalDevice;
-        }
-    }
-
-    return resultError("Failed to find a suitable physical device!");
+VkInstance VulkanInstance::getHandle() const {
+    return m_handle;
 }
 
-VkSurfaceKHR VulkanContext::getSurface() const {
+VkSurfaceKHR VulkanInstance::getSurface() const {
     return m_surface;
-}
-
-VkInstance VulkanContext::getInstance() const {
-    return m_instance;
 }
 
 } // namespace crisp

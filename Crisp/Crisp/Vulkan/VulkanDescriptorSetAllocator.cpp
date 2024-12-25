@@ -3,7 +3,7 @@
 #include <numeric>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 namespace {

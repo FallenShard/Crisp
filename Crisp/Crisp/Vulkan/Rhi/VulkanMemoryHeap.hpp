@@ -6,7 +6,7 @@
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Result.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
 class VulkanMemoryHeap {

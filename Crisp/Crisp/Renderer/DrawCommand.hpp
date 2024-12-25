@@ -5,7 +5,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 #include <variant>
 #include <vector>

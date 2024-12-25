@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Crisp/Core/HashMap.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-#include <Crisp/Vulkan/VulkanMemoryHeap.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
 
 namespace crisp {
 class VulkanResourceDeallocator;

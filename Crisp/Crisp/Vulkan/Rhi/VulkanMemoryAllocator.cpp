@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanMemoryAllocator.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 
@@ -15,11 +15,7 @@ VulkanMemoryAllocator::VulkanMemoryAllocator(const VulkanPhysicalDevice& physica
     // Device buffer memory
     const uint32_t deviceBufferHeapIndex = m_physicalDevice->findDeviceBufferMemoryType(deviceHandle).unwrap();
     m_deviceBufferHeap = std::make_unique<VulkanMemoryHeap>(
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        kDeviceHeapSize,
-        deviceBufferHeapIndex,
-        deviceHandle,
-        "Device Buffer Heap");
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, kDeviceHeapSize, deviceBufferHeapIndex, deviceHandle, "Device Buffer Heap");
 
     // Device image memory
     const uint32_t deviceImageHeapIndex = m_physicalDevice->findDeviceImageMemoryType(deviceHandle).unwrap();

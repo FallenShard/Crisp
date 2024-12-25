@@ -1,9 +1,14 @@
 #pragma once
 
 #define VK_NO_PROTOTYPES
+#ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif // _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
+#endif
+#ifndef APIENTRY
+#define APIENTRY
 #endif
 
 #include <type_traits>

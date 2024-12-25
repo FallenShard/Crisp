@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp {
 class VulkanDescriptorSetAllocator {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Utils/BitFlags.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanPipeline.hpp>
 
 #include <memory>

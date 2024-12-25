@@ -1,13 +1,11 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 namespace crisp {
 namespace {
 using VulkanDeviceTest = VulkanTest;
 
-using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Not;
-using ::testing::SizeIs;
 
 TEST_F(VulkanDeviceTest, ValidHandle) {
     EXPECT_THAT(device_->getHandle(), Not(IsNull()));

@@ -4,7 +4,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/UniformMultiBuffer.hpp>
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp::gui {
 DynamicUniformBufferResource::DynamicUniformBufferResource(

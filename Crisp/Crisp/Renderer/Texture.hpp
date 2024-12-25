@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <Crisp/Vulkan/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
 class Renderer;
@@ -47,11 +47,7 @@ public:
     void fill(const VulkanBuffer& buffer, VkDeviceSize size, uint32_t baseLayer, uint32_t numLayers);
 
     std::unique_ptr<VulkanImageView> createView(
-        VkImageViewType type,
-        uint32_t baseLayer,
-        uint32_t numLayers,
-        uint32_t baseMipLevel = 0,
-        uint32_t mipLevels = 1);
+        VkImageViewType type, uint32_t baseLayer, uint32_t numLayers, uint32_t baseMipLevel = 0, uint32_t mipLevels = 1);
 
 private:
     Renderer* m_renderer;

@@ -1,26 +1,24 @@
 
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
+namespace {
+
+template <typename T, typename U>
+void append(T& chainHead, U& newElement) {
+    newElement.pNext = chainHead.pNext;
+    chainHead.pNext = &newElement;
+}
+
+} // namespace
+
 VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle) // NOLINT
-    : m_handle(handle) {
+    : m_handle(handle)
+    , m_properties(std::make_unique<Properties>()) {
     initFeaturesAndProperties();
-}
-
-VulkanPhysicalDevice::VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept // NOLINT
-    : m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
-    , m_deviceExtensions(std::move(other.m_deviceExtensions)) {
-    initFeaturesAndProperties();
-}
-
-VulkanPhysicalDevice& VulkanPhysicalDevice::operator=(VulkanPhysicalDevice&& other) noexcept {
-    m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
-    m_deviceExtensions = std::move(other.m_deviceExtensions);
-    initFeaturesAndProperties();
-    return *this;
 }
 
 bool VulkanPhysicalDevice::isSuitable(
@@ -247,27 +245,25 @@ const std::vector<std::string>& VulkanPhysicalDevice::getDeviceExtensions() cons
 }
 
 void VulkanPhysicalDevice::initFeaturesAndProperties() {
-    m_features.pNext = &m_features11;
-    m_features11.pNext = &m_features12;
-    m_features12.pNext = &m_features13;
-    m_features13.pNext = &m_rayTracingFeatures;
-    m_rayTracingFeatures.pNext = &m_accelerationStructureFeatures;
-    vkGetPhysicalDeviceFeatures2(m_handle, &m_features);
+    append(m_properties->features, m_properties->features11);
+    append(m_properties->features, m_properties->features12);
+    append(m_properties->features, m_properties->features13);
+    append(m_properties->features, m_properties->rayTracingFeatures);
+    append(m_properties->features, m_properties->accelerationStructureFeatures);
+    vkGetPhysicalDeviceFeatures2(m_handle, &m_properties->features);
 
-    m_properties.pNext = &m_properties11;
-    m_properties11.pNext = &m_properties12;
-    m_properties12.pNext = &m_properties13;
-    m_properties13.pNext = &m_rayTracingPipelineProperties;
-    vkGetPhysicalDeviceProperties2(m_handle, &m_properties);
+    append(m_properties->properties, m_properties->properties11);
+    append(m_properties->properties, m_properties->properties12);
+    append(m_properties->properties, m_properties->properties13);
+    append(m_properties->properties, m_properties->rayTracingProperties);
+    vkGetPhysicalDeviceProperties2(m_handle, &m_properties->properties);
 
-    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_memoryProperties);
+    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_properties->memoryProperties);
 }
 
 std::vector<std::string> createDefaultDeviceExtensions() {
     return {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE2_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE_4_EXTENSION_NAME,
     };
 }
 
@@ -276,5 +272,29 @@ void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions) {
     deviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
     deviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
     deviceExtensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+}
+
+Result<VulkanPhysicalDevice> selectPhysicalDevice(
+    const VulkanInstance& instance, std::vector<std::string>&& deviceExtensions) {
+    uint32_t deviceCount = 0;
+    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, nullptr));
+    CRISP_CHECK_GE(deviceCount, 0, "Vulkan found no physical devices.");
+
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, devices.data()));
+
+    if (instance.getSurface() == VK_NULL_HANDLE) {
+        return VulkanPhysicalDevice(devices.front());
+    }
+
+    for (const auto& device : devices) {
+        VulkanPhysicalDevice physicalDevice(device);
+        if (physicalDevice.isSuitable(instance.getSurface(), deviceExtensions)) {
+            physicalDevice.setDeviceExtensions(std::move(deviceExtensions));
+            return physicalDevice;
+        }
+    }
+
+    return resultError("Failed to find a suitable physical device!");
 }
 } // namespace crisp

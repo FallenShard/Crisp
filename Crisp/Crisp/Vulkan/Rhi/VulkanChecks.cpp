@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 #define STRINGIFY_CASE_RETURN(x)                                                                                       \
     case (x):                                                                                                          \

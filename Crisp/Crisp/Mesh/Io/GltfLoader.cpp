@@ -91,10 +91,7 @@ int32_t determineGltfComponentType() {
     } else if constexpr (std::is_same_v<T, int8_t>) {
         return TINYGLTF_COMPONENT_TYPE_BYTE;
     } else {
-        []<bool flag = false>() {
-            static_assert(flag, "Encountered unknown type in determineGltfComponentType()");
-        }
-        ();
+        []<bool flag = false>() { static_assert(flag, "Encountered unknown type in determineGltfComponentType()"); }();
     }
 }
 
@@ -200,12 +197,12 @@ bool loadImageFromGltf(
     const int32_t size,
     void* userPtr) {
     CRISP_CHECK(image != nullptr);
-    logger->info("Loading image {:>4} '{}', byte size {} from {}.", imageIdx, image->name, size, image->uri);
+    CRISP_LOGI("Loading image {:>4} '{}', byte size {} from {}.", imageIdx, image->name, size, image->uri);
     if (err && !err->empty()) {
-        logger->error("Error while loading GLTF image: {}", *err);
+        CRISP_LOGE("Error while loading GLTF image: {}", *err);
     }
     if (warn && !warn->empty()) {
-        logger->warn("Warning while loading GLTF image: {}", *warn);
+        CRISP_LOGW("Warning while loading GLTF image: {}", *warn);
     }
 
     GltfImageLoader& imageLoader{*static_cast<GltfImageLoader*>(userPtr)};
@@ -292,7 +289,7 @@ TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinyglt
     CRISP_CHECK_EQ(primitive.mode, TINYGLTF_MODE_TRIANGLES);
 
     if (!primitive.targets.empty()) {
-        logger->info("Encountered morph targets in primitive will be skipped.");
+        CRISP_LOGI("Encountered morph targets in primitive will be skipped.");
     }
 
     std::vector<glm::vec3> positions{createBuffer<glm::vec3>(model, primitive, "POSITION").unwrap()};
@@ -372,7 +369,7 @@ void createModelDataFromNode(
     GltfImageLoader& imageLoader,
     std::vector<ModelData>& models) {
     if (isValidGltfIndex(node.camera)) {
-        logger->trace("Gltf contains camera information which will be unused.");
+        CRISP_LOGT("Gltf contains camera information which will be unused.");
     }
 
     ModelData modelData{};
@@ -510,10 +507,10 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     std::string err{};
     std::string warn{};
     const bool success{loader.LoadASCIIFromFile(&model, &err, &warn, path.string())};
-    logger->trace("{} MB for images.", (imageLoader.bytesTotal >> 20) + 1);
+    CRISP_LOGT("{} MB for images.", (imageLoader.bytesTotal >> 20) + 1);
 
     if (!warn.empty()) {
-        logger->warn("GLTF warning from {}: {}", path.string(), warn);
+        CRISP_LOGW("GLTF warning from {}: {}", path.string(), warn);
     }
     if (!err.empty()) {
         return resultError("GLTF error from {}: {}", path.string(), err);

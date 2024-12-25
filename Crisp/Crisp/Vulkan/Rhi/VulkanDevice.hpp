@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanMemoryAllocator.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
-#include <Crisp/Vulkan/VulkanHeader.hpp>
-#include <Crisp/Vulkan/VulkanMemoryAllocator.hpp>
-#include <Crisp/Vulkan/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/VulkanQueue.hpp>
 #include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>

@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <Crisp/Vulkan/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
