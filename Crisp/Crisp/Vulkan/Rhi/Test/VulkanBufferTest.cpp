@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 #include <numeric>
 
@@ -93,7 +93,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
 TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     auto device = std::make_unique<VulkanDevice>(
         *physicalDevice_,
-        createQueueConfiguration({QueueType::General, QueueType::Transfer}, *context_, *physicalDevice_),
+        createQueueConfiguration({QueueType::General, QueueType::Transfer}, *instance_, *physicalDevice_),
         2);
     ASSERT_THAT(device->getGeneralQueue(), Not(HandleIs(device->getTransferQueue())));
 
@@ -135,8 +135,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     // Transfer ownership to the transfer queue FOR DMA
     const VulkanQueue& transferQueue = device->getTransferQueue();
-    cmdBuffer.transferOwnership(
-        deviceBuffer.getHandle(), generalQueue.getFamilyIndex(), transferQueue.getFamilyIndex());
+    cmdBuffer.transferOwnership(deviceBuffer.getHandle(), generalQueue.getFamilyIndex(), transferQueue.getFamilyIndex());
 
     // Create the transfer execution context
     const VulkanCommandPool transferPool(transferQueue.createCommandPool(), device->getResourceDeallocator());

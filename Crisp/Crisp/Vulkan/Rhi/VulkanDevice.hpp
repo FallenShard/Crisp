@@ -3,10 +3,10 @@
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
-#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
 
 namespace crisp {
 class VulkanDevice {

@@ -5,7 +5,7 @@
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
-#include <Crisp/Vulkan/VulkanResource.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
 enum class TripleBuffering { Enabled, Disabled };

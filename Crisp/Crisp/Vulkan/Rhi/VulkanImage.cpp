@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>

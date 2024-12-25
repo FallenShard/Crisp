@@ -3,8 +3,8 @@
 #include <memory>
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanResource.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanSampler.hpp>
 
 namespace crisp {

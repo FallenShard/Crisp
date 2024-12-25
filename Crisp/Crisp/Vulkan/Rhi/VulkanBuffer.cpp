@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 
 namespace crisp {
 VulkanBuffer::VulkanBuffer(

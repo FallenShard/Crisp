@@ -2,7 +2,7 @@
 
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
 #include <vector>
@@ -16,8 +16,7 @@ struct TileFrustum {
 };
 
 glm::ivec2 calculateTileGridDims(glm::ivec2 tileSize, glm::ivec2 screenSize);
-std::vector<TileFrustum> createTileFrusta(
-    glm::ivec2 tileSize, glm::ivec2 screenSize, const glm::mat4& projectionMatrix);
+std::vector<TileFrustum> createTileFrusta(glm::ivec2 tileSize, glm::ivec2 screenSize, const glm::mat4& projectionMatrix);
 
 struct LightClustering {
     // Size of a single tile in pixel coordinates, e.g. 16x16.

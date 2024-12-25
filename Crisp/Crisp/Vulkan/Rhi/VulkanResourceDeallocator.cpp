@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanResourceDeallocator.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
 
 namespace crisp {
 VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, int32_t virtualFrameCount)

@@ -7,7 +7,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 
 namespace crisp {
 LightSystem::LightSystem(

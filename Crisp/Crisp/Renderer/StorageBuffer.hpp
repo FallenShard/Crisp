@@ -5,9 +5,8 @@
 #include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Renderer/BufferUpdatePolicy.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
-
 
 namespace crisp {
 class Renderer;

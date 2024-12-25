@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanResource.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
 class VulkanFramebuffer : public VulkanResource<VkFramebuffer> {

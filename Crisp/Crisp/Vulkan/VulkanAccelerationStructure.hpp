@@ -1,11 +1,12 @@
 #pragma once
 
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
-#include <Crisp/Vulkan/VulkanResource.hpp>
+
 
 namespace crisp {
 class VulkanAccelerationStructure final : public VulkanResource<VkAccelerationStructureKHR> {

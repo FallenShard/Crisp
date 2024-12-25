@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanQueue.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 

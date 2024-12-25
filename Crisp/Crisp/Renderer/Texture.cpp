@@ -1,11 +1,10 @@
 #include <Crisp/Renderer/Texture.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
-
 
 namespace crisp {
 Texture::Texture(

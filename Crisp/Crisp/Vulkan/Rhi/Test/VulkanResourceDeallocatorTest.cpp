@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 namespace crisp {
 namespace {

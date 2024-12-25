@@ -7,7 +7,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 
 namespace crisp {
 class VulkanPipeline;

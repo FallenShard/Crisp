@@ -2,7 +2,7 @@
 
 #include <Crisp/Image/Image.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 
 namespace crisp {
 void fillImageLayer(VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx);

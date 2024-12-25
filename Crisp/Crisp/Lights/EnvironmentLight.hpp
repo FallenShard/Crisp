@@ -3,7 +3,7 @@
 #include <Crisp/Image/Image.hpp>
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/VulkanImage.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/VulkanImageView.hpp>
 
 namespace crisp {
@@ -61,9 +61,7 @@ private:
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
     Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
-    Renderer* renderer,
-    const VulkanImageView& cubeMapView,
-    uint32_t cubeMapSize = EnvironmentLight::kDiffuseCubeMapSize);
+    Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize = EnvironmentLight::kDiffuseCubeMapSize);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(
     Renderer* renderer,
     const VulkanImageView& cubeMapView,

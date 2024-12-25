@@ -1,6 +1,6 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
-#include <Crisp/Vulkan/VulkanSwapChain.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 
 namespace crisp {
 namespace {
@@ -9,7 +9,7 @@ using ::testing::Each;
 class VulkanSwapChainTest : public VulkanTestWithSurface {
 protected:
     static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled) {
-        return {*device_, *physicalDevice_, context_->getSurface(), buffering};
+        return {*device_, *physicalDevice_, instance_->getSurface(), buffering};
     }
 };
 
@@ -76,7 +76,7 @@ TEST_F(VulkanSwapChainTest, Recreate) {
     EXPECT_THAT(swapChain, HandleIsValid());
 
     for (uint32_t i = 0; i < 5; ++i) {
-        swapChain.recreate(*device_, *physicalDevice_, context_->getSurface());
+        swapChain.recreate(*device_, *physicalDevice_, instance_->getSurface());
     }
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getImageCount(), 2u);
@@ -91,7 +91,7 @@ TEST_F(VulkanSwapChainTest, WindowResized) {
     constexpr uint32_t kNewWidth = 512;
     constexpr uint32_t kNewHeight = 1024;
     window_->setSize(kNewWidth, kNewHeight);
-    swapChain.recreate(*device_, *physicalDevice_, context_->getSurface());
+    swapChain.recreate(*device_, *physicalDevice_, instance_->getSurface());
 
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getExtent().width, kNewWidth);

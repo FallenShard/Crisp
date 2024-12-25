@@ -5,11 +5,10 @@
 
 #include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanDescriptorSet.hpp>
 #include <Crisp/Vulkan/VulkanPipelineLayout.hpp>
-#include <Crisp/Vulkan/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanVertexLayout.hpp>
-
 
 namespace crisp {
 enum class PipelineDynamicState { None = 0x00, Viewport = 0x01, Scissor = 0x02 };

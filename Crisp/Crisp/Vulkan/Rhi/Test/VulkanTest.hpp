@@ -7,13 +7,13 @@
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Core/Test/ResultTestUtils.hpp>
 #include <Crisp/Core/Window.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/VulkanCommandPool.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
 
 namespace crisp {
 MATCHER(HandleIsValid, "Checks whether the handle is not null.") {

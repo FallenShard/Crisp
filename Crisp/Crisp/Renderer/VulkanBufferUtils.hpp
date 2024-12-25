@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <memory>
 
 namespace crisp {

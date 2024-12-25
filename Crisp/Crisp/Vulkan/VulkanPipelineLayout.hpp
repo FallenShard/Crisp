@@ -4,9 +4,8 @@
 #include <vector>
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 #include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
-#include <Crisp/Vulkan/VulkanResource.hpp>
-
 
 namespace crisp {
 struct DescriptorSetLayout {

@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanQueueConfiguration.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
 
 namespace crisp {
 namespace {
