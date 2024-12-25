@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 
 #include <numeric>
 

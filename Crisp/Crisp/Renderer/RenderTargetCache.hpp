@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Core/HashMap.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 

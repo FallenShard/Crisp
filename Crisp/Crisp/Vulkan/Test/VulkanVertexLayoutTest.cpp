@@ -1,6 +1,6 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
-
 #include <Crisp/Vulkan/VulkanVertexLayout.hpp>
+
+#include <gmock/gmock.h>
 
 namespace crisp {
 namespace {

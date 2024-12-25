@@ -8,16 +8,16 @@
 #include <Crisp/ShaderUtils/Reflection.hpp>
 
 namespace crisp {
-FlatHashMap<VkPipeline, glm::uvec3> workGroupSizes;
+FlatHashMap<VkPipeline, VkExtent3D> workGroupSizes;
 
-glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline) {
+VkExtent3D getWorkGroupSize(const VulkanPipeline& pipeline) {
     return workGroupSizes.at(pipeline.getHandle());
 }
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer& renderer,
     const std::string& shaderName,
-    const glm::uvec3& workGroupSize,
+    const VkExtent3D& workGroupSize,
     const std::function<void(PipelineLayoutBuilder&)>& builderOverride) {
     const VulkanDevice& device = renderer.getDevice();
     PipelineLayoutBuilder layoutBuilder(
@@ -37,7 +37,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
     specInfo.pMapEntries = specEntries.data();
     specInfo.dataSize = sizeof(workGroupSize);
-    specInfo.pData = glm::value_ptr(workGroupSize);
+    specInfo.pData = &workGroupSize;
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, renderer.getOrLoadShaderModule(shaderName));
@@ -52,12 +52,21 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
 }
 
-glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline) {
-    return (dataDims - glm::uvec3(1)) / getWorkGroupSize(pipeline) + glm::uvec3(1);
+VkExtent3D computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline) {
+    const auto workGroupSize = getWorkGroupSize(pipeline);
+    return {
+        .width = (dataDims.x + workGroupSize.width - 1) / workGroupSize.width,
+        .height = (dataDims.y + workGroupSize.height - 1) / workGroupSize.height,
+        .depth = (dataDims.z + workGroupSize.depth - 1) / workGroupSize.depth,
+    };
 }
 
-glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const glm::uvec3& workGroupSize) {
-    return (dataDims - glm::uvec3(1)) / workGroupSize + glm::uvec3(1);
+VkExtent3D computeWorkGroupCount(const glm::uvec3& dataDims, const VkExtent3D& workGroupSize) {
+    return {
+        .width = (dataDims.x + workGroupSize.width - 1) / workGroupSize.width,
+        .height = (dataDims.y + workGroupSize.height - 1) / workGroupSize.height,
+        .depth = (dataDims.z + workGroupSize.depth - 1) / workGroupSize.depth,
+    };
 }
 
 } // namespace crisp

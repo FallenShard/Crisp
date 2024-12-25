@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 
 namespace crisp {
 VulkanFramebuffer::VulkanFramebuffer(

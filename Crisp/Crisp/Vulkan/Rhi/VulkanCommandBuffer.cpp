@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
 
 namespace crisp {
 VulkanCommandBuffer::VulkanCommandBuffer(VkCommandBuffer commandBuffer)
@@ -151,7 +151,7 @@ void VulkanCommandBuffer::copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo
     vkCmdCopyBuffer(m_handle, srcBufferInfo.buffer, dstBuffer, 1, &copyRegion);
 }
 
-void VulkanCommandBuffer::dispatchCompute(const glm::ivec3& workGroupCount) const {
-    vkCmdDispatch(m_handle, workGroupCount.x, workGroupCount.y, workGroupCount.z);
+void VulkanCommandBuffer::dispatchCompute(const VkExtent3D& workGroupCount) const {
+    vkCmdDispatch(m_handle, workGroupCount.width, workGroupCount.height, workGroupCount.depth);
 }
 } // namespace crisp

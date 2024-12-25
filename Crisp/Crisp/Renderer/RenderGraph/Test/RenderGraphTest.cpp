@@ -2,7 +2,7 @@
 
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
-#include <Crisp/Vulkan/VulkanSwapChain.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 
 namespace crisp {
 namespace {

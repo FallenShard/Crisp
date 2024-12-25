@@ -10,7 +10,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 #include <Crisp/Scenes/Scene.hpp>
-#include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 
 namespace crisp {
 class VulkanRayTracingScene : public Scene {

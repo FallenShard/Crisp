@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 inline constexpr uint32_t DepthPassDepthAttachmentIndex{0};

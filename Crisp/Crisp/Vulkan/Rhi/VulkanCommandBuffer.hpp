@@ -3,10 +3,9 @@
 #include <span>
 #include <vector>
 
-#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
-#include <Crisp/Vulkan/VulkanCommandPool.hpp>
 
 namespace crisp {
 struct MemoryRegion {
@@ -68,7 +67,7 @@ public:
     void updateBuffer(const VkDescriptorBufferInfo& bufferInfo, const MemoryRegion& memoryRegion) const;
     void copyBuffer(const VkDescriptorBufferInfo& srcBufferInfo, VkBuffer dstBuffer) const;
 
-    void dispatchCompute(const glm::ivec3& workGroupCount) const;
+    void dispatchCompute(const VkExtent3D& workGroupCount) const;
 
 private:
     VkCommandBuffer m_handle;

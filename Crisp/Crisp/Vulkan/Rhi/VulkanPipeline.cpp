@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
 VulkanPipeline::VulkanPipeline(

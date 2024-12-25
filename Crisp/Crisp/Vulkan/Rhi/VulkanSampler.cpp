@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 VulkanSampler::VulkanSampler(

@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanCommandPool.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
 
 namespace crisp {
 VulkanCommandPool::VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator)

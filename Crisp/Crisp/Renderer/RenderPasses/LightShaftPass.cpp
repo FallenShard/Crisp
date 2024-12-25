@@ -3,10 +3,9 @@
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanFramebuffer.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createLightShaftPass(const VulkanDevice& device, VkExtent2D renderArea) {

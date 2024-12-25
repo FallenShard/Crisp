@@ -3,15 +3,12 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 
 std::unique_ptr<VulkanRenderPass> createShadowMapPass(
-    const VulkanDevice& device,
-    RenderTargetCache& renderTargetCache,
-    uint32_t shadowMapSize,
-    uint32_t cascadeIndex = 0);
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, uint32_t shadowMapSize, uint32_t cascadeIndex = 0);
 
 std::unique_ptr<VulkanRenderPass> createVarianceShadowMappingPass(
     const VulkanDevice& device, RenderTargetCache& renderTargetCache, uint32_t shadowMapSize);
@@ -34,8 +31,9 @@ void addCascadedShadowMapPasses(rg::RenderGraph& renderGraph, const uint32_t sha
         renderGraph.addPass(
             kCsmPasses[i],
             [i, shadowMapSize](rg::RenderGraph::Builder& builder) {
-                auto& data = i == 0 ? builder.getBlackboard().insert<CascadedShadowMapData>()
-                                    : builder.getBlackboard().get<CascadedShadowMapData>();
+                auto& data =
+                    i == 0 ? builder.getBlackboard().insert<CascadedShadowMapData>()
+                           : builder.getBlackboard().get<CascadedShadowMapData>();
 
                 data.cascades[i] = builder.createAttachment(
                     {

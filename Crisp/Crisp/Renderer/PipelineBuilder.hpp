@@ -2,7 +2,7 @@
 
 #include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 #include <memory>
 #include <vector>

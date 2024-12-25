@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
-#include <Crisp/Vulkan/VulkanCommandPool.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
 #include <thread>
 #include <vector>

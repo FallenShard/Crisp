@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/VulkanAccelerationStructure.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 
 namespace crisp {
 

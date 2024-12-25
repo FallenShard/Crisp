@@ -15,7 +15,7 @@
 #include <Crisp/IO/FileUtils.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Scenes/RaytracedImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 namespace crisp {
 

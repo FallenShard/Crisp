@@ -2,8 +2,8 @@
 
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 #include <nlohmann/json.hpp>
 

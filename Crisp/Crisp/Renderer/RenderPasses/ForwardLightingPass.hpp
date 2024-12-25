@@ -4,7 +4,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createForwardLightingPass(

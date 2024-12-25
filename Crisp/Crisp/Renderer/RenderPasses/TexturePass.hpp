@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Renderer/RenderTargetCache.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createTexturePass(

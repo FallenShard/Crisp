@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
 
 namespace crisp {
 struct FrameContext {

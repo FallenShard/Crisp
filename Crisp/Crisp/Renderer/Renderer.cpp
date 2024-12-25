@@ -69,14 +69,14 @@ Renderer::Renderer(
     }
 
     // Create fundamental objects for the API
-    m_context = std::make_unique<VulkanContext>(
+    m_instance = std::make_unique<VulkanInstance>(
         std::move(surfCreatorCallback), std::move(requiredVulkanInstanceExtensions), true);
     m_physicalDevice =
-        std::make_unique<VulkanPhysicalDevice>(m_context->selectPhysicalDevice(std::move(deviceExtensions)).unwrap());
+        std::make_unique<VulkanPhysicalDevice>(selectPhysicalDevice(*m_instance, std::move(deviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(
-        *m_physicalDevice, createDefaultQueueConfiguration(*m_context, *m_physicalDevice), kRendererVirtualFrameCount);
+        *m_physicalDevice, createDefaultQueueConfiguration(*m_instance, *m_physicalDevice), kRendererVirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(
-        *m_device, *m_physicalDevice, m_context->getSurface(), TripleBuffering::Disabled);
+        *m_device, *m_physicalDevice, m_instance->getSurface(), TripleBuffering::Disabled);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
 
     m_defaultViewport = m_swapChain->getViewport();
@@ -115,8 +115,8 @@ std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderNam
     return m_assetPaths.shaderSourceDir / (shaderName + ".glsl");
 }
 
-VulkanContext& Renderer::getContext() const {
-    return *m_context;
+VulkanInstance& Renderer::getInstance() const {
+    return *m_instance;
 }
 
 const VulkanPhysicalDevice& Renderer::getPhysicalDevice() const {
@@ -423,7 +423,7 @@ void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex) {
 void Renderer::recreateSwapChain() {
     vkDeviceWaitIdle(m_device->getHandle());
 
-    m_swapChain->recreate(*m_device, *m_physicalDevice, m_context->getSurface());
+    m_swapChain->recreate(*m_device, *m_physicalDevice, m_instance->getSurface());
     m_defaultScissor.extent = m_swapChain->getExtent();
     m_defaultViewport.width = static_cast<float>(m_defaultScissor.extent.width);
     m_defaultViewport.height = static_cast<float>(m_defaultScissor.extent.height);

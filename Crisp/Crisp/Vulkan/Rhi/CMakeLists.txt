@@ -69,6 +69,8 @@ add_cpp_static_library(
     "VulkanQueue.hpp"
     "VulkanQueueConfiguration.cpp"
     "VulkanQueueConfiguration.hpp"
+    "VulkanDescriptorSetAllocator.cpp"
+    "VulkanDescriptorSetAllocator.hpp"
 )
 target_link_libraries(
     CrispVulkanDevice
@@ -185,6 +187,106 @@ target_link_libraries(
     CrispVulkanImageTest
     PRIVATE Crisp::VulkanImage
     PRIVATE Crisp::VulkanTestUtils
+)
+
+add_cpp_static_library(
+    CrispVulkanSampler
+    "VulkanSampler.cpp"
+    "VulkanSampler.hpp"
+)
+target_link_libraries(
+    CrispVulkanSampler
+    PUBLIC Crisp::VulkanDevice
+)
+
+add_cpp_static_library(
+    CrispVulkanImageView
+    "VulkanImageView.cpp"
+    "VulkanImageView.hpp"
+)
+target_link_libraries(
+    CrispVulkanImageView
+    PUBLIC Crisp::VulkanImage
+    PUBLIC Crisp::VulkanSampler
+)
+
+add_cpp_static_library(
+    CrispVulkanPipelineLayout
+    "VulkanPipelineLayout.cpp"
+    "VulkanPipelineLayout.hpp"
+)
+target_link_libraries(
+    CrispVulkanPipelineLayout
+    PUBLIC Crisp::VulkanDevice
+)
+
+add_cpp_static_library(
+    CrispVulkanDescriptorSet
+    "VulkanDescriptorSet.cpp"
+    "VulkanDescriptorSet.hpp"
+)
+target_link_libraries(
+    CrispVulkanDescriptorSet
+    PUBLIC Crisp::VulkanDevice
+    PUBLIC Crisp::VulkanPipelineLayout
+)
+
+add_cpp_static_library(
+    CrispVulkanPipeline
+    "VulkanPipeline.cpp"
+    "VulkanPipeline.hpp"
+)
+target_link_libraries(
+    CrispVulkanPipeline
+    PUBLIC Crisp::VulkanDevice
+    PUBLIC Crisp::VulkanPipelineLayout
+    PUBLIC Crisp::VulkanDescriptorSet
+    PUBLIC Crisp::VulkanVertexLayout
+)
+
+add_cpp_static_library(
+    CrispVulkanFramebuffer
+    "VulkanFramebuffer.cpp"
+    "VulkanFramebuffer.hpp"
+)
+target_link_libraries(
+    CrispVulkanFramebuffer
+    PUBLIC Crisp::VulkanDevice
+)
+
+add_cpp_static_library(
+    CrispVulkanRenderPass
+    "VulkanRenderPass.cpp"
+    "VulkanRenderPass.hpp"
+)
+target_link_libraries(
+    CrispVulkanRenderPass
+    PUBLIC Crisp::VulkanDevice
+    PUBLIC Crisp::VulkanImageView
+    PUBLIC Crisp::VulkanFramebuffer
+)
+
+add_cpp_static_library(
+    CrispVulkanCommandBuffer
+    "VulkanCommandBuffer.cpp"
+    "VulkanCommandBuffer.hpp"
+    "VulkanCommandPool.cpp"
+    "VulkanCommandPool.hpp"
+)
+target_link_libraries(
+    CrispVulkanCommandBuffer
+    PUBLIC Crisp::VulkanDevice
+)
+
+add_cpp_static_library(
+    CrispVulkanAccelerationStructure
+    "VulkanAccelerationStructure.cpp"
+    "VulkanAccelerationStructure.hpp"
+)
+target_link_libraries(
+    CrispVulkanAccelerationStructure
+    PUBLIC Crisp::VulkanDevice
+    PUBLIC Crisp::Math
 )
 
 add_cpp_interface_library(

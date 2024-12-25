@@ -4,7 +4,7 @@
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 namespace crisp {
 inline constexpr uint32_t kCubeMapFaceCount = 6;

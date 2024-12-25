@@ -3,7 +3,7 @@
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 #include <vector>
 

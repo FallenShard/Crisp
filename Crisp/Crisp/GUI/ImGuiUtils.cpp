@@ -39,7 +39,7 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
     ImGui_ImplGlfw_InitForVulkan(window, true);
 
     ImGui_ImplVulkan_InitInfo initInfo{};
-    initInfo.Instance = renderer.getContext().getInstance();
+    initInfo.Instance = renderer.getInstance().getHandle();
     initInfo.PhysicalDevice = renderer.getPhysicalDevice().getHandle();
     initInfo.Device = renderer.getDevice().getHandle();
     initInfo.Queue = renderer.getDevice().getGeneralQueue().getHandle();

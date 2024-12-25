@@ -3,12 +3,12 @@
 #include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanRingBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
-#include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 class Material {

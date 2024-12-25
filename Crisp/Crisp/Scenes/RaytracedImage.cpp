@@ -3,9 +3,9 @@
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>

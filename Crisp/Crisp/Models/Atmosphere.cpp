@@ -157,7 +157,7 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
         .create(device, renderArea, renderTargets);
 }
 
-std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, const glm::uvec3& workGroupSize) {
+std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, const VkExtent3D& workGroupSize) {
     PipelineLayoutBuilder layoutBuilder;
     layoutBuilder
         .defineDescriptorSet(
@@ -188,7 +188,7 @@ std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, cons
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
     specInfo.pMapEntries = specEntries.data();
     specInfo.dataSize = sizeof(workGroupSize);
-    specInfo.pData = glm::value_ptr(workGroupSize);
+    specInfo.pData = &workGroupSize;
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     pipelineInfo.stage = createShaderStageInfo(
@@ -264,8 +264,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     auto& multiScatPass = renderGraph.addComputePass(MultipleScatteringPass);
     renderGraph.addDependency(TransmittanceLutPass, MultipleScatteringPass, 0);
-    multiScatPass.workGroupSize = glm::ivec3(1, 1, 64);
-    multiScatPass.numWorkGroups = glm::ivec3(32, 32, 1);
+    multiScatPass.workGroupSize = {1, 1, 64};
+    multiScatPass.numWorkGroups = {32, 32, 1};
     multiScatPass.pipeline = createMultiScatPipeline(renderer, multiScatPass.workGroupSize);
     multiScatPass.material = std::make_unique<Material>(multiScatPass.pipeline.get());
     multiScatPass.material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));

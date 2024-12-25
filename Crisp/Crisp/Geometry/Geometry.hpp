@@ -6,7 +6,7 @@
 
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 #include <memory>
 #include <vector>

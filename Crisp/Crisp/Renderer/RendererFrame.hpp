@@ -2,10 +2,10 @@
 
 #include <memory>
 
+#include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
-#include <Crisp/Vulkan/VulkanQueue.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
 namespace crisp {
 class RendererFrame {

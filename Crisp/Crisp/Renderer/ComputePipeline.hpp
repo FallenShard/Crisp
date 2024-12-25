@@ -4,7 +4,7 @@
 
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
 class Renderer;
@@ -12,12 +12,12 @@ class Renderer;
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer& renderer,
     const std::string& shaderName,
-    const glm::uvec3& workGroupSize,
+    const VkExtent3D& workGroupSize,
     const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {});
 
-glm::uvec3 getWorkGroupSize(const VulkanPipeline& pipeline);
+VkExtent3D getWorkGroupSize(const VulkanPipeline& pipeline);
 
-glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline);
-glm::uvec3 computeWorkGroupCount(const glm::uvec3& dataDims, const glm::uvec3& workGroupSize);
+VkExtent3D computeWorkGroupCount(const glm::uvec3& dataDims, const VulkanPipeline& pipeline);
+VkExtent3D computeWorkGroupCount(const glm::uvec3& dataDims, const VkExtent3D& workGroupSize);
 
 } // namespace crisp

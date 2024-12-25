@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Crisp/Renderer/AssetPaths.hpp>
-#include <Crisp/Vulkan/VulkanDescriptorSetAllocator.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 #include <string_view>
 

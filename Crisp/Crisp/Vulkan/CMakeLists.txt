@@ -1,44 +1,12 @@
 add_subdirectory(Rhi)
 
 add_cpp_static_library(CrispVulkan
-    "VulkanAccelerationStructure.cpp"
-    "VulkanAccelerationStructure.hpp"
-    "VulkanCommandBuffer.cpp"
-    "VulkanCommandBuffer.hpp"
-    "VulkanCommandPool.cpp"
-    "VulkanCommandPool.hpp"
     "VulkanDebugUtils.cpp"
     "VulkanDebugUtils.hpp"
-    "VulkanDescriptorSet.cpp"
-    "VulkanDescriptorSet.hpp"
-    "VulkanDescriptorSetAllocator.cpp"
-    "VulkanDescriptorSetAllocator.hpp"
     "VulkanEnumToString.hpp"
     "VulkanEnumToString.cpp"
-    "VulkanFormatTraits.hpp"
-    "VulkanFramebuffer.cpp"
-    "VulkanFramebuffer.hpp"
-    "VulkanImageView.cpp"
-    "VulkanImageView.hpp"
-    "VulkanPipeline.cpp"
-    "VulkanPipeline.hpp"
-    "VulkanPipelineLayout.cpp"
-    "VulkanPipelineLayout.hpp"
-    "VulkanRenderPass.cpp"
-    "VulkanRenderPass.hpp"
-    "VulkanSampler.cpp"
-    "VulkanSampler.hpp"
-    "VulkanVertexLayout.cpp"
-    "VulkanVertexLayout.hpp"
 )
 target_link_libraries(CrispVulkan
-    PUBLIC Crisp::BitFlags
-    PUBLIC Crisp::RendererConfig
-    PUBLIC Crisp::Result
-    PUBLIC Crisp::HashMap
-    PUBLIC Crisp::Logger
-    PUBLIC Crisp::Checks
-    PUBLIC Crisp::Math
     PUBLIC Crisp::VulkanInstance
     PUBLIC Crisp::VulkanPhysicalDevice
     PUBLIC Crisp::VulkanDevice
@@ -46,8 +14,44 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::VulkanSwapChain
     PUBLIC Crisp::VulkanBuffer
     PUBLIC Crisp::VulkanImage
+    PUBLIC Crisp::VulkanSampler
+    PUBLIC Crisp::VulkanImageView
+    PUBLIC Crisp::VulkanPipelineLayout
+    PUBLIC Crisp::VulkanDescriptorSet
+    PUBLIC Crisp::VulkanPipeline
+    PUBLIC Crisp::VulkanFramebuffer
+    PUBLIC Crisp::VulkanRenderPass
+    PUBLIC Crisp::VulkanCommandBuffer
+    PUBLIC Crisp::VulkanAccelerationStructure
+    PUBLIC Crisp::VulkanFormatTraits
+    PUBLIC Crisp::VulkanVertexLayout
 )
 
-add_cpp_test(CrispVulkanVertexLayoutTest
-    "Test/VulkanVertexLayoutTest.cpp")
-target_link_libraries(CrispVulkanVertexLayoutTest PRIVATE Crisp::VulkanTestUtils)
+add_cpp_interface_library(
+    CrispVulkanFormatTraits
+    "VulkanVertexLayout.hpp"
+)
+target_link_libraries(
+    CrispVulkanFormatTraits
+    INTERFACE Crisp::VulkanHeader
+)
+
+add_cpp_static_library(
+    CrispVulkanVertexLayout
+    "VulkanVertexLayout.cpp"
+    "VulkanVertexLayout.hpp"
+)
+target_link_libraries(
+    CrispVulkanVertexLayout
+    PUBLIC Crisp::VulkanHeader
+    PUBLIC Crisp::VulkanFormatTraits
+)
+
+add_cpp_test(
+    CrispVulkanVertexLayoutTest
+    "Test/VulkanVertexLayoutTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanVertexLayoutTest
+    PRIVATE Crisp::VulkanVertexLayout
+)

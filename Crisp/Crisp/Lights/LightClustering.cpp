@@ -63,7 +63,7 @@ std::vector<TileFrustum> createTileFrusta(
     return tilePlanes;
 }
 
-std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
+std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
     return createComputePipeline(*renderer, "light-culling.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
         builder.setDescriptorDynamic(0, 1, true);
         builder.setDescriptorDynamic(0, 2, true);
@@ -80,8 +80,10 @@ void addToRenderGraph(
     const UniformBuffer& cameraBuffer,
     const UniformBuffer& pointLightBuffer) {
     auto& cullingPass = renderGraph.addComputePass(kLightCullingPass);
-    cullingPass.workGroupSize = glm::ivec3(lightClustering.m_tileSize, 1);
-    cullingPass.numWorkGroups = glm::ivec3(lightClustering.m_gridSize, 1);
+    cullingPass.workGroupSize = {
+        static_cast<uint32_t>(lightClustering.m_tileSize.x), static_cast<uint32_t>(lightClustering.m_tileSize.y), 1};
+    cullingPass.numWorkGroups = {
+        static_cast<uint32_t>(lightClustering.m_gridSize.x), static_cast<uint32_t>(lightClustering.m_tileSize.y), 1};
     cullingPass.pipeline = createLightCullingComputePipeline(renderer, cullingPass.workGroupSize);
     cullingPass.material = std::make_unique<Material>(cullingPass.pipeline.get());
     cullingPass.material->writeDescriptor(0, 0, lightClustering.m_tilePlaneBuffer->getDescriptorInfo());
@@ -138,11 +140,20 @@ void LightClustering::configure(
     const auto tileFrusta{createTileFrusta(m_tileSize, cameraParameters.screenSize, cameraParameters.P)};
     const std::size_t tileCount = tileFrusta.size();
 
-    m_tilePlaneBuffer =
-        std::make_unique<UniformBuffer>(renderer, tileCount * sizeof(TileFrustum), true, tileFrusta.data());
-    m_lightIndexCountBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(uint32_t), true);
-    m_lightIndexListBuffer =
-        std::make_unique<UniformBuffer>(renderer, tileCount * sizeof(uint32_t) * maximumLightCount, true);
+    m_tilePlaneBuffer = std::make_unique<UniformBuffer>(
+        renderer,
+        tileCount * sizeof(TileFrustum),
+        BufferUpdatePolicy::PerFrame,
+        tileFrusta.data(),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    m_lightIndexCountBuffer = std::make_unique<UniformBuffer>(
+        renderer, sizeof(uint32_t), BufferUpdatePolicy::PerFrame, nullptr, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    m_lightIndexListBuffer = std::make_unique<UniformBuffer>(
+        renderer,
+        tileCount * sizeof(uint32_t) * maximumLightCount,
+        BufferUpdatePolicy::PerFrame,
+        nullptr,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
     m_lightGrid = createSampledStorageImage(
         *renderer,

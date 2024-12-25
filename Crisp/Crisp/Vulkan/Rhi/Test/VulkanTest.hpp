@@ -8,12 +8,12 @@
 #include <Crisp/Core/Test/ResultTestUtils.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
-#include <Crisp/Vulkan/VulkanCommandPool.hpp>
 
 namespace crisp {
 MATCHER(HandleIsValid, "Checks whether the handle is not null.") {

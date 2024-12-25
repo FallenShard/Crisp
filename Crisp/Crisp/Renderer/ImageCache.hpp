@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 class Renderer;

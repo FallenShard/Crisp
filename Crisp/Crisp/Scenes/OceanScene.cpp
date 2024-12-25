@@ -79,8 +79,8 @@ struct ComputeDispatch {
     std::unique_ptr<VulkanPipeline> pipeline;
     std::unique_ptr<Material> material;
 
-    glm::vec3 workGroupSize;
-    glm::vec3 dispatchSize;
+    VkExtent3D workGroupSize;
+    VkExtent3D dispatchSize;
 
     inline void bind(const RenderPassExecutionContext& ctx) const {
         pipeline->bind(ctx.cmdBuffer.getHandle());
@@ -95,7 +95,7 @@ FlatStringHashMap<ComputeDispatch> IfftPasses{};
 ComputeDispatch createOscillationPassDispatch(
     Renderer& renderer, const rg::RenderGraph& renderGraph, const ImageCache& imageCache) {
     ComputeDispatch dispatch{};
-    dispatch.workGroupSize = glm::ivec3(16, 16, 1);
+    dispatch.workGroupSize = {16, 16, 1};
     dispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N, N, 1), dispatch.workGroupSize);
     dispatch.pipeline = createComputePipeline(renderer, "ocean-spectrum.comp", dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
@@ -122,7 +122,7 @@ ComputeDispatch createBitReverseDispatch(
     const VulkanImageView& sourceView,
     const VulkanImageView& dstView) {
     ComputeDispatch dispatch{};
-    dispatch.workGroupSize = glm::ivec3(16, 16, 1);
+    dispatch.workGroupSize = {16, 16, 1};
     dispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N, N, 1), dispatch.workGroupSize);
     dispatch.pipeline = createComputePipeline(renderer, "ocean-reverse-bits.comp", dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
@@ -144,7 +144,7 @@ ComputeDispatch createIfftDispatch(
     const std::string shaderName = Horizontal ? "ifft-hori.comp" : "ifft-vert.comp";
 
     ComputeDispatch dispatch{};
-    dispatch.workGroupSize = glm::ivec3(16, 16, 1);
+    dispatch.workGroupSize = {16, 16, 1};
     dispatch.dispatchSize = computeWorkGroupCount(workAmount, dispatch.workGroupSize);
     dispatch.pipeline = createComputePipeline(renderer, shaderName, dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
@@ -581,8 +581,8 @@ int OceanScene::applyFFT(std::string image) {
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
         auto& bitReversePass = m_renderGraph->addComputePass(image + "BitReversePass0");
-        bitReversePass.workGroupSize = glm::ivec3(16, 16, 1);
-        bitReversePass.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
+        bitReversePass.workGroupSize = {16, 16, 1};
+        bitReversePass.numWorkGroups = {N / 16, N / 16, 1};
         bitReversePass.pipeline =
             createComputePipeline(*m_renderer, "ocean-reverse-bits.comp", bitReversePass.workGroupSize);
         bitReversePass.material = std::make_unique<Material>(bitReversePass.pipeline.get());
@@ -619,8 +619,8 @@ int OceanScene::applyFFT(std::string image) {
 
         std::string name = image + "TrueFFTPass" + std::to_string(i);
         auto& fftPass = m_renderGraph->addComputePass(name);
-        fftPass.workGroupSize = glm::ivec3(16, 16, 1);
-        fftPass.numWorkGroups = glm::ivec3(N / 2 / 16, N / 16, 1);
+        fftPass.workGroupSize = {16, 16, 1};
+        fftPass.numWorkGroups = {N / 2 / 16, N / 16, 1};
         fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-hori.comp", fftPass.workGroupSize);
         fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
         fftPass.material->writeDescriptor(
@@ -672,8 +672,8 @@ int OceanScene::applyFFT(std::string image) {
         const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
         auto& bitReversePass2 = m_renderGraph->addComputePass(image + "BitReversePass1");
-        bitReversePass2.workGroupSize = glm::ivec3(16, 16, 1);
-        bitReversePass2.numWorkGroups = glm::ivec3(N / 16, N / 16, 1);
+        bitReversePass2.workGroupSize = {16, 16, 1};
+        bitReversePass2.numWorkGroups = {N / 16, N / 16, 1};
         bitReversePass2.pipeline =
             createComputePipeline(*m_renderer, "ocean-reverse-bits.comp", bitReversePass2.workGroupSize);
         bitReversePass2.material = std::make_unique<Material>(bitReversePass2.pipeline.get());
@@ -712,8 +712,8 @@ int OceanScene::applyFFT(std::string image) {
 
         std::string name = image + "TrueFFTPassVert" + std::to_string(i);
         auto& fftPass = m_renderGraph->addComputePass(name);
-        fftPass.workGroupSize = glm::ivec3(16, 16, 1);
-        fftPass.numWorkGroups = glm::ivec3(N / 16, N / 16 / 2, 1);
+        fftPass.workGroupSize = {16, 16, 1};
+        fftPass.numWorkGroups = {N / 16, N / 16 / 2, 1};
         fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-vert.comp", fftPass.workGroupSize);
         fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
         fftPass.material->writeDescriptor(

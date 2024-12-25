@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 #include <Crisp/IO/FontLoader.hpp>
 #include <Crisp/Math/Headers.hpp>

@@ -19,7 +19,7 @@ const auto logger = createLoggerMt("GltfViewerScene");
 
 constexpr uint32_t kShadowMapSize = 1024;
 
-std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const glm::uvec3& workGroupSize) {
+std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
     return createComputePipeline(
         *renderer, "linear-blend-skinning.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
             builder.setDescriptorDynamic(0, 3, true);
@@ -330,8 +330,8 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
                 BufferUpdatePolicy::PerFrame,
                 m_skinningData.skeleton.jointTransforms.data()));
         auto& skinningPass = m_renderGraph->addComputePass("SkinningPass");
-        skinningPass.workGroupSize = glm::ivec3(256, 1, 1);
-        skinningPass.numWorkGroups = glm::ivec3((vertexCount - 1) / 256 + 1, 1, 1);
+        skinningPass.workGroupSize = {256, 1, 1};
+        skinningPass.numWorkGroups = {(vertexCount + 256 - 1) / 256, 1, 1};
         skinningPass.pipeline = createSkinningPipeline(m_renderer, skinningPass.workGroupSize);
         skinningPass.material = std::make_unique<Material>(skinningPass.pipeline.get());
         skinningPass.material->writeDescriptor(0, 0, restVertexBuffer->getDescriptorInfo());

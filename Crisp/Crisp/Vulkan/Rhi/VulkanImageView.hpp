@@ -5,7 +5,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 class VulkanImageView : public VulkanResource<VkImageView> {

@@ -4,7 +4,7 @@
 
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
 BoxVisualizer::BoxVisualizer(Renderer* renderer, uint32_t numBoxes, const VulkanRenderPass& renderPass)

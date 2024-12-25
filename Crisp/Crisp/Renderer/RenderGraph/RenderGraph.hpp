@@ -4,8 +4,8 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraphBlackboard.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp::rg {
 class RenderGraph {

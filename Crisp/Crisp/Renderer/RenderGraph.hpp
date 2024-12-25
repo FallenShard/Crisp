@@ -4,8 +4,8 @@
 #include <Crisp/Renderer/DrawCommand.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/VulkanCommandBuffer.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Result.hpp>
@@ -40,8 +40,8 @@ public:
         // Compute data.
         std::unique_ptr<VulkanPipeline> pipeline;
         std::unique_ptr<Material> material;
-        glm::ivec3 workGroupSize;
-        glm::ivec3 numWorkGroups;
+        VkExtent3D workGroupSize;
+        VkExtent3D numWorkGroups;
         std::function<void(Node&, VulkanCommandBuffer&, uint32_t)> preDispatchCallback;
     };
 

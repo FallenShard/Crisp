@@ -8,11 +8,11 @@
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanRenderPass.hpp>
-#include <Crisp/Vulkan/VulkanSampler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
 namespace {

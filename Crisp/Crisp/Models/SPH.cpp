@@ -11,12 +11,18 @@ constexpr uint32_t kScanElementsPerThread = 2;
 constexpr uint32_t kScanElementsPerBlock = kScanBlockSize * kScanElementsPerThread;
 
 void setDispatchLayout(RenderGraph::Node& computeNode, const glm::ivec3& workGroupSize, const glm::ivec3& items) {
-    computeNode.workGroupSize = workGroupSize;
-    computeNode.numWorkGroups = (items - 1) / workGroupSize + 1;
+    computeNode.workGroupSize.width = workGroupSize.x;
+    computeNode.workGroupSize.height = workGroupSize.y;
+    computeNode.workGroupSize.depth = workGroupSize.z;
+
+    const auto gridSize = (items + workGroupSize - 1) / workGroupSize;
+    computeNode.numWorkGroups.width = gridSize.x;
+    computeNode.numWorkGroups.height = gridSize.y;
+    computeNode.numWorkGroups.depth = gridSize.z;
 }
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer* renderer, const std::string& shaderName, const int32_t dynamicBuffers, glm::uvec3 workGroupSize) {
+    Renderer* renderer, const std::string& shaderName, const int32_t dynamicBuffers, VkExtent3D workGroupSize) {
     return createComputePipeline(*renderer, shaderName, workGroupSize, [dynamicBuffers](PipelineLayoutBuilder& builder) {
         for (int32_t i = 0; i < dynamicBuffers; ++i) {
             builder.setDescriptorDynamic(0, i, true);
