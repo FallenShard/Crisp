@@ -7,9 +7,6 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#ifndef APIENTRY
-#define APIENTRY
-#endif
 
 #include <type_traits>
 

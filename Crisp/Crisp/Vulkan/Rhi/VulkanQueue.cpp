@@ -81,4 +81,35 @@ uint32_t VulkanQueue::getFamilyIndex() const {
 bool VulkanQueue::supportsOperations(const VkQueueFlags queueFlags) const {
     return m_familyProperties.queueFlags & queueFlags;
 }
+
+VulkanQueue::ExecutionInfo VulkanQueue::createExecutionInfo() const {
+    VkCommandPool cmdPool = createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+    VkCommandBufferAllocateInfo cmdBufferAllocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    cmdBufferAllocInfo.commandPool = cmdPool;
+    cmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufferAllocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmdBuffer{VK_NULL_HANDLE};
+    vkAllocateCommandBuffers(m_deviceHandle, &cmdBufferAllocInfo, &cmdBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+    return {
+        .commandPool = cmdPool,
+        .commandBuffer = cmdBuffer,
+    };
+}
+
+void VulkanQueue::submitAndWait(const ExecutionInfo& executionInfo) const {
+    vkEndCommandBuffer(executionInfo.commandBuffer);
+    submit(executionInfo.commandBuffer);
+    vkQueueWaitIdle(m_handle);
+
+    vkFreeCommandBuffers(m_deviceHandle, executionInfo.commandPool, 1, &executionInfo.commandBuffer);
+    vkResetCommandPool(m_deviceHandle, executionInfo.commandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+    vkDestroyCommandPool(m_deviceHandle, executionInfo.commandPool, nullptr);
+}
+
 } // namespace crisp

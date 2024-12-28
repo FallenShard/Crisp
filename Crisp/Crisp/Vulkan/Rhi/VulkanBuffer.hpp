@@ -64,6 +64,10 @@ public:
         return reinterpret_cast<const T*>(m_allocation.getMappedPtr()); // NOLINT
     }
 
+    const VulkanDevice& getDevice() const {
+        return *m_device;
+    }
+
 private:
     VulkanDevice* m_device;
 };

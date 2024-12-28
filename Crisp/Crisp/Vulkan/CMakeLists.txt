@@ -55,3 +55,24 @@ target_link_libraries(
     CrispVulkanVertexLayoutTest
     PRIVATE Crisp::VulkanVertexLayout
 )
+
+add_cpp_static_library(
+    CrispVulkanRingBuffer
+    "VulkanRingBuffer.cpp"
+    "VulkanRingBuffer.hpp"
+)
+target_link_libraries(
+    CrispVulkanRingBuffer
+    PUBLIC Crisp::VulkanBuffer
+    PUBLIC Microsoft.GSL::GSL
+)
+
+add_cpp_test(
+    CrispVulkanRingBufferTest
+    "Test/VulkanRingBufferTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanRingBufferTest
+    PRIVATE Crisp::VulkanRingBuffer
+    PRIVATE Crisp::VulkanTestUtils
+)

@@ -75,6 +75,17 @@ protected:
         device_->getResourceDeallocator().freeAllResources();
     }
 
+    template <typename T>
+    static std::vector<T> toStdVec(const VulkanBuffer& buffer) {
+        std::vector<T> vec(buffer.getSize() / sizeof(T));
+        StagingVulkanBuffer stagingBuffer(*device_, buffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
+        device_->getGeneralQueue().submitAndWait([&stagingBuffer, &buffer](const VkCommandBuffer cmdBuffer) {
+            stagingBuffer.copyFrom(cmdBuffer, buffer);
+        });
+        std::memcpy(vec.data(), stagingBuffer.getHostVisibleData<T>(), buffer.getSize());
+        return vec;
+    }
+
     inline static constexpr uint32_t kDefaultWidth = 200;
     inline static constexpr uint32_t kDefaultHeight = 200;
 

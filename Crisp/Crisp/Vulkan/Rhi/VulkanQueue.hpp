@@ -28,7 +28,22 @@ public:
         return m_handle;
     }
 
+    template <typename Func>
+    void submitAndWait(Func&& func) const {
+        const auto executionInfo = createExecutionInfo();
+        func(executionInfo.commandBuffer);
+        submitAndWait(executionInfo);
+    }
+
 private:
+    struct ExecutionInfo {
+        VkCommandPool commandPool;
+        VkCommandBuffer commandBuffer;
+    };
+
+    ExecutionInfo createExecutionInfo() const;
+    void submitAndWait(const ExecutionInfo& executionInfo) const;
+
     VkQueue m_handle; // Deallocated automatically once the parent device is destroyed.
     VkDevice m_deviceHandle;
     uint32_t m_familyIndex;
