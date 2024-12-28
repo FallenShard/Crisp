@@ -166,13 +166,6 @@ target_link_libraries(CrispEventTest
     PRIVATE Crisp::Event
 )
 
-add_cpp_interface_library(CrispNotNull
-    "NotNull.hpp"
-)
-target_link_libraries(CrispNotNull
-    INTERFACE Crisp::Checks
-)
-
 add_cpp_interface_library(CrispSlotMap
     "SlotMap.hpp"
 )
