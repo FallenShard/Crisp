@@ -191,13 +191,13 @@ FetchContent_MakeAvailable(embree)
 
 FetchContent_Declare(vulkan
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.3.280
+    GIT_TAG v1.4.304
 )
 FetchContent_MakeAvailable(vulkan)
 
 FetchContent_Declare(volk
     GIT_REPOSITORY https://github.com/zeux/volk.git
-    GIT_TAG 1.3.270
+    GIT_TAG 1.3.295
 )
 set(VOLK_HEADERS_ONLY ON CACHE BOOL "" FORCE)
 set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)
@@ -205,12 +205,19 @@ FetchContent_MakeAvailable(volk)
 
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
-    GIT_TAG vulkan-sdk-1.3.275.0
+    GIT_TAG vulkan-sdk-1.3.296.0
 )
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
 set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SPIRV-Reflect)
+
+FetchContent_Declare(GSL
+    GIT_REPOSITORY "https://github.com/microsoft/GSL"
+    GIT_TAG "v4.1.0"
+    GIT_SHALLOW ON
+)
+FetchContent_MakeAvailable(GSL)
 
 # List all used third-party libraries
 add_subdirectory(Externals/imgui)
