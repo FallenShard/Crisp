@@ -1,17 +1,20 @@
 add_subdirectory(RenderGraph)
 
-add_cpp_static_library(CrispShaderCache
+add_cpp_static_library(
+    CrispShaderCache
     "ShaderCache.hpp"
     "ShaderCache.cpp"
 )
-target_link_libraries(CrispShaderCache
+target_link_libraries(
+    CrispShaderCache
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Logger
     PRIVATE Crisp::FileUtils
 )
 
-add_cpp_static_library(CrispPipelineBuilder
+add_cpp_static_library(
+    CrispPipelineBuilder
     "PipelineBuilder.cpp"
     "PipelineBuilder.hpp"
     "PipelineLayoutBuilder.cpp"
@@ -19,13 +22,31 @@ add_cpp_static_library(CrispPipelineBuilder
     "VulkanPipelineIo.cpp"
     "VulkanPipelineIo.hpp"
 )
-target_link_libraries(CrispPipelineBuilder
+target_link_libraries(
+    CrispPipelineBuilder
     PUBLIC Crisp::Vulkan
     PUBLIC nlohmann_json::nlohmann_json
     PUBLIC Crisp::ThreadPool
+    PUBLIC Crisp::Renderer
 )
 
-add_cpp_static_library(CrispRenderer
+add_cpp_test(
+    CrispPipelineLayoutBuilderTest
+    "Test/PipelineLayoutBuilderTest.cpp"
+)
+target_link_libraries(
+    CrispPipelineLayoutBuilderTest
+    PRIVATE Crisp::PipelineBuilder
+    PRIVATE Crisp::VulkanTestUtils
+)
+
+add_cpp_interface_library(
+    CrispAssetPaths
+    "AssetPaths.hpp"
+)
+
+add_cpp_static_library(
+    CrispRenderPasses
     "RenderPasses/BlurPass.cpp"
     "RenderPasses/BlurPass.hpp"
     "RenderPasses/CubeMapRenderPass.cpp"
@@ -42,12 +63,14 @@ add_cpp_static_library(CrispRenderer
     "RenderPasses/ShadowPass.hpp"
     "RenderPasses/TexturePass.cpp"
     "RenderPasses/TexturePass.hpp"
+)
+
+add_cpp_static_library(
+    CrispRenderer
     "BufferUpdatePolicy.hpp"
     "ComputePipeline.cpp"
     "ComputePipeline.hpp"
     "DrawCommand.hpp"
-    "VulkanRingBuffer.cpp"
-    "VulkanRingBuffer.hpp"
     "Material.cpp"
     "Material.hpp"
     "Renderer.cpp"
@@ -63,10 +86,6 @@ add_cpp_static_library(CrispRenderer
     "ResourceContext.hpp"
     "Texture.cpp"
     "Texture.hpp"
-    "UniformBuffer.cpp"
-    "UniformBuffer.hpp"
-    "UniformMultiBuffer.cpp"
-    "UniformMultiBuffer.hpp"
     "RendererFrame.cpp"
     "RendererFrame.hpp"
     "VulkanBufferUtils.cpp"
@@ -75,15 +94,12 @@ add_cpp_static_library(CrispRenderer
     "VulkanImageUtils.hpp"
     "VulkanWorker.cpp"
     "VulkanWorker.hpp"
-    "StorageBuffer.hpp"
-    "StorageBuffer.cpp"
     "ImageCache.hpp"
     "ImageCache.cpp"
     "PipelineCache.cpp"
     "PipelineCache.hpp"
     "RenderTargetCache.cpp"
     "RenderTargetCache.hpp"
-    "AssetPaths.hpp"
 )
 target_link_libraries(CrispRenderer
     PUBLIC Crisp::BitFlags
@@ -102,6 +118,8 @@ target_link_libraries(CrispRenderer
     PRIVATE Crisp::ShaderCompiler
     PUBLIC Crisp::PipelineBuilder
     PUBLIC Crisp::ShaderCache
+    PUBLIC Crisp::VulkanRingBuffer
+    PUBLIC Crisp::AssetPaths
 )
 
 add_cpp_static_library(CrispImageCache
@@ -112,21 +130,15 @@ target_link_libraries(CrispImageCache
     PUBLIC Crisp::Vulkan
     PRIVATE Crisp::Renderer
 )
-
 add_cpp_interface_library(CrispFrameContext
     "FrameContext.hpp"
 )
 target_link_libraries(CrispFrameContext
     INTERFACE Crisp::Vulkan
 )
-
 add_cpp_interface_library(CrispRendererConfig
     "RendererConfig.hpp"
 )
-
-add_cpp_test(CrispPipelineLayoutBuilderTest
-    "Test/PipelineLayoutBuilderTest.cpp")
-target_link_libraries(CrispPipelineLayoutBuilderTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
 
 add_cpp_test(CrispDescriptorUpdaterTest
     "Test/DescriptorUpdaterTest.cpp")

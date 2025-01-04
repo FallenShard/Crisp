@@ -5,7 +5,6 @@
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 
@@ -14,8 +13,7 @@ LightSystem::LightSystem(
     Renderer* renderer, const DirectionalLight& dirLight, const uint32_t shadowMapSize, const uint32_t cascadeCount)
     : m_renderer(renderer)
     , m_directionalLight(dirLight)
-    , m_directionalLightBuffer(
-          std::make_unique<UniformBuffer>(renderer, sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame))
+    , m_directionalLightBuffer(createUniformRingBuffer(&renderer->getDevice(), sizeof(LightDescriptor)))
     , m_shadowMapSize(shadowMapSize) {
     if (cascadeCount > 0) {
         m_cascadedShadowMapping.setCascadeCount(renderer, m_directionalLight, cascadeCount);
@@ -35,14 +33,14 @@ void LightSystem::update(const Camera& camera, float /*dt*/) {
             lightDescriptors.push_back(pl.createDescriptorData());
         }
 
-        m_pointLightBuffer->updateStagingBuffer(
-            lightDescriptors.data(), lightDescriptors.size() * sizeof(LightDescriptor));
+        m_pointLightBuffer->updateStagingBufferFromStdVec(lightDescriptors, m_renderer->getCurrentVirtualFrameIndex());
     }
 }
 
 void LightSystem::setDirectionalLight(const DirectionalLight& dirLight) {
     m_directionalLight = dirLight;
-    m_directionalLightBuffer->updateStagingBuffer(m_directionalLight.createDescriptor());
+    m_directionalLightBuffer->updateStagingBufferFromStruct(
+        m_directionalLight.createDescriptor(), m_renderer->getCurrentVirtualFrameIndex());
     m_cascadedShadowMapping.updateDirectionalLight(m_directionalLight);
 }
 
@@ -50,15 +48,15 @@ void LightSystem::setSplitLambda(const float splitLambda) {
     m_cascadedShadowMapping.splitLambda = splitLambda;
 }
 
-UniformBuffer* crisp::LightSystem::getDirectionalLightBuffer() const {
+VulkanRingBuffer* crisp::LightSystem::getDirectionalLightBuffer() const {
     return m_directionalLightBuffer.get();
 }
 
-UniformBuffer* LightSystem::getCascadedDirectionalLightBuffer() const {
+VulkanRingBuffer* LightSystem::getCascadedDirectionalLightBuffer() const {
     return m_cascadedShadowMapping.cascadedLightBuffer.get();
 }
 
-UniformBuffer* LightSystem::getCascadedDirectionalLightBuffer(uint32_t index) const {
+VulkanRingBuffer* LightSystem::getCascadedDirectionalLightBuffer(uint32_t index) const {
     return m_cascadedShadowMapping.cascades.at(index).buffer.get();
 }
 
@@ -83,27 +81,23 @@ void LightSystem::createPointLightBuffer(std::vector<PointLight>&& pointLights) 
         lightDescriptors.emplace_back(light.createDescriptorData());
     }
 
-    m_pointLightBuffer = std::make_unique<UniformBuffer>(
-        m_renderer,
-        m_pointLights.size() * sizeof(LightDescriptor),
-        true,
-        BufferUpdatePolicy::PerFrame,
-        lightDescriptors.data());
+    m_pointLightBuffer = createStorageRingBuffer(
+        &m_renderer->getDevice(), m_pointLights.size() * sizeof(LightDescriptor), lightDescriptors.data());
 }
 
 void LightSystem::createTileGridBuffers(const CameraParameters& cameraParams) {
     m_lightClustering.configure(m_renderer, cameraParams, static_cast<uint32_t>(m_pointLights.size()));
 }
 
-void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const UniformBuffer& cameraBuffer) {
-    addToRenderGraph(m_renderer, renderGraph, m_lightClustering, cameraBuffer, *m_pointLightBuffer);
+void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const VulkanRingBuffer& cameraBuffer) {
+    // addToRenderGraph(m_renderer, renderGraph, m_lightClustering, cameraBuffer, *m_pointLightBuffer);
 }
 
-UniformBuffer* LightSystem::getPointLightBuffer() const {
+VulkanRingBuffer* LightSystem::getPointLightBuffer() const {
     return m_pointLightBuffer.get();
 }
 
-UniformBuffer* LightSystem::getLightIndexBuffer() const {
+VulkanRingBuffer* LightSystem::getLightIndexBuffer() const {
     return m_lightClustering.m_lightIndexListBuffer.get();
 }
 

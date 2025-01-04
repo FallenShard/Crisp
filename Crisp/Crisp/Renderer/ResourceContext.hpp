@@ -8,46 +8,34 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Renderer/VulkanRingBuffer.hpp>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
 class ResourceContext {
 public:
     explicit ResourceContext(Renderer* renderer);
 
-    template <typename T>
-    UniformBuffer* createUniformBuffer(
-        const std::string& id, const std::vector<T>& data, BufferUpdatePolicy updatePolicy) {
-        m_uniformBuffers[id] =
-            std::make_unique<UniformBuffer>(m_renderer, data.size() * sizeof(T), updatePolicy, data.data());
-        m_renderer->getDebugMarker().setObjectName(m_uniformBuffers[id]->get(), id);
-
-        return m_uniformBuffers[id].get();
+    VulkanBuffer* addBuffer(const std::string& id, std::unique_ptr<VulkanBuffer> buffer) {
+        m_buffers[id] = std::move(buffer);
+        return m_buffers[id].get();
     }
 
-    template <typename... Args>
-    UniformBuffer* createUniformBuffer(const std::string& id, Args&&... args) {
-        return addUniformBuffer(id, std::make_unique<UniformBuffer>(m_renderer, std::forward<Args>(args)...));
+    VulkanBuffer* getBuffer(const std::string& id) {
+        return m_buffers[id].get();
     }
-
-    UniformBuffer* addUniformBuffer(std::string id, std::unique_ptr<UniformBuffer> uniformBuffer);
-    UniformBuffer* getUniformBuffer(std::string id) const;
-
-    template <typename... Args>
-    StorageBuffer* createStorageBuffer(const std::string& id, Args&&... args) {
-        return addStorageBuffer(id, std::make_unique<StorageBuffer>(m_renderer, std::forward<Args>(args)...));
-    }
-
-    StorageBuffer* addStorageBuffer(std::string id, std::unique_ptr<StorageBuffer> uniformBuffer);
-    StorageBuffer* getStorageBuffer(const std::string& id) const;
 
     template <typename T>
-    VulkanRingBuffer* createStorageBufferFromStdVec(
-        const std::string& id, const std::vector<T>& data, const BufferUpdatePolicy updatePolicy) {
+    VulkanRingBuffer* createRingBufferFromStdVec(const std::string& id, const std::vector<T>& data) {
         auto buffer = std::make_unique<VulkanRingBuffer>(
-            m_renderer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, sizeof(T) * data.size(), updatePolicy, data.data());
+            &m_renderer->getDevice(), VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, sizeof(T) * data.size(), data.data());
+        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
+    }
+
+    template <typename T>
+    VulkanRingBuffer* createRingBufferFromStruct(const std::string& id, const T& data) {
+        auto buffer = std::make_unique<VulkanRingBuffer>(
+            &m_renderer->getDevice(), VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, sizeof(T), &data);
         m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
@@ -90,8 +78,7 @@ private:
 
     FlatStringHashMap<std::unique_ptr<Material>> m_materials;
     FlatStringHashMap<std::unique_ptr<Geometry>> m_geometries;
-    FlatStringHashMap<std::unique_ptr<UniformBuffer>> m_uniformBuffers;
-    FlatStringHashMap<std::unique_ptr<StorageBuffer>> m_storageBuffers;
+    FlatStringHashMap<std::unique_ptr<VulkanBuffer>> m_buffers;
     FlatStringHashMap<std::unique_ptr<VulkanRingBuffer>> m_ringBuffers;
     FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
 };

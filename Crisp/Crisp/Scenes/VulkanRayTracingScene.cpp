@@ -36,9 +36,10 @@ void append(AliasTable& globalAliasTable, const TriangleMesh& mesh) {
     globalAliasTable.insert(globalAliasTable.end(), aliasTable.begin(), aliasTable.end());
 }
 
-std::unique_ptr<StorageBuffer> createAliasTableBuffer(Renderer& renderer, const AliasTable& aliasTable) {
-    return std::make_unique<StorageBuffer>(
-        &renderer, aliasTable.size() * sizeof(AliasTable::value_type), 0, BufferUpdatePolicy::Constant, aliasTable.data());
+std::unique_ptr<VulkanBuffer> createAliasTableBuffer(Renderer& renderer, const AliasTable& aliasTable) {
+    auto buffer = createStorageBuffer(renderer.getDevice(), aliasTable.size() * sizeof(AliasTable::value_type));
+    fillDeviceBuffer(renderer, buffer.get(), aliasTable);
+    return buffer;
 }
 
 Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) {
@@ -76,8 +77,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
-    m_resourceContext->createStorageBufferFromStdVec("brdfParams", m_sceneDesc.brdfs, BufferUpdatePolicy::PerFrame);
-    m_resourceContext->createStorageBufferFromStdVec("lightParams", m_sceneDesc.lights, BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createRingBufferFromStdVec("brdfParams", m_sceneDesc.brdfs);
+    m_resourceContext->createRingBufferFromStdVec("lightParams", m_sceneDesc.lights);
 
     AliasTable aliasTable{};
     TriangleMesh sceneMesh{};
@@ -113,9 +114,9 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
-    m_resourceContext->addStorageBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
+    m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
-    m_resourceContext->createStorageBufferFromStdVec("materialIds", m_sceneDesc.props, BufferUpdatePolicy::Constant);
+    m_resourceContext->createRingBufferFromStdVec("materialIds", m_sceneDesc.props);
 
     m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -167,10 +168,12 @@ void VulkanRayTracingScene::update(float dt) {
     }
 
     const ExtendedCameraParameters cameraParams = m_cameraController->getExtendedCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
-    m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer(m_integratorParams);
-    m_resourceContext->getRingBuffer("brdfParams")->updateStagingBufferFromStdVec(m_sceneDesc.brdfs);
-    m_resourceContext->getRingBuffer("lightParams")->updateStagingBufferFromStdVec(m_sceneDesc.lights);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(cameraParams);
+    m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer2(m_integratorParams);
+    m_resourceContext->getRingBuffer("brdfParams")
+        ->updateStagingBufferFromStdVec(m_sceneDesc.brdfs, m_renderer->getCurrentVirtualFrameIndex());
+    m_resourceContext->getRingBuffer("lightParams")
+        ->updateStagingBufferFromStdVec(m_sceneDesc.lights, m_renderer->getCurrentVirtualFrameIndex());
 }
 
 void VulkanRayTracingScene::render() {
@@ -343,7 +346,7 @@ void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(1, 2, *m_resourceContext->getRingBuffer("materialIds"));
     m_material->writeDescriptor(1, 3, *m_resourceContext->getRingBuffer("brdfParams"));
     m_material->writeDescriptor(1, 4, *m_resourceContext->getRingBuffer("lightParams"));
-    m_material->writeDescriptor(1, 5, *m_resourceContext->getStorageBuffer("aliasTable"));
+    m_material->writeDescriptor(1, 5, *m_resourceContext->getBuffer("aliasTable"));
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 

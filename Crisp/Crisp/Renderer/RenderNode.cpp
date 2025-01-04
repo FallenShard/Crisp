@@ -1,17 +1,17 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Vulkan/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
 
-RenderNode::RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle)
-    : transformBuffer(transformBuffer)
+RenderNode::RenderNode(VulkanRingBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle)
+    : transformBuffer(nullptr)
     , transformPack(transformPack)
     , transformHandle(transformHandle) {}
 
 RenderNode::RenderNode(
-    UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle)
+    VulkanRingBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle)
     : RenderNode(transformBuffer, &transformPacks[transformHandle.index], transformHandle) {}
 
 RenderNode::RenderNode(TransformBuffer& transformBuffer, TransformHandle transformHandle)
@@ -37,9 +37,7 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, con
         if (!drawCommand.dynamicBufferViews[i].buffer) {
             continue;
         }
-        drawCommand.dynamicBufferOffsets[i] =
-            drawCommand.dynamicBufferViews[i].buffer->getDynamicOffset(frameIndex) +
-            drawCommand.dynamicBufferViews[i].subOffset;
+        drawCommand.dynamicBufferOffsets[i] = 0 + drawCommand.dynamicBufferViews[i].subOffset;
     }
 
     drawCommand.setPushConstantView(pushConstantView);

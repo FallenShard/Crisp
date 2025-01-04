@@ -51,7 +51,7 @@ void AtmosphereScene::update(float dt) {
     // Camera
     m_cameraController->update(dt);
     const auto camParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(camParams);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(camParams);
 
     // Object transforms
     m_transformBuffer->update(camParams.V, camParams.P);
@@ -83,7 +83,7 @@ void AtmosphereScene::update(float dt) {
 
     const auto screenExtent = m_renderer->getSwapChainExtent();
     m_atmosphereParams.screenResolution = glm::vec2(screenExtent.width, screenExtent.height);
-    m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer(m_atmosphereParams);
+    m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer2(m_atmosphereParams);
 }
 
 void AtmosphereScene::render() {

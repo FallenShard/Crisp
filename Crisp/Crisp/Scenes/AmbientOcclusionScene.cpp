@@ -75,8 +75,7 @@ void drawPostProcessEffect(
         const auto& dynamicBufferViews = command.material->getDynamicBufferViews();
         std::vector<uint32_t> dynamicBufferOffsets(dynamicBufferViews.size());
         for (std::size_t i = 0; i < dynamicBufferOffsets.size(); ++i) {
-            dynamicBufferOffsets[i] =
-                dynamicBufferViews[i].buffer->getDynamicOffset(ctx.virtualFrameIndex) + dynamicBufferViews[i].subOffset;
+            dynamicBufferOffsets[i] = 0 + dynamicBufferViews[i].subOffset;
         }
         command.material->bind(ctx.virtualFrameIndex, ctx.cmdBuffer.getHandle(), dynamicBufferOffsets);
     }
@@ -317,7 +316,7 @@ void AmbientOcclusionScene::resize(int width, int height) {
 void AmbientOcclusionScene::update(float dt) {
     m_cameraController->update(dt);
     const CameraParameters cameraParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(cameraParams);
     // auto pos = m_cameraController->getCamera().getPosition();
 
     m_transformBuffer->update(cameraParams.V, cameraParams.P);

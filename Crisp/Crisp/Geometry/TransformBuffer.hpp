@@ -1,10 +1,11 @@
 #pragma once
 
+#include <vector>
+
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-
-#include <vector>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
 
@@ -48,10 +49,10 @@ class TransformBuffer {
 public:
     TransformBuffer(Renderer* renderer, std::size_t maxTransformCount);
 
-    const UniformBuffer* getUniformBuffer() const;
-    UniformBuffer* getUniformBuffer();
+    const VulkanRingBuffer* getUniformBuffer() const;
+    VulkanRingBuffer* getUniformBuffer();
 
-    TransformPack& getPack(TransformHandle index);
+    TransformPack& getPack(TransformHandle handle);
 
     // The buffer is used as UNIFORM_DYNAMIC, hence we only provide info for one transformation.
     inline VkDescriptorBufferInfo getDescriptorInfo() const {
@@ -65,7 +66,7 @@ public:
 private:
     uint32_t m_activeTransforms;
     std::vector<TransformPack> m_transforms;
-    std::unique_ptr<UniformBuffer> m_transformBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_transformBuffer;
     ThreadPool m_threadPool;
 };
 } // namespace crisp

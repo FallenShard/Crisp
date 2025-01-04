@@ -3,7 +3,6 @@
 #include <Crisp/Camera/FreeCameraController.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {

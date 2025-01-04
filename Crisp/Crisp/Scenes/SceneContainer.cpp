@@ -1,17 +1,17 @@
 #include <Crisp/Scenes/SceneContainer.hpp>
 
-#include <Crisp/Scenes/AmbientOcclusionScene.hpp>
-#include <Crisp/Scenes/AtmosphereScene.hpp>
-#include <Crisp/Scenes/ClusteredLightingScene.hpp>
-#include <Crisp/Scenes/FluidSimulationScene.hpp>
-#include <Crisp/Scenes/GltfViewerScene.hpp>
-#include <Crisp/Scenes/NormalMappingScene.hpp>
-#include <Crisp/Scenes/OceanScene.hpp>
-#include <Crisp/Scenes/PbrScene.hpp>
-#include <Crisp/Scenes/RayTracerScene.hpp>
-#include <Crisp/Scenes/ShadowMappingScene.hpp>
+// #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
+// #include <Crisp/Scenes/AtmosphereScene.hpp>
+// #include <Crisp/Scenes/ClusteredLightingScene.hpp>
+// #include <Crisp/Scenes/FluidSimulationScene.hpp>
+// #include <Crisp/Scenes/GltfViewerScene.hpp>
+// #include <Crisp/Scenes/NormalMappingScene.hpp>
+// #include <Crisp/Scenes/OceanScene.hpp>
+// #include <Crisp/Scenes/PbrScene.hpp>
+// #include <Crisp/Scenes/RayTracerScene.hpp>
+// #include <Crisp/Scenes/ShadowMappingScene.hpp>
 #include <Crisp/Scenes/TestScene.hpp>
-#include <Crisp/Scenes/VulkanRayTracingScene.hpp>
+// #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 
@@ -36,39 +36,39 @@ const std::vector<std::string> kSceneNames = {
 std::unique_ptr<Scene> createScene(
     const std::string& name, Renderer* renderer, Window* window, const nlohmann::json& args) {
     CRISP_LOGI("Creating Scene: {}", name);
-    if (name == kSceneNames[0]) {
-        return std::make_unique<AmbientOcclusionScene>(renderer, window);
-    }
-    if (name == kSceneNames[1]) {
-        return std::make_unique<FluidSimulationScene>(renderer, window);
-    }
-    if (name == kSceneNames[2]) {
-        return std::make_unique<ShadowMappingScene>(renderer, window);
-    }
-    if (name == kSceneNames[3]) {
-        return std::make_unique<RayTracerScene>(renderer, window);
-    }
-    if (name == kSceneNames[4]) {
-        return std::make_unique<PbrScene>(renderer, window, args);
-    }
-    if (name == kSceneNames[5]) {
-        return std::make_unique<ClusteredLightingScene>(renderer, window);
-    }
-    if (name == kSceneNames[6]) {
-        return std::make_unique<NormalMappingScene>(renderer, window);
-    }
-    if (name == kSceneNames[7]) {
-        return std::make_unique<VulkanRayTracingScene>(renderer, window);
-    }
-    if (name == kSceneNames[8]) {
-        return std::make_unique<OceanScene>(renderer, window);
-    }
-    if (name == kSceneNames[9]) {
-        return std::make_unique<GltfViewerScene>(renderer, window);
-    }
-    if (name == kSceneNames[10]) {
-        return std::make_unique<AtmosphereScene>(renderer, window);
-    }
+    // if (name == kSceneNames[0]) {
+    //     return std::make_unique<AmbientOcclusionScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[1]) {
+    //     return std::make_unique<FluidSimulationScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[2]) {
+    //     return std::make_unique<ShadowMappingScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[3]) {
+    //     return std::make_unique<RayTracerScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[4]) {
+    //     return std::make_unique<PbrScene>(renderer, window, args);
+    // }
+    // if (name == kSceneNames[5]) {
+    //     return std::make_unique<ClusteredLightingScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[6]) {
+    //     return std::make_unique<NormalMappingScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[7]) {
+    //     return std::make_unique<VulkanRayTracingScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[8]) {
+    //     return std::make_unique<OceanScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[9]) {
+    //     return std::make_unique<GltfViewerScene>(renderer, window);
+    // }
+    // if (name == kSceneNames[10]) {
+    //     return std::make_unique<AtmosphereScene>(renderer, window);
+    // }
 
     spdlog::warn("Scene with the name {} is invalid/disabled", name);
     return std::make_unique<TestScene>(renderer, window);

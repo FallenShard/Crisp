@@ -14,8 +14,9 @@ add_cpp_static_library(CrispLights
     "LightSystem.hpp"
     "PointLight.cpp"
     "PointLight.hpp"
-    "ShadowMapper.cpp"
-    "ShadowMapper.hpp"
+
+    # "ShadowMapper.cpp"
+    # "ShadowMapper.hpp"
 )
 target_link_libraries(CrispLights
     PUBLIC Crisp::Renderer

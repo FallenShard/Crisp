@@ -6,14 +6,13 @@ namespace crisp {
 TransformBuffer::TransformBuffer(Renderer* renderer, const std::size_t maxTransformCount)
     : m_activeTransforms(0)
     , m_transforms(maxTransformCount)
-    , m_transformBuffer(std::make_unique<UniformBuffer>(
-          renderer, m_transforms.size() * sizeof(TransformPack), BufferUpdatePolicy::PerFrame)) {}
+    , m_transformBuffer(createUniformRingBuffer(&renderer->getDevice(), m_transforms.size() * sizeof(TransformPack))) {}
 
-const UniformBuffer* TransformBuffer::getUniformBuffer() const {
+const VulkanRingBuffer* TransformBuffer::getUniformBuffer() const {
     return m_transformBuffer.get();
 }
 
-UniformBuffer* TransformBuffer::getUniformBuffer() {
+VulkanRingBuffer* TransformBuffer::getUniformBuffer() {
     return m_transformBuffer.get();
 }
 
@@ -38,11 +37,11 @@ void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P) {
         }
     }
 
-    m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_activeTransforms * sizeof(TransformPack));
+    m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_activeTransforms * sizeof(TransformPack), 0);
 }
 
 TransformHandle TransformBuffer::getNextIndex() {
     CRISP_CHECK(m_activeTransforms < m_transforms.size());
-    return TransformHandle{static_cast<uint16_t>(m_activeTransforms++), 0};
+    return TransformHandle{{{static_cast<uint16_t>(m_activeTransforms++), 0}}};
 }
 } // namespace crisp

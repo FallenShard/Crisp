@@ -13,7 +13,6 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>

@@ -34,6 +34,16 @@ void VulkanRingBuffer::updateStagingBuffer(const MemoryCopyRegion& region, const
     m_lastUpdatedRegion = regionIndex;
 }
 
+void VulkanRingBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
+    const uint32_t regionToUpdate = (m_lastUpdatedRegion + 1) % kRendererVirtualFrameCount;
+    const VkDeviceSize stagingOffset = regionToUpdate * m_size + offset;
+    CRISP_CHECK_LE(stagingOffset + size, m_stagingBuffer->getSize());
+    m_stagingBuffer->updateFromHost(data, size, stagingOffset);
+
+    m_hasUpdate = true;
+    m_lastUpdatedRegion = regionToUpdate;
+}
+
 void VulkanRingBuffer::updateDeviceBuffer(const VkCommandBuffer commandBuffer) {
     if (!m_hasUpdate) {
         return;

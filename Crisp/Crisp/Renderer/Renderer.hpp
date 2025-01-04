@@ -12,8 +12,6 @@
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
-#include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/Renderer/VulkanRingBuffer.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
@@ -25,9 +23,9 @@
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 #include <Crisp/Vulkan/VulkanDebugUtils.hpp>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
-class UniformBuffer;
 class Geometry;
 class Material;
 
@@ -89,12 +87,6 @@ public:
     void setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex);
     void setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews);
 
-    void registerStreamingUniformBuffer(UniformBuffer* buffer);
-    void unregisterStreamingUniformBuffer(UniformBuffer* buffer);
-
-    void registerStreamingStorageBuffer(StorageBuffer* buffer);
-    void unregisterStreamingStorageBuffer(StorageBuffer* buffer);
-
     void registerStreamingRingBuffer(VulkanRingBuffer* buffer);
     void unregisterStreamingRingBuffer(VulkanRingBuffer* buffer);
 
@@ -102,11 +94,6 @@ public:
 
     std::unique_ptr<VulkanPipeline> createPipeline(
         std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex);
-
-    template <typename... Args>
-    std::unique_ptr<UniformBuffer> createUniformBuffer(Args&&... args) {
-        return std::make_unique<UniformBuffer>(this, std::forward<Args>(args)...);
-    }
 
     void updateInitialLayouts(VulkanRenderPass& renderPass);
 
@@ -154,8 +141,6 @@ private:
 
     std::unique_ptr<Geometry> m_fullScreenGeometry;
 
-    FlatHashSet<UniformBuffer*> m_streamingUniformBuffers;
-    FlatHashSet<StorageBuffer*> m_streamingStorageBuffers;
     FlatHashSet<VulkanRingBuffer*> m_streamingRingBuffers;
 
     std::unique_ptr<VulkanPipeline> m_scenePipeline;

@@ -88,7 +88,7 @@ void Skybox::updateTransforms(const glm::mat4& V, const glm::mat4& P) {
     m_transformPack.MV = glm::mat4(glm::mat3(V));
     m_transformPack.MVP = P * m_transformPack.MV;
 
-    m_transformBuffer->updateStagingBuffer(m_transformPack);
+    m_transformBuffer->updateStagingBuffer2(m_transformPack);
 }
 
 const RenderNode& Skybox::getRenderNode() {

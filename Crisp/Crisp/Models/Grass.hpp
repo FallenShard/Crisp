@@ -11,7 +11,6 @@ class VulkanPipeline;
 class Material;
 class Geometry;
 class VulkanRenderPass;
-class UniformBuffer;
 
 class VulkanSampler;
 

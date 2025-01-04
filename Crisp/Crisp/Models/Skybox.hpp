@@ -29,7 +29,7 @@ private:
     std::unique_ptr<Material> m_material;
 
     TransformPack m_transformPack;
-    std::unique_ptr<UniformBuffer> m_transformBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_transformBuffer;
 
     std::unique_ptr<VulkanImage> m_cubeMap;
     std::unique_ptr<VulkanImageView> m_cubeMapView;

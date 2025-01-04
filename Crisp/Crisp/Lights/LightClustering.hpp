@@ -1,11 +1,11 @@
 #pragma once
 
+#include <vector>
+
 #include <Crisp/Camera/Camera.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
-
-#include <vector>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
 class Renderer;
@@ -26,11 +26,10 @@ struct LightClustering {
     glm::ivec2 m_gridSize;
 
     // Buffer that holds all tile planes. We are not accounting for depth, so 4x number of tiles only.
-    std::unique_ptr<UniformBuffer> m_tilePlaneBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_tilePlaneBuffer;
 
-    //
-    std::unique_ptr<UniformBuffer> m_lightIndexCountBuffer;
-    std::unique_ptr<UniformBuffer> m_lightIndexListBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_lightIndexCountBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_lightIndexListBuffer;
     std::unique_ptr<VulkanImage> m_lightGrid;
     std::vector<std::unique_ptr<VulkanImageView>> m_lightGridViews;
 
@@ -41,7 +40,7 @@ void addToRenderGraph(
     Renderer* renderer,
     RenderGraph& renderGraph,
     const LightClustering& lightClustering,
-    const UniformBuffer& cameraBuffer,
-    const UniformBuffer& pointLightBuffer);
+    const VulkanRingBuffer& cameraBuffer,
+    const VulkanRingBuffer& pointLightBuffer);
 
 } // namespace crisp

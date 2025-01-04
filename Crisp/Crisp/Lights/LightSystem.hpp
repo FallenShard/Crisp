@@ -16,7 +16,6 @@ class Renderer;
 class RenderGraph;
 class VulkanImage;
 class VulkanImageView;
-class UniformBuffer;
 
 class LightSystem {
 public:
@@ -36,16 +35,16 @@ public:
     float getCascadeSplitLo(uint32_t cascadeIndex) const;
     float getCascadeSplitHi(uint32_t cascadeIndex) const;
 
-    UniformBuffer* getDirectionalLightBuffer() const;
-    UniformBuffer* getCascadedDirectionalLightBuffer() const;
-    UniformBuffer* getCascadedDirectionalLightBuffer(uint32_t index) const;
+    VulkanRingBuffer* getDirectionalLightBuffer() const;
+    VulkanRingBuffer* getCascadedDirectionalLightBuffer() const;
+    VulkanRingBuffer* getCascadedDirectionalLightBuffer(uint32_t index) const;
 
     void createPointLightBuffer(std::vector<PointLight>&& pointLights);
     void createTileGridBuffers(const CameraParameters& cameraParams);
-    void addLightClusteringPass(RenderGraph& renderGraph, const UniformBuffer& cameraBuffer);
+    void addLightClusteringPass(RenderGraph& renderGraph, const VulkanRingBuffer& cameraBuffer);
 
-    UniformBuffer* getPointLightBuffer() const;
-    UniformBuffer* getLightIndexBuffer() const;
+    VulkanRingBuffer* getPointLightBuffer() const;
+    VulkanRingBuffer* getLightIndexBuffer() const;
     const std::vector<std::unique_ptr<VulkanImageView>>& getTileGridViews() const;
 
     EnvironmentLight* getEnvironmentLight() const {
@@ -58,13 +57,13 @@ private:
     Renderer* m_renderer;
 
     DirectionalLight m_directionalLight;
-    std::unique_ptr<UniformBuffer> m_directionalLightBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_directionalLightBuffer;
     CascadedShadowMapping m_cascadedShadowMapping;
 
     uint32_t m_shadowMapSize;
 
     std::vector<PointLight> m_pointLights;
-    std::unique_ptr<UniformBuffer> m_pointLightBuffer;
+    std::unique_ptr<VulkanRingBuffer> m_pointLightBuffer;
     LightClustering m_lightClustering;
 
     // TODO: Implement omnidirectional shadow maps for select point lights.

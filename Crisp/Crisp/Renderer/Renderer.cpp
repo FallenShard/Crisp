@@ -229,7 +229,12 @@ FrameContext Renderer::beginFrame() {
     auto* commandBuffer = m_workers[0]->getCmdBuffer(virtualFrameIndex);
     commandBuffer->setIdleState();
     commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    return {m_currentFrameIndex, virtualFrameIndex, *swapImageIndex, commandBuffer};
+    return {
+        .frameIndex = m_currentFrameIndex,
+        .virtualFrameIndex = virtualFrameIndex,
+        .swapChainImageIndex = *swapImageIndex,
+        .commandBuffer = commandBuffer,
+    };
 }
 
 void Renderer::endFrame(const FrameContext& frameContext) {
@@ -294,22 +299,6 @@ void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageV
     m_device->flushDescriptorUpdates();
 }
 
-void Renderer::registerStreamingUniformBuffer(UniformBuffer* buffer) {
-    m_streamingUniformBuffers.insert(buffer);
-}
-
-void Renderer::unregisterStreamingUniformBuffer(UniformBuffer* buffer) {
-    m_streamingUniformBuffers.erase(buffer);
-}
-
-void Renderer::registerStreamingStorageBuffer(StorageBuffer* buffer) {
-    m_streamingStorageBuffers.insert(buffer);
-}
-
-void Renderer::unregisterStreamingStorageBuffer(StorageBuffer* buffer) {
-    m_streamingStorageBuffers.erase(buffer);
-}
-
 void Renderer::registerStreamingRingBuffer(VulkanRingBuffer* buffer) {
     m_streamingRingBuffers.insert(buffer);
 }
@@ -363,14 +352,8 @@ void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     const VkCommandBuffer cmdBuffer{commandBuffer.getHandle()};
 
-    for (auto& uniformBuffer : m_streamingUniformBuffers) {
-        uniformBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
-    }
-    for (auto& storageBuffer : m_streamingStorageBuffers) {
-        storageBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
-    }
-    for (auto& storageBuffer : m_streamingRingBuffers) {
-        storageBuffer->updateDeviceBuffer(cmdBuffer, virtualFrameIndex);
+    for (auto& ringBuffer : m_streamingRingBuffers) {
+        ringBuffer->updateDeviceBuffer(cmdBuffer);
     }
 
     commandBuffer.insertMemoryBarrier(

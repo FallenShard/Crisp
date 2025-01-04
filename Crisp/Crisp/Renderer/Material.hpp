@@ -1,14 +1,12 @@
 #pragma once
 
-#include <Crisp/Renderer/StorageBuffer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-#include <Crisp/Renderer/VulkanRingBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
 class Material {
@@ -63,21 +61,14 @@ public:
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorBufferInfo& bufferInfo);
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VkDescriptorBufferInfo& bufferInfo, uint32_t dstElement);
-    void writeDescriptor(uint32_t setIndex, uint32_t binding, const UniformBuffer& uniformBuffer);
-    void writeDescriptor(
-        uint32_t setIndex,
-        uint32_t binding,
-        const UniformBuffer& uniformBuffer,
-        uint32_t elementSize,
-        uint32_t elementCount);
-    void writeDescriptor(uint32_t setIndex, uint32_t binding, const StorageBuffer& storageBuffer);
+    void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanBuffer& buffer);
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VulkanRingBuffer& buffer);
 
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo);
 
     void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
-    void setDynamicBufferView(uint32_t index, const UniformBuffer& dynamicUniformBuffer, uint32_t offset);
+    void setDynamicBufferView(uint32_t index, const VulkanRingBuffer& dynamicUniformBuffer, uint32_t offset);
 
     void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer);
     void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);

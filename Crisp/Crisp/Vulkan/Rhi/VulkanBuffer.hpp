@@ -71,4 +71,28 @@ public:
 private:
     VulkanDevice* m_device;
 };
+
+inline std::unique_ptr<VulkanBuffer> createStorageBuffer(
+    const VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags additionalUsageFlags = 0) {
+    return std::make_unique<VulkanBuffer>(
+        device, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+}
+
+template <typename T>
+inline std::unique_ptr<VulkanBuffer> createStorageBuffer(
+    VulkanDevice& device, const std::vector<T>& data, const VkBufferUsageFlags additionalUsageFlags = 0) {
+    auto buffer = std::make_unique<VulkanBuffer>(
+        device,
+        data.size() * sizeof(T),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | additionalUsageFlags,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    auto stagingBuffer = std::make_unique<StagingVulkanBuffer>(device, data.size() * sizeof(T));
+    stagingBuffer->updateFromHost(data);
+
+    device.getGeneralQueue().submitAndWait([&buffer, &stagingBuffer, &data](const VkCommandBuffer cmdBuffer) {
+        buffer->copyFrom(cmdBuffer, *stagingBuffer);
+    });
+    return buffer;
+}
 } // namespace crisp

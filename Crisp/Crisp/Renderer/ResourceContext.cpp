@@ -8,24 +8,6 @@ ResourceContext::ResourceContext(Renderer* renderer)
     , imageCache(renderer)
     , pipelineCache(renderer->getAssetPaths()) {}
 
-UniformBuffer* ResourceContext::addUniformBuffer(std::string id, std::unique_ptr<UniformBuffer> uniformBuffer) {
-    m_renderer->getDebugMarker().setObjectName(uniformBuffer->get(), id.c_str());
-    return m_uniformBuffers.emplace(std::move(id), std::move(uniformBuffer)).first->second.get();
-}
-
-UniformBuffer* ResourceContext::getUniformBuffer(std::string id) const {
-    return m_uniformBuffers.at(id).get();
-}
-
-StorageBuffer* ResourceContext::addStorageBuffer(std::string id, std::unique_ptr<StorageBuffer> storageBuffer) {
-    m_renderer->getDebugMarker().setObjectName(storageBuffer->getHandle(), id.c_str());
-    return m_storageBuffers.emplace(std::move(id), std::move(storageBuffer)).first->second.get();
-}
-
-StorageBuffer* ResourceContext::getStorageBuffer(const std::string& id) const {
-    return m_storageBuffers.at(id).get();
-}
-
 VulkanPipeline* ResourceContext::createPipeline(
     std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex) {
     return pipelineCache.loadPipeline(m_renderer, id, luaFilename, renderPass, subpassIndex);

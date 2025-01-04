@@ -6,11 +6,9 @@ void CascadedShadowMapping::setCascadeCount(
     cascades.resize(cascadeCount);
     for (auto& cascade : cascades) {
         cascade.light = light;
-        cascade.buffer =
-            std::make_unique<UniformBuffer>(renderer, sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
+        cascade.buffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(LightDescriptor));
     }
-    cascadedLightBuffer =
-        std::make_unique<UniformBuffer>(renderer, cascadeCount * sizeof(LightDescriptor), BufferUpdatePolicy::PerFrame);
+    cascadedLightBuffer = createUniformRingBuffer(&renderer->getDevice(), cascadeCount * sizeof(LightDescriptor));
 }
 
 void CascadedShadowMapping::updateDirectionalLight(const DirectionalLight& light) {
@@ -40,6 +38,7 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
 }
 
 void CascadedShadowMapping::updateTransforms(const Camera& viewCamera, const uint32_t shadowMapSize) {
+    static int region = 0;
     for (uint32_t i = 0; i < cascades.size(); ++i) {
         auto& cascade = cascades[i];
 
@@ -48,9 +47,11 @@ void CascadedShadowMapping::updateTransforms(const Camera& viewCamera, const uin
             viewCamera.computeFrustumPoints(cascade.zNear, cascade.zFar), centerRadius, centerRadius.w, shadowMapSize);
 
         const auto desc = cascade.light.createDescriptor();
-        cascade.buffer->updateStagingBuffer(desc);
-        cascadedLightBuffer->updateStagingBuffer(&desc, sizeof(LightDescriptor), i * sizeof(LightDescriptor));
+        cascade.buffer->updateStagingBuffer(&desc, sizeof(LightDescriptor), 0);
+        cascadedLightBuffer->updateStagingBuffer(
+            {.data = &desc, .size = sizeof(LightDescriptor), .dstOffset = i * sizeof(LightDescriptor)}, region);
     }
+    region = (region + 1) % 2;
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> CascadedShadowMapping::getFrustumPoints(uint32_t cascadeIndex) const {

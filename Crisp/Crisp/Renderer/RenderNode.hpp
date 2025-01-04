@@ -4,7 +4,6 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Renderer/DrawCommand.hpp>
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
 
@@ -88,13 +87,13 @@ struct RenderNode {
     }
 
     RenderNode() = default;
-    RenderNode(UniformBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle);
+    RenderNode(VulkanRingBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle);
     RenderNode(
-        UniformBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle);
+        VulkanRingBuffer* transformBuffer, std::vector<TransformPack>& transformPacks, TransformHandle transformHandle);
     RenderNode(TransformBuffer& transformBuffer, TransformHandle transformHandle);
 
     Geometry* geometry = nullptr;
-    UniformBuffer* transformBuffer = nullptr;
+    VulkanRingBuffer* transformBuffer = nullptr;
     TransformPack* transformPack = nullptr;
     TransformHandle transformHandle{TransformHandle::createInvalidHandle()};
     bool isVisible = true;

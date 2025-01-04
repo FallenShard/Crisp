@@ -15,7 +15,6 @@ class FluidSimulation;
 class SceneRenderPass;
 class VulkanPipeline;
 class VulkanImageView;
-class UniformBuffer;
 class VulkanDevice;
 class VulkanSampler;
 

@@ -19,7 +19,6 @@
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
@@ -120,7 +119,7 @@ void NormalMappingScene::update(float dt) {
     // m_lightSystem->update(m_cameraController->getCamera(),
     // dt);
 
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(cameraParams);
 }
 
 void NormalMappingScene::render() {

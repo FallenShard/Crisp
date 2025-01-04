@@ -121,7 +121,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     // Object transforms
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 5000);
-    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->get(), "transformBuffer");
+    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->getHandle(), "transformBuffer");
 
     createCommonTextures();
 
@@ -163,7 +163,7 @@ void PbrScene::update(float dt) {
     // Camera
     m_cameraController->update(dt);
     const auto camParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(camParams);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(camParams);
 
     // Object transforms
     m_transformBuffer->update(camParams.V, camParams.P);

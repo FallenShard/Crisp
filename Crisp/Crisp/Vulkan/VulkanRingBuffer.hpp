@@ -31,6 +31,7 @@ public:
     }
 
     void updateStagingBuffer(const MemoryCopyRegion& region, uint32_t regionIndex);
+    void updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset);
 
     template <typename T>
     void updateStagingBufferFromStdVec(const std::vector<T>& data, const uint32_t regionIndex) {
@@ -38,6 +39,18 @@ public:
             {
                 .data = data.data(),
                 .size = sizeof(T) * data.size(),
+            },
+            regionIndex);
+    }
+
+    template <typename T>
+    void updateStagingBufferFromStruct(const T& data, const uint32_t regionIndex) {
+        using BaseType = std::remove_cvref_t<T>;
+        static_assert(std::is_trivially_copyable_v<BaseType>);
+        updateStagingBuffer(
+            {
+                .data = &data,
+                .size = sizeof(T),
             },
             regionIndex);
     }
@@ -54,6 +67,11 @@ private:
 
     bool m_hasUpdate{false};
     uint32_t m_lastUpdatedRegion{~0u};
+};
+
+struct DynamicBufferView {
+    const VulkanRingBuffer* buffer;
+    uint32_t subOffset;
 };
 
 std::unique_ptr<VulkanRingBuffer> createStorageRingBuffer(

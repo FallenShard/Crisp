@@ -182,8 +182,7 @@ Material* createPbrMaterial(
     }
 
     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-    material->writeDescriptor(
-        1, 0, *resourceContext.createUniformBuffer(paramsBufferKey, pbrMaterial.params, BufferUpdatePolicy::PerFrame));
+    material->writeDescriptor(1, 0, *resourceContext.createRingBufferFromStruct(paramsBufferKey, pbrMaterial.params));
 
     return material;
 }
@@ -195,7 +194,7 @@ void setPbrMaterialSceneParams(
     const rg::RenderGraph& rg) {
     const auto& imageCache = resourceContext.imageCache;
     const auto& envLight = *lightSystem.getEnvironmentLight();
-    material.writeDescriptor(0, 0, *resourceContext.getUniformBuffer("camera"));
+    material.writeDescriptor(0, 0, *resourceContext.getRingBuffer("camera"));
     material.writeDescriptor(0, 1, *lightSystem.getCascadedDirectionalLightBuffer());
     material.writeDescriptor(0, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(0, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));

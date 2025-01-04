@@ -12,7 +12,6 @@
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
@@ -81,20 +80,20 @@ void FluidSimulationScene::resize(int width, int height) {
 
 void FluidSimulationScene::update(float dt) {
     m_cameraController->update(dt);
-    m_uniformBuffers["camera"]->updateStagingBuffer(m_cameraController->getCameraParameters());
+    m_uniformBuffers["camera"]->updateStagingBuffer2(m_cameraController->getCameraParameters());
 
     const float scale = 10.0f;
     m_transforms.M = glm::scale(glm::vec3(scale));
     m_transforms.MV = m_cameraController->getCamera().getViewMatrix() * m_transforms.M;
     m_transforms.MVP = m_cameraController->getCamera().getProjectionMatrix() * m_transforms.MV;
-    m_transformsBuffer->updateStagingBuffer(m_transforms);
+    m_transformsBuffer->updateStagingBuffer2(m_transforms);
 
     m_fluidSimulation->update(dt);
 
     m_particleParams.radius = m_fluidSimulation->getParticleRadius() * scale;
     m_particleParams.screenSpaceScale =
         m_renderer->getSwapChainExtent().width * m_cameraController->getCamera().getProjectionMatrix()[0][0];
-    m_uniformBuffers["params"]->updateStagingBuffer(m_particleParams);
+    m_uniformBuffers["params"]->updateStagingBuffer2(m_particleParams);
 
     const uint32_t vertexByteOffset =
         m_fluidSimulation->getCurrentSection() * m_fluidSimulation->getParticleCount() * sizeof(glm::vec4);

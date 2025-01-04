@@ -77,8 +77,8 @@ void addToRenderGraph(
     Renderer* renderer,
     RenderGraph& renderGraph,
     const LightClustering& lightClustering,
-    const UniformBuffer& cameraBuffer,
-    const UniformBuffer& pointLightBuffer) {
+    const VulkanRingBuffer& cameraBuffer,
+    const VulkanRingBuffer& pointLightBuffer) {
     auto& cullingPass = renderGraph.addComputePass(kLightCullingPass);
     cullingPass.workGroupSize = {
         static_cast<uint32_t>(lightClustering.m_tileSize.x), static_cast<uint32_t>(lightClustering.m_tileSize.y), 1};
@@ -105,7 +105,7 @@ void addToRenderGraph(
             VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.buffer = lightCountBuffer->get();
+            barrier.buffer = lightCountBuffer->getHandle();
             barrier.offset = frameIndex * sizeof(zero);
             barrier.size = sizeof(zero);
 
@@ -140,20 +140,11 @@ void LightClustering::configure(
     const auto tileFrusta{createTileFrusta(m_tileSize, cameraParameters.screenSize, cameraParameters.P)};
     const std::size_t tileCount = tileFrusta.size();
 
-    m_tilePlaneBuffer = std::make_unique<UniformBuffer>(
-        renderer,
-        tileCount * sizeof(TileFrustum),
-        BufferUpdatePolicy::PerFrame,
-        tileFrusta.data(),
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    m_lightIndexCountBuffer = std::make_unique<UniformBuffer>(
-        renderer, sizeof(uint32_t), BufferUpdatePolicy::PerFrame, nullptr, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-    m_lightIndexListBuffer = std::make_unique<UniformBuffer>(
-        renderer,
-        tileCount * sizeof(uint32_t) * maximumLightCount,
-        BufferUpdatePolicy::PerFrame,
-        nullptr,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    m_tilePlaneBuffer =
+        createStorageRingBuffer(&renderer->getDevice(), tileCount * sizeof(TileFrustum), tileFrusta.data());
+    m_lightIndexCountBuffer = createStorageRingBuffer(&renderer->getDevice(), sizeof(uint32_t));
+    m_lightIndexListBuffer =
+        createStorageRingBuffer(&renderer->getDevice(), tileCount * sizeof(uint32_t) * maximumLightCount);
 
     m_lightGrid = createSampledStorageImage(
         *renderer,

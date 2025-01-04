@@ -14,7 +14,6 @@ namespace crisp {
 class CameraController;
 
 class Renderer;
-class UniformBuffer;
 
 class MeshGeometry;
 class VulkanPipeline;

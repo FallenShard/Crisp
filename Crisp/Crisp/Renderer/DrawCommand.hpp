@@ -3,9 +3,9 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Geometry/GeometryView.hpp>
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
 
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 #include <variant>
 #include <vector>

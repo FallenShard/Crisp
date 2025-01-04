@@ -6,57 +6,54 @@
 #include <Crisp/Models/FluidSimulation.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Renderer/StorageBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 
 namespace crisp {
 class VulkanPipeline;
 class Renderer;
 class VulkanDevice;
-class UniformBuffer;
 class RenderGraph;
 
 class SPH : public FluidSimulation {
 public:
     SPH(Renderer* renderer, RenderGraph* renderGraph);
-    virtual ~SPH();
 
-    virtual void update(float dt) override;
+    void update(float dt) override;
 
-    virtual void onKeyPressed(Key key, int modifier) override;
-    virtual void setGravityX(float value) override;
-    virtual void setGravityY(float value) override;
-    virtual void setGravityZ(float value) override;
-    virtual void setViscosity(float value) override;
-    virtual void setSurfaceTension(float value) override;
-    virtual void reset() override;
+    void onKeyPressed(Key key, int modifier) override;
+    void setGravityX(float value) override;
+    void setGravityY(float value) override;
+    void setGravityZ(float value) override;
+    void setViscosity(float value) override;
+    void setSurfaceTension(float value) override;
+    void reset() override;
 
-    virtual float getParticleRadius() const override;
+    float getParticleRadius() const override;
 
-    virtual VulkanBuffer* getVertexBuffer(std::string_view key) const override;
+    VulkanBuffer* getVertexBuffer(std::string_view key) const override;
 
-    virtual uint32_t getParticleCount() const override;
-    virtual uint32_t getCurrentSection() const override;
+    uint32_t getParticleCount() const override;
+    uint32_t getCurrentSection() const override;
 
 private:
     std::vector<glm::vec4> createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const;
 
     Renderer* m_renderer;
-    std::unique_ptr<StorageBuffer> m_vertexBuffer;
-    std::unique_ptr<StorageBuffer> m_colorBuffer;
-    std::unique_ptr<StorageBuffer> m_indexBuffer;
+    std::unique_ptr<VulkanBuffer> m_vertexBuffer;
+    std::unique_ptr<VulkanBuffer> m_colorBuffer;
+    std::unique_ptr<VulkanBuffer> m_indexBuffer;
 
-    std::unique_ptr<StorageBuffer> m_reorderedPositionBuffer;
+    std::unique_ptr<VulkanBuffer> m_reorderedPositionBuffer;
 
-    std::unique_ptr<StorageBuffer> m_cellCountBuffer;
-    std::unique_ptr<StorageBuffer> m_cellIdBuffer;
-    std::unique_ptr<StorageBuffer> m_blockSumBuffer;
+    std::unique_ptr<VulkanBuffer> m_cellCountBuffer;
+    std::unique_ptr<VulkanBuffer> m_cellIdBuffer;
+    std::unique_ptr<VulkanBuffer> m_blockSumBuffer;
     uint32_t m_blockSumRegionSize;
 
-    std::unique_ptr<StorageBuffer> m_densityBuffer;
-    std::unique_ptr<StorageBuffer> m_pressureBuffer;
-    std::unique_ptr<StorageBuffer> m_velocityBuffer;
-    std::unique_ptr<StorageBuffer> m_forcesBuffer;
+    std::unique_ptr<VulkanBuffer> m_densityBuffer;
+    std::unique_ptr<VulkanBuffer> m_pressureBuffer;
+    std::unique_ptr<VulkanBuffer> m_velocityBuffer;
+    std::unique_ptr<VulkanBuffer> m_forcesBuffer;
 
     float m_particleRadius;
     glm::uvec3 m_fluidDim;

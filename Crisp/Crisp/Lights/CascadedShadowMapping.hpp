@@ -2,9 +2,8 @@
 
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Lights/DirectionalLight.hpp>
-#include <Crisp/Renderer/UniformBuffer.hpp>
-
-#include <memory>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
 struct CascadedShadowMapping {
@@ -16,11 +15,11 @@ struct CascadedShadowMapping {
         float zFar;
 
         DirectionalLight light;
-        std::unique_ptr<UniformBuffer> buffer;
+        std::unique_ptr<VulkanRingBuffer> buffer;
     };
 
     std::vector<Cascade> cascades;
-    std::unique_ptr<UniformBuffer> cascadedLightBuffer;
+    std::unique_ptr<VulkanRingBuffer> cascadedLightBuffer;
 
     void setCascadeCount(Renderer* renderer, const DirectionalLight& light, uint32_t cascadeCount);
     void updateDirectionalLight(const DirectionalLight& light);

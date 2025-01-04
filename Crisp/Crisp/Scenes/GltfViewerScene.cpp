@@ -122,7 +122,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
 
     // Object transforms
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
-    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->get(), "transformBuffer");
+    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->getHandle(), "transformBuffer");
 
     createCommonTextures();
 
@@ -176,7 +176,7 @@ void GltfViewerScene::update(float dt) {
     // Camera
     m_cameraController->update(dt);
     const auto camParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(camParams);
+    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(camParams);
 
     // Object transforms
     m_transformBuffer->update(camParams.V, camParams.P);
@@ -190,10 +190,13 @@ void GltfViewerScene::update(float dt) {
     m_animation.updateJoints(m_skinningData.skeleton.joints, totalT);
     m_skinningData.skeleton.updateJointTransforms(m_skinningData.inverseBindTransforms);
 
-    m_resourceContext->getStorageBuffer("jointMatrices")
+    m_resourceContext->getRingBuffer("jointMatrices")
         ->updateStagingBuffer(
-            m_skinningData.skeleton.jointTransforms.data(),
-            m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4));
+            {
+                .data = m_skinningData.skeleton.jointTransforms.data(),
+                .size = m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4),
+            },
+            m_renderer->getCurrentVirtualFrameIndex());
 
     totalT += dt;
     if (totalT >= 2.0f) {
@@ -303,41 +306,25 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
 
         const auto& restPositions = renderObject.mesh.getPositions();
         const auto vertexCount = static_cast<uint32_t>(restPositions.size());
-        auto restVertexBuffer = m_resourceContext->addStorageBuffer(
-            "restPositions",
-            std::make_unique<StorageBuffer>(
-                m_renderer,
-                restPositions.size() * sizeof(glm::vec3),
-                0,
-                BufferUpdatePolicy::Constant,
-                restPositions.data()));
+        auto restVertexBuffer =
+            m_resourceContext->addBuffer("restPositions", createStorageBuffer(m_renderer->getDevice(), restPositions));
         const auto& weightsData = renderObject.mesh.getCustomAttribute("weights0");
-        auto weightsBuffer = m_resourceContext->addStorageBuffer(
-            "weights",
-            std::make_unique<StorageBuffer>(
-                m_renderer, weightsData.buffer.size(), 0, BufferUpdatePolicy::Constant, weightsData.buffer.data()));
+        auto weightsBuffer =
+            m_resourceContext->addBuffer("weights", createStorageBuffer(m_renderer->getDevice(), weightsData.buffer));
         const auto& jointIndices = renderObject.mesh.getCustomAttribute("indices0");
-        auto indicesBuffer = m_resourceContext->addStorageBuffer(
-            "indices",
-            std::make_unique<StorageBuffer>(
-                m_renderer, jointIndices.buffer.size(), 0, BufferUpdatePolicy::Constant, jointIndices.buffer.data()));
-        auto jointMatrices = m_resourceContext->addStorageBuffer(
-            "jointMatrices",
-            std::make_unique<StorageBuffer>(
-                m_renderer,
-                m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4),
-                0,
-                BufferUpdatePolicy::PerFrame,
-                m_skinningData.skeleton.jointTransforms.data()));
+        auto indicesBuffer =
+            m_resourceContext->addBuffer("indices", createStorageBuffer(m_renderer->getDevice(), jointIndices.buffer));
+        auto jointMatrices = m_resourceContext->addBuffer(
+            "jointMatrices", createStorageBuffer(m_renderer->getDevice(), m_skinningData.skeleton.jointTransforms));
         auto& skinningPass = m_renderGraph->addComputePass("SkinningPass");
         skinningPass.workGroupSize = {256, 1, 1};
         skinningPass.numWorkGroups = {(vertexCount + 256 - 1) / 256, 1, 1};
         skinningPass.pipeline = createSkinningPipeline(m_renderer, skinningPass.workGroupSize);
         skinningPass.material = std::make_unique<Material>(skinningPass.pipeline.get());
-        skinningPass.material->writeDescriptor(0, 0, restVertexBuffer->getDescriptorInfo());
-        skinningPass.material->writeDescriptor(0, 1, weightsBuffer->getDescriptorInfo());
-        skinningPass.material->writeDescriptor(0, 2, indicesBuffer->getDescriptorInfo());
-        skinningPass.material->writeDescriptor(0, 3, jointMatrices->getDescriptorInfo());
+        skinningPass.material->writeDescriptor(0, 0, *restVertexBuffer);
+        skinningPass.material->writeDescriptor(0, 1, *weightsBuffer);
+        skinningPass.material->writeDescriptor(0, 2, *indicesBuffer);
+        skinningPass.material->writeDescriptor(0, 3, *jointMatrices);
         skinningPass.material->writeDescriptor(
             0, 4, VkDescriptorBufferInfo{gltfNode->geometry->getVertexBuffer()->getHandle(), 0, VK_WHOLE_SIZE});
 
