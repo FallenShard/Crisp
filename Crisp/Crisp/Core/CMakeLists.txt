@@ -122,6 +122,7 @@ target_link_libraries(CrispApplication
     PUBLIC Crisp::Event
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Scenes
+    PUBLIC Crisp::AssetPaths
     PUBLIC Crisp::ImGui
     PRIVATE Crisp::Timer
 )

@@ -5,13 +5,23 @@
 #include <imgui.h>
 
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp::gui {
-void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string>& fontPath);
-void shutdownImGui(Renderer& renderer);
-void prepareImGuiFrame();
-void renderImGuiFrame(Renderer& renderer);
+
+void initImGui(
+    GLFWwindow* window,
+    VkInstance instance,
+    VkPhysicalDevice physicalDevice,
+    const VulkanDevice& device,
+    uint32_t swapChainImageCount,
+    VkRenderPass renderPass,
+    const std::optional<std::string>& fontPath);
+void shutdownImGui(VkDevice device);
+void prepareImGui();
+void renderImGui(VkCommandBuffer cmdBuffer);
+
+// void renderImGuiFrame(Renderer& renderer);
 
 template <typename F>
 inline void drawComboBox(

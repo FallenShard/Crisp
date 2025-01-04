@@ -6,6 +6,7 @@ add_cpp_static_library(
 target_link_libraries(
     CrispImGui
     PUBLIC ImGui
+    PUBLIC Crisp::VulkanDevice
     PUBLIC Crisp::Window
 )
 

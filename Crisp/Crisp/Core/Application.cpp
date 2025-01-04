@@ -1,16 +1,14 @@
 #include <Crisp/Core/Application.hpp>
 
-#include <imgui.h>
-
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Core/Profiler.hpp>
 #include <Crisp/Core/Timer.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
-#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Renderer/AssetPaths.hpp>
 
 namespace crisp {
 namespace {
-const auto logger = createLoggerMt("Application");
+CRISP_MAKE_LOGGER_MT("Application");
 
 [[maybe_unused]] void logFps(double frameTime, double fps) {
     CRISP_LOGD("{:03.2f} ms, {:03.2f} fps\r", frameTime, fps);
@@ -53,13 +51,19 @@ Application::Application(const ApplicationEnvironment& environment)
     m_sceneContainer->update(0.0f);
 
     gui::initImGui(
-        m_window.getHandle(), *m_renderer, getIfExists<std::string>(environment.getConfig(), "imguiFontPath"));
+        m_window.getHandle(),
+        m_renderer->getInstance().getHandle(),
+        m_renderer->getPhysicalDevice().getHandle(),
+        m_renderer->getDevice(),
+        m_renderer->getSwapChain().getImageCount(),
+        m_renderer->getDefaultRenderPass().getHandle(),
+        getIfExists<std::string>(environment.getConfig(), "imguiFontPath"));
 
     m_renderer->flushResourceUpdates(true);
 }
 
 Application::~Application() {
-    gui::shutdownImGui(*m_renderer);
+    gui::shutdownImGui(m_renderer->getDevice().getHandle());
 }
 
 void Application::run() {
@@ -85,11 +89,11 @@ void Application::run() {
             continue;
         }
 
-        gui::prepareImGuiFrame();
+        gui::prepareImGui();
         drawGui();
         m_sceneContainer->render();
 
-        gui::renderImGuiFrame(*m_renderer);
+        m_renderer->enqueueDefaultPassDrawCommand([](const VkCommandBuffer cmdBuffer) { gui::renderImGui(cmdBuffer); });
 
         m_renderer->drawFrame();
     }
@@ -177,11 +181,11 @@ void Application::drawGui() {
     drawMemoryLabel("Image Memory", metrics.imageMemoryUsed, metrics.imageMemorySize);
     drawMemoryLabel("Staging Memory", metrics.stagingMemoryUsed, metrics.stagingMemorySize);
 
-    // gui::drawComboBox(
-    //     "Scene",
-    //     m_sceneContainer->getSceneName(),
-    //     SceneContainer::getSceneNames(),
-    //     [this](const std::string& selectedItem) { m_sceneContainer->onSceneSelected(selectedItem); });
+    gui::drawComboBox(
+        "Scene",
+        m_sceneContainer->getSceneName(),
+        SceneContainer::getSceneNames(),
+        [this](const std::string& selectedItem) { m_sceneContainer->onSceneSelected(selectedItem); });
 
     ImGui::End();
 }

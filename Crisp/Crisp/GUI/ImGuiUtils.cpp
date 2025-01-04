@@ -11,7 +11,14 @@ namespace {
 VkDescriptorPool imGuiPool{VK_NULL_HANDLE};
 } // namespace
 
-void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::string>& fontPath) {
+void initImGui(
+    GLFWwindow* window,
+    VkInstance instance,
+    VkPhysicalDevice physicalDevice,
+    const VulkanDevice& device,
+    const uint32_t swapChainImageCount,
+    const VkRenderPass renderPass,
+    const std::optional<std::string>& fontPath) {
     VkDescriptorPoolSize poolSizes[] = /* NOLINT */ {
         {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
@@ -33,54 +40,60 @@ void initImGui(GLFWwindow* window, Renderer& renderer, const std::optional<std::
     poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
     poolInfo.pPoolSizes = poolSizes; // NOLINT
 
-    VK_CHECK(vkCreateDescriptorPool(renderer.getDevice().getHandle(), &poolInfo, nullptr, &imGuiPool));
+    VK_CHECK(vkCreateDescriptorPool(device.getHandle(), &poolInfo, nullptr, &imGuiPool));
 
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForVulkan(window, true);
 
     ImGui_ImplVulkan_InitInfo initInfo{};
-    initInfo.Instance = renderer.getInstance().getHandle();
-    initInfo.PhysicalDevice = renderer.getPhysicalDevice().getHandle();
-    initInfo.Device = renderer.getDevice().getHandle();
-    initInfo.Queue = renderer.getDevice().getGeneralQueue().getHandle();
+    initInfo.Instance = instance;
+    initInfo.PhysicalDevice = physicalDevice;
+    initInfo.Device = device.getHandle();
+    initInfo.QueueFamily = device.getGeneralQueue().getFamilyIndex();
+    initInfo.Queue = device.getGeneralQueue().getHandle();
     initInfo.DescriptorPool = imGuiPool;
-    initInfo.MinImageCount = kRendererVirtualFrameCount;
-    initInfo.ImageCount = kRendererVirtualFrameCount;
+    initInfo.MinImageCount = swapChainImageCount;
+    initInfo.ImageCount = swapChainImageCount;
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     ImGui_ImplVulkan_LoadFunctions(
         [](const char* funcName, void* userData) {
             return vkGetInstanceProcAddr(static_cast<VkInstance>(userData), funcName);
         },
         initInfo.Instance);
-    ImGui_ImplVulkan_Init(&initInfo, renderer.getDefaultRenderPass().getHandle());
+    ImGui_ImplVulkan_Init(&initInfo, renderPass);
 
     if (fontPath) {
         ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->c_str(), 16);
     }
 
-    auto& device = renderer.getDevice();
-    device.postResourceUpdate([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
-    device.waitIdle();
+    device.getGeneralQueue().submitAndWait([&](VkCommandBuffer commandBuffer) {
+        ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+    });
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
-void shutdownImGui(Renderer& renderer) {
+void shutdownImGui(const VkDevice device) {
     if (imGuiPool) {
-        vkDestroyDescriptorPool(renderer.getDevice().getHandle(), imGuiPool, nullptr);
+        vkDestroyDescriptorPool(device, imGuiPool, nullptr);
         ImGui_ImplVulkan_Shutdown();
     }
 }
 
-void prepareImGuiFrame() {
+void prepareImGui() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-void renderImGuiFrame(Renderer& renderer) {
+void renderImGui(const VkCommandBuffer cmdBuffer) {
     ImGui::Render();
-    renderer.enqueueDefaultPassDrawCommand([](VkCommandBuffer cmdBuffer) {
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
-    });
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
 }
+
+// void renderImGuiFrame(Renderer& renderer) {
+//     ImGui::Render();
+//     renderer.enqueueDefaultPassDrawCommand([](VkCommandBuffer cmdBuffer) {
+//         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
+//     });
+// }
 } // namespace crisp::gui
