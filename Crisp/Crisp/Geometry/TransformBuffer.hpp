@@ -55,7 +55,7 @@ public:
     TransformPack& getPack(TransformHandle handle);
 
     // The buffer is used as UNIFORM_DYNAMIC, hence we only provide info for one transformation.
-    inline VkDescriptorBufferInfo getDescriptorInfo() const {
+    VkDescriptorBufferInfo getDescriptorInfo() const {
         return m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack));
     }
 

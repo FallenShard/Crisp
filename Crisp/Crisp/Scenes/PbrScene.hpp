@@ -4,7 +4,7 @@
 #include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/HashMap.hpp>
-#include <Crisp/IO/JsonUtils.hpp>
+#include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Models/Skybox.hpp>

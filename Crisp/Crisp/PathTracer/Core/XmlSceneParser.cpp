@@ -1,6 +1,6 @@
 #include <Crisp/PathTracer/Core/XmlSceneParser.hpp>
 
-#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/PathTracer/BSDFs/BSDFFactory.hpp>
 #include <Crisp/PathTracer/BSSRDFs/BSSRDFFactory.hpp>
 #include <Crisp/PathTracer/Cameras/CameraFactory.hpp>

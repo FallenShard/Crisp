@@ -18,7 +18,8 @@ glm::mat4 calculateViewMatrix(const glm::vec3& direction) {
     return glm::lookAt(origin, origin + direction, up);
 }
 
-glm::mat4 fitTightOrthoAroundFrustum(const glm::mat4& view, const std::array<glm::vec3, 8>& worldFrustumPoints) {
+[[maybe_unused]] glm::mat4 fitTightOrthoAroundFrustum(
+    const glm::mat4& view, const std::array<glm::vec3, 8>& worldFrustumPoints) {
     glm::vec3 minCorner(std::numeric_limits<float>::max());
     glm::vec3 maxCorner(std::numeric_limits<float>::lowest());
     for (const auto& point : worldFrustumPoints) {
@@ -86,7 +87,7 @@ glm::mat4 fitSphereOrthoAroundFrustum(
     // float x = std::ceil(glm::dot(center, up), )
 
     glm::vec3 extent = maxCorner - minCorner;
-    float maxLength = std::max(extent.x, std::max(extent.y, extent.z));
+    float maxLength = std::max({extent.x, extent.y, extent.z});
     extent = glm::vec3(maxLength);
 
     // Because view matrix looks down the -Z axis, maxZ value will be "behind" the minZ value
@@ -108,12 +109,11 @@ glm::mat4 fitSphereOrthoAroundFrustum(
 } // namespace
 
 DirectionalLight::DirectionalLight(
-    const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& minCorner, const glm::vec3& maxCorner)
+    const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& extentMin, const glm::vec3& extentMax)
     : m_direction(glm::normalize(direction))
-    , m_radiance(radiance) {
-    m_view = calculateViewMatrix(m_direction);
-    m_projection = glm::ortho(minCorner.x, maxCorner.x, minCorner.y, maxCorner.y, minCorner.z, maxCorner.z);
-}
+    , m_radiance(radiance)
+    , m_view(calculateViewMatrix(m_direction))
+    , m_projection{glm::ortho(extentMin.x, extentMax.x, extentMin.y, extentMax.y, extentMin.z, extentMax.z)} {}
 
 void DirectionalLight::setDirection(glm::vec3 direction) {
     m_direction = glm::normalize(direction);

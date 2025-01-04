@@ -45,26 +45,25 @@ add_cpp_interface_library(
     "AssetPaths.hpp"
 )
 
-add_cpp_static_library(
-    CrispRenderPasses
-    "RenderPasses/BlurPass.cpp"
-    "RenderPasses/BlurPass.hpp"
-    "RenderPasses/CubeMapRenderPass.cpp"
-    "RenderPasses/CubeMapRenderPass.hpp"
-    "RenderPasses/DepthPass.cpp"
-    "RenderPasses/DepthPass.hpp"
-    "RenderPasses/ForwardLightingPass.cpp"
-    "RenderPasses/ForwardLightingPass.hpp"
-    "RenderPasses/LightShaftPass.cpp"
-    "RenderPasses/LightShaftPass.hpp"
-    "RenderPasses/LiquidRenderPass.cpp"
-    "RenderPasses/LiquidRenderPass.hpp"
-    "RenderPasses/ShadowPass.cpp"
-    "RenderPasses/ShadowPass.hpp"
-    "RenderPasses/TexturePass.cpp"
-    "RenderPasses/TexturePass.hpp"
-)
-
+# add_cpp_static_library(
+# CrispRenderPasses
+# "RenderPasses/BlurPass.cpp"
+# "RenderPasses/BlurPass.hpp"
+# "RenderPasses/CubeMapRenderPass.cpp"
+# "RenderPasses/CubeMapRenderPass.hpp"
+# "RenderPasses/DepthPass.cpp"
+# "RenderPasses/DepthPass.hpp"
+# "RenderPasses/ForwardLightingPass.cpp"
+# "RenderPasses/ForwardLightingPass.hpp"
+# "RenderPasses/LightShaftPass.cpp"
+# "RenderPasses/LightShaftPass.hpp"
+# "RenderPasses/LiquidRenderPass.cpp"
+# "RenderPasses/LiquidRenderPass.hpp"
+# "RenderPasses/ShadowPass.cpp"
+# "RenderPasses/ShadowPass.hpp"
+# "RenderPasses/TexturePass.cpp"
+# "RenderPasses/TexturePass.hpp"
+# )
 add_cpp_static_library(
     CrispRenderer
     "BufferUpdatePolicy.hpp"

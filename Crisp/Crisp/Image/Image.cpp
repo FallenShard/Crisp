@@ -1,5 +1,6 @@
 #include <Crisp/Image/Image.hpp>
 
+#include <bit>
 #include <cmath>
 
 namespace crisp {
@@ -108,7 +109,7 @@ uint32_t Image::getMipLevels() const {
 }
 
 uint32_t Image::getMipLevels(const uint32_t width, const uint32_t height) {
-    return static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
+    return std::bit_width(std::max(width, height));
 }
 
 } // namespace crisp

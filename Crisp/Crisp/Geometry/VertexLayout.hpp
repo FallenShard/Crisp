@@ -1,9 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include <Crisp/Mesh/VertexAttributeDescriptor.hpp>
 #include <Crisp/Vulkan/VulkanVertexLayout.hpp>
-
-#include <vector>
 
 namespace crisp {
 using VertexLayoutDescription = std::vector<std::vector<VertexAttributeDescriptor>>;

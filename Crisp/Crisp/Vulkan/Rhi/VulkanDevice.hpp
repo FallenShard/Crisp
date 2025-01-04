@@ -49,7 +49,7 @@ public:
         return *m_resourceDeallocator;
     }
 
-    inline void wait(const VkFence fence) const {
+    void wait(const VkFence fence) const {
         vkWaitForFences(m_handle, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     }
 

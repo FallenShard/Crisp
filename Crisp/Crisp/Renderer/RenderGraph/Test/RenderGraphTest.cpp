@@ -1,7 +1,7 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
-
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
+
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 
 namespace crisp {
@@ -24,7 +24,7 @@ struct ForwardLightingData {
 class RenderGraphTest : public VulkanTestWithSurface {
 protected:
     static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled) {
-        return {*device_, *physicalDevice_, context_->getSurface(), buffering};
+        return {*device_, *physicalDevice_, instance_->getSurface(), buffering};
     }
 };
 

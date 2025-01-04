@@ -20,9 +20,9 @@ public:
     static constexpr uint32_t kDiffuseCubeMapSize = 64;
     static constexpr uint32_t kSpecularCubeMapSize = 512;
 
-    EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& iblData);
+    EnvironmentLight(Renderer& renderer, const ImageBasedLightingData& iblData);
 
-    void update(Renderer& renderer, ImageBasedLightingData&& iblData);
+    void update(Renderer& renderer, const ImageBasedLightingData& iblData);
 
     void setName(const std::string& name) {
         m_name = name;
@@ -32,15 +32,15 @@ public:
         return m_name;
     }
 
-    inline const VulkanImageView& getDiffuseMapView() const {
+    const VulkanImageView& getDiffuseMapView() const {
         return *m_diffuseEnvironmentMapView;
     }
 
-    inline const VulkanImageView& getSpecularMapView() const {
+    const VulkanImageView& getSpecularMapView() const {
         return *m_specularEnvironmentMapView;
     }
 
-    inline std::unique_ptr<Skybox> createSkybox(
+    std::unique_ptr<Skybox> createSkybox(
         Renderer& renderer, const VulkanRenderPass& renderPass, const VulkanSampler& sampler) const {
         return std::make_unique<Skybox>(&renderer, renderPass, *m_cubeMapView, sampler);
     }
@@ -59,7 +59,7 @@ private:
 };
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
-    Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView);
+    Renderer* renderer, const VulkanImageView& equirectMapView);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
     Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize = EnvironmentLight::kDiffuseCubeMapSize);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(

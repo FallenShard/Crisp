@@ -1,7 +1,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 
 namespace crisp {
-
+namespace {
 VkAccelerationStructureBuildSizesInfoKHR getBuildSizes(
     const VkDevice device,
     const VkAccelerationStructureBuildGeometryInfoKHR& buildGeometryInfo,
@@ -11,6 +11,7 @@ VkAccelerationStructureBuildSizesInfoKHR getBuildSizes(
         device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildGeometryInfo, &primitiveCount, &sizes);
     return sizes;
 }
+} // namespace
 
 VulkanAccelerationStructure::VulkanAccelerationStructure(
     const VulkanDevice& device,

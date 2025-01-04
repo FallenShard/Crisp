@@ -2,8 +2,8 @@
 
 #include <gmock/gmock.h>
 
-namespace crisp {
-
+namespace crisp::test {
+namespace {
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::Field;
@@ -40,5 +40,5 @@ TEST(VertexLayoutTest, Simple) {
             AttributeIs(1, 2, 12, VK_FORMAT_R32G32_SFLOAT),
             AttributeIs(1, 3, 20, VK_FORMAT_R32G32B32A32_SFLOAT)));
 }
-
-} // namespace crisp
+} // namespace
+} // namespace crisp::test

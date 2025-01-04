@@ -1,4 +1,5 @@
-add_cpp_static_library(CrispGeometry
+add_cpp_static_library(
+    CrispGeometry
     "Geometry.cpp"
     "Geometry.hpp"
     "GeometryView.hpp"
@@ -6,25 +7,33 @@ add_cpp_static_library(CrispGeometry
     "TransformBuffer.hpp"
     "TransformPack.hpp"
 )
-target_link_libraries(CrispGeometry
+target_link_libraries(
+    CrispGeometry
     PUBLIC Crisp::Math
     PUBLIC Crisp::Mesh
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::ThreadPool
-    PUBLIC Crisp::VertexLayout)
+    PUBLIC Crisp::VertexLayout
+)
 
-add_cpp_static_library(CrispVertexLayout
+add_cpp_static_library(
+    CrispVertexLayout
     "VertexLayout.cpp"
     "VertexLayout.hpp"
 )
-target_link_libraries(CrispVertexLayout
+target_link_libraries(
+    CrispVertexLayout
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::Mesh
     PRIVATE Crisp::Logger
     PRIVATE Crisp::Result
 )
 
-add_cpp_test(CrispVertexLayoutTest
-    "Test/VertexLayoutTest.cpp")
-target_link_libraries(CrispVertexLayoutTest
-    PRIVATE Crisp::VertexLayout)
+add_cpp_test(
+    CrispVertexLayoutTest
+    "Test/VertexLayoutTest.cpp"
+)
+target_link_libraries(
+    CrispVertexLayoutTest
+    PRIVATE Crisp::VertexLayout
+)

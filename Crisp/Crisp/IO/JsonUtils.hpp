@@ -1,15 +1,15 @@
 #pragma once
 
-#include <Crisp/IO/FileUtils.hpp>
-
-#include <nlohmann/json.hpp>
-
 #include <filesystem>
 #include <optional>
 
+#include <nlohmann/json.hpp>
+
+#include <Crisp/Io/FileUtils.hpp>
+
 namespace crisp {
 
-enum class JsonType {
+enum class JsonType : uint8_t {
     Null,
     Object,
     Array,

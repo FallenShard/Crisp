@@ -18,7 +18,7 @@ public:
         std::map<uint64_t, uint64_t> freeChunks;
         robin_hood::unordered_flat_map<uint64_t, uint64_t> usedChunks;
 
-        inline bool operator==(const AllocationBlock& other) const {
+        bool operator==(const AllocationBlock& other) const {
             return memory == other.memory;
         }
 
@@ -32,23 +32,23 @@ public:
         uint64_t offset;
         uint64_t size;
 
-        inline void free() const {
+        void free() const {
             allocationBlock->heap->free(*this);
         }
 
-        inline void* getBlockMappedPtr() const {
+        void* getBlockMappedPtr() const {
             return allocationBlock->mappedPtr;
         }
 
-        inline char* getMappedPtr() const {
+        char* getMappedPtr() const {
             return static_cast<char*>(allocationBlock->mappedPtr) + offset; // NOLINT
         }
 
-        inline VkDeviceMemory getMemory() const {
+        VkDeviceMemory getMemory() const {
             return allocationBlock->memory;
         }
 
-        inline bool isValid() const {
+        bool isValid() const {
             return allocationBlock != nullptr;
         }
     };
@@ -71,11 +71,11 @@ public:
 
     bool isFromHeapIndex(uint32_t heapIndex, VkMemoryPropertyFlags memoryProperties) const;
 
-    inline VkDeviceSize getUsedSize() const {
+    VkDeviceSize getUsedSize() const {
         return m_usedSize;
     }
 
-    inline VkDeviceSize getAllocatedSize() const {
+    VkDeviceSize getAllocatedSize() const {
         return m_allocationBlocks.size() * m_blockSize;
     }
 

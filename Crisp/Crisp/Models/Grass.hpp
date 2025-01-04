@@ -11,6 +11,7 @@ class VulkanPipeline;
 class Material;
 class Geometry;
 class VulkanRenderPass;
+class VulkanRingBuffer;
 
 class VulkanSampler;
 
@@ -20,7 +21,7 @@ public:
         Renderer* renderer,
         VulkanRenderPass* mainRenderPass,
         VulkanRenderPass* renderPass,
-        UniformBuffer* cameraBuffer,
+        VulkanRingBuffer* cameraBuffer,
         VulkanSampler* sampler);
     ~Grass();
 

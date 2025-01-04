@@ -49,11 +49,11 @@ public:
     }
 
     // Object tags useful for debugging
-    inline void setTag(void* handle, std::string tag) {
+    void setTag(void* handle, std::string tag) {
         m_handleTagMap.emplace(handle, std::move(tag));
     }
 
-    inline const std::string& getTag(void* handle) const {
+    const std::string& getTag(void* handle) const {
         if (const auto iter = m_handleTagMap.find(handle); iter != m_handleTagMap.end()) {
             return iter->second;
         }
@@ -61,15 +61,15 @@ public:
         return m_handleTagMap.at(VK_NULL_HANDLE);
     }
 
-    inline void removeTag(void* handle) {
+    void removeTag(void* handle) {
         m_handleTagMap.erase(handle);
     }
 
-    inline VkDevice getDeviceHandle() const {
+    VkDevice getDeviceHandle() const {
         return m_deviceHandle;
     }
 
-    inline size_t getDeferredDestructorCount() const {
+    size_t getDeferredDestructorCount() const {
         return m_deferredDestructors.size();
     }
 

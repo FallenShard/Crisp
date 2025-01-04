@@ -2,7 +2,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/VulkanPipelineIo.hpp>

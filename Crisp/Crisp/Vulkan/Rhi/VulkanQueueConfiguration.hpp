@@ -5,7 +5,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 
 namespace crisp {
-enum class QueueType {
+enum class QueueType : uint8_t {
     Graphics = 0x01,
     Compute = 0x02,
     Transfer = 0x04,

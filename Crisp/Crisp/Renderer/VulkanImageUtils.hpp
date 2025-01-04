@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include <Crisp/Image/Image.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
@@ -13,7 +15,7 @@ std::unique_ptr<VulkanImage> createVulkanImage(
     Renderer& renderer, VkDeviceSize size, const void* data, VkImageCreateInfo imageCreateInfo);
 std::unique_ptr<VulkanImage> createVulkanImage(Renderer& renderer, const Image& image, VkFormat format);
 std::unique_ptr<VulkanImage> createVulkanCubeMap(
-    Renderer& renderer, const std::vector<std::vector<Image>>& cubeMapFaceMips, VkFormat format);
+    Renderer& renderer, std::span<const std::vector<Image>> cubeMapFaceMips, VkFormat format);
 
 void updateCubeMap(
     VulkanImage& cubeMap, Renderer& renderer, const std::vector<Image>& cubeMapFaces, uint32_t mipLevel = 0);

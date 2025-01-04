@@ -33,7 +33,7 @@ MATCHER_P(HandleIs, rhs, "Checks whether the handle is equal to another object's
     return arg.getHandle() == rhs.getHandle();
 }
 
-enum class SurfacePolicy { Headless, HiddenWindow };
+enum class SurfacePolicy : uint8_t { Headless, HiddenWindow };
 
 template <SurfacePolicy surfacePolicy = SurfacePolicy::Headless>
 class VulkanTestBase : public ::testing::Test {
@@ -86,8 +86,8 @@ protected:
         return vec;
     }
 
-    inline static constexpr uint32_t kDefaultWidth = 200;
-    inline static constexpr uint32_t kDefaultHeight = 200;
+    static constexpr uint32_t kDefaultWidth = 200;
+    static constexpr uint32_t kDefaultHeight = 200;
 
     inline static std::unique_ptr<Window> window_;
     inline static std::unique_ptr<VulkanInstance> instance_;
@@ -99,7 +99,7 @@ using VulkanTest = VulkanTestBase<SurfacePolicy::Headless>;
 using VulkanTestWithSurface = VulkanTestBase<SurfacePolicy::HiddenWindow>;
 
 struct ScopeCommandExecutor {
-    inline explicit ScopeCommandExecutor(const VulkanDevice& device)
+    explicit ScopeCommandExecutor(const VulkanDevice& device)
         : device(device)
         , commandPool(device.getGeneralQueue().createCommandPool(), device.getResourceDeallocator())
         , cmdBuffer(commandPool.allocateCommandBuffer(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY))
@@ -107,7 +107,7 @@ struct ScopeCommandExecutor {
         cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     }
 
-    inline ~ScopeCommandExecutor() {
+    ~ScopeCommandExecutor() {
         cmdBuffer.end();
         device.getGeneralQueue().submit(cmdBuffer.getHandle(), fence);
         device.wait(fence);

@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include <Crisp/IO/JsonUtils.hpp>
+#include <Crisp/Io/JsonUtils.hpp>
 
 namespace crisp {
 class ApplicationEnvironment // NOLINT

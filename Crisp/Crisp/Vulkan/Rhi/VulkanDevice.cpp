@@ -1,7 +1,5 @@
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
-#include <ranges>
-
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 

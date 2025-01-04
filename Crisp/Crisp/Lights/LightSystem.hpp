@@ -25,7 +25,7 @@ public:
 
     void setDirectionalLight(const DirectionalLight& dirLight);
 
-    inline const DirectionalLight& getDirectionalLight() const {
+    const DirectionalLight& getDirectionalLight() const {
         return m_directionalLight;
     }
 
@@ -65,9 +65,6 @@ private:
     std::vector<PointLight> m_pointLights;
     std::unique_ptr<VulkanRingBuffer> m_pointLightBuffer;
     LightClustering m_lightClustering;
-
-    // TODO: Implement omnidirectional shadow maps for select point lights.
-    // std::vector<ConeLight> m_coneLights;
 
     std::unique_ptr<EnvironmentLight> m_environmentLight;
 };

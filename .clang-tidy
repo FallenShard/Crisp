@@ -22,6 +22,7 @@ Checks: >
     modernize-*,
     -modernize-use-trailing-return-type,
     -modernize-use-nodiscard,
+    -modernize-use-designated-initializers,
     performance-*,
     portability-*,
     readability-*,

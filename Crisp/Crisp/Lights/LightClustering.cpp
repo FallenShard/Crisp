@@ -11,13 +11,23 @@ namespace {
 constexpr const char* kLightCullingPass = "lightCullingPass";
 
 struct Tile {
-    glm::vec3 screenSpacePoints[4];
-    glm::vec3 viewSpacePoints[4];
+    std::array<glm::vec3, 4> screenSpacePoints;
+    std::array<glm::vec3, 4> viewSpacePoints;
 };
 
 glm::vec4 computePlaneFromSpan(const glm::vec3& a, const glm::vec3& b) {
     glm::vec3 n = glm::normalize(glm::cross(a, b));
-    return glm::vec4(n, glm::dot(n, a));
+    return {n, glm::dot(n, a)};
+}
+
+std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
+    return createComputePipeline(*renderer, "light-culling.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
+        builder.setDescriptorDynamic(0, 1, true);
+        builder.setDescriptorDynamic(0, 2, true);
+        builder.setDescriptorDynamic(0, 3, true);
+        builder.setDescriptorDynamic(0, 4, true);
+        builder.setDescriptorSetBuffering(1, true);
+    });
 }
 } // namespace
 
@@ -33,15 +43,15 @@ std::vector<TileFrustum> createTileFrusta(
     std::vector<TileFrustum> tilePlanes(tileCount);
     for (int j = 0; j < numTiles.y; ++j) {
         for (int i = 0; i < numTiles.x; ++i) {
-            Tile tile;
+            Tile tile{};
             for (int k = 0; k < 4; ++k) {
-                float x = tileSize.x * static_cast<float>(i + k % 2);
-                float y = tileSize.y * static_cast<float>(j + k / 2);
+                const float x = static_cast<float>(tileSize.x) * static_cast<float>(i + k % 2);
+                const float y = static_cast<float>(tileSize.y) * static_cast<float>(j + k / 2); // NOLINT
                 tile.screenSpacePoints[k] = glm::vec3(x, y, 1.0f);
 
                 glm::vec4 ndc = glm::vec4(tile.screenSpacePoints[k], 1.0f);
-                ndc.x /= screenSize.x; // in [0, 1]
-                ndc.y /= screenSize.y;
+                ndc.x /= static_cast<float>(screenSize.x); // in [0, 1]
+                ndc.y /= static_cast<float>(screenSize.y);
                 ndc.x = ndc.x * 2.0f - 1.0f; // in [-1, 1]
                 ndc.y = ndc.y * 2.0f - 1.0f;
 
@@ -61,16 +71,6 @@ std::vector<TileFrustum> createTileFrusta(
     }
 
     return tilePlanes;
-}
-
-std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
-    return createComputePipeline(*renderer, "light-culling.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
-        builder.setDescriptorDynamic(0, 1, true);
-        builder.setDescriptorDynamic(0, 2, true);
-        builder.setDescriptorDynamic(0, 3, true);
-        builder.setDescriptorDynamic(0, 4, true);
-        builder.setDescriptorSetBuffering(1, true);
-    });
 }
 
 void addToRenderGraph(

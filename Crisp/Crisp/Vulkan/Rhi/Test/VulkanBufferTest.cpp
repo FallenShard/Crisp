@@ -11,7 +11,7 @@ using ::testing::Not;
 TEST_F(VulkanBufferTest, StagingVulkanBuffer) {
     constexpr uint32_t kElementCount{100};
     std::array<float, kElementCount> data{};
-    std::iota(data.begin(), data.end(), 0.0f);
+    std::iota(data.begin(), data.end(), 0.0f); // NOLINT
 
     constexpr VkDeviceSize size = data.size() * sizeof(float);
     StagingVulkanBuffer stagingBuffer(*device_, size);
@@ -29,7 +29,7 @@ TEST_F(VulkanBufferTest, StagingVulkanBuffer) {
 TEST_F(VulkanBufferTest, MoveConstruction) {
     constexpr uint32_t kElementCount{100};
     std::array<float, kElementCount> data{};
-    std::iota(data.begin(), data.end(), 0.0f);
+    std::iota(data.begin(), data.end(), 0.0f); // NOLINT
 
     constexpr VkDeviceSize size = data.size() * sizeof(float);
     StagingVulkanBuffer stagingBuffer(*device_, size);
@@ -47,7 +47,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
     std::vector<float> data(elementCount);
-    std::iota(data.begin(), data.end(), 0.0f);
+    std::iota(data.begin(), data.end(), 0.0f); // NOLINT
 
     VulkanBuffer deviceBuffer(
         *device_,
@@ -107,7 +107,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     StagingVulkanBuffer stagingBuffer(*device, kSize);
     std::vector<float> data(kSize / sizeof(float));
-    std::iota(data.begin(), data.end(), 0.0f);
+    std::iota(data.begin(), data.end(), 0.0f); // NOLINT
     const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i) {

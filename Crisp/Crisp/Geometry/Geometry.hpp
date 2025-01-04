@@ -1,15 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include <Crisp/Geometry/GeometryView.hpp>
 #include <Crisp/Geometry/VertexLayout.hpp>
 #include <Crisp/Mesh/TriangleMesh.hpp>
-
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
-
-#include <memory>
-#include <vector>
 
 namespace crisp {
 class Geometry {

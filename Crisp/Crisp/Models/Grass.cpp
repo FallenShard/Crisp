@@ -22,7 +22,7 @@ Grass::Grass(
     Renderer* renderer,
     VulkanRenderPass* /*mainRenderPass*/,
     VulkanRenderPass* /*shadowRenderPass*/,
-    UniformBuffer* /*cameraBuffer*/,
+    VulkanRingBuffer* /*cameraBuffer*/,
     VulkanSampler* /*sampler*/)
     : m_renderer(renderer) {
     // m_shadowPipelines.reserve(4);

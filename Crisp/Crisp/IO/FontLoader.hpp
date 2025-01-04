@@ -36,19 +36,15 @@ public:
     FontLoader();
     ~FontLoader();
 
+    FontLoader(const FontLoader&) = delete;
+    FontLoader& operator=(const FontLoader&) = delete;
+
+    FontLoader(FontLoader&&) = delete;
+    FontLoader& operator=(FontLoader&&) = delete;
+
     std::unique_ptr<Font> load(const std::filesystem::path& fontPath, int fontPixelSize) const;
 
 private:
-    std::pair<uint32_t, uint32_t> getFontAtlasSize(FT_Face fontFace) const;
-    void loadGlyphs(Font& fontName, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const;
-    void updateTexData(
-        std::vector<unsigned char>& texData,
-        unsigned char* data,
-        int x,
-        uint32_t dstWidth,
-        uint32_t width,
-        uint32_t height) const;
-
-    FT_Library m_context;
+    FT_Library m_context{nullptr};
 };
 } // namespace crisp

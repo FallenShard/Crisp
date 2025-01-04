@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
 
+#include <ranges>
+
 namespace crisp {
 VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, int32_t virtualFrameCount)
     : m_deviceHandle(device)
@@ -19,12 +21,11 @@ void VulkanResourceDeallocator::decrementLifetimes() {
         }
     }
 
-    m_deferredDestructors.erase(
-        std::remove_if(
-            m_deferredDestructors.begin(),
-            m_deferredDestructors.end(),
-            [](const auto& a) { return a.framesRemaining < 0; }),
-        m_deferredDestructors.end());
+    auto [firstDest, lastDest] = std::ranges::remove_if(m_deferredDestructors, [](const auto& a) {
+        return a.framesRemaining < 0;
+    });
+
+    m_deferredDestructors.erase(firstDest, lastDest);
 
     // Free the memory chunks
     for (auto& memoryChunkPair : m_deferredDeallocations) {
@@ -33,10 +34,11 @@ void VulkanResourceDeallocator::decrementLifetimes() {
         }
     }
 
-    m_deferredDeallocations.erase(
-        std::remove_if(
-            m_deferredDeallocations.begin(), m_deferredDeallocations.end(), [](const auto& a) { return a.first < 0; }),
-        m_deferredDeallocations.end());
+    auto [firstAlloc, lastAlloc] = std::ranges::remove_if(m_deferredDeallocations, [](const auto& a) {
+        return a.first < 0;
+    });
+
+    m_deferredDeallocations.erase(firstAlloc, lastAlloc);
 }
 
 void VulkanResourceDeallocator::freeAllResources() {

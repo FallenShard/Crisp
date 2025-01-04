@@ -38,8 +38,7 @@ Result<uint32_t> findQueueFamilyIndex(
     if (queueType == QueueType::AsyncCompute) {
         for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
             const auto& family = exposedQueueFamilies.at(i);
-            const auto familyType =
-                getQueueFamilyType(instance, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+            const auto familyType = getQueueFamilyType(instance, physicalDevice, i, family.queueFlags);
             if (((familyType & QueueType::AsyncCompute) == QueueType::AsyncCompute) &&
                 !(familyType & QueueType::Graphics)) {
                 return i;
@@ -50,8 +49,7 @@ Result<uint32_t> findQueueFamilyIndex(
     // Check for exact family match
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
-        const auto familyType =
-            getQueueFamilyType(instance, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+        const auto familyType = getQueueFamilyType(instance, physicalDevice, i, family.queueFlags);
         if (familyType == queueType && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }
@@ -60,8 +58,7 @@ Result<uint32_t> findQueueFamilyIndex(
     // Find a more general family for the queueType
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
-        const auto familyType =
-            getQueueFamilyType(instance, physicalDevice, static_cast<uint32_t>(i), family.queueFlags);
+        const auto familyType = getQueueFamilyType(instance, physicalDevice, i, family.queueFlags);
         if ((familyType & queueType) && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }

@@ -15,7 +15,7 @@ struct MemoryRegion {
 
 class VulkanCommandBuffer {
 public:
-    enum class State {
+    enum class State : uint8_t {
         Idle,
         Recording,
         Pending,
@@ -33,11 +33,11 @@ public:
 
     void setExecutionState();
 
-    inline VkCommandBuffer getHandle() const {
+    VkCommandBuffer getHandle() const {
         return m_handle;
     }
 
-    inline State getState() const {
+    State getState() const {
         return m_state;
     }
 

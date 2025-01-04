@@ -8,7 +8,7 @@ class VulkanDescriptorSet {
 public:
     VulkanDescriptorSet(uint32_t index, const VulkanPipelineLayout* pipelineLayout);
 
-    inline VkDescriptorSet getHandle() const {
+    VkDescriptorSet getHandle() const {
         return m_set;
     }
 

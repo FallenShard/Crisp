@@ -48,19 +48,19 @@ public:
     void updateFromHost(const void* hostMemoryData);
 
     template <typename T>
-    inline void updateFromHost(const std::vector<T>& buffer) {
+    void updateFromHost(const std::vector<T>& buffer) {
         updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
     }
 
     template <typename T, size_t N>
-    inline void updateFromHost(const std::array<T, N>& buffer) {
+    void updateFromHost(const std::array<T, N>& buffer) {
         updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
     }
 
     void updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer);
 
     template <typename T>
-    inline const T* getHostVisibleData() const {
+    const T* getHostVisibleData() const {
         return reinterpret_cast<const T*>(m_allocation.getMappedPtr()); // NOLINT
     }
 

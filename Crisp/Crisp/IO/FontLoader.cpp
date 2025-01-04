@@ -1,14 +1,13 @@
 #define NOMINMAX
-#include <Crisp/IO/FontLoader.hpp>
-
-#include <cmath>
-#include <iostream>
+#include <Crisp/Io/FontLoader.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 
 namespace crisp {
 namespace {
-constexpr int kPadding = 0;
+CRISP_MAKE_LOGGER_ST("FontLoader");
+
+constexpr uint32_t kPadding = 0;
 
 uint32_t ceilPowerOf2(uint32_t value) {
     uint32_t result = value - 1;
@@ -19,11 +18,79 @@ uint32_t ceilPowerOf2(uint32_t value) {
     result |= result >> 16;
     return result + 1;
 }
+
+std::pair<uint32_t, uint32_t> getFontAtlasSize(FT_Face fontFace) {
+    FT_GlyphSlot glyph = fontFace->glyph;
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+
+    for (unsigned int i = FontLoader::kCharBegin; i < FontLoader::kCharEnd; i++) {
+        if (FT_Load_Char(fontFace, i, FT_LOAD_RENDER)) {
+            CRISP_LOGE("Failed to load character: '{}'", static_cast<char>(i));
+            continue;
+        }
+
+        width += glyph->bitmap.width + kPadding;
+        height = std::max(height, glyph->bitmap.rows);
+    }
+
+    return {width, height};
+}
+
+void updateTexData(
+    std::vector<unsigned char>& texData,
+    const unsigned char* data,
+    const uint32_t xOffset,
+    const uint32_t dstWidth,
+    const uint32_t width,
+    const uint32_t height) {
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
+            uint32_t srcIndex = y * width + x;
+            uint32_t dstIndex = y * dstWidth + x + xOffset;
+
+            texData[dstIndex] = data[srcIndex]; // NOLINT
+        }
+    }
+}
+
+void loadGlyphs(Font& font, const FT_Face face, const uint32_t paddedWidth, const uint32_t paddedHeight) {
+    FT_GlyphSlot glyph = face->glyph;
+    uint32_t currX = 0;
+
+    float xOffsetScale = static_cast<float>(font.width) / static_cast<float>(paddedWidth);
+
+    for (int i = FontLoader::kCharBegin; i < FontLoader::kCharEnd; i++) {
+        if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
+            CRISP_LOGE("Failed to load character: '{}'", static_cast<char>(i));
+            continue;
+        }
+
+        updateTexData(
+            font.textureData, glyph->bitmap.buffer, currX, paddedWidth, glyph->bitmap.width, glyph->bitmap.rows);
+
+        font.glyphs[i - FontLoader::kCharBegin].atlasOffsetX =
+            static_cast<float>(currX) / static_cast<float>(font.width) * xOffsetScale;
+        font.glyphs[i - FontLoader::kCharBegin].advanceX = static_cast<float>(glyph->advance.x >> 6);
+        font.glyphs[i - FontLoader::kCharBegin].advanceY = static_cast<float>(glyph->advance.y >> 6);
+        font.glyphs[i - FontLoader::kCharBegin].bmpWidth = static_cast<float>(glyph->bitmap.width);
+        font.glyphs[i - FontLoader::kCharBegin].bmpHeight = static_cast<float>(glyph->bitmap.rows);
+        font.glyphs[i - FontLoader::kCharBegin].bmpLeft = static_cast<float>(glyph->bitmap_left);
+        font.glyphs[i - FontLoader::kCharBegin].bmpTop = static_cast<float>(glyph->bitmap_top);
+
+        currX += glyph->bitmap.width + kPadding;
+    }
+
+    font.width = paddedWidth;
+    font.height = paddedHeight;
+}
+
 } // namespace
 
 FontLoader::FontLoader() {
     if (FT_Init_FreeType(&m_context)) {
-        std::cerr << "Failed to initialize FreeType font library!" << std::endl;
+        CRISP_LOGF("Failed to initialize FreeType font library!");
     }
 }
 
@@ -32,7 +99,7 @@ FontLoader::~FontLoader() {
 }
 
 std::unique_ptr<Font> FontLoader::load(const std::filesystem::path& fontPath, int fontPixelSize) const {
-    FT_Face face;
+    FT_Face face{nullptr};
     if (FT_New_Face(m_context, fontPath.string().c_str(), 0, &face)) {
         spdlog::error("Failed to create new face: {}\n", fontPath.string());
         return nullptr;
@@ -59,70 +126,4 @@ std::unique_ptr<Font> FontLoader::load(const std::filesystem::path& fontPath, in
     return std::move(font);
 }
 
-std::pair<uint32_t, uint32_t> FontLoader::getFontAtlasSize(FT_Face fontFace) const {
-    FT_GlyphSlot glyph = fontFace->glyph;
-
-    uint32_t width = 0;
-    uint32_t height = 0;
-
-    for (unsigned int i = kCharBegin; i < kCharEnd; i++) {
-        if (FT_Load_Char(fontFace, i, FT_LOAD_RENDER)) {
-            std::cerr << "Failed to load character: " << static_cast<char>(i) << std::endl;
-            continue;
-        }
-
-        width += glyph->bitmap.width + kPadding;
-        height = std::max(height, glyph->bitmap.rows);
-    }
-
-    return {width, height};
-}
-
-void FontLoader::loadGlyphs(Font& font, FT_Face face, uint32_t paddedWidth, uint32_t paddedHeight) const {
-    FT_GlyphSlot glyph = face->glyph;
-    int currX = 0;
-
-    float xOffsetScale = static_cast<float>(font.width) / static_cast<float>(paddedWidth);
-
-    for (int i = kCharBegin; i < kCharEnd; i++) {
-        if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
-            std::cerr << "Failed to load character: " << static_cast<char>(i) << std::endl;
-            continue;
-        }
-
-        updateTexData(
-            font.textureData, glyph->bitmap.buffer, currX, paddedWidth, glyph->bitmap.width, glyph->bitmap.rows);
-
-        font.glyphs[i - kCharBegin].atlasOffsetX =
-            static_cast<float>(currX) / static_cast<float>(font.width) * xOffsetScale;
-        font.glyphs[i - kCharBegin].advanceX = static_cast<float>(glyph->advance.x >> 6);
-        font.glyphs[i - kCharBegin].advanceY = static_cast<float>(glyph->advance.y >> 6);
-        font.glyphs[i - kCharBegin].bmpWidth = static_cast<float>(glyph->bitmap.width);
-        font.glyphs[i - kCharBegin].bmpHeight = static_cast<float>(glyph->bitmap.rows);
-        font.glyphs[i - kCharBegin].bmpLeft = static_cast<float>(glyph->bitmap_left);
-        font.glyphs[i - kCharBegin].bmpTop = static_cast<float>(glyph->bitmap_top);
-
-        currX += glyph->bitmap.width + kPadding;
-    }
-
-    font.width = paddedWidth;
-    font.height = paddedHeight;
-}
-
-void FontLoader::updateTexData(
-    std::vector<unsigned char>& texData,
-    unsigned char* data,
-    int xOffset,
-    uint32_t dstWidth,
-    uint32_t width,
-    uint32_t height) const {
-    for (uint32_t y = 0; y < height; y++) {
-        for (uint32_t x = 0; x < width; x++) {
-            uint32_t srcIndex = y * width + x;
-            uint32_t dstIndex = y * dstWidth + x + xOffset;
-
-            texData[dstIndex] = data[srcIndex];
-        }
-    }
-}
 } // namespace crisp

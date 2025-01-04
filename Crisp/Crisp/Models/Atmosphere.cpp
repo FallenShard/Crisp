@@ -228,14 +228,14 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
                 resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
         };
 
-    resourceContext.createUniformBuffer("atmosphereBuffer", sizeof(AtmosphereParameters), BufferUpdatePolicy::PerFrame);
+    resourceContext.createRingBufferFromStruct("atmosphereBuffer", sizeof(AtmosphereParameters));
 
     // Transmittance lookup
     createPostProcessingRenderNode2(
         TransmittanceLutPass, createTransmittanceLutPass(renderer.getDevice(), renderTargetCache), "SkyTransLut.json");
     renderNodes[TransmittanceLutPass + std::string("Node")]
         ->pass(TransmittanceLutPass)
-        .material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+        .material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
 
     // Multiscattering
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -268,14 +268,14 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     multiScatPass.numWorkGroups = {32, 32, 1};
     multiScatPass.pipeline = createMultiScatPipeline(renderer, multiScatPass.workGroupSize);
     multiScatPass.material = std::make_unique<Material>(multiScatPass.pipeline.get());
-    multiScatPass.material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+    multiScatPass.material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
 
     std::vector<VulkanImageView*> views{
         &imageCache.getImageView("multiScatTexView0"), &imageCache.getImageView("multiScatTexView1")};
     multiScatPass.material->writeDescriptor(1, 0, views, nullptr, VK_IMAGE_LAYOUT_GENERAL);
     multiScatPass.material->writeDescriptor(
         1, 1, renderGraph.getRenderPass(TransmittanceLutPass), 0, &imageCache.getSampler("linearClamp"));
-    multiScatPass.material->setDynamicBufferView(0, *resourceContext.getUniformBuffer("atmosphereBuffer"), 0);
+    multiScatPass.material->setDynamicBufferView(0, *resourceContext.getRingBuffer("atmosphereBuffer"), 0);
     multiScatPass.preDispatchCallback =
         [](RenderGraph::Node& /*node*/, VulkanCommandBuffer& /*cmdBuffer*/, uint32_t /*frameIndex*/) {};
 
@@ -309,7 +309,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
     auto skyViewLutPipeline =
         resourceContext.createPipeline("skyViewLut", "SkyViewLut.json", renderGraph.getRenderPass(SkyViewLutPass), 0);
     auto skyViewLutMaterial = resourceContext.createMaterial("skyViewLut", skyViewLutPipeline);
-    skyViewLutMaterial->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+    skyViewLutMaterial->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
     skyViewLutMaterial->writeDescriptor(
         1, 0, renderGraph.getRenderPass(TransmittanceLutPass), 0, &imageCache.getSampler("linearClamp"));
     skyViewLutMaterial->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
@@ -322,7 +322,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         auto pipeline = resourceContext.createPipeline(
             "skyCameraVolumes", "SkyCameraVolumes.json", renderGraph.getRenderPass(ViewVolumePass), 0);
         auto material = resourceContext.createMaterial("skyCameraVolumes", pipeline);
-        material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+        material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
         material->writeDescriptor(
             1, 0, renderGraph.getRenderPass(TransmittanceLutPass), 0, &imageCache.getSampler("linearClamp"));
         material->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
@@ -349,7 +349,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         auto pipeline = resourceContext.createPipeline(
             "rayMarching", "SkyRayMarching.json", renderGraph.getRenderPass(RayMarchingPass), 0);
         auto material = resourceContext.createMaterial("rayMarching", pipeline);
-        material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+        material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
         material->writeDescriptor(
             1, 0, renderGraph.getRenderPass(TransmittanceLutPass), 0, &imageCache.getSampler("linearClamp"));
         material->writeDescriptor(1, 1, views, &imageCache.getSampler("linearClamp"), VK_IMAGE_LAYOUT_GENERAL);
@@ -410,7 +410,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             }
 
             Material* material = resourceContext.createMaterial("transmittanceLut", pipeline);
-            material->writeDescriptor(0, 0, *resourceContext.getUniformBuffer("atmosphereBuffer"));
+            material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
             renderer.getDevice().flushDescriptorUpdates();
 
             const VkCommandBuffer cmdBufferHandle = ctx.cmdBuffer.getHandle();

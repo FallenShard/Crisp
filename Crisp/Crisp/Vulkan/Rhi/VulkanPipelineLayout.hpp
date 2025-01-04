@@ -23,7 +23,7 @@ class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout> {
 public:
     VulkanPipelineLayout(
         const VulkanDevice& device,
-        std::vector<VkDescriptorSetLayout>&& setLayouts,
+        const std::vector<VkDescriptorSetLayout>& setLayouts,
         std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
         std::vector<VkPushConstantRange>&& pushConstants,
         std::vector<bool> descriptorSetBufferedStatus,
@@ -37,13 +37,13 @@ public:
     VulkanPipelineLayout(VulkanPipelineLayout&&) noexcept = default;
     VulkanPipelineLayout& operator=(VulkanPipelineLayout&&) noexcept = default;
 
-    inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
+    VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).bindings.at(binding).descriptorType;
     }
 
     VkDescriptorSet allocateSet(uint32_t setIndex) const;
 
-    inline void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const {
+    void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const {
         for (const auto& pushConstant : m_pushConstants) {
             vkCmdPushConstants(
                 cmdBuffer,
@@ -55,39 +55,39 @@ public:
         }
     }
 
-    inline uint32_t getDescriptorSetLayoutCount() const {
+    uint32_t getDescriptorSetLayoutCount() const {
         return static_cast<uint32_t>(m_descriptorSetLayouts.size());
     }
 
-    inline VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setIndex) const {
+    VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).handle;
     }
 
-    inline const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t setIndex) const {
+    const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).bindings;
     }
 
-    inline const std::vector<uint32_t>& getDescriptorSetBindlessBindings(uint32_t setIndex) const {
+    const std::vector<uint32_t>& getDescriptorSetBindlessBindings(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).bindlessIndices;
     }
 
-    inline bool isDescriptorSetBuffered(uint32_t setIndex) const {
+    bool isDescriptorSetBuffered(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).isBuffered;
     }
 
-    inline uint32_t getDynamicBufferCount() const {
+    uint32_t getDynamicBufferCount() const {
         return m_dynamicBufferCount;
     }
 
-    inline uint32_t getDynamicBufferCount(const uint32_t setIndex) const {
+    uint32_t getDynamicBufferCount(const uint32_t setIndex) const {
         return static_cast<uint32_t>(m_descriptorSetLayouts.at(setIndex).dynamicBufferCount);
     }
 
-    inline uint32_t getDynamicBufferIndex(const uint32_t setIndex, const uint32_t binding) const {
+    uint32_t getDynamicBufferIndex(const uint32_t setIndex, const uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).dynamicBufferIndices.at(binding);
     }
 
-    inline VulkanDescriptorSetAllocator* getVulkanDescriptorSetAllocator() {
+    VulkanDescriptorSetAllocator* getVulkanDescriptorSetAllocator() {
         return m_setAllocator.get();
     }
 

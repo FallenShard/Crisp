@@ -20,13 +20,15 @@ const std::array<glm::mat4, kCubeMapFaceCount> kCubeMapViews = {
 };
 } // namespace
 
-EnvironmentLight::EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& iblData) {
+EnvironmentLight::EnvironmentLight(Renderer& renderer, const ImageBasedLightingData& iblData) {
     auto equirectMap = createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
     std::tie(m_cubeMap, m_cubeMapView) =
-        convertEquirectToCubeMap(&renderer, createView(renderer.getDevice(), *equirectMap, VK_IMAGE_VIEW_TYPE_2D));
+        convertEquirectToCubeMap(&renderer, *createView(renderer.getDevice(), *equirectMap, VK_IMAGE_VIEW_TYPE_2D));
 
-    m_diffuseEnvironmentMap =
-        createVulkanCubeMap(renderer, {std::move(iblData.diffuseIrradianceCubeMap)}, VK_FORMAT_R32G32B32A32_SFLOAT);
+    m_diffuseEnvironmentMap = createVulkanCubeMap(
+        renderer,
+        std::span<const std::vector<Image>>(&iblData.diffuseIrradianceCubeMap, 1),
+        VK_FORMAT_R32G32B32A32_SFLOAT);
     m_diffuseEnvironmentMapView = createView(renderer.getDevice(), *m_diffuseEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
 
     m_specularEnvironmentMap =
@@ -34,7 +36,7 @@ EnvironmentLight::EnvironmentLight(Renderer& renderer, ImageBasedLightingData&& 
     m_specularEnvironmentMapView = createView(renderer.getDevice(), *m_specularEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
 }
 
-void EnvironmentLight::update(Renderer& renderer, ImageBasedLightingData&& iblData) {
+void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& iblData) {
     /* auto equirectMap =
          createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
      std::tie(m_cubeMap, m_cubeMapView) =
@@ -47,8 +49,8 @@ void EnvironmentLight::update(Renderer& renderer, ImageBasedLightingData&& iblDa
 }
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
-    Renderer* renderer, std::shared_ptr<VulkanImageView> equirectMapView) {
-    const auto cubeMapSize = equirectMapView->getImage().getHeight() / 2;
+    Renderer* renderer, const VulkanImageView& equirectMapView) {
+    const auto cubeMapSize = equirectMapView.getImage().getHeight() / 2;
 
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
     const auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
@@ -76,7 +78,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
-    cubeMapMaterial->writeDescriptor(0, 0, equirectMapView->getDescriptorInfo(sampler.get()));
+    cubeMapMaterial->writeDescriptor(0, 0, equirectMapView.getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();
 
     renderer->enqueueResourceUpdate(
@@ -243,7 +245,6 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
     });
     renderer->flushResourceUpdates(true);
 
-    const std::string key = "envIrrMap";
     auto imageView =
         createView(renderer->getDevice(), convPass->getRenderTarget(0), VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount);
     return std::make_pair(std::move(cubeMapRenderTarget->image), std::move(imageView));

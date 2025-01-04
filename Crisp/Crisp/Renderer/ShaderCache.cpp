@@ -1,7 +1,7 @@
 #include <Crisp/Renderer/ShaderCache.hpp>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/Io/FileUtils.hpp>
 
 namespace crisp {
 

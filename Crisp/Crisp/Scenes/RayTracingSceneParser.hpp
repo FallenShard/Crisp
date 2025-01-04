@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <Crisp/IO/JsonUtils.hpp>
+#include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Optics/Fresnel.hpp>
 

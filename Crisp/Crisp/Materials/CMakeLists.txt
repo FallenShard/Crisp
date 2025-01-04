@@ -1,14 +1,21 @@
-add_cpp_static_library(CrispMaterial
+add_cpp_static_library(
+    CrispMaterial
     "PbrMaterial.hpp"
-    "PbrMaterial.cpp")
-target_link_libraries(CrispMaterial
+    "PbrMaterial.cpp"
+)
+target_link_libraries(
+    CrispMaterial
     PUBLIC Crisp::Math
     PUBLIC Crisp::Image
     PUBLIC Crisp::Format)
 
-add_cpp_static_library(CrispMaterialUtils
+add_cpp_static_library(
+    CrispMaterialUtils
     "PbrMaterialUtils.hpp"
-    "PbrMaterialUtils.cpp")
-target_link_libraries(CrispMaterialUtils
+    "PbrMaterialUtils.cpp"
+)
+target_link_libraries(
+    CrispMaterialUtils
     PUBLIC Crisp::Material
-    PUBLIC Crisp::Renderer)
+    PUBLIC Crisp::Renderer
+)

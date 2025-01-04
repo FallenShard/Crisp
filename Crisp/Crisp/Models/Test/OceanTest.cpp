@@ -1,7 +1,7 @@
 #include <Crisp/Models/Ocean.hpp>
 
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 #include <numeric>
 

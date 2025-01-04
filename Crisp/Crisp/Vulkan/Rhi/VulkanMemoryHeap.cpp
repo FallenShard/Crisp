@@ -10,10 +10,10 @@ auto logger = createLoggerSt("VulkanMemoryHeap");
 } // namespace
 
 VulkanMemoryHeap::VulkanMemoryHeap(
-    VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memTypeIdx, VkDevice device, std::string tag)
+    VkMemoryPropertyFlags memProps, VkDeviceSize blockSize, uint32_t memoryTypeIndex, VkDevice device, std::string tag)
     : m_device(device)
     , m_properties(memProps)
-    , m_memoryTypeIndex(memTypeIdx)
+    , m_memoryTypeIndex(memoryTypeIndex)
     , m_usedSize(0)
     , m_blockSize(blockSize)
     , m_tag(std::move(tag)) {}

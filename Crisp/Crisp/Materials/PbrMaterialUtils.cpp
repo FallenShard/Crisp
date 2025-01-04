@@ -42,8 +42,6 @@ const std::vector<FlatStringHashSet> kTextureFileAliases = {
     {},
 };
 
-} // namespace
-
 PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::string name) {
     const auto loadImageIfExists =
         [&materialDir](
@@ -62,7 +60,7 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
                 return;
             }
 
-            CRISP_LOGW("Image does not exist at path: '{}'.", path.string());
+            CRISP_LOGW("Image does not exist at path: '{}'.", path.string()); // NOLINT
         };
 
     PbrImageGroup group{};
@@ -81,6 +79,21 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
     }
     return group;
 }
+
+[[maybe_unused]] void removePbrTexturesFromImageCache(const std::string& imageGroupName, ImageCache& imageCache) {
+    CRISP_LOGI("Removing PBR images with key: {}", imageGroupName);
+    const auto removeTexAndView = [&imageCache, &imageGroupName](const std::string_view mapName) {
+        const std::string key = fmt::format("{}-{}-0", imageGroupName, mapName);
+        imageCache.removeImage(key);
+        imageCache.removeImageView(key);
+    };
+
+    for (const auto& mapName : kPbrMapNames) {
+        removeTexAndView(mapName);
+    }
+}
+
+} // namespace
 
 std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::path& materialDir) {
 
@@ -118,19 +131,6 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
                 createVulkanImage(renderer, data, kTexInfos[typeIdx].defaultFormat));
         }
     };
-}
-
-void removePbrTexturesFromImageCache(const std::string& imageGroupName, ImageCache& imageCache) {
-    CRISP_LOGI("Removing PBR images with key: {}", imageGroupName);
-    const auto removeTexAndView = [&imageCache, &imageGroupName](const std::string_view mapName) {
-        const std::string key = fmt::format("{}-{}-0", imageGroupName, mapName);
-        imageCache.removeImage(key);
-        imageCache.removeImageView(key);
-    };
-
-    for (const auto& mapName : kPbrMapNames) {
-        removeTexAndView(mapName);
-    }
 }
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir) {

@@ -1,58 +1,76 @@
-add_cpp_interface_library(CrispFormat
+add_cpp_interface_library(
+    CrispFormat
     "Format.hpp"
 )
-target_link_libraries(CrispFormat
+target_link_libraries(
+    CrispFormat
     INTERFACE fmt::fmt-header-only
 )
 
-add_cpp_interface_library(CrispHashMap
+add_cpp_interface_library(
+    CrispHashMap
     "HashMap.hpp"
 )
-target_link_libraries(CrispHashMap
+target_link_libraries(
+    CrispHashMap
     INTERFACE robin_hood
     INTERFACE unordered_dense
 )
 
-add_cpp_interface_library(CrispLogger
+add_cpp_interface_library(
+    CrispLogger
     "Logger.hpp"
 )
-target_link_libraries(CrispLogger
+target_link_libraries(
+    CrispLogger
     INTERFACE spdlog::spdlog_header_only
     INTERFACE Crisp::Format
 )
 
-add_cpp_interface_library(CrispResult
+add_cpp_interface_library(
+    CrispResult
     "Result.hpp"
 )
-target_link_libraries(CrispResult
+target_link_libraries(
+    CrispResult
     INTERFACE Crisp::Logger
 )
 
-add_cpp_interface_library(CrispResultTestUtils
-    "Test/ResultTestUtils.hpp")
-target_link_libraries(CrispResultTestUtils
-    INTERFACE Crisp::Result GTest::gmock
+add_cpp_interface_library(
+    CrispResultTestUtils
+    "Test/ResultTestUtils.hpp"
+)
+target_link_libraries(
+    CrispResultTestUtils
+    INTERFACE Crisp::Result
+    INTERFACE GTest::gmock
 )
 
-add_cpp_test(CrispResultTest
+add_cpp_test(
+    CrispResultTest
     "Test/ResultTest.cpp"
 )
-target_link_libraries(CrispResultTest
+target_link_libraries(
+    CrispResultTest
     PRIVATE Crisp::Result
 )
 
-add_cpp_interface_library(CrispChecks
+add_cpp_interface_library(
+    CrispChecks
     "Checks.hpp"
 )
-target_link_libraries(CrispChecks
+target_link_libraries(
+    CrispChecks
     INTERFACE Crisp::Result
 )
 
-add_cpp_static_library(CrispWindow
+add_cpp_static_library(
+    CrispWindow
     "Window.cpp"
     "Window.hpp"
 )
-target_link_libraries(CrispWindow
+target_link_libraries(
+    CrispWindow
     PUBLIC Crisp::BitFlags
     PUBLIC Crisp::Math
     PUBLIC Crisp::Event
@@ -62,28 +80,34 @@ target_link_libraries(CrispWindow
     PRIVATE Crisp::Logger
 )
 
-add_cpp_test(CrispWindowTest
+add_cpp_test(
+    CrispWindowTest
     "Test/WindowTest.cpp"
 )
-target_link_libraries(CrispWindowTest
+target_link_libraries(
+    CrispWindowTest
     PRIVATE Crisp::Window
 )
 
-add_cpp_interface_library(CrispInput
+add_cpp_interface_library(
+    CrispInput
     "Mouse.hpp"
     "Keyboard.hpp"
     "InputTranslator.hpp"
 )
-target_link_libraries(CrispInput
+target_link_libraries(
+    CrispInput
     INTERFACE Crisp::BitFlags
     INTERFACE glfw
 )
 
-add_cpp_static_library(CrispApplicationEnvironment
+add_cpp_static_library(
+    CrispApplicationEnvironment
     "ApplicationEnvironment.cpp"
     "ApplicationEnvironment.hpp"
 )
-target_link_libraries(CrispApplicationEnvironment
+target_link_libraries(
+    CrispApplicationEnvironment
     PUBLIC Crisp::JsonUtils
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::StringUtils
@@ -94,29 +118,35 @@ target_link_libraries(CrispApplicationEnvironment
     PRIVATE Crisp::CommandLineParser
 )
 
-add_cpp_static_library(CrispCommandLineParser
+add_cpp_static_library(
+    CrispCommandLineParser
     "CommandLineParser.cpp"
     "CommandLineParser.hpp"
 )
-target_link_libraries(CrispCommandLineParser
+target_link_libraries(
+    CrispCommandLineParser
     PUBLIC Crisp::Format
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::StringUtils
     PUBLIC Crisp::Logger
 )
 
-add_cpp_test(CrispCommandLineParserTest
+add_cpp_test(
+    CrispCommandLineParserTest
     "Test/CommandLineParserTest.cpp"
 )
-target_link_libraries(CrispCommandLineParserTest
+target_link_libraries(
+    CrispCommandLineParserTest
     PRIVATE Crisp::CommandLineParser
 )
 
-add_cpp_static_library(CrispApplication
+add_cpp_static_library(
+    CrispApplication
     "Application.cpp"
     "Application.hpp"
 )
-target_link_libraries(CrispApplication
+target_link_libraries(
+    CrispApplication
     PUBLIC Crisp::Window
     PUBLIC Crisp::ApplicationEnvironment
     PUBLIC Crisp::Event
@@ -127,78 +157,98 @@ target_link_libraries(CrispApplication
     PRIVATE Crisp::Timer
 )
 
-add_cpp_interface_library(CrispThreadPool
+add_cpp_interface_library(
+    CrispThreadPool
     "ThreadPool.hpp"
 )
-target_link_libraries(CrispThreadPool
+target_link_libraries(
+    CrispThreadPool
     INTERFACE MPMCQueue
     INTERFACE Crisp::ScopeProfiler
 )
 
-add_cpp_test(CrispThreadPoolTest
+add_cpp_test(
+    CrispThreadPoolTest
     "Test/ThreadPoolTest.cpp"
 )
-target_link_libraries(CrispThreadPoolTest
+target_link_libraries(
+    CrispThreadPoolTest
     PRIVATE Crisp::ThreadPool
 )
 
-add_cpp_benchmark(CrispThreadPoolBenchmark
+add_cpp_benchmark(
+    CrispThreadPoolBenchmark
     "Benchmark/ThreadPoolBenchmark.cpp"
 )
-target_link_libraries(CrispThreadPoolBenchmark
+target_link_libraries(
+    CrispThreadPoolBenchmark
     PRIVATE Crisp::ThreadPool
 )
 
-add_cpp_interface_library(CrispEvent
+add_cpp_interface_library(
+    CrispEvent
     "Event.hpp"
     "Delegate.hpp"
     "ConnectionHandler.hpp"
 )
-target_link_libraries(CrispEvent
+target_link_libraries(
+    CrispEvent
     INTERFACE Crisp::HashMap
 )
 
-add_cpp_test(CrispEventTest
+add_cpp_test(
+    CrispEventTest
     "Test/DelegateTest.cpp"
     "Test/EventTest.cpp"
 )
-target_link_libraries(CrispEventTest
+target_link_libraries(
+    CrispEventTest
     PRIVATE Crisp::Event
 )
 
-add_cpp_interface_library(CrispSlotMap
+add_cpp_interface_library(
+    CrispSlotMap
     "SlotMap.hpp"
 )
 
-add_cpp_test(CrispSlotMapTest
+add_cpp_test(
+    CrispSlotMapTest
     "Test/SlotMapTest.cpp"
 )
-target_link_libraries(CrispSlotMapTest
+target_link_libraries(
+    CrispSlotMapTest
     PRIVATE Crisp::SlotMap
 )
 
-add_cpp_static_library(CrispChromeEventTracer
+add_cpp_static_library(
+    CrispChromeEventTracer
     "ChromeEventTracer.cpp"
     "ChromeEventTracer.hpp"
 )
-target_link_libraries(CrispChromeEventTracer
+target_link_libraries(
+    CrispChromeEventTracer
     PUBLIC Crisp::Format
     PUBLIC Crisp::ScopeProfiler
 )
-add_cpp_test(CrispChromeEventTracerTest
+add_cpp_test(
+    CrispChromeEventTracerTest
     "Test/ChromeEventTracerTest.cpp"
 )
-target_link_libraries(CrispChromeEventTracerTest
+target_link_libraries(
+    CrispChromeEventTracerTest
     PRIVATE Crisp::ChromeEventTracer
 )
 
-add_cpp_interface_library(CrispScopeProfiler
+add_cpp_interface_library(
+    CrispScopeProfiler
     "Profiler.hpp"
 )
-target_link_libraries(CrispScopeProfiler
+target_link_libraries(
+    CrispScopeProfiler
     INTERFACE Crisp::Logger
 )
 
-add_cpp_interface_library(CrispTimer
+add_cpp_interface_library(
+    CrispTimer
     "Timer.hpp"
 )

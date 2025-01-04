@@ -1,7 +1,7 @@
 #include <Crisp/ShaderUtils/Lexer.hpp>
 
 #include <Crisp/Core/HashMap.hpp>
-#include <Crisp/IO/FileUtils.hpp>
+#include <Crisp/Io/FileUtils.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 

@@ -1,23 +1,9 @@
-#include <Crisp/IO/FileUtils.hpp>
-
-// #include <commdlg.h>
+#include <Crisp/Io/FileUtils.hpp>
 
 #include <fstream>
 #include <sstream>
 
 namespace crisp {
-std::vector<std::string> enumerateFiles(const std::filesystem::path& directory, const std::string& extension) {
-    std::vector<std::string> filenames;
-
-    std::string pattern = '.' + extension;
-    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-        if (entry.path().extension() == pattern) {
-            filenames.push_back(entry.path().filename().string());
-        }
-    }
-
-    return filenames;
-}
 
 std::vector<std::string> enumerateDirectories(const std::filesystem::path& directory) {
     std::vector<std::string> dirNames;
@@ -59,7 +45,7 @@ Result<std::vector<char>> readBinaryFile(const std::filesystem::path& filePath) 
         return resultError("Failed to open binary file: {}!", filePath.string());
     }
 
-    const size_t fileSize = static_cast<size_t>(file.tellg());
+    const auto fileSize = file.tellg();
     std::vector<char> buffer(fileSize);
 
     file.seekg(0);
@@ -67,30 +53,5 @@ Result<std::vector<char>> readBinaryFile(const std::filesystem::path& filePath) 
     file.close();
 
     return buffer;
-}
-
-std::string openFileDialog() {
-    /*const int bufferSize = MAX_PATH;
-    char oldDir[bufferSize];
-    GetCurrentDirectory(bufferSize, oldDir);
-
-    char fileNameBuffer[1024] = {0};
-
-    OPENFILENAME openFile{};
-    openFile.lStructSize = sizeof(OPENFILENAME);
-    openFile.lpstrFile = fileNameBuffer;
-    openFile.nMaxFile = 1024;
-    openFile.Flags = OFN_FILEMUSTEXIST;
-    GetOpenFileName(&openFile);
-
-    char fileName[128] = {0};
-    for (int i = openFile.nFileOffset; fileNameBuffer[i] != '\0'; i++)
-    {
-        fileName[i - openFile.nFileOffset] = fileNameBuffer[i];
-    }
-
-    SetCurrentDirectory(oldDir);
-    return std::string(fileNameBuffer);*/
-    return "";
 }
 } // namespace crisp

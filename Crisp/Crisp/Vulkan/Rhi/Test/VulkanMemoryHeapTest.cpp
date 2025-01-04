@@ -1,4 +1,4 @@
-#include <Crisp/Vulkan/Test/VulkanTest.hpp>
+#include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 namespace crisp {
 namespace {
@@ -6,7 +6,8 @@ using ::testing::SizeIs;
 
 class VulkanMemoryHeapTest : public VulkanTest {
 protected:
-    std::unique_ptr<VulkanMemoryHeap> createHeap(const VkMemoryPropertyFlags memProps, const VkDeviceSize blockSize) {
+    static std::unique_ptr<VulkanMemoryHeap> createHeap(
+        const VkMemoryPropertyFlags memProps, const VkDeviceSize blockSize) {
         const uint32_t heapIndex = physicalDevice_->findMemoryType(memProps).unwrap();
         return std::make_unique<VulkanMemoryHeap>(memProps, blockSize, heapIndex, device_->getHandle(), "");
     }

@@ -1,19 +1,40 @@
-add_cpp_static_library(CrispFileUtils
+add_cpp_static_library(
+    CrispFileUtils
     "FileUtils.cpp"
-    "FileUtils.hpp")
-target_link_libraries(CrispFileUtils
+    "FileUtils.hpp"
+)
+target_link_libraries(
+    CrispFileUtils
     PUBLIC Crisp::Result
-    PUBLIC Crisp::Format)
+    PUBLIC Crisp::Format
+)
 
-add_cpp_static_library(CrispFontIo
+add_cpp_static_library(
+    CrispFontIo
     "FontLoader.cpp"
-    "FontLoader.hpp")
-target_link_libraries(CrispFontIo
+    "FontLoader.hpp"
+)
+target_link_libraries(
+    CrispFontIo
     PUBLIC freetype
-    PRIVATE Crisp::Logger)
+    PRIVATE Crisp::Logger
+)
 
-add_cpp_interface_library(CrispJsonUtils
-    "JsonUtils.hpp")
-target_link_libraries(CrispJsonUtils
+add_cpp_interface_library(
+    CrispJsonUtils
+    "JsonUtils.hpp"
+)
+target_link_libraries(
+    CrispJsonUtils
     INTERFACE Crisp::FileUtils
-    INTERFACE nlohmann_json::nlohmann_json)
+    INTERFACE nlohmann_json::nlohmann_json
+)
+
+add_cpp_test(
+    CrispJsonUtilsTest
+    "Test/JsonUtilsTest.cpp"
+)
+target_link_libraries(
+    CrispJsonUtilsTest
+    PRIVATE Crisp::JsonUtils
+)

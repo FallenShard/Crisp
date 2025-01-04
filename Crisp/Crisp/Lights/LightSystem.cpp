@@ -89,7 +89,7 @@ void LightSystem::createTileGridBuffers(const CameraParameters& cameraParams) {
     m_lightClustering.configure(m_renderer, cameraParams, static_cast<uint32_t>(m_pointLights.size()));
 }
 
-void LightSystem::addLightClusteringPass(RenderGraph& renderGraph, const VulkanRingBuffer& cameraBuffer) {
+void LightSystem::addLightClusteringPass(RenderGraph& /*renderGraph*/, const VulkanRingBuffer& /*cameraBuffer*/) {
     // addToRenderGraph(m_renderer, renderGraph, m_lightClustering, cameraBuffer, *m_pointLightBuffer);
 }
 
@@ -111,7 +111,7 @@ void LightSystem::setEnvironmentMap(ImageBasedLightingData&& iblData, const std:
     } else {
         // Update the map, but make sure that all rendering tha touched it so far has finished.
         m_renderer->finish();
-        m_environmentLight->update(*m_renderer, std::move(iblData));
+        m_environmentLight->update(*m_renderer, iblData);
     }
 
     m_environmentLight->setName(name);

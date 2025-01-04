@@ -15,7 +15,6 @@ namespace crisp {
 std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::path& materialDir);
 
 void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& imageCache);
-void removePbrImagesFromImageCache(const std::string& imageGroupName, ImageCache& imageCache);
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir);
 

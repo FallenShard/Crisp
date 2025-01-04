@@ -1,16 +1,13 @@
 #include <Crisp/Image/Io/Utils.hpp>
 
-#include <Crisp/Core/Checks.hpp>
-
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)
 #pragma warning(disable : 4244) // conversion warnings
 #include <stb/stb_image.h>
 #pragma warning(pop)
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Format.hpp>
-
-#include <string>
 
 namespace crisp {
 namespace {

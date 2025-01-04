@@ -21,8 +21,6 @@ void shutdownImGui(VkDevice device);
 void prepareImGui();
 void renderImGui(VkCommandBuffer cmdBuffer);
 
-// void renderImGuiFrame(Renderer& renderer);
-
 template <typename F>
 inline void drawComboBox(
     const char* name, const std::string& currentItem, const std::span<const std::string> items, const F& func) {

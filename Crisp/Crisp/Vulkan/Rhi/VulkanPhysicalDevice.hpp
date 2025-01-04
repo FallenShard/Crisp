@@ -39,31 +39,31 @@ public:
     VulkanPhysicalDevice(VulkanPhysicalDevice&& other) noexcept = default;
     VulkanPhysicalDevice& operator=(VulkanPhysicalDevice&& other) noexcept = default;
 
-    inline VkPhysicalDevice getHandle() const {
+    VkPhysicalDevice getHandle() const {
         return m_handle;
     }
 
-    inline const VkPhysicalDeviceFeatures& getFeatures() const {
+    const VkPhysicalDeviceFeatures& getFeatures() const {
         return m_properties->features.features;
     }
 
-    inline const VkPhysicalDeviceFeatures2& getFeatures2() const {
+    const VkPhysicalDeviceFeatures2& getFeatures2() const {
         return m_properties->features;
     }
 
-    inline const VkPhysicalDeviceProperties& getProperties() const {
+    const VkPhysicalDeviceProperties& getProperties() const {
         return m_properties->properties.properties;
     }
 
-    inline const VkPhysicalDeviceLimits& getLimits() const {
+    const VkPhysicalDeviceLimits& getLimits() const {
         return m_properties->properties.properties.limits;
     }
 
-    inline const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const {
+    const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const {
         return m_properties->rayTracingProperties;
     }
 
-    inline const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
+    const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
         return m_properties->memoryProperties.memoryProperties;
     }
 

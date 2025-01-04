@@ -11,7 +11,7 @@
 #include <Crisp/Vulkan/VulkanVertexLayout.hpp>
 
 namespace crisp {
-enum class PipelineDynamicState { None = 0x00, Viewport = 0x01, Scissor = 0x02 };
+enum class PipelineDynamicState : uint8_t { None = 0x00, Viewport = 0x01, Scissor = 0x02 };
 DECLARE_BITFLAG(PipelineDynamicState);
 
 class VulkanPipeline final : public VulkanResource<VkPipeline> {
@@ -24,7 +24,7 @@ public:
         VulkanVertexLayout&& vertexLayout = {},
         PipelineDynamicStateFlags dynamicStateFlags = PipelineDynamicState::None);
 
-    inline VulkanPipelineLayout* getPipelineLayout() const {
+    VulkanPipelineLayout* getPipelineLayout() const {
         return m_pipelineLayout.get();
     }
 
@@ -32,17 +32,17 @@ public:
 
     VulkanDescriptorSet allocateDescriptorSet(uint32_t setId) const;
 
-    inline VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
+    VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
         return m_pipelineLayout->getDescriptorType(setIndex, binding);
     }
 
     template <typename T>
-    inline void setPushConstant(
-        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& value) const {
+    void setPushConstant(
+        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, const T& value) const {
         vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, sizeof(T), &value);
     }
 
-    inline void setPushConstant(
+    void setPushConstant(
         VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, uint32_t size, const char* value)
         const {
         vkCmdPushConstants(
@@ -50,20 +50,19 @@ public:
     }
 
     template <typename T, typename... Ts>
-    inline void setPushConstants(
-        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg, Ts&&... args) const {
+    void setPushConstants(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg, Ts&&... args) const {
         setPushConstantsWithOffset(cmdBuffer, shaderStages, 0, std::forward<T>(arg), std::forward<Ts>(args)...);
     }
 
-    inline PipelineDynamicStateFlags getDynamicStateFlags() const {
+    PipelineDynamicStateFlags getDynamicStateFlags() const {
         return m_dynamicStateFlags;
     }
 
-    inline const VulkanVertexLayout& getVertexLayout() const {
+    const VulkanVertexLayout& getVertexLayout() const {
         return m_vertexLayout;
     }
 
-    inline void setConfigPath(std::filesystem::path path) {
+    void setConfigPath(std::filesystem::path path) {
         m_configPath = std::move(path);
     }
 
@@ -75,7 +74,7 @@ public:
 
 protected:
     template <typename T, typename... Ts>
-    inline void setPushConstantsWithOffset(
+    void setPushConstantsWithOffset(
         VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const {
         setPushConstant(cmdBuffer, shaderStages, offset, std::forward<T>(arg));
 

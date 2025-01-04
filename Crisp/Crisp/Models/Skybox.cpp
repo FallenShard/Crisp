@@ -16,7 +16,7 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
           loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
           kPosVertexFormat))
     , m_transformPack{} {
-    m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
+    m_transformBuffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(TransformPack));
 
     const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
 
@@ -63,7 +63,7 @@ Skybox::Skybox(
           loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
           kPosVertexFormat))
     , m_transformPack{} {
-    m_transformBuffer = std::make_unique<UniformBuffer>(renderer, sizeof(TransformPack), BufferUpdatePolicy::PerFrame);
+    m_transformBuffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(TransformPack));
 
     m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);
     updateRenderNode(sampler, cubeMapView);
@@ -88,7 +88,7 @@ void Skybox::updateTransforms(const glm::mat4& V, const glm::mat4& P) {
     m_transformPack.MV = glm::mat4(glm::mat3(V));
     m_transformPack.MVP = P * m_transformPack.MV;
 
-    m_transformBuffer->updateStagingBuffer2(m_transformPack);
+    m_transformBuffer->updateStagingBufferFromStruct(m_transformPack, 0);
 }
 
 const RenderNode& Skybox::getRenderNode() {

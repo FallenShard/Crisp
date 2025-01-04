@@ -24,12 +24,12 @@ public:
 
     bool supportsOperations(VkQueueFlags queueFlags) const;
 
-    inline VkQueue getHandle() const {
+    VkQueue getHandle() const {
         return m_handle;
     }
 
     template <typename Func>
-    void submitAndWait(Func&& func) const {
+    void submitAndWait(const Func& func) const {
         const auto executionInfo = createExecutionInfo();
         func(executionInfo.commandBuffer);
         submitAndWait(executionInfo);

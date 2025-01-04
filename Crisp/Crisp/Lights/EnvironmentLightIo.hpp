@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Crisp/Lights/EnvironmentLight.hpp>
-
 #include <filesystem>
 
+#include <Crisp/Lights/EnvironmentLight.hpp>
+
 namespace crisp {
-Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem::path& path);
+Result<ImageBasedLightingData> loadImageBasedLightingData(const std::filesystem::path& environmentMapDir);
 } // namespace crisp

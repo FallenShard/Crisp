@@ -12,7 +12,7 @@ class Renderer;
 class RenderGraph;
 
 struct TileFrustum {
-    glm::vec4 frustumPlanes[4];
+    std::array<glm::vec4, 4> frustumPlanes;
 };
 
 glm::ivec2 calculateTileGridDims(glm::ivec2 tileSize, glm::ivec2 screenSize);

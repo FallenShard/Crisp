@@ -40,7 +40,5 @@ TEST(GlmStructuredBindingsTest, CLValue) {
 }
 
 TEST(GlmStructuredBindingsTest, Printing) {
-    const glm::vec3 vec(0.0f, 1.0f, 2.0f);
-
-    const auto format = fmt::format("{}", vec);
+    EXPECT_EQ(fmt::format("{}", glm::vec3(0.0f, 1.0f, 2.0f)), "[0.0000, 1.0000, 2.0000]");
 }

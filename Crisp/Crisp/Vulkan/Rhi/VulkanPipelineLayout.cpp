@@ -22,8 +22,8 @@ VkPipelineLayout createHandle(
 
 VulkanPipelineLayout::VulkanPipelineLayout(
     const VulkanDevice& device,
-    std::vector<VkDescriptorSetLayout>&& setLayouts,
-    std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings,
+    const std::vector<VkDescriptorSetLayout>& setLayouts,
+    std::vector<std::vector<VkDescriptorSetLayoutBinding>>&& setBindings, // NOLINT
     std::vector<VkPushConstantRange>&& pushConstants,
     std::vector<bool> descriptorSetBufferedStatus,
     std::vector<std::vector<uint32_t>> bindlessIndices,
