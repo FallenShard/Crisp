@@ -250,6 +250,7 @@ void VulkanPhysicalDevice::initFeaturesAndProperties() {
     append(m_properties->features, m_properties->features13);
     append(m_properties->features, m_properties->rayTracingFeatures);
     append(m_properties->features, m_properties->accelerationStructureFeatures);
+    append(m_properties->features, m_properties->pageableDeviceLocalMemoryFeatures);
     vkGetPhysicalDeviceFeatures2(m_handle, &m_properties->features);
 
     append(m_properties->properties, m_properties->properties11);
@@ -264,6 +265,8 @@ void VulkanPhysicalDevice::initFeaturesAndProperties() {
 std::vector<std::string> createDefaultDeviceExtensions() {
     return {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME,
+        VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME,
     };
 }
 
