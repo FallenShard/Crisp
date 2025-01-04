@@ -5,7 +5,6 @@
 #include <Crisp/Core/ApplicationEnvironment.hpp>
 #include <Crisp/Core/Event.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/Gui/Form.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/SceneContainer.hpp>
 
@@ -17,7 +16,7 @@ public:
     static constexpr int32_t kDefaultWindowHeight = 1080;
     static constexpr glm::ivec2 kDefaultWindowSize{kDefaultWindowWidth, kDefaultWindowHeight};
 
-    static constexpr uint32_t kDesiredFramesPerSecond = 144;
+    static constexpr uint32_t kDesiredFramesPerSecond = 240;
     static constexpr double kTimePerFrame = 1.0 / kDesiredFramesPerSecond;
 
     explicit Application(const ApplicationEnvironment& environment);
@@ -31,9 +30,7 @@ public:
     void run();
     void close();
 
-    gui::Form* getForm() const;
     Window& getWindow();
-    SceneContainer* getSceneContainer() const;
 
     Event<double, double> onFrameTimeUpdated;
 

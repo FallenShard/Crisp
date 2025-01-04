@@ -120,7 +120,6 @@ target_link_libraries(CrispApplication
     PUBLIC Crisp::Window
     PUBLIC Crisp::ApplicationEnvironment
     PUBLIC Crisp::Event
-    PUBLIC Crisp::Gui
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Scenes
     PUBLIC Crisp::ImGui

@@ -109,15 +109,6 @@ void Application::onResize(int width, int height) {
     m_isResizing = true;
 }
 
-SceneContainer* Application::getSceneContainer() const {
-    return m_sceneContainer.get();
-}
-
-gui::Form* Application::getForm() const // NOLINT
-{
-    return nullptr;
-}
-
 Window& Application::getWindow() {
     return m_window;
 }
