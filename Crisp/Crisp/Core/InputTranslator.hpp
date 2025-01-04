@@ -1,9 +1,9 @@
 #pragma once
 
+#include <GLFW/glfw3.h>
+
 #include <Crisp/Core/Keyboard.hpp>
 #include <Crisp/Core/Mouse.hpp>
-
-#include <GLFW/glfw3.h>
 
 namespace crisp {
 inline Key translateGlfwToKey(const int keyCode) {

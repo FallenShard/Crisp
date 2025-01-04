@@ -30,6 +30,7 @@ TEST(SlotMapTest, Push) {
 
     std::vector<decltype(slotMap)::HandleType> handles;
 
+    handles.reserve(10);
     for (uint32_t i = 0; i < 10; ++i) {
         handles.push_back(slotMap.insert(std::to_string(i)));
     }

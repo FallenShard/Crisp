@@ -199,14 +199,16 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
         if (dispatcher && dispatcher->isEventEnabled(EventType::MouseButtonPressed)) {
             double xPos, yPos; // NOLINT
             glfwGetCursorPos(window, &xPos, &yPos);
-            dispatcher->mouseButtonPressed({translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos});
+            dispatcher->mouseButtonPressed(
+                {.button = translateGlfwToMouseButton(button), .modifiers = ModifierFlags(mods), .x = xPos, .y = yPos});
         }
     } else if (action == GLFW_RELEASE) {
         auto dispatcher = static_cast<Window*>(glfwGetWindowUserPointer(window));
         if (dispatcher && dispatcher->isEventEnabled(EventType::MouseButtonReleased)) {
             double xPos, yPos; // NOLINT
             glfwGetCursorPos(window, &xPos, &yPos);
-            dispatcher->mouseButtonReleased({translateGlfwToMouseButton(button), ModifierFlags(mods), xPos, yPos});
+            dispatcher->mouseButtonReleased(
+                {.button = translateGlfwToMouseButton(button), .modifiers = ModifierFlags(mods), .x = xPos, .y = yPos});
         }
     }
 }

@@ -1,6 +1,6 @@
 #include <Crisp/Animation/Animator.hpp>
 
-#include <algorithm>
+#include <ranges>
 
 namespace crisp {
 Animator::Animator()
@@ -18,19 +18,17 @@ void Animator::update(double dt) {
 
     // Remove all animations scheduled for removal
     if (!m_removedAnimations.empty()) {
-        m_activeAnimations.erase(
-            std::remove_if(
-                m_activeAnimations.begin(),
-                m_activeAnimations.end(),
-                [this](const std::shared_ptr<Animation>& anim) { return m_removedAnimations.contains(anim); }),
-            m_activeAnimations.end());
+        const auto [first, last] =
+            std::ranges::remove_if(m_activeAnimations, [this](const std::shared_ptr<Animation>& anim) {
+                return m_removedAnimations.contains(anim);
+            });
+        m_activeAnimations.erase(first, m_activeAnimations.end());
 
-        m_pendingAnimations.erase(
-            std::remove_if(
-                m_pendingAnimations.begin(),
-                m_pendingAnimations.end(),
-                [this](const std::shared_ptr<Animation>& anim) { return m_removedAnimations.contains(anim); }),
-            m_pendingAnimations.end());
+        const auto [firstPending, lastPending] =
+            std::ranges::remove_if(m_pendingAnimations, [this](const std::shared_ptr<Animation>& anim) {
+                return m_removedAnimations.contains(anim);
+            });
+        m_pendingAnimations.erase(firstPending, lastPending);
 
         m_removedAnimations.clear();
     }
@@ -53,27 +51,24 @@ void Animator::update(double dt) {
 
     // Remove all finished animations
     if (hasFinishedAnimations) {
-        m_activeAnimations.erase(
-            std::remove_if(
-                m_activeAnimations.begin(),
-                m_activeAnimations.end(),
-                [](const std::shared_ptr<Animation>& anim) { return anim->isFinished(); }),
-            m_activeAnimations.end());
+        const auto [first, last] = std::ranges::remove_if(
+            m_activeAnimations, [](const std::shared_ptr<Animation>& anim) { return anim->isFinished(); });
+        m_activeAnimations.erase(first, last);
     }
 }
 
-void Animator::add(std::shared_ptr<Animation> anim) {
+void Animator::add(const std::shared_ptr<Animation>& anim) {
     m_pendingAnimations.emplace_back(anim);
     anim->setActive(true);
 }
 
-void Animator::add(std::shared_ptr<Animation> animation, void* targetObject) {
+void Animator::add(const std::shared_ptr<Animation>& animation, void* targetObject) {
     m_pendingAnimations.emplace_back(animation);
     m_animationLifetimes[targetObject].emplace_back(animation);
     animation->setActive(true);
 }
 
-void Animator::remove(std::shared_ptr<Animation> anim) {
+void Animator::remove(const std::shared_ptr<Animation>& anim) {
     m_removedAnimations.insert(anim);
 }
 

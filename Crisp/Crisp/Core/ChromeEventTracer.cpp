@@ -8,7 +8,7 @@ namespace crisp {
 
 CpuTracerContext::CpuTracerContext() = default;
 
-void CpuTracerContext::addEvent(ScopeEvent&& event) {
+void CpuTracerContext::addEvent(const ScopeEvent& event) {
     m_events.push_back(event);
 }
 
@@ -17,7 +17,9 @@ const std::vector<ScopeEvent>& CpuTracerContext::getTracedEvents() const {
 }
 
 namespace detail {
+namespace {
 CpuTracerContext CpuContext;
+} // namespace
 
 CpuTracerContext& getCpuContext() {
     return CpuContext;

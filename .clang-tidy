@@ -32,5 +32,6 @@ Checks: >
     -readability-magic-numbers,
     -readability-implicit-bool-conversion,
     -readability-function-cognitive-complexity,
+    -readability-math-missing-parentheses,
 
 WarningsAsErrors: "*"

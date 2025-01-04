@@ -33,7 +33,7 @@ public:
     }
 
     // For storage in containers as a key
-    inline bool operator<(const Delegate& other) const {
+    bool operator<(const Delegate& other) const {
         if (m_receiverObject == other.m_receiverObject) {
             return m_callbackFunction < other.m_callbackFunction;
         }
@@ -41,15 +41,15 @@ public:
         return m_receiverObject < other.m_receiverObject;
     }
 
-    inline bool operator==(const Delegate& other) const {
+    bool operator==(const Delegate& other) const {
         return m_receiverObject == other.m_receiverObject && m_callbackFunction == other.m_callbackFunction;
     }
 
-    inline bool operator!=(const Delegate& other) const {
+    bool operator!=(const Delegate& other) const {
         return !operator==(other);
     }
 
-    inline bool isFromObject(void* obj) const {
+    bool isFromObject(void* obj) const {
         return m_receiverObject == obj;
     }
 
@@ -96,12 +96,12 @@ struct FuncDeductionContext<FreeFn> {
 
 template <auto MemFn, typename ReceiverType = detail::MemFnClassType<MemFn>>
 auto createDelegate(ReceiverType* obj) {
-    return detail::FuncDeductionContext<MemFn>::template fromMemberFunction(obj);
+    return detail::FuncDeductionContext<MemFn>::fromMemberFunction(obj);
 }
 
 template <auto FreeFn>
 auto createDelegate() {
-    return detail::FuncDeductionContext<FreeFn>::template fromFreeFunction();
+    return detail::FuncDeductionContext<FreeFn>::fromFreeFunction();
 }
 } // namespace crisp
 

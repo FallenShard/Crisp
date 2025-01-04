@@ -16,7 +16,7 @@ class ConcurrentQueue {
 public:
     void push(T&& item) {
         std::unique_lock lock(mutex);
-        taskQueue.push(item);
+        taskQueue.push(std::move(item));
 
         lock.unlock();
         condVar.notify_one();
@@ -57,7 +57,7 @@ public:
         for (std::size_t i = 0; i < m_workers.size(); ++i) {
             auto& worker = m_workers[i];
             worker.index = static_cast<int32_t>(i);
-            worker.thread = std::thread([this, i]() {
+            worker.thread = std::thread([this]() {
                 while (true) {
                     TaskType task = m_taskQueue.pop();
                     if (task == nullptr) {

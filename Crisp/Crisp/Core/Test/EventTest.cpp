@@ -1,27 +1,21 @@
-#include <gtest/gtest.h>
+
 
 #include <Crisp/Core/Delegate.hpp>
 #include <Crisp/Core/Event.hpp>
 
-using namespace crisp;
+#include <gtest/gtest.h>
+
+using crisp::createDelegate;
+using crisp::Event;
 
 namespace {
-static int copies = 0;
 
 class EventData {
 public:
     EventData(std::string msg, double x, double y)
-        : message(msg)
+        : message(std::move(msg))
         , x(x)
         , y(y) {}
-
-    EventData(const EventData& ev)
-        : message(ev.message)
-        , x(ev.x)
-        , y(ev.y) {
-        copies++;
-        std::cout << "Copy ctor\n";
-    }
 
     std::string message;
     double x;
@@ -35,7 +29,7 @@ struct DelegateTester {
     int triggerCounter = 0;
 
     void onEventTriggered(int newStateValue, std::string msg) {
-        message = msg;
+        message = std::move(msg);
         state = newStateValue;
         ++triggerCounter;
     }
@@ -109,7 +103,7 @@ TEST(EventTest, Autodisconnect) {
     event.subscribe<&printStuff>();
 
     {
-        const auto handler = event.subscribe([](const std::string& a) { std::cout << a.size() << std::endl; });
+        const auto handler = event.subscribe([](const std::string& a) { std::cout << a.size() << '\n'; });
         EXPECT_EQ(event.getSubscriberCount(), 2);
     }
 

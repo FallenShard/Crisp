@@ -20,9 +20,9 @@ public:
 
     void update(double dt);
 
-    void add(std::shared_ptr<Animation> animation);
-    void add(std::shared_ptr<Animation> animation, void* targetObject);
-    void remove(std::shared_ptr<Animation> animation);
+    void add(const std::shared_ptr<Animation>& animation);
+    void add(const std::shared_ptr<Animation>& animation, void* targetObject);
+    void remove(const std::shared_ptr<Animation>& animation);
     void clearAllAnimations();
     void clearObjectAnimations(void* targetObject);
 

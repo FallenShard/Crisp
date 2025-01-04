@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/IO/JsonUtils.hpp>
-
 #include <filesystem>
+
+#include <Crisp/IO/JsonUtils.hpp>
 
 namespace crisp {
 class ApplicationEnvironment // NOLINT

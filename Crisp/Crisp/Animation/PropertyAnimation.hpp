@@ -5,7 +5,7 @@
 #include <Crisp/Math/Constants.hpp>
 
 namespace crisp {
-enum class Easing {
+enum class Easing : uint8_t {
     Linear,
     SlowIn,
     SlowOut,
@@ -41,19 +41,15 @@ public:
         , m_updater(updater) {}
 
     PropertyAnimation(
-        double duration,
-        std::function<void(const T&)> updater,
-        double delay = 0,
-        bool isLooped = false,
-        int loopCount = 1)
+        double duration, std::function<void(const T&)> updater, double delay = 0, bool isLooped = false, int loopCount = 1)
         : Animation(delay, duration, isLooped, loopCount)
         , m_updater(updater) {}
 
-    inline T getPropertyStart() {
+    T getPropertyStart() {
         return m_propertyStart;
     }
 
-    inline T getPropertyEnd() {
+    T getPropertyEnd() {
         return m_propertyEnd;
     }
 
@@ -61,7 +57,7 @@ public:
         m_updater = updater;
     }
 
-    virtual void update(double dt) override {
+    void update(double dt) override {
         if (m_isFinished) {
             return;
         }
@@ -96,7 +92,7 @@ public:
         }
     }
 
-    inline bool hasElapsed() const {
+    bool hasElapsed() const {
         return std::abs(m_elapsedTime - m_duration) <= 1e-7;
     }
 
@@ -108,26 +104,18 @@ public:
 
 private:
     double interpolateTime(double dt) {
-        if constexpr (easing == Easing::Linear) {
-            return dt;
-        } else if constexpr (easing == Easing::Linear) {
+        if constexpr (easing == Easing::QuadraticIn) {
             return dt * dt;
         } else if constexpr (easing == Easing::CubicIn) {
             return dt * dt * dt;
-        } else if constexpr (easing == Easing::SlowIn) {
-            return dt * dt * dt * dt;
-        } else if constexpr (easing == Easing::QuarticIn) {
+        } else if constexpr (easing == Easing::QuarticIn || easing == Easing::SlowIn) {
             return dt * dt * dt * dt;
         } else if constexpr (easing == Easing::QuadraticOut) {
             return -1.0 * dt * (dt - 2.0);
         } else if constexpr (easing == Easing::CubicOut) {
             dt -= 1.0;
             return dt * dt * dt + 1.0;
-        } else if constexpr (easing == Easing::SlowOut) {
-            dt -= 1.0;
-            dt *= dt;
-            return -1.0 * (dt * dt - 1.0);
-        } else if constexpr (easing == Easing::QuarticOut) {
+        } else if constexpr (easing == Easing::QuarticOut || easing == Easing::SlowOut) {
             dt -= 1.0;
             dt *= dt;
             return -1.0 * (dt * dt - 1.0);

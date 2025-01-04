@@ -1,14 +1,17 @@
 #include <benchmark/benchmark.h>
 
+#include <fmt/format.h>
+
 #include <Crisp/Core/ThreadPool.hpp>
 
 namespace crisp {
+namespace {
 
 constexpr size_t N = 10'000'000;
 
 void BM_SimpleThreadPool(benchmark::State& state) {
     // Perform setup here
-    ThreadPool threadPool(state.range(0));
+    ThreadPool threadPool(static_cast<uint32_t>(state.range(0)));
     std::vector<double> size(N, 0);
     for (auto _ : state) {
         threadPool.parallelFor(
@@ -55,21 +58,21 @@ void BM_SimpleThreadPoolST(benchmark::State& state) {
     fmt::print("Using {} workers.\n", threadPool.getThreadCount());
     std::vector<double> size(N, 0);
     for (auto _ : state) {
-        for (uint32_t globalIdx = 0; globalIdx < size.size(); ++globalIdx) {
+        for (double& val : size) {
             double s = 0;
             for (uint32_t k = 0; k < 5; ++k) {
                 s += std::exp(s);
                 s += std::cos(s);
                 s += std::acos(s);
             }
-            size[globalIdx] += s;
+            val = s;
         }
         benchmark::DoNotOptimize(size);
     }
 }
 
 BENCHMARK(BM_SimpleThreadPoolST)->Unit(benchmark::kMillisecond)->UseRealTime(); // NOLINT
-
+} // namespace
 } // namespace crisp
 
 // Run the benchmark.

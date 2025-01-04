@@ -3,7 +3,7 @@
 #include <Crisp/Core/Keyboard.hpp>
 
 namespace crisp {
-enum class MouseButton {
+enum class MouseButton : int8_t {
     Unknown = -1,
     Left = 0,
     Right = 1,

@@ -16,11 +16,11 @@ public:
     Timer& operator=(const Timer& other) = default;
     Timer& operator=(Timer&& other) noexcept = default;
 
-    inline double getElapsedTime() const {
+    double getElapsedTime() const {
         return TimeUnit(std::chrono::steady_clock::now() - m_prevTimePoint).count();
     }
 
-    inline double restart() {
+    double restart() {
         const auto current = std::chrono::steady_clock::now();
         const double elapsed = TimeUnit(current - m_prevTimePoint).count();
         m_prevTimePoint = current;

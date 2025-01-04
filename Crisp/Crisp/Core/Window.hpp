@@ -11,18 +11,18 @@
 #include <Crisp/Math/Headers.hpp>
 
 namespace crisp {
-enum class CursorState {
+enum class CursorState : uint8_t {
     Disabled,
     Normal,
     Hidden,
 };
 
-enum class WindowVisibility {
+enum class WindowVisibility : uint8_t {
     Hidden,
     Shown,
 };
 
-enum class EventType : uint32_t {
+enum class EventType : uint16_t {
     None = 0,
     MouseMoved = 1 << 0,
     MouseButtonPressed = 1 << 1,
@@ -83,7 +83,7 @@ public:
     glm::ivec2 getSize() const;
     glm::vec2 getCursorPosition() const;
 
-    inline GLFWwindow* getHandle() const {
+    GLFWwindow* getHandle() const {
         return m_window;
     }
 

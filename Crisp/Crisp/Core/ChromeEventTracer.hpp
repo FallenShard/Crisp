@@ -5,7 +5,7 @@
 #include <Crisp/Core/Profiler.hpp>
 
 namespace crisp {
-enum class ScopeEventType { Begin, End };
+enum class ScopeEventType : uint8_t { Begin, End };
 
 struct ScopeEvent {
     uint64_t timestamp{};
@@ -17,7 +17,7 @@ class CpuTracerContext {
 public:
     CpuTracerContext();
 
-    void addEvent(ScopeEvent&& event);
+    void addEvent(const ScopeEvent& event);
 
     const std::vector<ScopeEvent>& getTracedEvents() const;
 

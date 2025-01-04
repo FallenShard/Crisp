@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
-
 #include <Crisp/Core/Delegate.hpp>
+
+#include <gtest/gtest.h>
 
 namespace crisp {
 struct DelegateTester {

@@ -3,8 +3,6 @@
 
 #include <Crisp/Core/Test/ResultTestUtils.hpp>
 
-#include <numeric>
-
 namespace crisp {
 using ::testing::Not;
 

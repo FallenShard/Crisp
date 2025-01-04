@@ -1,13 +1,13 @@
 #pragma once
 
+#include <charconv>
+#include <filesystem>
+#include <functional>
+
 #include <Crisp/Core/Format.hpp>
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Utils/StringUtils.hpp>
-
-#include <charconv>
-#include <filesystem>
-#include <functional>
 
 namespace crisp {
 template <typename T>
@@ -31,7 +31,7 @@ public:
     template <CommandLineArgumentType T>
     void addOption(const std::string_view name, T& variable, bool isRequired = false) {
         const std::string nameStr(name);
-        m_argMap.emplace(nameStr, Argument{nameStr, nullptr, isRequired});
+        m_argMap.emplace(nameStr, Argument{.name = nameStr, .parser = nullptr, .required = isRequired});
         if constexpr (std::same_as<T, bool>) {
             m_argMap.at(nameStr).parser = [&variable](const std::string_view input) {
                 std::string in;

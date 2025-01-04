@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
-
 #include <Crisp/Core/CommandLineParser.hpp>
+
+#include <gtest/gtest.h>
 
 TEST(CommandLineParserTest, Basic) {
     const char* argLine = "Program123 width 443 --path some_directive height=23";

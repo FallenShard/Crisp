@@ -3,7 +3,7 @@
 #include <Crisp/Utils/BitFlags.hpp>
 
 namespace crisp {
-enum class Key {
+enum class Key : int16_t {
     Unknown = -1,
     Space = 32,
     Apostrophe = 39,
@@ -127,7 +127,7 @@ enum class Key {
     Menu = 348,
 };
 
-enum class Modifier {
+enum class Modifier : uint8_t {
     Shift = 0x01,
     Control = 0x02,
     Alt = 0x04,
