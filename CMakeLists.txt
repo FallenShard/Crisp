@@ -121,7 +121,7 @@ FetchContent_MakeAvailable(robin_hood)
 
 FetchContent_Declare(unordered_dense
     GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-    GIT_TAG v4.4.0
+    GIT_TAG v4.5.0
 )
 FetchContent_MakeAvailable(unordered_dense)
 
@@ -134,14 +134,15 @@ FetchContent_MakeAvailable(fmt)
 
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.12.0
+    GIT_TAG v1.15.0
 )
 set(SPDLOG_FMT_EXTERNAL_HO ON CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 FetchContent_Declare(googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG v1.14.0
+    GIT_TAG v1.15.2
 )
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
@@ -150,7 +151,7 @@ FetchContent_MakeAvailable(googletest)
 
 FetchContent_Declare(benchmark
     GIT_REPOSITORY https://github.com/google/benchmark.git
-    GIT_TAG v1.8.3
+    GIT_TAG v1.9.1
 )
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
@@ -159,7 +160,7 @@ FetchContent_MakeAvailable(benchmark)
 
 FetchContent_Declare(tinygltf
     GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
-    GIT_TAG v2.8.21
+    GIT_TAG v2.9.4
 )
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
@@ -167,14 +168,14 @@ FetchContent_MakeAvailable(tinygltf)
 
 FetchContent_Declare(MPMCQueue
     GIT_REPOSITORY https://github.com/rigtorp/MPMCQueue.git
-    GIT_TAG v1.0
+    GIT_TAG 4323bd89b3bcdb48daa600804902f51ede7990c1
 )
 FetchContent_MakeAvailable(MPMCQueue)
 
 # TODO: Configure to be dynamic.
 FetchContent_Declare(onetbb
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG v2021.11.0
+    GIT_TAG v2022.0.0
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS ON)
@@ -183,7 +184,7 @@ set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(embree
     GIT_REPOSITORY https://github.com/embree/embree.git
-    GIT_TAG v4.3.1
+    GIT_TAG v4.3.3
 )
 set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
 set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
