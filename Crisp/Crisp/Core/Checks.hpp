@@ -44,6 +44,7 @@ inline void doAssert(const bool expr, const LocationFormatString& formatString) 
 
 #define CRISP_CHECK(expr, ...) crisp::detail::doAssert(expr, #expr __VA_OPT__(,) __VA_ARGS__)
 #define CRISP_CHECK_GE_LT(expr, left, right, ...) crisp::detail::doAssert((expr >= (left)) && (expr < (right)), #expr __VA_OPT__(,) __VA_ARGS__)
+#define CRISP_CHECK_GE_LE(expr, left, right, ...) crisp::detail::doAssert((expr >= (left)) && (expr <= (right)), #expr __VA_OPT__(,) __VA_ARGS__)
 #define CRISP_CHECK_EQ(expr, right, ...) crisp::detail::doAssert(expr == right, CRISP_STRINGIFY_BINARY_OP(expr, ==, right) __VA_OPT__(,) __VA_ARGS__)
 #define CRISP_CHECK_NE(expr, right, ...) crisp::detail::doAssert(expr != right, CRISP_STRINGIFY_BINARY_OP(expr, ==, right) __VA_OPT__(,) __VA_ARGS__)
 #define CRISP_CHECK_LE(expr, right, ...) crisp::detail::doAssert(expr <= right, CRISP_STRINGIFY_BINARY_OP(expr, <=, right) __VA_OPT__(,) __VA_ARGS__)
