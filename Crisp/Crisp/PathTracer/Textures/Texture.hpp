@@ -5,7 +5,7 @@
 #include <string>
 
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 namespace crisp {
 template <typename T>

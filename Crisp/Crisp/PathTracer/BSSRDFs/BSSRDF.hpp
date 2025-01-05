@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 namespace crisp {
 class Shape;

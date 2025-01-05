@@ -6,7 +6,7 @@
 #include <Crisp/Math/Distribution1D.hpp>
 #include <Crisp/PathTracer/Core/MipMap.hpp>
 #include <Crisp/PathTracer/Lights/Light.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 namespace crisp {
 class EnvironmentLight : public Light {

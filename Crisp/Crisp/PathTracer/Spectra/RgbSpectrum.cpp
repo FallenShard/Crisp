@@ -1,5 +1,5 @@
 #define NOMINMAX
-#include <Crisp/Spectra/RgbSpectrum.hpp>
+#include <Crisp/PathTracer/Spectra/RgbSpectrum.hpp>
 
 #include <iostream>
 
@@ -122,7 +122,7 @@ RgbSpectrum RgbSpectrum::exp() const {
 }
 
 RgbSpectrum RgbSpectrum::clamp() const {
-    return RgbSpectrum(std::max(r, 0.0f), std::max(g, 0.0f), std::max(b, 0.0f));
+    return {std::max(r, 0.0f), std::max(g, 0.0f), std::max(b, 0.0f)};
 }
 
 bool RgbSpectrum::isValid() const {

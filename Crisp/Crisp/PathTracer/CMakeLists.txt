@@ -226,3 +226,24 @@ target_link_libraries(CrispPathTracer
     PRIVATE Crisp::Logger
     PRIVATE Crisp::ImageIo
 )
+
+add_cpp_static_library(
+    CrispSpectrum
+    "Spectra/RgbSpectrum.hpp"
+    "Spectra/RgbSpectrum.cpp"
+    "Spectra/Spectrum.hpp"
+    "Spectra/WeightedRgbSpectrum.hpp"
+)
+target_link_libraries(
+    CrispSpectrum
+    PUBLIC Crisp::Math
+)
+
+add_cpp_interface_library(
+    CrispOptics
+    "Optics/Fresnel.hpp"
+)
+target_link_libraries(
+    CrispOptics
+    INTERFACE Crisp::Spectrum
+)

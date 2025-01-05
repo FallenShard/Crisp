@@ -1,7 +1,7 @@
 #include <Crisp/PathTracer/BSDFs/Mirror.hpp>
 
 #include <Crisp/Math/CoordinateFrame.hpp>
-#include <Crisp/Optics/Fresnel.hpp>
+#include <Crisp/PathTracer/Optics/Fresnel.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
 namespace crisp {

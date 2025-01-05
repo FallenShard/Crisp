@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Crisp/Spectra/RgbSpectrum.hpp>
-#include <Crisp/Spectra/WeightedRgbSpectrum.hpp>
+#include <Crisp/PathTracer/Spectra/RgbSpectrum.hpp>
+#include <Crisp/PathTracer/Spectra/WeightedRgbSpectrum.hpp>
 
 namespace crisp {
 using Spectrum = RgbSpectrum;

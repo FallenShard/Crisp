@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <map>
 
-#include <Crisp/Spectra/RgbSpectrum.hpp>
+#include <Crisp/PathTracer/Spectra/RgbSpectrum.hpp>
 
 namespace crisp {
-enum class IndexOfRefraction { Vacuum, Air, Ice, Water, Glass, Sapphire, Diamond };
+enum class IndexOfRefraction : uint8_t { Vacuum, Air, Ice, Water, Glass, Sapphire, Diamond };
 
 struct ComplexIOR {
     RgbSpectrum eta;
@@ -15,7 +15,7 @@ struct ComplexIOR {
 
 class Fresnel {
 public:
-    inline static float dielectric(float cosThetaI, float extIOR, float intIOR, float& cosThetaT) {
+    static float dielectric(float cosThetaI, float extIOR, float intIOR, float& cosThetaT) {
         float etaI = extIOR;
         float etaT = intIOR;
 
@@ -45,7 +45,7 @@ public:
         return (Rs * Rs + Rp * Rp) / 2.0f;
     }
 
-    inline static float dielectric(float cosThetaI, float extIOR, float intIOR) {
+    static float dielectric(float cosThetaI, float extIOR, float intIOR) {
         float etaI = extIOR;
         float etaT = intIOR;
 
@@ -75,7 +75,7 @@ public:
         return (Rs * Rs + Rp * Rp) / 2.0f;
     }
 
-    inline static float getIOR(IndexOfRefraction iorMaterial) {
+    static float getIOR(IndexOfRefraction iorMaterial) {
         switch (iorMaterial) {
         case IndexOfRefraction::Vacuum:
             return 1.0f;
@@ -96,7 +96,7 @@ public:
         }
     };
 
-    inline static ComplexIOR getComplexIOR(const std::string& name) {
+    static ComplexIOR getComplexIOR(const std::string& name) {
         static const std::map<std::string, ComplexIOR> complexIorMap = {
             {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f}, {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
             {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f}, {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
@@ -149,7 +149,7 @@ public:
         return iter->second;
     }
 
-    inline static RgbSpectrum conductor(float cosThetaI, const ComplexIOR& ior) {
+    static RgbSpectrum conductor(float cosThetaI, const ComplexIOR& ior) {
         RgbSpectrum squareTerm = ior.eta * ior.eta + ior.k * ior.k;
         float cosTheta2 = cosThetaI * cosThetaI;
         RgbSpectrum etaCosTheta = 2.0f * ior.eta * cosThetaI;
@@ -161,7 +161,7 @@ public:
         return (Rs + Rp) * 0.5f;
     }
 
-    inline static RgbSpectrum conductorFull(float cosThetaI, const ComplexIOR& ior) {
+    static RgbSpectrum conductorFull(float cosThetaI, const ComplexIOR& ior) {
         float cosTheta2 = cosThetaI * cosThetaI;
         float sinTheta2 = 1.0f - cosTheta2;
         glm::vec3 eta2(ior.eta.r * ior.eta.r, ior.eta.g * ior.eta.g, ior.eta.b * ior.eta.b);

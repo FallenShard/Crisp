@@ -94,12 +94,14 @@ include(FetchContent)
 FetchContent_Declare(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG 1.0.1
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(glm)
 
 FetchContent_Declare(glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG 3.4
+    GIT_SHALLOW TRUE
 )
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -110,24 +112,28 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.11.3
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(json)
 
 FetchContent_Declare(robin_hood
     GIT_REPOSITORY https://github.com/martinus/robin-hood-hashing.git
     GIT_TAG 3.11.5
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(robin_hood)
 
 FetchContent_Declare(unordered_dense
     GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
     GIT_TAG v4.5.0
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(unordered_dense)
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
     GIT_TAG 10.2.1
+    GIT_SHALLOW TRUE
 )
 set(FMT_OS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(fmt)
@@ -135,6 +141,7 @@ FetchContent_MakeAvailable(fmt)
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG v1.15.0
+    GIT_SHALLOW TRUE
 )
 set(SPDLOG_FMT_EXTERNAL_HO ON CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
@@ -143,6 +150,7 @@ FetchContent_MakeAvailable(spdlog)
 FetchContent_Declare(googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG v1.15.2
+    GIT_SHALLOW TRUE
 )
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
@@ -152,6 +160,7 @@ FetchContent_MakeAvailable(googletest)
 FetchContent_Declare(benchmark
     GIT_REPOSITORY https://github.com/google/benchmark.git
     GIT_TAG v1.9.1
+    GIT_SHALLOW TRUE
 )
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
@@ -161,6 +170,7 @@ FetchContent_MakeAvailable(benchmark)
 FetchContent_Declare(tinygltf
     GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
     GIT_TAG v2.9.4
+    GIT_SHALLOW TRUE
 )
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
@@ -169,6 +179,7 @@ FetchContent_MakeAvailable(tinygltf)
 FetchContent_Declare(MPMCQueue
     GIT_REPOSITORY https://github.com/rigtorp/MPMCQueue.git
     GIT_TAG 4323bd89b3bcdb48daa600804902f51ede7990c1
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(MPMCQueue)
 
@@ -176,6 +187,7 @@ FetchContent_MakeAvailable(MPMCQueue)
 FetchContent_Declare(onetbb
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
     GIT_TAG v2022.0.0
+    GIT_SHALLOW TRUE
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS ON)
@@ -185,6 +197,7 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_Declare(embree
     GIT_REPOSITORY https://github.com/embree/embree.git
     GIT_TAG v4.3.3
+    GIT_SHALLOW TRUE
 )
 set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
 set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
@@ -193,12 +206,14 @@ FetchContent_MakeAvailable(embree)
 FetchContent_Declare(vulkan
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
     GIT_TAG v1.4.304
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(vulkan)
 
 FetchContent_Declare(volk
     GIT_REPOSITORY https://github.com/zeux/volk.git
     GIT_TAG 1.3.295
+    GIT_SHALLOW TRUE
 )
 set(VOLK_HEADERS_ONLY ON CACHE BOOL "" FORCE)
 set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)
@@ -207,6 +222,7 @@ FetchContent_MakeAvailable(volk)
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
     GIT_TAG vulkan-sdk-1.3.296.0
+    GIT_SHALLOW TRUE
 )
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
 set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -216,7 +232,7 @@ FetchContent_MakeAvailable(SPIRV-Reflect)
 FetchContent_Declare(GSL
     GIT_REPOSITORY "https://github.com/microsoft/GSL"
     GIT_TAG "v4.1.0"
-    GIT_SHALLOW ON
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(GSL)
 

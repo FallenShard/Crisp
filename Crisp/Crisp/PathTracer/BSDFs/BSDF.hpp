@@ -3,9 +3,10 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 #include <Crisp/PathTracer/Textures/Texture.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
 #include <Crisp/Utils/BitFlags.hpp>
+
 
 namespace crisp {
 enum class Lobe {

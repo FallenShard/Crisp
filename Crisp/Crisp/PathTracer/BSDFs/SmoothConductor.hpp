@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Crisp/Optics/Fresnel.hpp>
 #include <Crisp/PathTracer/BSDFs/BSDF.hpp>
+#include <Crisp/PathTracer/Optics/Fresnel.hpp>
+
 
 namespace crisp {
 class SmoothConductorBSDF : public BSDF {

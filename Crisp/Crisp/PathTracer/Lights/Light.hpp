@@ -2,7 +2,7 @@
 
 #include <Crisp/Math/Ray.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 namespace crisp {
 class Sampler;
@@ -41,7 +41,7 @@ public:
             , light(nullptr) {}
     };
 
-    virtual ~Light(){};
+    virtual ~Light() {};
 
     virtual bool isOnSurface() {
         return true;

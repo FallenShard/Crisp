@@ -13,7 +13,7 @@
 #include <Crisp/Math/Ray.hpp>
 #include <Crisp/PathTracer/Core/Intersection.hpp>
 #include <Crisp/PathTracer/Lights/Light.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 namespace crisp {
 class Integrator;

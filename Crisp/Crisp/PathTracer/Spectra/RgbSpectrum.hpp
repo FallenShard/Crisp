@@ -29,7 +29,7 @@ struct RgbSpectrum {
         , g(green)
         , b(blue) {}
 
-    RgbSpectrum(const glm::vec3& vec); // NOLINT(single-arg)
+    RgbSpectrum(const glm::vec3& vec); // NOLINT (single-arg)
 
     float& operator[](int index);
     const float& operator[](int index) const;

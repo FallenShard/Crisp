@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Crisp/Math/BoundingBox.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 #include <array>
 #include <memory>
 #include <vector>

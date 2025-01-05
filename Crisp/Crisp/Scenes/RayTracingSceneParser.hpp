@@ -4,7 +4,7 @@
 
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Optics/Fresnel.hpp>
+#include <Crisp/PathTracer/Optics/Fresnel.hpp>
 
 namespace crisp {
 struct BrdfParameters {

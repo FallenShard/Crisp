@@ -2,12 +2,12 @@
 
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 namespace crisp {
 class MicrofacetDistribution {
 public:
-    virtual ~MicrofacetDistribution(){};
+    virtual ~MicrofacetDistribution() {};
 
     virtual glm::vec3 sampleNormal(const glm::vec2& sample) const = 0;
     virtual float pdf(const glm::vec3& m) const = 0;

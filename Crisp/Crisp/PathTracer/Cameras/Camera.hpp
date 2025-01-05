@@ -3,7 +3,7 @@
 #include <Crisp/Math/Ray.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/PathTracer/ReconstructionFilters/ReconstructionFilter.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 #include <memory>
 

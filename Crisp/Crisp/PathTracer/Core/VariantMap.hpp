@@ -3,7 +3,7 @@
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Math/Transform.hpp>
-#include <Crisp/Spectra/Spectrum.hpp>
+#include <Crisp/PathTracer/Spectra/Spectrum.hpp>
 
 #include <iostream>
 #include <string>
