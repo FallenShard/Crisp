@@ -7,6 +7,8 @@
 namespace crisp {
 namespace {
 
+CRISP_MAKE_LOGGER_ST("VulkanPhysicalDevice");
+
 template <typename T, typename U>
 void append(T& chainHead, U& newElement) {
     newElement.pNext = chainHead.pNext;
@@ -288,6 +290,13 @@ Result<VulkanPhysicalDevice> selectPhysicalDevice(
 
     if (instance.getSurface() == VK_NULL_HANDLE) {
         return VulkanPhysicalDevice(devices.front());
+    }
+
+    if (!deviceExtensions.empty()) {
+        CRISP_LOGI("Requesting {} device extensions.", deviceExtensions.size());
+        for (const auto& ext : deviceExtensions) {
+            CRISP_LOGI(" - {}", ext);
+        }
     }
 
     for (const auto& device : devices) {
