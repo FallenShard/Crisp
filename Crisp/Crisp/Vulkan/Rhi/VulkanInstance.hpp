@@ -23,9 +23,12 @@ public:
     VkInstance getHandle() const;
     VkSurfaceKHR getSurface() const;
 
+    uint32_t getApiVersion() const;
+
 private:
     VkInstance m_handle;
     VkDebugUtilsMessengerEXT m_debugMessenger;
     VkSurfaceKHR m_surface;
+    uint32_t m_apiVersion;
 };
 } // namespace crisp

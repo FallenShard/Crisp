@@ -54,26 +54,26 @@ public:
 
     template <typename DestroyFunc>
     static void destroyVulkanHandle(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
-        spdlog::debug("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
+        SPDLOG_DEBUG("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
         func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
         deallocator->removeTag(handle);
     }
 
-    inline T getHandle() const {
+    T getHandle() const {
         return m_handle;
     }
 
-    inline void swap(VulkanResource& rhs) noexcept {
+    void swap(VulkanResource& rhs) noexcept {
         std::swap(m_deallocator, rhs.m_deallocator);
         std::swap(m_handle, rhs.m_handle);
         std::swap(m_framesToLive, rhs.m_framesToLive);
     }
 
-    inline void setDeferredDestruction(bool isEnabled) {
+    void setDeferredDestruction(bool isEnabled) {
         m_framesToLive = isEnabled ? kRendererVirtualFrameCount : 0;
     }
 
-    inline void setTag(std::string tag) const { // NOLINT
+    void setTag(std::string tag) const { // NOLINT
         m_deallocator->setTag(m_handle, std::move(tag));
     }
 

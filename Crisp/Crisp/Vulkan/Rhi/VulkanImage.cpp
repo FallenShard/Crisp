@@ -2,6 +2,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 #define STRINGIFY(x) #x
 
@@ -109,8 +110,9 @@ std::string toString(VkImageUsageFlags flags) {
 }
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)
-    : VulkanResource(device.createImage(createInfo), device.getResourceDeallocator())
+    : VulkanResource(device.getResourceDeallocator())
     , m_allocation{}
+    , m_allocationInfo{}
     , m_imageType(createInfo.imageType)
     , m_extent(createInfo.extent)
     , m_mipLevelCount(createInfo.mipLevels)
@@ -119,12 +121,12 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& cr
     , m_sampleCount(createInfo.samples)
     , m_aspect(determineImageAspect(createInfo.format))
     , m_layouts(createInfo.arrayLayers, std::vector<VkImageLayout>(createInfo.mipLevels, VK_IMAGE_LAYOUT_UNDEFINED)) {
-    // Assign the image to the proper memory heap
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation =
-        device.getMemoryAllocator().allocateImage(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
-    vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+    VK_CHECK(vmaCreateImage(
+        device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 }
 
 VulkanImage::VulkanImage(
@@ -137,6 +139,7 @@ VulkanImage::VulkanImage(
     const VkImageCreateFlags createFlags)
     : VulkanResource(device.getResourceDeallocator())
     , m_allocation{}
+    , m_allocationInfo{}
     , m_imageType(extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D)
     , m_extent(extent)
     , m_mipLevelCount(numMipmaps)
@@ -157,14 +160,12 @@ VulkanImage::VulkanImage(
     createInfo.usage = usage;
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_handle = device.createImage(createInfo);
 
-    // Assign the image to the proper memory heap
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device.getHandle(), m_handle, &memRequirements);
-    m_allocation =
-        device.getMemoryAllocator().allocateImage(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements).unwrap();
-    vkBindImageMemory(device.getHandle(), m_handle, m_allocation.getMemory(), m_allocation.offset);
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+    VK_CHECK(vmaCreateImage(
+        device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 }
 
 VulkanImage::~VulkanImage() {

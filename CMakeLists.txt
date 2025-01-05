@@ -219,6 +219,13 @@ set(VOLK_HEADERS_ONLY ON CACHE BOOL "" FORCE)
 set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(volk)
 
+FetchContent_Declare(VulkanMemoryAllocator
+    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+    GIT_TAG v3.2.0
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(VulkanMemoryAllocator)
+
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
     GIT_TAG vulkan-sdk-1.3.296.0

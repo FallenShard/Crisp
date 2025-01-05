@@ -9,6 +9,7 @@ target_link_libraries(
     CrispVulkanHeader
     PUBLIC Vulkan::Headers
     PUBLIC volk::volk_headers
+    PUBLIC GPUOpen::VulkanMemoryAllocator
     PUBLIC Crisp::Checks
 )
 
@@ -59,10 +60,6 @@ add_cpp_static_library(
     CrispVulkanDevice
     "VulkanDevice.cpp"
     "VulkanDevice.hpp"
-    "VulkanMemoryAllocator.cpp"
-    "VulkanMemoryAllocator.hpp"
-    "VulkanMemoryHeap.cpp"
-    "VulkanMemoryHeap.hpp"
     "VulkanResourceDeallocator.cpp"
     "VulkanResourceDeallocator.hpp"
     "VulkanQueue.cpp"
@@ -85,26 +82,6 @@ add_cpp_test(
 )
 target_link_libraries(
     CrispVulkanDeviceTest
-    PRIVATE Crisp::VulkanDevice
-    PRIVATE Crisp::VulkanTestUtils
-)
-
-add_cpp_test(
-    CrispVulkanMemoryAllocatorTest
-    "Test/VulkanMemoryAllocatorTest.cpp"
-)
-target_link_libraries(
-    CrispVulkanMemoryAllocatorTest
-    PRIVATE Crisp::VulkanDevice
-    PRIVATE Crisp::VulkanTestUtils
-)
-
-add_cpp_test(
-    CrispVulkanMemoryHeapTest
-    "Test/VulkanMemoryHeapTest.cpp"
-)
-target_link_libraries(
-    CrispVulkanMemoryHeapTest
     PRIVATE Crisp::VulkanDevice
     PRIVATE Crisp::VulkanTestUtils
 )

@@ -12,6 +12,14 @@
 
 #include <volk.h>
 
+#if !defined(VMA_STATIC_VULKAN_FUNCTIONS)
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#endif
+#if !defined(VMA_DYNAMIC_VULKAN_FUNCTIONS)
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
+#endif
+#include <vk_mem_alloc.h>
+
 namespace crisp {
 
 VkResult loadVulkanLoaderFunctions();

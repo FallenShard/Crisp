@@ -177,7 +177,8 @@ VulkanInstance::VulkanInstance(
     const bool enableValidationLayers)
     : m_handle(createInstance(std::move(platformExtensions), enableValidationLayers))
     , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_handle) : VK_NULL_HANDLE)
-    , m_surface(surfaceCreator ? createSurface(m_handle, surfaceCreator) : VK_NULL_HANDLE) {}
+    , m_surface(surfaceCreator ? createSurface(m_handle, surfaceCreator) : VK_NULL_HANDLE)
+    , m_apiVersion(VK_API_VERSION_1_3) {}
 
 VulkanInstance::~VulkanInstance() {
     if (m_handle == VK_NULL_HANDLE) {
@@ -199,6 +200,10 @@ VkInstance VulkanInstance::getHandle() const {
 
 VkSurfaceKHR VulkanInstance::getSurface() const {
     return m_surface;
+}
+
+uint32_t VulkanInstance::getApiVersion() const {
+    return m_apiVersion;
 }
 
 } // namespace crisp

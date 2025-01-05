@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
@@ -32,7 +31,8 @@ public:
     VkDescriptorBufferInfo createDescriptorInfo() const;
 
 protected:
-    VulkanMemoryHeap::Allocation m_allocation;
+    VmaAllocation m_allocation;
+    VmaAllocationInfo m_allocationInfo;
     VkDeviceSize m_size;
     VkDeviceAddress m_address;
 };
@@ -61,7 +61,7 @@ public:
 
     template <typename T>
     const T* getHostVisibleData() const {
-        return reinterpret_cast<const T*>(m_allocation.getMappedPtr()); // NOLINT
+        return reinterpret_cast<const T*>(m_allocationInfo.pMappedData); // NOLINT
     }
 
     const VulkanDevice& getDevice() const {

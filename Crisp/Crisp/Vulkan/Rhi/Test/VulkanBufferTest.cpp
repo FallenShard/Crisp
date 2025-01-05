@@ -94,6 +94,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     auto device = std::make_unique<VulkanDevice>(
         *physicalDevice_,
         createQueueConfiguration({QueueType::General, QueueType::Transfer}, *instance_, *physicalDevice_),
+        *instance_,
         2);
     ASSERT_THAT(device->getGeneralQueue(), Not(HandleIs(device->getTransferQueue())));
 

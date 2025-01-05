@@ -4,7 +4,6 @@
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {

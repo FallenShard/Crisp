@@ -1,10 +1,11 @@
 #include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
 
-#include <ranges>
+#include <algorithm>
 
 namespace crisp {
-VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, int32_t virtualFrameCount)
+VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator, int32_t virtualFrameCount)
     : m_deviceHandle(device)
+    , m_allocator(allocator)
     , m_virtualFrameCount{virtualFrameCount} {
     m_handleTagMap.emplace(VK_NULL_HANDLE, "Unknown");
 }
@@ -28,17 +29,17 @@ void VulkanResourceDeallocator::decrementLifetimes() {
     m_deferredDestructors.erase(firstDest, lastDest);
 
     // Free the memory chunks
-    for (auto& memoryChunkPair : m_deferredDeallocations) {
+    for (auto& memoryChunkPair : m_deferredVmaDeallocations) {
         if (--memoryChunkPair.first < 0) {
-            memoryChunkPair.second.free();
+            vmaFreeMemory(m_allocator, memoryChunkPair.second);
         }
     }
 
-    auto [firstAlloc, lastAlloc] = std::ranges::remove_if(m_deferredDeallocations, [](const auto& a) {
+    auto [firstVmaAlloc, lastVmaAlloc] = std::ranges::remove_if(m_deferredVmaDeallocations, [](const auto& a) {
         return a.first < 0;
     });
 
-    m_deferredDeallocations.erase(firstAlloc, lastAlloc);
+    m_deferredVmaDeallocations.erase(firstVmaAlloc, lastVmaAlloc);
 }
 
 void VulkanResourceDeallocator::freeAllResources() {
@@ -47,9 +48,9 @@ void VulkanResourceDeallocator::freeAllResources() {
     }
     m_deferredDestructors.clear();
 
-    for (auto& memoryChunkPair : m_deferredDeallocations) {
-        memoryChunkPair.second.free();
+    for (auto& memoryChunkPair : m_deferredVmaDeallocations) {
+        vmaFreeMemory(m_allocator, memoryChunkPair.second);
     }
-    m_deferredDeallocations.clear();
+    m_deferredVmaDeallocations.clear();
 }
 } // namespace crisp

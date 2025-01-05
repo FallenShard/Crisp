@@ -39,18 +39,65 @@ QueueIdentifier getTransferQueue(const VulkanQueueConfiguration& queueConfig) {
     return queueConfig.identifiers.at(2);
 }
 
+VmaAllocator createMemoryAllocator(
+    const VulkanPhysicalDevice& physicalDevice, const VkDevice deviceHandle, const VulkanInstance& instance) {
+    VmaVulkanFunctions functions{};
+    functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    functions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+    functions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
+    functions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
+    functions.vkAllocateMemory = vkAllocateMemory;
+    functions.vkFreeMemory = vkFreeMemory;
+    functions.vkMapMemory = vkMapMemory;
+    functions.vkUnmapMemory = vkUnmapMemory;
+    functions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+    functions.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
+    functions.vkBindBufferMemory = vkBindBufferMemory;
+    functions.vkBindImageMemory = vkBindImageMemory;
+    functions.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
+    functions.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+    functions.vkCreateBuffer = vkCreateBuffer;
+    functions.vkDestroyBuffer = vkDestroyBuffer;
+    functions.vkCreateImage = vkCreateImage;
+    functions.vkDestroyImage = vkDestroyImage;
+    functions.vkCmdCopyBuffer = vkCmdCopyBuffer;
+    functions.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2;
+    functions.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2;
+    functions.vkBindBufferMemory2KHR = vkBindBufferMemory2;
+    functions.vkBindImageMemory2KHR = vkBindImageMemory2;
+    functions.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2;
+    functions.vkGetDeviceBufferMemoryRequirements = vkGetDeviceBufferMemoryRequirements;
+    functions.vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements;
+    functions.vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR;
+
+    VmaAllocatorCreateInfo createInfo{};
+    createInfo.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT;
+    createInfo.physicalDevice = physicalDevice.getHandle();
+    createInfo.device = deviceHandle;
+    createInfo.pVulkanFunctions = &functions;
+    createInfo.instance = instance.getHandle();
+    createInfo.vulkanApiVersion = instance.getApiVersion();
+
+    VmaAllocator allocator{};
+    vmaCreateAllocator(&createInfo, &allocator);
+    return allocator;
+}
+
 } // namespace
 
 VulkanDevice::VulkanDevice(
-    const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& queueConfig, int32_t virtualFrameCount)
+    const VulkanPhysicalDevice& physicalDevice,
+    const VulkanQueueConfiguration& queueConfig,
+    const VulkanInstance& instance,
+    int32_t virtualFrameCount)
     : m_handle(createLogicalDeviceHandle(physicalDevice, queueConfig))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
     , m_debugMarker(std::make_unique<VulkanDebugMarker>(m_handle))
     , m_generalQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getGeneralQueue(queueConfig)))
     , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getComputeQueue(queueConfig)))
     , m_transferQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getTransferQueue(queueConfig)))
-    , m_memoryAllocator(std::make_unique<VulkanMemoryAllocator>(physicalDevice, m_handle))
-    , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, virtualFrameCount)) {
+    , m_memoryAllocator(createMemoryAllocator(physicalDevice, m_handle, instance))
+    , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, m_memoryAllocator, virtualFrameCount)) {
     m_debugMarker->setObjectName(m_generalQueue->getHandle(), "General Queue");
     m_debugMarker->setObjectName(m_computeQueue->getHandle(), "Compute Queue");
     m_debugMarker->setObjectName(m_transferQueue->getHandle(), "Transfer Queue");
@@ -58,7 +105,7 @@ VulkanDevice::VulkanDevice(
 
 VulkanDevice::~VulkanDevice() {
     m_resourceDeallocator->freeAllResources();
-    m_memoryAllocator.reset();
+    vmaDestroyAllocator(m_memoryAllocator);
     vkDestroyDevice(m_handle, nullptr);
 }
 
@@ -123,18 +170,6 @@ VkFence VulkanDevice::createFence(VkFenceCreateFlags flags) const {
     VkFence fence{VK_NULL_HANDLE};
     vkCreateFence(m_handle, &fenceInfo, nullptr, &fence);
     return fence;
-}
-
-VkBuffer VulkanDevice::createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const {
-    VkBuffer buffer{VK_NULL_HANDLE};
-    vkCreateBuffer(m_handle, &bufferCreateInfo, nullptr, &buffer);
-    return buffer;
-}
-
-VkImage VulkanDevice::createImage(const VkImageCreateInfo& imageCreateInfo) const {
-    VkImage image{VK_NULL_HANDLE};
-    vkCreateImage(m_handle, &imageCreateInfo, nullptr, &image);
-    return image;
 }
 
 void VulkanDevice::postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorBufferInfo& bufferInfo) {

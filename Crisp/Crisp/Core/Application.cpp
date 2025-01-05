@@ -163,23 +163,36 @@ void Application::drawGui() {
     ImGui::Begin("Application Settings");
     ImGui::LabelText("Frame Time", "%.2f ms, %.2f FPS", m_avgFrameTimeMs, m_avgFps); // NOLINT
 
-    const auto metrics = m_renderer->getDevice().getMemoryAllocator().getDeviceMemoryUsage();
+    std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> budgets{};
+    vmaGetHeapBudgets(m_renderer->getDevice().getMemoryAllocator(), budgets.data());
 
-    const auto drawMemoryLabel = [](const char* label, const uint64_t bytesUsed, const uint64_t bytesAllocated) {
-        const auto toMegabytes = [](const uint64_t bytes) {
-            const uint64_t megaBytes = bytes >> 20;
-            const uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0; // NOLINT
-            return megaBytes + remainder;
-        };
-        ImGui::PushStyleColor(
-            ImGuiCol_Text, interpolateColor(static_cast<float>(bytesUsed) / static_cast<float>(bytesAllocated)));
-        ImGui::LabelText(label, "%llu / %llu MB", toMegabytes(bytesUsed), toMegabytes(bytesAllocated)); // NOLINT
-        ImGui::PopStyleColor();
+    const auto toMiB = [](const uint64_t bytes) {
+        const uint64_t megaBytes = bytes >> 20;
+        const uint64_t remainder = (bytes & ((1 << 20) - 1)) > 0; // NOLINT
+        return megaBytes + remainder;
     };
 
-    drawMemoryLabel("Buffer Memory", metrics.bufferMemoryUsed, metrics.bufferMemorySize);
-    drawMemoryLabel("Image Memory", metrics.imageMemoryUsed, metrics.imageMemorySize);
-    drawMemoryLabel("Staging Memory", metrics.stagingMemoryUsed, metrics.stagingMemorySize);
+    if (ImGui::CollapsingHeader("Memory Allocations")) {
+        for (uint32_t i = 0; i < VK_MAX_MEMORY_HEAPS; ++i) {
+            const auto& budget = budgets[i];
+            if (budget.budget == 0) {
+                continue;
+            }
+
+            const VkDeviceSize allocatedBytes = toMiB(budget.statistics.allocationBytes);
+            const VkDeviceSize availableBytes = budget.budget;
+
+            ImGui::PushStyleColor(
+                ImGuiCol_Text,
+                interpolateColor(static_cast<float>(allocatedBytes) / static_cast<float>(availableBytes)));
+            ImGui::LabelText( // NOLINT
+                fmt::format("Heap {} Usage", i).c_str(),
+                "%llu / %llu MB",
+                toMiB(allocatedBytes),
+                toMiB(availableBytes)); // NOLINT
+            ImGui::PopStyleColor();
+        }
+    }
 
     gui::drawComboBox(
         "Scene",

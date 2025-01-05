@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanMemoryAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
@@ -14,6 +13,7 @@ public:
     VulkanDevice(
         const VulkanPhysicalDevice& physicalDevice,
         const VulkanQueueConfiguration& queueConfig,
+        const VulkanInstance& instance,
         int32_t virtualFrameCount);
     ~VulkanDevice();
 
@@ -32,11 +32,9 @@ public:
 
     VkSemaphore createSemaphore() const;
     VkFence createFence(VkFenceCreateFlags flags = 0) const;
-    VkBuffer createBuffer(const VkBufferCreateInfo& bufferCreateInfo) const;
-    VkImage createImage(const VkImageCreateInfo& imageCreateInfo) const;
 
-    VulkanMemoryAllocator& getMemoryAllocator() const {
-        return *m_memoryAllocator;
+    VmaAllocator getMemoryAllocator() const {
+        return m_memoryAllocator;
     }
 
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorBufferInfo& bufferInfo);
@@ -84,7 +82,8 @@ private:
     std::unique_ptr<VulkanQueue> m_computeQueue;
     std::unique_ptr<VulkanQueue> m_transferQueue;
 
-    std::unique_ptr<VulkanMemoryAllocator> m_memoryAllocator;
+    VmaAllocator m_memoryAllocator;
+
     std::vector<VkMappedMemoryRange> m_unflushedRanges;
 
     std::list<std::vector<VkDescriptorBufferInfo>> m_bufferInfos;

@@ -2,7 +2,6 @@
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanMemoryHeap.hpp>
 
 namespace crisp {
 class VulkanResourceDeallocator;
@@ -17,7 +16,7 @@ struct DeferredDestructor {
 
 class VulkanResourceDeallocator {
 public:
-    explicit VulkanResourceDeallocator(VkDevice device, int32_t virtualFrameCount);
+    explicit VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator, int32_t virtualFrameCount);
     ~VulkanResourceDeallocator();
 
     VulkanResourceDeallocator(const VulkanResourceDeallocator&) = delete;
@@ -44,8 +43,8 @@ public:
              }});
     }
 
-    void deferMemoryDeallocation(int32_t framesToLive, VulkanMemoryHeap::Allocation allocation) {
-        m_deferredDeallocations.emplace_back(framesToLive, allocation);
+    void deferMemoryDeallocation(int32_t framesToLive, VmaAllocation allocation) {
+        m_deferredVmaDeallocations.emplace_back(framesToLive, allocation);
     }
 
     // Object tags useful for debugging
@@ -69,18 +68,23 @@ public:
         return m_deviceHandle;
     }
 
+    VmaAllocator getMemoryAllocator() const {
+        return m_allocator;
+    }
+
     size_t getDeferredDestructorCount() const {
         return m_deferredDestructors.size();
     }
 
 private:
     VkDevice m_deviceHandle{VK_NULL_HANDLE};
+    VmaAllocator m_allocator{VK_NULL_HANDLE};
 
     int32_t m_virtualFrameCount{1};
 
     FlatHashMap<void*, std::string> m_handleTagMap;
 
     std::vector<DeferredDestructor> m_deferredDestructors;
-    std::vector<std::pair<int32_t, VulkanMemoryHeap::Allocation>> m_deferredDeallocations;
+    std::vector<std::pair<int32_t, VmaAllocation>> m_deferredVmaDeallocations;
 };
 } // namespace crisp

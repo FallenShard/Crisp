@@ -74,7 +74,10 @@ Renderer::Renderer(
     m_physicalDevice =
         std::make_unique<VulkanPhysicalDevice>(selectPhysicalDevice(*m_instance, std::move(deviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(
-        *m_physicalDevice, createDefaultQueueConfiguration(*m_instance, *m_physicalDevice), kRendererVirtualFrameCount);
+        *m_physicalDevice,
+        createDefaultQueueConfiguration(*m_instance, *m_physicalDevice),
+        *m_instance,
+        kRendererVirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(
         *m_device, *m_physicalDevice, m_instance->getSurface(), TripleBuffering::Disabled);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);

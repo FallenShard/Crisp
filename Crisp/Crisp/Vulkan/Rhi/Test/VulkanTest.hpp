@@ -58,6 +58,7 @@ protected:
             surfacePolicy == SurfacePolicy::HiddenWindow
                 ? createDefaultQueueConfiguration(*instance_, *physicalDevice_)
                 : createQueueConfiguration({QueueType::General}, *instance_, *physicalDevice_),
+            *instance_,
             kRendererVirtualFrameCount);
     }
 
