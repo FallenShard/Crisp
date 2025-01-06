@@ -76,3 +76,21 @@ target_link_libraries(
     PRIVATE Crisp::VulkanRingBuffer
     PRIVATE Crisp::VulkanTestUtils
 )
+
+add_cpp_interface_library(
+    CrispVulkanSynchronization
+    "VulkanSynchronization.hpp"
+)
+target_link_libraries(
+    CrispVulkanSynchronization
+    INTERFACE Crisp::VulkanHeader
+)
+
+add_cpp_test(
+    CrispVulkanSynchronizationTest
+    "Test/VulkanSynchronizationTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanSynchronizationTest
+    PRIVATE Crisp::VulkanSynchronization
+)
