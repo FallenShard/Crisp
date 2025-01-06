@@ -118,6 +118,7 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::PipelineBuilder
     PUBLIC Crisp::ShaderCache
     PUBLIC Crisp::VulkanRingBuffer
+    PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Crisp::AssetPaths
 )
 

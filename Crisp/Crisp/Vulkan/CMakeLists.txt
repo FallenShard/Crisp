@@ -94,3 +94,14 @@ target_link_libraries(
     CrispVulkanSynchronizationTest
     PRIVATE Crisp::VulkanSynchronization
 )
+
+add_cpp_static_library(
+    CrispVulkanCommandEncoder
+    "VulkanCommandEncoder.cpp"
+    "VulkanCommandEncoder.hpp"
+)
+target_link_libraries(
+    CrispVulkanCommandEncoder
+    PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::VulkanSynchronization
+)

@@ -133,6 +133,22 @@ RenderPassBuilder& RenderPassBuilder::addDependency(
     return *this;
 }
 
+RenderPassBuilder& RenderPassBuilder::addDependency(
+    const uint32_t srcSubpass,
+    const uint32_t dstSubpass,
+    const VulkanSynchronizationScope& scope,
+    const VkDependencyFlags flags) {
+    m_dependencies.push_back(
+        {srcSubpass,
+         dstSubpass,
+         static_cast<uint32_t>(scope.srcStage),
+         static_cast<uint32_t>(scope.dstStage),
+         static_cast<uint32_t>(scope.srcAccess),
+         static_cast<uint32_t>(scope.dstAccess),
+         flags});
+    return *this;
+}
+
 std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> RenderPassBuilder::create(
     VkDevice device, std::vector<RenderTarget*> renderTargets) const {
     std::vector<VkAttachmentDescription> attachments(m_attachments);

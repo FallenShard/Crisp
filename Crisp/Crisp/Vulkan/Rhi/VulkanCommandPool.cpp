@@ -15,4 +15,8 @@ VkCommandBuffer VulkanCommandPool::allocateCommandBuffer(
     vkAllocateCommandBuffers(device.getHandle(), &cmdBufferAllocInfo, &bufferHandle);
     return bufferHandle;
 }
+
+void VulkanCommandPool::reset(const VulkanDevice& device) {
+    vkResetCommandPool(device.getHandle(), m_handle, 0);
+}
 } // namespace crisp

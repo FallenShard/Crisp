@@ -32,13 +32,7 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
 
             .setNumSubpasses(1)
             .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(
-                VK_SUBPASS_EXTERNAL,
-                0,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                0,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+            .addDependency(VK_SUBPASS_EXTERNAL, 0, kExternalColorSubpass >> kColorWrite)
             .create(device, swapChain.getExtent(), renderTargets);
     device.getDebugMarker().setObjectName(*renderPass, "Default Render Pass");
     return renderPass;
@@ -204,7 +198,7 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues) {
     m_device->flushResourceUpdates(waitOnAllQueues);
 }
 
-FrameContext Renderer::beginFrame() {
+std::optional<FrameContext> Renderer::beginFrame() {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     // Obtain a frame that we can safely draw into
     auto& frame = m_virtualFrames[virtualFrameIndex];
@@ -224,19 +218,20 @@ FrameContext Renderer::beginFrame() {
     const std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
     if (!swapImageIndex.has_value()) {
         CRISP_LOGE("Failed to acquire swap chain image!");
-        return {};
+        return std::nullopt;
     }
 
     updateSwapChainRenderPass(virtualFrameIndex, m_swapChain->getImageView(*swapImageIndex));
 
-    auto* commandBuffer = m_workers[0]->getCmdBuffer(virtualFrameIndex);
+    auto* commandBuffer = m_workers[0]->resetAndGetCmdBuffer(*m_device, virtualFrameIndex);
     commandBuffer->setIdleState();
     commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    return {
+    return FrameContext{
         .frameIndex = m_currentFrameIndex,
         .virtualFrameIndex = virtualFrameIndex,
         .swapChainImageIndex = *swapImageIndex,
         .commandBuffer = commandBuffer,
+        .commandEncoder = VulkanCommandEncoder(commandBuffer->getHandle()),
     };
 }
 
@@ -258,12 +253,12 @@ void Renderer::endFrame(const FrameContext& frameContext) {
 
 void Renderer::drawFrame() {
     const auto frameCtx{beginFrame()};
-    if (!frameCtx.commandBuffer) {
+    if (!frameCtx) {
         return;
     }
 
-    record(*frameCtx.commandBuffer);
-    endFrame(frameCtx);
+    record(*frameCtx);
+    endFrame(*frameCtx);
 }
 
 void Renderer::finish() {
@@ -351,20 +346,16 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     return imageIndex;
 }
 
-void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
+void Renderer::record(const FrameContext& frameContext) {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
-    const VkCommandBuffer cmdBuffer{commandBuffer.getHandle()};
+    const auto& encoder{frameContext.commandEncoder};
+    const auto cmdBuffer = encoder.getHandle();
 
     for (auto& ringBuffer : m_streamingRingBuffers) {
         ringBuffer->updateDeviceBuffer(cmdBuffer);
     }
 
-    commandBuffer.insertMemoryBarrier(
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_SHADER_READ_BIT);
+    encoder.insertBarrier(kTransferWrite >> kAllShaderRead);
 
     m_device->executeResourceUpdates(cmdBuffer);
 
@@ -373,18 +364,17 @@ void Renderer::record(const VulkanCommandBuffer& commandBuffer) {
     }
 
     if (!m_sceneImageViews.empty()) {
-        m_sceneImageViews[virtualFrameIndex]->getImage().transitionLayout(
-            cmdBuffer,
+        encoder.transitionLayout(
+            m_sceneImageViews[virtualFrameIndex]->getImage(),
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            kColorWrite >> kFragmentSampledRead);
     }
 
     m_defaultRenderPass->begin(cmdBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
     if (!m_sceneImageViews.empty()) {
         m_scenePipeline->bind(cmdBuffer);
-        setDefaultViewport(cmdBuffer);
-        setDefaultScissor(cmdBuffer);
+        encoder.setViewport(m_defaultViewport);
+        encoder.setScissor(m_defaultScissor);
         m_sceneMaterial->bind(virtualFrameIndex, cmdBuffer);
         drawFullScreenQuad(cmdBuffer);
     }

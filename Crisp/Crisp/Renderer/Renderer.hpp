@@ -78,7 +78,7 @@ public:
 
     void flushResourceUpdates(bool waitOnAllQueues);
 
-    FrameContext beginFrame();
+    std::optional<FrameContext> beginFrame();
     void endFrame(const FrameContext& frameContext);
     void drawFrame();
 
@@ -111,7 +111,7 @@ public:
 
 private:
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
-    void record(const VulkanCommandBuffer& commandBuffer);
+    void record(const FrameContext& frameContext);
     void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
 
     void recreateSwapChain();

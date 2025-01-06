@@ -26,8 +26,7 @@ RenderGraph::RenderGraph(Renderer* renderer)
         perFrameCtx.resize(std::thread::hardware_concurrency());
         for (auto& ctx : perFrameCtx) {
             ctx.pool = std::make_unique<VulkanCommandPool>(
-                m_renderer->getDevice().getGeneralQueue().createCommandPool(
-                    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
+                m_renderer->getDevice().getGeneralQueue().createCommandPool(0),
                 m_renderer->getDevice().getResourceDeallocator());
             ctx.cmdBuffer = std::make_unique<VulkanCommandBuffer>(
                 ctx.pool->allocateCommandBuffer(m_renderer->getDevice(), VK_COMMAND_BUFFER_LEVEL_SECONDARY));
@@ -40,7 +39,7 @@ RenderGraph::Node& RenderGraph::addRenderPass(const std::string& name, std::uniq
 
     const auto& [iter, inserted] = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
     m_renderer->enqueueResourceUpdate([node = iter->second.get()](VkCommandBuffer cmdBuffer) {
-        CRISP_LOGI("Initializing render target layouts for {}", node->name);
+        CRISP_LOGI("Initializing render target layouts for {}", node->name); // NOLINT
         node->renderPass->updateInitialLayouts(cmdBuffer);
     });
     return *iter->second;

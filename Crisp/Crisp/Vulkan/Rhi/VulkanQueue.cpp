@@ -83,7 +83,7 @@ bool VulkanQueue::supportsOperations(const VkQueueFlags queueFlags) const {
 }
 
 VulkanQueue::ExecutionInfo VulkanQueue::createExecutionInfo() const {
-    VkCommandPool cmdPool = createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VkCommandPool cmdPool = createCommandPool(0);
 
     VkCommandBufferAllocateInfo cmdBufferAllocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     cmdBufferAllocInfo.commandPool = cmdPool;

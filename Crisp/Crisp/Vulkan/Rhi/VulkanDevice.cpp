@@ -230,35 +230,11 @@ void VulkanDevice::flushResourceUpdates(const bool waitOnAllQueues) {
         return;
     }
 
-    const VulkanQueue& generalQueue = getGeneralQueue();
-    VkCommandPool cmdPool = generalQueue.createCommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-    VkCommandBufferAllocateInfo cmdBufferAllocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    cmdBufferAllocInfo.commandPool = cmdPool;
-    cmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmdBufferAllocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer cmdBuffer{VK_NULL_HANDLE};
-    vkAllocateCommandBuffers(m_handle, &cmdBufferAllocInfo, &cmdBuffer);
-
-    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
-    executeResourceUpdates(cmdBuffer);
-    vkEndCommandBuffer(cmdBuffer);
-
-    const VkFence fence = createFence(0);
-    generalQueue.submit(cmdBuffer, fence);
-    wait(fence);
+    getGeneralQueue().submitAndWait([this](const VkCommandBuffer cmdBuffer) { executeResourceUpdates(cmdBuffer); });
 
     if (waitOnAllQueues) {
         waitIdle();
     }
-
-    vkDestroyFence(m_handle, fence, nullptr);
-    vkFreeCommandBuffers(m_handle, cmdPool, 1, &cmdBuffer);
-    vkResetCommandPool(m_handle, cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-    vkDestroyCommandPool(m_handle, cmdPool, nullptr);
 }
 
 VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config) {

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
@@ -10,7 +8,7 @@
 namespace crisp {
 class RendererFrame {
 public:
-    enum class Status { Idle, Submitted };
+    enum class Status : uint8_t { Idle, Submitted };
 
     explicit RendererFrame(const VulkanDevice& device, int32_t logicalIndex);
     ~RendererFrame();

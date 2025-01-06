@@ -9,5 +9,7 @@ public:
     VulkanCommandPool(VkCommandPool handle, VulkanResourceDeallocator& deallocator);
 
     VkCommandBuffer allocateCommandBuffer(const VulkanDevice& device, VkCommandBufferLevel cmdBufferLevel) const;
+
+    void reset(const VulkanDevice& device);
 };
 } // namespace crisp

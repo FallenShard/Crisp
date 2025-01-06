@@ -4,6 +4,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 #include <vector>
 
@@ -49,6 +50,9 @@ public:
         VkPipelineStageFlags dstStageMask,
         VkAccessFlags dstAccessMask,
         VkDependencyFlags flags = 0);
+
+    RenderPassBuilder& addDependency(
+        uint32_t srcSubpass, uint32_t dstSubpass, const VulkanSynchronizationScope& scope, VkDependencyFlags flags = 0);
 
     std::pair<VkRenderPass, std::vector<VkAttachmentDescription>> create(
         VkDevice device, std::vector<RenderTarget*> renderTargets) const;
