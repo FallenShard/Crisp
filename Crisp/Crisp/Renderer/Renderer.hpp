@@ -79,8 +79,8 @@ public:
     void flushResourceUpdates(bool waitOnAllQueues);
 
     std::optional<FrameContext> beginFrame();
+    void record(const FrameContext& frameContext);
     void endFrame(const FrameContext& frameContext);
-    void drawFrame();
 
     void finish();
 
@@ -111,7 +111,6 @@ public:
 
 private:
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
-    void record(const FrameContext& frameContext);
     void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
 
     void recreateSwapChain();

@@ -8,5 +8,5 @@ void TestScene::resize(int /*width*/, int /*height*/) {}
 
 void TestScene::update(const UpdateParams&) {}
 
-void TestScene::render() {}
+void TestScene::render(const FrameContext&) {}
 } // namespace crisp

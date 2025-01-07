@@ -235,6 +235,41 @@ std::optional<FrameContext> Renderer::beginFrame() {
     };
 }
 
+void Renderer::record(const FrameContext& frameContext) {
+    const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
+    const auto& encoder{frameContext.commandEncoder};
+    const auto cmdBuffer = encoder.getHandle();
+
+    encoder.insertBarrier(kTransferWrite >> kAllShaderRead);
+
+    m_device->executeResourceUpdates(cmdBuffer);
+
+    for (const auto& drawCommand : m_drawCommands) {
+        drawCommand(cmdBuffer);
+    }
+
+    if (m_sceneImageView) {
+        encoder.transitionLayout(
+            m_sceneImageView->getImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kColorWrite >> kFragmentSampledRead);
+    }
+
+    const auto& framebuffer{*m_swapChainFramebuffers.at(m_swapChain->getImageView(frameContext.swapChainImageIndex))};
+
+    m_defaultRenderPass->begin(cmdBuffer, framebuffer, VK_SUBPASS_CONTENTS_INLINE);
+    if (m_sceneImageView) {
+        m_scenePipeline->bind(cmdBuffer);
+        encoder.setViewport(m_defaultViewport);
+        encoder.setScissor(m_defaultScissor);
+        m_sceneMaterial->bind(virtualFrameIndex, cmdBuffer);
+        drawFullScreenQuad(cmdBuffer);
+    }
+
+    for (const auto& drawCommand : m_defaultPassDrawCommands) {
+        drawCommand(cmdBuffer);
+    }
+    m_defaultRenderPass->end(cmdBuffer);
+}
+
 void Renderer::endFrame(const FrameContext& frameContext) {
     frameContext.commandBuffer->end();
     auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
@@ -249,16 +284,6 @@ void Renderer::endFrame(const FrameContext& frameContext) {
     m_defaultPassDrawCommands.clear();
 
     ++m_currentFrameIndex;
-}
-
-void Renderer::drawFrame() {
-    const auto frameCtx{beginFrame()};
-    if (!frameCtx) {
-        return;
-    }
-
-    record(*frameCtx);
-    endFrame(*frameCtx);
 }
 
 void Renderer::finish() {
@@ -344,45 +369,6 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     }
 
     return imageIndex;
-}
-
-void Renderer::record(const FrameContext& frameContext) {
-    const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
-    const auto& encoder{frameContext.commandEncoder};
-    const auto cmdBuffer = encoder.getHandle();
-
-    for (auto& ringBuffer : m_streamingRingBuffers) {
-        ringBuffer->updateDeviceBuffer(cmdBuffer);
-    }
-
-    encoder.insertBarrier(kTransferWrite >> kAllShaderRead);
-
-    m_device->executeResourceUpdates(cmdBuffer);
-
-    for (const auto& drawCommand : m_drawCommands) {
-        drawCommand(cmdBuffer);
-    }
-
-    if (!m_sceneImageViews.empty()) {
-        encoder.transitionLayout(
-            m_sceneImageViews[virtualFrameIndex]->getImage(),
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            kColorWrite >> kFragmentSampledRead);
-    }
-
-    m_defaultRenderPass->begin(cmdBuffer, virtualFrameIndex, VK_SUBPASS_CONTENTS_INLINE);
-    if (!m_sceneImageViews.empty()) {
-        m_scenePipeline->bind(cmdBuffer);
-        encoder.setViewport(m_defaultViewport);
-        encoder.setScissor(m_defaultScissor);
-        m_sceneMaterial->bind(virtualFrameIndex, cmdBuffer);
-        drawFullScreenQuad(cmdBuffer);
-    }
-
-    for (const auto& drawCommand : m_defaultPassDrawCommands) {
-        drawCommand(cmdBuffer);
-    }
-    m_defaultRenderPass->end(cmdBuffer, virtualFrameIndex);
 }
 
 void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex) {

@@ -18,7 +18,7 @@ public:
 
     void resize(int width, int height);
     void update(const UpdateParams& updateParams);
-    void render() const;
+    void render(const FrameContext& frameContext) const;
 
     void onSceneSelected(const std::string& sceneName);
 

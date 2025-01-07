@@ -97,11 +97,17 @@ void Application::run() {
 
         gui::prepareImGui();
         drawGui();
-        m_sceneContainer->render();
 
         m_renderer->enqueueDefaultPassDrawCommand([](const VkCommandBuffer cmdBuffer) { gui::renderImGui(cmdBuffer); });
 
-        m_renderer->drawFrame();
+        const auto frameCtx{m_renderer->beginFrame()};
+        if (!frameCtx) {
+            continue;
+        }
+
+        m_sceneContainer->render(*frameCtx);
+        m_renderer->record(*frameCtx);
+        m_renderer->endFrame(*frameCtx);
     }
 
     m_renderer->finish();

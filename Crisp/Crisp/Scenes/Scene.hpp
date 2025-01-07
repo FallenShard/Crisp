@@ -22,9 +22,9 @@ public:
 
     virtual void resize(int width, int height) = 0;
     virtual void update(const UpdateParams& updateParams) = 0;
-    virtual void render() = 0;
+    virtual void render(const FrameContext& frameContext) = 0;
 
-    virtual void renderGui() {}
+    virtual void drawGui() {}
 
 protected:
     Window* m_window{nullptr};

@@ -17,8 +17,8 @@ public:
 
     void resize(int width, int height) override;
     void update(const UpdateParams& updateParams) override;
-    void render() override;
-    void renderGui() override;
+    void render(const FrameContext& frameContext) override;
+    void drawGui() override;
 
     void onMaterialSelected(const std::string& material);
 

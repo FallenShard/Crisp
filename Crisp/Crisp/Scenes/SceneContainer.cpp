@@ -93,10 +93,10 @@ void SceneContainer::update(const UpdateParams& updateParams) {
     }
 }
 
-void SceneContainer::render() const {
+void SceneContainer::render(const FrameContext& frameContext) const {
     if (m_scene) {
-        m_scene->renderGui();
-        m_scene->render();
+        m_scene->drawGui();
+        m_scene->render(frameContext);
     }
 }
 

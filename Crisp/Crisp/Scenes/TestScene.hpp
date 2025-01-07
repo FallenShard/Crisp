@@ -9,6 +9,6 @@ public:
 
     void resize(int width, int height) override;
     void update(const UpdateParams& updateParams) override;
-    void render() override;
+    void render(const FrameContext& frameContext) override;
 };
 } // namespace crisp

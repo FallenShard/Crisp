@@ -172,13 +172,14 @@ void PbrScene::update(const UpdateParams& updateParams) {
     // m_resourceContext->getUniformBuffer("sceneObject-params")->updateStagingBuffer(m_uniformMaterialParams);
 }
 
-void PbrScene::render() {
-    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
-        m_rg->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex());
-    });
+void PbrScene::render(const FrameContext& frameContext) {
+    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
+        m_cameraController->getCameraParameters(), frameContext.virtualFrameIndex);
+
+    m_rg->execute(frameContext);
 }
 
-void PbrScene::renderGui() {
+void PbrScene::drawGui() {
     ImGui::Begin("Scene");
     if (ImGui::CollapsingHeader("Camera")) {
         drawCameraUi(m_cameraController->getCamera(), /*isSeparateWindow=*/false);
@@ -196,7 +197,7 @@ void PbrScene::renderGui() {
 
     ImGui::Begin("Render Graph");
     if (ImGui::CollapsingHeader("Overview")) {
-        drawGui(*m_rg);
+        ::crisp::drawGui(*m_rg);
     }
     if (ImGui::CollapsingHeader("Nodes")) {
         ImGui::SliderInt("Nodes to Draw", &m_nodesToDraw, 0, static_cast<int32_t>(m_renderNodes.size()));
