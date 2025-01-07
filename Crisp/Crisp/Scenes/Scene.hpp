@@ -8,13 +8,20 @@
 #include <Crisp/Renderer/ResourceContext.hpp>
 
 namespace crisp {
+struct UpdateParams {
+    uint32_t frameIdx;
+    uint32_t frameInFlightIdx;
+    float dt;
+    float totalTimeSec;
+};
+
 class Scene {
 public:
     Scene(Renderer* renderer, Window* window);
     virtual ~Scene() = default;
 
     virtual void resize(int width, int height) = 0;
-    virtual void update(float dt) = 0;
+    virtual void update(const UpdateParams& updateParams) = 0;
     virtual void render() = 0;
 
     virtual void renderGui() {}

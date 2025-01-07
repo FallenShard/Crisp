@@ -48,7 +48,7 @@ Application::Application(const ApplicationEnvironment& environment)
 
     m_sceneContainer = std::make_unique<SceneContainer>(
         m_renderer.get(), &m_window, environment.getParameters().scene, environment.getParameters().sceneArgs);
-    m_sceneContainer->update(0.0f);
+    m_sceneContainer->update({.frameIdx = 0, .frameInFlightIdx = 0, .dt = 0.0f, .totalTimeSec = 0.0f});
 
     gui::initImGui(
         m_window.getHandle(),
@@ -69,6 +69,7 @@ Application::~Application() {
 void Application::run() {
     Timer<std::chrono::duration<double>> updateTimer;
     double timeSinceLastUpdate = 0.0;
+    const auto beginTimePoint = std::chrono::steady_clock::now();
     while (!m_window.shouldClose()) {
         const double timeDelta = updateTimer.restart();
         updateFrameStatistics(timeDelta);
@@ -81,7 +82,12 @@ void Application::run() {
         resizeIfNeeded();
 
         while (timeSinceLastUpdate > kTimePerFrame) {
-            m_sceneContainer->update(static_cast<float>(kTimePerFrame));
+            m_sceneContainer->update({
+                .frameIdx = static_cast<uint32_t>(m_renderer->getCurrentFrameIndex()),
+                .frameInFlightIdx = m_renderer->getCurrentVirtualFrameIndex(),
+                .dt = static_cast<float>(kTimePerFrame),
+                .totalTimeSec = std::chrono::duration<float>(std::chrono::steady_clock::now() - beginTimePoint).count(),
+            });
             timeSinceLastUpdate -= kTimePerFrame;
         }
 

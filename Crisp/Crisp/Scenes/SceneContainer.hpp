@@ -17,7 +17,7 @@ public:
     static const std::vector<std::string>& getSceneNames();
 
     void resize(int width, int height);
-    void update(float dt);
+    void update(const UpdateParams& updateParams);
     void render() const;
 
     void onSceneSelected(const std::string& sceneName);

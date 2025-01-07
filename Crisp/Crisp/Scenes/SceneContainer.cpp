@@ -87,9 +87,9 @@ const std::vector<std::string>& SceneContainer::getSceneNames() {
     return kSceneNames;
 }
 
-void SceneContainer::update(float dt) {
+void SceneContainer::update(const UpdateParams& updateParams) {
     if (m_scene) {
-        m_scene->update(dt);
+        m_scene->update(updateParams);
     }
 }
 

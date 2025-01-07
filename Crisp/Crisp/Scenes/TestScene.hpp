@@ -6,10 +6,9 @@ namespace crisp {
 class TestScene : public Scene {
 public:
     TestScene(Renderer* renderer, Window* window);
-    ~TestScene() override;
 
     void resize(int width, int height) override;
-    void update(float dt) override;
+    void update(const UpdateParams& updateParams) override;
     void render() override;
 };
 } // namespace crisp

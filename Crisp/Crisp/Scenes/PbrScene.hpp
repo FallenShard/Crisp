@@ -2,7 +2,6 @@
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Camera/TargetCameraController.hpp>
-#include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
@@ -17,7 +16,7 @@ public:
     PbrScene(Renderer* renderer, Window* window, const nlohmann::json& args);
 
     void resize(int width, int height) override;
-    void update(float dt) override;
+    void update(const UpdateParams& updateParams) override;
     void render() override;
     void renderGui() override;
 

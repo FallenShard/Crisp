@@ -159,15 +159,14 @@ void PbrScene::resize(int width, int height) {
     m_renderer->flushResourceUpdates(true);
 }
 
-void PbrScene::update(float dt) {
+void PbrScene::update(const UpdateParams& updateParams) {
     // Camera
-    m_cameraController->update(dt);
-    const auto camParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(camParams);
+    m_cameraController->update(updateParams.dt);
+    const auto& camParams = m_cameraController->getCameraParameters();
 
     // Object transforms
     m_transformBuffer->update(camParams.V, camParams.P);
-    m_lightSystem->update(m_cameraController->getCamera(), dt);
+    m_lightSystem->update(m_cameraController->getCamera(), updateParams.dt);
     m_skybox->updateTransforms(camParams.V, camParams.P);
 
     // m_resourceContext->getUniformBuffer("sceneObject-params")->updateStagingBuffer(m_uniformMaterialParams);

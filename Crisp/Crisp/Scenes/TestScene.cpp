@@ -4,11 +4,9 @@ namespace crisp {
 TestScene::TestScene(Renderer* renderer, Window* window)
     : Scene(renderer, window) {}
 
-TestScene::~TestScene() {}
-
 void TestScene::resize(int /*width*/, int /*height*/) {}
 
-void TestScene::update(float /*dt*/) {}
+void TestScene::update(const UpdateParams&) {}
 
 void TestScene::render() {}
 } // namespace crisp
