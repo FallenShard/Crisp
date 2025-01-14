@@ -12,7 +12,12 @@
 
 namespace crisp {
 namespace {
-const std::filesystem::path kGlslExtension = ".glsl";
+const FlatHashSet<std::filesystem::path> kSupportedExtensions{".glsl", ".slang"};
+
+const FlatStringHashMap<std::string> kGlslangToSlangStageMap = {
+    {"frag", "fragment"},
+    {},
+};
 
 auto logger = spdlog::stderr_color_mt("ShaderCompiler");
 } // namespace
@@ -46,7 +51,7 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
             continue;
         }
 
-        if (inputPath.extension() != kGlslExtension) {
+        if (!kSupportedExtensions.contains(inputPath.extension())) {
             CRISP_LOGW("{} has no .glsl extension!", inputPath.string());
             continue;
         }
@@ -75,17 +80,24 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
                 : std::filesystem::file_time_type{};
         if (glslSource.lastModifiedRecursive > outputModifiedTs) {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
-            const std::filesystem::path tempInputPath = inputDir / "temp.glsl";
+            const std::filesystem::path tempInputPath = inputDir / fmt::format("temp{}", inputPath.extension().string());
 
             CRISP_LOGI("Compiling {}", inputPath.filename().string());
 
             stringToFile(tempInputPath, glslSource.sourceCode).unwrap();
 
-            const std::string command = fmt::format(
-                "glslangValidator.exe --target-env vulkan1.3 -o {} -S {} {}",
-                tempOutputPath.string(),
-                shaderType,
-                tempInputPath.string());
+            const std::string command =
+                inputPath.extension() == ".glsl"
+                    ? fmt::format(
+                          "glslangValidator.exe --target-env vulkan1.3 -o {} -S {} {}",
+                          tempOutputPath.string(),
+                          shaderType,
+                          tempInputPath.string())
+                    : fmt::format(
+                          "slangc.exe -o {} -stage {} {}",
+                          tempOutputPath.string(),
+                          kGlslangToSlangStageMap.find(shaderType)->second,
+                          tempInputPath.string());
 
             // Open a subprocess to compile this shader
             FILE* pipe = _popen(command.c_str(), "rt");
