@@ -220,7 +220,7 @@ std::unique_ptr<VulkanImage> createSampledStorageImage(
     createInfo.format = format;
     createInfo.extent = extent;
     createInfo.mipLevels = 1;
-    createInfo.arrayLayers = kRendererVirtualFrameCount;
+    createInfo.arrayLayers = 1;
     createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;

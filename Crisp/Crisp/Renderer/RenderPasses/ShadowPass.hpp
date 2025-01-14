@@ -45,7 +45,7 @@ void addCascadedShadowMapPasses(rg::RenderGraph& renderGraph, const uint32_t sha
                     fmt::format("cascaded-shadow-map-{}", i),
                     VkClearValue{.depthStencil{1.0f, 0}});
             },
-            [func, i](const RenderPassExecutionContext& ctx) { func(ctx, i); });
+            [func, i](const FrameContext& ctx) { func(ctx, i); });
     }
 }
 

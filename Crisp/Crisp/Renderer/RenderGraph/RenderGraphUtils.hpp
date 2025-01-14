@@ -3,21 +3,18 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
+#include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphResource.hpp>
 
 namespace crisp {
 
-enum class PassType {
+enum class PassType : uint8_t {
     Compute,
     Rasterizer,
     RayTracing,
-};
-
-struct RenderPassExecutionContext {
-    const VulkanCommandBuffer cmdBuffer;
-    uint32_t virtualFrameIndex;
 };
 
 struct RenderGraphPass {
@@ -38,10 +35,10 @@ struct RenderGraphPass {
         return static_cast<uint32_t>(colorAttachments.size() + (depthStencilAttachment.has_value() ? 1 : 0));
     };
 
-    std::function<void(const RenderPassExecutionContext&)> executeFunc{};
+    std::function<void(const FrameContext&)> executeFunc;
 };
 
-enum class SizePolicy { Absolute, SwapChainRelative, InputRelative };
+enum class SizePolicy : uint8_t { Absolute, SwapChainRelative, InputRelative };
 
 struct RenderGraphImageDescription {
     SizePolicy sizePolicy{SizePolicy::Absolute};
@@ -58,7 +55,7 @@ struct RenderGraphImageDescription {
 
     VkImageCreateFlags createFlags{};
 
-    std::optional<VkClearValue> clearValue{};
+    std::optional<VkClearValue> clearValue;
     VkImageUsageFlags imageUsageFlags{};
 
     bool canAlias(const RenderGraphImageDescription& desc) const {

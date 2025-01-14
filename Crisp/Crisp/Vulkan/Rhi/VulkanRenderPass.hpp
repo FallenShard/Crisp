@@ -12,8 +12,8 @@
 namespace crisp {
 struct RenderTargetInfo {
     // Required to set correct initial layout.
-    VkPipelineStageFlags initSrcStageFlags{VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
-    VkPipelineStageFlags initDstStageFlags{};
+    VkPipelineStageFlags2 initSrcStageFlags{VK_PIPELINE_STAGE_2_NONE};
+    VkPipelineStageFlags2 initDstStageFlags{VK_PIPELINE_STAGE_2_NONE};
 
     // Used by attachments to clear themselves.
     VkClearValue clearValue{};
@@ -26,9 +26,6 @@ struct RenderTargetInfo {
 
     VkImageCreateFlags createFlags{};
     VkImageUsageFlags usage{};
-
-    // Indicates if the render target should be buffered over virtual frames.
-    bool buffered{false};
 
     // Indicates if the render target has a fixed size. If not set, it is resized to the swap chain.
     VkExtent2D size{0, 0};
@@ -80,36 +77,39 @@ public:
     VkViewport createViewport() const;
     VkRect2D createScissor() const;
 
-    void begin(VkCommandBuffer cmdBuffer, uint32_t frameIndex, VkSubpassContents content) const;
-    void end(VkCommandBuffer cmdBuffer, uint32_t frameIndex);
+    void begin(VkCommandBuffer cmdBuffer, VkSubpassContents content) const;
+    void begin(VkCommandBuffer cmdBuffer, const VulkanFramebuffer& framebuffer, VkSubpassContents content) const;
+    void end(VkCommandBuffer cmdBuffer);
     void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
 
     VulkanImage& getRenderTarget(uint32_t index) const;
     VulkanImage& getRenderTargetFromAttachmentIndex(uint32_t attachmentIndex) const;
-    const VulkanImageView& getAttachmentView(uint32_t attachmentIndex, uint32_t frameIndex) const;
-    std::vector<VulkanImageView*> getAttachmentViews(uint32_t renderTargetIndex) const;
+    const VulkanImageView& getAttachmentView(uint32_t attachmentIndex) const;
 
-    inline uint32_t getSubpassCount() const {
+    uint32_t getSubpassCount() const {
         return m_params.subpassCount;
     }
 
-    // Used by default swap chain to update its framebuffers.
-    std::unique_ptr<VulkanFramebuffer>& getFramebuffer(uint32_t frameIdx) {
-        return m_framebuffers.at(frameIdx);
+    const VulkanFramebuffer* getFramebuffer() const {
+        return m_framebuffer.get();
     }
+
+    // // Used by default swap chain to update its framebuffers.
+    // std::unique_ptr<VulkanFramebuffer>& getFramebuffer(uint32_t frameIdx) {
+    //     return m_framebuffers.at(frameIdx);
+    // }
 
     void updateInitialLayouts(VkCommandBuffer cmdBuffer);
 
 protected:
-    void createRenderTargetViewsAndFramebuffers(const VulkanDevice& device);
+    void createAttachmentViews(const VulkanDevice& device);
     void createResources(const VulkanDevice& device);
     void freeResources();
 
     RenderPassParameters m_params;
     std::vector<VkClearValue> m_attachmentClearValues;
 
-    // Accessed view is indexed as [frameIdx][attachmentViewIdx].
-    std::vector<std::vector<std::unique_ptr<VulkanImageView>>> m_attachmentViews;
-    std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
+    std::vector<std::unique_ptr<VulkanImageView>> m_attachmentViews;
+    std::unique_ptr<VulkanFramebuffer> m_framebuffer;
 };
 } // namespace crisp

@@ -26,6 +26,25 @@ void VulkanCommandEncoder::insertBarrier(const VulkanSynchronizationScope& scope
     vkCmdPipelineBarrier2(m_cmdBuffer, &info);
 }
 
+void VulkanCommandEncoder::insertBufferMemoryBarrier(
+    const VulkanBuffer& buffer, const VulkanSynchronizationScope& scope) const {
+    VkBufferMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2};
+    barrier.buffer = buffer.getHandle();
+    barrier.offset = 0;
+    barrier.size = VK_WHOLE_SIZE;
+    barrier.srcStageMask = scope.srcStage;
+    barrier.srcAccessMask = scope.srcAccess;
+    barrier.dstStageMask = scope.dstStage;
+    barrier.dstAccessMask = scope.dstAccess;
+
+    VkDependencyInfo info{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .bufferMemoryBarrierCount = 1,
+        .pBufferMemoryBarriers = &barrier,
+    };
+    vkCmdPipelineBarrier2(m_cmdBuffer, &info);
+}
+
 void VulkanCommandEncoder::transitionLayout(
     VulkanImage& image, const VkImageLayout newLayout, const VulkanSynchronizationScope& scope) const {
     const auto range = image.getFullRange();
@@ -42,12 +61,21 @@ void VulkanCommandEncoder::transitionLayout(
     barrier.dstStageMask = scope.dstStage;
     barrier.dstAccessMask = scope.dstAccess;
 
-    VkDependencyInfo info{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
-    info.imageMemoryBarrierCount = 1;
-    info.pImageMemoryBarriers = &barrier;
+    VkDependencyInfo info{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier,
+    };
     vkCmdPipelineBarrier2(m_cmdBuffer, &info);
-
     image.setImageLayout(newLayout, range);
+}
+
+void VulkanCommandEncoder::beginRenderPass(const VulkanRenderPass& renderPass) const {
+    renderPass.begin(m_cmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void VulkanCommandEncoder::endRenderPass(VulkanRenderPass& renderPass) const {
+    renderPass.end(m_cmdBuffer);
 }
 
 } // namespace crisp

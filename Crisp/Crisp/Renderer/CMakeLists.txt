@@ -65,6 +65,26 @@ add_cpp_interface_library(
 # "RenderPasses/TexturePass.hpp"
 # )
 add_cpp_static_library(
+    CrispCubeMapRenderPass
+    "RenderPasses/CubeMapRenderPass.cpp"
+    "RenderPasses/CubeMapRenderPass.hpp"
+)
+target_link_libraries(
+    CrispCubeMapRenderPass
+    PUBLIC Crisp::Renderer
+)
+
+add_cpp_static_library(
+    CrispTexturePass
+    "RenderPasses/TexturePass.cpp"
+    "RenderPasses/TexturePass.hpp"
+)
+target_link_libraries(
+    CrispTexturePass
+    PUBLIC Crisp::Renderer
+)
+
+add_cpp_static_library(
     CrispRenderer
     "BufferUpdatePolicy.hpp"
     "ComputePipeline.cpp"

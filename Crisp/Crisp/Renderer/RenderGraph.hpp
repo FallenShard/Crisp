@@ -66,16 +66,13 @@ public:
     void buildCommandLists(const std::vector<std::unique_ptr<RenderNode>>& renderNodes);
     void executeCommandLists() const;
 
-    const Node& getNode(std::string name) const;
-    Node& getNode(std::string name);
+    const Node& getNode(const std::string& name) const;
+    Node& getNode(const std::string& name);
 
-    const VulkanRenderPass& getRenderPass(std::string name);
+    const VulkanRenderPass& getRenderPass(const std::string& name);
 
     static void executeDrawCommand(
-        const DrawCommand& command,
-        const Renderer& renderer,
-        const VulkanCommandBuffer& cmdBuffer,
-        uint32_t virtualFrameIndex);
+        const DrawCommand& command, const Renderer& renderer, const VulkanCommandBuffer& cmdBuffer);
 
 private:
     void executeRenderPass(VulkanCommandBuffer& buffer, uint32_t virtualFrameIndex, const Node& node) const;

@@ -6,7 +6,7 @@
 namespace crisp {
 
 RenderNode::RenderNode(VulkanRingBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle)
-    : transformBuffer(nullptr)
+    : transformBuffer(transformBuffer)
     , transformPack(transformPack)
     , transformHandle(transformHandle) {}
 
@@ -17,28 +17,15 @@ RenderNode::RenderNode(
 RenderNode::RenderNode(TransformBuffer& transformBuffer, TransformHandle transformHandle)
     : RenderNode(transformBuffer.getUniformBuffer(), &transformBuffer.getPack(transformHandle), transformHandle) {}
 
-DrawCommand RenderNode::MaterialData::createDrawCommand(uint32_t frameIndex, const RenderNode& renderNode) const {
+DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& renderNode) const {
     DrawCommand drawCommand;
     drawCommand.pipeline = pipeline ? pipeline : material->getPipeline();
     drawCommand.material = material;
 
-    if (material) {
-        drawCommand.dynamicBufferViews = material->getDynamicBufferViews();
-    }
-
-    if (renderNode.transformBuffer) {
-        drawCommand.dynamicBufferViews[transformBufferDynamicIndex] = {
-            renderNode.transformBuffer, static_cast<uint32_t>(renderNode.transformHandle.index * sizeof(TransformPack))};
-    }
-
-    drawCommand.dynamicBufferOffsets.resize(drawCommand.dynamicBufferViews.size());
-    for (std::size_t i = 0; i < drawCommand.dynamicBufferOffsets.size(); ++i) {
-        // This buffer is not provided for this command.
-        if (!drawCommand.dynamicBufferViews[i].buffer) {
-            continue;
-        }
-        drawCommand.dynamicBufferOffsets[i] = 0 + drawCommand.dynamicBufferViews[i].subOffset;
-    }
+    drawCommand.dynamicBufferOffsets.resize(drawCommand.material->getDynamicDescriptorCount());
+    CRISP_CHECK_GE_LT(transformBufferDynamicIndex, 0, drawCommand.dynamicBufferOffsets.size());
+    drawCommand.dynamicBufferOffsets[transformBufferDynamicIndex] =
+        renderNode.transformHandle.index * sizeof(TransformPack);
 
     drawCommand.setPushConstantView(pushConstantView);
 

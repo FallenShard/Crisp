@@ -38,7 +38,6 @@ private:
 
     int32_t m_nodesToDraw = 2500;
     std::unique_ptr<rg::RenderGraph> m_rg;
-    std::vector<std::unique_ptr<VulkanImageView>> m_sceneImageViews;
 
     std::unique_ptr<TargetCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;

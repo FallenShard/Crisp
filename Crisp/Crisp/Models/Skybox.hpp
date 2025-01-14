@@ -14,11 +14,13 @@ public:
         const VulkanImageView& cubeMapView,
         const VulkanSampler& sampler);
 
-    void updateTransforms(const glm::mat4& V, const glm::mat4& P);
+    void updateTransforms(const glm::mat4& V, const glm::mat4& P, uint32_t regionIndex);
 
     const RenderNode& getRenderNode();
 
     VulkanImageView* getSkyboxView() const;
+
+    void updateDeviceBuffer(VkCommandBuffer cmdBuffer);
 
 private:
     void updateRenderNode(const VulkanSampler& sampler, const VulkanImageView& cubeMapView);

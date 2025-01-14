@@ -7,7 +7,7 @@
 // #include <Crisp/Scenes/GltfViewerScene.hpp>
 // #include <Crisp/Scenes/NormalMappingScene.hpp>
 // #include <Crisp/Scenes/OceanScene.hpp>
-// #include <Crisp/Scenes/PbrScene.hpp>
+#include <Crisp/Scenes/PbrScene.hpp>
 // #include <Crisp/Scenes/RayTracerScene.hpp>
 // #include <Crisp/Scenes/ShadowMappingScene.hpp>
 #include <Crisp/Scenes/TestScene.hpp>
@@ -48,9 +48,9 @@ std::unique_ptr<Scene> createScene(
     // if (name == kSceneNames[3]) {
     //     return std::make_unique<RayTracerScene>(renderer, window);
     // }
-    // if (name == kSceneNames[4]) {
-    //     return std::make_unique<PbrScene>(renderer, window, args);
-    // }
+    if (name == kSceneNames[4]) {
+        return std::make_unique<PbrScene>(renderer, window, args);
+    }
     // if (name == kSceneNames[5]) {
     //     return std::make_unique<ClusteredLightingScene>(renderer, window);
     // }
@@ -102,7 +102,7 @@ void SceneContainer::render(const FrameContext& frameContext) const {
 
 void SceneContainer::onSceneSelected(const std::string& sceneName) {
     m_renderer->finish();
-    m_renderer->setSceneImageView(nullptr, 0);
+    m_renderer->setSceneImageView(nullptr);
     m_scene.reset();
     m_scene = createScene(sceneName, m_renderer, m_window, m_sceneArgs);
     m_sceneName = sceneName;

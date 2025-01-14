@@ -47,7 +47,6 @@ public:
 
     const AssetPaths& getAssetPaths() const;
     const std::filesystem::path& getResourcesPath() const;
-    std::filesystem::path getShaderSourcePath(const std::string& shaderName) const;
 
     VulkanInstance& getInstance() const;
     const VulkanPhysicalDevice& getPhysicalDevice() const;
@@ -84,11 +83,7 @@ public:
 
     void finish();
 
-    void setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex);
-    void setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews);
-
-    void registerStreamingRingBuffer(VulkanRingBuffer* buffer);
-    void unregisterStreamingRingBuffer(VulkanRingBuffer* buffer);
+    void setSceneImageView(const VulkanImageView* imageView);
 
     Geometry* getFullScreenGeometry() const;
 
@@ -114,7 +109,6 @@ private:
     void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
 
     void recreateSwapChain();
-    void updateSwapChainRenderPass(uint32_t virtualFrameIndex, VkImageView swapChainImageView);
 
     uint64_t m_currentFrameIndex;
     AssetPaths m_assetPaths;
@@ -140,13 +134,11 @@ private:
 
     std::unique_ptr<Geometry> m_fullScreenGeometry;
 
-    FlatHashSet<VulkanRingBuffer*> m_streamingRingBuffers;
-
     std::unique_ptr<VulkanPipeline> m_scenePipeline;
     std::unique_ptr<VulkanSampler> m_linearClampSampler;
     std::unique_ptr<Material> m_sceneMaterial;
 
-    std::vector<VulkanImageView*> m_sceneImageViews;
+    const VulkanImageView* m_sceneImageView{nullptr};
 
     std::vector<std::unique_ptr<VulkanWorker>> m_workers;
 

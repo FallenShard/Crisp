@@ -22,7 +22,7 @@ public:
         VkDeviceSize size,
         const void* data = nullptr);
 
-    inline VkBuffer getHandle() const {
+    VkBuffer getHandle() const {
         return m_buffer->getHandle();
     }
 
@@ -50,7 +50,7 @@ public:
         updateStagingBuffer(
             {
                 .data = &data,
-                .size = sizeof(T),
+                .size = sizeof(BaseType),
             },
             regionIndex);
     }

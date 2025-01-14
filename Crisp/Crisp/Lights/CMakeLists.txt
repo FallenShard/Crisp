@@ -22,4 +22,6 @@ target_link_libraries(CrispLights
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Geometry
     PRIVATE Crisp::Logger
+    PRIVATE Crisp::CubeMapRenderPass
+    PRIVATE Crisp::TexturePass
 )

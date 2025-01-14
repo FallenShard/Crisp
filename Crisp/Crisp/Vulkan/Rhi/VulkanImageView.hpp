@@ -25,7 +25,7 @@ public:
         return m_subresourceRange;
     }
 
-    const VulkanImage& getImage() const {
+    VulkanImage& getImage() const {
         return m_image;
     }
 

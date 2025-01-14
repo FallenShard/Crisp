@@ -21,7 +21,6 @@ RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc) {
         .depthSlices = desc.depth,
         .createFlags = desc.createFlags,
         .usage = desc.imageUsageFlags,
-        .buffered = false,
         .size = {desc.width, desc.height},
         .isSwapChainDependent = desc.sizePolicy == SizePolicy::SwapChainRelative,
     };
@@ -75,11 +74,7 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({
-        .usageType = ResourceUsageType::Texture,
-        .pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .access = VK_ACCESS_SHADER_READ_BIT,
-    });
+    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Texture, .stage = kFragmentRead});
 }
 
 void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
@@ -88,11 +83,7 @@ void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({
-        .usageType = ResourceUsageType::Storage,
-        .pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .access = VK_ACCESS_SHADER_READ_BIT,
-    });
+    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Storage, .stage = kFragmentRead});
 }
 
 void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
@@ -102,11 +93,7 @@ void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({
-        .usageType = ResourceUsageType::Attachment,
-        .pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .access = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
-    });
+    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Attachment, .stage = kFragmentInputRead});
 }
 
 void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
@@ -116,11 +103,7 @@ void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({
-        .usageType = ResourceUsageType::Storage,
-        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        .access = VK_ACCESS_SHADER_READ_BIT,
-    });
+    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Storage, .stage = kComputeRead});
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
@@ -137,9 +120,9 @@ RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
     resource.producerAccess.usageType = ResourceUsageType::Attachment;
-    resource.producerAccess.pipelineStage =
+    resource.producerAccess.stage.stage =
         isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    resource.producerAccess.access =
+    resource.producerAccess.stage.access =
         isDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     if (isDepthAttachment) {
         pass.depthStencilAttachment = handle;
@@ -154,11 +137,7 @@ RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
     const auto handle = m_renderGraph.addImageResource(description, std::move(name));
     auto& resource = m_renderGraph.getResource(handle);
     resource.producer = m_passHandle;
-    resource.producerAccess = {
-        .usageType = ResourceUsageType::Storage,
-        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        .access = VK_ACCESS_SHADER_WRITE_BIT,
-    };
+    resource.producerAccess = {.usageType = ResourceUsageType::Storage, .stage = kComputeWrite};
 
     m_renderGraph.getImageDescription(handle).imageUsageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
 
@@ -177,11 +156,7 @@ RenderGraphResourceHandle RenderGraph::Builder::importBuffer(
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
-    m_renderGraph.getResource(handle).producerAccess = {
-        .usageType = ResourceUsageType::Storage,
-        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        .access = VK_ACCESS_SHADER_WRITE_BIT,
-    };
+    m_renderGraph.getResource(handle).producerAccess = {.usageType = ResourceUsageType::Storage, .stage = kComputeWrite};
 
     return handle;
 }
@@ -195,11 +170,7 @@ RenderGraphResourceHandle RenderGraph::Builder::createBuffer(
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
-    m_renderGraph.getResource(handle).producerAccess = {
-        .usageType = ResourceUsageType::Storage,
-        .pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        .access = VK_ACCESS_SHADER_WRITE_BIT,
-    };
+    m_renderGraph.getResource(handle).producerAccess = {.usageType = ResourceUsageType::Storage, .stage = kComputeWrite};
 
     return handle;
 }
@@ -273,121 +244,87 @@ void RenderGraph::compile(
     createPhysicalPasses(device, swapChainExtent);
 }
 
-std::vector<VkPipelineStageFlags> glastPipelineStage;
-std::vector<VkPipelineStageFlags> glastAccessFlags;
+void RenderGraph::execute(const FrameContext& frameContext) {
+    const auto synchronizeInputResources = [this](const RenderGraphPass& pass, const FrameContext& ctx) {
+        for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
+            const auto& res = getResource(pass.inputs[inIdx]);
 
-void RenderGraph::execute(const VkCommandBuffer cmdBuffer, const uint32_t virtualFrameIndex, VkDevice device) {
-    std::vector<bool> isInReadState(m_resources.size(), false);
-    // VkPipelineStageFlags m_lastSynchronizedPipelineStage{0};
-    // VkPipelineStageFlags m_lastSynchronizedAccessStage{0};
-
-    const auto synchronizeInputResources =
-        [this, &isInReadState](const RenderGraphPass& pass, const RenderPassExecutionContext& ctx) {
-            for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
-                // if (isInReadState.at(pass.inputs[inIdx].id)) {
-                //     continue;
-                // }
-                // isInReadState.at(pass.inputs[inIdx].id) = true;
-
-                const auto& res = getResource(pass.inputs[inIdx]);
-
-                if (res.type == ResourceType::Image) {
-                    const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
-                    if (inputAccess.usageType == ResourceUsageType::Texture) {
-                        physicalImage.image->transitionLayoutDirect(
-                            ctx.cmdBuffer.getHandle(),
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                            glastPipelineStage[res.physicalResourceIndex],
-                            glastAccessFlags[res.physicalResourceIndex],
-                            // res.producerAccess.pipelineStage,
-                            // res.producerAccess.access,
-                            inputAccess.pipelineStage,
-                            inputAccess.access);
-                    } else if (inputAccess.usageType == ResourceUsageType::Storage) {
-                        physicalImage.image->transitionLayoutDirect(
-                            ctx.cmdBuffer.getHandle(),
-                            // glayouts[res.physicalResourceIndex],
-                            VK_IMAGE_LAYOUT_GENERAL,
-                            glastPipelineStage[res.physicalResourceIndex],
-                            glastAccessFlags[res.physicalResourceIndex],
-                            // res.producerAccess.pipelineStage,
-                            // res.producerAccess.access,
-                            inputAccess.pipelineStage,
-                            inputAccess.access);
-                    }
-                    glastPipelineStage[res.physicalResourceIndex] = inputAccess.pipelineStage;
-                    glastAccessFlags[res.physicalResourceIndex] = inputAccess.access;
-                } else if (res.type == ResourceType::Buffer) {
-                    const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
-                    ctx.cmdBuffer.insertBufferMemoryBarrier(
-                        physicalBuffer.buffer->createDescriptorInfo(),
-                        res.producerAccess.pipelineStage,
-                        res.producerAccess.access,
-                        inputAccess.pipelineStage,
-                        inputAccess.access);
-                }
+            if (res.type == ResourceType::Image) {
+                const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
+                const VkImageLayout newLayout =
+                    inputAccess.usageType == ResourceUsageType::Texture
+                        ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                        : VK_IMAGE_LAYOUT_GENERAL;
+                ctx.commandEncoder.transitionLayout(
+                    *physicalImage.image, newLayout, res.producerAccess.stage >> inputAccess.stage);
+            } else if (res.type == ResourceType::Buffer) {
+                const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
+                ctx.commandEncoder.insertBufferMemoryBarrier(
+                    *physicalBuffer.buffer, res.producerAccess.stage >> inputAccess.stage);
             }
-        };
+        }
+    };
 
-    const RenderPassExecutionContext executionCtx{VulkanCommandBuffer{cmdBuffer}, virtualFrameIndex};
+    const auto& encoder{frameContext.commandEncoder};
+
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         // CRISP_LOGI("Executing {}, pass: {}", virtualFrameIndex, pass.name);
         if (pass.type == PassType::Rasterizer) {
-            synchronizeInputResources(pass, executionCtx);
+            synchronizeInputResources(pass, frameContext);
 
             auto& renderPass = *m_physicalPasses.at(m_physicalPassIndices.at(idx));
-            renderPass.begin(executionCtx.cmdBuffer.getHandle(), 0, VK_SUBPASS_CONTENTS_INLINE);
-            pass.executeFunc(executionCtx);
-            renderPass.end(executionCtx.cmdBuffer.getHandle(), 0);
+            encoder.beginRenderPass(renderPass);
+            pass.executeFunc(frameContext);
+            encoder.endRenderPass(renderPass);
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
-            for (const auto resHandle : pass.outputs) {
-                const auto& res = getResource(resHandle);
-                const auto& outputAccess = res.producerAccess;
+            // for (const auto resHandle : pass.outputs) {
+            //     const auto& res = getResource(resHandle);
+            //     const auto& outputAccess = res.producerAccess;
 
-                if (res.type == ResourceType::Image) {
-                    const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
-                    if (outputAccess.usageType == ResourceUsageType::Texture) {
-                        physicalImage.image->transitionLayoutDirect(
-                            executionCtx.cmdBuffer.getHandle(),
-                            // glayouts[res.physicalResourceIndex],
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                            glastPipelineStage[res.physicalResourceIndex],
-                            glastAccessFlags[res.physicalResourceIndex],
-                            // res.producerAccess.pipelineStage,
-                            // res.producerAccess.access,
-                            outputAccess.pipelineStage,
-                            outputAccess.access);
-                    } else if (outputAccess.usageType == ResourceUsageType::Storage) {
-                        physicalImage.image->transitionLayoutDirect(
-                            executionCtx.cmdBuffer.getHandle(),
-                            // glayouts[res.physicalResourceIndex],
-                            VK_IMAGE_LAYOUT_GENERAL,
-                            glastPipelineStage[res.physicalResourceIndex],
-                            glastAccessFlags[res.physicalResourceIndex],
-                            // res.producerAccess.pipelineStage,
-                            // res.producerAccess.access,
-                            outputAccess.pipelineStage,
-                            outputAccess.access);
-                    }
-                    // glayouts[res.physicalResourceIndex] =
-                    //     outputAccess.usageType == ResourceUsageType::Texture
-                    //         ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    //         : VK_IMAGE_LAYOUT_GENERAL;
-                    glastPipelineStage[res.physicalResourceIndex] = outputAccess.pipelineStage;
-                    glastAccessFlags[res.physicalResourceIndex] = outputAccess.access;
-                } else if (res.type == ResourceType::Buffer) {
-                    const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
-                    executionCtx.cmdBuffer.insertBufferMemoryBarrier(
-                        physicalBuffer.buffer->createDescriptorInfo(),
-                        res.producerAccess.pipelineStage,
-                        res.producerAccess.access,
-                        outputAccess.pipelineStage,
-                        outputAccess.access);
-                }
-            }
+            //     // if (res.type == ResourceType::Image) {
+            //     //     const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
+            //     //     if (outputAccess.usageType == ResourceUsageType::Texture) {
+            //     //         physicalImage.image->transitionLayoutDirect(
+            //     //             executionCtx.cmdBuffer.getHandle(),
+            //     //             // glayouts[res.physicalResourceIndex],
+            //     //             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            //     //             glastPipelineStage[res.physicalResourceIndex],
+            //     //             glastAccessFlags[res.physicalResourceIndex],
+            //     //             // res.producerAccess.pipelineStage,
+            //     //             // res.producerAccess.access,
+            //     //             outputAccess.pipelineStage,
+            //     //             outputAccess.access);
+            //     //     } else if (outputAccess.usageType == ResourceUsageType::Storage) {
+            //     //         physicalImage.image->transitionLayoutDirect(
+            //     //             executionCtx.cmdBuffer.getHandle(),
+            //     //             // glayouts[res.physicalResourceIndex],
+            //     //             VK_IMAGE_LAYOUT_GENERAL,
+            //     //             glastPipelineStage[res.physicalResourceIndex],
+            //     //             glastAccessFlags[res.physicalResourceIndex],
+            //     //             // res.producerAccess.pipelineStage,
+            //     //             // res.producerAccess.access,
+            //     //             outputAccess.pipelineStage,
+            //     //             outputAccess.access);
+            //     //     }
+            //     //     // glayouts[res.physicalResourceIndex] =
+            //     //     //     outputAccess.usageType == ResourceUsageType::Texture
+            //     //     //         ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            //     //     //         : VK_IMAGE_LAYOUT_GENERAL;
+            //     //     glastPipelineStage[res.physicalResourceIndex] = outputAccess.pipelineStage;
+            //     //     glastAccessFlags[res.physicalResourceIndex] = outputAccess.access;
+            //     // } else if (res.type == ResourceType::Buffer) {
+            //     //     const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
+            //     //     executionCtx.cmdBuffer.insertBufferMemoryBarrier(
+            //     //         physicalBuffer.buffer->createDescriptorInfo(),
+            //     //         res.producerAccess.pipelineStage,
+            //     //         res.producerAccess.access,
+            //     //         outputAccess.pipelineStage,
+            //     //         outputAccess.access);
+            //     // }
+            // }
 
-            synchronizeInputResources(pass, executionCtx);
-            pass.executeFunc(executionCtx);
+            synchronizeInputResources(pass, frameContext);
+            pass.executeFunc(frameContext);
         }
     }
 }
@@ -487,27 +424,29 @@ VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>
     return flags;
 };
 
-std::tuple<VkImageLayout, VkAccessFlagBits, VkPipelineStageFlagBits> RenderGraph::determineInitialLayout(
+std::tuple<VkImageLayout, VkAccessFlagBits2, VkPipelineStageFlagBits2> RenderGraph::determineInitialLayout(
     const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags) {
     if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT) {
         return {
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT};
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_ACCESS_2_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT};
     }
     if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT) {
-        return {VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+        return {VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_2_SHADER_READ_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT};
     }
 
     if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format)) {
         return {
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT};
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT};
     }
 
     return {
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT};
 };
 
 void RenderGraph::determineAliasedResurces() {
@@ -567,9 +506,7 @@ void RenderGraph::determineAliasedResurces() {
 
 void RenderGraph::createPhysicalResources(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
-    int imgIdx = 0;
-    glastPipelineStage.resize(m_physicalImages.size());
-    glastAccessFlags.resize(m_physicalImages.size());
+    const VulkanCommandEncoder commandEncoder{cmdBuffer};
     for (auto& res : m_physicalImages) {
         const auto& desc = m_imageDescriptions[res.descriptionIndex];
         const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
@@ -589,11 +526,8 @@ void RenderGraph::createPhysicalResources(
 
         const auto lastUsageFlags = getImageDescription({res.aliasedResourceIndices.back()}).imageUsageFlags;
         const auto [initialLayout, access, pipelineStage] = determineInitialLayout(res, lastUsageFlags);
-        res.image->transitionLayoutDirect(
-            cmdBuffer, initialLayout, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, pipelineStage, access);
-        glastPipelineStage[imgIdx] = pipelineStage;
-        glastAccessFlags[imgIdx] = access;
-        imgIdx++;
+        commandEncoder.transitionLayout(
+            *res.image, initialLayout, kNullStage >> VulkanSynchronizationStage{pipelineStage, access});
     }
 
     for (const auto& res : m_resources) {

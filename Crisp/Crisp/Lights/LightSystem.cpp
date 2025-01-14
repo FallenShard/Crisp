@@ -20,11 +20,11 @@ LightSystem::LightSystem(
     }
 }
 
-void LightSystem::update(const Camera& camera, float /*dt*/) {
+void LightSystem::update(const Camera& camera, float /*dt*/, const uint32_t regionIndex) {
     // const auto [zNear, zFar] = camera.getViewDepthRange();
     const auto [zNear, zFar] = glm::vec2(1.0f, 100.0f);
     m_cascadedShadowMapping.updateSplitIntervals(zNear, zFar);
-    m_cascadedShadowMapping.updateTransforms(camera, m_shadowMapSize);
+    m_cascadedShadowMapping.updateTransforms(camera, m_shadowMapSize, regionIndex);
 
     if (m_pointLightBuffer) {
         std::vector<LightDescriptor> lightDescriptors;
@@ -33,8 +33,15 @@ void LightSystem::update(const Camera& camera, float /*dt*/) {
             lightDescriptors.push_back(pl.createDescriptorData());
         }
 
-        m_pointLightBuffer->updateStagingBufferFromStdVec(lightDescriptors, m_renderer->getCurrentVirtualFrameIndex());
+        m_pointLightBuffer->updateStagingBufferFromStdVec(lightDescriptors, regionIndex);
     }
+}
+
+void LightSystem::updateDeviceBuffers(const VkCommandBuffer cmdBuffer) {
+    for (auto& cascade : m_cascadedShadowMapping.cascades) {
+        cascade.buffer->updateDeviceBuffer(cmdBuffer);
+    }
+    m_cascadedShadowMapping.cascadedLightBuffer->updateDeviceBuffer(cmdBuffer);
 }
 
 void LightSystem::setDirectionalLight(const DirectionalLight& dirLight) {
@@ -101,8 +108,8 @@ VulkanRingBuffer* LightSystem::getLightIndexBuffer() const {
     return m_lightClustering.m_lightIndexListBuffer.get();
 }
 
-const std::vector<std::unique_ptr<VulkanImageView>>& LightSystem::getTileGridViews() const {
-    return m_lightClustering.m_lightGridViews;
+const VulkanImageView& LightSystem::getTileGridView() const {
+    return *m_lightClustering.m_lightGridView;
 }
 
 void LightSystem::setEnvironmentMap(ImageBasedLightingData&& iblData, const std::string& name) {

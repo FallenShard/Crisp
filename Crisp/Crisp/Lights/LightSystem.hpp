@@ -21,7 +21,8 @@ class LightSystem {
 public:
     LightSystem(Renderer* renderer, const DirectionalLight& dirLight, uint32_t shadowMapSize, uint32_t cascadeCount);
 
-    void update(const Camera& camera, float dt);
+    void update(const Camera& camera, float dt, uint32_t regionIndex);
+    void updateDeviceBuffers(VkCommandBuffer cmdBuffer);
 
     void setDirectionalLight(const DirectionalLight& dirLight);
 
@@ -45,7 +46,7 @@ public:
 
     VulkanRingBuffer* getPointLightBuffer() const;
     VulkanRingBuffer* getLightIndexBuffer() const;
-    const std::vector<std::unique_ptr<VulkanImageView>>& getTileGridViews() const;
+    const VulkanImageView& getTileGridView() const;
 
     EnvironmentLight* getEnvironmentLight() const {
         return m_environmentLight.get();

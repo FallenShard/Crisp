@@ -9,7 +9,7 @@
 
 namespace crisp {
 struct RenderNode {
-    inline void setModelMatrix(const glm::mat4& mat) {
+    void setModelMatrix(const glm::mat4& mat) const {
         transformPack->M = mat;
     }
 
@@ -17,13 +17,13 @@ struct RenderNode {
         std::string renderPassName;
         int subpassIndex = 0;
 
-        inline bool operator==(const SubpassKey& rhs) const {
+        bool operator==(const SubpassKey& rhs) const {
             return renderPassName == rhs.renderPassName && subpassIndex == rhs.subpassIndex;
         }
     };
 
     struct SubpassKeyHasher {
-        inline std::size_t operator()(const SubpassKey& key) const {
+        std::size_t operator()(const SubpassKey& key) const {
             return std::hash<std::string>()(key.renderPassName) ^ std::hash<int>()(key.subpassIndex);
         }
     };
@@ -41,47 +41,47 @@ struct RenderNode {
         std::vector<unsigned char> pushConstantBuffer;
         PushConstantView pushConstantView;
 
-        inline void setGeometry(Geometry* newGeometry, int firstVertexBuffer, int vertexBufferCount) {
+        void setGeometry(Geometry* newGeometry, int firstVertexBuffer, int vertexBufferCount) {
             geometry = newGeometry;
             firstBuffer = firstVertexBuffer;
             bufferCount = vertexBufferCount;
         }
 
         template <typename T>
-        inline void setPushConstantView(const T& data) {
+        void setPushConstantView(const T& data) {
             pushConstantView.set(data);
         }
 
         template <typename T>
-        inline void setPushConstants(const T& data) {
+        void setPushConstants(const T& data) {
             pushConstantBuffer.resize(sizeof(T));
             std::memcpy(pushConstantBuffer.data(), &data, sizeof(T));
             pushConstantView.set(pushConstantBuffer);
         }
 
-        inline void setPushConstantView(PushConstantView view) {
+        void setPushConstantView(PushConstantView view) {
             pushConstantView = view;
         }
 
-        DrawCommand createDrawCommand(uint32_t frameIndex, const RenderNode& renderNode) const;
+        DrawCommand createDrawCommand(const RenderNode& renderNode) const;
     };
 
     MaterialData& pass(std::string renderPassName) {
-        return materials[SubpassKey{renderPassName, 0}][-1];
+        return materials[SubpassKey{std::move(renderPassName), 0}][-1];
     }
 
     MaterialData& subpass(std::string renderPassName, int subpassIndex) {
-        return materials[SubpassKey{renderPassName, subpassIndex}][-1];
+        return materials[SubpassKey{std::move(renderPassName), subpassIndex}][-1];
     }
 
     MaterialData& pass(int part, std::string renderPassName) {
-        MaterialData& matData = materials[SubpassKey{renderPassName, 0}][part];
+        MaterialData& matData = materials[SubpassKey{std::move(renderPassName), 0}][part];
         matData.part = part;
         return matData;
     }
 
     MaterialData& subpass(int part, std::string renderPassName, int subpassIndex) {
-        MaterialData& matData = materials[SubpassKey{renderPassName, subpassIndex}][part];
+        MaterialData& matData = materials[SubpassKey{std::move(renderPassName), subpassIndex}][part];
         matData.part = part;
         return matData;
     }

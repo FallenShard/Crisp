@@ -182,7 +182,11 @@ Material* createPbrMaterial(
     }
 
     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-    material->writeDescriptor(1, 0, *resourceContext.createRingBufferFromStruct(paramsBufferKey, pbrMaterial.params));
+    material->writeDescriptor(
+        1,
+        0,
+        *resourceContext.createRingBufferFromStruct(
+            paramsBufferKey, pbrMaterial.params, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT));
 
     return material;
 }
@@ -201,11 +205,9 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(0, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(0, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-        for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
-            const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
-            material.writeDescriptor(0, 4, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
-            material.getRenderPassBindings().emplace_back(0, 4, k, i, kCsmPasses[i], 0, "nearestNeighbor");
-        }
+        const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0)};
+        material.writeBindlessDescriptor(0, 4, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
+        material.getRenderPassBindings().emplace_back(0, 4, i, kCsmPasses[i], 0, "nearestNeighbor");
     }
 }
 

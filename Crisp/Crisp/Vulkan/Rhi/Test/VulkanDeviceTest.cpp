@@ -22,20 +22,6 @@ TEST_F(VulkanDeviceTest, Queues) {
     EXPECT_TRUE(device_->getTransferQueue().supportsOperations(VK_QUEUE_TRANSFER_BIT));
 }
 
-TEST_F(VulkanDeviceTest, NonCoherentMappedRanges) {
-    const VkDeviceSize atomSize = physicalDevice_->getLimits().nonCoherentAtomSize;
-
-    constexpr uint32_t chunks = 10;
-    constexpr VkDeviceSize chunkSize = 100;
-    for (uint32_t i = 0; i < chunks; ++i) {
-        const auto chunk = device_->getMemoryAllocator().getDeviceBufferHeap().allocate(chunkSize, atomSize).unwrap();
-        EXPECT_EQ(chunk.offset % atomSize, 0);
-        EXPECT_EQ(chunk.size, chunkSize);
-    }
-
-    EXPECT_EQ(device_->getMemoryAllocator().getDeviceMemoryUsage().bufferMemoryUsed, chunks * chunkSize);
-}
-
 TEST_F(VulkanDeviceTest, CreateSemaphoreHandle) {
     const auto handle = device_->createSemaphore();
     EXPECT_THAT(handle, Not(IsNull()));

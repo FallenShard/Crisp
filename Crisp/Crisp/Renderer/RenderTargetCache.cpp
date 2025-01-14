@@ -26,11 +26,6 @@ RenderTargetBuilder& RenderTargetBuilder::setCreateFlags(VkImageCreateFlags crea
     return *this;
 }
 
-RenderTargetBuilder& RenderTargetBuilder::setBuffered(bool isBuffered) {
-    m_info.buffered = isBuffered;
-    return *this;
-}
-
 RenderTargetBuilder& RenderTargetBuilder::setSize(const VkExtent2D size, const bool isSwapChainDependent) {
     m_info.size = size;
     m_info.isSwapChainDependent = isSwapChainDependent;
@@ -62,7 +57,7 @@ RenderTargetBuilder& RenderTargetBuilder::configureDepthRenderTarget(
 
 std::unique_ptr<RenderTarget> RenderTargetBuilder::create(const VulkanDevice& device) {
     const VkExtent3D dims{m_info.size.width, m_info.size.height, m_info.depthSlices};
-    const uint32_t layerMultiplier = m_info.buffered && m_info.depthSlices == 1 ? kRendererVirtualFrameCount : 1;
+    const uint32_t layerMultiplier = 1;
     const uint32_t totalLayerCount = m_info.layerCount * layerMultiplier;
     return std::make_unique<RenderTarget>(
         m_info,
@@ -87,7 +82,7 @@ void RenderTargetCache::resizeRenderTargets(const VulkanDevice& device, const Vk
         }
 
         info.size = swapChainExtent;
-        const uint32_t layerMultiplier{info.buffered && info.depthSlices == 1 ? kRendererVirtualFrameCount : 1};
+        const uint32_t layerMultiplier{1};
         const VkExtent3D dims{info.size.width, info.size.height, info.depthSlices};
         const uint32_t totalLayerCount{info.layerCount * layerMultiplier};
         renderTarget->image = std::make_unique<VulkanImage>(

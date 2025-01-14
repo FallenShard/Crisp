@@ -22,13 +22,9 @@ add_cpp_static_library(CrispScenes
     # "RaytracedImage.hpp"
     # "RayTracerScene.cpp"
     # "RayTracerScene.hpp"
-    "Scene.cpp"
-    "Scene.hpp"
 
     # "ShadowMappingScene.cpp"
     # "ShadowMappingScene.hpp"
-    "TestScene.cpp"
-    "TestScene.hpp"
 
     # "VulkanRayTracingScene.cpp"
     # "VulkanRayTracingScene.hpp"
@@ -36,9 +32,11 @@ add_cpp_static_library(CrispScenes
     # "RayTracingSceneParser.hpp"
 )
 target_link_libraries(CrispScenes
-    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Scene
     PUBLIC Crisp::Camera
     PUBLIC Crisp::Lights
+
+    PRIVATE Crisp::PbrScene
 
     # PUBLIC Crisp::Models
     PUBLIC Crisp::MeshIo
@@ -50,5 +48,34 @@ target_link_libraries(CrispScenes
 
     # PRIVATE Crisp::RenderGraph
     # PRIVATE Crisp::RenderGraphGui
+    PRIVATE Crisp::ImGuiCameraUtils
+)
+
+add_cpp_static_library(CrispScene
+    "Scene.cpp"
+    "Scene.hpp"
+    "TestScene.cpp"
+    "TestScene.hpp"
+)
+target_link_libraries(CrispScene
+    PUBLIC Crisp::Window
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::HashMap
+)
+
+add_cpp_static_library(CrispPbrScene
+    "PbrScene.cpp"
+    "PbrScene.hpp"
+)
+target_link_libraries(CrispPbrScene
+    PUBLIC Crisp::Scene
+    PUBLIC Crisp::Camera
+    PUBLIC Crisp::Lights
+    PUBLIC Crisp::Models
+    PUBLIC Crisp::MeshIo
+    PUBLIC Crisp::MaterialUtils
+    PUBLIC Crisp::JsonUtils
+    PRIVATE Crisp::RenderGraph
+    PRIVATE Crisp::RenderGraphGui
     PRIVATE Crisp::ImGuiCameraUtils
 )

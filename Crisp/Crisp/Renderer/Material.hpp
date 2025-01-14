@@ -24,35 +24,20 @@ public:
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorImageInfo& imageInfo);
     void writeDescriptor(uint32_t setIndex, VkWriteDescriptorSet write, const VkDescriptorImageInfo& imageInfo);
     void writeDescriptor(
-        uint32_t setIndex, uint32_t binding, const VulkanImageView& imageView, const VulkanSampler& sampler);
+        uint32_t setIndex,
+        uint32_t binding,
+        const VulkanImageView& imageView,
+        const VulkanSampler& sampler,
+        std::optional<VkImageLayout> imageLayout = std::nullopt);
     void writeDescriptor(
         uint32_t setIndex,
         uint32_t binding,
         const VulkanRenderPass& renderPass,
         uint32_t renderTargetIndex,
         const VulkanSampler* sampler);
-    void writeDescriptor(
+    void writeBindlessDescriptor(
         uint32_t setIndex,
         uint32_t binding,
-        const std::vector<std::unique_ptr<VulkanImageView>>& imageViews,
-        const VulkanSampler* sampler,
-        VkImageLayout imageLayout);
-    void writeDescriptor(
-        uint32_t setIndex,
-        uint32_t binding,
-        const std::vector<VulkanImageView*>& imageViews,
-        const VulkanSampler* sampler,
-        VkImageLayout imageLayout);
-    void writeDescriptor(
-        uint32_t setIndex,
-        uint32_t binding,
-        uint32_t frameIndex,
-        const VulkanImageView& imageView,
-        const VulkanSampler* sampler);
-    void writeDescriptor(
-        uint32_t setIndex,
-        uint32_t binding,
-        uint32_t frameIndex,
         uint32_t arrayIndex,
         const VulkanImageView& imageView,
         const VulkanSampler* sampler);
@@ -67,22 +52,18 @@ public:
     void writeDescriptor(
         uint32_t setIndex, uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo);
 
-    void setDynamicOffset(uint32_t frameIdx, uint32_t index, uint32_t offset);
-    void setDynamicBufferView(uint32_t index, const VulkanRingBuffer& dynamicUniformBuffer, uint32_t offset);
+    void setDynamicOffset(uint32_t index, uint32_t offset);
 
-    void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer);
-    void bind(uint32_t frameIdx, VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
+    void bind(VkCommandBuffer cmdBuffer);
+    void bind(VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
 
-    inline VulkanPipeline* getPipeline() const {
+    VulkanPipeline* getPipeline() const {
         return m_pipeline;
     }
 
-    inline const std::vector<DynamicBufferView>& getDynamicBufferViews() const {
-        return m_dynamicBufferViews;
-    }
-
-    VkDescriptorSet getDescriptorSet(const uint32_t setIndex, const uint32_t frameIndex) const {
-        return m_sets.at(frameIndex).at(setIndex);
+    VkDescriptorSet getDescriptorSet(const uint32_t setIndex) const {
+        CRISP_CHECK_GE_LT(setIndex, 0, m_sets.size());
+        return m_sets[setIndex];
     }
 
     void setBindRange(uint32_t firstSet, uint32_t setCount, uint32_t firstDynamicOffset, uint32_t dynamicOffsetCount) {
@@ -94,8 +75,7 @@ public:
 
     struct RenderPassBindingData {
         uint32_t setIndex{0};
-        uint32_t bindingIndex{0};
-        uint32_t frameIndex{0};
+        uint32_t binding{0};
         uint32_t arrayIndex{0};
         std::string renderPass;
         uint32_t attachmentIndex{0};
@@ -106,10 +86,13 @@ public:
         return m_renderPassBindings;
     }
 
+    uint32_t getDynamicDescriptorCount() const {
+        return static_cast<uint32_t>(m_dynamicOffsets.size());
+    }
+
 private:
-    std::array<std::vector<VkDescriptorSet>, kRendererVirtualFrameCount> m_sets;
-    std::array<std::vector<uint32_t>, kRendererVirtualFrameCount> m_dynamicOffsets;
-    std::vector<DynamicBufferView> m_dynamicBufferViews;
+    std::vector<VkDescriptorSet> m_sets;
+    std::vector<uint32_t> m_dynamicOffsets;
 
     uint32_t m_firstSet{0};
     uint32_t m_setCount{0};

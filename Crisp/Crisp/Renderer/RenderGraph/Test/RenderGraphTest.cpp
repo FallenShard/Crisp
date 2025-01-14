@@ -42,7 +42,7 @@ TEST(RenderGraphTest2, BasicUsage) {
             auto& data = builder.getBlackboard().insert<FluidSimulationData>();
             data.positionBuffer = builder.createBuffer({}, "fluid-position-buffer");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     rg.addPass(
         "depth-pre-pass",
@@ -55,7 +55,7 @@ TEST(RenderGraphTest2, BasicUsage) {
                 "depth-buffer",
                 createDepthClearValue(1.0f, 0));
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     RenderGraphResourceHandle output{};
     rg.addPass(
@@ -63,7 +63,7 @@ TEST(RenderGraphTest2, BasicUsage) {
         [&output](rg::RenderGraph::Builder& builder) {
             output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     for (uint32_t i = 0; i < 10; ++i) {
         rg.addPass(
@@ -73,7 +73,7 @@ TEST(RenderGraphTest2, BasicUsage) {
                 output = builder.createStorageImage(
                     {.format = VK_FORMAT_R32G32_SFLOAT}, fmt::format("fft-pass-image-{}", i));
             },
-            [](const RenderPassExecutionContext&) {});
+            [](const FrameContext&) {});
     }
 
     rg.addPass(
@@ -85,7 +85,7 @@ TEST(RenderGraphTest2, BasicUsage) {
             auto& data = builder.getBlackboard().insert<ForwardLightingData>();
             data.hdrImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "hdr-image");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     RenderGraphResourceHandle modifiedHdrImage{};
     rg.addPass(
@@ -94,7 +94,7 @@ TEST(RenderGraphTest2, BasicUsage) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             modifiedHdrImage = builder.writeAttachment(builder.getBlackboard().get<ForwardLightingData>().hdrImage);
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
@@ -103,7 +103,7 @@ TEST(RenderGraphTest2, BasicUsage) {
             builder.readTexture(modifiedHdrImage);
             bloomImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "bloom-image");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     rg.addPass(
         "tonemapping-pass",
@@ -111,7 +111,7 @@ TEST(RenderGraphTest2, BasicUsage) {
             builder.readTexture(bloomImage);
             builder.createAttachment({.format = VK_FORMAT_R8G8B8A8_UNORM}, "ldr-image");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     toGraphViz(rg, "D:/graph.dot").unwrap();
 
@@ -140,7 +140,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
                 },
                 "hdr-image");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
@@ -155,7 +155,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
                 },
                 "bloom-image");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     constexpr VkExtent2D kSwapChainExtent{1600, 900};
     {
@@ -165,7 +165,8 @@ TEST_F(RenderGraphTest, BasicUsage) {
 
     {
         ScopeCommandExecutor executor(*device_);
-        rg.execute(executor.cmdBuffer.getHandle(), 0);
+        FrameContext context{.commandEncoder = VulkanCommandEncoder{executor.cmdBuffer.getHandle()}};
+        rg.execute(context);
     }
 
     toGraphViz(rg, "D:/graph_small.dot").unwrap();

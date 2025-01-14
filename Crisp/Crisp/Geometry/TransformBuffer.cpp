@@ -36,8 +36,15 @@ void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P) {
             trans.N = glm::transpose(glm::inverse(glm::mat3(trans.MV)));
         }
     }
+}
 
-    m_transformBuffer->updateStagingBuffer(m_transforms.data(), m_activeTransforms * sizeof(TransformPack), 0);
+void TransformBuffer::updateStagingBuffer(const uint32_t regionIndex) {
+    m_transformBuffer->updateStagingBuffer(
+        {
+            .data = m_transforms.data(),
+            .size = m_activeTransforms * sizeof(TransformPack),
+        },
+        regionIndex);
 }
 
 TransformHandle TransformBuffer::getNextIndex() {

@@ -60,6 +60,7 @@ public:
     }
 
     void update(const glm::mat4& V, const glm::mat4& P);
+    void updateStagingBuffer(uint32_t regionIndex);
 
     TransformHandle getNextIndex();
 

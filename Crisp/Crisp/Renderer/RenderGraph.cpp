@@ -83,7 +83,7 @@ void RenderGraph::addDependency(
 
     // We take the attachment aspect to determine if we are transitioning depth or color target.
     const VkImageAspectFlags attachmentAspect{
-        sourceNode.renderPass->getAttachmentView(srcAttachmentIndex, 0).getSubresourceRange().aspectMask};
+        sourceNode.renderPass->getAttachmentView(srcAttachmentIndex).getSubresourceRange().aspectMask};
     const VkPipelineStageFlagBits srcStageFlags{
         attachmentAspect == VK_IMAGE_ASPECT_COLOR_BIT
             ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -91,12 +91,12 @@ void RenderGraph::addDependency(
 
     sourceNode.dependencies[dstPass] =
         [srcAttachmentIndex, srcStageFlags, dstStageFlags](
-            const VulkanRenderPass& srcPass, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
+            const VulkanRenderPass& srcPass, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             auto& renderTarget{srcPass.getRenderTargetFromAttachmentIndex(srcAttachmentIndex)};
             renderTarget.transitionLayout(
                 cmdBuffer.getHandle(),
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                srcPass.getAttachmentView(srcAttachmentIndex, frameIndex).getSubresourceRange(),
+                srcPass.getAttachmentView(srcAttachmentIndex).getSubresourceRange(),
                 srcStageFlags,
                 dstStageFlags);
         };
@@ -162,11 +162,9 @@ void RenderGraph::addToCommandLists(const RenderNode& renderNode) {
         return;
     }
 
-    const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
     for (const auto& [key, materialMap] : renderNode.materials) {
         for (const auto& [part, material] : materialMap) {
-            m_nodes.at(key.renderPassName)
-                ->addCommand(material.createDrawCommand(virtualFrameIndex, renderNode), key.subpassIndex);
+            m_nodes.at(key.renderPassName)->addCommand(material.createDrawCommand(renderNode), key.subpassIndex);
         }
     }
 }
@@ -206,23 +204,20 @@ void RenderGraph::executeCommandLists() const {
     });
 }
 
-const RenderGraph::Node& RenderGraph::getNode(std::string name) const {
+const RenderGraph::Node& RenderGraph::getNode(const std::string& name) const {
     return *m_nodes.at(name);
 }
 
-RenderGraph::Node& RenderGraph::getNode(std::string name) {
+RenderGraph::Node& RenderGraph::getNode(const std::string& name) {
     return *m_nodes.at(name);
 }
 
-const VulkanRenderPass& RenderGraph::getRenderPass(std::string name) {
+const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) {
     return *m_nodes.at(name)->renderPass;
 }
 
 void RenderGraph::executeDrawCommand(
-    const DrawCommand& command,
-    const Renderer& renderer,
-    const VulkanCommandBuffer& cmdBuffer,
-    uint32_t virtualFrameIndex) {
+    const DrawCommand& command, const Renderer& renderer, const VulkanCommandBuffer& cmdBuffer) {
     command.pipeline->bind(cmdBuffer.getHandle());
     const auto dynamicState = command.pipeline->getDynamicStateFlags();
     if (dynamicState & PipelineDynamicState::Viewport) {
@@ -245,7 +240,7 @@ void RenderGraph::executeDrawCommand(
         cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
 
     if (command.material) {
-        command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
+        command.material->bind(cmdBuffer.getHandle(), command.dynamicBufferOffsets);
     }
 
     command.geometry->bindVertexBuffers(cmdBuffer.getHandle(), command.firstBuffer, command.bufferCount);
@@ -257,7 +252,6 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
 
     node.renderPass->begin(
         cmdBuffer.getHandle(),
-        virtualFrameIndex,
         useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
     for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getSubpassCount(); subpassIndex++) {
         if (subpassIndex > 0) {
@@ -275,13 +269,13 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
                     auto& cmdCtx = m_secondaryCommandBuffers[frameIdx][jobIdx];
 
                     VkCommandBufferInheritanceInfo inheritance = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
-                    inheritance.framebuffer = node.renderPass->getFramebuffer(frameIdx)->getHandle();
+                    inheritance.framebuffer = node.renderPass->getFramebuffer()->getHandle();
                     inheritance.renderPass = node.renderPass->getHandle();
                     inheritance.subpass = subpassIndex;
                     cmdCtx.cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance);
 
                     for (std::size_t k = start; k < end; ++k) {
-                        executeDrawCommand(node.commands[subpassIndex][k], *m_renderer, *cmdCtx.cmdBuffer, frameIdx);
+                        executeDrawCommand(node.commands[subpassIndex][k], *m_renderer, *cmdCtx.cmdBuffer);
                     }
 
                     cmdCtx.cmdBuffer->end();
@@ -295,12 +289,12 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
             cmdBuffer.executeSecondaryBuffers(secondaryBuffers);
         } else {
             for (const auto& command : node.commands[subpassIndex]) {
-                executeDrawCommand(command, *m_renderer, cmdBuffer, virtualFrameIndex);
+                executeDrawCommand(command, *m_renderer, cmdBuffer);
             }
         }
     }
 
-    node.renderPass->end(cmdBuffer.getHandle(), virtualFrameIndex);
+    node.renderPass->end(cmdBuffer.getHandle());
     for (const auto& dep : node.dependencies) {
         dep.second(*node.renderPass, cmdBuffer, virtualFrameIndex);
     }
@@ -311,7 +305,7 @@ void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t vi
         return;*/
 
     node.pipeline->bind(cmdBuffer.getHandle());
-    node.material->bind(virtualFrameIndex, cmdBuffer.getHandle());
+    node.material->bind(cmdBuffer.getHandle());
     if (node.preDispatchCallback) {
         node.preDispatchCallback(node, cmdBuffer, virtualFrameIndex);
     }
@@ -323,7 +317,7 @@ void RenderGraph::executeComputePass(VulkanCommandBuffer& cmdBuffer, uint32_t vi
 }
 
 RenderGraph::Node::Node(std::string name, std::unique_ptr<VulkanRenderPass> renderPass)
-    : name(name)
+    : name(std::move(name))
     , renderPass(std::move(renderPass)) {
     commands.resize(this->renderPass->getSubpassCount());
 }

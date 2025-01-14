@@ -9,18 +9,13 @@
 namespace crisp {
 
 std::unique_ptr<VulkanRenderPass> createTexturePass(
-    const VulkanDevice& device,
-    RenderTargetCache& renderTargetCache,
-    VkExtent2D renderArea,
-    VkFormat textureFormat,
-    const bool bufferedRenderTargets) {
+    const VulkanDevice& device, RenderTargetCache& renderTargetCache, VkExtent2D renderArea, VkFormat textureFormat) {
     std::vector<RenderTarget*> renderTargets(1);
     renderTargets[0] = renderTargetCache.addRenderTarget(
         "TexturePass",
         RenderTargetBuilder()
             .setFormat(textureFormat)
             .setLayerAndMipLevelCount(1)
-            .setBuffered(bufferedRenderTargets)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
             .setSize(renderArea, false)
             .create(device));
@@ -40,7 +35,7 @@ std::unique_ptr<VulkanRenderPass> createTexturePass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, renderArea, std::move(renderTargets));
+        .create(device, renderArea, renderTargets);
 }
 
 } // namespace crisp

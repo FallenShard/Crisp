@@ -71,7 +71,7 @@ public:
 
     void compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent, VkCommandBuffer cmdBuffer);
 
-    void execute(VkCommandBuffer cmdBuffer, uint32_t virtualFrameIndex, VkDevice device = VK_NULL_HANDLE);
+    void execute(const FrameContext& frameContext);
 
     RenderGraphBlackboard& getBlackboard();
 
@@ -124,7 +124,7 @@ private:
 
     VkImageUsageFlags determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const;
     VkImageCreateFlags determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const;
-    std::tuple<VkImageLayout, VkAccessFlagBits, VkPipelineStageFlagBits> determineInitialLayout(
+    std::tuple<VkImageLayout, VkAccessFlagBits2, VkPipelineStageFlagBits2> determineInitialLayout(
         const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags);
 
     void determineAliasedResurces();

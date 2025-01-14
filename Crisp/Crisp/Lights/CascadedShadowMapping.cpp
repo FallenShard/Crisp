@@ -37,8 +37,8 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
     }
 }
 
-void CascadedShadowMapping::updateTransforms(const Camera& viewCamera, const uint32_t shadowMapSize) {
-    static int region = 0;
+void CascadedShadowMapping::updateTransforms(
+    const Camera& viewCamera, const uint32_t shadowMapSize, const uint32_t regionIndex) {
     for (uint32_t i = 0; i < cascades.size(); ++i) {
         auto& cascade = cascades[i];
 
@@ -47,11 +47,15 @@ void CascadedShadowMapping::updateTransforms(const Camera& viewCamera, const uin
             viewCamera.computeFrustumPoints(cascade.zNear, cascade.zFar), centerRadius, centerRadius.w, shadowMapSize);
 
         const auto desc = cascade.light.createDescriptor();
-        cascade.buffer->updateStagingBuffer(&desc, sizeof(LightDescriptor), 0);
+        cascade.buffer->updateStagingBufferFromStruct(desc, regionIndex);
         cascadedLightBuffer->updateStagingBuffer(
-            {.data = &desc, .size = sizeof(LightDescriptor), .dstOffset = i * sizeof(LightDescriptor)}, region);
+            {
+                .data = &desc,
+                .size = sizeof(LightDescriptor),
+                .dstOffset = i * sizeof(LightDescriptor),
+            },
+            regionIndex);
     }
-    region = (region + 1) % 2;
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> CascadedShadowMapping::getFrustumPoints(uint32_t cascadeIndex) const {

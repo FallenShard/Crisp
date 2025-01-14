@@ -33,9 +33,14 @@ public:
     }
 
     template <typename T>
-    VulkanRingBuffer* createRingBufferFromStruct(const std::string& id, const T& data) {
-        auto buffer = std::make_unique<VulkanRingBuffer>(
-            &m_renderer->getDevice(), VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, sizeof(T), &data);
+    VulkanRingBuffer* createRingBufferFromStruct(const std::string& id, const T& data, const VkBufferUsageFlags2 usage) {
+        auto buffer = std::make_unique<VulkanRingBuffer>(&m_renderer->getDevice(), usage, sizeof(T), &data);
+        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
+    }
+
+    VulkanRingBuffer* createRingBuffer(const std::string& id, const size_t size, const VkBufferUsageFlags2 usage) {
+        auto buffer = std::make_unique<VulkanRingBuffer>(&m_renderer->getDevice(), usage, size);
         m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
@@ -61,11 +66,11 @@ public:
 
     void recreatePipelines();
 
-    inline VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
+    VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return pipelineCache.getDescriptorAllocator(pipelineLayout);
     }
 
-    inline const FlatStringHashMap<std::unique_ptr<RenderNode>>& getRenderNodes() const {
+    const FlatStringHashMap<std::unique_ptr<RenderNode>>& getRenderNodes() const {
         return m_renderNodes;
     }
 

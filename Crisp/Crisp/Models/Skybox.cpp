@@ -83,12 +83,12 @@ void Skybox::updateRenderNode(const VulkanSampler& sampler, const VulkanImageVie
     m_renderNode.pass(kForwardLightingPass).material = m_material.get();
 }
 
-void Skybox::updateTransforms(const glm::mat4& V, const glm::mat4& P) {
+void Skybox::updateTransforms(const glm::mat4& V, const glm::mat4& P, const uint32_t regionIndex) {
     m_transformPack.M = glm::mat4(1.0f);
     m_transformPack.MV = glm::mat4(glm::mat3(V));
     m_transformPack.MVP = P * m_transformPack.MV;
 
-    m_transformBuffer->updateStagingBufferFromStruct(m_transformPack, 0);
+    m_transformBuffer->updateStagingBufferFromStruct(m_transformPack, regionIndex);
 }
 
 const RenderNode& Skybox::getRenderNode() {
@@ -98,4 +98,9 @@ const RenderNode& Skybox::getRenderNode() {
 VulkanImageView* Skybox::getSkyboxView() const {
     return m_cubeMapView.get();
 }
+
+void Skybox::updateDeviceBuffer(const VkCommandBuffer cmdBuffer) {
+    m_transformBuffer->updateDeviceBuffer(cmdBuffer);
+}
+
 } // namespace crisp

@@ -5,6 +5,7 @@
 
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 namespace crisp {
 
@@ -14,7 +15,7 @@ enum class ResourceType : uint8_t {
     Unknown,
 };
 
-enum class ResourceUsageType {
+enum class ResourceUsageType : uint8_t {
     Storage,    // For compute, non-sampled use.
     Attachment, // For render pass attachments/render targets.
     Texture,    // For sampled images.
@@ -22,8 +23,7 @@ enum class ResourceUsageType {
 
 struct ResourceAccessState {
     ResourceUsageType usageType;
-    VkPipelineStageFlags pipelineStage;
-    VkAccessFlags access;
+    VulkanSynchronizationStage stage;
 };
 
 struct RenderGraphResource {

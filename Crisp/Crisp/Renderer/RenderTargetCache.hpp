@@ -13,7 +13,6 @@ public:
     RenderTargetBuilder& setLayerAndMipLevelCount(uint32_t layerCount = 1, uint32_t mipLevelCount = 1);
     RenderTargetBuilder& setDepthSliceCount(uint32_t depthSliceCount = 1);
     RenderTargetBuilder& setCreateFlags(VkImageCreateFlags createFlags);
-    RenderTargetBuilder& setBuffered(bool isBuffered);
     RenderTargetBuilder& setSize(VkExtent2D size, bool isSwapChainDependent);
     RenderTargetBuilder& configureColorRenderTarget(
         VkImageUsageFlags usageFlags, VkClearColorValue clearValue = {{0, 0, 0, 0}});

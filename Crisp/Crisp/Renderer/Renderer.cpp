@@ -15,7 +15,6 @@ auto logger = spdlog::stdout_color_mt("Renderer");
 std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     const VulkanDevice& device, const VulkanSwapChain& swapChain, RenderTarget& renderTarget) {
     std::vector<RenderTarget*> renderTargets{&renderTarget};
-    renderTargets[0]->info.buffered = true;
     renderTargets[0]->info.format = swapChain.getImageFormat();
     renderTargets[0]->info.sampleCount = VK_SAMPLE_COUNT_1_BIT;
     renderTargets[0]->info.isSwapChainDependent = true;
@@ -108,10 +107,6 @@ const std::filesystem::path& Renderer::getResourcesPath() const {
     return m_assetPaths.resourceDir;
 }
 
-std::filesystem::path Renderer::getShaderSourcePath(const std::string& shaderName) const {
-    return m_assetPaths.shaderSourceDir / (shaderName + ".glsl");
-}
-
 VulkanInstance& Renderer::getInstance() const {
     return *m_instance;
 }
@@ -153,7 +148,7 @@ VkShaderModule Renderer::getShaderModule(const std::string& key) const {
 }
 
 VkShaderModule Renderer::getOrLoadShaderModule(const std::string& key) {
-    return m_shaderCache->getOrLoadShaderModule(m_assetPaths.getSpvShaderPath(key));
+    return m_shaderCache->getOrLoadShaderModule(m_assetPaths.getShaderSpvPath(key));
 }
 
 void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const {
@@ -215,13 +210,20 @@ std::optional<FrameContext> Renderer::beginFrame() {
     // Flush all noncoherent updates
     m_device->flushMappedRanges();
 
-    const std::optional<uint32_t> swapImageIndex = acquireSwapImageIndex(frame);
-    if (!swapImageIndex.has_value()) {
+    const std::optional<uint32_t> swapChainImageIndex = acquireSwapImageIndex(frame);
+    if (!swapChainImageIndex.has_value()) {
         CRISP_LOGE("Failed to acquire swap chain image!");
         return std::nullopt;
     }
 
-    updateSwapChainRenderPass(virtualFrameIndex, m_swapChain->getImageView(*swapImageIndex));
+    const VkImageView swapChainImageView = m_swapChain->getImageView(*swapChainImageIndex);
+    if (!m_swapChainFramebuffers.contains(swapChainImageView)) {
+        const auto attachmentViews = {swapChainImageView};
+        m_swapChainFramebuffers.emplace(
+            swapChainImageView,
+            std::make_unique<VulkanFramebuffer>(
+                *m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(), attachmentViews));
+    }
 
     auto* commandBuffer = m_workers[0]->resetAndGetCmdBuffer(*m_device, virtualFrameIndex);
     commandBuffer->setIdleState();
@@ -229,14 +231,13 @@ std::optional<FrameContext> Renderer::beginFrame() {
     return FrameContext{
         .frameIndex = m_currentFrameIndex,
         .virtualFrameIndex = virtualFrameIndex,
-        .swapChainImageIndex = *swapImageIndex,
+        .swapChainImageIndex = *swapChainImageIndex,
         .commandBuffer = commandBuffer,
         .commandEncoder = VulkanCommandEncoder(commandBuffer->getHandle()),
     };
 }
 
 void Renderer::record(const FrameContext& frameContext) {
-    const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     const auto& encoder{frameContext.commandEncoder};
     const auto cmdBuffer = encoder.getHandle();
 
@@ -260,7 +261,7 @@ void Renderer::record(const FrameContext& frameContext) {
         m_scenePipeline->bind(cmdBuffer);
         encoder.setViewport(m_defaultViewport);
         encoder.setScissor(m_defaultScissor);
-        m_sceneMaterial->bind(virtualFrameIndex, cmdBuffer);
+        m_sceneMaterial->bind(cmdBuffer);
         drawFullScreenQuad(cmdBuffer);
     }
 
@@ -291,43 +292,12 @@ void Renderer::finish() {
     m_device->waitIdle();
 }
 
-void Renderer::setSceneImageView(const VulkanRenderPass* renderPass, uint32_t renderTargetIndex) {
-    if (renderPass) {
-        m_sceneImageViews = renderPass->getAttachmentViews(renderTargetIndex);
-        for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-            m_sceneMaterial->writeDescriptor(0, 0, i, *m_sceneImageViews[i], m_linearClampSampler.get());
-        }
-
+void Renderer::setSceneImageView(const VulkanImageView* imageView) {
+    m_sceneImageView = imageView;
+    if (m_sceneImageView) {
+        m_sceneMaterial->writeDescriptor(0, 0, m_sceneImageView->getDescriptorInfo(m_linearClampSampler.get()));
         m_device->flushDescriptorUpdates();
-    } else {
-        // Prevent rendering any scene output to the screen
-        m_sceneImageViews.clear();
     }
-}
-
-void Renderer::setSceneImageViews(const std::vector<std::unique_ptr<VulkanImageView>>& imageViews) {
-    m_sceneImageViews.clear();
-
-    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-        if (imageViews.size() == kRendererVirtualFrameCount) {
-            m_sceneImageViews.push_back(imageViews[i].get());
-        } else {
-            m_sceneImageViews.push_back(imageViews.front().get());
-        }
-    }
-
-    m_sceneMaterial->writeDescriptor(
-        0, 0, imageViews, m_linearClampSampler.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    m_device->flushDescriptorUpdates();
-}
-
-void Renderer::registerStreamingRingBuffer(VulkanRingBuffer* buffer) {
-    m_streamingRingBuffers.insert(buffer);
-}
-
-void Renderer::unregisterStreamingRingBuffer(VulkanRingBuffer* buffer) {
-    m_streamingRingBuffers.erase(buffer);
 }
 
 Geometry* Renderer::getFullScreenGeometry() const {
@@ -392,41 +362,6 @@ void Renderer::recreateSwapChain() {
 
     m_swapChainRenderTarget.info.size = m_swapChain->getExtent();
     m_defaultRenderPass->recreate(*m_device, m_swapChain->getExtent());
-}
-
-void Renderer::updateSwapChainRenderPass(const uint32_t virtualFrameIndex, const VkImageView swapChainImageView) {
-    auto& framebuffer = m_defaultRenderPass->getFramebuffer(virtualFrameIndex);
-    if (framebuffer && framebuffer->getAttachment(0) == swapChainImageView) {
-        return;
-    }
-
-    if (!m_swapChainFramebuffers.contains(swapChainImageView)) {
-        const auto attachmentViews = {swapChainImageView};
-        m_swapChainFramebuffers.emplace(
-            swapChainImageView,
-            std::make_unique<VulkanFramebuffer>(
-                *m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(), attachmentViews));
-    }
-
-    // Release ownership of the framebuffer into the pool of swap chain framebuffers.
-    if (framebuffer) {
-        framebuffer.swap(m_swapChainFramebuffers.at(framebuffer->getAttachment(0)));
-    }
-
-    if (m_swapChainFramebuffers.at(swapChainImageView)) {
-        // Acquire ownership of the framebuffer used for the current image to be rendered.
-        framebuffer.swap(m_swapChainFramebuffers.at(swapChainImageView));
-    } else {
-        // If the requested framebuffer is empty because it has already been grabbed, find it in that list and
-        // reclaim ownership. This can happen if the same image is requested twice in a row.
-        for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-            auto& otherFramebuffer = m_defaultRenderPass->getFramebuffer(i);
-            if (otherFramebuffer && otherFramebuffer->getAttachment(0) == swapChainImageView) {
-                framebuffer.swap(otherFramebuffer);
-                break;
-            }
-        }
-    }
 }
 
 void fillDeviceBuffer(

@@ -91,11 +91,12 @@ void addToRenderGraph(
     cullingPass.material->writeDescriptor(0, 2, pointLightBuffer.getDescriptorInfo());
     cullingPass.material->writeDescriptor(0, 3, cameraBuffer.getDescriptorInfo());
     cullingPass.material->writeDescriptor(0, 4, lightClustering.m_lightIndexListBuffer->getDescriptorInfo());
-    cullingPass.material->writeDescriptor(1, 0, lightClustering.m_lightGridViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    cullingPass.material->setDynamicBufferView(0, *lightClustering.m_lightIndexCountBuffer, 0);
-    cullingPass.material->setDynamicBufferView(1, pointLightBuffer, 0);
-    cullingPass.material->setDynamicBufferView(2, cameraBuffer, 0);
-    cullingPass.material->setDynamicBufferView(3, *lightClustering.m_lightIndexListBuffer, 0);
+    cullingPass.material->writeDescriptor(
+        1, 0, lightClustering.m_lightGridView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    // cullingPass.material->setDynamicBufferView(0, *lightClustering.m_lightIndexCountBuffer, 0);
+    // cullingPass.material->setDynamicBufferView(1, pointLightBuffer, 0);
+    // cullingPass.material->setDynamicBufferView(2, cameraBuffer, 0);
+    // cullingPass.material->setDynamicBufferView(3, *lightClustering.m_lightIndexListBuffer, 0);
     cullingPass.preDispatchCallback =
         [lightCountBuffer = lightClustering.m_lightIndexCountBuffer.get()](
             RenderGraph::Node& /*node*/, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
@@ -150,10 +151,7 @@ void LightClustering::configure(
         *renderer,
         VK_FORMAT_R32G32_UINT,
         VkExtent3D{static_cast<uint32_t>(m_gridSize.x), static_cast<uint32_t>(m_gridSize.y), 1u});
-
-    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-        m_lightGridViews.emplace_back(createView(renderer->getDevice(), *m_lightGrid, VK_IMAGE_VIEW_TYPE_2D, i, 1));
-    }
+    m_lightGridView = createView(renderer->getDevice(), *m_lightGrid, VK_IMAGE_VIEW_TYPE_2D);
 
     renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         m_lightGrid->transitionLayout(

@@ -41,7 +41,6 @@ std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(
         RenderTargetBuilder()
             .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
             .setLayerAndMipLevelCount(1)
-            .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
             .setSize({256, 64}, false)
             .create(device));
@@ -72,7 +71,6 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(
         RenderTargetBuilder()
             .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
             .setLayerAndMipLevelCount(1)
-            .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
             .setSize({192, 108}, false)
             .create(device));
@@ -103,7 +101,6 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device
             .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
             .setDepthSliceCount(32 * kRendererVirtualFrameCount)
             .setCreateFlags(VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
-            .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
             .setSize({32, 32}, false)
             .create(device));
@@ -136,7 +133,6 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
             .setFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
             .setSize(renderArea, true)
-            .setBuffered(true)
             .create(device));
 
     return RenderPassBuilder()
@@ -228,7 +224,8 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
                 resourceContext.createMaterial(renderPassName + "Material", node->pass(renderPassName).pipeline);
         };
 
-    resourceContext.createRingBufferFromStruct("atmosphereBuffer", sizeof(AtmosphereParameters));
+    resourceContext.createRingBufferFromStruct(
+        "atmosphereBuffer", sizeof(AtmosphereParameters), VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT);
 
     // Transmittance lookup
     createPostProcessingRenderNode2(
@@ -402,7 +399,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "transmittanceLut");
         },
-        [&renderer, &resourceContext, &renderGraph](const RenderPassExecutionContext& ctx) {
+        [&renderer, &resourceContext, &renderGraph](const FrameContext& ctx) {
             VulkanPipeline* pipeline = resourceContext.pipelineCache.getPipeline("transmittanceLut");
             if (pipeline == nullptr) {
                 pipeline = resourceContext.pipelineCache.loadPipeline(
@@ -413,7 +410,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
             renderer.getDevice().flushDescriptorUpdates();
 
-            const VkCommandBuffer cmdBufferHandle = ctx.cmdBuffer.getHandle();
+            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
             material->bind(0, cmdBufferHandle);
 
             // command.pipeline->bind(cmdBuffer.getHandle());
@@ -446,7 +443,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "multiScatTex");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     renderGraph.addPass(
         SkyViewLutPass,
@@ -464,7 +461,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "skyViewLut");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     renderGraph.addPass(
         ViewVolumePass,
@@ -482,7 +479,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "skyVolumeLut");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 
     renderGraph.addPass(
         RayMarchingPass,
@@ -497,7 +494,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "rayMarchedImage");
         },
-        [](const RenderPassExecutionContext&) {});
+        [](const FrameContext&) {});
 }
 
 } // namespace crisp
