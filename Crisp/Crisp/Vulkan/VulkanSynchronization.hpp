@@ -47,6 +47,11 @@ inline constexpr VulkanSynchronizationStage kTransferWrite = {
     .access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kTransferRead = {
+    .stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+    .access = VK_ACCESS_2_TRANSFER_READ_BIT,
+};
+
 inline constexpr VulkanSynchronizationStage kComputeRead = {
     .stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
     .access = VK_ACCESS_2_SHADER_READ_BIT,
@@ -55,6 +60,11 @@ inline constexpr VulkanSynchronizationStage kComputeRead = {
 inline constexpr VulkanSynchronizationStage kVertexRead = {
     .stage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT,
     .access = VK_ACCESS_2_SHADER_READ_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kVertexUniformRead = {
+    .stage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT,
+    .access = VK_ACCESS_2_UNIFORM_READ_BIT,
 };
 
 inline constexpr VulkanSynchronizationStage kFragmentRead = {
@@ -84,9 +94,29 @@ inline constexpr VulkanSynchronizationStage kFragmentSampledRead = {
     .access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kFragmentInputRead = {
+    .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+    .access = VK_ACCESS_2_INPUT_ATTACHMENT_READ_BIT,
+};
+
 inline constexpr VulkanSynchronizationStage kExternalColorSubpass = {
     .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
     .access = VK_ACCESS_2_NONE,
+};
+
+inline constexpr VulkanSynchronizationStage kNullStage = {
+    .stage = VK_PIPELINE_STAGE_2_NONE,
+    .access = VK_ACCESS_2_NONE,
+};
+
+inline constexpr VulkanSynchronizationStage kAllStages = {
+    .stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+    .access = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kHostWrite = {
+    .stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+    .access = VK_ACCESS_2_HOST_WRITE_BIT,
 };
 
 } // namespace crisp
