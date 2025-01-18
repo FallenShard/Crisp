@@ -22,7 +22,6 @@ public:
     LightSystem(Renderer* renderer, const DirectionalLight& dirLight, uint32_t shadowMapSize, uint32_t cascadeCount);
 
     void update(const Camera& camera, float dt, uint32_t regionIndex);
-    void updateDeviceBuffers(VkCommandBuffer cmdBuffer);
 
     void setDirectionalLight(const DirectionalLight& dirLight);
 
@@ -38,7 +37,7 @@ public:
 
     VulkanRingBuffer* getDirectionalLightBuffer() const;
     VulkanRingBuffer* getCascadedDirectionalLightBuffer() const;
-    VulkanRingBuffer* getCascadedDirectionalLightBuffer(uint32_t index) const;
+    VkDescriptorBufferInfo getCascadedDirectionalLightBufferInfo(uint32_t cascadeIndex) const;
 
     void createPointLightBuffer(std::vector<PointLight>&& pointLights);
     void createTileGridBuffers(const CameraParameters& cameraParams);

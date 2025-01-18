@@ -45,6 +45,14 @@ public:
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
 
+    VulkanRingBuffer* createUniformRingBuffer(
+        const std::string& id, const size_t size, const VkBufferUsageFlags2 extraUsage = 0) {
+        auto buffer = std::make_unique<VulkanRingBuffer>(
+            &m_renderer->getDevice(), VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | extraUsage, size);
+        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
+    }
+
     VulkanRingBuffer* getRingBuffer(const std::string_view id) const {
         return m_ringBuffers.at(id).get();
     }

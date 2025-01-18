@@ -6,7 +6,6 @@ void CascadedShadowMapping::setCascadeCount(
     cascades.resize(cascadeCount);
     for (auto& cascade : cascades) {
         cascade.light = light;
-        cascade.buffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(LightDescriptor));
     }
     cascadedLightBuffer = createUniformRingBuffer(&renderer->getDevice(), cascadeCount * sizeof(LightDescriptor));
 }
@@ -47,7 +46,6 @@ void CascadedShadowMapping::updateTransforms(
             viewCamera.computeFrustumPoints(cascade.zNear, cascade.zFar), centerRadius, centerRadius.w, shadowMapSize);
 
         const auto desc = cascade.light.createDescriptor();
-        cascade.buffer->updateStagingBufferFromStruct(desc, regionIndex);
         cascadedLightBuffer->updateStagingBuffer(
             {
                 .data = &desc,

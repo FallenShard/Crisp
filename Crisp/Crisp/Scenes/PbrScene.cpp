@@ -65,7 +65,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     setupInput();
 
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
-    m_resourceContext->createRingBuffer("camera", sizeof(CameraParameters), VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT);
+    m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
 
     m_rg = std::make_unique<rg::RenderGraph>();
 
@@ -123,7 +123,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             m_resourceContext->createPipeline(key, "ShadowMap.json", m_rg->getRenderPass(kCsmPasses[i]), 0);
         auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
         csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-        csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
+        csmMaterial->writeDescriptor(0, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
     }
 
     createPlane();
@@ -152,31 +152,25 @@ void PbrScene::resize(int width, int height) {
 }
 
 void PbrScene::update(const UpdateParams& updateParams) {
-    // Camera
     m_cameraController->update(updateParams.dt);
+    const auto& camParams = m_cameraController->getCameraParameters();
+    m_transformBuffer->update(camParams.V, camParams.P);
 }
 
 void PbrScene::render(const FrameContext& frameContext) {
-
-    const auto& camParams = m_cameraController->getCameraParameters();
-
     frameContext.commandEncoder.insertBarrier(kVertexUniformRead >> kTransferWrite);
 
-    // frameContext.commandEncoder.insertBarrier(kAllStages >> kAllStages);
-
-    // Object transforms
-    m_transformBuffer->update(camParams.V, camParams.P);
+    const auto& camParams = m_cameraController->getCameraParameters();
     m_lightSystem->update(m_cameraController->getCamera(), 0.0f, frameContext.virtualFrameIndex);
     m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
 
-    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
-        m_cameraController->getCameraParameters(), frameContext.virtualFrameIndex);
+    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, frameContext.virtualFrameIndex);
     m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
-    m_lightSystem->updateDeviceBuffers(frameContext.commandEncoder.getHandle());
 
     m_skybox->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
     m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kVertexUniformRead);
 

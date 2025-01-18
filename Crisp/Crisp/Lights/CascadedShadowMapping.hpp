@@ -15,7 +15,6 @@ struct CascadedShadowMapping {
         float zFar;
 
         DirectionalLight light;
-        std::unique_ptr<VulkanRingBuffer> buffer;
     };
 
     std::vector<Cascade> cascades;

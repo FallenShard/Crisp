@@ -37,13 +37,6 @@ void LightSystem::update(const Camera& camera, float /*dt*/, const uint32_t regi
     }
 }
 
-void LightSystem::updateDeviceBuffers(const VkCommandBuffer cmdBuffer) {
-    for (auto& cascade : m_cascadedShadowMapping.cascades) {
-        cascade.buffer->updateDeviceBuffer(cmdBuffer);
-    }
-    m_cascadedShadowMapping.cascadedLightBuffer->updateDeviceBuffer(cmdBuffer);
-}
-
 void LightSystem::setDirectionalLight(const DirectionalLight& dirLight) {
     m_directionalLight = dirLight;
     m_directionalLightBuffer->updateStagingBufferFromStruct(
@@ -55,7 +48,7 @@ void LightSystem::setSplitLambda(const float splitLambda) {
     m_cascadedShadowMapping.splitLambda = splitLambda;
 }
 
-VulkanRingBuffer* crisp::LightSystem::getDirectionalLightBuffer() const {
+VulkanRingBuffer* LightSystem::getDirectionalLightBuffer() const {
     return m_directionalLightBuffer.get();
 }
 
@@ -63,8 +56,9 @@ VulkanRingBuffer* LightSystem::getCascadedDirectionalLightBuffer() const {
     return m_cascadedShadowMapping.cascadedLightBuffer.get();
 }
 
-VulkanRingBuffer* LightSystem::getCascadedDirectionalLightBuffer(uint32_t index) const {
-    return m_cascadedShadowMapping.cascades.at(index).buffer.get();
+VkDescriptorBufferInfo LightSystem::getCascadedDirectionalLightBufferInfo(uint32_t cascadeIndex) const {
+    return m_cascadedShadowMapping.cascadedLightBuffer->getDescriptorInfo(
+        cascadeIndex * sizeof(LightDescriptor), sizeof(LightDescriptor));
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> LightSystem::getCascadeFrustumPoints(uint32_t cascadeIndex) const {
