@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gsl/pointers>
+
 #include <Crisp/Camera/Camera.hpp>
 
 #include <Crisp/Core/Mouse.hpp>
@@ -39,7 +41,7 @@ public:
     CameraParameters getCameraParameters() const;
 
 private:
-    Window* m_window;
+    gsl::not_null<Window*> m_window;
     Camera m_camera;
 
     glm::vec3 m_target;
@@ -51,7 +53,8 @@ private:
     float m_yaw;
     float m_pitch;
 
-    bool m_isDragging;
+    bool m_isDraggingLeftClick{false};
+    bool m_isDraggingRightClick{false};
     glm::vec2 m_prevMousePos;
 };
 } // namespace crisp

@@ -10,7 +10,6 @@ TargetCameraController::TargetCameraController(Window& window)
     , m_angularSpeed(glm::radians(90.0f))
     , m_yaw(0.0f)
     , m_pitch(0.0f)
-    , m_isDragging(false)
     , m_prevMousePos(0.0f) {
     m_window->mouseButtonPressed.subscribe<&TargetCameraController::onMousePressed>(this);
     m_window->mouseButtonReleased.subscribe<&TargetCameraController::onMouseReleased>(this);
@@ -77,12 +76,30 @@ const Camera& TargetCameraController::getCamera() const {
     return m_camera;
 }
 
-void TargetCameraController::update(const float /*dt*/) {}
+void TargetCameraController::update(const float dt) {
+    if (m_window->isKeyDown(Key::A)) {
+        m_camera.translate(-m_camera.getRightDir() * m_panSpeed * dt);
+        m_target -= m_camera.getRightDir() * m_panSpeed * dt;
+    }
+    if (m_window->isKeyDown(Key::D)) {
+        m_camera.translate(m_camera.getRightDir() * m_panSpeed * dt);
+        m_target += m_camera.getRightDir() * m_panSpeed * dt;
+    }
+    if (m_window->isKeyDown(Key::W)) {
+        m_camera.translate(m_camera.getLookDir() * m_panSpeed * dt);
+        m_target += m_camera.getLookDir() * m_panSpeed * dt;
+    }
+    if (m_window->isKeyDown(Key::S)) {
+        m_camera.translate(-m_camera.getLookDir() * m_panSpeed * dt);
+        m_target -= m_camera.getLookDir() * m_panSpeed * dt;
+    }
+}
 
 void TargetCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs) {
-    if (mouseEventArgs.button == MouseButton::Left) {
-        m_isDragging = true;
-        m_window->setCursorState(CursorState::Disabled);
+    if (mouseEventArgs.button == MouseButton::Left || mouseEventArgs.button == MouseButton::Right) {
+        m_isDraggingLeftClick = mouseEventArgs.button == MouseButton::Left;
+        m_isDraggingRightClick = mouseEventArgs.button == MouseButton::Right;
+        m_window->setCursorState(CursorState::Hidden);
 
         m_prevMousePos.x = static_cast<float>(mouseEventArgs.x);
         m_prevMousePos.y = static_cast<float>(mouseEventArgs.y);
@@ -90,8 +107,9 @@ void TargetCameraController::onMousePressed(const MouseEventArgs& mouseEventArgs
 }
 
 void TargetCameraController::onMouseReleased(const MouseEventArgs& mouseEventArgs) {
-    if (mouseEventArgs.button == MouseButton::Left) {
-        m_isDragging = false;
+    if (mouseEventArgs.button == MouseButton::Left || mouseEventArgs.button == MouseButton::Right) {
+        m_isDraggingLeftClick = false;
+        m_isDraggingRightClick = false;
         m_window->setCursorState(CursorState::Normal);
 
         m_prevMousePos.x = static_cast<float>(mouseEventArgs.x);
@@ -102,15 +120,16 @@ void TargetCameraController::onMouseReleased(const MouseEventArgs& mouseEventArg
 void TargetCameraController::onMouseMoved(const double xPos, const double yPos) {
     const glm::vec2 mousePos(static_cast<float>(xPos), static_cast<float>(yPos));
 
-    if (m_isDragging) {
+    if (m_isDraggingLeftClick) {
         // In [-1, 1] range
         const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
+        updateOrientation(-delta.x, -delta.y);
+    }
 
-        if (m_window->isKeyDown(Key::LeftControl)) {
-            pan(delta.x, -delta.y);
-        } else {
-            updateOrientation(-delta.x, -delta.y);
-        }
+    if (m_isDraggingRightClick) {
+        // In [-1, 1] range
+        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
+        pan(delta.x, -delta.y);
     }
 
     m_prevMousePos = mousePos;

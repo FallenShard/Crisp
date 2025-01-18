@@ -13,6 +13,7 @@ target_link_libraries(
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::Event
     PUBLIC Crisp::Window
+    PUBLIC Microsoft.GSL::GSL
 )
 
 add_cpp_test(
