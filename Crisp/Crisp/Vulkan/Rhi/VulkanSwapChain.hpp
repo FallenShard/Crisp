@@ -8,7 +8,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
-enum class TripleBuffering : uint8_t { Enabled, Disabled };
+enum class PresentationMode : uint8_t { DoubleBuffered, TripleBuffered, Immediate };
 
 class VulkanSwapChain : public VulkanResource<VkSwapchainKHR> {
 public:

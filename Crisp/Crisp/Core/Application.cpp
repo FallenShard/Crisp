@@ -36,11 +36,18 @@ AssetPaths createAssetPaths(const ApplicationEnvironment& environment) {
 Application::Application(const ApplicationEnvironment& environment)
     : m_window(createWindow(kTitle, kDefaultWindowSize)) {
     const ScopeProfiler scope("Application constructor");
+
+    VulkanCoreParams vulkanCoreParams{};
+    vulkanCoreParams.requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions();
+    vulkanCoreParams.requiredDeviceExtensions = createDefaultDeviceExtensions();
+    vulkanCoreParams.presentationMode = PresentationMode::DoubleBuffered;
+    addPageableMemoryDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
+    if (environment.getParameters().enableRayTracingExtension) {
+        addRayTracingDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
+    }
+
     m_renderer = std::make_unique<Renderer>(
-        ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
-        m_window.createSurfaceCallback(),
-        createAssetPaths(environment),
-        environment.getParameters().enableRayTracingExtension);
+        std::move(vulkanCoreParams), m_window.createSurfaceCallback(), createAssetPaths(environment));
 
     m_window.resized.subscribe<&Application::onResize>(this);
     m_window.minimized.subscribe<&Application::onMinimize>(this);

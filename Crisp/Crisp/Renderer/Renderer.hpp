@@ -8,6 +8,7 @@
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
+#include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
@@ -27,17 +28,18 @@
 
 namespace crisp {
 class Geometry;
-class Material;
+
+struct VulkanCoreParams {
+    std::vector<std::string> requiredInstanceExtensions;
+    std::vector<std::string> requiredDeviceExtensions;
+    PresentationMode presentationMode;
+};
 
 class Renderer {
 public:
     static constexpr uint32_t NumVirtualFrames = kRendererVirtualFrameCount;
 
-    Renderer(
-        std::vector<std::string>&& requiredVulkanInstanceExtensions,
-        SurfaceCreator&& surfCreatorCallback,
-        AssetPaths&& assetPaths,
-        bool enableRayTracingExtensions);
+    Renderer(VulkanCoreParams&& vulkanCoreParams, SurfaceCreator&& surfCreatorCallback, AssetPaths&& assetPaths);
     ~Renderer(); // Defined in .cpp due to symbol definition visibility.
 
     Renderer(const Renderer& other) = delete;

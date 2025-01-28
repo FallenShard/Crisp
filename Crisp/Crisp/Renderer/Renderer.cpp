@@ -46,26 +46,18 @@ std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer) {
 } // namespace
 
 Renderer::Renderer(
-    std::vector<std::string>&& requiredVulkanInstanceExtensions,
-    SurfaceCreator&& surfCreatorCallback,
-    AssetPaths&& assetPaths,
-    const bool enableRayTracingExtensions)
+    VulkanCoreParams&& vulkanCoreParams, SurfaceCreator&& surfCreatorCallback, AssetPaths&& assetPaths) // NOLINT
     : m_currentFrameIndex(0)
     , m_assetPaths(std::move(assetPaths))
     , m_defaultViewport()
     , m_defaultScissor() {
     recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
 
-    std::vector<std::string> deviceExtensions = createDefaultDeviceExtensions();
-    if (enableRayTracingExtensions) {
-        addRayTracingDeviceExtensions(deviceExtensions);
-    }
-
     // Create fundamental objects for the API
     m_instance = std::make_unique<VulkanInstance>(
-        std::move(surfCreatorCallback), std::move(requiredVulkanInstanceExtensions), true);
-    m_physicalDevice =
-        std::make_unique<VulkanPhysicalDevice>(selectPhysicalDevice(*m_instance, std::move(deviceExtensions)).unwrap());
+        std::move(surfCreatorCallback), std::move(vulkanCoreParams.requiredInstanceExtensions), true);
+    m_physicalDevice = std::make_unique<VulkanPhysicalDevice>(
+        selectPhysicalDevice(*m_instance, std::move(vulkanCoreParams.requiredDeviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(
         *m_physicalDevice,
         createDefaultQueueConfiguration(*m_instance, *m_physicalDevice),
@@ -93,7 +85,7 @@ Renderer::Renderer(
 
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
-    m_scenePipeline = createPipelineFromJsonPath("GammaCorrect.json", *this, getDefaultRenderPass(), 0).unwrap();
+    m_scenePipeline = createPipelineFromJsonPath("GammaCorrect.json", *this, getDefaultRenderPass()).unwrap();
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 }
 
