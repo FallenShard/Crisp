@@ -18,7 +18,7 @@ public:
         VkFormat format,
         VkImageUsageFlags usage,
         VkImageCreateFlags createFlags);
-    ~VulkanImage() override;
+    ~VulkanImage();
 
     VulkanImage(const VulkanImage&) = delete;
     VulkanImage& operator=(const VulkanImage&) = delete;

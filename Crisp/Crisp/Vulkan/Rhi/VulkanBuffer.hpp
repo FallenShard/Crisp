@@ -8,7 +8,7 @@ class VulkanBuffer : public VulkanResource<VkBuffer> {
 public:
     VulkanBuffer(
         const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
-    ~VulkanBuffer() override;
+    ~VulkanBuffer();
 
     VulkanBuffer(const VulkanBuffer&) = delete;
     VulkanBuffer& operator=(const VulkanBuffer&) = delete;

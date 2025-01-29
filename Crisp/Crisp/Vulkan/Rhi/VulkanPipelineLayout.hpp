@@ -29,7 +29,7 @@ public:
         std::vector<bool> descriptorSetBufferedStatus,
         std::vector<std::vector<uint32_t>> bindlessIndices,
         std::unique_ptr<VulkanDescriptorSetAllocator> setAllocator);
-    ~VulkanPipelineLayout() override;
+    ~VulkanPipelineLayout();
 
     VulkanPipelineLayout(const VulkanPipelineLayout&) = delete;
     VulkanPipelineLayout& operator=(const VulkanPipelineLayout&) = delete;

@@ -10,33 +10,6 @@ namespace crisp {
 template <typename T>
 class VulkanResource {
 public:
-    explicit VulkanResource(VulkanResourceDeallocator& deallocator)
-        : m_handle(VK_NULL_HANDLE)
-        , m_deallocator(&deallocator) {}
-
-    VulkanResource(const T handle, VulkanResourceDeallocator& deallocator)
-        : m_handle(handle)
-        , m_deallocator(&deallocator) {}
-
-    virtual ~VulkanResource() {
-        if (getDestroyFunc<T>() != nullptr) {
-            if (!m_handle || !m_deallocator) {
-                return;
-            }
-
-            if (m_framesToLive == 0) {
-                destroyVulkanHandle(m_handle, m_deallocator, getDestroyFunc<T>());
-            } else {
-                m_deallocator->deferDestruction(
-                    m_framesToLive, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
-                        destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
-                    });
-            }
-        } else {
-            CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
-        }
-    }
-
     VulkanResource(const VulkanResource& other) = delete;
     VulkanResource& operator=(const VulkanResource& other) = delete;
 
@@ -78,6 +51,33 @@ public:
     }
 
 protected:
+    explicit VulkanResource(VulkanResourceDeallocator& deallocator)
+        : m_handle(VK_NULL_HANDLE)
+        , m_deallocator(&deallocator) {}
+
+    VulkanResource(const T handle, VulkanResourceDeallocator& deallocator)
+        : m_handle(handle)
+        , m_deallocator(&deallocator) {}
+
+    ~VulkanResource() {
+        if (getDestroyFunc<T>() != nullptr) {
+            if (!m_handle || !m_deallocator) {
+                return;
+            }
+
+            if (m_framesToLive == 0) {
+                destroyVulkanHandle(m_handle, m_deallocator, getDestroyFunc<T>());
+            } else {
+                m_deallocator->deferDestruction(
+                    m_framesToLive, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+                        destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
+                    });
+            }
+        } else {
+            CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
+        }
+    }
+
     T m_handle;
     VulkanResourceDeallocator* m_deallocator;
     int32_t m_framesToLive = kRendererVirtualFrameCount;
