@@ -64,7 +64,7 @@ Renderer::Renderer(
         *m_instance,
         kRendererVirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(
-        *m_device, *m_physicalDevice, m_instance->getSurface(), TripleBuffering::Disabled);
+        *m_device, *m_physicalDevice, m_instance->getSurface(), vulkanCoreParams.presentationMode);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain, m_swapChainRenderTarget);
 
     m_defaultViewport = m_swapChain->getViewport();
@@ -233,7 +233,7 @@ void Renderer::record(const FrameContext& frameContext) {
     const auto& encoder{frameContext.commandEncoder};
     const auto cmdBuffer = encoder.getHandle();
 
-    encoder.insertBarrier(kTransferWrite >> kAllShaderRead);
+    encoder.insertBarrier(kTransferWrite >> (kComputeRead | kVertexRead | kFragmentRead));
 
     m_device->executeResourceUpdates(cmdBuffer);
 

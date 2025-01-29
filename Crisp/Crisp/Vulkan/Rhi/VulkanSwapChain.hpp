@@ -16,8 +16,8 @@ public:
         const VulkanDevice& device,
         const VulkanPhysicalDevice& physicalDevice,
         VkSurfaceKHR surface,
-        TripleBuffering tripleBuffering);
-    ~VulkanSwapChain() override;
+        PresentationMode presentationMode);
+    ~VulkanSwapChain();
 
     VulkanSwapChain(const VulkanSwapChain& other) = delete;
     VulkanSwapChain& operator=(const VulkanSwapChain& other) = delete;

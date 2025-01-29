@@ -23,8 +23,8 @@ struct ForwardLightingData {
 
 class RenderGraphTest : public VulkanTestWithSurface {
 protected:
-    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled) {
-        return {*device_, *physicalDevice_, instance_->getSurface(), buffering};
+    static VulkanSwapChain createSwapChain(const PresentationMode presentationMode = PresentationMode::TripleBuffered) {
+        return {*device_, *physicalDevice_, instance_->getSurface(), presentationMode};
     }
 };
 

@@ -8,8 +8,8 @@ using ::testing::Each;
 
 class VulkanSwapChainTest : public VulkanTestWithSurface {
 protected:
-    static VulkanSwapChain createSwapChain(const TripleBuffering buffering = TripleBuffering::Enabled) {
-        return {*device_, *physicalDevice_, instance_->getSurface(), buffering};
+    static VulkanSwapChain createSwapChain(const PresentationMode presentationMode = PresentationMode::TripleBuffered) {
+        return {*device_, *physicalDevice_, instance_->getSurface(), presentationMode};
     }
 };
 
@@ -64,7 +64,7 @@ TEST_F(VulkanSwapChainTest, SwapImagesTripleBuffering) {
 }
 
 TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent) {
-    const VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
+    const VulkanSwapChain swapChain(createSwapChain(PresentationMode::DoubleBuffered));
     EXPECT_THAT(swapChain, HandleIsValid());
 
     EXPECT_EQ(swapChain.getImageCount(), 2u);
@@ -72,7 +72,7 @@ TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent) {
 }
 
 TEST_F(VulkanSwapChainTest, Recreate) {
-    VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
+    VulkanSwapChain swapChain(createSwapChain(PresentationMode::DoubleBuffered));
     EXPECT_THAT(swapChain, HandleIsValid());
 
     for (uint32_t i = 0; i < 5; ++i) {
@@ -83,7 +83,7 @@ TEST_F(VulkanSwapChainTest, Recreate) {
 }
 
 TEST_F(VulkanSwapChainTest, WindowResized) {
-    VulkanSwapChain swapChain(createSwapChain(TripleBuffering::Disabled));
+    VulkanSwapChain swapChain(createSwapChain(PresentationMode::DoubleBuffered));
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getExtent().width, kDefaultWidth);
     EXPECT_EQ(swapChain.getExtent().height, kDefaultHeight);

@@ -6,16 +6,30 @@
 #include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
 
 namespace crisp {
+namespace {
+VkPresentModeKHR toPresentMode(const PresentationMode presentationMode) {
+    switch (presentationMode) {
+    case PresentationMode::DoubleBuffered:
+        return VK_PRESENT_MODE_FIFO_KHR;
+    case PresentationMode::TripleBuffered:
+        return VK_PRESENT_MODE_MAILBOX_KHR;
+    case PresentationMode::Immediate:
+        return VK_PRESENT_MODE_IMMEDIATE_KHR;
+    }
+
+    return VK_PRESENT_MODE_MAILBOX_KHR;
+}
+} // namespace
+
 VulkanSwapChain::VulkanSwapChain(
     const VulkanDevice& device,
     const VulkanPhysicalDevice& physicalDevice,
     const VkSurfaceKHR surface,
-    const TripleBuffering tripleBuffering)
+    const PresentationMode presentationMode)
     : VulkanResource(device.getResourceDeallocator())
     , m_imageFormat{}
     , m_extent{}
-    , m_presentationMode(
-          tripleBuffering == TripleBuffering::Enabled ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR) {
+    , m_presentationMode(toPresentMode(presentationMode)) {
     createSwapChain(device, physicalDevice, surface);
     createImageViews(device);
 }
