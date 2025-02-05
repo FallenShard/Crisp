@@ -47,23 +47,6 @@ public:
         m_deferredVmaDeallocations.emplace_back(framesToLive, allocation);
     }
 
-    // Object tags useful for debugging
-    void setTag(void* handle, std::string tag) {
-        m_handleTagMap.emplace(handle, std::move(tag));
-    }
-
-    const std::string& getTag(void* handle) const {
-        if (const auto iter = m_handleTagMap.find(handle); iter != m_handleTagMap.end()) {
-            return iter->second;
-        }
-
-        return m_handleTagMap.at(VK_NULL_HANDLE);
-    }
-
-    void removeTag(void* handle) {
-        m_handleTagMap.erase(handle);
-    }
-
     VkDevice getDeviceHandle() const {
         return m_deviceHandle;
     }
@@ -81,8 +64,6 @@ private:
     VmaAllocator m_allocator{VK_NULL_HANDLE};
 
     int32_t m_virtualFrameCount{1};
-
-    FlatHashMap<void*, std::string> m_handleTagMap;
 
     std::vector<DeferredDestructor> m_deferredDestructors;
     std::vector<std::pair<int32_t, VmaAllocation>> m_deferredVmaDeallocations;

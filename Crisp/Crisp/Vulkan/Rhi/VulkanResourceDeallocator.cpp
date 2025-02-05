@@ -6,9 +6,7 @@ namespace crisp {
 VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator, int32_t virtualFrameCount)
     : m_deviceHandle(device)
     , m_allocator(allocator)
-    , m_virtualFrameCount{virtualFrameCount} {
-    m_handleTagMap.emplace(VK_NULL_HANDLE, "Unknown");
-}
+    , m_virtualFrameCount{virtualFrameCount} {}
 
 VulkanResourceDeallocator::~VulkanResourceDeallocator() {
     freeAllResources();

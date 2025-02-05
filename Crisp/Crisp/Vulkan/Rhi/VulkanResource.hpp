@@ -27,9 +27,8 @@ public:
 
     template <typename DestroyFunc>
     static void destroyVulkanHandle(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
-        SPDLOG_DEBUG("Destroying object {} at address {}: {}.", deallocator->getTag(handle), handle, typeid(T).name());
+        SPDLOG_DEBUG("Destroying object at address {}: {}.", handle, typeid(T).name());
         func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
-        deallocator->removeTag(handle);
     }
 
     T getHandle() const {
@@ -44,10 +43,6 @@ public:
 
     void setDeferredDestruction(bool isEnabled) {
         m_framesToLive = isEnabled ? kRendererVirtualFrameCount : 0;
-    }
-
-    void setTag(std::string tag) const { // NOLINT
-        m_deallocator->setTag(m_handle, std::move(tag));
     }
 
 protected:
