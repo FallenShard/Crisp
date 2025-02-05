@@ -99,12 +99,8 @@ add_cpp_static_library(
     "RenderGraph.hpp"
     "RenderNode.cpp"
     "RenderNode.hpp"
-    "RenderPassBuilder.cpp"
-    "RenderPassBuilder.hpp"
     "ResourceContext.cpp"
     "ResourceContext.hpp"
-    "Texture.cpp"
-    "Texture.hpp"
     "RendererFrame.cpp"
     "RendererFrame.hpp"
     "VulkanBufferUtils.cpp"
@@ -165,8 +161,8 @@ add_cpp_test(CrispDescriptorUpdaterTest
 target_link_libraries(CrispDescriptorUpdaterTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
 
 add_cpp_static_library(CrispVulkanRenderPassBuilder
-    "VulkanRenderPassBuilder.hpp"
-    "VulkanRenderPassBuilder.cpp"
+    "RenderPassBuilder.cpp"
+    "RenderPassBuilder.hpp"
 )
 target_link_libraries(CrispVulkanRenderPassBuilder
     PUBLIC Crisp::Vulkan
