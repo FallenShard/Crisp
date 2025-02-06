@@ -15,6 +15,14 @@ struct VulkanSynchronizationScope {
 
     VkPipelineStageFlags2 dstStage;
     VkAccessFlags2 dstAccess;
+
+    constexpr VulkanSynchronizationStage src() const {
+        return {srcStage, srcAccess};
+    }
+
+    constexpr VulkanSynchronizationStage dst() const {
+        return {dstStage, dstAccess};
+    }
 };
 
 constexpr VulkanSynchronizationScope operator>>(VulkanSynchronizationStage src, VulkanSynchronizationStage dst) {
@@ -62,8 +70,23 @@ inline constexpr VulkanSynchronizationStage kVertexRead = {
     .access = VK_ACCESS_2_SHADER_READ_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kVertexInputRead = {
+    .stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT,
+    .access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kIndexInputRead = {
+    .stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+    .access = VK_ACCESS_2_INDEX_READ_BIT,
+};
+
 inline constexpr VulkanSynchronizationStage kVertexUniformRead = {
     .stage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT,
+    .access = VK_ACCESS_2_UNIFORM_READ_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kFragmentUniformRead = {
+    .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
     .access = VK_ACCESS_2_UNIFORM_READ_BIT,
 };
 
@@ -87,6 +110,11 @@ inline constexpr VulkanSynchronizationStage kComputeWrite = {
 inline constexpr VulkanSynchronizationStage kColorWrite = {
     .stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
     .access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kDepthWrite = {
+    .stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+    .access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 };
 
 inline constexpr VulkanSynchronizationStage kFragmentSampledRead = {
