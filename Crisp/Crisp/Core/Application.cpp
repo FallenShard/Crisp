@@ -180,6 +180,7 @@ void Application::resizeIfNeeded() {
 
 void Application::drawGui() {
     ImGui::Begin("Application Settings");
+    ImGui::LabelText("Frame", "%llu", m_renderer->getCurrentFrameIndex());           // NOLINT
     ImGui::LabelText("Frame Time", "%.2f ms, %.2f FPS", m_avgFrameTimeMs, m_avgFps); // NOLINT
 
     std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> budgets{};
