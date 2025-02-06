@@ -22,10 +22,11 @@ void createDrawCommand(
     }
 
     for (const auto& [key, materialMap] : renderNode.materials) {
+        if (key.renderPassName != renderPass) {
+            continue;
+        }
         for (const auto& [part, material] : materialMap) {
-            if (key.renderPassName == renderPass) {
-                drawCommands.push_back(material.createDrawCommand(renderNode));
-            }
+            drawCommands.push_back(material.createDrawCommand(renderNode));
         }
     }
 }
@@ -99,11 +100,8 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         }
     });
 
-    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
-        m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-        updateSceneViews();
-    });
-    m_renderer->flushResourceUpdates(true);
+    m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    updateSceneViews();
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
@@ -111,9 +109,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         kShadowMapSize,
         kDefaultCascadeCount);
 
-    // Object transforms
-    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 5000);
-    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->getHandle(), "transformBuffer");
+    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, kMaximumObjectCount);
 
     createCommonTextures();
 
@@ -129,26 +125,23 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     createPlane();
     createSceneObject(args["modelPath"]);
 
-    m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
-        *m_renderer, m_rg->getRenderPass(kForwardLightingPass), m_resourceContext->imageCache.getSampler("linearClamp"));
-
-    m_renderer->getDevice().flushDescriptorUpdates();
-
-    for (const auto& dir :
-         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
-        m_environmentMapNames.push_back(dir.path().stem().string());
-    }
+    m_skybox = std::make_unique<Skybox>(
+        m_renderer,
+        m_rg->getRenderPass(kForwardLightingPass),
+        m_lightSystem->getEnvironmentLight()->getCubeMapView(),
+        m_resourceContext->imageCache.getSampler("linearClamp"));
+    // for (const auto& dir :
+    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
+    //     m_environmentMapNames.push_back(dir.path().stem().string());
+    // }
 }
 
-void PbrScene::resize(int width, int height) {
+void PbrScene::resize(const int32_t width, const int32_t height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderer->getDevice().postResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
-        m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-        updateRenderPassMaterials();
-        updateSceneViews();
-    });
-    m_renderer->flushResourceUpdates(true);
+    m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    updateRenderPassMaterials();
+    updateSceneViews();
 }
 
 void PbrScene::update(const UpdateParams& updateParams) {
@@ -158,21 +151,20 @@ void PbrScene::update(const UpdateParams& updateParams) {
 }
 
 void PbrScene::render(const FrameContext& frameContext) {
-    frameContext.commandEncoder.insertBarrier(kVertexUniformRead >> kTransferWrite);
+    frameContext.commandEncoder.insertBarrier((kVertexUniformRead | kFragmentUniformRead) >> kTransferWrite);
 
     const auto& camParams = m_cameraController->getCameraParameters();
     m_lightSystem->update(m_cameraController->getCamera(), 0.0f, frameContext.virtualFrameIndex);
     m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
-
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, frameContext.virtualFrameIndex);
     m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
 
+    m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
     m_skybox->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
     m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
-    m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
 
-    frameContext.commandEncoder.insertBarrier(kTransferWrite >> kVertexUniformRead);
+    frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
 
     m_rg->execute(frameContext);
 }
@@ -201,6 +193,7 @@ void PbrScene::drawGui() {
         ImGui::SliderInt("Nodes to Draw", &m_nodesToDraw, 0, static_cast<int32_t>(m_renderNodes.size()));
     }
     ImGui::End();
+
     // ImGui::Begin("Settings");
     // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness,
     // 0.0f, 1.0f); ImGui::SliderFloat("Metallic",
@@ -242,52 +235,51 @@ void PbrScene::drawGui() {
 }
 
 void PbrScene::onMaterialSelected(const std::string& materialName) {
-    m_renderer->finish();
+    // m_renderer->finish();
 
-    const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialName};
-    PbrMaterial pbrMaterial{};
-    pbrMaterial.name = materialPath.stem().string();
+    // const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialName};
+    // PbrMaterial pbrMaterial{};
+    // pbrMaterial.name = materialPath.stem().string();
 
-    auto* shaderBallMaterial = m_resourceContext->getMaterial("pbrTexshaderBall");
+    // auto* shaderBallMaterial = m_resourceContext->getMaterial("pbrTexshaderBall");
 
-    auto& imageCache{m_resourceContext->imageCache};
-    const auto setMaterialTexture =
-        [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName) {
-            const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
-            const std::string fallbackKey = fmt::format("default-{}", texName);
-            shaderBallMaterial->writeDescriptor(
-                2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-        };
+    // auto& imageCache{m_resourceContext->imageCache};
+    // const auto setMaterialTexture =
+    //     [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName) {
+    //         const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
+    //         const std::string fallbackKey = fmt::format("default-{}", texName);
+    //         shaderBallMaterial->writeDescriptor(
+    //             2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
+    //     };
 
-    // if (pbrMaterial.name != "Grass") {
-    //     auto [material, images] = loadPbrMaterial(materialPath);
-    //     material.params.uvScale = glm::vec2(100.0f, 100.0f);
-    //     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
+    // // if (pbrMaterial.name != "Grass") {
+    // //     auto [material, images] = loadPbrMaterial(materialPath);
+    // //     material.params.uvScale = glm::vec2(100.0f, 100.0f);
+    // //     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
-    //     addPbrTexturesToImageCache(loadPbrTextureGroup(materialPath), pbrMaterial.name, imageCache);
-    // }
-    // if (m_shaderBallPbrMaterialKey != "Grass") {
-    //     removePbrTexturesFromImageCache(m_shaderBallPbrMaterialKey, imageCache);
-    // }
-    setMaterialTexture(0, "diffuse");
-    setMaterialTexture(1, "metallic");
-    setMaterialTexture(2, "roughness");
-    setMaterialTexture(3, "normal");
-    setMaterialTexture(4, "ao");
-    setMaterialTexture(5, "emissive");
-    m_renderer->getDevice().flushDescriptorUpdates();
+    // //     addPbrTexturesToImageCache(loadPbrTextureGroup(materialPath), pbrMaterial.name, imageCache);
+    // // }
+    // // if (m_shaderBallPbrMaterialKey != "Grass") {
+    // //     removePbrTexturesFromImageCache(m_shaderBallPbrMaterialKey, imageCache);
+    // // }
+    // setMaterialTexture(0, "diffuse");
+    // setMaterialTexture(1, "metallic");
+    // setMaterialTexture(2, "roughness");
+    // setMaterialTexture(3, "normal");
+    // setMaterialTexture(4, "ao");
+    // setMaterialTexture(5, "emissive");
+    // m_renderer->getDevice().flushDescriptorUpdates();
 
-    m_shaderBallPbrMaterialKey = pbrMaterial.name;
+    // m_shaderBallPbrMaterialKey = pbrMaterial.name;
 }
 
-RenderNode* PbrScene::createRenderNode(const std::string_view id, const bool hasTransform) {
+RenderNode& PbrScene::createRenderNode(const std::string_view id, const bool hasTransform) {
     if (!hasTransform) {
-        return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
+        return *m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second;
     }
 
     const auto transformHandle{m_transformBuffer->getNextIndex()};
-    return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle))
-        .first->second.get();
+    return *m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle)).first->second;
 }
 
 void PbrScene::createCommonTextures() {
@@ -326,26 +318,27 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
         addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
         for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
-            const std::string materialName = fmt::format("material_{}", idx);
+            // const std::string materialName = fmt::format("material_{}", idx);
             const std::string entityName = fmt::format("renderObject_{}", idx);
             m_shaderBallPbrMaterialKey = fmt::format("material_{}", idx);
 
             CRISP_LOGI("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
 
-            m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+            auto& geometry = m_resourceContext->addGeometry(
+                entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
 
-            auto* sceneObject = createRenderNode(entityName, true);
-            sceneObject->geometry = m_resourceContext->getGeometry(entityName);
-            sceneObject->transformPack->M = renderObject.transform;
-            sceneObject->pass(kForwardLightingPass).material =
+            auto& sceneObject = createRenderNode(entityName);
+            sceneObject.geometry = &geometry;
+            sceneObject.transformPack->M = renderObject.transform;
+            sceneObject.pass(kForwardLightingPass).material =
                 createPbrMaterial(entityName, renderObject.material, *m_resourceContext, *m_transformBuffer);
-            sceneObject->pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
-            sceneObject->pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
+            sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+            sceneObject.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
             m_renderer->getDevice().flushDescriptorUpdates();
 
             for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-                auto& subpass = sceneObject->pass(kCsmPasses[c]);
-                subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
+                auto& subpass = sceneObject.pass(kCsmPasses[c]);
+                subpass.setGeometry(&geometry, 0, 1);
                 subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
                 CRISP_CHECK(
                     subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
@@ -359,29 +352,29 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
         // translation * glm::rotate(glm::pi<float>() * 0.5f, glm ::vec3(1.0f, 0.0f, 0.0f));
     }
 
-    else {
-        const std::string entityName{"sceneObject"};
-        auto* sceneObject = createRenderNode(entityName, true);
-        TriangleMesh mesh{};
-        PbrMaterial material{};
+    // else {
+    //     const std::string entityName{"sceneObject"};
+    //     auto& sceneObject = createRenderNode(entityName, true);
+    //     TriangleMesh mesh{};
+    //     PbrMaterial material{};
 
-        auto [triMesh, materials] =
-            loadTriangleMeshAndMaterial(
-                m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(kPbrVertexFormat))
-                .unwrap();
-        mesh = std::move(triMesh);
+    //     auto [triMesh, materials] =
+    //         loadTriangleMeshAndMaterial(
+    //             m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(kPbrVertexFormat))
+    //             .unwrap();
+    //     mesh = std::move(triMesh);
 
-        // material.name = "vokselia";
-        // material.textureKeys = createDefaultPbrTextureGroup();
-        // material.textures.albedo =
-        //     loadImage(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.png", 4, FlipAxis::Y).unwrap();
+    //     // material.name = "vokselia";
+    //     // material.textureKeys = createDefaultPbrTextureGroup();
+    //     // material.textures.albedo =
+    //     //     loadImage(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.png", 4, FlipAxis::Y).unwrap();
 
-        const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-        const float maxDimLength = mesh.getBoundingBox().getMaximumExtent();
-        sceneObject->transformPack->M = translation * glm::scale(glm::vec3(10.0f / maxDimLength));
-    }
+    //     const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
+    //     const float maxDimLength = mesh.getBoundingBox().getMaximumExtent();
+    //     sceneObject->transformPack->M = translation * glm::scale(glm::vec3(10.0f / maxDimLength));
+    // }
 
-    m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
+    // m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
 
     // m_shaderBallPbrMaterialKey = material.name;
     // addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
@@ -414,19 +407,19 @@ void PbrScene::createPlane() {
     material.params.uvScale = glm::vec2(10.0f, 10.0f);
     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
-    auto* floor = createRenderNode(kNodeName, true);
-    floor->transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f));
-    floor->geometry = m_resourceContext->getGeometry(kNodeName);
-    floor->pass(kForwardLightingPass).material =
+    auto& floor = createRenderNode(kNodeName);
+    floor.transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f));
+    floor.geometry = &m_resourceContext->getGeometry(kNodeName);
+    floor.pass(kForwardLightingPass).material =
         createPbrMaterial(kNodeName, material, *m_resourceContext, *m_transformBuffer);
-    floor->pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
-    floor->pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
+    floor.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+    floor.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
 
-    CRISP_CHECK(
-        floor->pass(kForwardLightingPass)
-            .material->getPipeline()
-            ->getVertexLayout()
-            .isSubsetOf(floor->geometry->getVertexLayout()));
+    // CRISP_CHECK(
+    //     floor->pass(kForwardLightingPass)
+    //         .material->getPipeline()
+    //         ->getVertexLayout()
+    //         .isSubsetOf(floor->geometry->getVertexLayout()));
 }
 
 void PbrScene::setupInput() {

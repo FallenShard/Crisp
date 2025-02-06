@@ -47,32 +47,22 @@ struct RenderPassParameters {
     uint32_t subpassCount{0};
     VkExtent2D renderArea{0, 0};
 
-    // If true, indicates that this render pass should resize its views according to the swap chain extent.
-    // Otherwise, the render pass has a fixed size.
-    bool isSwapChainDependent{false};
-
-    // If true, indicates that the render pass should allocate its own image views.
-    // Otherwise, attachment views are supplied from the outer context.
-    bool allocateAttachmentViews{true};
+    std::vector<VkClearValue> clearValues;
 
     std::vector<VkAttachmentDescription> attachmentDescriptions;
-    std::vector<AttachmentMapping> attachmentMappings;
+    // std::vector<AttachmentMapping> attachmentMappings;
 
-    std::vector<RenderTargetInfo> renderTargetInfos;
-    std::vector<VulkanImage*> renderTargets;
+    // std::vector<RenderTargetInfo> renderTargetInfos;
+    // std::vector<VulkanImage*> renderTargets;
 };
 
 class VulkanRenderPass final : public VulkanResource<VkRenderPass> {
 public:
     VulkanRenderPass(const VulkanDevice& device, VkRenderPass handle, RenderPassParameters&& parameters);
-    VulkanRenderPass(
-        const VulkanDevice& device,
-        VkRenderPass handle,
-        RenderPassParameters&& parameters,
-        std::vector<VkClearValue>&& clearValues);
 
-    void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
+    // void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
 
+    void setRenderArea(const VkExtent2D& extent);
     VkExtent2D getRenderArea() const;
     VkViewport createViewport() const;
     VkRect2D createScissor() const;
@@ -82,8 +72,7 @@ public:
     void end(VkCommandBuffer cmdBuffer);
     void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
 
-    VulkanImage& getRenderTarget(uint32_t index) const;
-    VulkanImage& getRenderTargetFromAttachmentIndex(uint32_t attachmentIndex) const;
+    VulkanImage& getRenderTarget(uint32_t attachmentIndex) const;
     const VulkanImageView& getAttachmentView(uint32_t attachmentIndex) const;
 
     uint32_t getSubpassCount() const {
@@ -94,20 +83,18 @@ public:
         return m_framebuffer.get();
     }
 
-    // // Used by default swap chain to update its framebuffers.
-    // std::unique_ptr<VulkanFramebuffer>& getFramebuffer(uint32_t frameIdx) {
-    //     return m_framebuffers.at(frameIdx);
-    // }
+    const std::vector<VkClearValue>& getClearValues() const {
+        return m_params.clearValues;
+    }
 
-    void updateInitialLayouts(VkCommandBuffer cmdBuffer);
+    VkImageLayout getFinalLayout(const uint32_t attachmentIndex) const {
+        return m_params.attachmentDescriptions.at(attachmentIndex).finalLayout;
+    }
+
+    // void updateInitialLayouts(VkCommandBuffer cmdBuffer);
 
 protected:
-    void createAttachmentViews(const VulkanDevice& device);
-    void createResources(const VulkanDevice& device);
-    void freeResources();
-
     RenderPassParameters m_params;
-    std::vector<VkClearValue> m_attachmentClearValues;
 
     std::vector<std::unique_ptr<VulkanImageView>> m_attachmentViews;
     std::unique_ptr<VulkanFramebuffer> m_framebuffer;

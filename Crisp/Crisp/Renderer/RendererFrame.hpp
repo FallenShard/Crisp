@@ -19,7 +19,7 @@ public:
     RendererFrame& operator=(const RendererFrame&) = delete;
     RendererFrame& operator=(RendererFrame&&) noexcept;
 
-    void waitCompletion(VkDevice device);
+    void waitCompletion(const VulkanDevice& device);
     void addSubmission(const VulkanCommandBuffer& cmdBuffer);
     void submitToQueue(const VulkanQueue& queue);
 

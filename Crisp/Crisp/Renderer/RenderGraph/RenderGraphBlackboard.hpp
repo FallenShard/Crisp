@@ -39,7 +39,9 @@ public:
     template <typename T>
     T& get() {
         const auto typeIdx{std::type_index(typeid(T))}; // NOLINT
-        return std::any_cast<T&>(m_resourceGroups.at(typeIdx));
+        auto iter = m_resourceGroups.find(typeIdx);
+        CRISP_CHECK(iter != m_resourceGroups.end(), "Resource of type '{}' not found.", typeid(T).name());
+        return std::any_cast<T&>(iter->second);
     }
 
     size_t size() const {

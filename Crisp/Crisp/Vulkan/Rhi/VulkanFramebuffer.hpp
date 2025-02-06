@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
@@ -21,4 +22,13 @@ public:
 private:
     std::vector<VkImageView> m_attachments;
 };
+
+std::unique_ptr<VulkanFramebuffer> createFramebuffer(
+    const VulkanDevice& device,
+    VkRenderPass renderPass,
+    const std::vector<std::unique_ptr<VulkanImageView>>& attachments);
+
+std::unique_ptr<VulkanFramebuffer> createFramebuffer(
+    const VulkanDevice& device, VkRenderPass renderPass, const VulkanImageView& attachment);
+
 } // namespace crisp

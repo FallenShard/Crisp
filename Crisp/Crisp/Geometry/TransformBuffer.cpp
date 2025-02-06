@@ -6,7 +6,9 @@ namespace crisp {
 TransformBuffer::TransformBuffer(Renderer* renderer, const std::size_t maxTransformCount)
     : m_activeTransforms(0)
     , m_transforms(maxTransformCount)
-    , m_transformBuffer(createUniformRingBuffer(&renderer->getDevice(), m_transforms.size() * sizeof(TransformPack))) {}
+    , m_transformBuffer(createUniformRingBuffer(&renderer->getDevice(), m_transforms.size() * sizeof(TransformPack))) {
+    renderer->getDebugMarker().setObjectName(m_transformBuffer->getHandle(), "transformBuffer");
+}
 
 const VulkanRingBuffer* TransformBuffer::getUniformBuffer() const {
     return m_transformBuffer.get();
@@ -21,20 +23,11 @@ TransformPack& TransformBuffer::getPack(TransformHandle handle) {
 }
 
 void TransformBuffer::update(const glm::mat4& V, const glm::mat4& P) {
-    if (m_activeTransforms > 500) {
-        m_threadPool.parallelFor(m_activeTransforms, [this, &V, &P](const std::size_t i, const std::size_t /*jobIdx*/) {
-            auto& trans = m_transforms[i];
-            trans.MV = V * trans.M;
-            trans.MVP = P * trans.MV;
-            trans.N = glm::transpose(glm::inverse(glm::mat3(trans.MV)));
-        });
-    } else {
-        for (uint32_t i = 0; i < m_activeTransforms; ++i) {
-            auto& trans = m_transforms[i];
-            trans.MV = V * trans.M;
-            trans.MVP = P * trans.MV;
-            trans.N = glm::transpose(glm::inverse(glm::mat3(trans.MV)));
-        }
+    for (uint32_t i = 0; i < m_activeTransforms; ++i) {
+        auto& trans = m_transforms[i];
+        trans.MV = V * trans.M;
+        trans.MVP = P * trans.MV;
+        trans.N = glm::transpose(glm::inverse(glm::mat3(trans.MV)));
     }
 }
 

@@ -199,11 +199,11 @@ void VulkanDevice::flushDescriptorUpdates() {
     if (!m_descriptorWrites.empty()) {
         vkUpdateDescriptorSets(
             m_handle, static_cast<uint32_t>(m_descriptorWrites.size()), m_descriptorWrites.data(), 0, nullptr);
-    }
 
-    m_descriptorWrites.clear();
-    m_imageInfos.clear();
-    m_bufferInfos.clear();
+        m_descriptorWrites.clear();
+        m_imageInfos.clear();
+        m_bufferInfos.clear();
+    }
 }
 
 void VulkanDevice::waitIdle() const {

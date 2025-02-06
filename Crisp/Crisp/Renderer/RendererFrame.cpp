@@ -50,13 +50,13 @@ RendererFrame& RendererFrame::operator=(RendererFrame&& other) noexcept {
     return *this;
 }
 
-void RendererFrame::waitCompletion(VkDevice device) {
+void RendererFrame::waitCompletion(const VulkanDevice& device) {
     if (m_status == Status::Idle) {
         return;
     }
 
-    vkWaitForFences(device, 1, &m_completionFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-    vkResetFences(device, 1, &m_completionFence);
+    vkWaitForFences(device.getHandle(), 1, &m_completionFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    vkResetFences(device.getHandle(), 1, &m_completionFence);
     m_status = Status::Idle;
 }
 

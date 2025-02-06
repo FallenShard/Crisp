@@ -40,7 +40,7 @@ RenderGraph::Node& RenderGraph::addRenderPass(const std::string& name, std::uniq
     const auto& [iter, inserted] = m_nodes.emplace(name, std::make_unique<Node>(name, std::move(renderPass)));
     m_renderer->enqueueResourceUpdate([node = iter->second.get()](VkCommandBuffer cmdBuffer) {
         CRISP_LOGI("Initializing render target layouts for {}", node->name); // NOLINT
-        node->renderPass->updateInitialLayouts(cmdBuffer);
+        // node->renderPass->updateInitialLayouts(cmdBuffer);
     });
     return *iter->second;
 }
@@ -57,7 +57,7 @@ RenderGraph::Node& RenderGraph::addComputePass(const std::string& name) {
 void RenderGraph::resize(int /*width*/, int /*height*/) {
     for (auto& [key, node] : m_nodes) {
         if (node->type != NodeType::Compute) {
-            node->renderPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+            // node->renderPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
             m_renderer->updateInitialLayouts(*node->renderPass);
         }
     }
@@ -92,13 +92,13 @@ void RenderGraph::addDependency(
     sourceNode.dependencies[dstPass] =
         [srcAttachmentIndex, srcStageFlags, dstStageFlags](
             const VulkanRenderPass& srcPass, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            auto& renderTarget{srcPass.getRenderTargetFromAttachmentIndex(srcAttachmentIndex)};
-            renderTarget.transitionLayout(
-                cmdBuffer.getHandle(),
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                srcPass.getAttachmentView(srcAttachmentIndex).getSubresourceRange(),
-                srcStageFlags,
-                dstStageFlags);
+            // auto& renderTarget{srcPass.getRenderTargetFromAttachmentIndex(srcAttachmentIndex)};
+            // renderTarget.transitionLayout(
+            //     cmdBuffer.getHandle(),
+            //     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            //     srcPass.getAttachmentView(srcAttachmentIndex).getSubresourceRange(),
+            //     srcStageFlags,
+            //     dstStageFlags);
         };
 }
 

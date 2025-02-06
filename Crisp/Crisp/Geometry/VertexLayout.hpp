@@ -19,4 +19,7 @@ inline const VertexLayoutDescription kPosVertexFormat = {
 
 VulkanVertexLayout createVertexLayout(const VertexLayoutDescription& vertexLayoutDescription);
 
+inline const VulkanVertexLayout kPbrVertexLayout = createVertexLayout(kPbrVertexFormat);
+inline const VulkanVertexLayout kPosVertexLayout = createVertexLayout(kPosVertexFormat);
+
 } // namespace crisp

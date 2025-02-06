@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
@@ -68,6 +67,5 @@ private:
     uint32_t m_activeTransforms;
     std::vector<TransformPack> m_transforms;
     std::unique_ptr<VulkanRingBuffer> m_transformBuffer;
-    ThreadPool m_threadPool;
 };
 } // namespace crisp

@@ -20,4 +20,28 @@ VulkanFramebuffer::VulkanFramebuffer(
     createInfo.flags = flags;
     vkCreateFramebuffer(device.getHandle(), &createInfo, nullptr, &m_handle);
 }
+
+std::unique_ptr<VulkanFramebuffer> createFramebuffer(
+    const VulkanDevice& device,
+    VkRenderPass renderPass,
+    const std::vector<std::unique_ptr<VulkanImageView>>& attachments) {
+    CRISP_CHECK_NE(attachments.size(), 0);
+    const VkExtent2D extent = attachments.front()->getImage().getExtent2D();
+
+    std::vector<VkImageView> attachmentHandles(attachments.size());
+    for (const auto& attachment : attachments) {
+        CRISP_CHECK_EQ(attachment->getImage().getExtent2D().width, extent.width);
+        CRISP_CHECK_EQ(attachment->getImage().getExtent2D().height, extent.height);
+        attachmentHandles.push_back(attachment->getHandle());
+    }
+
+    return std::make_unique<VulkanFramebuffer>(device, renderPass, extent, attachmentHandles);
+}
+
+std::unique_ptr<VulkanFramebuffer> createFramebuffer(
+    const VulkanDevice& device, VkRenderPass renderPass, const VulkanImageView& attachment) {
+    return std::make_unique<VulkanFramebuffer>(
+        device, renderPass, attachment.getImage().getExtent2D(), std::vector<VkImageView>{attachment.getHandle()});
+}
+
 } // namespace crisp

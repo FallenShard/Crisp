@@ -58,13 +58,16 @@ public:
     }
 
     VulkanPipeline* createPipeline(
-        std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex);
-    Material* createMaterial(std::string materialId, std::string pipelineId);
+        const std::string& id,
+        std::string_view luaFilename,
+        const VulkanRenderPass& renderPass,
+        uint32_t subpassIndex = 0);
+    Material* createMaterial(std::string materialId, const std::string& pipelineId);
     Material* createMaterial(std::string materialId, VulkanPipeline* pipeline);
-    Material* getMaterial(std::string id) const;
+    Material* getMaterial(std::string_view id) const;
 
     Geometry& addGeometry(std::string_view id, Geometry&& geometry);
-    Geometry* getGeometry(std::string_view id) const;
+    Geometry& getGeometry(std::string_view id) const;
 
     RenderNode* createPostProcessingEffectNode(
         std::string renderNodeId,

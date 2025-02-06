@@ -28,9 +28,14 @@ struct SurfaceSupport {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+struct DeviceRequirements {
+    bool rayTracing{false};
+    bool pageableMemory{false};
+};
+
 class VulkanPhysicalDevice {
 public:
-    explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
+    explicit VulkanPhysicalDevice(VkPhysicalDevice handle, const DeviceRequirements& requirements = {});
     ~VulkanPhysicalDevice() = default;
 
     VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
@@ -91,8 +96,6 @@ public:
     const std::vector<std::string>& getDeviceExtensions() const;
 
 private:
-    void initFeaturesAndProperties();
-
     bool supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const;
 
     VkPhysicalDevice m_handle{VK_NULL_HANDLE}; // Implicitly cleaned up with VkInstance
@@ -124,6 +127,7 @@ private:
 };
 
 std::vector<std::string> createDefaultDeviceExtensions();
+void addPageableMemoryDeviceExtensions(std::vector<std::string>& deviceExtensions);
 void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions);
 
 Result<VulkanPhysicalDevice> selectPhysicalDevice(

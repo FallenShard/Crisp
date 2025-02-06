@@ -23,7 +23,9 @@ public:
     void onMaterialSelected(const std::string& material);
 
 private:
-    RenderNode* createRenderNode(std::string_view nodeId, bool hasTransform);
+    static constexpr uint32_t kMaximumObjectCount = 1000;
+
+    RenderNode& createRenderNode(std::string_view nodeId, bool hasTransform = true);
 
     void createCommonTextures();
     void setEnvironmentMap(const std::string& envMapName);
@@ -36,7 +38,7 @@ private:
     void updateRenderPassMaterials();
     void updateSceneViews();
 
-    int32_t m_nodesToDraw = 2500;
+    int32_t m_nodesToDraw = 0;
     std::unique_ptr<rg::RenderGraph> m_rg;
 
     std::unique_ptr<TargetCameraController> m_cameraController;

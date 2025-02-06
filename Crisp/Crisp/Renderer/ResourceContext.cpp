@@ -4,16 +4,19 @@
 
 namespace crisp {
 ResourceContext::ResourceContext(Renderer* renderer)
-    : m_renderer(renderer)
-    , imageCache(renderer)
-    , pipelineCache(renderer->getAssetPaths()) {}
+    : imageCache(renderer)
+    , pipelineCache(renderer->getAssetPaths())
+    , m_renderer(renderer) {}
 
 VulkanPipeline* ResourceContext::createPipeline(
-    std::string id, std::string_view luaFilename, const VulkanRenderPass& renderPass, int subpassIndex) {
-    return pipelineCache.loadPipeline(m_renderer, id, luaFilename, renderPass, subpassIndex);
+    const std::string& id,
+    const std::string_view luaFilename,
+    const VulkanRenderPass& renderPass,
+    const uint32_t subpassIndex) {
+    return pipelineCache.loadPipeline(m_renderer, id, luaFilename, renderPass, static_cast<int32_t>(subpassIndex));
 }
 
-Material* ResourceContext::createMaterial(std::string materialId, std::string pipelineId) {
+Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {
     m_materials[materialId] = std::make_unique<Material>(pipelineCache.getPipeline(pipelineId));
     return m_materials.at(materialId).get();
 }
@@ -24,7 +27,7 @@ Material* ResourceContext::createMaterial(std::string materialId, VulkanPipeline
     return m_materials.at(materialId).get();
 }
 
-Material* ResourceContext::getMaterial(std::string id) const {
+Material* ResourceContext::getMaterial(const std::string_view id) const {
     return m_materials.at(id).get();
 }
 
@@ -32,8 +35,8 @@ Geometry& ResourceContext::addGeometry(const std::string_view id, Geometry&& geo
     return *m_geometries.emplace(id, std::make_unique<Geometry>(std::move(geometry))).first->second;
 }
 
-Geometry* ResourceContext::getGeometry(const std::string_view id) const {
-    return m_geometries.at(id).get();
+Geometry& ResourceContext::getGeometry(const std::string_view id) const {
+    return *m_geometries.at(id);
 }
 
 RenderNode* ResourceContext::createPostProcessingEffectNode(

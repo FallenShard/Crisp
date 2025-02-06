@@ -12,7 +12,7 @@ struct VertexAttributeDescriptor {
     uint32_t size;        // Size in bytes
 
     VertexAttributeDescriptor();
-    VertexAttributeDescriptor(VertexAttribute attribType);
+    /*implicit*/ VertexAttributeDescriptor(VertexAttribute attribType); // NOLINT
     VertexAttributeDescriptor(const std::string& name, uint32_t size);
 };
 

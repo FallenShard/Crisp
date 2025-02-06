@@ -22,11 +22,11 @@ std::unique_ptr<VulkanRenderPass> createTexturePass(
 
     return RenderPassBuilder()
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
+        // .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-        .setNumSubpasses(1)
+        .setSubpassCount(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         .addDependency(
             VK_SUBPASS_EXTERNAL,
@@ -35,7 +35,24 @@ std::unique_ptr<VulkanRenderPass> createTexturePass(
             VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-        .create(device, renderArea, renderTargets);
+        .create(device, renderArea, {});
+}
+
+std::unique_ptr<VulkanRenderPass> createTexturePass(
+    const VulkanDevice& device, const VkExtent2D renderArea, const VkFormat textureFormat) {
+
+    RenderPassCreationParams creationParams{};
+    creationParams.clearValues.push_back({.color = {{0, 0, 0, 1}}});
+
+    return RenderPassBuilder()
+        .setAttachmentCount(1)
+        .setAttachmentFormat(0, textureFormat)
+        .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
+        .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+        .setSubpassCount(1)
+        .addColorAttachmentRef(0, 0)
+        .addDependency(VK_SUBPASS_EXTERNAL, 0, kExternalColorSubpass >> kColorWrite)
+        .create(device, renderArea, creationParams);
 }
 
 } // namespace crisp

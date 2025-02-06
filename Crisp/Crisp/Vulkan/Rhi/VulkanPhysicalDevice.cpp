@@ -17,10 +17,30 @@ void append(T& chainHead, U& newElement) {
 
 } // namespace
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle) // NOLINT
+VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const DeviceRequirements& requirements)
     : m_handle(handle)
     , m_properties(std::make_unique<Properties>()) {
-    initFeaturesAndProperties();
+    append(m_properties->features, m_properties->features11);
+    append(m_properties->features, m_properties->features12);
+    append(m_properties->features, m_properties->features13);
+    if (requirements.rayTracing) {
+        append(m_properties->features, m_properties->rayTracingFeatures);
+        append(m_properties->features, m_properties->accelerationStructureFeatures);
+    }
+    if (requirements.pageableMemory) {
+        append(m_properties->features, m_properties->pageableDeviceLocalMemoryFeatures);
+    }
+    vkGetPhysicalDeviceFeatures2(m_handle, &m_properties->features);
+
+    append(m_properties->properties, m_properties->properties11);
+    append(m_properties->properties, m_properties->properties12);
+    append(m_properties->properties, m_properties->properties13);
+    if (requirements.rayTracing) {
+        append(m_properties->properties, m_properties->rayTracingProperties);
+    }
+    vkGetPhysicalDeviceProperties2(m_handle, &m_properties->properties);
+
+    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_properties->memoryProperties);
 }
 
 bool VulkanPhysicalDevice::isSuitable(
@@ -246,30 +266,15 @@ const std::vector<std::string>& VulkanPhysicalDevice::getDeviceExtensions() cons
     return m_deviceExtensions;
 }
 
-void VulkanPhysicalDevice::initFeaturesAndProperties() {
-    append(m_properties->features, m_properties->features11);
-    append(m_properties->features, m_properties->features12);
-    append(m_properties->features, m_properties->features13);
-    append(m_properties->features, m_properties->rayTracingFeatures);
-    append(m_properties->features, m_properties->accelerationStructureFeatures);
-    append(m_properties->features, m_properties->pageableDeviceLocalMemoryFeatures);
-    vkGetPhysicalDeviceFeatures2(m_handle, &m_properties->features);
-
-    append(m_properties->properties, m_properties->properties11);
-    append(m_properties->properties, m_properties->properties12);
-    append(m_properties->properties, m_properties->properties13);
-    append(m_properties->properties, m_properties->rayTracingProperties);
-    vkGetPhysicalDeviceProperties2(m_handle, &m_properties->properties);
-
-    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_properties->memoryProperties);
-}
-
 std::vector<std::string> createDefaultDeviceExtensions() {
     return {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME,
-        VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME,
     };
+}
+
+void addPageableMemoryDeviceExtensions(std::vector<std::string>& deviceExtensions) {
+    deviceExtensions.emplace_back(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME);
 }
 
 void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions) {

@@ -32,13 +32,14 @@ void addForwardLightingPass(rg::RenderGraph& renderGraph, const Func& func) {
                     .sizePolicy = SizePolicy::SwapChainRelative,
                     .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 },
-                fmt::format("{}-color", kForwardLightingPass));
+                fmt::format("{}-color", kForwardLightingPass),
+                VkClearValue{.color{{0.0f, 0.0f, 0.0f, 1.0f}}});
             builder.exportTexture(data.hdrImage);
 
             builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
-                    .format = VK_FORMAT_D32_SFLOAT,
+                    .format = VK_FORMAT_D24_UNORM_S8_UINT,
                 },
                 fmt::format("{}-depth", kForwardLightingPass),
                 VkClearValue{.depthStencil{0.0f, 0}});

@@ -26,22 +26,10 @@ TEST_F(VulkanImageTest, ChangingLayouts) {
     {
         const ScopeCommandExecutor executor(*device_);
         const auto& cmdBuffer = executor.cmdBuffer.getHandle();
-        image.transitionLayoutDirect(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            0,
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_2_SHADER_READ_BIT);
+        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kNullStage >> kFragmentRead);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-        image.transitionLayoutDirect(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_GENERAL,
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_2_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-            VK_ACCESS_2_SHADER_WRITE_BIT);
+        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kComputeWrite);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_GENERAL);
     }
 }
@@ -99,33 +87,15 @@ TEST_F(VulkanImageTest, FillImageRoundtrip) {
         const ScopeCommandExecutor executor(*device_);
         const auto& cmdBuffer = executor.cmdBuffer.getHandle();
 
-        image.transitionLayoutDirect(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            0,
-            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-            VK_ACCESS_2_TRANSFER_WRITE_BIT);
+        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         image.copyFrom(cmdBuffer, stagingBuffer, 0, 1);
 
-        image.transitionLayoutDirect(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_GENERAL,
-            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-            VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-            VK_ACCESS_2_SHADER_READ_BIT);
+        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeRead);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_GENERAL);
 
-        image.transitionLayoutDirect(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-            VK_ACCESS_2_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-            VK_ACCESS_2_TRANSFER_READ_BIT);
+        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kComputeRead >> kTransferRead);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         image.copyTo(cmdBuffer, downloadBuffer, 0, 1);

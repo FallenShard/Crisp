@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Crisp/Image/Image.hpp>
-#include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
@@ -40,9 +39,8 @@ public:
         return *m_specularEnvironmentMapView;
     }
 
-    std::unique_ptr<Skybox> createSkybox(
-        Renderer& renderer, const VulkanRenderPass& renderPass, const VulkanSampler& sampler) const {
-        return std::make_unique<Skybox>(&renderer, renderPass, *m_cubeMapView, sampler);
+    const VulkanImageView& getCubeMapView() const {
+        return *m_cubeMapView;
     }
 
 private:

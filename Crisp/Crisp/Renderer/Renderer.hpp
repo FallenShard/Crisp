@@ -144,8 +144,6 @@ private:
 
     std::vector<std::unique_ptr<VulkanWorker>> m_workers;
 
-    RenderTarget m_swapChainRenderTarget;
-
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
 };

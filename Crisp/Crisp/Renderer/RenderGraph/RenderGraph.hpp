@@ -69,7 +69,7 @@ public:
 
     VkExtent2D getRenderArea(const RenderGraphPass& pass, VkExtent2D swapChainExtent);
 
-    void compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent, VkCommandBuffer cmdBuffer);
+    void compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
 
     void execute(const FrameContext& frameContext);
 
@@ -77,7 +77,7 @@ public:
 
     const VulkanRenderPass& getRenderPass(const std::string& name) const;
 
-    void resize(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
+    void resize(const VulkanDevice& device, VkExtent2D swapChainExtent);
 
     const std::vector<RenderGraphResource>& getResources() const {
         return m_resources;
@@ -90,6 +90,8 @@ public:
     const RenderGraphPass& getPass(const RenderGraphPassHandle handle) const {
         return m_passes.at(handle.id);
     }
+
+    const VulkanImageView& getImageView(const std::string& name, uint32_t attachmentIndex) const;
 
 private:
     struct ResourceTimeline {
@@ -124,7 +126,7 @@ private:
 
     VkImageUsageFlags determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const;
     VkImageCreateFlags determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const;
-    std::tuple<VkImageLayout, VkAccessFlagBits2, VkPipelineStageFlagBits2> determineInitialLayout(
+    std::pair<VkImageLayout, VulkanSynchronizationStage> determineInitialLayout(
         const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags);
 
     void determineAliasedResurces();
@@ -147,6 +149,7 @@ private:
     std::vector<RenderGraphPhysicalBuffer> m_physicalBuffers;
     std::vector<RenderGraphImportedBuffer> m_importedBuffers;
     std::vector<std::unique_ptr<VulkanRenderPass>> m_physicalPasses;
+    std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
 
     FlatHashMap<uint32_t, std::unique_ptr<VulkanImageView>> m_imageViews;
 

@@ -50,27 +50,41 @@ void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& 
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
     Renderer* renderer, const VulkanImageView& equirectMapView) {
+    auto& device = renderer->getDevice();
     const auto cubeMapSize = equirectMapView.getImage().getHeight() / 2;
 
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
-    const auto additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
+    const uint32_t additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
 
-    auto cubeMapRenderTarget =
-        RenderTargetBuilder()
-            .setFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-            .setLayerAndMipLevelCount(kCubeMapFaceCount, mipmapCount)
-            .setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-            .configureColorRenderTarget(
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                additionalFlags)
-            .setSize({cubeMapSize, cubeMapSize}, false)
-            .create(renderer->getDevice());
+    auto cubeMap = std::make_unique<VulkanImage>(
+        device,
+        VulkanImageDescription{
+            .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+            .extent = {cubeMapSize, cubeMapSize, 1},
+            .mipLevelCount = mipmapCount,
+            .layerCount = kCubeMapFaceCount,
+            .usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | additionalFlags,
+            .createFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
 
-    auto cubeMapPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
-    renderer->updateInitialLayouts(*cubeMapPass);
-    std::vector<std::unique_ptr<VulkanPipeline>> cubeMapPipelines(kCubeMapFaceCount);
+        });
+    device.getDebugMarker().setObjectName(*cubeMap, "CubeMap");
+
+    auto cubeMapPass = createTexturePass(device, {cubeMapSize, cubeMapSize}, cubeMap->getFormat());
+
+    std::vector<std::unique_ptr<VulkanPipeline>> cubeMapPipelines(1);
+    std::vector<std::unique_ptr<VulkanFramebuffer>> cubeMapFramebuffers(kCubeMapFaceCount);
+    std::vector<std::unique_ptr<VulkanImageView>> cubeMapImageViews(kCubeMapFaceCount);
     for (uint32_t i = 0; i < kCubeMapFaceCount; ++i) {
-        cubeMapPipelines[i] = renderer->createPipeline("EquirectToCube.json", *cubeMapPass, i);
+        if (i == 0) {
+            cubeMapPipelines[i] = renderer->createPipeline("EquirectToCube.json", *cubeMapPass, i);
+        }
+        cubeMapImageViews[i] = createView(device, *cubeMap, VK_IMAGE_VIEW_TYPE_2D, i, 1, 0, 1);
+        cubeMapFramebuffers[i] = std::make_unique<VulkanFramebuffer>(
+            device,
+            cubeMapPass->getHandle(),
+            VkExtent2D{cubeMapSize, cubeMapSize},
+            std::vector<VkImageView>{cubeMapImageViews[i]->getHandle()});
     }
 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
@@ -81,57 +95,17 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     cubeMapMaterial->writeDescriptor(0, 0, equirectMapView.getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();
 
-    renderer->enqueueResourceUpdate(
-        [&unitCube, &cubeMapPipelines, &cubeMapPass, &cubeMapMaterial](VkCommandBuffer cmdBuffer) {
-            // VkMemoryBarrier barrier{};
-            // barrier.sType = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
-            // barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            // barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-            // VkMemoryBarrier barrier2{};
-            // barrier.sType = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
-            // barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            // barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-            // std::array<VkMemoryBarrier, 2> barriers = {
-            //     {barrier, barrier2}
-            // };
-            // vkCmdPipelineBarrier(
-            //     cmdBuffer,
-            //     VK_PIPELINE_STAGE_TRANSFER_BIT,
-            //     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            //     0,
-            //     static_cast<uint32_t>(barriers.size()),
-            //     barriers.data(),
-            //     0,
-            //     nullptr,
-            //     0,
-            //     nullptr);
+    device.getGeneralQueue().submitAndWait(
+        [&unitCube, &cubeMapPipelines, &cubeMapPass, &cubeMapMaterial, &cubeMapFramebuffers, &cubeMap](
+            const VkCommandBuffer cmdBuffer) {
+            VulkanCommandEncoder commandEncoder(cmdBuffer);
 
-            std::array<VkBufferMemoryBarrier, 2> barriers{};
-            VkBufferMemoryBarrier& barrier = barriers[0];
-            barrier.buffer = unitCube.getIndexBuffer()->getHandle();
-            barrier.sType = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-            barrier.offset = 0;
-            barrier.size = unitCube.getIndexBuffer()->getSize();
-            VkBufferMemoryBarrier& barrier2 = barriers[1];
-            barrier2.buffer = unitCube.getVertexBuffer()->getHandle();
-            barrier2.sType = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            barrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier2.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-            barrier2.offset = 0;
-            barrier2.size = unitCube.getVertexBuffer()->getSize();
-            vkCmdPipelineBarrier(
-                cmdBuffer,
-                VK_PIPELINE_STAGE_TRANSFER_BIT,
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                0,
-                0,
-                nullptr,
-                static_cast<uint32_t>(barriers.size()),
-                barriers.data(),
-                0,
-                nullptr);
+            commandEncoder.insertBarrier(kTransferWrite >> (kIndexInputRead | kVertexInputRead));
+            commandEncoder.transitionLayout(
+                *cubeMap,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                kNullStage >> kFragmentRead,
+                cubeMap->getFirstMipRange());
 
             const glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
             const std::array<glm::mat4, kCubeMapFaceCount> captureViews = {
@@ -142,51 +116,38 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
                 glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))};
 
-            cubeMapPass->begin(cmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
             for (uint32_t i = 0; i < kCubeMapFaceCount; i++) {
+                commandEncoder.beginRenderPass(*cubeMapPass, *cubeMapFramebuffers[i]);
+
                 glm::mat4 MVP = captureProjection * captureViews[i];
                 std::vector<char> pushConst(sizeof(glm::mat4));
                 memcpy(pushConst.data(), glm::value_ptr(MVP), sizeof(glm::mat4));
 
-                cubeMapPipelines[i]->bind(cmdBuffer);
-                cubeMapPipelines[i]->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
+                commandEncoder.bindPipeline(*cubeMapPipelines[0]);
+                cubeMapPipelines[0]->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
 
                 cubeMapMaterial->bind(cmdBuffer);
                 unitCube.bindAndDraw(cmdBuffer);
-
-                if (i < 5) {
-                    cubeMapPass->nextSubpass(cmdBuffer);
-                }
+                commandEncoder.endRenderPass(*cubeMapPass);
+                cubeMap->setImageLayout(
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    {
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = i,
+                        .layerCount = 1,
+                    });
             }
-
-            cubeMapPass->end(cmdBuffer);
-
-            cubeMapPass->getRenderTarget(0).transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                0,
-                6,
-                0,
-                1,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_PIPELINE_STAGE_TRANSFER_BIT);
+            cubeMap->transitionLayout(
+                cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, kCubeMapFaceCount, 0, 1, kColorWrite >> kTransferRead);
+            cubeMap->buildMipmaps(cmdBuffer);
+            cubeMap->transitionLayout(
+                cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentSampledRead);
         });
-    renderer->flushResourceUpdates(true);
 
-    std::unique_ptr<VulkanImage> cubeMap = std::move(cubeMapRenderTarget->image);
-    renderer->enqueueResourceUpdate([&cubeMap](VkCommandBuffer cmdBuffer) {
-        cubeMap->buildMipmaps(cmdBuffer);
-        cubeMap->transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    });
-    renderer->flushResourceUpdates(true);
-
-    auto cubeMapView = createView(
-        renderer->getDevice(), *cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, cubeMap->getMipLevels());
+    auto cubeMapView =
+        createView(device, *cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, cubeMap->getMipLevels());
     return std::make_pair(std::move(cubeMap), std::move(cubeMapView));
 }
 
@@ -202,7 +163,8 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
             .setSize({cubeMapSize, cubeMapSize}, false)
             .create(renderer->getDevice());
 
-    auto convPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
+    // auto convPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
+    auto convPass = createCubeMapPass(renderer->getDevice(), {cubeMapSize, cubeMapSize});
     renderer->updateInitialLayouts(*convPass);
     std::vector<std::unique_ptr<VulkanPipeline>> convPipelines(kCubeMapFaceCount);
     for (uint32_t i = 0; i < kCubeMapFaceCount; i++) {
@@ -238,10 +200,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 
         convPass->end(cmdBuffer);
         convPass->getRenderTarget(0).transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kColorWrite >> kFragmentSampledRead);
     });
     renderer->flushResourceUpdates(true);
 
@@ -275,8 +234,9 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
 
         const auto w = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
         const auto h = static_cast<unsigned int>(cubeMapSize * std::pow(0.5, i));
-        std::shared_ptr<VulkanRenderPass> prefilterPass =
-            createCubeMapPass(renderer->getDevice(), environmentSpecularMap.get(), VkExtent2D{w, h}, i);
+        std::shared_ptr<VulkanRenderPass> prefilterPass = createCubeMapPass(renderer->getDevice(), VkExtent2D{w, h});
+        // std::shared_ptr<VulkanRenderPass> prefilterPass =
+        //     createCubeMapPass(renderer->getDevice(), environmentSpecularMap.get(), VkExtent2D{w, h}, i);
         renderer->updateInitialLayouts(*prefilterPass);
 
         std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(kCubeMapFaceCount);
@@ -315,8 +275,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
                         cmdBuffer,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         prefilterPass->getAttachmentView(k).getSubresourceRange(),
-                        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                        kColorWrite >> kFragmentSampledRead);
                 }
             });
         renderer->flushResourceUpdates(true);
@@ -334,28 +293,43 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
 }
 
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer) {
-    RenderTargetCache cache{};
-    std::shared_ptr<VulkanRenderPass> texPass =
-        createTexturePass(renderer->getDevice(), cache, VkExtent2D{512, 512}, VK_FORMAT_R16G16_SFLOAT);
+    auto& device = renderer->getDevice();
+
+    auto brdfLut = std::make_unique<VulkanImage>(
+        device,
+        VulkanImageDescription{
+            .format = VK_FORMAT_R16G16_SFLOAT,
+            .extent = {512, 512, 1},
+            .usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        });
+    auto view = createView(device, *brdfLut, VK_IMAGE_VIEW_TYPE_2D);
+    auto texPass = createTexturePass(renderer->getDevice(), VkExtent2D{512, 512}, VK_FORMAT_R16G16_SFLOAT);
+
+    auto framebuffer = std::make_unique<VulkanFramebuffer>(
+        device, texPass->getHandle(), view->getImage().getExtent2D(), std::vector<VkImageView>{view->getHandle()});
+
+    std::vector<std::unique_ptr<VulkanFramebuffer>> cubeMapFramebuffers(kCubeMapFaceCount);
+
     renderer->updateInitialLayouts(*texPass);
-    std::shared_ptr<VulkanPipeline> pipeline = renderer->createPipeline("BrdfLut.json", *texPass, 0);
+    auto pipeline = renderer->createPipeline("BrdfLut.json", *texPass, 0);
 
-    renderer->enqueueResourceUpdate([renderer, pipeline, texPass](VkCommandBuffer cmdBuffer) {
-        texPass->begin(cmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
+    renderer->getDevice().getGeneralQueue().submitAndWait(
+        [renderer, &pipeline, &texPass, &framebuffer, &brdfLut](VkCommandBuffer cmdBuffer) {
+            VulkanCommandEncoder commandEncoder(cmdBuffer);
+            commandEncoder.transitionLayout(
+                *brdfLut, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kNullStage >> kFragmentRead);
+            commandEncoder.beginRenderPass(*texPass, *framebuffer);
 
-        pipeline->bind(cmdBuffer);
-        renderer->drawFullScreenQuad(cmdBuffer);
+            commandEncoder.bindPipeline(*pipeline);
+            renderer->drawFullScreenQuad(cmdBuffer);
 
-        texPass->end(cmdBuffer);
-        texPass->getRenderTarget(0).transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    });
-    renderer->flushResourceUpdates(true);
+            commandEncoder.endRenderPass(*texPass);
+            brdfLut->setImageLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, brdfLut->getFullRange());
+            commandEncoder.transitionLayout(
+                *brdfLut, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kColorWrite >> kFragmentSampledRead);
+        });
 
-    return std::move(cache.extract("TexturePass")->image);
+    return brdfLut;
 }
 
 } // namespace crisp

@@ -21,7 +21,6 @@ VulkanPipeline* PipelineCache::loadPipeline(
 
     auto& pipeline =
         m_pipelines.emplace(id, renderer->createPipeline(luaFilename, renderPass, subpassIndex)).first->second;
-    pipeline->setTag(id);
 
     auto layout = pipeline->getPipelineLayout();
     m_descriptorAllocators[layout] = layout->createVulkanDescriptorSetAllocator(renderer->getDevice());

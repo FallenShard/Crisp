@@ -3,7 +3,7 @@
 #include <ranges>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
+#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp::rg {
@@ -237,11 +237,14 @@ VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExten
     return renderArea;
 }
 
-void RenderGraph::compile(
-    const VulkanDevice& device, const VkExtent2D& swapChainExtent, const VkCommandBuffer cmdBuffer) {
+void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent) {
+    CRISP_LOGI("Compiling RenderGraph...");
     determineAliasedResurces();
-    createPhysicalResources(device, swapChainExtent, cmdBuffer);
+    device.getGeneralQueue().submitAndWait([this, &device, &swapChainExtent](const VkCommandBuffer cmdBuffer) {
+        createPhysicalResources(device, swapChainExtent, cmdBuffer);
+    });
     createPhysicalPasses(device, swapChainExtent);
+    CRISP_LOGI("RenderGraph compiled!");
 }
 
 void RenderGraph::execute(const FrameContext& frameContext) {
@@ -268,14 +271,35 @@ void RenderGraph::execute(const FrameContext& frameContext) {
     const auto& encoder{frameContext.commandEncoder};
 
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
-        // CRISP_LOGI("Executing {}, pass: {}", virtualFrameIndex, pass.name);
+        // CRISP_LOGI("Executing pass: {}", pass.name);
         if (pass.type == PassType::Rasterizer) {
             synchronizeInputResources(pass, frameContext);
 
             auto& renderPass = *m_physicalPasses.at(m_physicalPassIndices.at(idx));
-            encoder.beginRenderPass(renderPass);
+            auto& framebuffer = *m_framebuffers.at(m_physicalPassIndices.at(idx));
+            encoder.beginRenderPass(renderPass, framebuffer);
             pass.executeFunc(frameContext);
             encoder.endRenderPass(renderPass);
+
+            std::vector<const VulkanImageView*> attachmentViews{};
+            for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
+                const auto& colorImageResource{getResource(resourceId)};
+                attachmentViews.push_back(m_imageViews.at(colorImageResource.physicalResourceIndex).get());
+            }
+            if (pass.depthStencilAttachment) {
+                const auto& depthResource{getResource(*pass.depthStencilAttachment)};
+                attachmentViews.push_back(m_imageViews.at(depthResource.physicalResourceIndex).get());
+            }
+            for (const auto& [i, attachmentView] : std::views::enumerate(attachmentViews)) {
+                attachmentView->getImage().setImageLayout(
+                    renderPass.getFinalLayout(i), attachmentView->getSubresourceRange());
+            }
+
+            // for (const auto& [i, attachmentView] : std::views::enumerate(m_attachmentViews)) {
+            //     // We unconditionally set the layout here because the render pass did an automatic layout transition.
+            //     attachmentView->getImage().setImageLayout(
+            //         m_params.attachmentDescriptions.at(i).finalLayout, attachmentView->getSubresourceRange());
+            // }
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
             // for (const auto resHandle : pass.outputs) {
             //     const auto& res = getResource(resHandle);
@@ -337,12 +361,29 @@ const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) cons
     return *m_physicalPasses.at(m_physicalPassIndices.at(m_passMap.at(name).id));
 }
 
-void RenderGraph::resize(
-    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) // NOLINT
+const VulkanImageView& RenderGraph::getImageView(const std::string& name, const uint32_t attachmentIndex) const {
+    const auto passHandle = m_passMap.at(name);
+    const auto& pass = getPass(passHandle);
+    uint32_t currIndex = 0;
+    for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
+        if (currIndex == attachmentIndex) {
+            return *m_imageViews.at(getResource(resourceId).physicalResourceIndex);
+        }
+        ++currIndex;
+    }
+    if (pass.depthStencilAttachment) {
+        if (currIndex == attachmentIndex) {
+            return *m_imageViews.at(getResource(*pass.depthStencilAttachment).physicalResourceIndex);
+        }
+        ++currIndex;
+    }
+
+    CRISP_FATAL("Attachment index {} out of range for pass {}.", attachmentIndex, name);
+}
+
+void RenderGraph::resize(const VulkanDevice& device, const VkExtent2D swapChainExtent) // NOLINT
 {
-    determineAliasedResurces();
-    createPhysicalResources(device, swapChainExtent, cmdBuffer);
-    createPhysicalPasses(device, swapChainExtent);
+    compile(device, swapChainExtent);
 }
 
 std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines() {
@@ -424,32 +465,24 @@ VkImageCreateFlags RenderGraph::determineCreateFlags(const std::vector<uint32_t>
     return flags;
 };
 
-std::tuple<VkImageLayout, VkAccessFlagBits2, VkPipelineStageFlagBits2> RenderGraph::determineInitialLayout(
-    const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags) {
+std::pair<VkImageLayout, VulkanSynchronizationStage> RenderGraph::determineInitialLayout(
+    const RenderGraphPhysicalImage& image, const VkImageUsageFlags usageFlags) {
     if (usageFlags & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        return {
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_ACCESS_2_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT};
+        return {VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kFragmentSampledRead};
     }
     if (usageFlags & VK_IMAGE_USAGE_STORAGE_BIT) {
-        return {VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_2_SHADER_READ_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT};
+        return {VK_IMAGE_LAYOUT_GENERAL, kComputeRead};
     }
 
     if (isDepthFormat(m_imageDescriptions[image.descriptionIndex].format)) {
-        return {
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT};
+        return {VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, kDepthWrite};
     }
 
-    return {
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT};
+    return {VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, kColorWrite};
 };
 
 void RenderGraph::determineAliasedResurces() {
+    CRISP_LOGI("Determining resources to alias...");
     const auto timelines{calculateResourceTimelines()};
     std::vector<bool> processed(m_resources.size(), false);
     uint16_t currPhysBufferIdx{0};
@@ -506,53 +539,56 @@ void RenderGraph::determineAliasedResurces() {
 
 void RenderGraph::createPhysicalResources(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
+    CRISP_LOGI("Creating physical resources...");
     const VulkanCommandEncoder commandEncoder{cmdBuffer};
-    for (auto& res : m_physicalImages) {
-        const auto& desc = m_imageDescriptions[res.descriptionIndex];
-        const auto usageFlags = determineUsageFlags(res.aliasedResourceIndices);
-
-        const uint32_t layerMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
-        res.image = std::make_unique<VulkanImage>(
+    for (auto& physicalImage : m_physicalImages) {
+        const auto& desc = m_imageDescriptions[physicalImage.descriptionIndex];
+        physicalImage.image = std::make_unique<VulkanImage>(
             device,
             calculateImageExtent(desc, swapChainExtent),
-            desc.layerCount * layerMultiplier,
+            desc.layerCount,
             desc.mipLevelCount,
             desc.format,
-            usageFlags,
-            determineCreateFlags(res.aliasedResourceIndices));
-        res.image->setTag(m_resources[res.aliasedResourceIndices[0]].name);
+            determineUsageFlags(physicalImage.aliasedResourceIndices),
+            determineCreateFlags(physicalImage.aliasedResourceIndices));
         device.getDebugMarker().setObjectName(
-            res.image->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
+            *physicalImage.image, m_resources[physicalImage.aliasedResourceIndices[0]].name.c_str());
+        CRISP_LOGT(
+            "Created image: {} with size: {}x{}",
+            m_resources[physicalImage.aliasedResourceIndices[0]].name,
+            physicalImage.image->getWidth(),
+            physicalImage.image->getHeight());
 
-        const auto lastUsageFlags = getImageDescription({res.aliasedResourceIndices.back()}).imageUsageFlags;
-        const auto [initialLayout, access, pipelineStage] = determineInitialLayout(res, lastUsageFlags);
-        commandEncoder.transitionLayout(
-            *res.image, initialLayout, kNullStage >> VulkanSynchronizationStage{pipelineStage, access});
+        // TODO(fallenshard): Looks like a hack.
+        const auto lastUsageFlags = getImageDescription({physicalImage.aliasedResourceIndices.back()}).imageUsageFlags;
+        const auto [initialLayout, stage] = determineInitialLayout(physicalImage, lastUsageFlags);
+        commandEncoder.transitionLayout(*physicalImage.image, initialLayout, kNullStage >> stage);
     }
 
     for (const auto& res : m_resources) {
         if (res.type == ResourceType::Image) {
-            m_imageViews[res.physicalResourceIndex] =
-                createView(device, *m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
+            const auto physicalResourceIndex = res.physicalResourceIndex;
+            m_imageViews[physicalResourceIndex] =
+                createView(device, *m_physicalImages[physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
         }
     }
 
     for (auto& res : m_physicalBuffers) {
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
-
-        const uint32_t sizeMultiplier = 1; // buffered ? kRendererVirtualFrameCount : 1;
-        res.buffer = std::make_unique<VulkanBuffer>(
-            device, desc.size * sizeMultiplier, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        res.buffer =
+            std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         device.getDebugMarker().setObjectName(
             res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
     }
 }
 
 void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent) {
+    CRISP_LOGI("Creating physical passes...");
     m_physicalPassIndices.clear();
     m_physicalPassIndices.resize(m_passes.size(), -1);
     m_physicalPasses.clear();
     m_physicalPasses.reserve(m_passes.size());
+    m_framebuffers.clear();
     for (auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         if (pass.type != PassType::Rasterizer) {
             CRISP_LOGI("Skipping pass {} as it's not a rasterizer pass.", pass.name);
@@ -560,78 +596,67 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         }
         CRISP_LOGD("Building render pass: {}\n", pass.name);
 
-        VulkanRenderPassBuilder builder{};
-        builder.setSubpassCount(1)
-            .configureSubpass(0, VK_PIPELINE_BIND_POINT_GRAPHICS)
-            .setAttachmentCount(pass.getAttachmentCount());
+        RenderPassBuilder builder{};
+        builder.setSubpassCount(1).setAttachmentCount(pass.getAttachmentCount());
 
         std::vector<VkAttachmentReference> colorAttachmentRefs{};
         uint32_t attachmentIndex = 0;
-        RenderPassParameters renderPassParams{};
-        std::vector<VkClearValue> attachmentClearValues{};
+        RenderPassCreationParams creationParams{};
         for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
             const auto& colorImageResource{getResource(resourceId)};
             const auto& colorDescription{getImageDescription(resourceId)};
-            builder.setAttachment(attachmentIndex, toColorAttachmentDescription(colorImageResource, colorDescription))
+            builder
+                .setAttachmentDescription(
+                    attachmentIndex, toColorAttachmentDescription(colorImageResource, colorDescription))
                 .addColorAttachmentRef(0, attachmentIndex);
 
-            renderPassParams.renderTargetInfos.push_back(toRenderTargetInfo(colorDescription));
-            renderPassParams.renderTargets.push_back(
-                m_physicalImages[colorImageResource.physicalResourceIndex].image.get());
-            renderPassParams.attachmentMappings.push_back(
-                {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(colorDescription.clearValue ? *colorDescription.clearValue : VkClearValue{});
+            if (colorDescription.clearValue) {
+                creationParams.clearValues.push_back(*colorDescription.clearValue);
+            }
             ++attachmentIndex;
         }
 
         if (pass.depthStencilAttachment) {
             const auto& depthResource{getResource(*pass.depthStencilAttachment)};
             const auto& depthDescription{getImageDescription(*pass.depthStencilAttachment)};
-            builder.setAttachment(attachmentIndex, toDepthAttachmentDescription(depthResource, depthDescription))
+            builder
+                .setAttachmentDescription(attachmentIndex, toDepthAttachmentDescription(depthResource, depthDescription))
                 .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-            renderPassParams.renderTargetInfos.push_back(toRenderTargetInfo(depthDescription));
-            renderPassParams.renderTargets.push_back(m_physicalImages[depthResource.physicalResourceIndex].image.get());
-            renderPassParams.attachmentMappings.push_back(
-                {attachmentIndex, renderPassParams.renderTargets.back()->getFullRange(), false});
-            attachmentClearValues.push_back(depthDescription.clearValue ? *depthDescription.clearValue : VkClearValue{});
+            if (depthDescription.clearValue) {
+                creationParams.clearValues.push_back(*depthDescription.clearValue);
+            }
 
             // Ensure that we are synchronizing the load.
             const VkAttachmentLoadOp loadOp =
                 depthDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             if (loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-                builder.addDependency({
-                    .srcSubpass = VK_SUBPASS_EXTERNAL,
-                    .dstSubpass = 0,
-                    .srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    .dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                    .srcAccessMask = 0,
-                    .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                });
+                builder.addDependency(VK_SUBPASS_EXTERNAL, 0, kNullStage >> kDepthWrite);
             }
 
             ++attachmentIndex;
         }
 
-        builder.addDependency(
-            VK_SUBPASS_EXTERNAL,
-            0,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+        builder.addDependency(VK_SUBPASS_EXTERNAL, 0, kFragmentRead >> kColorWrite);
 
-        renderPassParams.subpassCount = 1;
-        renderPassParams.renderArea = getRenderArea(pass, swapChainExtent);
-
-        auto [passHandle, vkAttachments] = builder.create(device.getHandle());
-        renderPassParams.attachmentDescriptions = std::move(vkAttachments);
-
-        auto& physicalPass = m_physicalPasses.emplace_back(std::make_unique<VulkanRenderPass>(
-            device, passHandle, std::move(renderPassParams), std::move(attachmentClearValues)));
+        auto& physicalPass =
+            m_physicalPasses.emplace_back(builder.create(device, getRenderArea(pass, swapChainExtent), creationParams));
         m_physicalPassIndices[idx] = static_cast<int32_t>(m_physicalPasses.size()) - 1;
+        device.getDebugMarker().setObjectName(*physicalPass, pass.name.c_str());
 
-        device.getDebugMarker().setObjectName(physicalPass->getHandle(), pass.name.c_str());
+        std::vector<VkImageView> attachmentViews{};
+        for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
+            const auto& colorImageResource{getResource(resourceId)};
+            attachmentViews.push_back(m_imageViews.at(colorImageResource.physicalResourceIndex)->getHandle());
+        }
+        if (pass.depthStencilAttachment) {
+            const auto& depthResource{getResource(*pass.depthStencilAttachment)};
+            attachmentViews.push_back(m_imageViews.at(depthResource.physicalResourceIndex)->getHandle());
+        }
+
+        m_framebuffers.push_back(std::make_unique<VulkanFramebuffer>(
+            device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews));
+        device.getDebugMarker().setObjectName(*m_framebuffers.back(), fmt::format("{}Framebuffer", pass.name).c_str());
     }
 }
 

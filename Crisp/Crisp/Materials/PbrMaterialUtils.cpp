@@ -114,18 +114,18 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
 void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& imageCache) {
     auto& renderer = *imageCache.getRenderer();
     const PbrImageKeyCreator keyCreator{imageGroup.name};
-    std::array<const std::vector<Image>*, kPbrMapTypeCount> mapArrays{
-        &imageGroup.albedoMaps,
-        &imageGroup.normalMaps,
-        &imageGroup.roughnessMaps,
-        &imageGroup.metallicMaps,
-        &imageGroup.occlusionMaps,
-        &imageGroup.emissiveMaps,
+    std::array<std::span<const Image>, kPbrMapTypeCount> mapArrays{
+        imageGroup.albedoMaps,
+        imageGroup.normalMaps,
+        imageGroup.roughnessMaps,
+        imageGroup.metallicMaps,
+        imageGroup.occlusionMaps,
+        imageGroup.emissiveMaps,
     };
 
     for (auto&& [typeIdx, maps] : std::views::enumerate(mapArrays)) {
         const uint32_t mapTypeIdx{static_cast<uint32_t>(typeIdx)};
-        for (auto&& [idx, data] : std::views::enumerate(*maps)) {
+        for (auto&& [idx, data] : std::views::enumerate(maps)) {
             imageCache.addImageWithView(
                 keyCreator.createMapKey(mapTypeIdx, static_cast<uint32_t>(idx)),
                 createVulkanImage(renderer, data, kTexInfos[typeIdx].defaultFormat));
@@ -205,9 +205,8 @@ void setPbrMaterialSceneParams(
     material.writeDescriptor(0, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(0, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-        const auto& shadowMapView{rg.getRenderPass(kCsmPasses[i]).getAttachmentView(0)};
+        const auto& shadowMapView{rg.getImageView(kCsmPasses[i], 0)};
         material.writeBindlessDescriptor(0, 4, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
-        material.getRenderPassBindings().emplace_back(0, 4, i, kCsmPasses[i], 0, "nearestNeighbor");
     }
 }
 

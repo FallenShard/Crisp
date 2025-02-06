@@ -158,10 +158,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
         [](const FrameContext&) {});
 
     constexpr VkExtent2D kSwapChainExtent{1600, 900};
-    {
-        ScopeCommandExecutor executor(*device_);
-        rg.compile(*device_, kSwapChainExtent, executor.cmdBuffer.getHandle());
-    }
+    rg.compile(*device_, kSwapChainExtent);
 
     {
         ScopeCommandExecutor executor(*device_);
