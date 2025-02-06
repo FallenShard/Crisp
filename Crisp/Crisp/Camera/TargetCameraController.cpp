@@ -122,13 +122,13 @@ void TargetCameraController::onMouseMoved(const double xPos, const double yPos) 
 
     if (m_isDraggingLeftClick) {
         // In [-1, 1] range
-        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
+        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize()) * 2.0f;
         updateOrientation(-delta.x, -delta.y);
     }
 
     if (m_isDraggingRightClick) {
         // In [-1, 1] range
-        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
+        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize()) * 2.0f;
         pan(delta.x, -delta.y);
     }
 
