@@ -272,12 +272,12 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
 
     m_renderer->getDevice().flushDescriptorUpdates();
 
-    m_resourceContext->addGeometry("floorPos", createFromMesh(*m_renderer, createPlaneMesh(), kPosVertexFormat));
+    m_resourceContext->addGeometry("floorPos", createGeometry(*m_renderer, createPlaneMesh(), kPosVertexFormat));
 
     const VertexLayoutDescription vertexFormat = {{VertexAttribute::Position, VertexAttribute::Normal}};
     m_resourceContext->addGeometry(
         "sponza",
-        createFromMesh(
+        createGeometry(
             *m_renderer,
             loadTriangleMesh(m_renderer->getResourcesPath() / "Meshes/Sponza-master/sponza.obj", flatten(vertexFormat))
                 .unwrap(),

@@ -11,7 +11,7 @@ constexpr std::size_t NumCubeMapFaces = 6;
 const std::array<const std::string, NumCubeMapFaces> SideFilenames = {"left", "right", "top", "bottom", "back", "front"};
 
 Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder)
-    : m_cubeGeometry(createFromMesh(
+    : m_cubeGeometry(createGeometry(
           *renderer,
           loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
           kPosVertexFormat))
@@ -58,7 +58,7 @@ Skybox::Skybox(
     const VulkanRenderPass& renderPass,
     const VulkanImageView& cubeMapView,
     const VulkanSampler& sampler)
-    : m_cubeGeometry(createFromMesh(
+    : m_cubeGeometry(createGeometry(
           *renderer,
           loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj", flatten(kPosVertexFormat)).unwrap(),
           kPosVertexFormat))

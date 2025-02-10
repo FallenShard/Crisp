@@ -141,7 +141,7 @@ ListGeometryView Geometry::createListGeometryView() const {
     };
 }
 
-Geometry createFromMesh(
+Geometry createGeometry(
     Renderer& renderer,
     const TriangleMesh& mesh,
     const VertexLayoutDescription& vertexLayoutDescription,

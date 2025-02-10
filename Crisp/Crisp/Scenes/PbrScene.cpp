@@ -325,7 +325,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
             CRISP_LOGI("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
 
             auto& geometry = m_resourceContext->addGeometry(
-                entityName, createFromMesh(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+                entityName, createGeometry(*m_renderer, renderObject.mesh, kPbrVertexFormat));
 
             auto& sceneObject = createRenderNode(entityName);
             sceneObject.geometry = &geometry;
@@ -379,7 +379,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     // m_shaderBallPbrMaterialKey = material.name;
     // addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
 
-    // m_resourceContext->addGeometry(entityName, createFromMesh(*m_renderer, mesh, kPbrVertexFormat));
+    // m_resourceContext->addGeometry(entityName, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
     // sceneObject->geometry = m_resourceContext->getGeometry(entityName);
     // sceneObject->pass(kForwardLightingPass).material =
     //     createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
@@ -400,7 +400,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
 void PbrScene::createPlane() {
     constexpr std::string_view kNodeName{"floor"};
     m_resourceContext->addGeometry(
-        kNodeName, createFromMesh(*m_renderer, createPlaneMesh(10.0f, 10.0f), kPbrVertexFormat));
+        kNodeName, createGeometry(*m_renderer, createPlaneMesh(10.0f, 10.0f), kPbrVertexFormat));
 
     const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass"};
     auto [material, images] = loadPbrMaterial(materialPath);

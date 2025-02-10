@@ -143,7 +143,7 @@ RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIn
 
 void NormalMappingScene::createPlane() {
     auto& imageCache = m_resourceContext->imageCache;
-    m_resourceContext->addGeometry("floor", createFromMesh(*m_renderer, createPlaneMesh(10.0f, 1.0f), kPbrVertexFormat));
+    m_resourceContext->addGeometry("floor", createGeometry(*m_renderer, createPlaneMesh(10.0f, 1.0f), kPbrVertexFormat));
 
     imageCache.addSampler(
         "linearRepeat",
@@ -203,7 +203,7 @@ void NormalMappingScene::createPlane() {
             .unwrap());
     mesh.normalizeToUnitBox();
     mesh.transform(glm::translate(glm::vec3(0.0f, 0.5f, 0.0f)));
-    m_resourceContext->addGeometry("nanosuit", createFromMesh(*m_renderer, mesh, kPbrVertexFormat));
+    m_resourceContext->addGeometry("nanosuit", createGeometry(*m_renderer, mesh, kPbrVertexFormat));
 
     // Leg, Hand, Glass, Arm, Helmet,
     // Body

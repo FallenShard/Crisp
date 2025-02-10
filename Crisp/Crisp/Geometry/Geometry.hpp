@@ -121,7 +121,7 @@ private:
     std::vector<TriangleMeshView> m_meshViews;
 };
 
-Geometry createFromMesh(
+Geometry createGeometry(
     Renderer& renderer,
     const TriangleMesh& mesh,
     const VertexLayoutDescription& vertexLayoutDescription,

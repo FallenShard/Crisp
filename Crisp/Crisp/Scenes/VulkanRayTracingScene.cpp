@@ -10,7 +10,6 @@
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 
-
 namespace crisp {
 namespace {
 
@@ -44,7 +43,7 @@ std::unique_ptr<VulkanBuffer> createAliasTableBuffer(Renderer& renderer, const A
 }
 
 Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) {
-    return createFromMesh(
+    return createGeometry(
         renderer,
         mesh,
         {{VertexAttribute::Position, VertexAttribute::Normal}},
