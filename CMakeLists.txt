@@ -178,7 +178,7 @@ FetchContent_MakeAvailable(tinygltf)
 
 FetchContent_Declare(MPMCQueue
     GIT_REPOSITORY https://github.com/rigtorp/MPMCQueue.git
-    GIT_TAG 4323bd89b3bcdb48daa600804902f51ede7990c1
+    GIT_TAG b9808ede08f26fa9df4df4e081d19cace8f6c6ea
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(MPMCQueue)
