@@ -37,10 +37,9 @@ EnvironmentLight::EnvironmentLight(Renderer& renderer, const ImageBasedLightingD
 }
 
 void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& iblData) {
-    /* auto equirectMap =
-         createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
-     std::tie(m_cubeMap, m_cubeMapView) =
-         convertEquirectToCubeMap(&renderer, createView(*equirectMap, VK_IMAGE_VIEW_TYPE_2D), 1024);*/
+    auto equirectMap = createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
+    std::tie(m_cubeMap, m_cubeMapView) =
+        convertEquirectToCubeMap(&renderer, *createView(renderer.getDevice(), *equirectMap, VK_IMAGE_VIEW_TYPE_2D));
 
     updateCubeMap(*m_diffuseEnvironmentMap, renderer, iblData.diffuseIrradianceCubeMap);
     for (uint32_t i = 0; i < iblData.specularReflectanceMapMipLevels.size(); ++i) {

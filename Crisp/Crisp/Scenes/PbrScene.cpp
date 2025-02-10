@@ -125,15 +125,10 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     createPlane();
     createSceneObject(args["modelPath"]);
 
-    m_skybox = std::make_unique<Skybox>(
-        m_renderer,
-        m_rg->getRenderPass(kForwardLightingPass),
-        m_lightSystem->getEnvironmentLight()->getCubeMapView(),
-        m_resourceContext->imageCache.getSampler("linearClamp"));
-    // for (const auto& dir :
-    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
-    //     m_environmentMapNames.push_back(dir.path().stem().string());
-    // }
+    for (const auto& dir :
+         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
+        m_environmentMapNames.push_back(dir.path().stem().string());
+    }
 }
 
 void PbrScene::resize(const int32_t width, const int32_t height) {
@@ -205,12 +200,11 @@ void PbrScene::drawGui() {
     // ImGui::SliderFloat("V Scale",
     // &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
 
-    // gui::drawComboBox(
-    //     "Environment Light",
-    //     m_lightSystem->getEnvironmentLight()->getName(),
-    //     m_environmentMapNames,
-    //     [this](const std::string& selectedItem) {
-    //     setEnvironmentMap(selectedItem); });
+    gui::drawComboBox(
+        "Environment Light",
+        m_lightSystem->getEnvironmentLight()->getName(),
+        m_environmentMapNames,
+        [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
 
     // if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
     //     m_renderNodes["floor"]->isVisible = m_showFloor;
@@ -308,6 +302,11 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
     m_lightSystem->setEnvironmentMap(
         loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName).unwrap(),
         envMapName);
+    m_skybox = std::make_unique<Skybox>(
+        m_renderer,
+        m_rg->getRenderPass(kForwardLightingPass),
+        m_lightSystem->getEnvironmentLight()->getCubeMapView(),
+        m_resourceContext->imageCache.getSampler("linearClamp"));
 }
 
 void PbrScene::createSceneObject(const std::filesystem::path& path) {
