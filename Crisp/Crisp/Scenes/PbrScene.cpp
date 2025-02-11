@@ -31,32 +31,25 @@ void createDrawCommand(
     }
 }
 
-void executeDrawCommand(const DrawCommand& command, const Renderer& renderer, const VulkanCommandBuffer& cmdBuffer) {
-    command.pipeline->bind(cmdBuffer.getHandle());
+void executeDrawCommand(
+    const DrawCommand& command, const Renderer& renderer, const VulkanCommandEncoder& commandEncoder) {
+    commandEncoder.bindPipeline(*command.pipeline);
     if (command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Viewport) {
-        if (command.viewport.width != 0.0f) {
-            vkCmdSetViewport(cmdBuffer.getHandle(), 0, 1, &command.viewport);
-        } else {
-            renderer.setDefaultViewport(cmdBuffer.getHandle());
-        }
+        commandEncoder.setViewport(command.viewport.width != 0.0f ? command.viewport : renderer.getDefaultViewport());
     }
     if (command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Scissor) {
-        if (command.scissor.extent.width != 0) {
-            vkCmdSetScissor(cmdBuffer.getHandle(), 0, 1, &command.scissor);
-        } else {
-            renderer.setDefaultScissor(cmdBuffer.getHandle());
-        }
+        commandEncoder.setScissor(command.scissor.extent.width != 0 ? command.scissor : renderer.getDefaultScissor());
     }
 
     command.pipeline->getPipelineLayout()->setPushConstants(
-        cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
+        commandEncoder.getHandle(), static_cast<const char*>(command.pushConstantView.data));
 
     if (command.material) {
-        command.material->bind(cmdBuffer.getHandle(), command.dynamicBufferOffsets);
+        command.material->bind(commandEncoder.getHandle(), command.dynamicBufferOffsets);
     }
 
-    command.geometry->bindVertexBuffers(cmdBuffer.getHandle(), command.firstBuffer, command.bufferCount);
-    command.drawFunc(cmdBuffer.getHandle(), command.geometryView);
+    command.geometry->bindVertexBuffers(commandEncoder.getHandle(), command.firstBuffer, command.bufferCount);
+    command.drawFunc(commandEncoder.getHandle(), command.geometryView);
 }
 
 } // namespace
@@ -80,7 +73,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         }
 
         for (const auto& drawCommand : drawCommands) {
-            executeDrawCommand(drawCommand, *m_renderer, *ctx.commandBuffer);
+            executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
         }
     });
 
@@ -96,7 +89,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
         m_forwardPassMaterial->bind(ctx.commandEncoder.getHandle());
         for (const auto& drawCommand : drawCommands) {
-            executeDrawCommand(drawCommand, *m_renderer, *ctx.commandBuffer);
+            executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
         }
     });
 

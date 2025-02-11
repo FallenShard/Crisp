@@ -7,8 +7,6 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 namespace crisp {
-constexpr std::size_t NumCubeMapFaces = 6;
-const std::array<const std::string, NumCubeMapFaces> SideFilenames = {"left", "right", "top", "bottom", "back", "front"};
 
 Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder)
     : m_cubeGeometry(createGeometry(
@@ -20,28 +18,11 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
 
     const std::filesystem::path cubeMapDir = renderer->getResourcesPath() / "Textures/Cubemaps" / cubeMapFolder;
 
-    std::vector<Image> cubeMapImages;
-    cubeMapImages.reserve(NumCubeMapFaces);
-    for (std::size_t i = 0; i < NumCubeMapFaces; ++i) {
-        cubeMapImages.push_back(loadImage(cubeMapDir / (SideFilenames[i] + ".jpg")).unwrap());
-    }
+    std::vector<std::vector<Image>> cubeMapImages;
+    cubeMapImages.push_back(loadCubeMapFaces(cubeMapDir).unwrap());
 
-    const uint32_t width = cubeMapImages[0].getWidth();
-    const uint32_t height = cubeMapImages[0].getHeight();
-
-    m_cubeMap = std::make_unique<VulkanImage>(
-        renderer->getDevice(),
-        VkExtent3D{width, height, 1u},
-        static_cast<uint32_t>(NumCubeMapFaces),
-        1,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
-
-    for (uint32_t i = 0; i < NumCubeMapFaces; ++i) {
-        fillImageLayer(*m_cubeMap, *renderer, cubeMapImages[i].getData(), width * height * 4, i);
-    }
-
+    m_cubeMap =
+        createVulkanCubeMap(*renderer, std::span<const std::vector<Image>>{cubeMapImages}, VK_FORMAT_R8G8B8A8_UNORM);
     m_cubeMapView = createView(
         renderer->getDevice(), *m_cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
     m_sampler = createLinearClampSampler(renderer->getDevice());

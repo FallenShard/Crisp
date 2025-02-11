@@ -27,6 +27,10 @@ auto getStbComponentFormat(const int numComponents) {
         return STBI_default;
     }
 }
+
+constexpr std::size_t kNumCubeMapFaces = 6;
+const std::array<const std::string, kNumCubeMapFaces> kSideFilenames = {
+    "left", "right", "top", "bottom", "back", "front"};
 } // namespace
 
 std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, const FlipAxis flip) {
@@ -48,6 +52,20 @@ std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& 
     cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, cubeMapSize, cubeMapSize, cubeMapSize));
     cubeMapFaces.push_back(hcrossImage.createSubImage(cubeMapSize, 3 * cubeMapSize, cubeMapSize, cubeMapSize));
     return cubeMapFaces;
+}
+
+Result<std::vector<Image>> loadCubeMapFaces(const std::filesystem::path& path) {
+    std::vector<Image> cubeMapImages;
+    cubeMapImages.reserve(kNumCubeMapFaces);
+    for (std::size_t i = 0; i < kNumCubeMapFaces; ++i) {
+        auto result = loadImage(path / (kSideFilenames[i] + ".jpg"));
+        if (!result) {
+            return resultError("Failed to load image from path: {}", path.string());
+        }
+        cubeMapImages.push_back(result.unwrap());
+    }
+
+    return cubeMapImages;
 }
 
 Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipAxis flip) {
