@@ -10,8 +10,6 @@
 #include <Crisp/Renderer/ResourceContext.hpp>
 
 namespace crisp {
-// PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir);
-
 std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::path& materialDir);
 
 void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& imageCache);
@@ -24,15 +22,7 @@ Material* createPbrMaterial(
     ResourceContext& resourceContext,
     const TransformBuffer& transformBuffer);
 
-// Material* createPbrMaterial(
-//     std::string_view materialId,
-//     std::string_view imageGroupName,
-//     const std::array<int32_t, kPbrMapTypeCount>& textureIndices,
-//     ResourceContext& resourceContext,
-//     const PbrParams& params,
-//     const TransformBuffer& transformBuffer);
-
-void setPbrMaterialSceneParams(
+void configureForwardLightingPassMaterial(
     Material& material,
     const ResourceContext& resourceContext,
     const LightSystem& lightSystem,

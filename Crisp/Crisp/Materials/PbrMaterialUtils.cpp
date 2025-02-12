@@ -191,7 +191,7 @@ Material* createPbrMaterial(
     return material;
 }
 
-void setPbrMaterialSceneParams(
+void configureForwardLightingPassMaterial(
     Material& material,
     const ResourceContext& resourceContext,
     const LightSystem& lightSystem,

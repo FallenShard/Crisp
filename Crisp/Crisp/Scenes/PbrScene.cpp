@@ -13,7 +13,7 @@ namespace crisp {
 namespace {
 const auto logger = createLoggerMt("PbrScene");
 
-constexpr uint32_t kShadowMapSize = 1024;
+constexpr uint32_t kShadowMapSize = 4096;
 
 void createDrawCommand(
     std::vector<DrawCommand>& drawCommands, const RenderNode& renderNode, const std::string_view renderPass) {
@@ -170,6 +170,12 @@ void PbrScene::drawGui() {
         ImGui::SliderFloat("Direction Z", &direction.z, -1.0, 1.0);
         light.setDirection(glm::normalize(direction));
         m_lightSystem->setDirectionalLight(light);
+
+        gui::drawComboBox(
+            "Environment Light",
+            m_lightSystem->getEnvironmentLight()->getName(),
+            m_environmentMapNames,
+            [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
     }
     ImGui::End();
 
@@ -192,12 +198,6 @@ void PbrScene::drawGui() {
     // Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
     // ImGui::SliderFloat("V Scale",
     // &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
-
-    gui::drawComboBox(
-        "Environment Light",
-        m_lightSystem->getEnvironmentLight()->getName(),
-        m_environmentMapNames,
-        [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
 
     // if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
     //     m_renderNodes["floor"]->isVisible = m_showFloor;
@@ -288,7 +288,7 @@ void PbrScene::createCommonTextures() {
 
     m_forwardPassMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 0, 1);
-    setPbrMaterialSceneParams(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
 }
 
 void PbrScene::setEnvironmentMap(const std::string& envMapName) {
@@ -429,7 +429,7 @@ void PbrScene::setupInput() {
 }
 
 void PbrScene::updateRenderPassMaterials() {
-    setPbrMaterialSceneParams(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
 }
 
 void PbrScene::updateSceneViews() {

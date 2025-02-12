@@ -96,7 +96,7 @@ float evalCascadedShadow(vec3 worldPos, float bias)
     ivec2 size = textureSize(cascadedShadowMaps[cascadeIndex], 0).xy;
     vec2 texelSize = vec2(1) / size;
 
-    const int pcfRadius = 5;
+    const int pcfRadius = 2;
     const float numSamples = (2 * pcfRadius + 1) * (2 * pcfRadius + 1);
 
     float amount  = 0.0f;
@@ -113,7 +113,7 @@ float evalCascadedShadow(vec3 worldPos, float bias)
     return amount / numSamples;
 }
 
-vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
+vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow)
 {
     const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
@@ -126,27 +126,8 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     const float MaxReflectionLod = 8.0f;
     const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * MaxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
+    const vec3 specular = shadow * prefilter * (F * brdf.x + brdf.y);
 
-    return kD * diffuse * ao + specular;
-}
-
-vec3 computeEnvRadianceShadow(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow)
-{
-    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
-    const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
-    const vec3 diffuse = irradiance * albedo;
-    
-    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
-    const vec3 eyeR = reflect(-eyeV, eyeN);
-    const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
-   
-    const float MaxReflectionLod = 8.0f;
-    const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * MaxReflectionLod).rgb;
-    const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
-
-    //return vec3(F);
     return kD * diffuse * ao + specular;
 }
 
@@ -338,10 +319,12 @@ void main()
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
-    const float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
+    const float shadowCoeff = evalCascadedShadow(worldPos, 0.01f);
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
-    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
+    const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao, shadowCoeff);
 
-    fragColor = vec4(Lenv + Li * shadowCoeff + emission, 1.0f);
+    const vec3 shadowColor = vec3(0.1f + 0.9f * shadowCoeff, 0.2f + 0.8f * shadowCoeff, 0.4f + 0.6f * shadowCoeff);
+
+    fragColor = vec4(Lenv + Li * shadowColor + emission, 1.0f);
 }
