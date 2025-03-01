@@ -13,7 +13,8 @@ VulkanPipeline* ResourceContext::createPipeline(
     const std::string_view filename,
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
-    return pipelineCache.loadPipeline(m_renderer, id, filename, renderPass, subpassIndex);
+    return pipelineCache.loadPipeline(
+        id, filename, m_renderer->getShaderCache(), m_renderer->getDevice(), renderPass, subpassIndex);
 }
 
 Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {
@@ -53,6 +54,6 @@ RenderNode* ResourceContext::createPostProcessingEffectNode(
 }
 
 void ResourceContext::recreatePipelines() {
-    pipelineCache.recreatePipelines(*m_renderer);
+    pipelineCache.recreatePipelines(m_renderer->getShaderCache(), m_renderer->getDevice());
 }
 } // namespace crisp

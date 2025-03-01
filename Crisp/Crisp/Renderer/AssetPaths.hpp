@@ -15,5 +15,9 @@ struct AssetPaths {
     std::filesystem::path getShaderSourcePath(const std::string& shaderName) const {
         return shaderSourceDir / (shaderName + ".glsl");
     }
+
+    std::filesystem::path getPipelineConfigPath(const std::string_view pipelineFilename) const {
+        return resourceDir / "Pipelines" / pipelineFilename;
+    }
 };
 } // namespace crisp
