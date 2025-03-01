@@ -21,7 +21,7 @@ public:
     ShaderCache(ShaderCache&&) noexcept = delete;
     ShaderCache& operator=(ShaderCache&&) noexcept = delete;
 
-    inline std::optional<VkShaderModule> getShaderModule(const std::string& key) const {
+    std::optional<VkShaderModule> getShaderModule(const std::string& key) const {
         const auto it = m_shaderModules.find(key);
         if (it == m_shaderModules.end()) {
             return std::nullopt;

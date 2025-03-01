@@ -1,39 +1,25 @@
 #pragma once
 
-#include <Crisp/Utils/BitFlags.hpp>
+#include <memory>
+#include <span>
+#include <vector>
+
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
-#include <memory>
-#include <vector>
-
 namespace crisp {
-enum class PipelineState {
-    VertexInput = 0x001,
-    InputAssembly = 0x002,
-    Tessellation = 0x004,
-    Viewport = 0x008,
-    Rasterization = 0x010,
-    Multisample = 0x020,
-    ColorBlend = 0x040,
-    DepthStencil = 0x080,
-    Dynamic = 0x100,
-
-    Default = VertexInput | InputAssembly | Viewport | Rasterization | Multisample | ColorBlend | DepthStencil
-};
-DECLARE_BITFLAG(PipelineState);
 
 class PipelineBuilder {
 public:
     PipelineBuilder();
 
-    PipelineBuilder& addShaderStage(VkPipelineShaderStageCreateInfo&& shaderStage);
-    PipelineBuilder& setShaderStages(std::initializer_list<VkPipelineShaderStageCreateInfo> shaderStages);
+    PipelineBuilder& addShaderStage(const VkPipelineShaderStageCreateInfo& shaderStage);
+    PipelineBuilder& setShaderStages(std::span<const VkPipelineShaderStageCreateInfo> shaderStages);
     PipelineBuilder& setShaderStages(std::vector<VkPipelineShaderStageCreateInfo>&& shaderStages);
 
     PipelineBuilder& addVertexInputBinding(
-        uint32_t binding, VkVertexInputRate inputRate, const std::vector<VkFormat>& formats);
-    PipelineBuilder& addVertexAttributes(uint32_t binding, const std::vector<VkFormat>& formats);
+        uint32_t binding, VkVertexInputRate inputRate, std::span<const VkFormat> formats);
+    PipelineBuilder& addVertexAttributes(uint32_t binding, std::span<const VkFormat> formats);
 
     PipelineBuilder& setFullScreenVertexLayout();
 
@@ -48,8 +34,8 @@ public:
     PipelineBuilder& setSampleCount(VkSampleCountFlagBits sampleCount);
     PipelineBuilder& setAlphaToCoverage(VkBool32 alphaToCoverageEnabled);
 
-    PipelineBuilder& setViewport(VkViewport&& viewport);
-    PipelineBuilder& setScissor(VkRect2D&& scissor);
+    PipelineBuilder& setViewport(const VkViewport& viewport);
+    PipelineBuilder& setScissor(const VkRect2D& scissor);
 
     PipelineBuilder& setBlendState(uint32_t index, VkBool32 enabled);
     PipelineBuilder& setBlendFactors(uint32_t index, VkBlendFactor srcFactor, VkBlendFactor dstFactor);
@@ -57,9 +43,6 @@ public:
     PipelineBuilder& setDepthTest(VkBool32 enabled);
     PipelineBuilder& setDepthTestOperation(VkCompareOp testOperation);
     PipelineBuilder& setDepthWrite(VkBool32 enabled);
-
-    PipelineBuilder& enableState(PipelineState pipelineState);
-    PipelineBuilder& disableState(PipelineState pipelineState);
 
     PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
 
@@ -71,12 +54,6 @@ public:
     PipelineDynamicStateFlags createDynamicStateFlags() const;
 
 private:
-    VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState();
-    VkPipelineMultisampleStateCreateInfo createDefaultMultisampleState();
-    VkPipelineColorBlendAttachmentState createDefaultColorBlendAttachmentState();
-    VkPipelineColorBlendStateCreateInfo createDefaultColorBlendState();
-    VkPipelineDepthStencilStateCreateInfo createDefaultDepthStencilState();
-
     std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
     VulkanVertexLayout m_vertexLayout;
@@ -101,8 +78,6 @@ private:
 
     std::vector<VkDynamicState> m_dynamicStates;
     VkPipelineDynamicStateCreateInfo m_dynamicState;
-
-    PipelineStateFlags m_pipelineStateFlags;
 };
 
 VkPipelineShaderStageCreateInfo createShaderStageInfo(

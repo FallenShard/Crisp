@@ -4,8 +4,7 @@
 #include <Crisp/Io/FileUtils.hpp>
 
 namespace crisp {
-
-auto logger = createLoggerSt("ShaderCache");
+CRISP_MAKE_LOGGER_ST("ShaderCache");
 
 ShaderCache::ShaderCache(VulkanDevice* device)
     : m_device(device) {}

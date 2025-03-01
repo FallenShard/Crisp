@@ -67,7 +67,7 @@ Renderer::Renderer(
     m_defaultViewport = m_swapChain->getViewport();
     m_defaultScissor = m_swapChain->getScissorRect();
 
-    // Create frame resources, such as command buffer, fence and semaphores
+    // Create frame resources, such as command buffer, fence and semaphores.
     m_virtualFrames.reserve(kRendererVirtualFrameCount);
     for (int32_t i = 0; i < static_cast<int32_t>(kRendererVirtualFrameCount); ++i) {
         m_virtualFrames.emplace_back(*m_device, i);
@@ -82,7 +82,7 @@ Renderer::Renderer(
 
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
-    m_scenePipeline = createPipelineFromJsonPath("GammaCorrect.json", *this, getDefaultRenderPass()).unwrap();
+    m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRenderPass());
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 }
 
@@ -299,10 +299,12 @@ Geometry* Renderer::getFullScreenGeometry() const {
 }
 
 std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
-    std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex) {
+    const std::string_view pipelineName, const VulkanRenderPass& renderPass, const uint32_t subpassIndex) {
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
-    return createPipelineFromJsonPath(absolutePipelinePath, *this, renderPass, subpassIndex).unwrap();
+    return createPipelineFromFile(
+               absolutePipelinePath, m_assetPaths.spvShaderDir, *m_shaderCache, *m_device, renderPass, subpassIndex)
+        .unwrap();
 }
 
 void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass) {

@@ -58,10 +58,7 @@ public:
     }
 
     VulkanPipeline* createPipeline(
-        const std::string& id,
-        std::string_view luaFilename,
-        const VulkanRenderPass& renderPass,
-        uint32_t subpassIndex = 0);
+        const std::string& id, std::string_view filename, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
     Material* createMaterial(std::string materialId, const std::string& pipelineId);
     Material* createMaterial(std::string materialId, VulkanPipeline* pipeline);
     Material* getMaterial(std::string_view id) const;
@@ -71,7 +68,7 @@ public:
 
     RenderNode* createPostProcessingEffectNode(
         std::string renderNodeId,
-        std::string pipelineLuaFilename,
+        std::string_view pipelineFilename,
         const VulkanRenderPass& renderPass,
         const std::string& renderPassName);
 

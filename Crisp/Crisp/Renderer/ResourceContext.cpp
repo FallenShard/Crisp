@@ -10,10 +10,10 @@ ResourceContext::ResourceContext(Renderer* renderer)
 
 VulkanPipeline* ResourceContext::createPipeline(
     const std::string& id,
-    const std::string_view luaFilename,
+    const std::string_view filename,
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
-    return pipelineCache.loadPipeline(m_renderer, id, luaFilename, renderPass, static_cast<int32_t>(subpassIndex));
+    return pipelineCache.loadPipeline(m_renderer, id, filename, renderPass, subpassIndex);
 }
 
 Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {
@@ -41,12 +41,12 @@ Geometry& ResourceContext::getGeometry(const std::string_view id) const {
 
 RenderNode* ResourceContext::createPostProcessingEffectNode(
     std::string renderNodeId,
-    std::string pipelineLuaFilename,
+    const std::string_view pipelineFilename,
     const VulkanRenderPass& renderPass,
     const std::string& renderPassName) {
     auto renderNode = m_renderNodes.emplace(renderNodeId, std::make_unique<RenderNode>()).first->second.get();
     renderNode->geometry = m_renderer->getFullScreenGeometry();
-    auto pipeline = createPipeline(renderNodeId, pipelineLuaFilename, renderPass, 0);
+    auto pipeline = createPipeline(renderNodeId, pipelineFilename, renderPass);
     renderNode->pass(renderPassName).pipeline = pipeline;
     renderNode->pass(renderPassName).material = createMaterial(renderNodeId, pipeline);
     return renderNode;

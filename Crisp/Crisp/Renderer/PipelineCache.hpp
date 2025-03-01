@@ -1,31 +1,31 @@
 #pragma once
 
+#include <string_view>
+
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
-
-#include <string_view>
 
 namespace crisp {
 class Renderer;
 
 class PipelineCache {
 public:
-    PipelineCache(const AssetPaths& assetPaths);
+    explicit PipelineCache(AssetPaths assetPaths);
 
     VulkanPipeline* loadPipeline(
         Renderer* renderer,
         const std::string& id,
-        std::string_view luaFilename,
+        std::string_view filename,
         const VulkanRenderPass& renderPass,
-        int subpassIndex);
+        uint32_t subpassIndex);
 
     VulkanPipeline* getPipeline(const std::string& key) const;
 
     void recreatePipelines(Renderer& renderer);
 
-    inline VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
+    VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return m_descriptorAllocators.at(pipelineLayout).get();
     }
 
@@ -33,9 +33,9 @@ private:
     AssetPaths m_assetPaths;
 
     struct PipelineInfo {
-        std::string luaFilename;
+        std::string filename;
         const VulkanRenderPass* renderPass;
-        int subpassIndex;
+        uint32_t subpassIndex;
     };
 
     FlatHashMap<std::string, PipelineInfo> m_pipelineInfos;

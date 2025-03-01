@@ -14,7 +14,7 @@ namespace crisp {
 namespace {
 const auto logger = createLoggerMt("VulkanPipelineIo");
 
-Result<FlatHashMap<VkShaderStageFlagBits, std::string>> readShaderFiles(const nlohmann::json& json) {
+Result<FlatHashMap<VkShaderStageFlagBits, std::string>> parseShaderFiles(const nlohmann::json& json) {
     FlatHashMap<VkShaderStageFlagBits, std::string> shaderFiles;
 
     const auto getPathIfExists = [&shaderFiles, &json](const std::string_view key, const VkShaderStageFlagBits stage) {
@@ -258,42 +258,24 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
     return {};
 }
 
-} // namespace
-
-Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJsonPath(
-    const std::filesystem::path& path,
-    Renderer& renderer,
-    const VulkanRenderPass& renderPass,
-    const uint32_t subpassIndex) {
-    const auto absolutePath{renderer.getResourcesPath() / "Pipelines" / path};
-    auto maybeJson = loadJsonFromFile(absolutePath);
-    if (!maybeJson) {
-        return resultError("Failed to open json config at {}", path.generic_string());
-    }
-
-    auto result = createPipelineFromJson(maybeJson.unwrap(), renderer, renderPass, subpassIndex);
-    if (result) {
-        renderer.getDevice().getDebugMarker().setObjectName(
-            (*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));
-    }
-    return result;
-}
-
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const nlohmann::json& pipelineJson,
-    Renderer& renderer,
+    const std::filesystem::path& spvShaderDir,
+    ShaderCache& shaderCache,
+    const VulkanDevice& device,
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
     CRISP_CHECK(pipelineJson.is_object());
 
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
-    const auto shaderFiles{readShaderFiles(pipelineJson["shaders"]).unwrap()};
+    const auto shaderFiles{parseShaderFiles(pipelineJson["shaders"]).unwrap()};
 
     PipelineLayoutMetadata shaderMetadata{};
     PipelineBuilder builder{};
     for (const auto& [stageFlag, fileStem] : shaderFiles) {
-        builder.addShaderStage(createShaderStageInfo(stageFlag, renderer.getOrLoadShaderModule(fileStem)));
-        const auto spvFile = readSpirvFile(renderer.getAssetPaths().spvShaderDir / (fileStem + ".spv")).unwrap();
+        const auto absoluteSpvPath = spvShaderDir / (fileStem + ".spv");
+        builder.addShaderStage(createShaderStageInfo(stageFlag, shaderCache.getOrLoadShaderModule(absoluteSpvPath)));
+        const auto spvFile = readSpirvFile(absoluteSpvPath).unwrap();
         shaderMetadata.merge(reflectPipelineLayoutFromSpirvShader(spvFile).unwrap());
     }
 
@@ -322,8 +304,8 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     if (hasField<JsonType::Object>(pipelineJson, "viewport")) {
         readViewportState(pipelineJson["viewport"], renderPass, builder).unwrap();
     } else {
-        builder.setViewport(renderer.getDefaultViewport()).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
-        builder.setScissor(renderer.getDefaultScissor()).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
+        builder.setViewport({}).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
+        builder.setScissor({}).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
     }
 
     // Optional state for overrides.
@@ -348,8 +330,29 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder).unwrap();
     }
 
-    return builder.create(
-        renderer.getDevice(), layoutBuilder.create(renderer.getDevice()), renderPass.getHandle(), subpassIndex);
+    return builder.create(device, layoutBuilder.create(device), renderPass.getHandle(), subpassIndex);
+}
+
+} // namespace
+
+Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
+    const std::filesystem::path& path,
+    const std::filesystem::path& spvShaderDir,
+    ShaderCache& shaderCache,
+    const VulkanDevice& device,
+    const VulkanRenderPass& renderPass,
+    const uint32_t subpassIndex) {
+    auto maybeJson = loadJsonFromFile(path);
+    if (!maybeJson) {
+        return resultError("Failed to open json config at {}", path.generic_string());
+    }
+
+    auto result =
+        createPipelineFromJson(maybeJson.unwrap(), spvShaderDir, shaderCache, device, renderPass, subpassIndex);
+    if (result) {
+        device.getDebugMarker().setObjectName((*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));
+    }
+    return result;
 }
 
 } // namespace crisp

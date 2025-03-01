@@ -90,7 +90,7 @@ public:
     Geometry* getFullScreenGeometry() const;
 
     std::unique_ptr<VulkanPipeline> createPipeline(
-        std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex);
+        std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
 
     void updateInitialLayouts(VulkanRenderPass& renderPass);
 
@@ -104,6 +104,14 @@ public:
 
     const VulkanDebugMarker& getDebugMarker() const {
         return m_device->getDebugMarker();
+    }
+
+    const ShaderCache& getShaderCache() const {
+        return *m_shaderCache;
+    }
+
+    ShaderCache& getShaderCache() {
+        return *m_shaderCache;
     }
 
 private:
