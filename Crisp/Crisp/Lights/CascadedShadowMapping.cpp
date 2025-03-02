@@ -1,16 +1,16 @@
 #include <Crisp/Lights/CascadedShadowMapping.hpp>
 
 namespace crisp {
-void CascadedShadowMapping::setCascadeCount(
-    Renderer* renderer, const DirectionalLight& light, const uint32_t cascadeCount) {
+void CascadedShadowMapping::configure(
+    const gsl::not_null<VulkanDevice*> device, const DirectionalLight& light, const uint32_t cascadeCount) {
     cascades.resize(cascadeCount);
     for (auto& cascade : cascades) {
         cascade.light = light;
     }
-    cascadedLightBuffer = createUniformRingBuffer(&renderer->getDevice(), cascadeCount * sizeof(LightDescriptor));
+    cascadedLightBuffer = createUniformRingBuffer(device, cascadeCount * sizeof(LightDescriptor));
 }
 
-void CascadedShadowMapping::updateDirectionalLight(const DirectionalLight& light) {
+void CascadedShadowMapping::updateLight(const DirectionalLight& light) {
     for (auto& cascade : cascades) {
         cascade.light = light;
     }
@@ -24,8 +24,8 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
     const float range = zFar - zNear;
     const float ratio = zFar / zNear;
 
-    cascades[0].zNear = zNear;
-    cascades[cascades.size() - 1].zFar = zFar;
+    cascades.front().zNear = zNear;
+    cascades.back().zFar = zFar;
     for (uint32_t i = 0; i < cascades.size() - 1; i++) {
         const float p = static_cast<float>(i + 1) / static_cast<float>(cascades.size());
         const float logSplit = zNear * std::pow(ratio, p);

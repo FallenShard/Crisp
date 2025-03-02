@@ -14,15 +14,15 @@ LightSystem::LightSystem(
     : m_renderer(renderer)
     , m_directionalLight(dirLight)
     , m_directionalLightBuffer(createUniformRingBuffer(&renderer->getDevice(), sizeof(LightDescriptor)))
+    , m_lightDepthRange(glm::vec2(1.0f, 100.0f))
     , m_shadowMapSize(shadowMapSize) {
     if (cascadeCount > 0) {
-        m_cascadedShadowMapping.setCascadeCount(renderer, m_directionalLight, cascadeCount);
+        m_cascadedShadowMapping.configure(&renderer->getDevice(), m_directionalLight, cascadeCount);
     }
 }
 
 void LightSystem::update(const Camera& camera, float /*dt*/, const uint32_t regionIndex) {
-    // const auto [zNear, zFar] = camera.getViewDepthRange();
-    const auto [zNear, zFar] = glm::vec2(1.0f, 100.0f);
+    const auto [zNear, zFar] = m_lightDepthRange;
     m_cascadedShadowMapping.updateSplitIntervals(zNear, zFar);
     m_cascadedShadowMapping.updateTransforms(camera, m_shadowMapSize, regionIndex);
 
@@ -41,7 +41,7 @@ void LightSystem::setDirectionalLight(const DirectionalLight& dirLight) {
     m_directionalLight = dirLight;
     m_directionalLightBuffer->updateStagingBufferFromStruct(
         m_directionalLight.createDescriptor(), m_renderer->getCurrentVirtualFrameIndex());
-    m_cascadedShadowMapping.updateDirectionalLight(m_directionalLight);
+    m_cascadedShadowMapping.updateLight(m_directionalLight);
 }
 
 void LightSystem::setSplitLambda(const float splitLambda) {

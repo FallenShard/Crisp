@@ -59,6 +59,7 @@ private:
     DirectionalLight m_directionalLight;
     std::unique_ptr<VulkanRingBuffer> m_directionalLightBuffer;
     CascadedShadowMapping m_cascadedShadowMapping;
+    glm::vec2 m_lightDepthRange;
 
     uint32_t m_shadowMapSize;
 

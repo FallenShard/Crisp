@@ -133,7 +133,6 @@ const glm::mat4& DirectionalLight::getProjectionMatrix() const {
 }
 
 void DirectionalLight::fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints) {
-    // m_projection = fitSphereOrthoAroundFrustum(m_view, worldFrustumPoints);
     m_projection = fitSphereOrthoAroundFrustum(m_view, worldFrustumPoints, m_direction);
 }
 

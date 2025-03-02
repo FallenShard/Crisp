@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Crisp/Lights/LightDescriptor.hpp>
-
 #include <array>
+
+#include <Crisp/Lights/LightDescriptor.hpp>
 
 namespace crisp {
 class DirectionalLight {
