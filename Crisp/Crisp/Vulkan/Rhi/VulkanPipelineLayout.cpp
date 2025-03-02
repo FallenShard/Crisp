@@ -55,7 +55,7 @@ VulkanPipelineLayout::VulkanPipelineLayout(
 VulkanPipelineLayout::~VulkanPipelineLayout() {
     for (const auto& setLayout : m_descriptorSetLayouts) {
         m_deallocator->deferDestruction(
-            m_framesToLive, setLayout.handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+            kRendererVirtualFrameCount, setLayout.handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
                 spdlog::debug("Destroying set layout: {}", handle);
                 vkDestroyDescriptorSetLayout(
                     deallocator->getDeviceHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);

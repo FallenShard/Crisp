@@ -36,7 +36,7 @@ VulkanSwapChain::VulkanSwapChain(
 
 VulkanSwapChain::~VulkanSwapChain() {
     for (auto* imageView : m_imageViews) {
-        m_deallocator->deferDestruction(m_framesToLive, imageView);
+        m_deallocator->deferDestruction(kRendererVirtualFrameCount, imageView);
     }
 }
 

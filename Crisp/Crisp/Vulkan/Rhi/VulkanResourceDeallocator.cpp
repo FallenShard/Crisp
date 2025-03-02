@@ -2,7 +2,13 @@
 
 #include <algorithm>
 
+#include <Crisp/Core/Logger.hpp>
+
 namespace crisp {
+namespace {
+CRISP_MAKE_LOGGER_ST("VulkanResourceDeallocator");
+} // namespace
+
 VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator)
     : m_deviceHandle(device)
     , m_allocator(allocator) {}

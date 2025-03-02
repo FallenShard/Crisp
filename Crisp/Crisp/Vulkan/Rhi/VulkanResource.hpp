@@ -15,13 +15,11 @@ public:
 
     VulkanResource(VulkanResource&& other) noexcept
         : m_deallocator(std::exchange(other.m_deallocator, nullptr))
-        , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
-        , m_framesToLive(std::exchange(other.m_framesToLive, 0)) {}
+        , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE)) {}
 
     VulkanResource& operator=(VulkanResource&& other) noexcept {
         m_deallocator = std::exchange(other.m_deallocator, nullptr);
         m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
-        m_framesToLive = std::exchange(other.m_framesToLive, 0);
         return *this;
     }
 
@@ -32,7 +30,6 @@ public:
     void swap(VulkanResource& rhs) noexcept {
         std::swap(m_deallocator, rhs.m_deallocator);
         std::swap(m_handle, rhs.m_handle);
-        std::swap(m_framesToLive, rhs.m_framesToLive);
     }
 
 protected:
@@ -50,14 +47,10 @@ protected:
                 return;
             }
 
-            if (m_framesToLive == 0) {
-                destroyVulkanHandle(m_handle, m_deallocator, getDestroyFunc<T>());
-            } else {
-                m_deallocator->deferDestruction(
-                    m_framesToLive, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
-                        destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
-                    });
-            }
+            m_deallocator->deferDestruction(
+                kRendererVirtualFrameCount, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+                    destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
+                });
         } else {
             CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
         }
@@ -71,6 +64,5 @@ protected:
 
     T m_handle;
     VulkanResourceDeallocator* m_deallocator;
-    int32_t m_framesToLive = kRendererVirtualFrameCount;
 };
 } // namespace crisp

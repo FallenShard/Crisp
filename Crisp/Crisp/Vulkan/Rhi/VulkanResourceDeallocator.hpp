@@ -36,7 +36,7 @@ public:
     template <typename VulkanHandleType>
     void deferDestruction(
         const uint32_t framesToLive, const VulkanHandleType handle, const VulkanDestructorCallback callback) {
-        m_deferredDestructors.push_back({framesToLive, handle, callback});
+        m_deferredDestructors.push_back({m_frameIndex + framesToLive, handle, callback});
     }
 
     template <typename VulkanHandleType>
@@ -49,7 +49,7 @@ public:
     }
 
     void deferMemoryDeallocation(const uint32_t framesToLive, const VmaAllocation allocation) {
-        m_deferredMemoryDeallocations.emplace_back(framesToLive, allocation);
+        m_deferredMemoryDeallocations.emplace_back(m_frameIndex + framesToLive, allocation);
     }
 
     VkDevice getDeviceHandle() const {
