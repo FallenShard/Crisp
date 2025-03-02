@@ -199,17 +199,30 @@ void Application::drawGui() {
                 continue;
             }
 
-            const VkDeviceSize allocatedBytes = toMiB(budget.statistics.allocationBytes);
-            const VkDeviceSize availableBytes = budget.budget;
+            const VkDeviceSize allocatedBytes = budget.statistics.blockBytes;
+            const VkDeviceSize usedAllocatedBytes = budget.statistics.allocationBytes;
 
             ImGui::PushStyleColor(
                 ImGuiCol_Text,
-                interpolateColor(static_cast<float>(allocatedBytes) / static_cast<float>(availableBytes)));
+                interpolateColor(static_cast<float>(usedAllocatedBytes) / static_cast<float>(allocatedBytes)));
             ImGui::LabelText( // NOLINT
-                fmt::format("Heap {} Usage", i).c_str(),
+                fmt::format("Heap {} Allocations", i).c_str(),
                 "%llu / %llu MB",
-                toMiB(allocatedBytes),
-                toMiB(availableBytes)); // NOLINT
+                toMiB(usedAllocatedBytes),
+                toMiB(allocatedBytes));
+            ImGui::PopStyleColor();
+
+            const VkDeviceSize totalAvailableBytes = budget.budget;
+            const VkDeviceSize totalUsedBytes = budget.usage;
+
+            ImGui::PushStyleColor(
+                ImGuiCol_Text,
+                interpolateColor(static_cast<float>(totalUsedBytes) / static_cast<float>(totalAvailableBytes)));
+            ImGui::LabelText( // NOLINT
+                fmt::format("Heap {} Total", i).c_str(),
+                "%llu / %llu MB",
+                toMiB(totalUsedBytes),
+                toMiB(totalAvailableBytes)); // NOLINT
             ImGui::PopStyleColor();
         }
     }
