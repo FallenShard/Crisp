@@ -20,23 +20,26 @@ TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
     const VkBuffer buffer2 = createBuffer(*device_, bufferInfo);
     const VkBuffer buffer3 = createBuffer(*device_, bufferInfo);
 
-    const auto deferDeallocation = [&device = device_](int32_t framesToLive, VkBuffer buffer) {
-        device->getResourceDeallocator().deferDestruction(framesToLive, buffer);
+    auto& deallocator = device_->getResourceDeallocator();
+
+    const auto deferDeallocation = [&deallocator](int32_t framesToLive, VkBuffer buffer) {
+        deallocator.deferDestruction(framesToLive, buffer);
     };
 
     deferDeallocation(1, buffer1);
     deferDeallocation(2, buffer2);
     deferDeallocation(4, buffer3);
-    device_->getResourceDeallocator().decrementLifetimes();
-    EXPECT_EQ(device_->getResourceDeallocator().getDeferredDestructorCount(), 3);
-    device_->getResourceDeallocator().decrementLifetimes();
-    EXPECT_EQ(device_->getResourceDeallocator().getDeferredDestructorCount(), 2);
-    device_->getResourceDeallocator().decrementLifetimes();
-    EXPECT_EQ(device_->getResourceDeallocator().getDeferredDestructorCount(), 1);
-    device_->getResourceDeallocator().decrementLifetimes();
-    EXPECT_EQ(device_->getResourceDeallocator().getDeferredDestructorCount(), 1);
-    device_->getResourceDeallocator().decrementLifetimes();
-    EXPECT_EQ(device_->getResourceDeallocator().getDeferredDestructorCount(), 0);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
+    deallocator.advanceFrame();
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
+    deallocator.advanceFrame();
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 2);
+    deallocator.advanceFrame();
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    deallocator.advanceFrame();
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    deallocator.advanceFrame();
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
 }
 } // namespace
 } // namespace crisp

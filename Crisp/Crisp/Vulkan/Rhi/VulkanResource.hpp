@@ -25,12 +25,6 @@ public:
         return *this;
     }
 
-    template <typename DestroyFunc>
-    static void destroyVulkanHandle(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
-        SPDLOG_DEBUG("Destroying object at address {}: {}.", handle, typeid(T).name());
-        func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
-    }
-
     T getHandle() const {
         return m_handle;
     }
@@ -39,10 +33,6 @@ public:
         std::swap(m_deallocator, rhs.m_deallocator);
         std::swap(m_handle, rhs.m_handle);
         std::swap(m_framesToLive, rhs.m_framesToLive);
-    }
-
-    void setDeferredDestruction(bool isEnabled) {
-        m_framesToLive = isEnabled ? kRendererVirtualFrameCount : 0;
     }
 
 protected:
@@ -71,6 +61,12 @@ protected:
         } else {
             CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
         }
+    }
+
+    template <typename DestroyFunc>
+    static void destroyVulkanHandle(void* handle, VulkanResourceDeallocator* deallocator, const DestroyFunc& func) {
+        SPDLOG_DEBUG("Destroying object at address {}: {}.", handle, typeid(T).name());
+        func(deallocator->getDeviceHandle(), static_cast<T>(handle), nullptr);
     }
 
     T m_handle;

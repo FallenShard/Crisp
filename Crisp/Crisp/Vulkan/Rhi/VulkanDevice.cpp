@@ -89,7 +89,7 @@ VulkanDevice::VulkanDevice(
     const VulkanPhysicalDevice& physicalDevice,
     const VulkanQueueConfiguration& queueConfig,
     const VulkanInstance& instance,
-    int32_t virtualFrameCount)
+    const int32_t /*virtualFrameCount*/)
     : m_handle(createLogicalDeviceHandle(physicalDevice, queueConfig))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
     , m_debugMarker(std::make_unique<VulkanDebugMarker>(m_handle))
@@ -97,7 +97,7 @@ VulkanDevice::VulkanDevice(
     , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getComputeQueue(queueConfig)))
     , m_transferQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getTransferQueue(queueConfig)))
     , m_memoryAllocator(createMemoryAllocator(physicalDevice, m_handle, instance))
-    , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, m_memoryAllocator, virtualFrameCount)) {
+    , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, m_memoryAllocator)) {
     m_debugMarker->setObjectName(m_generalQueue->getHandle(), "General Queue");
     m_debugMarker->setObjectName(m_computeQueue->getHandle(), "Compute Queue");
     m_debugMarker->setObjectName(m_transferQueue->getHandle(), "Transfer Queue");

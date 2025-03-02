@@ -7,16 +7,20 @@ namespace crisp {
 class VulkanResourceDeallocator;
 using VulkanDestructorCallback = void (*)(void*, VulkanResourceDeallocator*);
 
-struct DeferredDestructor {
-    int64_t deferredFrameIndex;
-    int32_t framesRemaining;
-    void* vulkanHandle;
+struct DeferredHandleDestructor {
+    uint64_t frameIndex;
+    void* handle;
     VulkanDestructorCallback destructorCallback;
+};
+
+struct DeferredMemoryDestructor {
+    uint64_t frameIndex;
+    VmaAllocation allocation;
 };
 
 class VulkanResourceDeallocator {
 public:
-    explicit VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator, int32_t virtualFrameCount);
+    VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator);
     ~VulkanResourceDeallocator();
 
     VulkanResourceDeallocator(const VulkanResourceDeallocator&) = delete;
@@ -25,26 +29,27 @@ public:
     VulkanResourceDeallocator(VulkanResourceDeallocator&&) noexcept = default;
     VulkanResourceDeallocator& operator=(VulkanResourceDeallocator&&) noexcept = default;
 
-    void decrementLifetimes();
+    void advanceFrame();
 
     void freeAllResources();
 
     template <typename VulkanHandleType>
-    void deferDestruction(int32_t framesToLive, VulkanHandleType handle, VulkanDestructorCallback callback) {
-        m_deferredDestructors.push_back({0, framesToLive, handle, callback});
+    void deferDestruction(
+        const uint32_t framesToLive, const VulkanHandleType handle, const VulkanDestructorCallback callback) {
+        m_deferredDestructors.push_back({framesToLive, handle, callback});
     }
 
     template <typename VulkanHandleType>
-    void deferDestruction(int32_t framesToLive, VulkanHandleType handle) {
+    void deferDestruction(const uint32_t framesToLive, const VulkanHandleType handle) {
         m_deferredDestructors.push_back(
-            {0, framesToLive, handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+            {m_frameIndex + framesToLive, handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
                  getDestroyFunc<VulkanHandleType>()(
                      deallocator->getDeviceHandle(), static_cast<VulkanHandleType>(handle), nullptr);
              }});
     }
 
-    void deferMemoryDeallocation(int32_t framesToLive, VmaAllocation allocation) {
-        m_deferredVmaDeallocations.emplace_back(framesToLive, allocation);
+    void deferMemoryDeallocation(const uint32_t framesToLive, const VmaAllocation allocation) {
+        m_deferredMemoryDeallocations.emplace_back(framesToLive, allocation);
     }
 
     VkDevice getDeviceHandle() const {
@@ -62,10 +67,9 @@ public:
 private:
     VkDevice m_deviceHandle{VK_NULL_HANDLE};
     VmaAllocator m_allocator{VK_NULL_HANDLE};
+    uint64_t m_frameIndex{0};
 
-    int32_t m_virtualFrameCount{1};
-
-    std::vector<DeferredDestructor> m_deferredDestructors;
-    std::vector<std::pair<int32_t, VmaAllocation>> m_deferredVmaDeallocations;
+    std::vector<DeferredHandleDestructor> m_deferredDestructors;
+    std::vector<DeferredMemoryDestructor> m_deferredMemoryDeallocations;
 };
 } // namespace crisp

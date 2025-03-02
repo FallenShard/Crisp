@@ -197,7 +197,7 @@ std::optional<FrameContext> Renderer::beginFrame() {
     }
 
     // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
-    m_device->getResourceDeallocator().decrementLifetimes();
+    m_device->getResourceDeallocator().advanceFrame();
 
     // Flush all noncoherent updates
     m_device->flushMappedRanges();
