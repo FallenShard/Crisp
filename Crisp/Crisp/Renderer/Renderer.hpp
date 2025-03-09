@@ -23,7 +23,6 @@
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
-#include <Crisp/Vulkan/VulkanDebugUtils.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
@@ -33,6 +32,7 @@ struct VulkanCoreParams {
     std::vector<std::string> requiredInstanceExtensions;
     std::vector<std::string> requiredDeviceExtensions;
     PresentationMode presentationMode;
+    bool includeValidation{true};
 };
 
 class Renderer {
@@ -100,10 +100,6 @@ public:
 
     void scheduleOnMainThread(std::function<void()>&& task) {
         m_mainThreadQueue.push(std::move(task));
-    }
-
-    const VulkanDebugMarker& getDebugMarker() const {
-        return m_device->getDebugMarker();
     }
 
     const ShaderCache& getShaderCache() const {

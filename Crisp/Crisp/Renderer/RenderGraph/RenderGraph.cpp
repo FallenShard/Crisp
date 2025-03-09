@@ -551,8 +551,7 @@ void RenderGraph::createPhysicalResources(
             desc.format,
             determineUsageFlags(physicalImage.aliasedResourceIndices),
             determineCreateFlags(physicalImage.aliasedResourceIndices));
-        device.getDebugMarker().setObjectName(
-            *physicalImage.image, m_resources[physicalImage.aliasedResourceIndices[0]].name.c_str());
+        device.setObjectName(*physicalImage.image, m_resources[physicalImage.aliasedResourceIndices[0]].name.c_str());
         CRISP_LOGT(
             "Created image: {} with size: {}x{}",
             m_resources[physicalImage.aliasedResourceIndices[0]].name,
@@ -577,8 +576,7 @@ void RenderGraph::createPhysicalResources(
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
         res.buffer =
             std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        device.getDebugMarker().setObjectName(
-            res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
+        device.setObjectName(res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
     }
 }
 
@@ -642,7 +640,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         auto& physicalPass =
             m_physicalPasses.emplace_back(builder.create(device, getRenderArea(pass, swapChainExtent), creationParams));
         m_physicalPassIndices[idx] = static_cast<int32_t>(m_physicalPasses.size()) - 1;
-        device.getDebugMarker().setObjectName(*physicalPass, pass.name.c_str());
+        device.setObjectName(*physicalPass, pass.name.c_str());
 
         std::vector<VkImageView> attachmentViews{};
         for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
@@ -656,7 +654,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
 
         m_framebuffers.push_back(std::make_unique<VulkanFramebuffer>(
             device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews));
-        device.getDebugMarker().setObjectName(*m_framebuffers.back(), fmt::format("{}Framebuffer", pass.name).c_str());
+        device.setObjectName(*m_framebuffers.back(), fmt::format("{}Framebuffer", pass.name).c_str());
     }
 }
 

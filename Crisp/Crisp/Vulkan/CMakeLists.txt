@@ -1,8 +1,6 @@
 add_subdirectory(Rhi)
 
 add_cpp_static_library(CrispVulkan
-    "VulkanDebugUtils.cpp"
-    "VulkanDebugUtils.hpp"
     "VulkanEnumToString.hpp"
     "VulkanEnumToString.cpp"
 )

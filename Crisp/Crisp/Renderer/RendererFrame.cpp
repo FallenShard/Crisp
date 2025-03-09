@@ -7,12 +7,9 @@ RendererFrame::RendererFrame(const VulkanDevice& device, const int32_t logicalIn
     , m_renderFinishedSemaphore(device.createSemaphore())
     , m_deviceHandle(device.getHandle())
     , m_logicalIndex(logicalIndex) {
-    device.getDebugMarker().setObjectName(
-        m_completionFence, fmt::format("[Frame {}] Frame Completion Fence", m_logicalIndex));
-    device.getDebugMarker().setObjectName(
-        m_imageAvailableSemaphore, fmt::format("[Frame {}] Image Available Sem", m_logicalIndex));
-    device.getDebugMarker().setObjectName(
-        m_renderFinishedSemaphore, fmt::format("[Frame {}] Render Finished Sem", m_logicalIndex));
+    device.setObjectName(m_completionFence, fmt::format("[Frame {}] Frame Completion Fence", m_logicalIndex));
+    device.setObjectName(m_imageAvailableSemaphore, fmt::format("[Frame {}] Image Available Sem", m_logicalIndex));
+    device.setObjectName(m_renderFinishedSemaphore, fmt::format("[Frame {}] Render Finished Sem", m_logicalIndex));
 }
 
 RendererFrame::~RendererFrame() {

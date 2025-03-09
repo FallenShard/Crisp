@@ -28,20 +28,20 @@ public:
     VulkanRingBuffer* createRingBufferFromStdVec(const std::string& id, const std::vector<T>& data) {
         auto buffer = std::make_unique<VulkanRingBuffer>(
             &m_renderer->getDevice(), VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, sizeof(T) * data.size(), data.data());
-        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        m_renderer->getDevice().setObjectName(buffer->getHandle(), id.c_str());
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
 
     template <typename T>
     VulkanRingBuffer* createRingBufferFromStruct(const std::string& id, const T& data, const VkBufferUsageFlags2 usage) {
         auto buffer = std::make_unique<VulkanRingBuffer>(&m_renderer->getDevice(), usage, sizeof(T), &data);
-        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        m_renderer->getDevice().setObjectName(buffer->getHandle(), id.c_str());
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
 
     VulkanRingBuffer* createRingBuffer(const std::string& id, const size_t size, const VkBufferUsageFlags2 usage) {
         auto buffer = std::make_unique<VulkanRingBuffer>(&m_renderer->getDevice(), usage, size);
-        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        m_renderer->getDevice().setObjectName(buffer->getHandle(), id.c_str());
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
 
@@ -49,7 +49,7 @@ public:
         const std::string& id, const size_t size, const VkBufferUsageFlags2 extraUsage = 0) {
         auto buffer = std::make_unique<VulkanRingBuffer>(
             &m_renderer->getDevice(), VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | extraUsage, size);
-        m_renderer->getDebugMarker().setObjectName(buffer->getHandle(), id.c_str());
+        m_renderer->getDevice().setObjectName(buffer->getHandle(), id.c_str());
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
 

@@ -67,7 +67,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
             .createFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
 
         });
-    device.getDebugMarker().setObjectName(*cubeMap, "CubeMap");
+    device.setObjectName(*cubeMap, "CubeMap");
 
     auto cubeMapPass = createTexturePass(device, {cubeMapSize, cubeMapSize}, cubeMap->getFormat());
 

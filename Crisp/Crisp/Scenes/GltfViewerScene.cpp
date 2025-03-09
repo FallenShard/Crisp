@@ -122,7 +122,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
 
     // Object transforms
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
-    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->getHandle(), "transformBuffer");
+    m_renderer->getDevice().setObjectName(m_transformBuffer->getUniformBuffer()->getHandle(), "transformBuffer");
 
     createCommonTextures();
 

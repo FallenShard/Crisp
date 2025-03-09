@@ -38,7 +38,7 @@ VkShaderModule ShaderCache::getOrLoadShaderModule(const std::filesystem::path& s
     vkCreateShaderModule(m_device->getHandle(), &createInfo, nullptr, &shaderModule);
 
     m_shaderModules.insert_or_assign(shaderKey, ShaderModule{shaderModule, timestamp});
-    m_device->getDebugMarker().setObjectName(shaderModule, shaderKey);
+    m_device->setObjectName(shaderModule, shaderKey);
     return shaderModule;
 }
 } // namespace crisp

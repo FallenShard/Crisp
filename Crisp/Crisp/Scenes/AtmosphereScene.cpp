@@ -17,11 +17,11 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
 
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-    m_renderer->getDebugMarker().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
+    m_renderer->getDevice().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
 
     // Object transforms
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
-    m_renderer->getDebugMarker().setObjectName(m_transformBuffer->getUniformBuffer()->get(), "transformBuffer");
+    m_renderer->getDevice().setObjectName(m_transformBuffer->getUniformBuffer()->get(), "transformBuffer");
 
     createCommonTextures();
 

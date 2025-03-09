@@ -7,7 +7,7 @@ TransformBuffer::TransformBuffer(Renderer* renderer, const std::size_t maxTransf
     : m_activeTransforms(0)
     , m_transforms(maxTransformCount)
     , m_transformBuffer(createUniformRingBuffer(&renderer->getDevice(), m_transforms.size() * sizeof(TransformPack))) {
-    renderer->getDebugMarker().setObjectName(m_transformBuffer->getHandle(), "transformBuffer");
+    renderer->getDevice().setObjectName(m_transformBuffer->getHandle(), "transformBuffer");
 }
 
 const VulkanRingBuffer* TransformBuffer::getUniformBuffer() const {

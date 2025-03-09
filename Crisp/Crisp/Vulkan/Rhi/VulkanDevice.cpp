@@ -92,15 +92,15 @@ VulkanDevice::VulkanDevice(
     const int32_t /*virtualFrameCount*/)
     : m_handle(createLogicalDeviceHandle(physicalDevice, queueConfig))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
-    , m_debugMarker(std::make_unique<VulkanDebugMarker>(m_handle))
     , m_generalQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getGeneralQueue(queueConfig)))
     , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getComputeQueue(queueConfig)))
     , m_transferQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getTransferQueue(queueConfig)))
     , m_memoryAllocator(createMemoryAllocator(physicalDevice, m_handle, instance))
-    , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, m_memoryAllocator)) {
-    m_debugMarker->setObjectName(m_generalQueue->getHandle(), "General Queue");
-    m_debugMarker->setObjectName(m_computeQueue->getHandle(), "Compute Queue");
-    m_debugMarker->setObjectName(m_transferQueue->getHandle(), "Transfer Queue");
+    , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, m_memoryAllocator))
+    , m_debugUtilsEnabled(instance.isExtensionEnabled(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+    setObjectName(m_generalQueue->getHandle(), "General Queue");
+    setObjectName(m_computeQueue->getHandle(), "Compute Queue");
+    setObjectName(m_transferQueue->getHandle(), "Transfer Queue");
 }
 
 VulkanDevice::~VulkanDevice() {
@@ -235,6 +235,18 @@ void VulkanDevice::flushResourceUpdates(const bool waitOnAllQueues) {
     if (waitOnAllQueues) {
         waitIdle();
     }
+}
+
+void VulkanDevice::setObjectName(const uint64_t vulkanHandle, const char* name, const VkObjectType objectType) const {
+    if (!m_debugUtilsEnabled) {
+        return;
+    }
+
+    VkDebugUtilsObjectNameInfoEXT nameInfo{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+    nameInfo.objectType = objectType;
+    nameInfo.objectHandle = vulkanHandle;
+    nameInfo.pObjectName = name;
+    vkSetDebugUtilsObjectNameEXT(m_handle, &nameInfo);
 }
 
 VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config) {

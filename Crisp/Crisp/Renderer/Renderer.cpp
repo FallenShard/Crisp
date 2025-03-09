@@ -30,7 +30,7 @@ std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
             .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, kExternalColorSubpass >> kColorWrite)
             .create(device, swapChain.getExtent(), creationParams);
-    device.getDebugMarker().setObjectName(*renderPass, "Default Render Pass");
+    device.setObjectName(*renderPass, "Default Render Pass");
     return renderPass;
 }
 
@@ -52,7 +52,9 @@ Renderer::Renderer(
 
     // Create fundamental objects for the API
     m_instance = std::make_unique<VulkanInstance>(
-        std::move(surfCreatorCallback), std::move(vulkanCoreParams.requiredInstanceExtensions), true);
+        std::move(surfCreatorCallback),
+        std::move(vulkanCoreParams.requiredInstanceExtensions),
+        vulkanCoreParams.includeValidation);
     m_physicalDevice = std::make_unique<VulkanPhysicalDevice>(
         selectPhysicalDevice(*m_instance, std::move(vulkanCoreParams.requiredDeviceExtensions)).unwrap());
     m_device = std::make_unique<VulkanDevice>(

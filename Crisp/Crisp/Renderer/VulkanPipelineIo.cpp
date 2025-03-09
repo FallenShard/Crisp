@@ -350,7 +350,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     auto result =
         createPipelineFromJson(maybeJson.unwrap(), spvShaderDir, shaderCache, device, renderPass, subpassIndex);
     if (result) {
-        device.getDebugMarker().setObjectName((*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));
+        device.setObjectName((*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));
     }
     return result;
 }

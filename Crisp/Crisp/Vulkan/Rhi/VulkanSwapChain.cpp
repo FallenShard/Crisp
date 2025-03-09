@@ -115,7 +115,7 @@ void VulkanSwapChain::createSwapChain(
 
     VkDevice deviceHandle = device.getHandle();
     VK_CHECK(vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle));
-    device.getDebugMarker().setObjectName(m_handle, "Main Swap Chain");
+    device.setObjectName(m_handle, "Main Swap Chain");
 
     if (createInfo.oldSwapchain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(deviceHandle, createInfo.oldSwapchain, nullptr);
@@ -125,7 +125,7 @@ void VulkanSwapChain::createSwapChain(
     m_images.resize(imageCount);
     VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data()));
     for (uint32_t i = 0; i < m_images.size(); ++i) {
-        device.getDebugMarker().setObjectName(m_handle, fmt::format("Swap Chain Image {}", i));
+        device.setObjectName(m_handle, fmt::format("Swap Chain Image {}", i));
     }
 
     m_imageFormat = surfaceFormat.format;
@@ -151,7 +151,7 @@ void VulkanSwapChain::createImageViews(const VulkanDevice& device) {
         viewInfo.subresourceRange.layerCount = 1;
 
         VK_CHECK(vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_imageViews[i]));
-        device.getDebugMarker().setObjectName(m_handle, fmt::format("Swap Chain Image View {}", i));
+        device.setObjectName(m_handle, fmt::format("Swap Chain Image View {}", i));
     }
 }
 
