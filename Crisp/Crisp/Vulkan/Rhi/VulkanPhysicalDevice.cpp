@@ -15,6 +15,47 @@ void append(T& chainHead, U& newElement) {
     chainHead.pNext = &newElement;
 }
 
+const char* getDeviceTypeString(const VkPhysicalDeviceType type) {
+    switch (type) {
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+        return "Integrated GPU";
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+        return "Discrete GPU";
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+        return "Virtual GPU";
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+        return "CPU";
+    default:
+        return "Other";
+    }
+    return "Unknown";
+}
+
+void logSelectedDevice(const VulkanPhysicalDevice& physicalDevice) {
+    const auto apiVersion = physicalDevice.getProperties().apiVersion;
+    CRISP_LOGI(
+        "Selected device: {}, type: {}",
+        physicalDevice.getProperties().deviceName,
+        getDeviceTypeString(physicalDevice.getProperties().deviceType));
+    CRISP_LOGI(
+        " - API version:    {}.{}.{}",
+        VK_VERSION_MAJOR(apiVersion),
+        VK_VERSION_MINOR(apiVersion),
+        VK_VERSION_PATCH(apiVersion));
+    const bool isNvidia = physicalDevice.getProperties().vendorID == 0x10DE;
+    const auto driverVersion = physicalDevice.getProperties().driverVersion;
+    if (isNvidia) {
+        CRISP_LOGI(
+            " - Driver version: {}.{}.{}.{}",
+            (driverVersion >> 22) & 0x3FF,
+            (driverVersion >> 14) & 0xFF,
+            (driverVersion >> 6) & 0xFF,
+            driverVersion & 0x3F);
+    } else {
+        CRISP_LOGI("  Driver version: {}", driverVersion);
+    }
+}
+
 } // namespace
 
 VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const DeviceRequirements& requirements)
@@ -307,6 +348,7 @@ Result<VulkanPhysicalDevice> selectPhysicalDevice(
     for (const auto& device : devices) {
         VulkanPhysicalDevice physicalDevice(device);
         if (physicalDevice.isSuitable(instance.getSurface(), deviceExtensions)) {
+            logSelectedDevice(physicalDevice);
             physicalDevice.setDeviceExtensions(std::move(deviceExtensions));
             return physicalDevice;
         }
