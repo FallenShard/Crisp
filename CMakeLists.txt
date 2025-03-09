@@ -221,7 +221,7 @@ FetchContent_MakeAvailable(volk)
 
 FetchContent_Declare(VulkanMemoryAllocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-    GIT_TAG v3.2.0
+    GIT_TAG v3.2.1
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(VulkanMemoryAllocator)

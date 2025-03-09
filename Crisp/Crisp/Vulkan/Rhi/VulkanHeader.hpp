@@ -18,6 +18,7 @@
 #if !defined(VMA_DYNAMIC_VULKAN_FUNCTIONS)
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #endif
+#define VMA_VULKAN_VERSION 1004000
 #include <vk_mem_alloc.h>
 
 namespace crisp {

@@ -112,14 +112,14 @@ Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredL
     return {};
 }
 
-VkInstance createInstance(std::vector<std::string>&& requiredExtensions, const bool enableValidationLayers) { // NOLINT
+VkInstance createInstance(std::vector<std::string> requiredExtensions, const bool enableValidationLayers) { // NOLINT
     loadVulkanLoaderFunctions();
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     appInfo.pApplicationName = "Crisp";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "CrispEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_3;
+    appInfo.apiVersion = VK_API_VERSION_1_4;
 
     if (enableValidationLayers) {
         requiredExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -148,7 +148,7 @@ VkInstance createInstance(std::vector<std::string>&& requiredExtensions, const b
     return instance;
 }
 
-VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance instance) {
+VkDebugUtilsMessengerEXT createDebugMessenger(const VkInstance instance) {
     VkDebugUtilsMessengerCreateInfoEXT createInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
     createInfo.flags = 0;
     createInfo.messageSeverity =
@@ -172,13 +172,17 @@ VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator& surf
 } // namespace
 
 VulkanInstance::VulkanInstance(
-    const SurfaceCreator& surfaceCreator,
-    std::vector<std::string>&& platformExtensions,
-    const bool enableValidationLayers)
-    : m_handle(createInstance(std::move(platformExtensions), enableValidationLayers))
+    const SurfaceCreator& surfaceCreator, std::vector<std::string> requiredExtensions, const bool enableValidationLayers)
+    : m_handle(createInstance(requiredExtensions, enableValidationLayers))
     , m_debugMessenger(enableValidationLayers ? createDebugMessenger(m_handle) : VK_NULL_HANDLE)
     , m_surface(surfaceCreator ? createSurface(m_handle, surfaceCreator) : VK_NULL_HANDLE)
-    , m_apiVersion(VK_API_VERSION_1_3) {}
+    , m_apiVersion(VK_API_VERSION_1_4)
+    , m_enabledExtensions(requiredExtensions.begin(), requiredExtensions.end()) {
+    if (enableValidationLayers) {
+        m_enabledExtensions.emplace(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        m_enabledLayers.insert(kValidationLayers.begin(), kValidationLayers.end());
+    }
+}
 
 VulkanInstance::~VulkanInstance() {
     if (m_handle == VK_NULL_HANDLE) {
@@ -204,6 +208,14 @@ VkSurfaceKHR VulkanInstance::getSurface() const {
 
 uint32_t VulkanInstance::getApiVersion() const {
     return m_apiVersion;
+}
+
+bool VulkanInstance::isExtensionEnabled(const std::string_view extensionName) const {
+    return m_enabledExtensions.contains(extensionName);
+}
+
+bool VulkanInstance::isLayerEnabled(const std::string_view layerName) const {
+    return m_enabledLayers.contains(layerName);
 }
 
 } // namespace crisp
