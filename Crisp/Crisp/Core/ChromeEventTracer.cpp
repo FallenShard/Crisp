@@ -2,8 +2,6 @@
 
 #include <Crisp/Core/ChromeEventTracer.hpp>
 
-#include <fstream>
-
 namespace crisp {
 
 CpuTracerContext::CpuTracerContext() = default;
@@ -42,38 +40,6 @@ CpuTracerScope::~CpuTracerScope() {
         .name = m_scopeName,
         .type = ScopeEventType::End,
     });
-}
-
-void serializeTracedEvents(const std::filesystem::path& outputFile) {
-    std::ofstream output(outputFile);
-    output << "{\"traceEvents\":[\n";
-
-    const auto& ctx = detail::getCpuContext();
-
-    std::vector<uint32_t> stack;
-    const auto& tracedEvents = ctx.getTracedEvents();
-    for (uint32_t i = 0; i < tracedEvents.size(); ++i) {
-        auto& event = tracedEvents[i];
-        if (event.type == ScopeEventType::Begin) {
-            stack.push_back(i);
-        } else {
-            const auto& beginEvent = tracedEvents[stack.back()];
-            stack.pop_back();
-
-            const auto beginUs = static_cast<double>(beginEvent.timestamp) / 1000.0;
-            const auto durationUs = static_cast<double>(event.timestamp - beginEvent.timestamp) / 1000.0;
-            const std::string_view comma = i == tracedEvents.size() - 1 ? "\n" : ",\n";
-            output << fmt::format(
-                R"({{"name":{:?}, "ph":"X", "ts":{}, "dur":{}, "pid":{}}}{})",
-                beginEvent.name.literal,
-                beginUs,
-                durationUs,
-                1,
-                comma);
-        }
-    }
-    output << "],\n";
-    output << R"("meta_user":"FallenShard","meta_cpu_count":"16"})";
 }
 
 } // namespace crisp

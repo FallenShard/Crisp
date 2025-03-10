@@ -24,6 +24,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
+#include <Crisp/Vulkan/VulkanTracer.hpp>
 
 namespace crisp {
 class Geometry;
@@ -150,6 +151,8 @@ private:
 
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
+
+    std::vector<std::unique_ptr<VulkanTracingContext>> m_gpuTracingContexts;
 };
 
 void fillDeviceBuffer(

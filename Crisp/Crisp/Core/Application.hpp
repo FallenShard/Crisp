@@ -56,5 +56,7 @@ private:
 
     bool m_isMinimized{false};
     bool m_isResizing{false};
+
+    std::filesystem::path m_outputDir;
 };
 } // namespace crisp

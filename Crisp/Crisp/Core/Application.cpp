@@ -1,5 +1,6 @@
 #include <Crisp/Core/Application.hpp>
 
+#include <Crisp/Core/ChromeEventTracerIo.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Core/Profiler.hpp>
 #include <Crisp/Core/Timer.hpp>
@@ -34,7 +35,8 @@ AssetPaths createAssetPaths(const ApplicationEnvironment& environment) {
 } // namespace
 
 Application::Application(const ApplicationEnvironment& environment)
-    : m_window(createWindow(kTitle, kDefaultWindowSize)) {
+    : m_window(createWindow(kTitle, kDefaultWindowSize))
+    , m_outputDir(environment.getOutputDirectory()) {
     const ScopeProfiler scope("Application constructor");
 
     VulkanCoreParams vulkanCoreParams{};
@@ -71,6 +73,7 @@ Application::Application(const ApplicationEnvironment& environment)
 
 Application::~Application() {
     gui::shutdownImGui(m_renderer->getDevice().getHandle());
+    serializeTracedEvents(m_outputDir / "profiler.json");
 }
 
 void Application::run() {

@@ -86,6 +86,12 @@ Renderer::Renderer(
     m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRenderPass());
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
+
+    m_gpuTracingContexts.resize(kRendererVirtualFrameCount);
+    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
+        m_gpuTracingContexts[i] = std::make_unique<VulkanTracingContext>(*m_device, *m_physicalDevice);
+    }
+    detail::setTraceContexts(m_gpuTracingContexts);
 }
 
 Renderer::~Renderer() {} // NOLINT
@@ -192,6 +198,7 @@ std::optional<FrameContext> Renderer::beginFrame() {
         CRISP_TRACE_SCOPE("frame_wait");
         frame.waitCompletion(*m_device);
     }
+    CRISP_TRACE_VK_ADVANCE(virtualFrameIndex);
 
     std::function<void()> task;
     while (m_mainThreadQueue.tryPop(task)) {

@@ -52,6 +52,4 @@ private:
 #define CRISP_TRACE_SCOPE(scopeName)                                                                                   \
     CpuTracerScope CRISP_CONCATENATE(scope, __LINE__)(detail::getCpuContext(), scopeName);
 
-void serializeTracedEvents(const std::filesystem::path& outputFile);
-
 } // namespace crisp

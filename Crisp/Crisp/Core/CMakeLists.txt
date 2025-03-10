@@ -112,7 +112,7 @@ target_link_libraries(
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::StringUtils
     PUBLIC glfw
-    PRIVATE Crisp::ChromeEventTracer
+    PRIVATE Crisp::ChromeEventTracerIo
     PRIVATE Crisp::Logger
     PRIVATE Crisp::Format
     PRIVATE Crisp::CommandLineParser
@@ -237,6 +237,18 @@ add_cpp_test(
 target_link_libraries(
     CrispChromeEventTracerTest
     PRIVATE Crisp::ChromeEventTracer
+    PRIVATE Crisp::ChromeEventTracerIo
+)
+
+add_cpp_static_library(
+    CrispChromeEventTracerIo
+    "ChromeEventTracerIo.cpp"
+    "ChromeEventTracerIo.hpp"
+)
+target_link_libraries(
+    CrispChromeEventTracerIo
+    PUBLIC Crisp::ChromeEventTracer
+    PUBLIC Crisp::VulkanTracer
 )
 
 add_cpp_interface_library(
@@ -246,9 +258,15 @@ add_cpp_interface_library(
 target_link_libraries(
     CrispScopeProfiler
     INTERFACE Crisp::Logger
+    INTERFACE Crisp::StringLiteral
 )
 
 add_cpp_interface_library(
     CrispTimer
     "Timer.hpp"
+)
+
+add_cpp_interface_library(
+    CrispStringLiteral
+    "StringLiteral.hpp"
 )

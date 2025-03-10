@@ -136,6 +136,7 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::VulkanRingBuffer
     PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Crisp::AssetPaths
+    PUBLIC Crisp::VulkanTracer
 )
 
 add_cpp_static_library(CrispImageCache

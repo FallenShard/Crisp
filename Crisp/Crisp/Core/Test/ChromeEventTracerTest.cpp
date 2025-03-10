@@ -1,4 +1,5 @@
 #include <Crisp/Core/ChromeEventTracer.hpp>
+#include <Crisp/Core/ChromeEventTracerIo.hpp>
 
 #include <gmock/gmock.h>
 

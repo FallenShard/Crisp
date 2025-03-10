@@ -103,3 +103,15 @@ target_link_libraries(
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::VulkanSynchronization
 )
+
+add_cpp_static_library(
+    CrispVulkanTracer
+    "VulkanTracer.cpp"
+    "VulkanTracer.hpp"
+)
+target_link_libraries(
+    CrispVulkanTracer
+    PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::ChromeEventTracer
+    PUBLIC Microsoft.GSL::GSL
+)

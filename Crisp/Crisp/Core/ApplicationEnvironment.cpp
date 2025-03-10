@@ -2,7 +2,6 @@
 
 #include <GLFW/glfw3.h>
 
-#include <Crisp/Core/ChromeEventTracer.hpp>
 #include <Crisp/Core/CommandLineParser.hpp>
 #include <Crisp/Core/Logger.hpp>
 
@@ -55,8 +54,6 @@ ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
 
 ApplicationEnvironment::~ApplicationEnvironment() {
     glfwTerminate();
-
-    serializeTracedEvents(getOutputDirectory() / "profiler.json");
 }
 
 const std::filesystem::path& ApplicationEnvironment::getResourcesPath() const {
