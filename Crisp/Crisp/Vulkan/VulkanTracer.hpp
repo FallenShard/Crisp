@@ -34,8 +34,8 @@ public:
         vkCmdWriteTimestamp2(cmdBuffer, stageFlags, m_queryPool, m_count++);
     }
 
-    const std::vector<ScopeEvent>& getTracedEvents() const {
-        return m_events;
+    std::span<const ScopeEvent> getTracedEvents() const {
+        return std::span(m_events).subspan(0, m_resolvedEvents);
     }
 
 private:
@@ -50,6 +50,7 @@ private:
 
     std::vector<uint64_t> m_retrievedQueries;
     std::vector<ScopeEvent> m_events;
+    uint64_t m_resolvedEvents;
 };
 
 namespace detail {

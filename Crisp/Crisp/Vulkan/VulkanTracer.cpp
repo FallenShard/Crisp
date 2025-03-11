@@ -1,3 +1,4 @@
+#include "Crisp/Core/Checks.hpp"
 #include <Crisp/Vulkan/VulkanTracer.hpp>
 
 namespace crisp {
@@ -18,7 +19,8 @@ VulkanTracingContext::VulkanTracingContext(const VulkanDevice& device, const Vul
     , m_referenceTimepoint{0}
     , m_first(0)
     , m_count(0)
-    , m_retrievedQueries(m_maxQueryCount) {
+    , m_retrievedQueries(m_maxQueryCount)
+    , m_resolvedEvents(0) {
     VkQueryPoolCreateInfo queryPoolInfo{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
     queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
     queryPoolInfo.queryCount = m_maxQueryCount;
@@ -54,7 +56,7 @@ VulkanTracingContext::~VulkanTracingContext() {
 
 void VulkanTracingContext::retrieveResults() {
     if (m_count > 0) {
-        vkGetQueryPoolResults(
+        const auto status = vkGetQueryPoolResults(
             m_device->getHandle(),
             m_queryPool,
             m_first,
@@ -62,24 +64,23 @@ void VulkanTracingContext::retrieveResults() {
             m_count * sizeof(uint64_t),
             m_retrievedQueries.data(),
             sizeof(uint64_t),
-            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+            VK_QUERY_RESULT_64_BIT);
+        if (status == VK_NOT_READY) {
+            return;
+        }
         vkResetQueryPool(m_device->getHandle(), m_queryPool, 0, m_maxQueryCount);
 
         const size_t prevEventOffset = m_events.size() - m_count;
         for (size_t i = 0; i < m_count; ++i) {
             auto& event = m_events[prevEventOffset + i];
             event.timestamp =
-                static_cast<uint64_t>(static_cast<double>(m_retrievedQueries[i]) * m_timestampPeriod) -
+                static_cast<uint64_t>(static_cast<double>(m_retrievedQueries[event.timestamp]) * m_timestampPeriod) -
                 m_referenceTimepoint;
         }
 
+        m_resolvedEvents += m_count;
         m_first = 0;
         m_count = 0;
-
-        // const auto duration = m_retrievedQueries[1] - m_retrievedQueries[0];
-        // const double durationNs = static_cast<double>(duration) * m_timestampPeriod;
-
-        // fmt::print("Frame GPU time: {:.3f} ms.\n", durationNs * 1e-6);
     }
 }
 
