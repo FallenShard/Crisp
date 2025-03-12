@@ -3,6 +3,7 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 #define STRINGIFY(x) #x
 
@@ -137,6 +138,11 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VulkanImageDescriptio
 
     VK_CHECK(vmaCreateImage(
         device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
+
+    m_view = createView(
+        device,
+        *this,
+        getImageViewType(m_imageType, m_layerCount, createInfo.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
 }
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& createInfo)
@@ -155,6 +161,11 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& cr
 
     VK_CHECK(vmaCreateImage(
         device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
+
+    m_view = createView(
+        device,
+        *this,
+        getImageViewType(m_imageType, m_layerCount, createInfo.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
 }
 
 VulkanImage::VulkanImage(
@@ -192,6 +203,9 @@ VulkanImage::VulkanImage(
 
     VK_CHECK(vmaCreateImage(
         device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
+
+    m_view = createView(
+        device, *this, getImageViewType(m_imageType, m_layerCount, createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
 }
 
 VulkanImage::~VulkanImage() {
@@ -475,6 +489,14 @@ VkFormat VulkanImage::getFormat() const {
 
 uint32_t VulkanImage::getLayerCount() const {
     return m_layerCount;
+}
+
+const VulkanImageView& VulkanImage::getView() const {
+    return *m_view;
+}
+
+VulkanImageView& VulkanImage::getView() {
+    return *m_view;
 }
 
 VkImageSubresourceRange VulkanImage::getFullRange() const {

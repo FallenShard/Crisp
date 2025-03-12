@@ -283,8 +283,8 @@ void PbrScene::createCommonTextures() {
         m_resourceContext->createPipeline("pbr", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
 
     setEnvironmentMap("GreenwichPark");
-    imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
-    imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
+    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImage("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 
     m_forwardPassMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 0, 1);

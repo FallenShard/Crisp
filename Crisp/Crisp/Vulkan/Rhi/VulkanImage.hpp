@@ -21,6 +21,8 @@ struct VulkanImageDescription {
     std::optional<VkImageAspectFlags> aspectMask{std::nullopt};
 };
 
+class VulkanImageView;
+
 class VulkanImage : public VulkanResource<VkImage> {
 public:
     VulkanImage(const VulkanDevice& device, const VulkanImageDescription& imageDescription);
@@ -91,6 +93,9 @@ public:
 
     VkExtent2D getExtent2D() const;
 
+    const VulkanImageView& getView() const;
+    VulkanImageView& getView();
+
 private:
     bool matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const;
     bool isSameLayoutInRange(const VkImageSubresourceRange& range) const;
@@ -113,6 +118,8 @@ private:
 
     // Tracks layouts across all layers and mip levels. Stored as layerCount * mipLevelCount.
     std::vector<VkImageLayout> m_layouts;
+
+    std::unique_ptr<VulkanImageView> m_view; // Default view over the whole image.
 };
 
 VkImageAspectFlags determineImageAspect(VkFormat format);

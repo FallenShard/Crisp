@@ -35,6 +35,24 @@ VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sa
     return {sampler ? sampler->getHandle() : VK_NULL_HANDLE, m_handle, layout};
 }
 
+VkImageViewType getImageViewType(const VkImageType imageType, const uint32_t layerCount, const bool isCubemap) {
+    if (isCubemap) {
+        CRISP_CHECK_EQ(layerCount, 6);
+        return VK_IMAGE_VIEW_TYPE_CUBE;
+    }
+
+    switch (imageType) {
+    case VK_IMAGE_TYPE_1D:
+        return VK_IMAGE_VIEW_TYPE_1D;
+    case VK_IMAGE_TYPE_2D:
+        return layerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    case VK_IMAGE_TYPE_3D:
+        return VK_IMAGE_VIEW_TYPE_3D;
+    default:
+        CRISP_FATAL("Unknown image type!");
+    }
+}
+
 std::unique_ptr<VulkanImageView> createView(const VulkanDevice& device, VulkanImage& image, VkImageViewType type) {
     return std::make_unique<VulkanImageView>(device, image, type, 0, image.getLayerCount(), 0, image.getMipLevels());
 }

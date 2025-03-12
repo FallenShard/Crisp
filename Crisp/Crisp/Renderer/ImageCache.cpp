@@ -7,32 +7,6 @@ namespace crisp {
 ImageCache::ImageCache(Renderer* renderer)
     : m_renderer{renderer} {}
 
-void ImageCache::addImageWithView(
-    const std::string& key, std::unique_ptr<VulkanImage> image, VkImageViewType imageViewType) {
-    auto& cachedView = m_imageViews[key];
-    if (!cachedView) {
-        cachedView = createView(m_renderer->getDevice(), *image, imageViewType);
-    }
-
-    auto& cachedImage = m_images[key];
-    if (!cachedImage) {
-        cachedImage = std::move(image);
-    }
-}
-
-void ImageCache::addImageWithView(
-    const std::string& key, std::unique_ptr<VulkanImage> image, std::unique_ptr<VulkanImageView> imageView) {
-    auto& cachedView = m_imageViews[key];
-    if (!cachedView) {
-        cachedView = std::move(imageView);
-    }
-
-    auto& cachedImage = m_images[key];
-    if (!cachedImage) {
-        cachedImage = std::move(image);
-    }
-}
-
 void ImageCache::addImage(const std::string& key, std::unique_ptr<VulkanImage> image) {
     auto& cachedImage = m_images[key];
     if (!cachedImage) {
@@ -60,16 +34,24 @@ void ImageCache::addImageView(const std::string& key, std::unique_ptr<VulkanImag
 }
 
 VulkanImageView& ImageCache::getImageView(const std::string& key) const {
+    if (auto found = m_images.find(key); found != m_images.end()) {
+        return found->second->getView();
+    }
     return *m_imageViews.at(key);
 }
 
 VulkanImageView& ImageCache::getImageView(const std::string& key, const std::string& fallbackKey) const {
-    auto found = m_imageViews.find(key);
-    if (found != m_imageViews.end()) {
-        return *found->second;
-    } else {
-        return *m_imageViews.at(fallbackKey);
+    if (auto found = m_images.find(key); found != m_images.end()) {
+        return found->second->getView();
     }
+    if (auto found = m_images.find(fallbackKey); found != m_images.end()) {
+        return found->second->getView();
+    }
+    if (auto found = m_imageViews.find(key); found != m_imageViews.end()) {
+        return *found->second;
+    }
+
+    return *m_imageViews.at(fallbackKey);
 }
 
 void ImageCache::addSampler(const std::string& key, std::unique_ptr<VulkanSampler> sampler) {

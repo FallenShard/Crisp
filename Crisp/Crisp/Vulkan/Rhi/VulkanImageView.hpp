@@ -38,6 +38,8 @@ private:
     VkImageSubresourceRange m_subresourceRange;
 };
 
+VkImageViewType getImageViewType(VkImageType imageType, uint32_t layerCount, bool isCubemap);
+
 std::unique_ptr<VulkanImageView> createView(const VulkanDevice& device, VulkanImage& image, VkImageViewType type);
 std::unique_ptr<VulkanImageView> createView(
     const VulkanDevice& device,

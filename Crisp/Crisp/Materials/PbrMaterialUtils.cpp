@@ -126,7 +126,7 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
     for (auto&& [typeIdx, maps] : std::views::enumerate(mapArrays)) {
         const uint32_t mapTypeIdx{static_cast<uint32_t>(typeIdx)};
         for (auto&& [idx, data] : std::views::enumerate(maps)) {
-            imageCache.addImageWithView(
+            imageCache.addImage(
                 keyCreator.createMapKey(mapTypeIdx, static_cast<uint32_t>(idx)),
                 createVulkanImage(renderer, data, kTexInfos[typeIdx].defaultFormat));
         }

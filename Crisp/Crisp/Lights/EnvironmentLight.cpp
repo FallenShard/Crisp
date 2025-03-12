@@ -21,25 +21,19 @@ const std::array<glm::mat4, kCubeMapFaceCount> kCubeMapViews = {
 } // namespace
 
 EnvironmentLight::EnvironmentLight(Renderer& renderer, const ImageBasedLightingData& iblData) {
-    auto equirectMap = createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
-    std::tie(m_cubeMap, m_cubeMapView) =
-        convertEquirectToCubeMap(&renderer, *createView(renderer.getDevice(), *equirectMap, VK_IMAGE_VIEW_TYPE_2D));
-
+    m_cubeMap = convertEquirectToCubeMap(
+        &renderer, *createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT));
     m_diffuseEnvironmentMap = createVulkanCubeMap(
         renderer,
         std::span<const std::vector<Image>>(&iblData.diffuseIrradianceCubeMap, 1),
         VK_FORMAT_R32G32B32A32_SFLOAT);
-    m_diffuseEnvironmentMapView = createView(renderer.getDevice(), *m_diffuseEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
-
     m_specularEnvironmentMap =
         createVulkanCubeMap(renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
-    m_specularEnvironmentMapView = createView(renderer.getDevice(), *m_specularEnvironmentMap, VK_IMAGE_VIEW_TYPE_CUBE);
 }
 
 void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& iblData) {
-    auto equirectMap = createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT);
-    std::tie(m_cubeMap, m_cubeMapView) =
-        convertEquirectToCubeMap(&renderer, *createView(renderer.getDevice(), *equirectMap, VK_IMAGE_VIEW_TYPE_2D));
+    m_cubeMap = convertEquirectToCubeMap(
+        &renderer, *createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT));
 
     updateCubeMap(*m_diffuseEnvironmentMap, renderer, iblData.diffuseIrradianceCubeMap);
     for (uint32_t i = 0; i < iblData.specularReflectanceMapMipLevels.size(); ++i) {
@@ -47,10 +41,9 @@ void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& 
     }
 }
 
-std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
-    Renderer* renderer, const VulkanImageView& equirectMapView) {
+std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const VulkanImage& equirectMap) {
     auto& device = renderer->getDevice();
-    const auto cubeMapSize = equirectMapView.getImage().getHeight() / 2;
+    const auto cubeMapSize = equirectMap.getHeight() / 2;
 
     const auto mipmapCount = Image::getMipLevels(cubeMapSize, cubeMapSize);
     const uint32_t additionalFlags = mipmapCount == 1 ? 0 : VK_IMAGE_USAGE_TRANSFER_DST_BIT; // for mipmap transfers
@@ -91,7 +84,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
     auto sampler = std::make_unique<VulkanSampler>(
         renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipelines[0].get());
-    cubeMapMaterial->writeDescriptor(0, 0, equirectMapView.getDescriptorInfo(sampler.get()));
+    cubeMapMaterial->writeDescriptor(0, 0, equirectMap.getView().getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();
 
     device.getGeneralQueue().submitAndWait(
@@ -144,10 +137,7 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> conver
             cubeMap->transitionLayout(
                 cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentSampledRead);
         });
-
-    auto cubeMapView =
-        createView(device, *cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, kCubeMapFaceCount, 0, cubeMap->getMipLevels());
-    return std::make_pair(std::move(cubeMap), std::move(cubeMapView));
+    return cubeMap;
 }
 
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
@@ -164,7 +154,6 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupD
 
     // auto convPass = createCubeMapPass(renderer->getDevice(), cubeMapRenderTarget.get(), {cubeMapSize, cubeMapSize});
     auto convPass = createCubeMapPass(renderer->getDevice(), {cubeMapSize, cubeMapSize});
-    renderer->updateInitialLayouts(*convPass);
     std::vector<std::unique_ptr<VulkanPipeline>> convPipelines(kCubeMapFaceCount);
     for (uint32_t i = 0; i < kCubeMapFaceCount; i++) {
         convPipelines[i] = renderer->createPipeline("ConvolveDiffuse.json", *convPass, i);
@@ -236,7 +225,6 @@ std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupR
         std::shared_ptr<VulkanRenderPass> prefilterPass = createCubeMapPass(renderer->getDevice(), VkExtent2D{w, h});
         // std::shared_ptr<VulkanRenderPass> prefilterPass =
         //     createCubeMapPass(renderer->getDevice(), environmentSpecularMap.get(), VkExtent2D{w, h}, i);
-        renderer->updateInitialLayouts(*prefilterPass);
 
         std::vector<std::unique_ptr<VulkanPipeline>> filterPipelines(kCubeMapFaceCount);
         for (uint32_t j = 0; j < kCubeMapFaceCount; j++) {
@@ -309,7 +297,6 @@ std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer) {
 
     std::vector<std::unique_ptr<VulkanFramebuffer>> cubeMapFramebuffers(kCubeMapFaceCount);
 
-    renderer->updateInitialLayouts(*texPass);
     auto pipeline = renderer->createPipeline("BrdfLut.json", *texPass, 0);
 
     renderer->getDevice().getGeneralQueue().submitAndWait(

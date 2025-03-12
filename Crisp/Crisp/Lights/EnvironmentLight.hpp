@@ -32,32 +32,26 @@ public:
     }
 
     const VulkanImageView& getDiffuseMapView() const {
-        return *m_diffuseEnvironmentMapView;
+        return m_diffuseEnvironmentMap->getView();
     }
 
     const VulkanImageView& getSpecularMapView() const {
-        return *m_specularEnvironmentMapView;
+        return m_specularEnvironmentMap->getView();
     }
 
     const VulkanImageView& getCubeMapView() const {
-        return *m_cubeMapView;
+        return m_cubeMap->getView();
     }
 
 private:
     std::string m_name;
 
     std::unique_ptr<VulkanImage> m_cubeMap;
-    std::unique_ptr<VulkanImageView> m_cubeMapView;
-
     std::unique_ptr<VulkanImage> m_diffuseEnvironmentMap;
-    std::unique_ptr<VulkanImageView> m_diffuseEnvironmentMapView;
-
     std::unique_ptr<VulkanImage> m_specularEnvironmentMap;
-    std::unique_ptr<VulkanImageView> m_specularEnvironmentMapView;
 };
 
-std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> convertEquirectToCubeMap(
-    Renderer* renderer, const VulkanImageView& equirectMapView);
+std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const VulkanImage& equirectMap);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
     Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize = EnvironmentLight::kDiffuseCubeMapSize);
 std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(
