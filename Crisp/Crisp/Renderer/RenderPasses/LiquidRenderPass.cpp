@@ -1,6 +1,6 @@
 #include <Crisp/Renderer/RenderPasses/LiquidRenderPass.hpp>
 
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
+#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
@@ -8,7 +8,7 @@
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createLiquidRenderPass(const VulkanDevice& device, VkExtent2D renderArea) {
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         /*.setRenderTargetCount(3)
         .setRenderTargetFormat(0, VK_FORMAT_R32G32B32A32_SFLOAT)
         .configureColorRenderTarget(0, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)

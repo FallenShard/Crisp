@@ -1,36 +1,30 @@
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
+#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
-#include <Crisp/Core/Checks.hpp>
-
 namespace crisp {
 
-RenderPassBuilder& RenderPassBuilder::setAllocateAttachmentViews(bool allocateAttachmentViews) {
-    m_allocateAttachmentViews = allocateAttachmentViews;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setSwapChainDependent(const bool isSwapChainDependent) {
-    m_isSwapChainDependent = isSwapChainDependent;
-    return *this;
-}
-
-RenderPassBuilder& RenderPassBuilder::setAttachmentCount(uint32_t count) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentCount(const uint32_t count) {
     m_attachments.resize(count);
-    m_attachmentMappings.resize(count);
+    m_clearedAttachmentIndices.resize(count, ~0u);
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setAttachmentDescription(
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentDescription(
     const uint32_t attachmentIndex, const VkAttachmentDescription& description) {
     CRISP_CHECK_GE_LT(attachmentIndex, 0, m_attachments.size());
     m_attachments[attachmentIndex] = description;
+
+    if (description.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+        m_clearedAttachmentIndices[attachmentIndex] = static_cast<uint32_t>(m_clearValues.size());
+        m_clearValues.emplace_back();
+    }
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setAttachmentFormat(
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentFormat(
     const uint32_t attachmentIndex, const VkFormat format, const VkSampleCountFlagBits sampleCount) {
     CRISP_CHECK_GE_LT(attachmentIndex, 0, m_attachments.size());
     m_attachments[attachmentIndex].format = format;
@@ -38,31 +32,63 @@ RenderPassBuilder& RenderPassBuilder::setAttachmentFormat(
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setAttachmentOps(
-    uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentOps(
+    const uint32_t attachmentIndex, const VkAttachmentLoadOp loadOp, const VkAttachmentStoreOp storeOp) {
     CRISP_CHECK_GE_LT(attachmentIndex, 0, m_attachments.size());
     m_attachments[attachmentIndex].loadOp = loadOp;
     m_attachments[attachmentIndex].storeOp = storeOp;
+
+    if (loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+        m_clearedAttachmentIndices[attachmentIndex] = static_cast<uint32_t>(m_clearValues.size());
+        m_clearValues.emplace_back();
+    }
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setAttachmentStencilOps(
-    uint32_t attachmentIndex, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentStencilOps(
+    const uint32_t attachmentIndex, const VkAttachmentLoadOp loadOp, const VkAttachmentStoreOp storeOp) {
     CRISP_CHECK_GE_LT(attachmentIndex, 0, m_attachments.size());
     m_attachments[attachmentIndex].stencilLoadOp = loadOp;
     m_attachments[attachmentIndex].stencilStoreOp = storeOp;
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setAttachmentLayouts(
-    uint32_t attachmentIndex, VkImageLayout initialLayout, VkImageLayout finalLayout) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentLayouts(
+    const uint32_t attachmentIndex, const VkImageLayout initialLayout, const VkImageLayout finalLayout) {
     CRISP_CHECK_GE_LT(attachmentIndex, 0, m_attachments.size());
     m_attachments[attachmentIndex].initialLayout = initialLayout;
     m_attachments[attachmentIndex].finalLayout = finalLayout;
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setSubpassCount(const uint32_t subpassCount) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentClearValue(
+    uint32_t attachmentIndex, const VkClearValue& clearValue) {
+    CRISP_CHECK_GE_LT(attachmentIndex, 0, m_clearedAttachmentIndices.size());
+    const uint32_t clearIndex = m_clearedAttachmentIndices[attachmentIndex];
+    CRISP_CHECK_GE_LT(clearIndex, 0, m_clearValues.size());
+    m_clearValues[clearIndex] = clearValue;
+    return *this;
+}
+
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentClearColor(
+    const uint32_t attachmentIndex, const VkClearColorValue& clearColor) {
+    CRISP_CHECK_GE_LT(attachmentIndex, 0, m_clearedAttachmentIndices.size());
+    const uint32_t clearIndex = m_clearedAttachmentIndices[attachmentIndex];
+    CRISP_CHECK_GE_LT(clearIndex, 0, m_clearValues.size());
+    m_clearValues[clearIndex].color = clearColor;
+    return *this;
+}
+
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentClearDepthStencil(
+    uint32_t attachmentIndex, const VkClearDepthStencilValue& clearDepthStencil) {
+    CRISP_CHECK_GE_LT(attachmentIndex, 0, m_clearedAttachmentIndices.size());
+    const uint32_t clearIndex = m_clearedAttachmentIndices[attachmentIndex];
+    CRISP_CHECK_GE_LT(clearIndex, 0, m_clearValues.size());
+    m_clearValues[clearIndex].depthStencil = clearDepthStencil;
+    return *this;
+}
+
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setSubpassCount(const uint32_t subpassCount) {
     m_inputAttachmentRefs.resize(subpassCount);
     m_colorAttachmentRefs.resize(subpassCount);
     m_resolveAttachmentRefs.resize(subpassCount);
@@ -72,15 +98,15 @@ RenderPassBuilder& RenderPassBuilder::setSubpassCount(const uint32_t subpassCoun
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setSubpassDescription(
-    uint32_t subpass, VkPipelineBindPoint bindPoint, VkSubpassDescriptionFlags flags) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setSubpassDescription(
+    const uint32_t subpass, const VkPipelineBindPoint bindPoint, const VkSubpassDescriptionFlags flags) {
     CRISP_CHECK_GE_LT(subpass, 0, m_subpasses.size());
     m_subpasses[subpass] = {flags, bindPoint};
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::addInputAttachmentRef(
-    uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::addInputAttachmentRef(
+    const uint32_t subpass, const uint32_t attachment, const VkImageLayout imageLayout) {
     CRISP_CHECK_GE_LT(subpass, 0, m_subpasses.size());
     m_inputAttachmentRefs[subpass].push_back({attachment, imageLayout});
     m_subpasses[subpass].inputAttachmentCount = static_cast<uint32_t>(m_inputAttachmentRefs[subpass].size());
@@ -88,8 +114,8 @@ RenderPassBuilder& RenderPassBuilder::addInputAttachmentRef(
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::addColorAttachmentRef(
-    uint32_t subpass, uint32_t attachment, std::optional<VkImageLayout> imageLayout) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::addColorAttachmentRef(
+    const uint32_t subpass, const uint32_t attachment, const std::optional<VkImageLayout> imageLayout) {
     CRISP_CHECK_GE_LT(subpass, 0, m_subpasses.size());
     CRISP_CHECK_GE_LT(attachment, 0, m_attachments.size());
     m_colorAttachmentRefs[subpass].push_back(
@@ -99,14 +125,14 @@ RenderPassBuilder& RenderPassBuilder::addColorAttachmentRef(
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::addResolveAttachmentRef(
-    uint32_t subpass, uint32_t attachment, VkImageLayout imageLayout) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::addResolveAttachmentRef(
+    const uint32_t subpass, const uint32_t attachment, const VkImageLayout imageLayout) {
     m_resolveAttachmentRefs[subpass].push_back({attachment, imageLayout});
     m_subpasses[subpass].pResolveAttachments = m_resolveAttachmentRefs[subpass].data();
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::setDepthAttachmentRef(
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::setDepthAttachmentRef(
     const uint32_t subpass, const uint32_t attachment, const std::optional<VkImageLayout> imageLayout) {
     CRISP_CHECK_GE_LT(subpass, 0, m_subpasses.size());
     CRISP_CHECK_GE_LT(attachment, 0, m_attachments.size());
@@ -115,7 +141,7 @@ RenderPassBuilder& RenderPassBuilder::setDepthAttachmentRef(
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::addPreserveAttachmentRef(uint32_t subpass, uint32_t attachment) {
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::addPreserveAttachmentRef(uint32_t subpass, uint32_t attachment) {
     CRISP_CHECK_GE_LT(subpass, 0, m_subpasses.size());
     CRISP_CHECK_GE_LT(attachment, 0, m_attachments.size());
     m_preserveAttachments[subpass].push_back(attachment);
@@ -124,7 +150,7 @@ RenderPassBuilder& RenderPassBuilder::addPreserveAttachmentRef(uint32_t subpass,
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::addDependency(
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::addDependency(
     const uint32_t srcSubpass,
     const uint32_t dstSubpass,
     const VkPipelineStageFlags srcStageMask,
@@ -136,7 +162,7 @@ RenderPassBuilder& RenderPassBuilder::addDependency(
     return *this;
 }
 
-RenderPassBuilder& RenderPassBuilder::addDependency(
+VulkanRenderPassBuilder& VulkanRenderPassBuilder::addDependency(
     const uint32_t srcSubpass,
     const uint32_t dstSubpass,
     const VulkanSynchronizationScope& scope,
@@ -152,13 +178,13 @@ RenderPassBuilder& RenderPassBuilder::addDependency(
     return *this;
 }
 
-std::unique_ptr<VulkanRenderPass> RenderPassBuilder::create(
-    const VulkanDevice& device, VkExtent2D renderArea, const RenderPassCreationParams& creationParams) const {
+std::unique_ptr<VulkanRenderPass> VulkanRenderPassBuilder::create(
+    const VulkanDevice& device, const VkExtent2D& renderArea) const {
 
     RenderPassParameters params{};
     params.subpassCount = static_cast<uint32_t>(m_subpasses.size());
     params.renderArea = renderArea;
-    params.clearValues = creationParams.clearValues;
+    params.clearValues = m_clearValues;
     params.attachmentDescriptions = m_attachments;
 
     VkRenderPassCreateInfo renderPassInfo{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};

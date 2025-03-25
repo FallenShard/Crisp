@@ -3,8 +3,8 @@
 #include <ranges>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp::rg {
 namespace {
@@ -594,12 +594,11 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         }
         CRISP_LOGD("Building render pass: {}\n", pass.name);
 
-        RenderPassBuilder builder{};
+        VulkanRenderPassBuilder builder{};
         builder.setSubpassCount(1).setAttachmentCount(pass.getAttachmentCount());
 
         std::vector<VkAttachmentReference> colorAttachmentRefs{};
         uint32_t attachmentIndex = 0;
-        RenderPassCreationParams creationParams{};
         for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
             const auto& colorImageResource{getResource(resourceId)};
             const auto& colorDescription{getImageDescription(resourceId)};
@@ -609,7 +608,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                 .addColorAttachmentRef(0, attachmentIndex);
 
             if (colorDescription.clearValue) {
-                creationParams.clearValues.push_back(*colorDescription.clearValue);
+                builder.setAttachmentClearValue(attachmentIndex, *colorDescription.clearValue);
             }
             ++attachmentIndex;
         }
@@ -622,7 +621,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
                 .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
             if (depthDescription.clearValue) {
-                creationParams.clearValues.push_back(*depthDescription.clearValue);
+                builder.setAttachmentClearValue(attachmentIndex, *depthDescription.clearValue);
             }
 
             // Ensure that we are synchronizing the load.
@@ -637,8 +636,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
 
         builder.addDependency(VK_SUBPASS_EXTERNAL, 0, kFragmentRead >> kColorWrite);
 
-        auto& physicalPass =
-            m_physicalPasses.emplace_back(builder.create(device, getRenderArea(pass, swapChainExtent), creationParams));
+        auto& physicalPass = m_physicalPasses.emplace_back(builder.create(device, getRenderArea(pass, swapChainExtent)));
         m_physicalPassIndices[idx] = static_cast<int32_t>(m_physicalPasses.size()) - 1;
         device.setObjectName(*physicalPass, pass.name.c_str());
 

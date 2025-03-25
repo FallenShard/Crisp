@@ -362,8 +362,8 @@ void ShadowMappingScene::createCommonTextures() {
         createView(m_renderer->getDevice(), *envRefMap, VK_IMAGE_VIEW_TYPE_2D);
 
     auto [cubeMap, cubeMapView] = convertEquirectToCubeMap(m_renderer, envRefMapView);
-    setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
-    setupReflectEnvMap(m_renderer, *cubeMapView, 1024);
+    // setupDiffuseEnvMap(m_renderer, *cubeMapView, 64);
+    // setupReflectEnvMap(m_renderer, *cubeMapView, 1024);
     imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
 

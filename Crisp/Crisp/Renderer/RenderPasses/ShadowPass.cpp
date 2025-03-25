@@ -1,11 +1,12 @@
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
+#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createShadowMapPass(
@@ -27,7 +28,7 @@ std::unique_ptr<VulkanRenderPass> createShadowMapPass(
         renderTargets[0] = renderTargetCache.get("ShadowMap");
     }
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
         .setAttachmentMapping(0, 0, cascadeIndex, 1)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
@@ -68,7 +69,7 @@ std::unique_ptr<VulkanRenderPass> createVarianceShadowMappingPass(
             .setSize(shadowMapExtent, false)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(2)
         .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)

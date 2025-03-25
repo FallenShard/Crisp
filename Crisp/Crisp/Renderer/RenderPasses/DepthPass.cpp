@@ -1,6 +1,6 @@
 #include <Crisp/Renderer/RenderPasses/DepthPass.hpp>
 
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
+#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
@@ -20,7 +20,7 @@ std::unique_ptr<VulkanRenderPass> createDepthPass(
             .setSize(renderArea, true)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
         .setAttachmentMapping(DepthPassDepthAttachmentIndex, 0)
         .setAttachmentOps(DepthPassDepthAttachmentIndex, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)

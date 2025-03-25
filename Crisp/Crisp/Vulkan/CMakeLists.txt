@@ -115,3 +115,13 @@ target_link_libraries(
     PUBLIC Crisp::ChromeEventTracer
     PUBLIC Microsoft.GSL::GSL
 )
+
+add_cpp_static_library(
+    CrispVulkanRenderPassBuilder
+    "VulkanRenderPassBuilder.cpp"
+    "VulkanRenderPassBuilder.hpp"
+)
+target_link_libraries(
+    CrispVulkanRenderPassBuilder
+    PUBLIC Crisp::Vulkan
+)

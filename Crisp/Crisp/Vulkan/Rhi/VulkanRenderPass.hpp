@@ -37,12 +37,6 @@ struct RenderTarget {
     std::unique_ptr<VulkanImage> image;
 };
 
-struct AttachmentMapping {
-    uint32_t renderTargetIndex{};
-    VkImageSubresourceRange subresource{};
-    bool bufferOverDepthSlices{false};
-};
-
 struct RenderPassParameters {
     uint32_t subpassCount{0};
     VkExtent2D renderArea{0, 0};
@@ -50,24 +44,17 @@ struct RenderPassParameters {
     std::vector<VkClearValue> clearValues;
 
     std::vector<VkAttachmentDescription> attachmentDescriptions;
-    // std::vector<AttachmentMapping> attachmentMappings;
-
-    // std::vector<RenderTargetInfo> renderTargetInfos;
-    // std::vector<VulkanImage*> renderTargets;
 };
 
 class VulkanRenderPass final : public VulkanResource<VkRenderPass> {
 public:
     VulkanRenderPass(const VulkanDevice& device, VkRenderPass handle, RenderPassParameters&& parameters);
 
-    // void recreate(const VulkanDevice& device, const VkExtent2D& swapChainExtent);
-
     void setRenderArea(const VkExtent2D& extent);
     VkExtent2D getRenderArea() const;
     VkViewport createViewport() const;
     VkRect2D createScissor() const;
 
-    void begin(VkCommandBuffer cmdBuffer, VkSubpassContents content) const;
     void begin(VkCommandBuffer cmdBuffer, const VulkanFramebuffer& framebuffer, VkSubpassContents content) const;
     void end(VkCommandBuffer cmdBuffer);
     void nextSubpass(VkCommandBuffer cmdBuffer, VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE) const;
@@ -79,10 +66,6 @@ public:
         return m_params.subpassCount;
     }
 
-    const VulkanFramebuffer* getFramebuffer() const {
-        return m_framebuffer.get();
-    }
-
     const std::vector<VkClearValue>& getClearValues() const {
         return m_params.clearValues;
     }
@@ -91,12 +74,9 @@ public:
         return m_params.attachmentDescriptions.at(attachmentIndex).finalLayout;
     }
 
-    // void updateInitialLayouts(VkCommandBuffer cmdBuffer);
-
 protected:
     RenderPassParameters m_params;
 
     std::vector<std::unique_ptr<VulkanImageView>> m_attachmentViews;
-    std::unique_ptr<VulkanFramebuffer> m_framebuffer;
 };
 } // namespace crisp

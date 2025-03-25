@@ -1,11 +1,12 @@
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
@@ -28,7 +29,7 @@ std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
             .setSize(renderArea, true)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(2)
         .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)

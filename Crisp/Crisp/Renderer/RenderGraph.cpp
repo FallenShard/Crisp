@@ -58,7 +58,7 @@ void RenderGraph::resize(int /*width*/, int /*height*/) {
     for (auto& [key, node] : m_nodes) {
         if (node->type != NodeType::Compute) {
             // node->renderPass->recreate(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-            m_renderer->updateInitialLayouts(*node->renderPass);
+            // m_renderer->updateInitialLayouts(*node->renderPass);
         }
     }
 }
@@ -250,9 +250,9 @@ void RenderGraph::executeDrawCommand(
 void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t virtualFrameIndex, const Node& node) const {
     bool useSecondaries = node.commands[0].size() > 100;
 
-    node.renderPass->begin(
-        cmdBuffer.getHandle(),
-        useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
+    // node.renderPass->begin(
+    //     cmdBuffer.getHandle(),
+    //     useSecondaries ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
     for (uint32_t subpassIndex = 0; subpassIndex < node.renderPass->getSubpassCount(); subpassIndex++) {
         if (subpassIndex > 0) {
             useSecondaries = node.commands[subpassIndex].size() > 100;
@@ -269,7 +269,7 @@ void RenderGraph::executeRenderPass(VulkanCommandBuffer& cmdBuffer, uint32_t vir
                     auto& cmdCtx = m_secondaryCommandBuffers[frameIdx][jobIdx];
 
                     VkCommandBufferInheritanceInfo inheritance = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
-                    inheritance.framebuffer = node.renderPass->getFramebuffer()->getHandle();
+                    // inheritance.framebuffer = node.renderPass->getFramebuffer()->getHandle();
                     inheritance.renderPass = node.renderPass->getHandle();
                     inheritance.subpass = subpassIndex;
                     cmdCtx.cmdBuffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritance);

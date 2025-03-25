@@ -5,9 +5,9 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/VulkanPipelineIo.hpp>
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
+#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp {
 namespace {
@@ -15,21 +15,17 @@ auto logger = spdlog::stdout_color_mt("Renderer");
 
 std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
     const VulkanDevice& device, const VulkanSwapChain& swapChain) {
-
-    RenderPassCreationParams creationParams{};
-    creationParams.clearValues.push_back({.color = {{0.0, 0.0f, 0.0f, 1.0f}}});
-
     auto renderPass =
-        RenderPassBuilder()
+        VulkanRenderPassBuilder()
             .setAttachmentCount(1)
             .setAttachmentFormat(0, swapChain.getImageFormat())
             .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
             .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-
+            .setAttachmentClearColor(0, {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}})
             .setSubpassCount(1)
             .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             .addDependency(VK_SUBPASS_EXTERNAL, 0, kExternalColorSubpass >> kColorWrite)
-            .create(device, swapChain.getExtent(), creationParams);
+            .create(device, swapChain.getExtent());
     device.setObjectName(*renderPass, "Default Render Pass");
     return renderPass;
 }
@@ -314,10 +310,6 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
     return createPipelineFromFile(
                absolutePipelinePath, m_assetPaths.spvShaderDir, *m_shaderCache, *m_device, renderPass, subpassIndex)
         .unwrap();
-}
-
-void Renderer::updateInitialLayouts(VulkanRenderPass& renderPass) {
-    // enqueueResourceUpdate([&renderPass](VkCommandBuffer cmdBuffer) { renderPass.updateInitialLayouts(cmdBuffer); });
 }
 
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {

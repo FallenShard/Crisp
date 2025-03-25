@@ -2,9 +2,9 @@
 
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp {
 std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
@@ -12,7 +12,7 @@ std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
 
 inline constexpr const char* kForwardLightingPass = "forwardLightingPass";
 
-struct ForwardLightingData {
+struct ForwardLightingPassData {
     RenderGraphResourceHandle hdrImage;
 };
 
@@ -26,7 +26,7 @@ void addForwardLightingPass(rg::RenderGraph& renderGraph, const Func& func) {
                 builder.readTexture(shadowMap);
             }
 
-            auto& data = builder.getBlackboard().insert<ForwardLightingData>();
+            auto& data = builder.getBlackboard().insert<ForwardLightingPassData>();
             data.hdrImage = builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,

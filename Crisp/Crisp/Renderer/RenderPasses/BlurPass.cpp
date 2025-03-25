@@ -1,11 +1,11 @@
 #include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
+#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp {
 
@@ -22,18 +22,16 @@ std::unique_ptr<VulkanRenderPass> createBlurPass(
         RenderTargetBuilder()
             .setFormat(format)
             .setLayerAndMipLevelCount(1)
-            .setBuffered(true)
             .configureColorRenderTarget(VK_IMAGE_USAGE_SAMPLED_BIT)
             .setSize(renderArea, isSwapChainDependent)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
-        .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
         .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 
-        .setNumSubpasses(1)
+        .setSubpassCount(1)
         .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         .addDependency(
             VK_SUBPASS_EXTERNAL,

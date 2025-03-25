@@ -137,6 +137,7 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Crisp::AssetPaths
     PUBLIC Crisp::VulkanTracer
+    PUBLIC Crisp::VulkanRenderPassBuilder
 )
 
 add_cpp_static_library(CrispImageCache
@@ -160,14 +161,6 @@ add_cpp_interface_library(CrispRendererConfig
 add_cpp_test(CrispDescriptorUpdaterTest
     "Test/DescriptorUpdaterTest.cpp")
 target_link_libraries(CrispDescriptorUpdaterTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
-
-add_cpp_static_library(CrispVulkanRenderPassBuilder
-    "RenderPassBuilder.cpp"
-    "RenderPassBuilder.hpp"
-)
-target_link_libraries(CrispVulkanRenderPassBuilder
-    PUBLIC Crisp::Vulkan
-)
 
 add_cpp_static_library(CrispRayTracingPipelineBuilder
     "RayTracingPipelineBuilder.hpp"

@@ -93,8 +93,6 @@ public:
     std::unique_ptr<VulkanPipeline> createPipeline(
         std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
 
-    void updateInitialLayouts(VulkanRenderPass& renderPass);
-
     void schedule(std::function<void()>&& task) {
         m_threadPool.schedule(std::move(task));
     }
