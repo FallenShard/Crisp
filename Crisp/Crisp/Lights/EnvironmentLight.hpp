@@ -52,12 +52,6 @@ private:
 };
 
 std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const VulkanImage& equirectMap);
-std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupDiffuseEnvMap(
-    Renderer* renderer, const VulkanImageView& cubeMapView, uint32_t cubeMapSize = EnvironmentLight::kDiffuseCubeMapSize);
-std::pair<std::unique_ptr<VulkanImage>, std::unique_ptr<VulkanImageView>> setupReflectEnvMap(
-    Renderer* renderer,
-    const VulkanImageView& cubeMapView,
-    uint32_t cubeMapSize = EnvironmentLight::kSpecularCubeMapSize);
 std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer);
 
 } // namespace crisp
