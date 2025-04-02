@@ -39,10 +39,11 @@ Application::Application(const ApplicationEnvironment& environment)
     , m_outputDir(environment.getOutputDirectory()) {
     const ScopeProfiler scope("Application constructor");
 
-    VulkanCoreParams vulkanCoreParams{};
-    vulkanCoreParams.requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions();
-    vulkanCoreParams.requiredDeviceExtensions = createDefaultDeviceExtensions();
-    vulkanCoreParams.presentationMode = PresentationMode::DoubleBuffered;
+    VulkanCoreParams vulkanCoreParams{
+        .requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
+        .requiredDeviceExtensions = createDefaultDeviceExtensions(),
+        .presentationMode = PresentationMode::DoubleBuffered,
+    };
     addPageableMemoryDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
     if (environment.getParameters().enableRayTracingExtension) {
         addRayTracingDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
