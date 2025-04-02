@@ -31,4 +31,8 @@ inline void setDefaultSpdlogPattern() {
 #define CRISP_LOGI(...) SPDLOG_LOGGER_INFO(logger, __VA_ARGS__);
 #define CRISP_LOGW(...) SPDLOG_LOGGER_WARN(logger, __VA_ARGS__);
 #define CRISP_LOGE(...) SPDLOG_LOGGER_ERROR(logger, __VA_ARGS__);
-#define CRISP_LOGF(...) SPDLOG_LOGGER_CRITICAL(logger, __VA_ARGS__);
+#define CRISP_LOGF(...)                                                                                                \
+    {                                                                                                                  \
+        SPDLOG_LOGGER_CRITICAL(logger, __VA_ARGS__);                                                                   \
+        std::abort();                                                                                                  \
+    }

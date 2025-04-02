@@ -12,7 +12,6 @@ template <typename TracingContext>
 void serializeContext(const TracingContext& ctx, std::ofstream& output, const bool appendComma) {
     std::vector<uint32_t> stack;
     const auto& tracedEvents = ctx.getTracedEvents();
-    fmt::print("Preparing to save {} events.\n", tracedEvents.size());
     for (uint32_t i = 0; i < tracedEvents.size(); ++i) {
         auto& event = tracedEvents[i];
         if (event.type == ScopeEventType::Begin) {

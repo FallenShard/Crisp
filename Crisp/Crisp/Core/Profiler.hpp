@@ -3,21 +3,9 @@
 #include <chrono>
 
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/StringLiteral.hpp>
 
 namespace crisp {
-
-class LiteralWrapper {
-public:
-    template <size_t N>
-    consteval LiteralWrapper(const char (&literal)[N]) // NOLINT
-        : literal(literal) {}
-
-    const char* literal{nullptr};
-
-    bool operator==(const std::string_view& other) const {
-        return other == std::string_view(literal);
-    }
-};
 
 class ScopeProfiler {
 public:

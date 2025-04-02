@@ -1,16 +1,14 @@
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
 
-#include <Crisp/Core/Logger.hpp>
-#include <Crisp/Utils/StringUtils.hpp>
-
 #include <array>
 #include <charconv>
 #include <fstream>
-#include <iostream>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
+
+#include <Crisp/Core/Logger.hpp>
+#include <Crisp/Utils/StringUtils.hpp>
 
 namespace crisp {
 namespace {
@@ -22,21 +20,21 @@ struct ObjVertex {
     std::optional<IndexType> n;
     std::optional<IndexType> uv;
 
-    inline ObjVertex() = default;
+    ObjVertex() = default;
 
-    inline explicit ObjVertex(std::string_view stringView) {
-        auto vertexAttribs = fixedTokenize<3>(stringView, "/", false);
+    explicit ObjVertex(const std::string_view stringView) {
+        const auto vertexAttribs = fixedTokenize<3>(stringView, "/", /*skipEmptyTokens=*/false);
 
-        auto parse = [](const std::string_view& line_view) {
+        const auto parse = [](const std::string_view lineView) {
             IndexType val; // NOLINT
-            std::from_chars(line_view.data(), line_view.data() + line_view.size(), val);
+            std::from_chars(lineView.data(), lineView.data() + lineView.size(), val);
             return val < 0 ? val : val - 1; // return negative if it is a negative value, otherwise 0-based
         };
 
         if (!vertexAttribs[0].empty()) {
             p = parse(vertexAttribs[0]);
         } else {
-            spdlog::critical("Invalid vertex specification in an obj file.");
+            CRISP_LOGF("Invalid vertex specification in an obj file: {}", stringView);
         }
 
         if (!vertexAttribs[1].empty()) {
@@ -48,7 +46,7 @@ struct ObjVertex {
         }
     }
 
-    inline bool operator==(const ObjVertex& v) const {
+    bool operator==(const ObjVertex& v) const {
         return p == v.p && uv == v.uv && n == v.n;
     }
 };

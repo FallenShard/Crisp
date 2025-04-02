@@ -3,9 +3,10 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
-#include <Crisp/Renderer/RenderPassBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
+#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
+
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
@@ -45,7 +46,7 @@ std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(
             .setSize({256, 64}, false)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
         .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
@@ -75,7 +76,7 @@ std::unique_ptr<VulkanRenderPass> createSkyViewLutPass(
             .setSize({192, 108}, false)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
         .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
@@ -105,7 +106,7 @@ std::unique_ptr<VulkanRenderPass> createSkyVolumePass(const VulkanDevice& device
             .setSize({32, 32}, false)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
         .setAttachmentMapping(0, 0, 0, 32)
         .setAttachmentBufferOverDepthSlices(0, true)
@@ -135,7 +136,7 @@ std::unique_ptr<VulkanRenderPass> createRayMarchingPass(
             .setSize(renderArea, true)
             .create(device));
 
-    return RenderPassBuilder()
+    return VulkanRenderPassBuilder()
         .setAttachmentCount(1)
         .setAttachmentMapping(0, 0)
         .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)

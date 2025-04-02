@@ -29,7 +29,7 @@ Skybox::Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std
     m_pipeline = renderer->createPipeline("Skybox.json", renderPass, 0);
     updateRenderNode(*m_sampler, *m_cubeMapView);
 
-    // renderer->getDebugMarker().setObjectName(m_cubeMapView->getHandle(), "Cube Map View");
+    // renderer->getDevice().setObjectName(m_cubeMapView->getHandle(), "Cube Map View");
 
     renderer->getDevice().flushDescriptorUpdates();
 }

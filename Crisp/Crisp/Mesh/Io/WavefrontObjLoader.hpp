@@ -1,12 +1,12 @@
 #pragma once
 
-#include <Crisp/Core/HashMap.hpp>
-#include <Crisp/Math/Headers.hpp>
-#include <Crisp/Mesh/TriangleMeshView.hpp>
-
 #include <filesystem>
 #include <string>
 #include <vector>
+
+#include <Crisp/Core/HashMap.hpp>
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Mesh/TriangleMeshView.hpp>
 
 namespace crisp {
 struct WavefrontObjMaterial {
