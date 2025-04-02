@@ -21,7 +21,7 @@ LightSystem::LightSystem(
     }
 }
 
-void LightSystem::update(const Camera& camera, float /*dt*/, const uint32_t regionIndex) {
+void LightSystem::update(const Camera& camera, const uint32_t regionIndex) {
     const auto [zNear, zFar] = m_lightDepthRange;
     m_cascadedShadowMapping.updateSplitIntervals(zNear, zFar);
     m_cascadedShadowMapping.updateTransforms(camera, m_shadowMapSize, regionIndex);

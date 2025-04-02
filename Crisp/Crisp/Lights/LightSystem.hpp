@@ -21,7 +21,7 @@ class LightSystem {
 public:
     LightSystem(Renderer* renderer, const DirectionalLight& dirLight, uint32_t shadowMapSize, uint32_t cascadeCount);
 
-    void update(const Camera& camera, float dt, uint32_t regionIndex);
+    void update(const Camera& camera, uint32_t regionIndex);
 
     void setDirectionalLight(const DirectionalLight& dirLight);
 
