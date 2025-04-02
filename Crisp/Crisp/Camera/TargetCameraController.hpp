@@ -40,6 +40,22 @@ public:
 
     CameraParameters getCameraParameters() const;
 
+    float getDistance() const {
+        return m_distance;
+    }
+
+    glm::vec3 getTarget() const {
+        return m_target;
+    }
+
+    float getYaw() const {
+        return glm::degrees(m_yaw);
+    }
+
+    float getPitch() const {
+        return glm::degrees(m_pitch);
+    }
+
 private:
     gsl::not_null<Window*> m_window;
     Camera m_camera;
