@@ -14,13 +14,9 @@ layout(set = 0, binding = 1) uniform LightTransforms
 };
 layout(set = 1, binding = 0) uniform sampler2D shadowMap[4];
 
-//layout(set = 0, binding = 2) uniform CameraParams
-//{
-//    mat4 V;
-//    mat4 P;
-//    vec2 screenSize;
-//    vec2 nearFar;
-//};
+// layout(set = 0, binding = 2) uniform View {
+//     ViewParameters view;
+// };
 //layout(set = 1, binding = 1) uniform sampler2D vsm;
 
 //layout(push_constant) uniform PushConstant

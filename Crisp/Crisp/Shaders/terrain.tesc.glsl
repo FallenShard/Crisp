@@ -1,5 +1,9 @@
 #version 450 core
 
+#extension GL_GOOGLE_include_directive: require
+
+#include "Parts/view.part.glsl"
+
 layout(vertices = 4) out;
 
 layout(set = 0, binding = 0) uniform Transforms
@@ -10,12 +14,8 @@ layout(set = 0, binding = 0) uniform Transforms
     mat4 N;
 };
 
-layout(set = 0, binding = 2) uniform CameraParams
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 2) uniform View {
+    ViewParameters view;
 };
 
 layout(push_constant) uniform PushConstants
@@ -31,8 +31,8 @@ float calculateTess(vec4 p1, vec4 p2, float diameter)
     vec4 eyeSurfPt = eyeCenter;
     eyeSurfPt.x += worldScale * diameter;
 
-    vec4 clipCenter = P * eyeCenter;
-    vec4 clipSurfPt = P * eyeSurfPt;
+    vec4 clipCenter = view.P * eyeCenter;
+    vec4 clipSurfPt = view.P * eyeSurfPt;
 
     clipCenter /= clipCenter.w;
     clipSurfPt /= clipSurfPt.w;
@@ -43,8 +43,8 @@ float calculateTess(vec4 p1, vec4 p2, float diameter)
     clipCenter += 0.5f;
     clipSurfPt += 0.5f;
 
-    clipCenter.xy *= screenSize;
-    clipSurfPt.xy *= screenSize;
+    clipCenter.xy *= view.screenSize;
+    clipSurfPt.xy *= view.screenSize;
 
     float d = distance(clipCenter, clipSurfPt);
 

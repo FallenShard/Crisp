@@ -69,7 +69,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     setCameraParameters(*m_cameraController, json["camera"]);
-    m_resourceContext->createUniformBuffer("camera", sizeof(ExtendedCameraParameters), BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
     m_integratorParams.lightCount = static_cast<int32_t>(m_sceneDesc.lights.size());
@@ -167,7 +167,7 @@ void VulkanRayTracingScene::update(float dt) {
         m_integratorParams.frameIdx = 0;
     }
 
-    const ExtendedCameraParameters cameraParams = m_cameraController->getExtendedCameraParameters();
+    const CameraParameters cameraParams = m_cameraController->getCameraParameters();
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(cameraParams);
     m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer2(m_integratorParams);
     m_resourceContext->getRingBuffer("brdfParams")

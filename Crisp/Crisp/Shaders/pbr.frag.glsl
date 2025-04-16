@@ -5,6 +5,7 @@
 #define PI 3.1415926535897932384626433832795
 
 #include "Parts/microfacet.part.glsl"
+#include "Parts/view.part.glsl"
 
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
@@ -30,15 +31,10 @@ struct LightDescriptor
 };
 
 // View-specific parameters.
-layout(set = 0, binding = 0) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 0) uniform View {
+    ViewParameters view;
 };
-layout(set = 0, binding = 1) uniform CascadedLight
-{
+layout(set = 0, binding = 1) uniform CascadedLight {
     LightDescriptor cascadedLight[4];
 };
 layout(set = 0, binding = 2) uniform samplerCube diffuseIrradianceMap;
@@ -59,24 +55,19 @@ layout(set = 1, binding = 0) uniform Material
 layout(set = 1, binding = 1) uniform sampler2D textures[];
 
 
-vec3 evalDirectionalLightRadiance(out vec3 eyeL)
-{
-    eyeL = normalize((V * cascadedLight[0].direction).xyz);
-    return cascadedLight[0].spectrum.rgb * 2;
+vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
+    eyeL = normalize((view.V * cascadedLight[0].direction).xyz);
+    return cascadedLight[0].spectrum.rgb;
 }
 
 // ----- Cascaded Shadow Mapping
-bool isInCascade(vec3 worldPos, mat4 lightVP)
-{
-    vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
-    vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
-
-    return all(greaterThan(ndcPos, NdcMin)) && all(lessThan(ndcPos, NdcMax));
+bool isInCascade(in vec3 worldPos, in mat4 lightVP) {
+    const vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
+    return all(greaterThan(lightSpacePos.xyz, NdcMin * lightSpacePos.w)) && all(lessThan(lightSpacePos.xyz, NdcMax * lightSpacePos.w));
 }
 
 // Check-in-bounds based
-float evalCascadedShadow(vec3 worldPos, float bias)
-{
+float evalCascadedShadow(vec3 worldPos, float bias) {
     int cascadeIndex = 3;
     if (isInCascade(worldPos, cascadedLight[0].VP))
        cascadeIndex = 0;
@@ -113,15 +104,14 @@ float evalCascadedShadow(vec3 worldPos, float bias)
     return amount / numSamples;
 }
 
-vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow)
-{
-    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow) {
+    const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
     const vec3 diffuse = irradiance * albedo;
     
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
     const vec3 eyeR = reflect(-eyeV, eyeN);
-    const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+    const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
    
     const float MaxReflectionLod = 8.0f;
     const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * MaxReflectionLod).rgb;
@@ -131,8 +121,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     return kD * diffuse * ao + specular;
 }
 
-vec3 decodeNormal(in vec2 uv)
-{
+vec3 decodeNormal(in vec2 uv) {
     vec3 normal  = normalize(eyeNormal);
     // Have to check this because without UVs, computed tangents will be NaN.
     if (any(isnan(eyeTangent)))
@@ -283,21 +272,20 @@ vec3 sheenLogic()
     return vec3(0.0f);
 }
 
-void main()
-{
+void main() {
     const vec2 uvCoord = inTexCoord * material.uvScale;
     
-    // Basic shading geometry
+    // Basic shading geometry.
     const vec3 eyeN = decodeNormal(uvCoord);
     const vec3 eyeV = normalize(-eyePosition);
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
-    // Primary light source radiance
+    // Primary light source radiance.
     vec3 eyeL; // light direction, out param
     const vec3 Le = evalDirectionalLightRadiance(eyeL);
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
-    // Material properties
+    // Material properties.
     const vec3 albedo = texture(textures[0], uvCoord).rgb * material.albedo.rgb;
     float roughness = texture(textures[2], uvCoord).r * material.roughness;
     roughness *= roughness;
@@ -305,26 +293,27 @@ void main()
     const float ao = texture(textures[4], uvCoord).r;
     const vec3 emission = texture(textures[5], uvCoord).rgb;
 
-    // BRDF diffuse (Light source independent)
+    // BRDF diffuse (view-independent).
     const vec3 F0 = mix(vec3(0.04), albedo, metallic);
     const vec3 F = fresnelSchlickRoughness(NdotV, F0, roughness);
     const vec3 kS = F;
     const vec3 kD = (1.0f - kS) * (1.0f - metallic);
     const vec3 diffuse = kD * albedo / PI;
 
-    // BRDF specularity (Light source dependent)
+    // BRDF specularity (view-dependent).
     const vec3 eyeH = normalize(eyeL + eyeV);
     const float NdotH = max(dot(eyeN, eyeH), 0.0f);
     const float D = distributionGGX(NdotH, roughness);
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
-    const float shadowCoeff = evalCascadedShadow(worldPos, 0.01f);
+    const float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
     const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao, shadowCoeff);
 
-    const vec3 shadowColor = vec3(0.1f + 0.9f * shadowCoeff, 0.2f + 0.8f * shadowCoeff, 0.4f + 0.6f * shadowCoeff);
+    const vec3 shadowColor = vec3(0.05f, 0.1f, 0.3f);
+    const vec3 shadowCoeffColor = shadowColor + (vec3(1.0f) - shadowColor) * shadowCoeff;
 
-    fragColor = vec4(Lenv + Li * shadowColor + emission, 1.0f);
+    fragColor = vec4(Lenv + Li * shadowCoeffColor + emission, 1.0f);
 }

@@ -12,16 +12,14 @@ layout(location = 3) out vec3 eyeTangent;
 layout(location = 4) out vec3 eyeBitangent;
 layout(location = 5) out vec3 worldPos;
 
-layout(set = 2, binding = 0) uniform Transforms
-{
+layout(set = 2, binding = 0) uniform Transforms {
     mat4 MVP;
     mat4 MV;
     mat4 M;
     mat4 N;
 };
 
-void main()
-{
+void main() {
     gl_Position = MVP * vec4(position, 1.0f);
     eyeNormal    = normalize((N * vec4(normal, 0.0f)).xyz);
     eyeTangent   = normalize((N * vec4(tangent.xyz, 0.0f)).xyz);

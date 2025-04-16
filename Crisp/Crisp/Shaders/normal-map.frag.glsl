@@ -1,5 +1,9 @@
 #version 450 core
 
+#extension GL_GOOGLE_include_directive : require
+
+#include "Parts/view.part.glsl"
+
 layout(location = 0) in vec3 eyePos;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 worldPos;
@@ -17,12 +21,8 @@ layout(set = 0, binding = 0) uniform TransformPack
     mat4 N;
 };
 
-layout(set = 0, binding = 1) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 1) uniform View {
+    ViewParameters view;
 };
 
 //layout(set = 1, binding = 1) uniform sampler2D vsm;
@@ -214,7 +214,7 @@ void main()
     vec3 lightDir = normalize(posToLight);
     vec3 Le = vec3(10.0f) / distSq;
 
-    vec3 wi = (V * vec4(lightDir, 0.0f)).xyz; // light direction in view space
+    vec3 wi = (view.V * vec4(lightDir, 0.0f)).xyz; // light direction in view space
 
     // Diffuse
     vec3 albedo = texture(diffuseMap, texCoord).rgb;

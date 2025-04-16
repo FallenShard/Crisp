@@ -1,5 +1,9 @@
 #version 460 core
 
+#extension GL_GOOGLE_include_directive : require
+
+#include "Parts/view.part.glsl"
+
 layout(location = 0) in vec3 inEyePos;
 layout(location = 1) in vec3 inEyeNormal;
 layout(location = 2) in vec3 inWorldPos;
@@ -23,13 +27,9 @@ struct LightDescriptor
     vec4 params;
 };
 
-layout(set = 1, binding = 1) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
-} camera;
+layout(set = 1, binding = 1) uniform View {
+    ViewParameters view;
+};
 
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
@@ -107,7 +107,7 @@ void main()
 {
     const vec3 eyeV = -normalize(inEyePos);
     const vec3 eyeN = normalize(inEyeNormal);
-    const vec3 eyeL = vec4(camera.V * cascadedLight[0].direction).xyz;
+    const vec3 eyeL = vec4(view.V * cascadedLight[0].direction).xyz;
 
     const float t = (dot(eyeN, eyeL) + 1.0f) * 0.5f;
     const vec3 cool = vec3(0.0f, 0.0f, 0.55f) + 0.25f * surface.rgb;

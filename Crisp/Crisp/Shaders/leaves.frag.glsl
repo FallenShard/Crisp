@@ -1,5 +1,13 @@
 #version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "Parts/view.part.glsl"
+
 #define PI 3.1415926535897932384626433832795
+
+
+
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
 
@@ -47,12 +55,8 @@ layout(set = 1, binding = 2) uniform CascadedLight
 
 
 // ----- Camera -----
-layout(set = 1, binding = 3) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 1, binding = 3) uniform View {
+    ViewParameters view;
 };
 
 // ----- Camera -----
@@ -60,7 +64,7 @@ layout(set = 1, binding = 4) uniform sampler2DArray cascadedShadowMapArray;
 
 vec3 evalDirectionalLightRadiance(out vec3 eyeL)
 {
-    eyeL = normalize((V * cascadedLight[0].direction).xyz);
+    eyeL = normalize((view.V * cascadedLight[0].direction).xyz);
     return cascadedLight[0].spectrum.rgb;
 }
 
@@ -71,13 +75,13 @@ layout (set = 2, binding = 2) uniform sampler2D brdfLut;
 
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
 {
-   const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+   const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
    const vec3 irradiance = texture(irrMap, worldN).rgb;
    const vec3 diffuse = irradiance * albedo;
 
    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
    const vec3 eyeR = reflect(-eyeV, eyeN);
-   const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+   const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
 
    const float MaxReflectionLod = 4.0f;
    const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;

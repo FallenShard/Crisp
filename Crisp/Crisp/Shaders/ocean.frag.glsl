@@ -1,4 +1,7 @@
 #version 450 core
+
+#extension GL_GOOGLE_include_directive : require
+
 #define PI 3.1415926535897932384626433832795
 layout(location = 0) out vec4 finalColor;
 
@@ -7,14 +10,11 @@ layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 worldNormal;
 
 #include "Parts/microfacet.part.glsl"
+#include "Parts/view.part.glsl"
 
 // ----- Camera -----
-layout(set = 1, binding = 0) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 1, binding = 0) uniform View {
+    ViewParameters view;
 };
 
 
@@ -24,13 +24,13 @@ layout (set = 1, binding = 3) uniform sampler2D brdfLut;
 
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
 {
-    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(irrMap, worldN).rgb;
     const vec3 diffuse = irradiance * albedo;
 
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
     const vec3 eyeR = reflect(-eyeV, eyeN);
-    const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+    const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
 
     const float MaxReflectionLod = 4.0f;
     const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
@@ -49,7 +49,7 @@ void main()
 
     // Primary light source radiance
     const vec3 lightDir = normalize(vec3(1.0f, 1.0f, 1.0f));
-    const vec3 eyeL = normalize(vec3(V * vec4(lightDir, 0.0f)));
+    const vec3 eyeL = normalize(vec3(view.V * vec4(lightDir, 0.0f)));
     const vec3 Le = vec3(1.0f);
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 

@@ -147,19 +147,11 @@ CameraParameters FreeCameraController::getCameraParameters() const {
     CameraParameters params{};
     params.V = m_camera.getViewMatrix();
     params.P = m_camera.getProjectionMatrix();
-    params.screenSize = glm::vec2(m_window->getSize());
-    params.nearFar = m_camera.getViewDepthRange();
-    return params;
-}
-
-ExtendedCameraParameters FreeCameraController::getExtendedCameraParameters() const {
-    ExtendedCameraParameters params{};
-    params.V = m_camera.getViewMatrix();
-    params.P = m_camera.getProjectionMatrix();
     params.invV = glm::inverse(params.V);
     params.invP = glm::inverse(params.P);
     params.screenSize = glm::vec2(m_window->getSize());
     params.nearFar = m_camera.getViewDepthRange();
     return params;
 }
+
 } // namespace crisp

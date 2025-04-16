@@ -7,6 +7,7 @@
 #include "Parts/math-constants.part.glsl"
 #include "Parts/rng.part.glsl"
 #include "Parts/warp.part.glsl"
+#include "Parts/view.part.glsl"
 
 const int kRussianRouletteCutoff = 3;
 
@@ -17,15 +18,9 @@ layout(location = 0) rayPayloadEXT HitInfo hitInfo;
 layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
 
-layout(set = 0, binding = 2) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    mat4 invV;
-    mat4 invP;
-    vec2 screenSize;
-    vec2 nearFar;
-} camera;
+layout(set = 0, binding = 2) uniform View {
+    ViewParameters view;
+};
 
 layout(set = 0, binding = 3) uniform IntegratorParameters
 {
@@ -88,12 +83,12 @@ void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
 {
     const vec2 ndcSample = pixelSample / vec2(gl_LaunchSizeEXT.xy) * 2.0 - 1.0; // In [-1, 1].
 
-    origin = camera.invV * vec4(0, 0, 0, 1);
+    origin = view.invV * vec4(0, 0, 0, 1);
 
-    const vec4 target = camera.invP * vec4(ndcSample, 0, 1);
+    const vec4 target = view.invP * vec4(ndcSample, 0, 1);
     const vec3 rayDirEyeSpace = normalize(target.xyz);
 
-    direction = camera.invV * vec4(rayDirEyeSpace, 0.0f);
+    direction = view.invV * vec4(rayDirEyeSpace, 0.0f);
 }
 
 float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal)
@@ -176,7 +171,7 @@ vec3 computeRadianceDirectLighting(inout uint seed)
     vec4 rayDirection;
     sampleRay(rayOrigin, rayDirection, pixelSample);
     const float tMin = 1e-4;
-    const float tMax = camera.nearFar[1];
+    const float tMax = view.nearFar[1];
 
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
@@ -225,7 +220,7 @@ vec3 computeRadianceMis(inout uint seed)
     vec4 rayDirection;
     sampleRay(rayOrigin, rayDirection, pixelSample);
     const float tMin = 1e-4;
-    const float tMax = camera.nearFar[1]; 
+    const float tMax = view.nearFar[1]; 
 
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
@@ -281,7 +276,7 @@ vec3 computeRadianceMisPt(inout uint seed)
     vec4 rayDirection;
     sampleRay(rayOrigin, rayDirection, pixelSample);
     const float tMin = 1e-4;
-    const float tMax = camera.nearFar[1];
+    const float tMax = view.nearFar[1];
 
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
@@ -391,7 +386,7 @@ vec3 computeRadiance(inout uint seed)
     vec4 rayDirection;
     sampleRay(rayOrigin, rayDirection, pixelSample);
     const float tMin = 1e-4;
-    const float tMax = camera.nearFar[1];
+    const float tMax = view.nearFar[1];
 
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);

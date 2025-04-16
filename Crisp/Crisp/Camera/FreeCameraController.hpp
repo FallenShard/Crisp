@@ -38,7 +38,6 @@ public:
     void onViewportResized(int32_t width, int32_t height);
 
     CameraParameters getCameraParameters() const;
-    ExtendedCameraParameters getExtendedCameraParameters() const;
 
 private:
     Window* m_window{nullptr};

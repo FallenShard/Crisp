@@ -1,4 +1,8 @@
 #version 450 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "Parts/view.part.glsl"
  
 layout(location = 0) in vec3 eyePos;
 layout(location = 1) in vec3 eyeNormal;
@@ -11,12 +15,8 @@ layout(set = 0, binding = 1) uniform LightTransforms
     mat4 LVP[4];
 };
 
-layout(set = 0, binding = 2) uniform CameraParams
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 2) uniform View {
+    ViewParameters view;
 };
 
 layout(set = 1, binding = 0) uniform sampler2D shadowMaps[4];
@@ -137,7 +137,7 @@ void main()
     //
     //finalColor = vec4(V * f * Li * cosThetaI, 1.0f);
 
-    vec3 wi = (V * lightDir).xyz;
+    vec3 wi = (view.V * lightDir).xyz;
     vec3 intensity = vec3(1.0f);
     
     float cosThetaI = max(0, dot(wi, eyeNormal));

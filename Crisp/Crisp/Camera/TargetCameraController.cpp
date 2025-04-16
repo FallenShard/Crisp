@@ -152,6 +152,8 @@ CameraParameters TargetCameraController::getCameraParameters() const {
     CameraParameters params{};
     params.V = m_camera.getViewMatrix();
     params.P = m_camera.getProjectionMatrix();
+    params.invV = glm::inverse(params.V);
+    params.invP = glm::inverse(params.P);
     params.screenSize = glm::vec2(m_window->getSize());
     params.nearFar = m_camera.getViewDepthRange();
     return params;

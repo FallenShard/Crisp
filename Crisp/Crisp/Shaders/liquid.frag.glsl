@@ -1,4 +1,8 @@
 #version 450 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "Parts/view.part.glsl"
  
 layout(location = 0) in vec2 fsTexCoord;
 
@@ -6,12 +10,8 @@ layout(location = 0) out vec4 finalColor;
 
 layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput normalDepthTex;
 layout(set = 0, binding = 1) uniform sampler2D sceneTex;
-layout(set = 0, binding = 2) uniform CameraParams
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 2) uniform View {
+    ViewParameters view;
 };
 
 layout(set = 0, binding = 3) uniform sampler2D sceneDepthTex;
@@ -19,23 +19,23 @@ layout(set = 0, binding = 4) uniform samplerCube cubeMap;
 
 float getEyeDepth(float fragDepth) // Used to transform scene depth for comparison
 {
-    return P[3][2] / (1 - 2 * fragDepth - P[2][2]);
+    return view.P[3][2] / (1 - 2 * fragDepth - view.P[2][2]);
 }
 
 vec3 screenToEye(vec2 uv, float eyeDepth)
 {
     uv = 2.0f * uv - 1.0f;
-    return vec3(-uv.x / P[0][0], uv.y / P[1][1], 1.0f) * eyeDepth;
+    return vec3(-uv.x / view.P[0][0], uv.y / view.P[1][1], 1.0f) * eyeDepth;
 }
 
 vec4 projectToScreen(vec3 eyePos)
 {
     mat4 invY = mat4(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    vec4 clipPos = invY * P * vec4(eyePos, 1.0);
+    vec4 clipPos = invY * view.P * vec4(eyePos, 1.0);
     float invW = 1 / clipPos.w;
     vec3 ndcPos = clipPos.xyz * invW; // NDC
     vec3 screenPos = ndcPos * 0.5 + 0.5;
-    return vec4(screenPos * vec3(screenSize, 1), invW);
+    return vec4(screenPos * vec3(view.screenSize, 1), invW);
 }
 
 float distanceSquared(vec2 a, vec2 b)
@@ -86,8 +86,8 @@ bool traceScreenSpaceReflection(vec3 rayOrig, vec3 rayDir, out vec2 hitPixel, ou
     float maxRayTraceDist = 20;
 
     // Clip ray length to near plane (important when reflection is facing the camera)
-    float rayLength = ((rayOrig.z + rayDir.z * maxRayTraceDist) > -nearFar.x) ? 
-                      (-nearFar.x - rayOrig.z) / rayDir.z : maxRayTraceDist;
+    float rayLength = ((rayOrig.z + rayDir.z * maxRayTraceDist) > -view.nearFar.x) ?
+                      (-view.nearFar.x - rayOrig.z) / rayDir.z : maxRayTraceDist;
 
     vec3 rayEndPoint = rayOrig + rayDir * rayLength;
 
@@ -157,7 +157,7 @@ bool traceScreenSpaceReflection(vec3 rayOrig, vec3 rayDir, out vec2 hitPixel, ou
 
         ivec2 unTexCoord = ivec2(hitPixel);
 
-        if (any(greaterThan(abs(hitPixel / screenSize - 0.5), vec2(0.5))))
+        if (any(greaterThan(abs(hitPixel / view.screenSize - 0.5), vec2(0.5))))
             inBounds = false;
 
         sceneZMax = getEyeDepth(texelFetch(sceneDepthTex, unTexCoord, 0).r);
@@ -166,7 +166,7 @@ bool traceScreenSpaceReflection(vec3 rayOrig, vec3 rayDir, out vec2 hitPixel, ou
         stepCount += 1.0;
     }
 
-    vec2 absNdcHit = abs(hitPixel / screenSize * 2 - 1);
+    vec2 absNdcHit = abs(hitPixel / view.screenSize * 2 - 1);
     alpha = 1.0 - max(absNdcHit.x, absNdcHit.y);
     alpha *= 1.0 - (stepCount / ssMaxRaySteps);
     alpha *= -rayDir.z * 0.5f + 0.5f;
@@ -203,11 +203,11 @@ void main()
     float alpha;
     bool hasSSR = traceScreenSpaceReflection(viewPos, reflectDir, hitPixel, alpha);
     if (hasSSR) {
-        vec2 hitCoord = hitPixel / screenSize;
+        vec2 hitCoord = hitPixel / view.screenSize;
         reflectionColor = texture(sceneTex, hitCoord).xyz;
     }
     else {
-        vec3 worldReflectDir = (transpose(V) * vec4(reflectDir, 0.0f)).xyz;
+        vec3 worldReflectDir = (view.invV * vec4(reflectDir, 0.0f)).xyz;
         reflectionColor = texture(cubeMap, worldReflectDir).xyz;
     }
 

@@ -1,5 +1,9 @@
 #version 460 core
 
+#extension GL_GOOGLE_include_directive : require
+
+#include "Parts/view.part.glsl"
+
 struct TileFrustum
 {
     vec4 planes[4];
@@ -33,12 +37,8 @@ layout(set = 0, binding = 2) buffer Lights
     Light lights[];
 };
 
-layout(set = 0, binding = 3) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 3) uniform View {
+    ViewParameters view;
 };
 
 layout (set = 0, binding = 4) buffer LightIndexList
@@ -141,7 +141,7 @@ void main()
 
     for (uint i = gl_LocalInvocationIndex; i < TotalLightCount; i += localThreadCount)
     {
-       vec3 center = (V * vec4(lights[i].position.xyz, 1.0f)).xyz;
+       vec3 center = (view.V * vec4(lights[i].position.xyz, 1.0f)).xyz;
        float radius = lights[i].params.r;
 
        if (SphereInsideFrustum(center, radius, groupFrustum, minDepth, maxDepth))

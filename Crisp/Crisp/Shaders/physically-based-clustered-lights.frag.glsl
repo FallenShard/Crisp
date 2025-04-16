@@ -1,4 +1,9 @@
 #version 460 core
+
+#extension GL_GOOGLE_include_directive: require
+
+#include "Parts/view.part.glsl"
+
 #define PI 3.1415926535897932384626433832795
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
@@ -10,12 +15,8 @@ layout(location = 2) in vec3 worldPos;
 layout(location = 0) out vec4 fragColor;
 
 // ----- Camera -----
-layout(set = 0, binding = 1) uniform Camera
-{
-    mat4 V;
-    mat4 P;
-    vec2 screenSize;
-    vec2 nearFar;
+layout(set = 0, binding = 1) uniform View {
+    ViewParameters view;
 };
 
 // ----- PBR Microfacet BRDF -------
@@ -73,13 +74,13 @@ layout (set = 2, binding = 2) uniform sampler2D brdfLut;
 
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
 {
-    const vec3 worldN = (inverse(V) * vec4(eyeN, 0.0f)).rgb;
+    const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(irrMap, worldN).rgb;
     const vec3 diffuse = irradiance * albedo;
 
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
     const vec3 eyeR = reflect(-eyeV, eyeN);
-    const vec3 worldR = (inverse(V) * vec4(eyeR, 0.0f)).rgb;
+    const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
 
     const float MaxReflectionLod = 4.0f;
     const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
@@ -116,7 +117,7 @@ layout(set = 3, binding = 0, rg32ui) uniform readonly uimage2D lightGrid;
 
 vec3 evalPointLightRadiance(in vec3 lightPos, in vec3 spectrum, in float radius, out vec3 eyeL)
 {
-    const vec3 eyeLightPos = (V * vec4(lightPos, 1.0f)).xyz;
+    const vec3 eyeLightPos = (view.V * vec4(lightPos, 1.0f)).xyz;
     const vec3 eyePosToLight = eyeLightPos - eyePosition;
     float dist = length(eyePosToLight);
     eyeL = eyePosToLight / dist;
