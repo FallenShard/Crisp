@@ -184,6 +184,7 @@ add_cpp_static_library(PathTracerShapes
 )
 target_link_libraries(PathTracerShapes
     PUBLIC PathTracerUtils
+    PUBLIC Crisp::MeshIo
     PRIVATE Crisp::Logger
     PUBLIC embree
 )

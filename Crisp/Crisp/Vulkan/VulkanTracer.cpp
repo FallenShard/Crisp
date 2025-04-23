@@ -1,4 +1,3 @@
-#include "Crisp/Core/Checks.hpp"
 #include <Crisp/Vulkan/VulkanTracer.hpp>
 
 namespace crisp {
@@ -45,8 +44,6 @@ VulkanTracingContext::VulkanTracingContext(const VulkanDevice& device, const Vul
 
     const auto gpuTimestampNs = static_cast<int64_t>(static_cast<double>(m_referenceTimepoint) * m_timestampPeriod);
 
-    CRISP_LOGI("CPU timestamp: {}", cpuTimestampNs);
-    CRISP_LOGI("GPU timestamp: {}", gpuTimestampNs);
     m_referenceTimepoint = gpuTimestampNs - cpuTimestampNs;
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <span>
 
 #include <imgui.h>
@@ -16,7 +17,7 @@ void initImGui(
     const VulkanDevice& device,
     uint32_t swapChainImageCount,
     VkRenderPass renderPass,
-    const std::optional<std::string>& fontPath);
+    const std::optional<std::filesystem::path>& fontPath);
 void shutdownImGui(VkDevice device);
 void prepareImGui();
 void renderImGui(VkCommandBuffer cmdBuffer);

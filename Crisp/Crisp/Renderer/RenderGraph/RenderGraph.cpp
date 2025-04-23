@@ -11,21 +11,6 @@ namespace {
 
 const auto logger = createLoggerMt("RenderGraph");
 
-RenderTargetInfo toRenderTargetInfo(const RenderGraphImageDescription& desc) {
-    return {
-        .initDstStageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .format = desc.format,
-        .sampleCount = desc.sampleCount,
-        .layerCount = desc.layerCount,
-        .mipmapCount = desc.mipLevelCount,
-        .depthSlices = desc.depth,
-        .createFlags = desc.createFlags,
-        .usage = desc.imageUsageFlags,
-        .size = {desc.width, desc.height},
-        .isSwapChainDependent = desc.sizePolicy == SizePolicy::SwapChainRelative,
-    };
-}
-
 VkAttachmentDescription toAttachmentDescription(
     const RenderGraphResource& resource,
     const RenderGraphImageDescription& imageDescription,
@@ -292,7 +277,7 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             }
             for (const auto& [i, attachmentView] : std::views::enumerate(attachmentViews)) {
                 attachmentView->getImage().setImageLayout(
-                    renderPass.getFinalLayout(i), attachmentView->getSubresourceRange());
+                    renderPass.getFinalLayout(static_cast<uint32_t>(i)), attachmentView->getSubresourceRange());
             }
 
             // for (const auto& [i, attachmentView] : std::views::enumerate(m_attachmentViews)) {

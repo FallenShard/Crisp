@@ -1,8 +1,9 @@
 {
   "resourcesPath": "D:/Projects/Crisp/Resources",
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
+  "outputDir": "D:/Projects/Crisp/Output",
   "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/DinPro.ttf",
-  "validationLayersInRelease": true,
+  "forceValidationLayers": true,
   "enableVulkanRayTracing": false,
   "scene_": "ambient-occlusion",
   "scene": "pbr",

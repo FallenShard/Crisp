@@ -96,8 +96,7 @@ private:
     BoundingBox3 m_boundingBox;
 };
 
-std::vector<glm::vec3> computeVertexNormals(
-    std::span<const glm::vec3> positions, std::span<const glm::uvec3> triangles);
+std::vector<glm::vec3> computeVertexNormals(std::span<const glm::vec3> positions, std::span<const glm::uvec3> triangles);
 
 InterleavedVertexBuffer interleaveVertexBuffers(
     const TriangleMesh& mesh, const std::vector<VertexAttributeDescriptor>& vertexAttribs, bool padToVec4);

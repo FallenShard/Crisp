@@ -159,9 +159,9 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
     if (json.contains("polygonMode")) {
         CRISP_CHECK(json["polygonMode"].is_string());
         if (json["polygonMode"] == "line") {
-            builder.setCullMode(VK_POLYGON_MODE_LINE);
+            builder.setPolygonMode(VK_POLYGON_MODE_LINE);
         } else if (json["polygonMode"] == "fill") {
-            builder.setCullMode(VK_POLYGON_MODE_FILL);
+            builder.setPolygonMode(VK_POLYGON_MODE_FILL);
         } else {
             return resultError("Encountered unknown polygon mode {}", json["polygonMode"].dump());
         }

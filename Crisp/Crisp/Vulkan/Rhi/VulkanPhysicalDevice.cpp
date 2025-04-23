@@ -28,7 +28,6 @@ const char* getDeviceTypeString(const VkPhysicalDeviceType type) {
     default:
         return "Other";
     }
-    return "Unknown";
 }
 
 void logSelectedDevice(const VulkanPhysicalDevice& physicalDevice) {
@@ -64,6 +63,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const 
     append(m_properties->features, m_properties->features11);
     append(m_properties->features, m_properties->features12);
     append(m_properties->features, m_properties->features13);
+    append(m_properties->features, m_properties->features14);
     if (requirements.rayTracing) {
         append(m_properties->features, m_properties->rayTracingFeatures);
         append(m_properties->features, m_properties->accelerationStructureFeatures);
@@ -76,6 +76,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const 
     append(m_properties->properties, m_properties->properties11);
     append(m_properties->properties, m_properties->properties12);
     append(m_properties->properties, m_properties->properties13);
+    append(m_properties->properties, m_properties->properties14);
     if (requirements.rayTracing) {
         append(m_properties->properties, m_properties->rayTracingProperties);
     }

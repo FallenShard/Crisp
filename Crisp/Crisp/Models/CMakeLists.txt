@@ -19,6 +19,7 @@ add_cpp_static_library(CrispModels
 )
 target_link_libraries(CrispModels
     PUBLIC Crisp::Renderer
+    PUBLIC Crisp::MeshIo
     PUBLIC Crisp::Window
 )
 

@@ -93,7 +93,7 @@ void initImGui(
     const VulkanDevice& device,
     const uint32_t swapChainImageCount,
     const VkRenderPass renderPass,
-    const std::optional<std::string>& fontPath) {
+    const std::optional<std::filesystem::path>& fontPath) {
     VkDescriptorPoolSize poolSizes[] = /* NOLINT */ {
         {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
@@ -138,7 +138,7 @@ void initImGui(
     ImGui_ImplVulkan_Init(&initInfo, renderPass);
 
     if (fontPath) {
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->c_str(), 16);
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->string().c_str(), 16);
     }
 
     device.getGeneralQueue().submitAndWait([&](VkCommandBuffer commandBuffer) {

@@ -7,9 +7,9 @@
 
 namespace crisp {
 namespace {
-auto logger = spdlog::stdout_color_mt("ApplicationEnvironment");
+CRISP_MAKE_LOGGER_ST("ApplicationEnvironment");
 
-void glfwErrorHandler(int errorCode, const char* message) {
+void glfwErrorHandler(const int32_t errorCode, const char* message) {
     CRISP_LOGE("GLFW error code: {}. Message: {}", errorCode, message);
 }
 
@@ -31,24 +31,15 @@ void setSpdlogLevel(const std::string_view level) {
 
 } // namespace
 
-ApplicationEnvironment::ApplicationEnvironment(Parameters&& parameters)
-    : m_arguments(std::move(parameters)) {
-    m_config = loadJsonFromFile(m_arguments.configPath).unwrap();
-    m_resourcesPath = m_config["resourcesPath"].get<std::string>();
-    m_shaderSourcesPath = m_config["shaderSourcesPath"].get<std::string>();
-    m_arguments.scene = m_config["scene"].get<std::string>();
-    m_arguments.sceneArgs = m_config["sceneArgs"];
-    m_arguments.enableRayTracingExtension = getIfExists<bool>(m_config, "enableVulkanRayTracing").value_or(false);
-    m_arguments.logLevel = getIfExists<std::string>(m_config, "logLevel").value_or("info");
-
+ApplicationEnvironment::ApplicationEnvironment(ConfigParams&& configParams)
+    : m_configParams(std::move(configParams)) {
     spdlog::set_pattern("%^[%T.%e][%t][%n][%l]:%$ %v");
-    setSpdlogLevel(m_arguments.logLevel);
+    setSpdlogLevel(m_configParams.logLevel);
     CRISP_LOGI("Current path: {}", std::filesystem::current_path().string());
 
     glfwSetErrorCallback(glfwErrorHandler);
     if (glfwInit() == GLFW_FALSE) {
         CRISP_LOGF("Could not initialize GLFW library!\n");
-        std::terminate();
     }
 }
 
@@ -57,11 +48,19 @@ ApplicationEnvironment::~ApplicationEnvironment() {
 }
 
 const std::filesystem::path& ApplicationEnvironment::getResourcesPath() const {
-    return m_resourcesPath;
+    return m_configParams.resourcesPath;
 }
 
 const std::filesystem::path& ApplicationEnvironment::getShaderSourceDirectory() const {
-    return m_shaderSourcesPath;
+    return m_configParams.shaderSourcesPath;
+}
+
+const std::filesystem::path& ApplicationEnvironment::getOutputDirectory() const {
+    return m_configParams.outputDir;
+}
+
+const ApplicationEnvironment::ConfigParams& ApplicationEnvironment::getConfigParams() const {
+    return m_configParams;
 }
 
 std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtensions() {
@@ -76,31 +75,28 @@ std::vector<std::string> ApplicationEnvironment::getRequiredVulkanInstanceExtens
     return extensions;
 }
 
-const ApplicationEnvironment::Parameters& ApplicationEnvironment::getParameters() const {
-    return m_arguments;
-}
-
-const nlohmann::json& ApplicationEnvironment::getConfig() const {
-    return m_config;
-}
-
-const std::filesystem::path& ApplicationEnvironment::getOutputDirectory() const {
-    return m_arguments.outputDir;
-}
-
-Result<ApplicationEnvironment::Parameters> parse(const int32_t argc, char** argv) {
-    ApplicationEnvironment::Parameters args{};
+Result<ApplicationEnvironment::CliParams> parse(const int32_t argc, char** argv) {
+    ApplicationEnvironment::CliParams params{};
     CommandLineParser parser{};
-    parser.addOption("config", args.configPath, /*isRequired=*/true);
-    parser.addOption("scene", args.scene);
-    parser.addOption("enable_ray_tracing", args.enableRayTracingExtension);
-    parser.addOption("log_level", args.logLevel);
-    parser.addOption("output_dir", args.outputDir);
+    parser.addOption("config", params.configPath, /*isRequired=*/true);
     if (!parser.parse(argc, argv).isValid()) {
         return resultError("Failed to parse input arguments!");
     }
 
-    return args;
+    return params;
+}
+
+Result<ApplicationEnvironment::ConfigParams> parseConfig(const std::filesystem::path& configPath) {
+    const auto config = loadJsonFromFile(configPath).unwrap();
+    ApplicationEnvironment::ConfigParams params{};
+    params.logLevel = getIfExists<std::string>(config, "logLevel").value_or("info");
+    params.resourcesPath = config["resourcesPath"].get<std::string>();
+    params.shaderSourcesPath = config["shaderSourcesPath"].get<std::string>();
+    params.outputDir = config["outputDir"].get<std::string>();
+    params.enableRayTracingExtension = getIfExists<bool>(config, "enableVulkanRayTracing").value_or(false);
+    params.scene = config["scene"].get<std::string>();
+    params.sceneArgs = config["sceneArgs"];
+    return params;
 }
 
 } // namespace crisp

@@ -45,7 +45,7 @@ Application::Application(const ApplicationEnvironment& environment)
         .presentationMode = PresentationMode::DoubleBuffered,
     };
     addPageableMemoryDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
-    if (environment.getParameters().enableRayTracingExtension) {
+    if (environment.getConfigParams().enableRayTracingExtension) {
         addRayTracingDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
     }
 
@@ -57,7 +57,7 @@ Application::Application(const ApplicationEnvironment& environment)
     m_window.restored.subscribe<&Application::onRestore>(this);
 
     m_sceneContainer = std::make_unique<SceneContainer>(
-        m_renderer.get(), &m_window, environment.getParameters().scene, environment.getParameters().sceneArgs);
+        m_renderer.get(), &m_window, environment.getConfigParams().scene, environment.getConfigParams().sceneArgs);
     m_sceneContainer->update({.frameIdx = 0, .frameInFlightIdx = 0, .dt = 0.0f, .totalTimeSec = 0.0f});
 
     gui::initImGui(
@@ -67,7 +67,7 @@ Application::Application(const ApplicationEnvironment& environment)
         m_renderer->getDevice(),
         m_renderer->getSwapChain().getImageCount(),
         m_renderer->getDefaultRenderPass().getHandle(),
-        getIfExists<std::string>(environment.getConfig(), "imguiFontPath"));
+        environment.getConfigParams().imGuiFontPath);
 
     m_renderer->flushResourceUpdates(true);
 }
