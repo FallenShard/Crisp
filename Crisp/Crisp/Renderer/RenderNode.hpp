@@ -101,6 +101,13 @@ struct RenderNode {
 };
 
 struct RenderNodeLite {
+    Geometry* geometry = nullptr;
+    VulkanRingBuffer* transformBuffer = nullptr;
+    TransformPack* transformPack = nullptr;
+    TransformHandle transformHandle{TransformHandle::createInvalidHandle()};
+    bool isVisible = true;
+    Material* material = nullptr;
+
     // void setModelMatrix(const glm::mat4& mat) const {
     //     transformPack->M = mat;
     // }

@@ -57,6 +57,13 @@ public:
         return m_ringBuffers.at(id).get();
     }
 
+    template <typename T>
+    VulkanBuffer* createStorageBuffer(const std::string& id, const std::vector<T>& data) {
+        auto buffer = ::crisp::createStorageBuffer(m_renderer->getDevice(), data);
+        m_renderer->getDevice().setObjectName(buffer->getHandle(), id.c_str());
+        return m_buffers.emplace(id, std::move(buffer)).first->second.get();
+    }
+
     VulkanPipeline* createPipeline(
         const std::string& id, std::string_view filename, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
     Material* createMaterial(std::string materialId, const std::string& pipelineId);

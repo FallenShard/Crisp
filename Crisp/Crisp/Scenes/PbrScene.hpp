@@ -6,6 +6,7 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
+#include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Scenes/Scene.hpp>
@@ -35,9 +36,6 @@ private:
 
     void setupInput();
 
-    void updateRenderPassMaterials();
-    void updateSceneViews();
-
     int32_t m_nodesToDraw = 0;
     std::unique_ptr<rg::RenderGraph> m_rg;
 
@@ -58,5 +56,7 @@ private:
     std::vector<std::string> m_environmentMapNames;
 
     bool m_showFloor{true};
+
+    MeshletData m_meshletData;
 };
 } // namespace crisp

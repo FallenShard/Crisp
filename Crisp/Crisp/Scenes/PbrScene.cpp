@@ -14,6 +14,7 @@ namespace {
 const auto logger = createLoggerMt("PbrScene");
 
 constexpr uint32_t kShadowMapSize = 4096;
+constexpr float kFloorHeight = -1.0f;
 
 void createDrawCommand(
     std::vector<DrawCommand>& drawCommands, const RenderNode& renderNode, const std::string_view renderPass) {
@@ -91,10 +92,17 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         for (const auto& drawCommand : drawCommands) {
             executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
         }
+
+        auto* meshPipeline = m_resourceContext->pipelineCache.getPipeline("mesh");
+        meshPipeline->bind(ctx.commandEncoder.getHandle());
+        auto* meshMaterial = m_resourceContext->getMaterial("mesh");
+        meshMaterial->bind(ctx.commandEncoder.getHandle());
+        vkCmdDrawMeshTasksEXT(ctx.commandEncoder.getHandle(), m_meshletData.meshlets.size(), 1, 1);
     });
 
     m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    updateSceneViews();
+    m_renderer->setSceneImageView(
+        &m_rg->getResourceImageView(m_rg->getBlackboard().get<ForwardLightingPassData>().hdrImage));
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
@@ -118,6 +126,8 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     createPlane();
     createSceneObject(args["modelPath"]);
 
+    m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
+
     for (const auto& dir :
          std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
         m_environmentMapNames.push_back(dir.path().stem().string());
@@ -128,8 +138,9 @@ void PbrScene::resize(const int32_t width, const int32_t height) {
     m_cameraController->onViewportResized(width, height);
 
     m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    updateRenderPassMaterials();
-    updateSceneViews();
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
+    m_renderer->setSceneImageView(
+        &m_rg->getResourceImageView(m_rg->getBlackboard().get<ForwardLightingPassData>().hdrImage));
 }
 
 void PbrScene::update(const UpdateParams& updateParams) {
@@ -139,17 +150,21 @@ void PbrScene::update(const UpdateParams& updateParams) {
 }
 
 void PbrScene::render(const FrameContext& frameContext) {
+    CRISP_TRACE_VK_SCOPE("PbrScene::render", frameContext.commandEncoder.getHandle());
+
     frameContext.commandEncoder.insertBarrier((kVertexUniformRead | kFragmentUniformRead) >> kTransferWrite);
 
     const auto& camParams = m_cameraController->getCameraParameters();
-    m_lightSystem->update(m_cameraController->getCamera(), 0.0f, frameContext.virtualFrameIndex);
-    m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
-    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, frameContext.virtualFrameIndex);
-    m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
-
+    m_lightSystem->update(m_cameraController->getCamera(), frameContext.virtualFrameIndex);
     m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+
+    m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
     m_skybox->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+
+    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, frameContext.virtualFrameIndex);
     m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+
+    m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
@@ -282,6 +297,8 @@ void PbrScene::createCommonTextures() {
     auto pipeline =
         m_resourceContext->createPipeline("pbr", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
 
+    m_resourceContext->createPipeline("mesh", "MeshShading.json", m_rg->getRenderPass(kForwardLightingPass), 0);
+
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
     imageCache.addImage("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
@@ -303,58 +320,86 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
 }
 
 void PbrScene::createSceneObject(const std::filesystem::path& path) {
-    const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
-    if (absPath.extension() == ".gltf") {
-        auto [images, models] = loadGltfAsset(absPath).unwrap();
-        CRISP_LOGI("Loaded {} models and {} images from {}.", models.size(), images.size(), absPath.generic_string());
-        addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
+    // const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
+    // if (absPath.extension() == ".gltf") {
+    //     auto [images, models] = loadGltfAsset(absPath).unwrap();
+    //     CRISP_LOGI("Loaded {} models and {} images from {}.", models.size(), images.size(),
+    //     absPath.generic_string()); addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
-        for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
-            // const std::string materialName = fmt::format("material_{}", idx);
-            const std::string entityName = fmt::format("renderObject_{}", idx);
-            m_shaderBallPbrMaterialKey = fmt::format("material_{}", idx);
+    //     const auto modelName = path.stem().string();
+    //     for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
+    //         CRISP_LOGI("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
+    //         const std::string entityName = fmt::format("{}_{}", modelName, idx);
 
-            CRISP_LOGI("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
+    //         auto& geometry = m_resourceContext->addGeometry(
+    //             entityName, createGeometry(*m_renderer, renderObject.mesh, kPbrVertexFormat));
 
-            auto& geometry = m_resourceContext->addGeometry(
-                entityName, createGeometry(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+    //         auto& sceneObject = createRenderNode(entityName);
+    //         sceneObject.geometry = &geometry;
+    //         sceneObject.transformPack->M = renderObject.transform;
+    //         sceneObject.pass(kForwardLightingPass).material =
+    //             createPbrMaterial(entityName, renderObject.material, *m_resourceContext, *m_transformBuffer);
+    //         sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+    //         sceneObject.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
 
-            auto& sceneObject = createRenderNode(entityName);
-            sceneObject.geometry = &geometry;
-            sceneObject.transformPack->M = renderObject.transform;
-            sceneObject.pass(kForwardLightingPass).material =
-                createPbrMaterial(entityName, renderObject.material, *m_resourceContext, *m_transformBuffer);
-            sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
-            sceneObject.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
-            m_renderer->getDevice().flushDescriptorUpdates();
+    //         for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
+    //             auto& subpass = sceneObject.pass(kCsmPasses[c]);
+    //             subpass.setGeometry(&geometry, 0, 1);
+    //             subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
+    //             CRISP_CHECK(
+    //                 subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
+    //         }
+    //     }
+    // }
 
-            for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-                auto& subpass = sceneObject.pass(kCsmPasses[c]);
-                subpass.setGeometry(&geometry, 0, 1);
-                subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
-                CRISP_CHECK(
-                    subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
-            }
-        }
+    TriangleMesh mesh{};
+    PbrMaterial material{};
+    material.params.albedo = glm::vec4(0.5f);
 
-        m_renderer->getDevice().flushDescriptorUpdates();
+    auto [triMesh, materials, meshletData] =
+        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Meshes/bunny.obj", flatten(kPbrVertexFormat)).unwrap();
+    mesh = std::move(triMesh);
 
-        // const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-        // sceneObject->transformPack->M = translation;
-        // translation * glm::rotate(glm::pi<float>() * 0.5f, glm ::vec3(1.0f, 0.0f, 0.0f));
+    m_meshletData = std::move(meshletData);
+
+    auto meshletBuffer = m_resourceContext->createStorageBuffer("meshletBuffer", m_meshletData.meshlets);
+    auto meshletVertices = m_resourceContext->createStorageBuffer("meshletVertices", m_meshletData.meshletVertices);
+    auto meshletTriangles = m_resourceContext->createStorageBuffer("meshletTriangles", m_meshletData.meshletTriangles);
+    auto meshPipeline = m_resourceContext->pipelineCache.getPipeline("mesh");
+    auto meshMaterial = m_resourceContext->createMaterial("mesh", meshPipeline);
+    meshMaterial->writeDescriptor(0, 0, meshletBuffer->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 1, meshletTriangles->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 2, meshletVertices->createDescriptorInfo());
+
+    material.name = "shaderBall";
+
+    const std::string entityName = fmt::format("shaderBall");
+
+    auto& geometry = m_resourceContext->addGeometry(entityName, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
+
+    meshMaterial->writeDescriptor(0, 3, geometry.getVertexBuffer(0)->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 4, m_resourceContext->getRingBuffer("camera")->getDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 5, geometry.getVertexBuffer(1)->createDescriptorInfo());
+
+    auto& sceneObject = createRenderNode(entityName);
+    sceneObject.geometry = &geometry;
+    const glm::mat4 translation =
+        glm::translate(glm::vec3(5.0f, kFloorHeight, 0.0f)) * glm::scale(glm::vec3(1.0f)) *
+        glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
+    sceneObject.transformPack->M = translation;
+    sceneObject.pass(kForwardLightingPass).material =
+        createPbrMaterial(entityName, material, *m_resourceContext, *m_transformBuffer);
+    sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+    sceneObject.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
+
+    for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
+        auto& subpass = sceneObject.pass(kCsmPasses[c]);
+        subpass.setGeometry(&geometry, 0, 1);
+        subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
+        CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
     }
 
     // else {
-    //     const std::string entityName{"sceneObject"};
-    //     auto& sceneObject = createRenderNode(entityName, true);
-    //     TriangleMesh mesh{};
-    //     PbrMaterial material{};
-
-    //     auto [triMesh, materials] =
-    //         loadTriangleMeshAndMaterial(
-    //             m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.obj", flatten(kPbrVertexFormat))
-    //             .unwrap();
-    //     mesh = std::move(triMesh);
 
     //     // material.name = "vokselia";
     //     // material.textureKeys = createDefaultPbrTextureGroup();
@@ -365,8 +410,6 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     //     const float maxDimLength = mesh.getBoundingBox().getMaximumExtent();
     //     sceneObject->transformPack->M = translation * glm::scale(glm::vec3(10.0f / maxDimLength));
     // }
-
-    // m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
 
     // m_shaderBallPbrMaterialKey = material.name;
     // addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
@@ -385,8 +428,6 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     //     subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
     //     CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
     // }
-
-    // m_renderer->getDevice().flushDescriptorUpdates();
 }
 
 void PbrScene::createPlane() {
@@ -400,18 +441,18 @@ void PbrScene::createPlane() {
     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
     auto& floor = createRenderNode(kNodeName);
-    floor.transformPack->M = glm::translate(glm::vec3(0.0f, -1.0f, 0.0f));
+    floor.transformPack->M = glm::translate(glm::vec3(0.0f, kFloorHeight, 0.0f));
     floor.geometry = &m_resourceContext->getGeometry(kNodeName);
     floor.pass(kForwardLightingPass).material =
         createPbrMaterial(kNodeName, material, *m_resourceContext, *m_transformBuffer);
     floor.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
     floor.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
 
-    // CRISP_CHECK(
-    //     floor->pass(kForwardLightingPass)
-    //         .material->getPipeline()
-    //         ->getVertexLayout()
-    //         .isSubsetOf(floor->geometry->getVertexLayout()));
+    CRISP_CHECK(
+        floor.pass(kForwardLightingPass)
+            .material->getPipeline()
+            ->getVertexLayout()
+            .isSubsetOf(floor.geometry->getVertexLayout()));
 }
 
 void PbrScene::setupInput() {
@@ -426,15 +467,6 @@ void PbrScene::setupInput() {
         }
         }
     }));
-}
-
-void PbrScene::updateRenderPassMaterials() {
-    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
-}
-
-void PbrScene::updateSceneViews() {
-    const auto& data = m_rg->getBlackboard().get<ForwardLightingData>();
-    m_renderer->setSceneImageView(&m_rg->getResourceImageView(data.hdrImage));
 }
 
 } // namespace crisp

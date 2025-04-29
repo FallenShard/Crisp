@@ -249,6 +249,7 @@ FetchContent_Declare(meshoptimizer
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(meshoptimizer)
+
 # List all used third-party libraries
 add_subdirectory(Externals/imgui)
 add_subdirectory(Externals/stb)
