@@ -94,6 +94,14 @@ const VertexAttributeBuffer& TriangleMesh::getCustomAttribute(const std::string_
     return m_customAttributes.at(attributeName);
 }
 
+const float* TriangleMesh::getPositionsPtr() const {
+    return m_positions.empty() ? nullptr : glm::value_ptr(m_positions[0]);
+}
+
+const uint32_t* TriangleMesh::getIndices() const {
+    return m_triangles.empty() ? nullptr : glm::value_ptr(m_triangles[0]);
+}
+
 bool TriangleMesh::hasCustomAttribute(const std::string_view attributeName) const {
     return m_customAttributes.contains(attributeName);
 }

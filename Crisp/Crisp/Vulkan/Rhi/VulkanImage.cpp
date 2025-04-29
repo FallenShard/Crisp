@@ -91,7 +91,6 @@ const char* toString(const VkImageLayout layout) {
         return "FragmentShadingRateAttachment";
     default:
         CRISP_LOGF("Unknown layout encountered: {}.", static_cast<uint32_t>(layout));
-        return "Unknown";
     }
 }
 

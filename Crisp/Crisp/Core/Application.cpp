@@ -48,6 +48,8 @@ Application::Application(const ApplicationEnvironment& environment)
     if (environment.getConfigParams().enableRayTracingExtension) {
         addRayTracingDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
     }
+    vulkanCoreParams.requiredDeviceExtensions.emplace_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+    vulkanCoreParams.requiredDeviceExtensions.emplace_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
 
     m_renderer = std::make_unique<Renderer>(
         std::move(vulkanCoreParams), m_window.createSurfaceCallback(), createAssetPaths(environment));

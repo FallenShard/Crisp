@@ -71,6 +71,10 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const 
     if (requirements.pageableMemory) {
         append(m_properties->features, m_properties->pageableDeviceLocalMemoryFeatures);
     }
+    if (requirements.meshShading) {
+        append(m_properties->features, m_properties->meshShaderFeatures);
+        append(m_properties->features, m_properties->fragmentShadingRateFeatures);
+    }
     vkGetPhysicalDeviceFeatures2(m_handle, &m_properties->features);
 
     append(m_properties->properties, m_properties->properties11);
@@ -79,6 +83,9 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const 
     append(m_properties->properties, m_properties->properties14);
     if (requirements.rayTracing) {
         append(m_properties->properties, m_properties->rayTracingProperties);
+    }
+    if (requirements.meshShading) {
+        append(m_properties->properties, m_properties->meshShaderProperties);
     }
     vkGetPhysicalDeviceProperties2(m_handle, &m_properties->properties);
 
@@ -326,6 +333,11 @@ void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions) {
     deviceExtensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 }
 
+void addMeshShadingDeviceExtensions(std::vector<std::string>& deviceExtensions) {
+    deviceExtensions.emplace_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+}
+
 Result<VulkanPhysicalDevice> selectPhysicalDevice(
     const VulkanInstance& instance, std::vector<std::string>&& deviceExtensions) {
     uint32_t deviceCount = 0;
@@ -346,8 +358,15 @@ Result<VulkanPhysicalDevice> selectPhysicalDevice(
         }
     }
 
+    const FlatStringHashSet requestedExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+    const DeviceRequirements requirements{
+        .rayTracing = requestedExtensions.contains(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME),
+        .pageableMemory = requestedExtensions.contains(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME),
+        .meshShading = requestedExtensions.contains(VK_EXT_MESH_SHADER_EXTENSION_NAME),
+    };
     for (const auto& device : devices) {
-        VulkanPhysicalDevice physicalDevice(device);
+        VulkanPhysicalDevice physicalDevice(device, requirements);
         if (physicalDevice.isSuitable(instance.getSurface(), deviceExtensions)) {
             logSelectedDevice(physicalDevice);
             physicalDevice.setDeviceExtensions(std::move(deviceExtensions));

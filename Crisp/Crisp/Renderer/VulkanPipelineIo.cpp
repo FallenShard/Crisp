@@ -29,6 +29,8 @@ Result<FlatHashMap<VkShaderStageFlagBits, std::string>> parseShaderFiles(const n
     getPathIfExists("tesc", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
     getPathIfExists("tese", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
     getPathIfExists("comp", VK_SHADER_STAGE_COMPUTE_BIT);
+    getPathIfExists("mesh", VK_SHADER_STAGE_MESH_BIT_EXT);
+    getPathIfExists("task", VK_SHADER_STAGE_TASK_BIT_EXT);
 
     return shaderFiles;
 }

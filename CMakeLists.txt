@@ -243,6 +243,12 @@ FetchContent_Declare(GSL
 )
 FetchContent_MakeAvailable(GSL)
 
+FetchContent_Declare(meshoptimizer
+    GIT_REPOSITORY "https://github.com/zeux/meshoptimizer"
+    GIT_TAG "v0.23"
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(meshoptimizer)
 # List all used third-party libraries
 add_subdirectory(Externals/imgui)
 add_subdirectory(Externals/stb)

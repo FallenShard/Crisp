@@ -31,6 +31,7 @@ struct SurfaceSupport {
 struct DeviceRequirements {
     bool rayTracing{false};
     bool pageableMemory{false};
+    bool meshShading{false};
 };
 
 class VulkanPhysicalDevice {
@@ -112,6 +113,10 @@ private:
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
         VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageableDeviceLocalMemoryFeatures{
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT};
+        VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT};
+        VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragmentShadingRateFeatures{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR};
 
         VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         VkPhysicalDeviceVulkan11Properties properties11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES};
@@ -120,6 +125,8 @@ private:
         VkPhysicalDeviceVulkan14Properties properties14{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_PROPERTIES};
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingProperties{
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+        VkPhysicalDeviceMeshShaderPropertiesEXT meshShaderProperties{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT};
 
         VkPhysicalDeviceMemoryProperties2 memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
     };
@@ -131,6 +138,7 @@ private:
 std::vector<std::string> createDefaultDeviceExtensions();
 void addPageableMemoryDeviceExtensions(std::vector<std::string>& deviceExtensions);
 void addRayTracingDeviceExtensions(std::vector<std::string>& deviceExtensions);
+void addMeshShadingDeviceExtensions(std::vector<std::string>& deviceExtensions);
 
 Result<VulkanPhysicalDevice> selectPhysicalDevice(
     const VulkanInstance& instance, std::vector<std::string>&& deviceExtensions);

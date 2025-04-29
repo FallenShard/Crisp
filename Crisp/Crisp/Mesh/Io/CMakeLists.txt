@@ -40,6 +40,7 @@ add_cpp_static_library(CrispMeshIo
 target_link_libraries(CrispMeshIo
     PUBLIC Crisp::GltfLoader
     PUBLIC Crisp::WavefrontObjLoader
+    PUBLIC meshoptimizer
     PRIVATE Crisp::Logger
 )
 

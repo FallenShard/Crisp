@@ -27,6 +27,9 @@ public:
     const std::vector<glm::uvec3>& getTriangles() const;
     const VertexAttributeBuffer& getCustomAttribute(std::string_view attributeName) const;
 
+    const float* getPositionsPtr() const;
+    const uint32_t* getIndices() const;
+
     bool hasPositions() const {
         return !m_positions.empty();
     }
