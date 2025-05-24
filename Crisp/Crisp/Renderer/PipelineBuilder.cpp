@@ -276,8 +276,8 @@ PipelineBuilder& PipelineBuilder::addDynamicState(VkDynamicState dynamicState) {
 std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
     const VulkanDevice& device,
     std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
-    VkRenderPass renderPass,
-    uint32_t subpassIndex) {
+    const VkRenderPass renderPass,
+    const uint32_t subpassIndex) {
     VkGraphicsPipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
     pipelineInfo.stageCount = static_cast<uint32_t>(m_shaderStages.size());
     pipelineInfo.pStages = m_shaderStages.data();
@@ -297,7 +297,7 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
     pipelineInfo.basePipelineIndex = -1;
 
     VkPipeline pipeline{VK_NULL_HANDLE};
-    vkCreateGraphicsPipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+    vkCreateGraphicsPipelines(device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline);
     return std::make_unique<VulkanPipeline>(
         device,
         pipeline,

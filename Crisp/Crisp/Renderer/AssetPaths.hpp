@@ -7,6 +7,7 @@ struct AssetPaths {
     std::filesystem::path shaderSourceDir;
     std::filesystem::path resourceDir;
     std::filesystem::path spvShaderDir;
+    std::filesystem::path outputDir;
 
     std::filesystem::path getShaderSpvPath(const std::string& shaderName) const {
         return spvShaderDir / (shaderName + ".spv");

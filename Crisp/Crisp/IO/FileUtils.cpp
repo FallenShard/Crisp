@@ -50,8 +50,19 @@ Result<std::vector<char>> readBinaryFile(const std::filesystem::path& filePath) 
 
     file.seekg(0);
     file.read(buffer.data(), fileSize);
-    file.close();
 
     return buffer;
+}
+
+Result<> writeBinaryFile(const std::filesystem::path& filePath, const std::span<const char> data) {
+    std::ofstream file(filePath, std::ios::binary);
+
+    if (!file.is_open()) {
+        return resultError("Failed to open binary file: {}!", filePath.string());
+    }
+
+    file.write(data.data(), static_cast<std::streamsize>(data.size()));
+
+    return kResultSuccess;
 }
 } // namespace crisp

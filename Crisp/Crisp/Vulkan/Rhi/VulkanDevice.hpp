@@ -2,6 +2,7 @@
 
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipelineCache.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
@@ -138,6 +139,9 @@ public:
             getDebugReportObjectType<decltype(wrapperType.getHandle())>());
     }
 
+    void loadPipelineCache(std::filesystem::path&& cachePath);
+    VkPipelineCache getPipelineCacheHandle() const;
+
 private:
     template <VulkanHandle VkHandle>
     static VkObjectType getDebugReportObjectType() {
@@ -235,6 +239,7 @@ private:
     std::vector<VkWriteDescriptorSet> m_descriptorWrites;
 
     std::unique_ptr<VulkanResourceDeallocator> m_resourceDeallocator;
+    std::unique_ptr<VulkanPipelineCache> m_pipelineCache;
 
     using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
     FunctionVector m_resourceUpdates;

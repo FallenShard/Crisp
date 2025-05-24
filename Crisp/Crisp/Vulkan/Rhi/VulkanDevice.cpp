@@ -106,6 +106,7 @@ VulkanDevice::VulkanDevice(
 }
 
 VulkanDevice::~VulkanDevice() {
+    m_pipelineCache.reset();
     m_resourceDeallocator->freeAllResources();
     vmaDestroyAllocator(m_memoryAllocator);
     vkDestroyDevice(m_handle, nullptr);
@@ -249,6 +250,14 @@ void VulkanDevice::setObjectName(const uint64_t vulkanHandle, const char* name, 
     nameInfo.objectHandle = vulkanHandle;
     nameInfo.pObjectName = name;
     vkSetDebugUtilsObjectNameEXT(m_handle, &nameInfo);
+}
+
+void VulkanDevice::loadPipelineCache(std::filesystem::path&& cachePath) {
+    m_pipelineCache = std::make_unique<VulkanPipelineCache>(*this, std::move(cachePath));
+}
+
+VkPipelineCache VulkanDevice::getPipelineCacheHandle() const {
+    return m_pipelineCache ? VK_NULL_HANDLE : m_pipelineCache->getHandle();
 }
 
 VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config) {

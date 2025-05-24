@@ -72,6 +72,7 @@ Renderer::Renderer(
     }
 
     m_shaderCache = std::make_unique<ShaderCache>(m_device.get());
+    m_device->loadPipelineCache(m_assetPaths.outputDir / "pipeline.cache");
 
     m_workers.resize(1);
     for (auto& w : m_workers) {

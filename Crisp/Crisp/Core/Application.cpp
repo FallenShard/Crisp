@@ -30,6 +30,7 @@ AssetPaths createAssetPaths(const ApplicationEnvironment& environment) {
         .shaderSourceDir = environment.getShaderSourceDirectory(),
         .resourceDir = environment.getResourcesPath(),
         .spvShaderDir = environment.getResourcesPath() / "Shaders",
+        .outputDir = environment.getOutputDirectory(),
     };
 }
 } // namespace

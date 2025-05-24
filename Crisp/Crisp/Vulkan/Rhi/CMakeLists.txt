@@ -73,6 +73,7 @@ target_link_libraries(
     CrispVulkanDevice
     PUBLIC Crisp::VulkanInstance
     PUBLIC Crisp::VulkanPhysicalDevice
+    PUBLIC Crisp::VulkanPipelineCache
     PUBLIC Crisp::HashMap
 )
 
@@ -206,6 +207,17 @@ target_link_libraries(
     CrispVulkanDescriptorSet
     PUBLIC Crisp::VulkanDevice
     PUBLIC Crisp::VulkanPipelineLayout
+)
+
+add_cpp_static_library(
+    CrispVulkanPipelineCache
+    "VulkanPipelineCache.cpp"
+    "VulkanPipelineCache.hpp"
+)
+target_link_libraries(
+    CrispVulkanPipelineCache
+    PRIVATE Crisp::VulkanDevice
+    PRIVATE Crisp::FileUtils
 )
 
 add_cpp_static_library(

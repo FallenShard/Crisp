@@ -70,6 +70,10 @@ public:
         return *m_expected;
     }
 
+    constexpr const T* operator->() const {
+        return m_expected.operator->();
+    }
+
     constexpr operator bool() const // NOLINT
     {
         return m_expected.has_value();

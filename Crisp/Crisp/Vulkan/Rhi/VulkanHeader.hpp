@@ -47,8 +47,9 @@ inline auto getDestroyFunc() {
     IF_CONSTEXPR_VK_DESTROY_FUNC(Sampler)
     IF_CONSTEXPR_VK_DESTROY_FUNC(SwapchainKHR)
     IF_CONSTEXPR_VK_DESTROY_FUNC(AccelerationStructureKHR)
+    IF_CONSTEXPR_VK_DESTROY_FUNC(PipelineCache)
 
-    return static_cast<VulkanDestroyFunc>(nullptr);
+    static_assert(!sizeof(T), "Failed to retrieve a destroy function for Vulkan type!");
 }
 
 } // namespace crisp
