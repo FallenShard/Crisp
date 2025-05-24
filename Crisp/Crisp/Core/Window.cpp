@@ -186,21 +186,24 @@ void Window::keyboardCallback(GLFWwindow* window, int key, int /*scanCode*/, int
     }
 }
 
-void Window::mouseMoveCallback(GLFWwindow* window, double xPos, double yPos) {
+void Window::mouseMoveCallback(GLFWwindow* window, const double xPos, const double yPos) {
     auto dispatcher = static_cast<Window*>(glfwGetWindowUserPointer(window));
     if (dispatcher && dispatcher->isEventEnabled(EventType::MouseMoved)) {
         dispatcher->mouseMoved(xPos, yPos);
     }
 }
 
-void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+void Window::mouseButtonCallback(GLFWwindow* window, const int button, const int action, const int mods) {
     if (action == GLFW_PRESS) {
         auto dispatcher = static_cast<Window*>(glfwGetWindowUserPointer(window));
         if (dispatcher && dispatcher->isEventEnabled(EventType::MouseButtonPressed)) {
             double xPos, yPos; // NOLINT
             glfwGetCursorPos(window, &xPos, &yPos);
             dispatcher->mouseButtonPressed(
-                {.button = translateGlfwToMouseButton(button), .modifiers = ModifierFlags(mods), .x = xPos, .y = yPos});
+                {.button = translateGlfwToMouseButton(button),
+                 .modifiers = ModifierFlags(static_cast<uint8_t>(mods)),
+                 .x = xPos,
+                 .y = yPos});
         }
     } else if (action == GLFW_RELEASE) {
         auto dispatcher = static_cast<Window*>(glfwGetWindowUserPointer(window));
@@ -208,7 +211,10 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
             double xPos, yPos; // NOLINT
             glfwGetCursorPos(window, &xPos, &yPos);
             dispatcher->mouseButtonReleased(
-                {.button = translateGlfwToMouseButton(button), .modifiers = ModifierFlags(mods), .x = xPos, .y = yPos});
+                {.button = translateGlfwToMouseButton(button),
+                 .modifiers = ModifierFlags(static_cast<uint8_t>(mods)),
+                 .x = xPos,
+                 .y = yPos});
         }
     }
 }

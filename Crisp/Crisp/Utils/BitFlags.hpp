@@ -6,9 +6,7 @@
 
 namespace crisp {
 template <typename Enum>
-struct IsBitFlag {
-    static constexpr bool value = false;
-};
+struct IsBitFlag : public std::false_type {};
 
 template <typename Enum>
 concept EnumBitFlagType = IsBitFlag<Enum>::value;
@@ -53,58 +51,58 @@ public:
         return BitFlags(m_mask | rhs.m_mask);
     }
 
-    inline bool operator==(const BitFlags& rhs) const {
+    bool operator==(const BitFlags& rhs) const {
         return m_mask == rhs.m_mask;
     }
 
-    inline bool operator==(const EnumType bit) const {
+    bool operator==(const EnumType bit) const {
         return m_mask == static_cast<MaskType>(bit);
     }
 
-    inline bool operator==(const MaskType mask) const {
+    bool operator==(const MaskType mask) const {
         return m_mask == mask;
     }
 
-    inline bool operator!=(const BitFlags& rhs) const {
+    bool operator!=(const BitFlags& rhs) const {
         return m_mask != rhs.m_mask;
     }
 
-    inline bool operator!=(const EnumType bit) const {
+    bool operator!=(const EnumType bit) const {
         return m_mask != static_cast<MaskType>(bit);
     }
 
-    inline bool operator!=(const MaskType mask) const {
+    bool operator!=(const MaskType mask) const {
         return m_mask != mask;
     }
 
-    inline bool operator!() const {
+    bool operator!() const {
         return m_mask == 0;
     }
 
-    inline BitFlags& operator&=(const BitFlags& rhs) {
+    BitFlags& operator&=(const BitFlags& rhs) {
         m_mask &= rhs.m_mask;
         return *this;
     }
 
-    inline BitFlags& operator&=(const EnumType bits) {
+    BitFlags& operator&=(const EnumType bits) {
         m_mask &= static_cast<MaskType>(bits);
         return *this;
     }
 
-    inline BitFlags operator&(const EnumType bits) const {
+    BitFlags operator&(const EnumType bits) const {
         return BitFlags(m_mask & static_cast<MaskType>(bits));
     }
 
-    inline BitFlags operator&(const BitFlags& rhs) const {
+    BitFlags operator&(const BitFlags& rhs) const {
         return BitFlags(m_mask & rhs.m_mask);
     }
 
-    inline operator bool() const // NOLINT
+    /*implicit*/ operator bool() const // NOLINT
     {
         return m_mask != 0;
     }
 
-    inline MaskType getMask() const {
+    MaskType getMask() const {
         return m_mask;
     }
 
@@ -128,14 +126,10 @@ private:
 
 #define DECLARE_BITFLAG(EnumClass)                                                                                     \
     template <>                                                                                                        \
-    struct IsBitFlag<EnumClass> {                                                                                      \
-        static constexpr bool value = true;                                                                            \
-    };                                                                                                                 \
+    struct IsBitFlag<EnumClass> : public std::true_type {};                                                            \
     using EnumClass##Flags = BitFlags<EnumClass>;
 
 #define DECLARE_BITFLAG_IN_NAMESPACE(ns, EnumClass)                                                                    \
     template <>                                                                                                        \
-    struct IsBitFlag<ns::EnumClass> {                                                                                  \
-        static constexpr bool value = true;                                                                            \
-    };                                                                                                                 \
+    struct IsBitFlag<ns::EnumClass> : public std::true_type {};                                                        \
     using EnumClass##Flags = BitFlags<ns::EnumClass>;
