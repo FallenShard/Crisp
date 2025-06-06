@@ -344,17 +344,13 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const VulkanDevice& device,
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
-    auto maybeJson = loadJsonFromFile(path);
-    if (!maybeJson) {
-        return resultError("Failed to open json config at {}", path.generic_string());
-    }
-
-    auto result =
-        createPipelineFromJson(maybeJson.unwrap(), spvShaderDir, shaderCache, device, renderPass, subpassIndex);
-    if (result) {
-        device.setObjectName((*result)->getHandle(), fmt::format("{} Pipeline", path.stem().string()));
-    }
-    return result;
+    CRISP_TRY(const auto json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
+    CRISP_TRY(
+        auto pipeline,
+        createPipelineFromJson(json, spvShaderDir, shaderCache, device, renderPass, subpassIndex),
+        "Failed to create pipeline from json");
+    device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
+    return pipeline;
 }
 
 } // namespace crisp

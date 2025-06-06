@@ -6,46 +6,27 @@
 namespace crisp::detail {
 const char* toString(VkResult result) noexcept;
 
-template <typename... Args>
-VkResult doAssert(
-    const VkResult result, const char* exprString, const LocationFormatString& formatString, Args&&... args) noexcept {
+inline VkResult doVkAssert(const VkResult result, const LocationFormatString& formatString = {}) noexcept {
     if (result == VK_SUCCESS) {
         return VK_SUCCESS;
     }
 
-    const auto argsFormat = fmt::format(formatString.str, std::forward<Args>(args)...);
     spdlog::critical(
-        "File: {}\n({}:{}) -- Function: `{}`, Vulkan call '{}' returned '{}'\nMessage: {}",
-        formatString.loc.file_name(),
-        formatString.loc.line(),
-        formatString.loc.column(),
-        formatString.loc.function_name(),
-        exprString,
+        "VkResult: {}\nFile: {}\n({}:{}) -- Function: `{}` \nMessage: {}",
         toString(result),
-        argsFormat);
-    std::abort();
-}
-
-inline VkResult doAssert(const VkResult result, const LocationFormatString& formatString) noexcept {
-    if (result == VK_SUCCESS) {
-        return VK_SUCCESS;
-    }
-
-    spdlog::critical(
-        "File: {}\n({}:{}) -- Function: `{}`, Vulkan call '{}' returned '{}'",
         formatString.loc.file_name(),
         formatString.loc.line(),
         formatString.loc.column(),
         formatString.loc.function_name(),
-        formatString.str,
-        toString(result));
+        formatString.str);
     std::abort();
 }
 } // namespace crisp::detail
 
 #ifdef _DEBUG
 // clang-format off
-#define VK_CHECK(expr, ...) crisp::detail::doAssert(expr, #expr __VA_OPT__(,) __VA_ARGS__)
+// #define VK_CHECK(expr, ...) expr
+#define VK_CHECK(expr, ...) crisp::detail::doVkAssert(expr __VA_OPT__(, fmt::format(__VA_ARGS__)))
 // clang-format on
 #else
 #define VK_CHECK(expr, ...) expr

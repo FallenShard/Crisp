@@ -8,13 +8,13 @@
 namespace crisp {
 namespace detail {
 struct LocationFormatString {
-    fmt::string_view str;
+    std::string str;
     std::source_location loc;
 
     LocationFormatString( // NOLINT
-        const char* str = "",
+        std::string&& str = "",
         const std::source_location& loc = std::source_location::current())
-        : str(str)
+        : str(std::move(str))
         , loc(loc) {}
 };
 } // namespace detail
@@ -106,15 +106,27 @@ private:
 inline constexpr Result<void> kResultSuccess;
 
 template <typename... Args>
-std::unexpected<std::string> resultError(detail::LocationFormatString&& formatString, Args&&... args) { // NOLINT
-    std::string errorMessage = fmt::format(fmt::runtime(formatString.str), std::forward<Args>(args)...);
+std::unexpected<std::string> resultErrorImpl(detail::LocationFormatString&& formatString, Args&&... args) { // NOLINT
     spdlog::error(
         "File: {}\n[Function: {}][Line {}, Column {}] Error:\n {}",
         formatString.loc.file_name(),
         formatString.loc.function_name(),
         formatString.loc.line(),
         formatString.loc.column(),
-        errorMessage);
-    return std::unexpected<std::string>(std::move(errorMessage));
+        formatString.str);
+    return std::unexpected<std::string>(std::move(formatString.str));
 }
+
+#define resultError(...) resultErrorImpl(__VA_OPT__(fmt::format(__VA_ARGS__)))
+
+#define CRISP_TRY_CONCAT(a, b) a##b
+#define CRISP_TRY_CONCAT_HELPER(a, b) CRISP_TRY_CONCAT(a, b)
+#define CRISP_TRY_UNIQUE_NAME(a) CRISP_TRY_CONCAT_HELPER(a, __LINE__)
+#define CRISP_TRY(lhs, resultExpr, ...)                                                                                \
+    auto CRISP_TRY_UNIQUE_NAME(tempResult) = (resultExpr);                                                             \
+    if (!CRISP_TRY_UNIQUE_NAME(tempResult)) {                                                                          \
+        return resultError(__VA_ARGS__);                                                                               \
+    }                                                                                                                  \
+    lhs = std::move(CRISP_TRY_UNIQUE_NAME(tempResult)).extract(); // NOLINT
+
 } // namespace crisp

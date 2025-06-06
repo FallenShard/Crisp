@@ -130,8 +130,16 @@ public:
             getDebugReportObjectType<decltype(wrapperType.getHandle())>());
     }
 
+    template <VulkanWrapperType T>
+    void setObjectName(const T& wrapperType, const std::string& name) const {
+        setObjectName(
+            reinterpret_cast<uint64_t>(wrapperType.getHandle()), // NOLINT
+            name.c_str(),
+            getDebugReportObjectType<decltype(wrapperType.getHandle())>());
+    }
+
 private:
-    template <typename VkHandle>
+    template <VulkanHandle VkHandle>
     static VkObjectType getDebugReportObjectType() {
         if constexpr (std::same_as<VkHandle, VkInstance>) {
             return VK_OBJECT_TYPE_INSTANCE;
