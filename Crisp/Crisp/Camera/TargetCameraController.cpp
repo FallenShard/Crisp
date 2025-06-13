@@ -86,12 +86,22 @@ void TargetCameraController::update(const float dt) {
         m_target += m_camera.getRightDir() * m_panSpeed * dt;
     }
     if (m_window->isKeyDown(Key::W)) {
-        m_camera.translate(m_camera.getLookDir() * m_panSpeed * dt);
-        m_target += m_camera.getLookDir() * m_panSpeed * dt;
+        if (m_window->isKeyDown(Key::LeftShift)) {
+            m_camera.translate(m_camera.getLookDir() * m_panSpeed * dt);
+            m_target += m_camera.getLookDir() * m_panSpeed * dt;
+        } else {
+            m_camera.translate(m_camera.getLookDir() * m_panSpeed * dt);
+            m_distance = glm::length(m_target - m_camera.getPosition());
+        }
     }
     if (m_window->isKeyDown(Key::S)) {
-        m_camera.translate(-m_camera.getLookDir() * m_panSpeed * dt);
-        m_target -= m_camera.getLookDir() * m_panSpeed * dt;
+        if (m_window->isKeyDown(Key::LeftShift)) {
+            m_camera.translate(-m_camera.getLookDir() * m_panSpeed * dt);
+            m_target -= m_camera.getLookDir() * m_panSpeed * dt;
+        } else {
+            m_camera.translate(-m_camera.getLookDir() * m_panSpeed * dt);
+            m_distance = glm::length(m_target - m_camera.getPosition());
+        }
     }
 }
 
@@ -137,8 +147,7 @@ void TargetCameraController::onMouseMoved(const double xPos, const double yPos) 
 
 void TargetCameraController::onMouseWheelScrolled(const double offset) {
     if (m_window->isKeyDown(Key::LeftShift)) {
-        const float distance = m_distance;
-        setDistance(std::clamp(distance - static_cast<float>(offset) * 3.0f, 0.01f, 100.0f));
+        setDistance(std::clamp(m_distance - static_cast<float>(offset) * 3.0f, 0.01f, 100.0f));
     } else {
         m_camera.setVerticalFov(std::clamp(m_camera.getVerticalFov() - static_cast<float>(offset) * 3.0f, 5.0f, 90.0f));
     }
