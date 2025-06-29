@@ -93,6 +93,7 @@ Result<ApplicationEnvironment::ConfigParams> parseConfig(const std::filesystem::
     params.resourcesPath = config["resourcesPath"].get<std::string>();
     params.shaderSourcesPath = config["shaderSourcesPath"].get<std::string>();
     params.outputDir = config["outputDir"].get<std::string>();
+    params.imGuiFontPath = config["imguiFontPath"].get<std::string>();
     params.enableRayTracingExtension = getIfExists<bool>(config, "enableVulkanRayTracing").value_or(false);
     params.scene = config["scene"].get<std::string>();
     params.sceneArgs = config["sceneArgs"];
