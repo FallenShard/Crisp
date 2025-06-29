@@ -65,8 +65,8 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const 
     append(m_properties->features, m_properties->features13);
     append(m_properties->features, m_properties->features14);
     if (requirements.rayTracing) {
-        append(m_properties->features, m_properties->rayTracingFeatures);
         append(m_properties->features, m_properties->accelerationStructureFeatures);
+        append(m_properties->features, m_properties->rayTracingFeatures);
     }
     if (requirements.pageableMemory) {
         append(m_properties->features, m_properties->pageableDeviceLocalMemoryFeatures);
