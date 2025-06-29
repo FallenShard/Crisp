@@ -58,8 +58,9 @@ void setCameraParameters(FreeCameraController& cameraController, const nlohmann:
 
 } // namespace
 
-VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
-    : Scene(renderer, window) {
+VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window, std::filesystem::path outputDir)
+    : Scene(renderer, window)
+    , m_outputDir(std::move(outputDir)) {
     setupInput();
 
     const auto json =
@@ -69,11 +70,11 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     setCameraParameters(*m_cameraController, json["camera"]);
-    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createUniformRingBuffer<CameraParameters>("camera");
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
     m_integratorParams.lightCount = static_cast<int32_t>(m_sceneDesc.lights.size());
-    m_resourceContext->createUniformBuffer("integrator", sizeof(IntegratorParameters), BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createUniformRingBuffer<IntegratorParameters>("integrator");
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
@@ -139,11 +140,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
     createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_rtImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
-
-    for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-        m_rtImageViews.emplace_back(createView(m_renderer->getDevice(), *m_rtImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
-    }
+    m_rayTracedImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
 
     m_pipeline = createPipeline();
 
@@ -151,7 +148,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window)
 
     updateDescriptorSets();
 
-    m_renderer->setSceneImageViews(m_rtImageViews);
+    m_renderer->setSceneImageView(&m_rayTracedImage->getView());
 }
 
 void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {
@@ -162,100 +159,72 @@ void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {
      0);*/
 }
 
-void VulkanRayTracingScene::update(float dt) {
-    if (m_cameraController->update(dt)) {
+void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
+    if (m_cameraController->update(updateParams.dt)) {
         m_integratorParams.frameIdx = 0;
     }
+}
 
-    const CameraParameters cameraParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(cameraParams);
-    m_resourceContext->getUniformBuffer("integrator")->updateStagingBuffer2(m_integratorParams);
+void VulkanRayTracingScene::render(const FrameContext& frameContext) {
+    CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder.getHandle());
+
+    frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
+
+    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
+        m_cameraController->getCameraParameters(), frameContext.virtualFrameIndex);
+    m_resourceContext->getRingBuffer("integrator")
+        ->updateStagingBufferFromStruct(m_integratorParams, frameContext.virtualFrameIndex);
     m_resourceContext->getRingBuffer("brdfParams")
-        ->updateStagingBufferFromStdVec(m_sceneDesc.brdfs, m_renderer->getCurrentVirtualFrameIndex());
+        ->updateStagingBufferFromStdVec(m_sceneDesc.brdfs, frameContext.virtualFrameIndex);
     m_resourceContext->getRingBuffer("lightParams")
-        ->updateStagingBufferFromStdVec(m_sceneDesc.lights, m_renderer->getCurrentVirtualFrameIndex());
-}
+        ->updateStagingBufferFromStdVec(m_sceneDesc.lights, frameContext.virtualFrameIndex);
 
-void VulkanRayTracingScene::render() {
-    if (m_screenshotBuffer) {
-        m_renderer->enqueueResourceUpdate([this, buffer = std::move(m_screenshotBuffer)](VkCommandBuffer) {
-            const std::span<const float> pixelData(
-                buffer->getHostVisibleData<float>(), m_rtImage->getWidth() * m_rtImage->getHeight() * 4);
-            saveExr("D:/tex.exr", pixelData, m_rtImage->getWidth(), m_rtImage->getHeight()).unwrap();
-        });
+    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_resourceContext->getRingBuffer("integrator")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_resourceContext->getRingBuffer("brdfParams")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_resourceContext->getRingBuffer("lightParams")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+
+    frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
+
+    if (m_screenshotBuffer && !m_screenshotRequestFrameIdx) {
+        m_screenshotRequestFrameIdx = frameContext.frameIndex;
+        frameContext.commandEncoder.transitionLayout(
+            *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> (kRayTracingStorageWrite | kTransferRead));
+        frameContext.commandEncoder.copyImageToBuffer(*m_rayTracedImage, *m_screenshotBuffer);
     }
-    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
-        m_rtImage->transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_GENERAL,
-            0,
-            1,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 
-        m_pipeline->bind(cmdBuffer);
-        m_material->bind(m_renderer->getCurrentVirtualFrameIndex(), cmdBuffer);
+    frameContext.commandEncoder.transitionLayout(
+        *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kRayTracingStorageWrite);
+    m_pipeline->bind(frameContext.commandEncoder.getHandle());
+    m_material->bind(frameContext.commandEncoder.getHandle());
 
-        const auto extent = m_renderer->getSwapChainExtent();
-        vkCmdTraceRaysKHR(
-            cmdBuffer,
-            &m_shaderBindingTable.bindings[ShaderBindingTable::kRayGen],
-            &m_shaderBindingTable.bindings[ShaderBindingTable::kMiss],
-            &m_shaderBindingTable.bindings[ShaderBindingTable::kHit],
-            &m_shaderBindingTable.bindings[ShaderBindingTable::kCall],
-            extent.width,
-            extent.height,
-            1);
+    const auto extent = m_renderer->getSwapChainExtent();
+    frameContext.commandEncoder.traceRays(m_shaderBindingTable.bindings, extent);
+    frameContext.commandEncoder.transitionLayout(
+        *m_rayTracedImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kRayTracingStorageWrite >> kFragmentRead);
 
-        m_integratorParams.frameIdx++;
-        if (m_screenshotRequested) {
-            m_screenshotRequested = false;
-            const auto imageRange = m_rtImage->getFullRange();
+    m_integratorParams.frameIdx++;
 
-            VkImageMemoryBarrier2 rtImageBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
-            rtImageBarrier.image = m_rtImage->getHandle();
-            rtImageBarrier.subresourceRange = imageRange;
-            rtImageBarrier.dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-            rtImageBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-            rtImageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
-            rtImageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-
-            VkDependencyInfo syncForTransfer{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
-            syncForTransfer.pImageMemoryBarriers = &rtImageBarrier;
-            vkCmdPipelineBarrier2(cmdBuffer, &syncForTransfer);
-
-            VkDeviceSize size = m_rtImage->getWidth() * m_rtImage->getHeight() * 4 * sizeof(float);
-            m_screenshotBuffer =
-                std::make_shared<StagingVulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-            VkBufferImageCopy region{};
-            region.bufferOffset = 0;
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
-            region.imageSubresource.mipLevel = 0;
-            region.imageOffset = {0, 0, 0};
-            region.imageExtent = {.width = m_rtImage->getWidth(), .height = m_rtImage->getHeight(), .depth = 1};
-            vkCmdCopyImageToBuffer(
-                cmdBuffer, m_rtImage->getHandle(), VK_IMAGE_LAYOUT_GENERAL, m_screenshotBuffer->getHandle(), 1, &region);
-        }
-
-        m_rtImage->transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            0,
-            1,
-            VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    });
+    if (m_screenshotRequestFrameIdx &&
+        *m_screenshotRequestFrameIdx + Renderer::NumVirtualFrames == frameContext.frameIndex) {
+        const std::span<const float> pixelData(
+            m_screenshotBuffer->getHostVisibleData<float>(),
+            m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4);
+        saveExr(m_outputDir / "screenshot.exr", pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
+            .unwrap();
+        m_screenshotRequestFrameIdx = std::nullopt;
+        m_screenshotBuffer.reset();
+    }
 }
 
-void VulkanRayTracingScene::renderGui() {
+void VulkanRayTracingScene::drawGui() {
     ImGui::Begin("Integrator");
     ImGui::LabelText("Acc. Samples", "%d", m_integratorParams.frameIdx * m_integratorParams.sampleCount); // NOLINT
     if (ImGui::InputInt("Max Bounces", &m_integratorParams.maxBounces)) {
         m_integratorParams.frameIdx = 0;
     }
     if (ImGui::InputInt("Samples per Frame", &m_integratorParams.sampleCount)) {
+        m_integratorParams.sampleCount = std::max(1, m_integratorParams.sampleCount);
         m_integratorParams.frameIdx = 0;
     }
 
@@ -291,7 +260,9 @@ void VulkanRayTracingScene::renderGui() {
         m_integratorParams.frameIdx = 0;
     }
     if (ImGui::Button("Take Screenshot")) {
-        m_screenshotRequested = true;
+        const VkDeviceSize size = m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
+        m_screenshotBuffer =
+            std::make_shared<StagingVulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     }
 
     ImGui::End();
@@ -312,13 +283,9 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     std::vector<std::filesystem::path> shaderSpvPaths;
     shaderSpvPaths.reserve(shaderInfos.size());
     for (const auto& name : shaderInfos) {
-        shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getSpvShaderPath(name.first));
+        shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getShaderSpvPath(name.first));
     }
     PipelineLayoutBuilder builder{reflectPipelineLayoutFromSpirvPaths(shaderSpvPaths).unwrap()};
-    builder.setDescriptorSetBuffering(0, true);
-    builder.setDescriptorDynamic(0, 2, true);
-    builder.setDescriptorDynamic(0, 3, true);
-    builder.setDescriptorDynamic(1, 3, true);
     auto pipelineLayout = builder.create(m_renderer->getDevice());
 
     RayTracingPipelineBuilder pipelineBuilder(*m_renderer);
@@ -336,13 +303,13 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
 
 void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(0, 0, m_topLevelAccelStructure->getDescriptorInfo());
-    m_material->writeDescriptor(0, 1, m_rtImageViews, nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    m_material->writeDescriptor(0, 2, *m_resourceContext->getUniformBuffer("camera"));
-    m_material->writeDescriptor(0, 3, *m_resourceContext->getUniformBuffer("integrator"));
+    m_material->writeDescriptor(0, 1, m_rayTracedImage->getView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    m_material->writeDescriptor(0, 2, *m_resourceContext->getRingBuffer("camera"));
+    m_material->writeDescriptor(0, 3, *m_resourceContext->getRingBuffer("integrator"));
     m_material->writeDescriptor(
-        1, 0, m_resourceContext->getGeometry("scene-geometry")->getVertexBuffer()->createDescriptorInfo());
+        1, 0, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(
-        1, 1, m_resourceContext->getGeometry("scene-geometry")->getIndexBuffer()->createDescriptorInfo());
+        1, 1, m_resourceContext->getGeometry("scene-geometry").getIndexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(1, 2, *m_resourceContext->getRingBuffer("materialIds"));
     m_material->writeDescriptor(1, 3, *m_resourceContext->getRingBuffer("brdfParams"));
     m_material->writeDescriptor(1, 4, *m_resourceContext->getRingBuffer("lightParams"));

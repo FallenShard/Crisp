@@ -11,7 +11,7 @@
 // #include <Crisp/Scenes/RayTracerScene.hpp>
 // #include <Crisp/Scenes/ShadowMappingScene.hpp>
 #include <Crisp/Scenes/TestScene.hpp>
-// #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
+#include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
 #include <Crisp/Core/Logger.hpp>
 
@@ -34,7 +34,11 @@ const std::vector<std::string> kSceneNames = {
     "null"};
 
 std::unique_ptr<Scene> createScene(
-    const std::string& name, Renderer* renderer, Window* window, const nlohmann::json& args) {
+    const std::string& name,
+    Renderer* renderer,
+    Window* window,
+    const std::filesystem::path& outputDir,
+    const nlohmann::json& args) {
     CRISP_LOGI("Creating Scene: {}", name);
     // if (name == kSceneNames[0]) {
     //     return std::make_unique<AmbientOcclusionScene>(renderer, window);
@@ -57,9 +61,9 @@ std::unique_ptr<Scene> createScene(
     // if (name == kSceneNames[6]) {
     //     return std::make_unique<NormalMappingScene>(renderer, window);
     // }
-    // if (name == kSceneNames[7]) {
-    //     return std::make_unique<VulkanRayTracingScene>(renderer, window);
-    // }
+    if (name == kSceneNames[7]) {
+        return std::make_unique<VulkanRayTracingScene>(renderer, window, outputDir);
+    }
     // if (name == kSceneNames[8]) {
     //     return std::make_unique<OceanScene>(renderer, window);
     // }
@@ -76,11 +80,16 @@ std::unique_ptr<Scene> createScene(
 } // namespace
 
 SceneContainer::SceneContainer(
-    Renderer* renderer, Window* window, const std::string& sceneName, const nlohmann::json& sceneArgs)
-    : m_sceneName(sceneName)
+    Renderer* renderer,
+    Window* window,
+    std::filesystem::path outputDir,
+    const std::string& sceneName,
+    const nlohmann::json& sceneArgs)
+    : m_outputDir(std::move(outputDir))
+    , m_sceneName(sceneName)
     , m_renderer(renderer)
     , m_window(window) {
-    m_scene = createScene(sceneName, m_renderer, m_window, sceneArgs);
+    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, sceneArgs);
 }
 
 const std::vector<std::string>& SceneContainer::getSceneNames() {
@@ -104,7 +113,7 @@ void SceneContainer::onSceneSelected(const std::string& sceneName) {
     m_renderer->finish();
     m_renderer->setSceneImageView(nullptr);
     m_scene.reset();
-    m_scene = createScene(sceneName, m_renderer, m_window, m_sceneArgs);
+    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, m_sceneArgs);
     m_sceneName = sceneName;
 }
 

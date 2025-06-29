@@ -185,6 +185,9 @@ Result<> saveExr(
         return resultError("Failed to save EXR image into file {}: {}", outputPath.string(), err);
     }
 
+    // Prevent double free on the vector memory once the image goes out of scope.
+    image.images = nullptr;
+
     return kResultSuccess;
 }
 

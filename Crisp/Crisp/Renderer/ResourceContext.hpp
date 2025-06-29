@@ -53,6 +53,11 @@ public:
         return m_ringBuffers.emplace(id, std::move(buffer)).first->second.get();
     }
 
+    template <typename T>
+    VulkanRingBuffer* createUniformRingBuffer(const std::string& id, const VkBufferUsageFlags2 extraUsage = 0) {
+        return createUniformRingBuffer(id, sizeof(T), extraUsage);
+    }
+
     VulkanRingBuffer* getRingBuffer(const std::string_view id) const {
         return m_ringBuffers.at(id).get();
     }

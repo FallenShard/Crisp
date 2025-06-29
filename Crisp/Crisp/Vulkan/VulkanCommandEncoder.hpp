@@ -28,6 +28,10 @@ public:
     void beginRenderPass(const VulkanRenderPass& renderPass, const VulkanFramebuffer& framebuffer) const;
     void endRenderPass(VulkanRenderPass& renderPass) const;
 
+    void copyImageToBuffer(const VulkanImage& srcImage, const VulkanBuffer& dstBuffer) const;
+
+    void traceRays(std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const;
+
     VkCommandBuffer getHandle() const {
         return m_cmdBuffer;
     }

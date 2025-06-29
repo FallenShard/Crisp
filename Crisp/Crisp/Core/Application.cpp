@@ -59,7 +59,11 @@ Application::Application(const ApplicationEnvironment& environment)
     m_window.restored.subscribe<&Application::onRestore>(this);
 
     m_sceneContainer = std::make_unique<SceneContainer>(
-        m_renderer.get(), &m_window, environment.getConfigParams().scene, environment.getConfigParams().sceneArgs);
+        m_renderer.get(),
+        &m_window,
+        m_outputDir,
+        environment.getConfigParams().scene,
+        environment.getConfigParams().sceneArgs);
     m_sceneContainer->update({.frameIdx = 0, .frameInFlightIdx = 0, .dt = 0.0f, .totalTimeSec = 0.0f});
 
     gui::initImGui(

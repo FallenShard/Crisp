@@ -119,4 +119,33 @@ void VulkanCommandEncoder::endRenderPass(VulkanRenderPass& renderPass) const {
     renderPass.end(m_cmdBuffer);
 }
 
+void VulkanCommandEncoder::copyImageToBuffer(const VulkanImage& srcImage, const VulkanBuffer& dstBuffer) const {
+    const VkDeviceSize size = srcImage.getWidth() * srcImage.getHeight() * 4 * sizeof(float);
+    CRISP_CHECK_EQ(size, dstBuffer.getSize());
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageSubresource.mipLevel = 0;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {.width = srcImage.getWidth(), .height = srcImage.getHeight(), .depth = 1};
+    vkCmdCopyImageToBuffer(
+        m_cmdBuffer, srcImage.getHandle(), VK_IMAGE_LAYOUT_GENERAL, dstBuffer.getHandle(), 1, &region);
+}
+
+void VulkanCommandEncoder::traceRays(
+    const std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const {
+    CRISP_CHECK_GE(bindingRegions.size(), 4);
+    vkCmdTraceRaysKHR(
+        m_cmdBuffer,
+        &bindingRegions[0], // Raygen NOLINT
+        &bindingRegions[1], // Miss
+        &bindingRegions[2], // Hit
+        &bindingRegions[3], // Callable
+        gridSize.width,
+        gridSize.height,
+        1);
+}
+
 } // namespace crisp

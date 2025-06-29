@@ -100,6 +100,16 @@ inline constexpr VulkanSynchronizationStage kRayTracingRead = {
     .access = VK_ACCESS_2_SHADER_READ_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kRayTracingStorageRead = {
+    .stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+    .access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kRayTracingUniformRead = {
+    .stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+    .access = VK_ACCESS_2_UNIFORM_READ_BIT,
+};
+
 inline constexpr auto kAllShaderRead = kComputeRead | kVertexRead | kFragmentRead | kRayTracingRead;
 
 inline constexpr VulkanSynchronizationStage kComputeWrite = {
@@ -115,6 +125,11 @@ inline constexpr VulkanSynchronizationStage kColorWrite = {
 inline constexpr VulkanSynchronizationStage kDepthWrite = {
     .stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
     .access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kRayTracingStorageWrite = {
+    .stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+    .access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 };
 
 inline constexpr VulkanSynchronizationStage kFragmentSampledRead = {
