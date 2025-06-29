@@ -17,13 +17,14 @@ VulkanBuffer::VulkanBuffer(
     , m_allocationInfo{}
     , m_size(size)
     , m_address{} {
-    VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufferInfo.size = size;
-    bufferInfo.usage = usageFlags;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBufferCreateInfo bufferInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usageFlags,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
 
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    VmaAllocationCreateInfo allocInfo{.usage = VMA_MEMORY_USAGE_AUTO};
     if (memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
         allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }

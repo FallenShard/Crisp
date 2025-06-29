@@ -41,42 +41,44 @@ QueueIdentifier getTransferQueue(const VulkanQueueConfiguration& queueConfig) {
 
 VmaAllocator createMemoryAllocator(
     const VulkanPhysicalDevice& physicalDevice, const VkDevice deviceHandle, const VulkanInstance& instance) {
-    VmaVulkanFunctions functions{};
-    functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
-    functions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
-    functions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
-    functions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
-    functions.vkAllocateMemory = vkAllocateMemory;
-    functions.vkFreeMemory = vkFreeMemory;
-    functions.vkMapMemory = vkMapMemory;
-    functions.vkUnmapMemory = vkUnmapMemory;
-    functions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
-    functions.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
-    functions.vkBindBufferMemory = vkBindBufferMemory;
-    functions.vkBindImageMemory = vkBindImageMemory;
-    functions.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
-    functions.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
-    functions.vkCreateBuffer = vkCreateBuffer;
-    functions.vkDestroyBuffer = vkDestroyBuffer;
-    functions.vkCreateImage = vkCreateImage;
-    functions.vkDestroyImage = vkDestroyImage;
-    functions.vkCmdCopyBuffer = vkCmdCopyBuffer;
-    functions.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2;
-    functions.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2;
-    functions.vkBindBufferMemory2KHR = vkBindBufferMemory2;
-    functions.vkBindImageMemory2KHR = vkBindImageMemory2;
-    functions.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2;
-    functions.vkGetDeviceBufferMemoryRequirements = vkGetDeviceBufferMemoryRequirements;
-    functions.vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements;
-    functions.vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR;
+    VmaVulkanFunctions functions{
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+        .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
+        .vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
+        .vkAllocateMemory = vkAllocateMemory,
+        .vkFreeMemory = vkFreeMemory,
+        .vkMapMemory = vkMapMemory,
+        .vkUnmapMemory = vkUnmapMemory,
+        .vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
+        .vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
+        .vkBindBufferMemory = vkBindBufferMemory,
+        .vkBindImageMemory = vkBindImageMemory,
+        .vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
+        .vkGetImageMemoryRequirements = vkGetImageMemoryRequirements,
+        .vkCreateBuffer = vkCreateBuffer,
+        .vkDestroyBuffer = vkDestroyBuffer,
+        .vkCreateImage = vkCreateImage,
+        .vkDestroyImage = vkDestroyImage,
+        .vkCmdCopyBuffer = vkCmdCopyBuffer,
+        .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2,
+        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2,
+        .vkBindBufferMemory2KHR = vkBindBufferMemory2,
+        .vkBindImageMemory2KHR = vkBindImageMemory2,
+        .vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2,
+        .vkGetDeviceBufferMemoryRequirements = vkGetDeviceBufferMemoryRequirements,
+        .vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements,
+        .vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR,
+    };
 
-    VmaAllocatorCreateInfo createInfo{};
-    createInfo.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT;
-    createInfo.physicalDevice = physicalDevice.getHandle();
-    createInfo.device = deviceHandle;
-    createInfo.pVulkanFunctions = &functions;
-    createInfo.instance = instance.getHandle();
-    createInfo.vulkanApiVersion = instance.getApiVersion();
+    VmaAllocatorCreateInfo createInfo{
+        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+        .physicalDevice = physicalDevice.getHandle(),
+        .device = deviceHandle,
+        .pVulkanFunctions = &functions,
+        .instance = instance.getHandle(),
+        .vulkanApiVersion = instance.getApiVersion(),
+    };
 
     VmaAllocator allocator{};
     vmaCreateAllocator(&createInfo, &allocator);
