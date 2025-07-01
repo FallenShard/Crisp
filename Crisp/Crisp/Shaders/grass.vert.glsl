@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/view.part.glsl"
+#include "Common/view.part.glsl"
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec4 col0;

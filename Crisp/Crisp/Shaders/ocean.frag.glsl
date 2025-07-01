@@ -9,8 +9,8 @@ layout(location = 0) in vec3 eyePosition;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 worldNormal;
 
-#include "Parts/microfacet.part.glsl"
-#include "Parts/view.part.glsl"
+#include "Brdf/microfacet.part.glsl"
+#include "Common/view.part.glsl"
 
 // ----- Camera -----
 layout(set = 1, binding = 0) uniform View {

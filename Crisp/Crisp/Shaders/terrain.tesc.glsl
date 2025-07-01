@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_include_directive: require
 
-#include "Parts/view.part.glsl"
+#include "Common/view.part.glsl"
 
 layout(vertices = 4) out;
 

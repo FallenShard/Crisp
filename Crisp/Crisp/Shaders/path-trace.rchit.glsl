@@ -3,10 +3,10 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/path-trace-payload.part.glsl"
-#include "Parts/math-constants.part.glsl"
-#include "Parts/rng.part.glsl"
-#include "Parts/warp.part.glsl"
+#include "Common/path-trace-payload.part.glsl"
+#include "Common/math-constants.part.glsl"
+#include "Common/rng.part.glsl"
+#include "Common/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 layout(location = 1) callableDataEXT BrdfSample bsdf;
@@ -18,53 +18,44 @@ const uint kMicrofacetShaderCallable = 3;
 
 hitAttributeEXT vec2 barycentric;
 
-layout(set = 1, binding = 0, scalar) buffer Vertices
-{
+layout(set = 1, binding = 0, scalar) buffer Vertices {
     float data[];
 } vertices;
 
-layout(set = 1, binding = 1, scalar) buffer Indices
-{
+layout(set = 1, binding = 1, scalar) buffer Indices {
     uint data[];
 } indices;
 
-layout(set = 1, binding = 2, scalar) buffer InstanceProps
-{
+layout(set = 1, binding = 2, scalar) buffer InstanceProps {
     InstanceProperties instanceProps[];
 };
 
-layout(set = 1, binding = 3) buffer BrdfParams
-{
+layout(set = 1, binding = 3) buffer BrdfParams {
     BrdfParameters brdfParams[];
 };
 
-layout(set = 1, binding = 4, std430) buffer Lights
-{
+layout(set = 1, binding = 4, std430) buffer Lights {
     LightParameters lights[];
 };
 
-vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance)
-{
+vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance) {
     const vec3 ref = gl_WorldRayOriginEXT;
     const vec3 wi = p - ref;
     const float cosTheta = dot(n, normalize(-wi));
     return cosTheta <= 0.0f ? vec3(0.0f) : radiance;
 }
 
-#include "Parts/path-trace-vertex-pull.part.glsl"
+#include "Common/path-trace-vertex-pull.part.glsl"
 
-vec3 toLocal(const vec3 dir, const mat3 coordinateFrame)
-{
+vec3 toLocal(const vec3 dir, const mat3 coordinateFrame) {
     return transpose(coordinateFrame) * dir;
 }
 
-vec3 toWorld(const vec3 dir, const mat3 coordinateFrame)
-{
+vec3 toWorld(const vec3 dir, const mat3 coordinateFrame) {
     return coordinateFrame * dir;
 }
 
-void main()
-{
+void main() {
     // Grab the ID of the object that we just hit.
     const uint objId = gl_InstanceCustomIndexEXT;
     const InstanceProperties props = instanceProps[objId];
@@ -106,8 +97,7 @@ void main()
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);
     hitInfo.lightId = -1;
-    if (props.lightId != -1)
-    {
+    if (props.lightId != -1) {
         hitInfo.Le = evalAreaLight(position, normal, lights[props.lightId].radiance);
         hitInfo.lightId = props.lightId;
     }

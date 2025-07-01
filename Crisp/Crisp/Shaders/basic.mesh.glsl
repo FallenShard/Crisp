@@ -4,7 +4,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/view.part.glsl"
+#include "Common/view.part.glsl"
 
 struct Meshlet {
     uint vertexOffset;

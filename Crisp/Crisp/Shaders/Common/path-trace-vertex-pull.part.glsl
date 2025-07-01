@@ -5,8 +5,7 @@ const int kVertexComponentCount = 6;
 const int kPositionComponentOffset = 0;
 const int kNormalComponentOffset = 3;
 
-vec3 interpolatePosition(const uvec3 tri, const vec3 bary)
-{
+vec3 interpolatePosition(const uvec3 tri, const vec3 bary) {
     mat3 positions = mat3(
         vec3(
             vertices.data[kVertexComponentCount * tri[0] + kPositionComponentOffset],
@@ -24,8 +23,7 @@ vec3 interpolatePosition(const uvec3 tri, const vec3 bary)
     return positions * bary;
 }
 
-vec3 interpolateNormal(const uvec3 tri, const vec3 bary)
-{
+vec3 interpolateNormal(const uvec3 tri, const vec3 bary) {
     mat3 normals = mat3(
         vec3(
             vertices.data[kVertexComponentCount * tri[0] + kNormalComponentOffset],

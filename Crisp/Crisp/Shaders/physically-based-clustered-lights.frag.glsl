@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_include_directive: require
 
-#include "Parts/view.part.glsl"
+#include "Common/view.part.glsl"
 
 #define PI 3.1415926535897932384626433832795
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);

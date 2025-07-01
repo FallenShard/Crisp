@@ -8,7 +8,7 @@
 
 layout(location = 0) out vec4 finalColor;
 
-#include "Parts/atmosphere.part.glsl"
+#include "Common/atmosphere.part.glsl"
 
 layout(set = 0, binding = 0) uniform AtmosphereParamsBlock
 {

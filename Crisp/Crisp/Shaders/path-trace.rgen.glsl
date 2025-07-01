@@ -3,11 +3,11 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Parts/path-trace-payload.part.glsl"
-#include "Parts/math-constants.part.glsl"
-#include "Parts/rng.part.glsl"
-#include "Parts/warp.part.glsl"
-#include "Parts/view.part.glsl"
+#include "Common/path-trace-payload.part.glsl"
+#include "Common/math-constants.part.glsl"
+#include "Common/rng.part.glsl"
+#include "Common/warp.part.glsl"
+#include "Common/view.part.glsl"
 
 const int kRussianRouletteCutoff = 3;
 
@@ -22,8 +22,7 @@ layout(set = 0, binding = 2) uniform View {
     ViewParameters view;
 };
 
-layout(set = 0, binding = 3) uniform IntegratorParameters
-{
+layout(set = 0, binding = 3) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
     int frameIdx;
@@ -32,55 +31,46 @@ layout(set = 0, binding = 3) uniform IntegratorParameters
     int samplingMode;
 } integrator;
 
-layout(set = 1, binding = 0, scalar) buffer Vertices
-{
+layout(set = 1, binding = 0, scalar) buffer Vertices {
     float data[];
 } vertices;
 
-layout(set = 1, binding = 1, scalar) buffer Indices
-{
+layout(set = 1, binding = 1, scalar) buffer Indices {
     uint data[];
 } indices;
 
-#include "Parts/path-trace-vertex-pull.part.glsl"
+#include "Common/path-trace-vertex-pull.part.glsl"
 
-layout(set = 1, binding = 2, scalar) buffer InstanceProps
-{
+layout(set = 1, binding = 2, scalar) buffer InstanceProps {
     InstanceProperties instanceProps[];
 };
 
-layout(set = 1, binding = 4, std430) buffer Lights
-{
+layout(set = 1, binding = 4, std430) buffer Lights {
     LightParameters lights[];
 };
 
-struct AliasTableElement
-{
+struct AliasTableElement {
     float tau;
     uint j;
 };
 
-layout(set = 1, binding = 5, std430) buffer AliasTables
-{
+layout(set = 1, binding = 5, std430) buffer AliasTables {
     AliasTableElement elements[];
 } aliasTable;
 
-void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax)
-{
+void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
     hitInfo.rngSeed = seed;
     traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
     seed = hitInfo.rngSeed;
 }
 
-void traceShadowRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax)
-{
+void traceShadowRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
     hitInfo.rngSeed = seed;
     traceRayEXT(sceneBvh, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
     seed = hitInfo.rngSeed;
 }
 
-void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
-{
+void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample) {
     const vec2 ndcSample = pixelSample / vec2(gl_LaunchSizeEXT.xy) * 2.0 - 1.0; // In [-1, 1].
 
     origin = view.invV * vec4(0, 0, 0, 1);
@@ -91,8 +81,7 @@ void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample)
     direction = view.invV * vec4(rayDirEyeSpace, 0.0f);
 }
 
-float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal)
-{
+float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal) {
     const uint aliasTableOffset = instanceProps[meshId].aliasTableOffset;
     const uint triCount = aliasTable.elements[aliasTableOffset].j;
     
@@ -100,8 +89,7 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
     const float rndVal = rndFloat(seed);
 
     uint sampledTriIdx = elemIdx - 1;
-    if (rndVal > aliasTable.elements[aliasTableOffset + elemIdx].tau)
-    {
+    if (rndVal > aliasTable.elements[aliasTableOffset + elemIdx].tau) {
         sampledTriIdx = aliasTable.elements[aliasTableOffset + elemIdx].j;
     }
 
@@ -161,8 +149,7 @@ float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
     return uniformPdf * shapePdf * squaredDist / dot(hitNormal, -normalize(hitVector));
 }
 
-vec3 computeRadianceDirectLighting(inout uint seed)
-{
+vec3 computeRadianceDirectLighting(inout uint seed) {
     // Sample a point on the screen and transform it into a ray.
     const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
     const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
@@ -210,8 +197,7 @@ float powerHeuristic(const float fPdf, const float gPdf) {
     return fPdf2 / (fPdf2 + gPdf2);
 }
 
-vec3 computeRadianceMis(inout uint seed)
-{
+vec3 computeRadianceMis(inout uint seed) {
     // Sample a point on the screen and transform it into a ray.
     const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
     const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
@@ -227,8 +213,7 @@ vec3 computeRadianceMis(inout uint seed)
 
     traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
-    if (hitInfo.tHit == -1.0)
-    {
+    if (hitInfo.tHit == -1.0) {
         return L;
     }
 
@@ -266,8 +251,7 @@ vec3 computeRadianceMis(inout uint seed)
     return L;
 }
 
-vec3 computeRadianceMisPt(inout uint seed)
-{
+vec3 computeRadianceMisPt(inout uint seed) {
     // Sample a point on the screen and transform it into a ray.
     const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
     const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
@@ -284,17 +268,13 @@ vec3 computeRadianceMisPt(inout uint seed)
 
     bool specularBounce = false;
     int bounceCount = 0;
-    while (bounceCount < integrator.maxBounces)
-    {
+    while (bounceCount < integrator.maxBounces) {
         traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
         if (bounceCount == 0 || specularBounce) {
-            if (hitInfo.tHit >= tMin)
-            {
+            if (hitInfo.tHit >= tMin) {
                 // Accumulate any emission from the hit surface (e.g. we hit a light).
                 L += throughput * hitInfo.Le;
-            }
-            else // The ray missed, evaluate environment lighting and exit the loop.
-            {
+            } else { // The ray missed, evaluate environment lighting and exit the loop. 
                 // L += throughput * texture(environmentMap, rayDirection);
                 break;
             }
@@ -312,16 +292,14 @@ vec3 computeRadianceMisPt(inout uint seed)
         specularBounce = hitInfo.sampleLobeType == kLobeTypeDelta;
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
-        if (!specularBounce)
-        {
+        if (!specularBounce) {
             vec3 shadowRayDir;
             float shadowRayLen;
             float lightPdf;
             const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
             traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
 
-            if (hitInfo.tHit <= 0) // The shadow ray has missed.
-            {
+            if (hitInfo.tHit <= 0) { // The shadow ray has missed.
                 const float brdfPdf = InvPI * dot(n, shadowRayDir); // This is only correct for Diffuse BRDFs.
                 L += throughput * f * radiance * brdfPdf * powerHeuristic(lightPdf, brdfPdf);
             }
@@ -345,39 +323,21 @@ vec3 computeRadianceMisPt(inout uint seed)
         rayDirection.xyz = rayDir;
 
 
-        if (++bounceCount > kRussianRouletteCutoff) // Cut the path tracing with Russian roulette.
-        {
+        if (++bounceCount > kRussianRouletteCutoff) { // Cut the path tracing with Russian roulette.
             const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
             const float q = 1.0f - min(maxCoeff, 0.99f);
-            if (rndFloat(seed) > q)
+            if (rndFloat(seed) > q) {
                 throughput /= 1.0f - q;
-            else
+            } else {
                 break;
+            }
         }
     }
-
-
-    
-
-    // // Light sampling.
-    // vec3 shadowRayDir;
-    // float shadowRayLen;
-    // float lightPdf;
-    // const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
-    // traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
-
-    // if (hitInfo.tHit <= 0) // The shadow ray has missed.
-    // {
-    //     const float brdfPdf = InvPI * dot(n, shadowRayDir);
-    //     const vec3 brdfEval = f * brdfPdf;
-    //     L += radiance * brdfEval * powerHeuristic(lightPdf, brdfPdf);
-    // }
 
     return L;
 }
 
-vec3 computeRadiance(inout uint seed)
-{
+vec3 computeRadiance(inout uint seed) {
     // Sample a point on the screen and transform it into a ray.
     const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
     const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
@@ -396,11 +356,9 @@ vec3 computeRadiance(inout uint seed)
 
     vec3 debugColor = vec3(0.0f);
     int bounceCount = 0;
-    while (bounceCount < integrator.maxBounces)
-    {
+    while (bounceCount < integrator.maxBounces) {
         traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
-        if (hitInfo.tHit >= tMin)
-        {
+        if (hitInfo.tHit >= tMin) {
             // Accumulate any emission from the hit surface (e.g. we hit a light).
             L += throughput * hitInfo.Le;
 
@@ -410,55 +368,46 @@ vec3 computeRadiance(inout uint seed)
             // Setup the next ray.
             rayOrigin.xyz    = hitInfo.position;
             rayDirection.xyz = hitInfo.sampleDirection;
-        }
-        else // The ray missed, evaluate environment lighting and exit the loop.
-        {
+        } else { // The ray missed, evaluate environment lighting and exit the loop.
             // L += throughput * texture(environmentMap, rayDirection);
             break;
         }
 
-        if (++bounceCount > kRussianRouletteCutoff) // Cut the path tracing with Russian roulette.
-        {
+        if (++bounceCount > kRussianRouletteCutoff) { // Cut the path tracing with Russian roulette.
             const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
             const float q = 1.0f - min(maxCoeff, 0.99f);
-            if (rndFloat(seed) > q)
+            if (rndFloat(seed) > q) {
                 throughput /= 1.0f - q;
-            else
+            } else {
                 break;
+            }
         }
     }
 
     return L;
 }
 
-void main() 
-{
+void main() {
     uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, integrator.frameIdx);
 
     vec3 L = vec3(0.0f);
     const uint sampleCount = integrator.sampleCount;
-    for (uint i = 0; i < sampleCount; ++i)
-    {
+    for (uint i = 0; i < sampleCount; ++i) {
         if (integrator.samplingMode == 0) {
             L += computeRadianceDirectLighting(seed);
-        }
-        else if (integrator.samplingMode == 1) {
+        } else if (integrator.samplingMode == 1) {
             L += computeRadiance(seed);
-        }
-        else {
+        } else {
             L += computeRadianceMisPt(seed);
         }
     }
     L /= sampleCount;
 
-    if (integrator.frameIdx > 0)
-    {
+    if (integrator.frameIdx > 0) {
        const float t = 1.0f / (integrator.frameIdx + 1);
        const vec3 prevVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-       imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(prevVal, L, t), 1.0));
+       L = mix(prevVal, L, t);
     }
-    else
-    {
-       imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(L, 1.0));
-    }
+
+    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(L, 1.0));
 }

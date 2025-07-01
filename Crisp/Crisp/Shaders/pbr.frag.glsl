@@ -4,8 +4,8 @@
 
 #define PI 3.1415926535897932384626433832795
 
-#include "Parts/microfacet.part.glsl"
-#include "Parts/view.part.glsl"
+#include "Brdf/microfacet.part.glsl"
+#include "Common/view.part.glsl"
 
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
