@@ -160,7 +160,7 @@ Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span
     return metadata;
 }
 
-Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvShader(const std::span<const char> spirvShader) {
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(const std::span<const char> spirvShader) {
     SpvReflectShaderModule module;
     CRISP_SPV_TRY(spvReflectCreateShaderModule(spirvShader.size(), spirvShader.data(), &module));
     SpirvShaderReflectionModuleGuard moduleGuard(module);
@@ -215,18 +215,18 @@ Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvShader(const std::s
     return metadata;
 }
 
-Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPath(const std::filesystem::path& filePath) {
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(const std::filesystem::path& filePath) {
     const auto spirvFile{readSpirvFile(filePath)};
     if (!spirvFile) {
         return resultError("Failed to load spirv file from: {}", filePath.string());
     }
-    return reflectPipelineLayoutFromSpirvShader(*spirvFile);
+    return reflectPipelineLayoutFromSpirv(*spirvFile);
 }
 
-Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPaths(std::span<const std::filesystem::path> filePaths) {
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(std::span<const std::filesystem::path> filePaths) {
     PipelineLayoutMetadata data{};
     for (const auto& path : filePaths) {
-        auto result{reflectPipelineLayoutFromSpirvPath(path)};
+        auto result{reflectPipelineLayoutFromSpirv(path)};
         if (!result) {
             return resultError("Could not parse reflection data from '{}'", path.string());
         }

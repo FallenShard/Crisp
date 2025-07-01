@@ -278,7 +278,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         const auto absoluteSpvPath = spvShaderDir / (fileStem + ".spv");
         builder.addShaderStage(createShaderStageInfo(stageFlag, shaderCache.getOrLoadShaderModule(absoluteSpvPath)));
         const auto spvFile = readSpirvFile(absoluteSpvPath).unwrap();
-        shaderMetadata.merge(reflectPipelineLayoutFromSpirvShader(spvFile).unwrap());
+        shaderMetadata.merge(reflectPipelineLayoutFromSpirv(spvFile).unwrap());
     }
 
     if (shaderStagesMatchTessellation(shaderFiles)) {

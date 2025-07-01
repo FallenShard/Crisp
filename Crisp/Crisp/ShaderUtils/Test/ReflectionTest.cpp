@@ -16,7 +16,7 @@ std::filesystem::path getSpirvShaderPath(const std::string& shaderName) {
 }
 
 TEST(ReflectionTest, ComputeShader) {
-    const auto reflection = reflectPipelineLayoutFromSpirvPath(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
+    const auto reflection = reflectPipelineLayoutFromSpirv(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
     ASSERT_THAT(reflection.descriptorSetLayoutBindings, SizeIs(1));
     EXPECT_THAT(
         reflection.descriptorSetLayoutBindings[0],

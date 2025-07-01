@@ -285,7 +285,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     for (const auto& name : shaderInfos) {
         shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getShaderSpvPath(name.first));
     }
-    PipelineLayoutBuilder builder{reflectPipelineLayoutFromSpirvPaths(shaderSpvPaths).unwrap()};
+    PipelineLayoutBuilder builder{reflectPipelineLayoutFromSpirv(shaderSpvPaths).unwrap()};
     auto pipelineLayout = builder.create(m_renderer->getDevice());
 
     RayTracingPipelineBuilder pipelineBuilder(*m_renderer);

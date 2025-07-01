@@ -34,7 +34,7 @@ struct ShaderVertexInputMetadata {
 Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath);
 
 Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span<const char> spirvShader);
-Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvShader(std::span<const char> spirvShader);
-Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPath(const std::filesystem::path& filePath);
-Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirvPaths(std::span<const std::filesystem::path> filePaths);
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(std::span<const char> spirvShader);
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(const std::filesystem::path& filePath);
+Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(std::span<const std::filesystem::path> filePaths);
 } // namespace crisp
