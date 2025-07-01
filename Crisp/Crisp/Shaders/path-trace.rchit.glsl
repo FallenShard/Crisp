@@ -9,12 +9,7 @@
 #include "Common/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
-layout(location = 1) callableDataEXT BrdfSample bsdf;
-
-const uint kLambertianShaderCallable = 0;
-const uint kDielectricShaderCallable = 1;
-const uint kMirrorShaderCallable = 2;
-const uint kMicrofacetShaderCallable = 3;
+layout(location = 0) callableDataEXT BrdfSample bsdf;
 
 hitAttributeEXT vec2 barycentric;
 
@@ -89,7 +84,7 @@ void main() {
     bsdf.unitSample = vec2(r1, r2);
 
     const int brdfType = brdfParams[props.materialId].type;
-    executeCallableEXT(brdfType, 1);
+    executeCallableEXT(brdfType, /*location(bsdf)=*/0);
     hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
     hitInfo.samplePdf = bsdf.pdf;
     hitInfo.bsdfEval = bsdf.f;

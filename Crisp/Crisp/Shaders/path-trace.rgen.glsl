@@ -12,8 +12,7 @@
 const int kRussianRouletteCutoff = 3;
 
 const int kPayloadIndex = 0;
-
-layout(location = 0) rayPayloadEXT HitInfo hitInfo;
+layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
