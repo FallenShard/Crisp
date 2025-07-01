@@ -46,7 +46,7 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
     return createGeometry(
         renderer,
         mesh,
-        {{VertexAttribute::Position, VertexAttribute::Normal}},
+        {{VertexAttribute::Position}, {VertexAttribute::Normal}},
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
@@ -117,7 +117,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
     m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
-    m_resourceContext->createRingBufferFromStdVec("materialIds", m_sceneDesc.props);
+    m_resourceContext->createRingBufferFromStdVec("instanceProps", m_sceneDesc.props);
 
     m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -310,7 +310,9 @@ void VulkanRayTracingScene::updateDescriptorSets() {
         1, 0, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(
         1, 1, m_resourceContext->getGeometry("scene-geometry").getIndexBuffer()->createDescriptorInfo());
-    m_material->writeDescriptor(1, 2, *m_resourceContext->getRingBuffer("materialIds"));
+    m_material->writeDescriptor(
+        1, 6, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer(1)->createDescriptorInfo());
+    m_material->writeDescriptor(1, 2, *m_resourceContext->getRingBuffer("instanceProps"));
     m_material->writeDescriptor(1, 3, *m_resourceContext->getRingBuffer("brdfParams"));
     m_material->writeDescriptor(1, 4, *m_resourceContext->getRingBuffer("lightParams"));
     m_material->writeDescriptor(1, 5, *m_resourceContext->getBuffer("aliasTable"));

@@ -32,12 +32,16 @@ layout(set = 0, binding = 3) uniform IntegratorParams {
 } integrator;
 
 layout(set = 1, binding = 0, scalar) buffer Vertices {
-    float data[];
+    vec3 data[];
 } vertices;
 
+layout(set = 1, binding = 6, scalar) buffer Normals {
+    vec3 data[];
+} normals;
+
 layout(set = 1, binding = 1, scalar) buffer Indices {
-    uint data[];
-} indices;
+    uvec3 data[];
+} triangles;
 
 #include "Common/path-trace-vertex-pull.part.glsl"
 
@@ -98,10 +102,7 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
     const vec3 bary = squareToUniformTriangle(vec2(r1, r2));
 
     const uint triangleOffset = instanceProps[meshId].indexOffset;
-    const ivec3 sampledTriangle = ivec3(
-        indices.data[3 * (triangleOffset + sampledTriIdx) + 0],
-        indices.data[3 * (triangleOffset + sampledTriIdx) + 1],
-        indices.data[3 * (triangleOffset + sampledTriIdx) + 2]);
+    const uvec3 sampledTriangle = triangles.data[triangleOffset + sampledTriIdx];
 
     position = interpolatePosition(sampledTriangle, bary);
     normal = interpolateNormal(sampledTriangle, bary);

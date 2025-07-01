@@ -19,12 +19,16 @@ const uint kMicrofacetShaderCallable = 3;
 hitAttributeEXT vec2 barycentric;
 
 layout(set = 1, binding = 0, scalar) buffer Vertices {
-    float data[];
+    vec3 data[];
 } vertices;
 
 layout(set = 1, binding = 1, scalar) buffer Indices {
-    uint data[];
-} indices;
+    uvec3 data[];
+} triangles;
+
+layout(set = 1, binding = 6, scalar) buffer Normals {
+    vec3 data[];
+} normals;
 
 layout(set = 1, binding = 2, scalar) buffer InstanceProps {
     InstanceProperties instanceProps[];
@@ -61,10 +65,7 @@ void main() {
     const InstanceProperties props = instanceProps[objId];
 
     // Formulate the triangle at the hit.
-    const uvec3 hitTriangle = uvec3(
-        indices.data[3 * (props.indexOffset + gl_PrimitiveID) + 0],
-        indices.data[3 * (props.indexOffset + gl_PrimitiveID) + 1],
-        indices.data[3 * (props.indexOffset + gl_PrimitiveID) + 2]);
+    const uvec3 hitTriangle = triangles.data[props.indexOffset + gl_PrimitiveID];
 
     const vec3 baryCoord = vec3(1.0 - barycentric.x - barycentric.y, barycentric.x, barycentric.y);
     const vec3 normal   = interpolateNormal(hitTriangle, baryCoord);

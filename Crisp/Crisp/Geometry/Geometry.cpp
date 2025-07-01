@@ -164,7 +164,7 @@ VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(
     geo.geometry.triangles = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
     geo.geometry.triangles.vertexData.deviceAddress = geometry.getVertexBuffer()->getDeviceAddress();
     geo.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT; // Positions format.
-    geo.geometry.triangles.vertexStride = 2 * sizeof(glm::vec3);      // Spacing between positions.
+    geo.geometry.triangles.vertexStride = sizeof(glm::vec3);          // Spacing between positions.
     geo.geometry.triangles.maxVertex = geometry.getVertexCount() - 1; // geometry.getVertexCount() - 1;
     geo.geometry.triangles.indexData.deviceAddress = geometry.getIndexBuffer()->getDeviceAddress() + indexByteOffset;
     geo.geometry.triangles.indexType = geometry.getIndexType();
