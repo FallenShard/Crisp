@@ -59,37 +59,37 @@ void logSelectedDevice(const VulkanPhysicalDevice& physicalDevice) {
 
 VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const DeviceRequirements& requirements)
     : m_handle(handle)
-    , m_properties(std::make_unique<Properties>()) {
-    append(m_properties->features, m_properties->features11);
-    append(m_properties->features, m_properties->features12);
-    append(m_properties->features, m_properties->features13);
-    append(m_properties->features, m_properties->features14);
+    , m_capabilities(std::make_unique<Capabilities>()) {
+    append(m_capabilities->features, m_capabilities->features11);
+    append(m_capabilities->features, m_capabilities->features12);
+    append(m_capabilities->features, m_capabilities->features13);
+    append(m_capabilities->features, m_capabilities->features14);
     if (requirements.rayTracing) {
-        append(m_properties->features, m_properties->accelerationStructureFeatures);
-        append(m_properties->features, m_properties->rayTracingFeatures);
+        append(m_capabilities->features, m_capabilities->accelerationStructureFeatures);
+        append(m_capabilities->features, m_capabilities->rayTracingFeatures);
     }
     if (requirements.pageableMemory) {
-        append(m_properties->features, m_properties->pageableDeviceLocalMemoryFeatures);
+        append(m_capabilities->features, m_capabilities->pageableDeviceLocalMemoryFeatures);
     }
     if (requirements.meshShading) {
-        append(m_properties->features, m_properties->meshShaderFeatures);
-        append(m_properties->features, m_properties->fragmentShadingRateFeatures);
+        append(m_capabilities->features, m_capabilities->meshShaderFeatures);
+        append(m_capabilities->features, m_capabilities->fragmentShadingRateFeatures);
     }
-    vkGetPhysicalDeviceFeatures2(m_handle, &m_properties->features);
+    vkGetPhysicalDeviceFeatures2(m_handle, &m_capabilities->features);
 
-    append(m_properties->properties, m_properties->properties11);
-    append(m_properties->properties, m_properties->properties12);
-    append(m_properties->properties, m_properties->properties13);
-    append(m_properties->properties, m_properties->properties14);
+    append(m_capabilities->properties, m_capabilities->properties11);
+    append(m_capabilities->properties, m_capabilities->properties12);
+    append(m_capabilities->properties, m_capabilities->properties13);
+    append(m_capabilities->properties, m_capabilities->properties14);
     if (requirements.rayTracing) {
-        append(m_properties->properties, m_properties->rayTracingProperties);
+        append(m_capabilities->properties, m_capabilities->rayTracingProperties);
     }
     if (requirements.meshShading) {
-        append(m_properties->properties, m_properties->meshShaderProperties);
+        append(m_capabilities->properties, m_capabilities->meshShaderProperties);
     }
-    vkGetPhysicalDeviceProperties2(m_handle, &m_properties->properties);
+    vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
 
-    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_properties->memoryProperties);
+    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_capabilities->memoryProperties);
 }
 
 bool VulkanPhysicalDevice::isSuitable(
@@ -262,11 +262,7 @@ Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevic
 }
 
 bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const {
-    uint32_t extensionCount = 0;
-    VK_CHECK(vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, nullptr));
-
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    VK_CHECK(vkEnumerateDeviceExtensionProperties(m_handle, nullptr, &extensionCount, availableExtensions.data()));
+    const auto availableExtensions = querySupportedExtensions(m_handle);
 
     FlatHashSet<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
     for (const auto& ext : availableExtensions) {
@@ -315,6 +311,26 @@ const std::vector<std::string>& VulkanPhysicalDevice::getDeviceExtensions() cons
     return m_deviceExtensions;
 }
 
+std::vector<VkPhysicalDevice> enumeratePhysicalDevices(const VulkanInstance& instance) {
+    uint32_t deviceCount = 0;
+    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, nullptr));
+    CRISP_CHECK_GE(deviceCount, 0, "Vulkan found no physical devices.");
+
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, devices.data()));
+    return devices;
+}
+
+std::vector<VkExtensionProperties> querySupportedExtensions(const VkPhysicalDevice physicalDevice) {
+    uint32_t extensionCount = 0;
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr));
+
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, extensions.data()));
+
+    return extensions;
+}
+
 std::vector<std::string> createDefaultDeviceExtensions() {
     return {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -340,12 +356,7 @@ void addMeshShadingDeviceExtensions(std::vector<std::string>& deviceExtensions) 
 
 Result<VulkanPhysicalDevice> selectPhysicalDevice(
     const VulkanInstance& instance, std::vector<std::string>&& deviceExtensions) {
-    uint32_t deviceCount = 0;
-    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, nullptr));
-    CRISP_CHECK_GE(deviceCount, 0, "Vulkan found no physical devices.");
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, devices.data()));
+    const auto devices = enumeratePhysicalDevices(instance);
 
     if (instance.getSurface() == VK_NULL_HANDLE) {
         return VulkanPhysicalDevice(devices.front());

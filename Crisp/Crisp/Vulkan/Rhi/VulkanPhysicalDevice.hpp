@@ -50,27 +50,27 @@ public:
     }
 
     const VkPhysicalDeviceFeatures& getFeatures() const {
-        return m_properties->features.features;
+        return m_capabilities->features.features;
     }
 
     const VkPhysicalDeviceFeatures2& getFeatures2() const {
-        return m_properties->features;
+        return m_capabilities->features;
     }
 
     const VkPhysicalDeviceProperties& getProperties() const {
-        return m_properties->properties.properties;
+        return m_capabilities->properties.properties;
     }
 
     const VkPhysicalDeviceLimits& getLimits() const {
-        return m_properties->properties.properties.limits;
+        return m_capabilities->properties.properties.limits;
     }
 
     const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const {
-        return m_properties->rayTracingProperties;
+        return m_capabilities->rayTracingProperties;
     }
 
     const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
-        return m_properties->memoryProperties.memoryProperties;
+        return m_capabilities->memoryProperties.memoryProperties;
     }
 
     bool isSuitable(VkSurfaceKHR surface, const std::vector<std::string>& deviceExtensions) const;
@@ -101,7 +101,7 @@ private:
 
     VkPhysicalDevice m_handle{VK_NULL_HANDLE}; // Implicitly cleaned up with VkInstance
 
-    struct Properties {
+    struct Capabilities {
         VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         VkPhysicalDeviceVulkan11Features features11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
         VkPhysicalDeviceVulkan12Features features12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
@@ -131,9 +131,12 @@ private:
         VkPhysicalDeviceMemoryProperties2 memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
     };
 
-    std::unique_ptr<Properties> m_properties;
+    std::unique_ptr<Capabilities> m_capabilities;
     std::vector<std::string> m_deviceExtensions;
 };
+
+std::vector<VkPhysicalDevice> enumeratePhysicalDevices(const VulkanInstance& instance);
+std::vector<VkExtensionProperties> querySupportedExtensions(VkPhysicalDevice physicalDevice);
 
 std::vector<std::string> createDefaultDeviceExtensions();
 void addPageableMemoryDeviceExtensions(std::vector<std::string>& deviceExtensions);
