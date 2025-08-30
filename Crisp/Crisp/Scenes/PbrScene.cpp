@@ -357,7 +357,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     material.params.albedo = glm::vec4(0.5f);
 
     auto [triMesh, materials, meshletData] =
-        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Meshes/bunny.obj", flatten(kPbrVertexFormat)).unwrap();
+        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Meshes/bunny.obj").unwrap();
     mesh = std::move(triMesh);
 
     m_meshletData = std::move(meshletData);

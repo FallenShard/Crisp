@@ -33,10 +33,18 @@ struct MeshAndMaterialMeshlets {
     MeshletData meshlets;
 };
 
+struct MeshLoadOptions {
+    bool normalizeNormals{true};     // If normals are available, they will be renormalized.
+    bool computeVertexNormals{true}; // If normals are not available, they will be computed on load.
+    bool computeTangents{true};      // If tangents are not available, they will be computed on load.
+};
+
 Result<TriangleMesh> loadTriangleMesh(
     const std::filesystem::path& path,
     const std::vector<VertexAttributeDescriptor>& vertexAttributes = {
         VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord});
+
+Result<TriangleMesh> loadTriangleMesh(const std::filesystem::path& path, const MeshLoadOptions& options = {});
 
 Result<MeshAndMaterial> loadTriangleMeshAndMaterial(
     const std::filesystem::path& path,
@@ -44,8 +52,6 @@ Result<MeshAndMaterial> loadTriangleMeshAndMaterial(
         VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord});
 
 Result<MeshAndMaterialMeshlets> loadTriangleMeshlets(
-    const std::filesystem::path& path,
-    const std::vector<VertexAttributeDescriptor>& vertexAttributes = {
-        VertexAttribute::Position, VertexAttribute::Normal, VertexAttribute::TexCoord});
+    const std::filesystem::path& path, const MeshLoadOptions& options = {});
 
 } // namespace crisp
