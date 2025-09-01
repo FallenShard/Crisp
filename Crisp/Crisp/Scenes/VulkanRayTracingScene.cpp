@@ -106,12 +106,13 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
 
     std::vector<VulkanAccelerationStructure*> blases;
     for (auto&& [idx, _] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
-        m_bottomLevelAccelStructures.push_back(std::make_unique<VulkanAccelerationStructure>(
-            m_renderer->getDevice(),
-            createAccelerationStructureGeometry(
-                sceneGeometry, m_sceneDesc.props[idx].triangleOffset * sizeof(glm::uvec3)),
-            m_sceneDesc.props[idx].triangleCount,
-            glm::mat4(1.0f)));
+        m_bottomLevelAccelStructures.push_back(
+            std::make_unique<VulkanAccelerationStructure>(
+                m_renderer->getDevice(),
+                createAccelerationStructureGeometry(
+                    sceneGeometry, m_sceneDesc.props[idx].triangleOffset * sizeof(glm::uvec3)),
+                m_sceneDesc.props[idx].triangleCount,
+                glm::mat4(1.0f)));
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);

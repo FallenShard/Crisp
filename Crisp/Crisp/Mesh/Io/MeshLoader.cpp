@@ -18,7 +18,7 @@ struct TriangleMeshlets {
 TriangleMesh convertToTriangleMesh(
     const std::filesystem::path& path,
     WavefrontObjMesh&& objMesh, // NOLINT
-    const MeshLoadOptions& options) {
+    const TriangleMeshLoadOptions& options) {
     TriangleMesh mesh(
         std::move(objMesh.positions),
         std::move(objMesh.normals),
@@ -38,7 +38,7 @@ TriangleMesh convertToTriangleMesh(
 }
 
 TriangleMeshlets convertToTriangleMeshlets(
-    const std::filesystem::path& path, WavefrontObjMesh&& objMesh, const MeshLoadOptions& options) {
+    const std::filesystem::path& path, WavefrontObjMesh&& objMesh, const TriangleMeshLoadOptions& options) { // NOLINT
     auto mesh = convertToTriangleMesh(path, std::move(objMesh), options);
 
     // const float threshold = 0.2f;
@@ -96,16 +96,7 @@ TriangleMeshlets convertToTriangleMeshlets(
 }
 } // namespace
 
-Result<TriangleMesh> loadTriangleMesh(
-    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes) { // NOLINT
-    if (isWavefrontObjFile(path)) {
-        return convertToTriangleMesh(path, loadWavefrontObj(path), {});
-    }
-
-    return resultError("Failed to open an obj mesh at {}", path.string());
-}
-
-Result<TriangleMesh> loadTriangleMesh(const std::filesystem::path& path, const MeshLoadOptions& options) {
+Result<TriangleMesh> loadTriangleMesh(const std::filesystem::path& path, const TriangleMeshLoadOptions& options) {
     if (isWavefrontObjFile(path)) {
         return convertToTriangleMesh(path, loadWavefrontObj(path), options);
     }
@@ -113,8 +104,7 @@ Result<TriangleMesh> loadTriangleMesh(const std::filesystem::path& path, const M
     return resultError("Failed to open an obj mesh at {}", path.string());
 }
 
-Result<MeshAndMaterial> loadTriangleMeshAndMaterial(
-    const std::filesystem::path& path, const std::vector<VertexAttributeDescriptor>& vertexAttributes) { // NOLINT
+Result<MeshAndMaterial> loadTriangleMeshAndMaterial(const std::filesystem::path& path) { // NOLINT
     if (isWavefrontObjFile(path)) {
         auto objMesh = loadWavefrontObj(path);
         auto materials = std::move(objMesh.materials);
@@ -124,7 +114,8 @@ Result<MeshAndMaterial> loadTriangleMeshAndMaterial(
     return resultError("Failed to open an obj mesh at {}", path.string());
 }
 
-Result<MeshAndMaterialMeshlets> loadTriangleMeshlets(const std::filesystem::path& path, const MeshLoadOptions& options) {
+Result<MeshAndMaterialMeshlets> loadTriangleMeshlets(
+    const std::filesystem::path& path, const TriangleMeshLoadOptions& options) {
     if (isWavefrontObjFile(path)) {
         auto objMesh = loadWavefrontObj(path);
         auto materials = std::move(objMesh.materials);
