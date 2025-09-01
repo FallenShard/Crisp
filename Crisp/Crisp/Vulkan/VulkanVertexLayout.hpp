@@ -5,7 +5,6 @@
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/VulkanFormatTraits.hpp>
 
-
 namespace crisp {
 
 struct VulkanVertexLayout {
@@ -24,6 +23,16 @@ struct VulkanVertexLayout {
         });
         addAttributes<0, Formats...>(
             static_cast<uint32_t>(attributes.size()), static_cast<uint32_t>(bindings.size() - 1));
+    }
+
+    template <VkFormat... Formats>
+    void addVertexAttributes() {
+        addBinding<Formats...>(VK_VERTEX_INPUT_RATE_VERTEX);
+    }
+
+    template <VkFormat... Formats>
+    void addInstanceAttributes() {
+        addBinding<Formats...>(VK_VERTEX_INPUT_RATE_INSTANCE);
     }
 
     template <uint32_t Offset, VkFormat First, VkFormat... Rest>
