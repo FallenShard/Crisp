@@ -42,15 +42,14 @@ Application::Application(const ApplicationEnvironment& environment)
 
     VulkanCoreParams vulkanCoreParams{
         .requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
-        .requiredDeviceExtensions = createDefaultDeviceExtensions(),
+        .deviceFeatureRequests = createDefaultFeatureRequests(),
         .presentationMode = PresentationMode::DoubleBuffered,
     };
-    addPageableMemoryDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
+    addPageableMemoryFeatures(vulkanCoreParams.deviceFeatureRequests);
     if (environment.getConfigParams().enableRayTracingExtension) {
-        addRayTracingDeviceExtensions(vulkanCoreParams.requiredDeviceExtensions);
+        addRayTracingFeatures(vulkanCoreParams.deviceFeatureRequests);
     }
-    vulkanCoreParams.requiredDeviceExtensions.emplace_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
-    vulkanCoreParams.requiredDeviceExtensions.emplace_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+    addMeshShadingFeatures(vulkanCoreParams.deviceFeatureRequests);
 
     m_renderer = std::make_unique<Renderer>(
         std::move(vulkanCoreParams), m_window.createSurfaceCallback(), createAssetPaths(environment));

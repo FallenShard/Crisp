@@ -88,15 +88,19 @@ VmaAllocator createMemoryAllocator(
 } // namespace
 
 VulkanDevice::VulkanDevice(
+    VulkanDeviceConfiguration&& config,
     const VulkanPhysicalDevice& physicalDevice,
-    const VulkanQueueConfiguration& queueConfig,
     const VulkanInstance& instance,
     const int32_t /*virtualFrameCount*/)
-    : m_handle(createLogicalDeviceHandle(physicalDevice, queueConfig))
+    : m_handle(createLogicalDeviceHandle(physicalDevice, config))
+    , m_config(std::move(config))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
-    , m_generalQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getGeneralQueue(queueConfig)))
-    , m_computeQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getComputeQueue(queueConfig)))
-    , m_transferQueue(std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getTransferQueue(queueConfig)))
+    , m_generalQueue(
+          std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getGeneralQueue(m_config.queueConfig)))
+    , m_computeQueue(
+          std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getComputeQueue(m_config.queueConfig)))
+    , m_transferQueue(
+          std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getTransferQueue(m_config.queueConfig)))
     , m_memoryAllocator(createMemoryAllocator(physicalDevice, m_handle, instance))
     , m_resourceDeallocator(std::make_unique<VulkanResourceDeallocator>(m_handle, m_memoryAllocator))
     , m_debugUtilsEnabled(instance.isExtensionEnabled(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
@@ -260,17 +264,18 @@ VkPipelineCache VulkanDevice::getPipelineCacheHandle() const {
     return m_pipelineCache ? VK_NULL_HANDLE : m_pipelineCache->getHandle();
 }
 
-VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config) {
+VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanDeviceConfiguration& config) {
     std::vector<const char*> enabledExtensions;
-    std::ranges::transform(
-        physicalDevice.getDeviceExtensions(), std::back_inserter(enabledExtensions), [](const std::string& ext) {
-            return ext.c_str();
-        });
+    std::ranges::transform(config.extensions, std::back_inserter(enabledExtensions), [](const std::string& ext) {
+        return ext.c_str();
+    });
+
+    vkGetPhysicalDeviceFeatures2(physicalDevice.getHandle(), &config.featureChain->features);
 
     VkDeviceCreateInfo createInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-    createInfo.pNext = &physicalDevice.getFeatures2();
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.createInfos.size());
-    createInfo.pQueueCreateInfos = config.createInfos.data();
+    createInfo.pNext = &config.featureChain->features;
+    createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.queueConfig.createInfos.size());
+    createInfo.pQueueCreateInfos = config.queueConfig.createInfos.data();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 

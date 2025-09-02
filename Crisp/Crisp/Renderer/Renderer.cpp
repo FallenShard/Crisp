@@ -51,13 +51,14 @@ Renderer::Renderer(
         std::move(surfCreatorCallback),
         std::move(vulkanCoreParams.requiredInstanceExtensions),
         vulkanCoreParams.includeValidation);
+    VulkanDeviceConfiguration deviceConfig{};
     m_physicalDevice = std::make_unique<VulkanPhysicalDevice>(
-        selectPhysicalDevice(*m_instance, std::move(vulkanCoreParams.requiredDeviceExtensions)).unwrap());
+        selectPhysicalDevice(
+            *m_instance, vulkanCoreParams.deviceFeatureRequests, *deviceConfig.featureChain, deviceConfig.extensions)
+            .unwrap());
+    deviceConfig.queueConfig = createDefaultQueueConfiguration(*m_instance, *m_physicalDevice);
     m_device = std::make_unique<VulkanDevice>(
-        *m_physicalDevice,
-        createDefaultQueueConfiguration(*m_instance, *m_physicalDevice),
-        *m_instance,
-        kRendererVirtualFrameCount);
+        std::move(deviceConfig), *m_physicalDevice, *m_instance, kRendererVirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(
         *m_device, *m_physicalDevice, m_instance->getSurface(), vulkanCoreParams.presentationMode);
     m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain);

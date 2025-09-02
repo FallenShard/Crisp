@@ -13,254 +13,156 @@ using ::testing::IsNull;
 using ::testing::Not;
 using ::testing::SizeIs;
 
-// TEST(VulkanPhysicalDeviceSelectionTest, DeviceSelection) {
-//     const VulkanInstance instance(nullptr, {}, false);
-//     EXPECT_THAT(instance.getSurface(), IsNull());
-//     EXPECT_THAT(instance.getHandle(), Not(IsNull()));
-//     EXPECT_THAT(selectPhysicalDevice(instance, {}), Not(HasError()));
-// }
-
-// TEST_F(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCapabilities) {
-//     const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}).unwrap());
-//     const auto queueFamilies = physicalDevice.queryQueueFamilyIndices(instance_->getSurface());
-//     EXPECT_TRUE(queueFamilies.presentFamily.has_value());
-//     EXPECT_TRUE(queueFamilies.graphicsFamily.has_value());
-//     EXPECT_TRUE(queueFamilies.computeFamily.has_value());
-//     EXPECT_TRUE(queueFamilies.transferFamily.has_value());
-
-//     const auto surfaceSupport = physicalDevice.querySurfaceSupport(instance_->getSurface());
-//     EXPECT_THAT(surfaceSupport.formats, Not(IsEmpty()));
-//     EXPECT_THAT(surfaceSupport.presentModes, Not(IsEmpty()));
-// }
-
-// TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDefaultQueueConfiguration) {
-//     const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}).unwrap());
-//     const auto queueConfig = createDefaultQueueConfiguration(*instance_, physicalDevice);
-//     EXPECT_THAT(queueConfig.createInfos, SizeIs(3));
-//     EXPECT_THAT(queueConfig.priorities, SizeIs(Ge(3)));
-//     EXPECT_THAT(queueConfig.identifiers, SizeIs(3));
-//     EXPECT_THAT(queueConfig.types, SizeIs(3));
-// }
-
-// TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateLogicalDevice) {
-//     const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}).unwrap());
-
-//     const VkDevice device =
-//         createLogicalDeviceHandle(physicalDevice, createDefaultQueueConfiguration(*instance_, physicalDevice));
-//     EXPECT_THAT(device, Not(IsNull()));
-//     vkDestroyDevice(device, nullptr);
-// }
-
-// TEST_F(VulkanPhysicalDeviceTest, Features) {
-//     EXPECT_TRUE(physicalDevice_->getFeatures().tessellationShader);
-// }
-
-// TEST_F(VulkanPhysicalDeviceTest, FindDepthFormat) {
-//     ASSERT_EQ(physicalDevice_->findSupportedDepthFormat().unwrap(), VK_FORMAT_D32_SFLOAT);
-// }
-
-// TEST_F(VulkanPhysicalDeviceTest, MemoryTypes) {
-//     const auto device = device_->getHandle();
-//     EXPECT_TRUE(physicalDevice_->findStagingBufferMemoryType(device).hasValue());
-//     EXPECT_TRUE(physicalDevice_->findDeviceBufferMemoryType(device).hasValue());
-//     EXPECT_TRUE(physicalDevice_->findDeviceImageMemoryType(device).hasValue());
-
-//     EXPECT_EQ(
-//         physicalDevice_->findStagingBufferMemoryType(device).unwrap(),
-//         physicalDevice_->findMemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT).unwrap());
-// }
-
-// TEST_F(VulkanPhysicalDeviceTest, FormatProperties) {
-//     const auto props = physicalDevice_->getFormatProperties(VK_FORMAT_D32_SFLOAT);
-//     EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
-//     EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-// }
-
-class VulkanFeatureChain {
-public:
-    VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-    VkPhysicalDeviceVulkan11Features features11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
-    VkPhysicalDeviceVulkan12Features features12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
-    VkPhysicalDeviceVulkan13Features features13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
-    VkPhysicalDeviceVulkan14Features features14{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES};
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
-    VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageableDeviceLocalMemoryFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT};
-    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT};
-    VkPhysicalDeviceFragmentDensityMapFeaturesEXT fragmentDensityMapFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT};
-    VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragmentShadingRateFeatures{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR};
-
-    void reset() {
-        features.pNext = nullptr;
-        isLinked.clear();
-    }
-
-    template <typename FeatureStruct>
-    void link(FeatureStruct& featureStruct) {
-        if (isLinked.contains(typeid(FeatureStruct))) {
-            return;
-        }
-        featureStruct.pNext = features.pNext;
-        features.pNext = &featureStruct;
-
-        isLinked.emplace(typeid(FeatureStruct));
-    }
-
-    FlatHashSet<std::type_index> isLinked;
-};
-
-struct DeviceFeatureRequest {
-    std::string extensionName;
-    bool isOptional{false};
-    std::function<bool(const VkPhysicalDevice)> supportCallback = [](const VkPhysicalDevice) { return true; };
-    std::function<void(VulkanFeatureChain&)> featureChainCallback = [](VulkanFeatureChain&) {};
-
-    std::vector<DeviceFeatureRequest> dependencies;
-
-    void emplaceExtensions(FlatHashSet<std::string>& supportedExtensions) const {
-        if (!extensionName.empty()) {
-            supportedExtensions.emplace(extensionName);
-        }
-        for (const auto& dep : dependencies) {
-            dep.emplaceExtensions(supportedExtensions);
-        }
-    }
-
-    void emplaceFeatures(VulkanFeatureChain& featureChain) const {
-        featureChainCallback(featureChain);
-        for (const auto& dep : dependencies) {
-            dep.emplaceFeatures(featureChain);
-        }
-    }
-};
-
-template <typename FeatureStruct>
-consteval VkStructureType getFeatureStructureType() {
-    if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceRayTracingPipelineFeaturesKHR>) {
-        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceMeshShaderFeaturesEXT>) {
-        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
-    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceFragmentDensityMapFeaturesEXT>) {
-        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT;
-    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceAccelerationStructureFeaturesKHR>) {
-        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT>) {
-        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT;
-    } else {
-        static_assert(sizeof(FeatureStruct) == 0, "Unknown feature structure type.");
-    }
+TEST(VulkanPhysicalDeviceSelectionTest, DeviceSelection) {
+    const VulkanInstance instance(nullptr, {}, false);
+    EXPECT_THAT(instance.getSurface(), IsNull());
+    EXPECT_THAT(instance.getHandle(), Not(IsNull()));
+    VulkanDeviceFeatureChain featureChain{};
+    FlatStringHashSet extensions{};
+    EXPECT_THAT(selectPhysicalDevice(instance, {}, featureChain, extensions), Not(HasError()));
 }
 
-template <typename FeatureStruct>
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, SurfaceCapabilities) {
+    VulkanDeviceFeatureChain featureChain{};
+    FlatStringHashSet extensions{};
+    const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}, featureChain, extensions).unwrap());
+    const auto queueFamilies = physicalDevice.queryQueueFamilySupport(instance_->getSurface());
+    EXPECT_TRUE(queueFamilies.isComplete());
+
+    const auto surfaceSupport = physicalDevice.querySurfaceSupport(instance_->getSurface());
+    EXPECT_THAT(surfaceSupport.formats, Not(IsEmpty()));
+    EXPECT_THAT(surfaceSupport.presentModes, Not(IsEmpty()));
+}
+
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateDefaultQueueConfiguration) {
+    VulkanDeviceFeatureChain featureChain{};
+    FlatStringHashSet extensions{};
+    const VulkanPhysicalDevice physicalDevice(selectPhysicalDevice(*instance_, {}, featureChain, extensions).unwrap());
+    const auto queueConfig = createDefaultQueueConfiguration(*instance_, physicalDevice);
+    EXPECT_THAT(queueConfig.createInfos, SizeIs(3));
+    EXPECT_THAT(queueConfig.priorities, SizeIs(Ge(3)));
+    EXPECT_THAT(queueConfig.identifiers, SizeIs(3));
+    EXPECT_THAT(queueConfig.types, SizeIs(3));
+}
+
+TEST_F(VulkanPhysicalDeviceWithSurfaceTest, CreateLogicalDevice) {
+    VulkanDeviceConfiguration deviceConfig{};
+    const VulkanPhysicalDevice physicalDevice(
+        selectPhysicalDevice(*instance_, {}, *deviceConfig.featureChain, deviceConfig.extensions).unwrap());
+    deviceConfig.queueConfig = createDefaultQueueConfiguration(*instance_, physicalDevice);
+
+    const VkDevice device = createLogicalDeviceHandle(physicalDevice, deviceConfig);
+    EXPECT_THAT(device, Not(IsNull()));
+    vkDestroyDevice(device, nullptr);
+}
+
+TEST_F(VulkanPhysicalDeviceTest, Features) {
+    EXPECT_TRUE(physicalDevice_->getCapabilities().features.features.features.tessellationShader);
+}
+
+TEST_F(VulkanPhysicalDeviceTest, FindDepthFormat) {
+    ASSERT_EQ(physicalDevice_->findSupportedDepthFormat().unwrap(), VK_FORMAT_D32_SFLOAT);
+}
+
+TEST_F(VulkanPhysicalDeviceTest, MemoryTypes) {
+    const auto device = device_->getHandle();
+    EXPECT_TRUE(physicalDevice_->findStagingBufferMemoryType(device).hasValue());
+    EXPECT_TRUE(physicalDevice_->findDeviceBufferMemoryType(device).hasValue());
+    EXPECT_TRUE(physicalDevice_->findDeviceImageMemoryType(device).hasValue());
+
+    EXPECT_EQ(
+        physicalDevice_->findStagingBufferMemoryType(device).unwrap(),
+        physicalDevice_->findMemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT).unwrap());
+}
+
+TEST_F(VulkanPhysicalDeviceTest, FormatProperties) {
+    const auto props = physicalDevice_->getFormatProperties(VK_FORMAT_D32_SFLOAT);
+    EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+    EXPECT_TRUE(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+template <typename FeatureStruct, VkStructureType StructureType>
 FeatureStruct queryFeatures(const VkPhysicalDevice physicalDevice) {
     VkPhysicalDeviceFeatures2 baseFeatures{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
 
-    FeatureStruct features{.sType = getFeatureStructureType<FeatureStruct>()};
+    FeatureStruct features{.sType = StructureType};
     baseFeatures.pNext = &features;
     vkGetPhysicalDeviceFeatures2(physicalDevice, &baseFeatures);
     return features;
 }
 
-std::vector<DeviceFeatureRequest> kRequestedFeatures = {
-    DeviceFeatureRequest{
-        .featureChainCallback = [](VulkanFeatureChain& featureChain) { featureChain.link(featureChain.features11); },
+std::vector<VulkanDeviceFeatureRequest> kRequestedFeatures = {
+    VulkanDeviceFeatureRequest{
+        .addFeatureFunc = [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.features11); },
     },
-    DeviceFeatureRequest{
-        .featureChainCallback = [](VulkanFeatureChain& featureChain) { featureChain.link(featureChain.features12); },
+    VulkanDeviceFeatureRequest{
+        .addFeatureFunc = [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.features12); },
     },
-    DeviceFeatureRequest{
-        .featureChainCallback = [](VulkanFeatureChain& featureChain) { featureChain.link(featureChain.features13); },
+    VulkanDeviceFeatureRequest{
+        .addFeatureFunc = [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.features13); },
     },
-    DeviceFeatureRequest{
-        .featureChainCallback = [](VulkanFeatureChain& featureChain) { featureChain.link(featureChain.features14); },
+    VulkanDeviceFeatureRequest{
+        .addFeatureFunc = [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.features14); },
     },
-    DeviceFeatureRequest{
+    VulkanDeviceFeatureRequest{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     },
-    DeviceFeatureRequest{
+    VulkanDeviceFeatureRequest{
         .extensionName = VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-        .supportCallback =
-            [](const VkPhysicalDevice physicalDevice) {
-                const auto rayTracingFeatures =
-                    queryFeatures<VkPhysicalDeviceRayTracingPipelineFeaturesKHR>(physicalDevice);
-                return rayTracingFeatures.rayTracingPipeline == VK_TRUE;
+        .isSupportedFunc =
+            [](const VulkanPhysicalDevice& physicalDevice) {
+                return physicalDevice.getCapabilities().features.rayTracingFeatures.rayTracingPipeline == VK_TRUE;
             },
-        .featureChainCallback =
-            [](VulkanFeatureChain& featureChain) { featureChain.link(featureChain.rayTracingFeatures); },
+        .addFeatureFunc =
+            [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.rayTracingFeatures); },
         .dependencies =
             {
-                DeviceFeatureRequest{
+                VulkanDeviceFeatureRequest{
                     .extensionName = VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+                    .addFeatureFunc =
+                        [](VulkanDeviceFeatureChain& featureChain) {
+                            featureChain.link(featureChain.accelerationStructureFeatures);
+                        },
                     .dependencies =
                         {
-                            DeviceFeatureRequest{
+                            VulkanDeviceFeatureRequest{
                                 .extensionName = VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
                             },
                         }},
             },
     },
-    DeviceFeatureRequest{
+    VulkanDeviceFeatureRequest{
         .extensionName = VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME,
         .isOptional = true,
-        .featureChainCallback =
-            [](VulkanFeatureChain& featureChain) { featureChain.link(featureChain.fragmentDensityMapFeatures); },
+        .isSupportedFunc =
+            [](const VulkanPhysicalDevice& physicalDevice) {
+                const auto features = queryFeatures<
+                    VkPhysicalDeviceFragmentDensityMapFeaturesEXT,
+                    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT>(physicalDevice.getHandle());
+                return features.fragmentDensityMap == VK_TRUE;
+            },
+        .addFeatureFunc =
+            [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.fragmentDensityMapFeatures); },
     },
-    {
+    VulkanDeviceFeatureRequest{
         .extensionName = VK_EXT_MESH_SHADER_EXTENSION_NAME,
-        .isOptional = true,
-        .featureChainCallback =
-            [](VulkanFeatureChain& featureChain) {
+        .isSupportedFunc =
+            [](const VulkanPhysicalDevice& physicalDevice) {
+                return physicalDevice.getCapabilities().features.meshShaderFeatures.meshShader == VK_TRUE;
+            },
+        .addFeatureFunc =
+            [](VulkanDeviceFeatureChain& featureChain) {
                 featureChain.link(featureChain.meshShaderFeatures);
                 featureChain.link(featureChain.fragmentShadingRateFeatures);
             },
         .dependencies =
             {
-                DeviceFeatureRequest{
+                VulkanDeviceFeatureRequest{
                     .extensionName = VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME,
                 },
             },
     },
 };
-
-bool checkSupport(
-    const VkPhysicalDevice physicalDevice,
-    const std::span<const DeviceFeatureRequest> featureRequests,
-    VulkanFeatureChain& supportedFeatures,
-    FlatHashSet<std::string>& supportedExtensions) {
-    const auto availableExtensions = querySupportedExtensions(physicalDevice);
-    FlatHashSet<std::string> availableExtensionsSet;
-    for (const auto& extProp : availableExtensions) {
-        availableExtensionsSet.emplace(extProp.extensionName);
-    }
-
-    supportedFeatures.reset();
-    supportedExtensions.clear();
-    for (const auto& featureRequest : featureRequests) {
-        const bool extensionSupported =
-            featureRequest.extensionName.empty() || availableExtensionsSet.contains(featureRequest.extensionName);
-        const bool featureSupported =
-            featureRequest.supportCallback ? featureRequest.supportCallback(physicalDevice) : true;
-
-        if (!extensionSupported || !featureSupported) {
-            if (featureRequest.isOptional) {
-                spdlog::warn("Optional extension {} is not supported.", featureRequest.extensionName);
-            } else {
-                spdlog::error("Required extension {} is not supported.", featureRequest.extensionName);
-                return false;
-            }
-        } else {
-            featureRequest.emplaceFeatures(supportedFeatures);
-            featureRequest.emplaceExtensions(supportedExtensions);
-        }
-    }
-
-    return true;
-}
 
 TEST(VulkanExtensionTest, RequireFeatures) {
     glfwInit();
@@ -275,13 +177,17 @@ TEST(VulkanExtensionTest, RequireFeatures) {
         const auto physicalDevices = enumeratePhysicalDevices(instance);
 
         VkPhysicalDevice selectedPhysicalDevice{VK_NULL_HANDLE};
-        FlatHashSet<std::string> supportedExtensions;
-        VulkanFeatureChain supportedFeatures{};
+        FlatStringHashSet supportedExtensions;
+        VulkanDeviceFeatureChain supportedFeatures{};
         for (const auto physicalDevice : physicalDevices) {
+            const VulkanPhysicalDevice device(physicalDevice);
+
             VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
             vkGetPhysicalDeviceProperties2(physicalDevice, &properties);
             spdlog::info("Checking {}", properties.properties.deviceName);
-            if (!checkSupport(physicalDevice, kRequestedFeatures, supportedFeatures, supportedExtensions)) {
+            supportedFeatures.reset();
+            supportedExtensions.clear();
+            if (!isPhysicalDeviceSuitable(device, instance, kRequestedFeatures, supportedFeatures, supportedExtensions)) {
                 spdlog::error("Device {} does not support all requested features.", properties.properties.deviceName);
             } else {
                 selectedPhysicalDevice = physicalDevice;

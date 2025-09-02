@@ -95,9 +95,9 @@ void VulkanSwapChain::createSwapChain(
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Render directly to swap chain image
 
-    const QueueFamilyIndices indices = physicalDevice.queryQueueFamilyIndices(surface);
-    const std::array<uint32_t, 2> queueFamilyIndices = {*indices.graphicsFamily, *indices.presentFamily};
-    if (indices.graphicsFamily != indices.presentFamily) {
+    const QueueFamilySupport queueSupport = physicalDevice.queryQueueFamilySupport(surface);
+    const std::array<uint32_t, 2> queueFamilyIndices = {*queueSupport.graphics, *queueSupport.present};
+    if (queueSupport.graphics != queueSupport.present) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices.data();

@@ -51,15 +51,17 @@ protected:
             surfacePolicy == SurfacePolicy::HiddenWindow ? window_->createSurfaceCallback() : nullptr,
             ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
             true);
+        VulkanDeviceConfiguration deviceConfig{};
         physicalDevice_ = std::make_unique<VulkanPhysicalDevice>(
-            selectPhysicalDevice(*instance_, createDefaultDeviceExtensions()).unwrap());
-        device_ = std::make_unique<VulkanDevice>(
-            *physicalDevice_,
+            selectPhysicalDevice(
+                *instance_, createDefaultFeatureRequests(), *deviceConfig.featureChain, deviceConfig.extensions)
+                .unwrap());
+        deviceConfig.queueConfig =
             surfacePolicy == SurfacePolicy::HiddenWindow
                 ? createDefaultQueueConfiguration(*instance_, *physicalDevice_)
-                : createQueueConfiguration({QueueType::General}, *instance_, *physicalDevice_),
-            *instance_,
-            kRendererVirtualFrameCount);
+                : createQueueConfiguration({QueueType::General}, *instance_, *physicalDevice_);
+        device_ = std::make_unique<VulkanDevice>(
+            std::move(deviceConfig), *physicalDevice_, *instance_, kRendererVirtualFrameCount);
     }
 
     static void TearDownTestSuite() {

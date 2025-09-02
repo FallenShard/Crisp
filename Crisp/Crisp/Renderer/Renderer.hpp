@@ -31,7 +31,7 @@ class Geometry;
 
 struct VulkanCoreParams {
     std::vector<std::string> requiredInstanceExtensions;
-    std::vector<std::string> requiredDeviceExtensions;
+    std::vector<VulkanDeviceFeatureRequest> deviceFeatureRequests;
     PresentationMode presentationMode;
     bool includeValidation{true};
 };

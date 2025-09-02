@@ -91,11 +91,10 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
 }
 
 TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
-    auto device = std::make_unique<VulkanDevice>(
-        *physicalDevice_,
-        createQueueConfiguration({QueueType::General, QueueType::Transfer}, *instance_, *physicalDevice_),
-        *instance_,
-        2);
+    VulkanDeviceConfiguration config{};
+    config.queueConfig =
+        createQueueConfiguration({QueueType::General, QueueType::Transfer}, *instance_, *physicalDevice_);
+    auto device = std::make_unique<VulkanDevice>(std::move(config), *physicalDevice_, *instance_, 2);
     ASSERT_THAT(device->getGeneralQueue(), Not(HandleIs(device->getTransferQueue())));
 
     constexpr VkDeviceSize kElementCount = 25;

@@ -54,11 +54,17 @@ concept VulkanHandle = IsAnyOf<
     VkValidationCacheEXT,
     VkAccelerationStructureKHR>;
 
+struct VulkanDeviceConfiguration {
+    VulkanQueueConfiguration queueConfig;
+    std::unique_ptr<VulkanDeviceFeatureChain> featureChain = std::make_unique<VulkanDeviceFeatureChain>();
+    FlatStringHashSet extensions;
+};
+
 class VulkanDevice {
 public:
     VulkanDevice(
+        VulkanDeviceConfiguration&& config,
         const VulkanPhysicalDevice& physicalDevice,
-        const VulkanQueueConfiguration& queueConfig,
         const VulkanInstance& instance,
         int32_t virtualFrameCount);
     ~VulkanDevice();
@@ -224,6 +230,8 @@ private:
 
     VkDevice m_handle;
 
+    VulkanDeviceConfiguration m_config;
+
     VkDeviceSize m_nonCoherentAtomSize;
 
     std::unique_ptr<VulkanQueue> m_generalQueue;
@@ -247,6 +255,6 @@ private:
     bool m_debugUtilsEnabled{false};
 };
 
-VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanQueueConfiguration& config);
+VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanDeviceConfiguration& config);
 
 } // namespace crisp
