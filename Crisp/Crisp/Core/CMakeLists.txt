@@ -13,7 +13,6 @@ add_cpp_interface_library(
 )
 target_link_libraries(
     CrispHashMap
-    INTERFACE robin_hood
     INTERFACE unordered_dense
 )
 

@@ -39,7 +39,7 @@ private:
     std::unique_ptr<LightSystem> m_lightSystem;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::unordered_map<std::string, std::size_t> m_renderNodeMap;
     std::vector<std::unique_ptr<RenderNode>> m_renderNodeList;

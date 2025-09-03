@@ -36,10 +36,10 @@ private:
     std::vector<std::shared_ptr<Animation>> m_pendingAnimations;
 
     // The set of animations slated to be removed from active animations list
-    HashSet<std::shared_ptr<Animation>> m_removedAnimations;
+    FlatHashSet<std::shared_ptr<Animation>> m_removedAnimations;
 
     // Ties the lifetime of a group of animations to a particular object pointer
-    HashMap<void*, std::vector<std::shared_ptr<Animation>>> m_animationLifetimes;
+    FlatHashMap<void*, std::vector<std::shared_ptr<Animation>>> m_animationLifetimes;
 
     bool m_clearAllAnimations;
 };

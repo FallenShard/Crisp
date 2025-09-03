@@ -18,16 +18,14 @@ void Animator::update(double dt) {
 
     // Remove all animations scheduled for removal
     if (!m_removedAnimations.empty()) {
-        const auto [first, last] =
-            std::ranges::remove_if(m_activeAnimations, [this](const std::shared_ptr<Animation>& anim) {
-                return m_removedAnimations.contains(anim);
-            });
+        const auto [first, last] = std::ranges::remove_if(m_activeAnimations, [this](const auto& anim) {
+            return m_removedAnimations.contains(anim);
+        });
         m_activeAnimations.erase(first, m_activeAnimations.end());
 
-        const auto [firstPending, lastPending] =
-            std::ranges::remove_if(m_pendingAnimations, [this](const std::shared_ptr<Animation>& anim) {
-                return m_removedAnimations.contains(anim);
-            });
+        const auto [firstPending, lastPending] = std::ranges::remove_if(m_pendingAnimations, [this](const auto& anim) {
+            return m_removedAnimations.contains(anim);
+        });
         m_pendingAnimations.erase(firstPending, lastPending);
 
         m_removedAnimations.clear();

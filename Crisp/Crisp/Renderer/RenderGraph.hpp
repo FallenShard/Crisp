@@ -30,7 +30,7 @@ public:
         // General data.
         std::string name;
         NodeType type{NodeType::Rasterizer};
-        HashMap<std::string, DependencyCallback> dependencies;
+        FlatHashMap<std::string, DependencyCallback> dependencies;
         bool isEnabled{true};
 
         // Rasterizer data.

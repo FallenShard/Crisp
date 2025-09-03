@@ -96,7 +96,7 @@ private:
 
     std::unique_ptr<ShadowMapper> m_shadowMapper;
 
-    robin_hood::unordered_flat_map<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::vector<ManyLightDescriptor> m_manyLights;
     std::unique_ptr<UniformBuffer> m_manyLightsBuffer;

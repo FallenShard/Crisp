@@ -147,7 +147,7 @@ public:
     }
 
 private:
-    robin_hood::unordered_flat_set<Delegate<void, ParamTypes...>> m_delegates;
+    FlatHashSet<Delegate<void, ParamTypes...>> m_delegates;
     std::vector<Connection> m_connections;
     ConnectionToken m_tokenCounter = 0;
 };

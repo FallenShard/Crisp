@@ -3,43 +3,38 @@
 #include <Crisp/Core/Format.hpp>
 #include <Crisp/Math/Headers.hpp>
 
-namespace fmt {
 template <>
-struct formatter<glm::vec2> {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
+struct fmt::formatter<glm::vec2> {
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+        return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const glm::vec2& vec, FormatContext& ctx) {
+    auto format(const glm::vec2& vec, FormatContext& ctx) const -> decltype(ctx.out()) {
         return fmt::format_to(ctx.out(), "[{:.4f}, {:.4f}]", vec.x, vec.y);
     }
 };
 
 template <>
-struct formatter<glm::vec3> {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
+struct fmt::formatter<glm::vec3> {
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+        return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const glm::vec3& vec, FormatContext& ctx) {
+    auto format(const glm::vec3& vec, FormatContext& ctx) const -> decltype(ctx.out()) {
         return fmt::format_to(ctx.out(), "[{:.4f}, {:.4f}, {:.4f}]", vec.x, vec.y, vec.z);
     }
 };
 
 template <>
-struct formatter<glm::vec4> {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx) {
-        return ctx.begin();
+struct fmt::formatter<glm::vec4> {
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+        return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const glm::vec4& vec, FormatContext& ctx) {
+    auto format(const glm::vec4& vec, FormatContext& ctx) const -> decltype(ctx.out()) {
         return fmt::format_to(ctx.out(), "[{:.4f}, {:.4f}, {:.4f}, {:.4f}]", vec.x, vec.y, vec.z, vec.w);
     }
 };
-} // namespace fmt

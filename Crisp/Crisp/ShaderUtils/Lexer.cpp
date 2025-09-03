@@ -8,9 +8,9 @@
 #include <charconv>
 
 namespace {
-robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordMap() {
+crisp::FlatHashMap<std::string, crisp::sl::TokenType> createKeywordMap() {
     using crisp::sl::TokenType;
-    robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> map;
+    crisp::FlatHashMap<std::string, crisp::sl::TokenType> map;
 
     // Execution Control
     map.emplace("break", TokenType::Break);
@@ -244,7 +244,7 @@ robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> createKeywordM
     return map;
 }
 
-robin_hood::unordered_flat_map<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
+crisp::FlatHashMap<std::string, crisp::sl::TokenType> Keywords = createKeywordMap();
 } // namespace
 
 namespace crisp::sl {

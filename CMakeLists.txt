@@ -92,15 +92,15 @@ include(FetchContent)
 
 # Grab readily available third parties from external repositories.
 FetchContent_Declare(glm
-    GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.1
+    GIT_REPOSITORY "https://github.com/g-truc/glm.git"
+    GIT_TAG "1.0.1"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(glm)
 
 FetchContent_Declare(glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.4
+    GIT_REPOSITORY "https://github.com/glfw/glfw.git"
+    GIT_TAG "3.4"
     GIT_SHALLOW TRUE
 )
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -110,37 +110,30 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(glfw)
 
 FetchContent_Declare(json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
+    GIT_REPOSITORY "https://github.com/nlohmann/json.git"
+    GIT_TAG "v3.12.0"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(json)
 
-FetchContent_Declare(robin_hood
-    GIT_REPOSITORY https://github.com/martinus/robin-hood-hashing.git
-    GIT_TAG 3.11.5
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(robin_hood)
-
 FetchContent_Declare(unordered_dense
-    GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-    GIT_TAG v4.5.0
+    GIT_REPOSITORY "https://github.com/martinus/unordered_dense.git"
+    GIT_TAG "v4.5.0"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(unordered_dense)
 
 FetchContent_Declare(fmt
-    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG 10.2.1
+    GIT_REPOSITORY "https://github.com/fmtlib/fmt.git"
+    GIT_TAG "11.2.0"
     GIT_SHALLOW TRUE
 )
 set(FMT_OS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(fmt)
 
 FetchContent_Declare(spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.15.0
+    GIT_REPOSITORY "https://github.com/gabime/spdlog.git"
+    GIT_TAG "v1.15.3"
     GIT_SHALLOW TRUE
 )
 set(SPDLOG_FMT_EXTERNAL_HO ON CACHE BOOL "" FORCE)
@@ -148,8 +141,8 @@ set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 FetchContent_Declare(googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG v1.15.2
+    GIT_REPOSITORY "https://github.com/google/googletest.git"
+    GIT_TAG "v1.17.0"
     GIT_SHALLOW TRUE
 )
 
@@ -158,8 +151,8 @@ FetchContent_Declare(googletest
 FetchContent_MakeAvailable(googletest)
 
 FetchContent_Declare(benchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-    GIT_TAG v1.9.1
+    GIT_REPOSITORY "https://github.com/google/benchmark.git"
+    GIT_TAG "v1.9.4"
     GIT_SHALLOW TRUE
 )
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
@@ -168,8 +161,8 @@ set(BENCHMARK_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(benchmark)
 
 FetchContent_Declare(tinygltf
-    GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
-    GIT_TAG v2.9.4
+    GIT_REPOSITORY "https://github.com/syoyo/tinygltf.git"
+    GIT_TAG "v2.9.6"
     GIT_SHALLOW TRUE
 )
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE BOOL "" FORCE)
@@ -177,16 +170,16 @@ set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(tinygltf)
 
 FetchContent_Declare(MPMCQueue
-    GIT_REPOSITORY https://github.com/rigtorp/MPMCQueue.git
-    GIT_TAG b9808ede08f26fa9df4df4e081d19cace8f6c6ea
+    GIT_REPOSITORY "https://github.com/rigtorp/MPMCQueue.git"
+    GIT_TAG "b9808ede08f26fa9df4df4e081d19cace8f6c6ea"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(MPMCQueue)
 
 # TODO: Configure to be dynamic.
 FetchContent_Declare(onetbb
-    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG v2022.0.0
+    GIT_REPOSITORY "https://github.com/oneapi-src/oneTBB.git"
+    GIT_TAG "v2022.2.0"
     GIT_SHALLOW TRUE
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
@@ -195,8 +188,8 @@ FetchContent_MakeAvailable(onetbb)
 set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_Declare(embree
-    GIT_REPOSITORY https://github.com/embree/embree.git
-    GIT_TAG v4.3.3
+    GIT_REPOSITORY "https://github.com/embree/embree.git"
+    GIT_TAG "v4.4.0"
     GIT_SHALLOW TRUE
 )
 set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
@@ -204,15 +197,15 @@ set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(embree)
 
 FetchContent_Declare(vulkan
-    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.4.304
+    GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git"
+    GIT_TAG "v1.4.326"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(vulkan)
 
 FetchContent_Declare(volk
-    GIT_REPOSITORY https://github.com/zeux/volk.git
-    GIT_TAG 1.3.295
+    GIT_REPOSITORY "https://github.com/zeux/volk.git"
+    GIT_TAG "1.4.304"
     GIT_SHALLOW TRUE
 )
 set(VOLK_HEADERS_ONLY ON CACHE BOOL "" FORCE)
@@ -220,15 +213,15 @@ set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(volk)
 
 FetchContent_Declare(VulkanMemoryAllocator
-    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-    GIT_TAG v3.2.1
+    GIT_REPOSITORY "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git"
+    GIT_TAG "v3.3.0"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(VulkanMemoryAllocator)
 
 FetchContent_Declare(SPIRV-Reflect
-    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
-    GIT_TAG vulkan-sdk-1.3.296.0
+    GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Reflect.git"
+    GIT_TAG "vulkan-sdk-1.4.321.0"
     GIT_SHALLOW TRUE
 )
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)

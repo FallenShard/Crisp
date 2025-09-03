@@ -103,7 +103,7 @@ void RenderGraph::addDependency(
 }
 
 Result<> RenderGraph::sortRenderPasses() {
-    HashMap<std::string, int32_t> fanIn;
+    FlatHashMap<std::string, int32_t> fanIn;
     for (auto& [srcPass, node] : m_nodes) {
         if (fanIn.count(srcPass) == 0) {
             fanIn.emplace(srcPass, 0);
