@@ -12,7 +12,7 @@ target_link_libraries(
     PRIVATE Crisp::StringUtils
 )
 
-add_cpp_interface_library(CrispBitFlags
+add_cpp_header_library(CrispBitFlags
     "BitFlags.hpp"
 )
 

@@ -20,7 +20,7 @@ target_link_libraries(
     PRIVATE Crisp::Logger
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispJsonUtils
     "JsonUtils.hpp"
 )

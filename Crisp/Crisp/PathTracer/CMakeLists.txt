@@ -240,7 +240,7 @@ target_link_libraries(
     PUBLIC Crisp::Math
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispOptics
     "Optics/Fresnel.hpp"
 )

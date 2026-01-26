@@ -1,4 +1,4 @@
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispFormat
     "Format.hpp"
 )
@@ -7,7 +7,7 @@ target_link_libraries(
     INTERFACE fmt::fmt-header-only
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispHashMap
     "HashMap.hpp"
 )
@@ -16,7 +16,7 @@ target_link_libraries(
     INTERFACE unordered_dense
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispLogger
     "Logger.hpp"
 )
@@ -26,7 +26,7 @@ target_link_libraries(
     INTERFACE Crisp::Format
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispResult
     "Result.hpp"
 )
@@ -35,7 +35,7 @@ target_link_libraries(
     INTERFACE Crisp::Logger
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispResultTestUtils
     "Test/ResultTestUtils.hpp"
 )
@@ -54,7 +54,7 @@ target_link_libraries(
     PRIVATE Crisp::Result
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispChecks
     "Checks.hpp"
 )
@@ -88,7 +88,7 @@ target_link_libraries(
     PRIVATE Crisp::Window
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispInput
     "Mouse.hpp"
     "Keyboard.hpp"
@@ -156,7 +156,7 @@ target_link_libraries(
     PRIVATE Crisp::Timer
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispThreadPool
     "ThreadPool.hpp"
 )
@@ -184,7 +184,7 @@ target_link_libraries(
     PRIVATE Crisp::ThreadPool
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispEvent
     "Event.hpp"
     "Delegate.hpp"
@@ -205,7 +205,7 @@ target_link_libraries(
     PRIVATE Crisp::Event
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispSlotMap
     "SlotMap.hpp"
 )
@@ -250,7 +250,7 @@ target_link_libraries(
     PUBLIC Crisp::VulkanTracer
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispScopeProfiler
     "Profiler.hpp"
 )
@@ -260,12 +260,12 @@ target_link_libraries(
     INTERFACE Crisp::StringLiteral
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispTimer
     "Timer.hpp"
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispStringLiteral
     "StringLiteral.hpp"
 )

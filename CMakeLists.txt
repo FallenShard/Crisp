@@ -46,7 +46,7 @@ macro(add_cpp_shared_library targetName)
 endmacro()
 
 # Creates a C++ header-only library target.
-macro(add_cpp_interface_library targetName)
+macro(add_cpp_header_library targetName)
     add_library(${targetName} INTERFACE ${ARGN})
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} INTERFACE)

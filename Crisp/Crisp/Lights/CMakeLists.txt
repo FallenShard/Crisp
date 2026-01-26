@@ -1,4 +1,4 @@
-add_cpp_interface_library(CrispLightDescriptor
+add_cpp_header_library(CrispLightDescriptor
     "LightDescriptor.hpp"
 )
 target_link_libraries(CrispLightDescriptor

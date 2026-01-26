@@ -25,7 +25,7 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::VulkanVertexLayout
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispVulkanFormatTraits
     "VulkanVertexLayout.hpp"
 )
@@ -75,7 +75,7 @@ target_link_libraries(
     PRIVATE Crisp::VulkanTestUtils
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispVulkanSynchronization
     "VulkanSynchronization.hpp"
 )

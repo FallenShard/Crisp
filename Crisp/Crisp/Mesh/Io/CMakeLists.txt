@@ -1,4 +1,4 @@
-add_cpp_interface_library(CrispModelData
+add_cpp_header_library(CrispModelData
     "ModelData.hpp"
 )
 target_link_libraries(CrispModelData

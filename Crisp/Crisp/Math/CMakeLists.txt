@@ -24,7 +24,7 @@ add_cpp_test(CrispIFFTTest
 target_link_libraries(CrispIFFTTest
     PRIVATE Crisp::Math)
 
-add_cpp_interface_library(CrispGlmFormat
+add_cpp_header_library(CrispGlmFormat
     "GlmFormat.hpp"
 )
 target_link_libraries(CrispGlmFormat

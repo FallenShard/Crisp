@@ -40,7 +40,7 @@ target_link_libraries(
     PRIVATE Crisp::VulkanTestUtils
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispAssetPaths
     "AssetPaths.hpp"
 )
@@ -148,13 +148,13 @@ target_link_libraries(CrispImageCache
     PUBLIC Crisp::Vulkan
     PRIVATE Crisp::Renderer
 )
-add_cpp_interface_library(CrispFrameContext
+add_cpp_header_library(CrispFrameContext
     "FrameContext.hpp"
 )
 target_link_libraries(CrispFrameContext
     INTERFACE Crisp::Vulkan
 )
-add_cpp_interface_library(CrispRendererConfig
+add_cpp_header_library(CrispRendererConfig
     "RendererConfig.hpp"
 )
 

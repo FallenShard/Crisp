@@ -97,7 +97,7 @@ target_link_libraries(
     PRIVATE Crisp::VulkanTestUtils
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispVulkanResource
     "VulkanResource.hpp"
 )
@@ -278,7 +278,7 @@ target_link_libraries(
     PUBLIC Crisp::Math
 )
 
-add_cpp_interface_library(
+add_cpp_header_library(
     CrispVulkanTestUtils
     "Test/VulkanTest.hpp"
 )
