@@ -7,7 +7,7 @@ namespace crisp {
 namespace {
 
 VkDescriptorPoolCreateFlags addBindlessFlag(const std::vector<bool>& isSetBindless) {
-    if (std::any_of(isSetBindless.begin(), isSetBindless.end(), [](const auto v) { return v; })) {
+    if (std::ranges::any_of(isSetBindless, [](const auto v) { return v; })) {
         return VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
     }
 
@@ -91,7 +91,7 @@ std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
         std::make_unique<VulkanDescriptorSetAllocator>(
             device,
             m_metadata.descriptorSetLayoutBindings,
-            computeCopiesPerSet(m_setBuffered, numCopies),
+            computeCopiesPerSet(m_setBuffered, numCopies, device.getResourceDeallocator().getFramesInFlight()),
             flags | addBindlessFlag(m_setBindless)));
 }
 

@@ -20,7 +20,7 @@ struct DeferredMemoryDestructor {
 
 class VulkanResourceDeallocator {
 public:
-    VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator);
+    VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator, uint32_t framesInFlight);
     ~VulkanResourceDeallocator();
 
     VulkanResourceDeallocator(const VulkanResourceDeallocator&) = delete;
@@ -34,22 +34,21 @@ public:
     void freeAllResources();
 
     template <typename VulkanHandleType>
-    void deferDestruction(
-        const uint32_t framesToLive, const VulkanHandleType handle, const VulkanDestructorCallback callback) {
-        m_deferredDestructors.push_back({m_frameIndex + framesToLive, handle, callback});
+    void deferDestruction(const VulkanHandleType handle, const VulkanDestructorCallback callback) {
+        m_deferredDestructors.push_back({m_frameIndex + m_framesInFlight, handle, callback});
     }
 
     template <typename VulkanHandleType>
-    void deferDestruction(const uint32_t framesToLive, const VulkanHandleType handle) {
+    void deferDestruction(const VulkanHandleType handle) {
         m_deferredDestructors.push_back(
-            {m_frameIndex + framesToLive, handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+            {m_frameIndex + m_framesInFlight, handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
                  getDestroyFunc<VulkanHandleType>()(
                      deallocator->getDeviceHandle(), static_cast<VulkanHandleType>(handle), nullptr);
              }});
     }
 
-    void deferMemoryDeallocation(const uint32_t framesToLive, const VmaAllocation allocation) {
-        m_deferredMemoryDeallocations.emplace_back(m_frameIndex + framesToLive, allocation);
+    void deferMemoryDeallocation(const VmaAllocation allocation) {
+        m_deferredMemoryDeallocations.emplace_back(m_frameIndex + m_framesInFlight, allocation);
     }
 
     VkDevice getDeviceHandle() const {
@@ -64,10 +63,15 @@ public:
         return m_deferredDestructors.size();
     }
 
+    uint32_t getFramesInFlight() const {
+        return m_framesInFlight;
+    }
+
 private:
     VkDevice m_deviceHandle{VK_NULL_HANDLE};
     VmaAllocator m_allocator{VK_NULL_HANDLE};
     uint64_t m_frameIndex{0};
+    uint32_t m_framesInFlight{0};
 
     std::vector<DeferredHandleDestructor> m_deferredDestructors;
     std::vector<DeferredMemoryDestructor> m_deferredMemoryDeallocations;

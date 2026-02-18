@@ -35,7 +35,7 @@ ApplicationEnvironment::ApplicationEnvironment(ConfigParams&& configParams)
     : m_configParams(std::move(configParams)) {
     spdlog::set_pattern("%^[%T.%e][%t][%n][%l]:%$ %v");
     setSpdlogLevel(m_configParams.logLevel);
-    CRISP_LOGI("Current path: {}", std::filesystem::current_path().string());
+    CRISP_LOGI("Working directory: {}", std::filesystem::current_path().string());
 
     glfwSetErrorCallback(glfwErrorHandler);
     if (glfwInit() == GLFW_FALSE) {

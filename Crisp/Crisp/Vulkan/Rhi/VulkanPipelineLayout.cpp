@@ -54,12 +54,11 @@ VulkanPipelineLayout::VulkanPipelineLayout(
 
 VulkanPipelineLayout::~VulkanPipelineLayout() {
     for (const auto& setLayout : m_descriptorSetLayouts) {
-        m_deallocator->deferDestruction(
-            kRendererVirtualFrameCount, setLayout.handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
-                spdlog::debug("Destroying set layout: {}", handle);
-                vkDestroyDescriptorSetLayout(
-                    deallocator->getDeviceHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
-            });
+        m_deallocator->deferDestruction(setLayout.handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+            spdlog::debug("Destroying set layout: {}", handle);
+            vkDestroyDescriptorSetLayout(
+                deallocator->getDeviceHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
+        });
     }
 }
 
@@ -88,14 +87,15 @@ std::unique_ptr<VulkanDescriptorSetAllocator> VulkanPipelineLayout::createVulkan
     }
 
     return std::make_unique<VulkanDescriptorSetAllocator>(
-        device, bindings, computeCopiesPerSet(isSetBuffered, numCopies), flags);
+        device, bindings, computeCopiesPerSet(isSetBuffered, numCopies, m_deallocator->getFramesInFlight()), flags);
 }
 
-std::vector<uint32_t> computeCopiesPerSet(const std::vector<bool>& isSetBuffered, uint32_t numCopies) {
+std::vector<uint32_t> computeCopiesPerSet(
+    const std::vector<bool>& isSetBuffered, uint32_t numCopies, const uint32_t framesInFlight) {
     std::vector<uint32_t> numCopiesPerSet;
     numCopiesPerSet.reserve(isSetBuffered.size());
     for (const bool setBuffered : isSetBuffered) {
-        numCopiesPerSet.push_back(setBuffered ? numCopies * kRendererVirtualFrameCount : numCopies);
+        numCopiesPerSet.push_back(setBuffered ? numCopies * framesInFlight : numCopies);
     }
     return numCopiesPerSet;
 }

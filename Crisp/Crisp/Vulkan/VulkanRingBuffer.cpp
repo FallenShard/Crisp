@@ -12,10 +12,11 @@ VulkanRingBuffer::VulkanRingBuffer(
     const VkBufferUsageFlags2 usageFlags,
     const VkDeviceSize size,
     const void* data)
-    : m_size(size) {
+    : m_size(size)
+    , m_regionCount(device->getResourceDeallocator().getFramesInFlight()) {
     m_buffer = std::make_unique<VulkanBuffer>(
         *device, size, usageFlags | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(*device, size * kRendererVirtualFrameCount);
+    m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(*device, size * m_regionCount);
 
     if (data) {
         updateStagingBuffer({.data = data, .size = size}, 0);
@@ -35,7 +36,7 @@ void VulkanRingBuffer::updateStagingBuffer(const MemoryCopyRegion& region, const
 }
 
 void VulkanRingBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, VkDeviceSize offset) {
-    const uint32_t regionToUpdate = (m_lastUpdatedRegion + 1) % kRendererVirtualFrameCount;
+    const uint32_t regionToUpdate = (m_lastUpdatedRegion + 1) % m_regionCount;
     const VkDeviceSize stagingOffset = regionToUpdate * m_size + offset;
     CRISP_CHECK_LE(stagingOffset + size, m_stagingBuffer->getSize());
     m_stagingBuffer->updateFromHost(data, size, stagingOffset);

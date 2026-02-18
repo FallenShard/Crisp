@@ -41,7 +41,7 @@ VulkanBuffer::VulkanBuffer(
 
 VulkanBuffer::~VulkanBuffer() {
     if (m_allocation) {
-        m_deallocator->deferMemoryDeallocation(kRendererVirtualFrameCount, m_allocation);
+        m_deallocator->deferMemoryDeallocation(m_allocation);
     }
 }
 

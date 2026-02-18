@@ -9,9 +9,11 @@ namespace {
 CRISP_MAKE_LOGGER_ST("VulkanResourceDeallocator");
 } // namespace
 
-VulkanResourceDeallocator::VulkanResourceDeallocator(VkDevice device, VmaAllocator allocator)
+VulkanResourceDeallocator::VulkanResourceDeallocator(
+    const VkDevice device, const VmaAllocator allocator, const uint32_t framesInFlight)
     : m_deviceHandle(device)
-    , m_allocator(allocator) {}
+    , m_allocator(allocator)
+    , m_framesInFlight(framesInFlight) {}
 
 VulkanResourceDeallocator::~VulkanResourceDeallocator() {
     freeAllResources();

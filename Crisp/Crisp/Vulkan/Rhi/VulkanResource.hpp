@@ -2,7 +2,6 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanResourceDeallocator.hpp>
 
@@ -47,10 +46,9 @@ protected:
                 return;
             }
 
-            m_deallocator->deferDestruction(
-                kRendererVirtualFrameCount, m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
-                    destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
-                });
+            m_deallocator->deferDestruction(m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+                destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
+            });
         } else {
             CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
         }

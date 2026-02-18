@@ -61,7 +61,7 @@ protected:
                 ? createDefaultQueueConfiguration(*instance_, *physicalDevice_)
                 : createQueueConfiguration({QueueType::General}, *instance_, *physicalDevice_);
         device_ = std::make_unique<VulkanDevice>(
-            std::move(deviceConfig), *physicalDevice_, *instance_, kRendererVirtualFrameCount);
+            std::move(deviceConfig), *physicalDevice_, *instance_, /*virtualFrameCount=*/1);
     }
 
     static void TearDownTestSuite() {

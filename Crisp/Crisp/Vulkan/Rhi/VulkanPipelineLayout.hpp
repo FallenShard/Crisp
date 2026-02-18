@@ -105,6 +105,7 @@ private:
     std::unique_ptr<VulkanDescriptorSetAllocator> m_setAllocator;
 };
 
-std::vector<uint32_t> computeCopiesPerSet(const std::vector<bool>& isSetBuffered, uint32_t numCopies);
+std::vector<uint32_t> computeCopiesPerSet(
+    const std::vector<bool>& isSetBuffered, uint32_t numCopies, uint32_t framesInFlight);
 
 } // namespace crisp

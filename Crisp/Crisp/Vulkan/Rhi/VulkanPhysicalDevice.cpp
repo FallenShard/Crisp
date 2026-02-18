@@ -417,7 +417,7 @@ bool isPhysicalDeviceSuitable(
     const std::span<const VulkanDeviceFeatureRequest> featureRequests,
     VulkanDeviceFeatureChain& supportedFeatures,
     FlatStringHashSet& supportedExtensions) {
-    const auto isFeatureRequestSupported = [&physicalDevice](const VulkanDeviceFeatureRequest& featureRequest) {
+    const auto isFeatureSupported = [&physicalDevice](const VulkanDeviceFeatureRequest& featureRequest) {
         const bool extensionSupported =
             featureRequest.extensionName.empty() ||
             physicalDevice.getAvailableExtensions().contains(featureRequest.extensionName);
@@ -441,9 +441,7 @@ bool isPhysicalDeviceSuitable(
     }
 
     for (const auto& featureRequest : featureRequests) {
-        const bool isSupported = isFeatureRequestSupported(featureRequest);
-
-        if (isSupported) {
+        if (isFeatureSupported(featureRequest)) {
             featureRequest.appendTo(supportedExtensions, supportedFeatures);
         } else {
             if (featureRequest.isOptional) {

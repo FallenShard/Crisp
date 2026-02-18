@@ -208,7 +208,7 @@ VulkanImage::VulkanImage(
 }
 
 VulkanImage::~VulkanImage() {
-    m_deallocator->deferMemoryDeallocation(kRendererVirtualFrameCount, m_allocation);
+    m_deallocator->deferMemoryDeallocation(m_allocation);
 }
 
 void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range) {

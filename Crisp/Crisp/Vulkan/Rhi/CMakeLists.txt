@@ -104,7 +104,6 @@ add_cpp_header_library(
 target_link_libraries(
     CrispVulkanResource
     INTERFACE Crisp::VulkanDevice
-    INTERFACE Crisp::RendererConfig
 )
 
 add_cpp_static_library(

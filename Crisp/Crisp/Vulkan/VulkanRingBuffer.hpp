@@ -67,6 +67,7 @@ private:
 
     bool m_hasUpdate{false};
     uint32_t m_lastUpdatedRegion{~0u};
+    uint32_t m_regionCount{0};
 };
 
 struct DynamicBufferView {
