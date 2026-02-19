@@ -28,6 +28,10 @@ struct QueueFamilySupport {
     bool isComplete() const {
         return graphics && present && compute && transfer;
     }
+
+    bool isCompleteWithoutPresentation() const {
+        return graphics && compute && transfer;
+    }
 };
 
 class VulkanDeviceFeatureChain {

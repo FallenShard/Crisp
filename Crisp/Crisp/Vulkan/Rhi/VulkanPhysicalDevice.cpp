@@ -71,10 +71,19 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle)
     m_capabilities->features.link(m_capabilities->features.fragmentShadingRateFeatures);
     vkGetPhysicalDeviceFeatures2(m_handle, &m_capabilities->features.features);
 
+    // Get the initial properties to query basic data like API version.
+    vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
+
     append(m_capabilities->properties, m_capabilities->properties11);
-    append(m_capabilities->properties, m_capabilities->properties12);
-    append(m_capabilities->properties, m_capabilities->properties13);
-    append(m_capabilities->properties, m_capabilities->properties14);
+    if (m_capabilities->properties.properties.apiVersion >= VK_MAKE_VERSION(1, 2, 0)) {
+        append(m_capabilities->properties, m_capabilities->properties12);
+    }
+    if (m_capabilities->properties.properties.apiVersion >= VK_MAKE_VERSION(1, 3, 0)) {
+        append(m_capabilities->properties, m_capabilities->properties13);
+    }
+    if (m_capabilities->properties.properties.apiVersion >= VK_MAKE_VERSION(1, 4, 0)) {
+        append(m_capabilities->properties, m_capabilities->properties14);
+    }
     append(m_capabilities->properties, m_capabilities->rayTracingProperties);
     append(m_capabilities->properties, m_capabilities->meshShaderProperties);
     vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
@@ -116,11 +125,11 @@ QueueFamilySupport VulkanPhysicalDevice::queryQueueFamilySupport(const VkSurface
             indices.transfer = i;
         }
 
-        if (queueFamily.queueCount > 0 && supportsPresentation(i, surface)) {
+        if (queueFamily.queueCount > 0 && surface && supportsPresentation(i, surface)) {
             indices.present = i;
         }
 
-        if (indices.isComplete()) {
+        if (indices.isComplete() || (!surface && indices.isCompleteWithoutPresentation())) {
             return indices;
         }
     }
@@ -428,16 +437,25 @@ bool isPhysicalDeviceSuitable(
         return featureRequest.isSupportedFunc ? featureRequest.isSupportedFunc(physicalDevice) : true;
     };
 
-    if (!physicalDevice.queryQueueFamilySupport(instance.getSurface()).isComplete()) {
-        return false;
+    const auto queueFamilySupport = physicalDevice.queryQueueFamilySupport(instance.getSurface());
+    if (instance.getSurface() == VK_NULL_HANDLE) {
+        if (!queueFamilySupport.isCompleteWithoutPresentation()) {
+            return false;
+        }
+    } else {
+        if (!queueFamilySupport.isComplete()) {
+            return false;
+        }
     }
     if (physicalDevice.getProperties().deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
         return false;
     }
 
-    const SurfaceSupport surfaceSupport = physicalDevice.querySurfaceSupport(instance.getSurface());
-    if (surfaceSupport.formats.empty() || surfaceSupport.presentModes.empty()) {
-        return false;
+    if (instance.getSurface() != VK_NULL_HANDLE) {
+        const SurfaceSupport surfaceSupport = physicalDevice.querySurfaceSupport(instance.getSurface());
+        if (surfaceSupport.formats.empty() || surfaceSupport.presentModes.empty()) {
+            return false;
+        }
     }
 
     for (const auto& featureRequest : featureRequests) {
@@ -463,10 +481,6 @@ Result<VulkanPhysicalDevice> selectPhysicalDevice(
     FlatStringHashSet& supportedExtensions) {
     const auto devices = enumeratePhysicalDevices(instance);
 
-    if (instance.getSurface() == VK_NULL_HANDLE) {
-        return VulkanPhysicalDevice(devices.front());
-    }
-
     if (!featureRequests.empty()) {
         const auto logExtensions = [&](this const auto& self, const VulkanDeviceFeatureRequest& request) -> void {
             if (!request.extensionName.empty()) {
@@ -482,11 +496,6 @@ Result<VulkanPhysicalDevice> selectPhysicalDevice(
         }
     }
 
-    // const DeviceRequirements requirements{
-    //     .rayTracing = requestedExtensions.contains(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME),
-    //     .pageableMemory = requestedExtensions.contains(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME),
-    //     .meshShading = requestedExtensions.contains(VK_EXT_MESH_SHADER_EXTENSION_NAME),
-    // };
     for (const auto deviceHandle : devices) {
         VulkanPhysicalDevice physicalDevice(deviceHandle);
 

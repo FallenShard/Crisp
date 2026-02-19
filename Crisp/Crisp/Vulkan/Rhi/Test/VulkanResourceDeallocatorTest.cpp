@@ -22,22 +22,20 @@ TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
 
     auto& deallocator = device_->getResourceDeallocator();
 
-    const auto deferDeallocation = [&deallocator](int32_t framesToLive, VkBuffer buffer) {
-        deallocator.deferDestruction(framesToLive, buffer);
-    };
+    const auto deferDeallocation = [&deallocator](VkBuffer buffer) { deallocator.deferDestruction(buffer); };
 
-    deferDeallocation(1, buffer1);
-    deferDeallocation(2, buffer2);
-    deferDeallocation(4, buffer3);
+    deferDeallocation(buffer1);
+    deferDeallocation(buffer2);
+    deferDeallocation(buffer3);
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
     deallocator.advanceFrame();
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
     deallocator.advanceFrame();
-    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 2);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
     deallocator.advanceFrame();
-    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
     deallocator.advanceFrame();
-    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
     deallocator.advanceFrame();
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
 }

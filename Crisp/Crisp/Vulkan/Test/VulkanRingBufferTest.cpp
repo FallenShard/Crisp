@@ -26,7 +26,7 @@ TEST_F(VulkanRingBufferTest, Updates) {
     for (auto& v : data2) {
         v *= 2;
     }
-    buffer.updateStagingBuffer({.data = data2.data(), .size = data2.size() * sizeof(float)}, 1);
+    buffer.updateStagingBuffer({.data = data2.data(), .size = data2.size() * sizeof(float)}, 0);
     device_->getGeneralQueue().submitAndWait([&buffer](const VkCommandBuffer cmdBuffer) {
         buffer.updateDeviceBuffer(cmdBuffer);
     });
