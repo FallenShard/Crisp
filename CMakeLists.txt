@@ -3,7 +3,6 @@ project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 23)
 
 enable_testing()
 
@@ -30,51 +29,51 @@ function(add_crisp_alias_target targetName)
 endfunction()
 
 # Creates a C++ static library target.
-macro(add_cpp_static_library targetName)
+function(add_cpp_static_library targetName)
     add_library(${targetName} STATIC ${ARGN})
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
-endmacro()
+endfunction()
 
 # Creates a C++ shared library target.
-macro(add_cpp_shared_library targetName)
+function(add_cpp_shared_library targetName)
     add_library(${targetName} SHARED ${ARGN})
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
-endmacro()
+endfunction()
 
 # Creates a C++ header-only library target.
-macro(add_cpp_header_library targetName)
+function(add_cpp_header_library targetName)
     add_library(${targetName} INTERFACE ${ARGN})
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} INTERFACE)
     target_include_directories(${targetName} INTERFACE ${CRISP_INCLUDE_DIR})
-endmacro()
+endfunction()
 
 # Creates a C++ binary target.
-macro(add_cpp_binary targetName)
+function(add_cpp_binary targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
-endmacro()
+endfunction()
 
 # Creates a C++ binary test target.
-macro(add_cpp_test targetName)
+function(add_cpp_test targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE GTest::gmock)
     target_link_libraries(${targetName} PRIVATE GTest::gmock_main)
 
     add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
-endmacro()
+endfunction()
 
 # Creates a C++ binary benchmark target.
-macro(add_cpp_benchmark targetName)
+function(add_cpp_benchmark targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE benchmark::benchmark)
-endmacro()
+endfunction()
 
 # Copies a list of shared libraries into the designated target's directory. TO be used with DLL dependencies.
 function(copy_shared_libs targetName)
