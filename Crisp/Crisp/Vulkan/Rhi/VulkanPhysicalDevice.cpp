@@ -1,6 +1,8 @@
 
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 
+#include <algorithm>
+
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
@@ -60,40 +62,66 @@ void logSelectedDevice(const VulkanPhysicalDevice& physicalDevice) {
 VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle)
     : m_handle(handle)
     , m_capabilities(std::make_unique<VulkanPhysicalDeviceCapabilities>()) {
-    m_capabilities->features.link(m_capabilities->features.features11);
-    m_capabilities->features.link(m_capabilities->features.features12);
-    m_capabilities->features.link(m_capabilities->features.features13);
-    m_capabilities->features.link(m_capabilities->features.features14);
-    m_capabilities->features.link(m_capabilities->features.accelerationStructureFeatures);
-    m_capabilities->features.link(m_capabilities->features.rayTracingFeatures);
-    m_capabilities->features.link(m_capabilities->features.pageableDeviceLocalMemoryFeatures);
-    m_capabilities->features.link(m_capabilities->features.meshShaderFeatures);
-    m_capabilities->features.link(m_capabilities->features.fragmentShadingRateFeatures);
-    vkGetPhysicalDeviceFeatures2(m_handle, &m_capabilities->features.features);
-
-    // Get the initial properties to query basic data like API version.
-    vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
-
-    append(m_capabilities->properties, m_capabilities->properties11);
-    if (m_capabilities->properties.properties.apiVersion >= VK_MAKE_VERSION(1, 2, 0)) {
-        append(m_capabilities->properties, m_capabilities->properties12);
-    }
-    if (m_capabilities->properties.properties.apiVersion >= VK_MAKE_VERSION(1, 3, 0)) {
-        append(m_capabilities->properties, m_capabilities->properties13);
-    }
-    if (m_capabilities->properties.properties.apiVersion >= VK_MAKE_VERSION(1, 4, 0)) {
-        append(m_capabilities->properties, m_capabilities->properties14);
-    }
-    append(m_capabilities->properties, m_capabilities->rayTracingProperties);
-    append(m_capabilities->properties, m_capabilities->meshShaderProperties);
-    vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
-
-    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_capabilities->memoryProperties);
-
     const auto availableExtensions = querySupportedExtensions(m_handle);
     for (const auto& extProp : availableExtensions) {
         m_capabilities->extensions.emplace(extProp.extensionName);
     }
+
+    // Query basic properties first to determine API version before building the feature/property chains.
+    vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
+    const auto apiVersion = m_capabilities->properties.properties.apiVersion;
+
+    // Link versioned feature structs only for API versions the device actually supports.
+    m_capabilities->features.link(m_capabilities->features.features11);
+    if (apiVersion >= VK_MAKE_VERSION(1, 2, 0)) {
+        m_capabilities->features.link(m_capabilities->features.features12);
+    }
+    if (apiVersion >= VK_MAKE_VERSION(1, 3, 0)) {
+        m_capabilities->features.link(m_capabilities->features.features13);
+    }
+    if (apiVersion >= VK_MAKE_VERSION(1, 4, 0)) {
+        m_capabilities->features.link(m_capabilities->features.features14);
+    }
+
+    // Link extension feature structs only when the extension is actually present.
+    // Chaining a feature struct for an unsupported extension is undefined behaviour per the spec.
+    const auto& exts = m_capabilities->extensions;
+    if (exts.contains(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)) {
+        m_capabilities->features.link(m_capabilities->features.accelerationStructureFeatures);
+    }
+    if (exts.contains(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) {
+        m_capabilities->features.link(m_capabilities->features.rayTracingFeatures);
+    }
+    if (exts.contains(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME)) {
+        m_capabilities->features.link(m_capabilities->features.pageableDeviceLocalMemoryFeatures);
+    }
+    if (exts.contains(VK_EXT_MESH_SHADER_EXTENSION_NAME)) {
+        m_capabilities->features.link(m_capabilities->features.meshShaderFeatures);
+    }
+    if (exts.contains(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME)) {
+        m_capabilities->features.link(m_capabilities->features.fragmentShadingRateFeatures);
+    }
+    vkGetPhysicalDeviceFeatures2(m_handle, &m_capabilities->features.features);
+
+    append(m_capabilities->properties, m_capabilities->properties11);
+    if (apiVersion >= VK_MAKE_VERSION(1, 2, 0)) {
+        append(m_capabilities->properties, m_capabilities->properties12);
+    }
+    if (apiVersion >= VK_MAKE_VERSION(1, 3, 0)) {
+        append(m_capabilities->properties, m_capabilities->properties13);
+    }
+    if (apiVersion >= VK_MAKE_VERSION(1, 4, 0)) {
+        append(m_capabilities->properties, m_capabilities->properties14);
+    }
+    if (exts.contains(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) {
+        append(m_capabilities->properties, m_capabilities->rayTracingProperties);
+    }
+    if (exts.contains(VK_EXT_MESH_SHADER_EXTENSION_NAME)) {
+        append(m_capabilities->properties, m_capabilities->meshShaderProperties);
+    }
+    vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
+
+    vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_capabilities->memoryProperties);
 }
 
 bool VulkanPhysicalDevice::supportsPresentation(const uint32_t queueFamilyIndex, const VkSurfaceKHR surface) const {
@@ -247,17 +275,6 @@ Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevic
     return findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 }
 
-bool VulkanPhysicalDevice::supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const {
-    const auto availableExtensions = querySupportedExtensions(m_handle);
-
-    FlatHashSet<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-    for (const auto& ext : availableExtensions) {
-        requiredExtensions.erase(ext.extensionName); // NOLINT
-    }
-
-    return requiredExtensions.empty();
-}
-
 Result<VkFormat> VulkanPhysicalDevice::findSupportedFormat(
     const std::vector<VkFormat>& candidates, const VkImageTiling tiling, const VkFormatFeatureFlags features) const {
     for (const auto& format : candidates) {
@@ -336,13 +353,9 @@ bool VulkanDeviceFeatureRequest::isSupported(const VulkanPhysicalDevice& physica
         return false;
     }
 
-    for (const auto& dep : dependencies) {
-        if (!dep.isSupported(physicalDevice)) {
-            return false;
-        }
-    }
-
-    return true;
+    return std::ranges::all_of(dependencies, [&physicalDevice](const auto& dep) {
+        return dep.isSupported(physicalDevice);
+    });
 }
 
 std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {

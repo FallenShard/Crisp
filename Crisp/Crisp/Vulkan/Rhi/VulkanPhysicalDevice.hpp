@@ -163,8 +163,6 @@ public:
     const FlatStringHashSet& getAvailableExtensions() const;
 
 private:
-    bool supportsDeviceExtensions(const std::vector<std::string>& deviceExtensions) const;
-
     VkPhysicalDevice m_handle{VK_NULL_HANDLE}; // Implicitly cleaned up with VkInstance.
 
     std::unique_ptr<VulkanPhysicalDeviceCapabilities> m_capabilities;
