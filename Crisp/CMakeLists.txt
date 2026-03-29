@@ -26,10 +26,10 @@ add_cpp_binary(
 )
 set_target_properties(CrispMain
     PROPERTIES
-    LINK_FLAGS "/INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF"
     COMPILE_PDB_NAME CrispMain
     COMPILE_PDB_OUTPUT_DIR ${CMAKE_BINARY_DIR}
 )
+target_link_options(CrispMain PRIVATE /INCREMENTAL:NO /DEBUG /OPT:REF /OPT:ICF)
 target_link_libraries(
     CrispMain
     PRIVATE Crisp::Application
