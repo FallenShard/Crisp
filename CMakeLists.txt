@@ -178,16 +178,19 @@ FetchContent_Declare(MPMCQueue
 )
 FetchContent_MakeAvailable(MPMCQueue)
 
-# TODO: Configure to be dynamic.
+# oneTBB must be built as SHARED (it provides TBB::tbb as an import target with a DLL).
+# Save and restore BUILD_SHARED_LIBS to avoid affecting any other FetchContent targets.
 FetchContent_Declare(onetbb
     GIT_REPOSITORY "https://github.com/oneapi-src/oneTBB.git"
     GIT_TAG "v2022.2.0"
     GIT_SHALLOW TRUE
 )
 set(TBB_TEST OFF CACHE BOOL "" FORCE)
+set(_saved_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 set(BUILD_SHARED_LIBS ON)
 FetchContent_MakeAvailable(onetbb)
-set(BUILD_SHARED_LIBS OFF)
+set(BUILD_SHARED_LIBS ${_saved_BUILD_SHARED_LIBS})
+unset(_saved_BUILD_SHARED_LIBS)
 
 FetchContent_Declare(embree
     GIT_REPOSITORY "https://github.com/embree/embree.git"
