@@ -53,8 +53,11 @@ function(add_cpp_binary targetName)
     enable_default_cpp_compile_options(${targetName} PUBLIC)
 endfunction()
 
-# Creates a C++ binary test target.
+# Creates a C++ binary test target. No-op when CRISP_BUILD_TESTS is OFF.
 function(add_cpp_test targetName)
+    if(NOT CRISP_BUILD_TESTS)
+        return()
+    endif()
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE GTest::gmock)
@@ -63,8 +66,11 @@ function(add_cpp_test targetName)
     add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
 endfunction()
 
-# Creates a C++ binary benchmark target.
+# Creates a C++ binary benchmark target. No-op when CRISP_BUILD_BENCHMARKS is OFF.
 function(add_cpp_benchmark targetName)
+    if(NOT CRISP_BUILD_BENCHMARKS)
+        return()
+    endif()
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE benchmark::benchmark)

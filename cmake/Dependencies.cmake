@@ -49,22 +49,26 @@ set(SPDLOG_FMT_EXTERNAL_HO ON  CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_EXAMPLE   OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
-FetchContent_Declare(googletest
-    GIT_REPOSITORY "https://github.com/google/googletest.git"
-    GIT_TAG "v1.17.0"
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(googletest)
+if(CRISP_BUILD_TESTS)
+    FetchContent_Declare(googletest
+        GIT_REPOSITORY "https://github.com/google/googletest.git"
+        GIT_TAG "v1.17.0"
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(googletest)
+endif()
 
-FetchContent_Declare(benchmark
-    GIT_REPOSITORY "https://github.com/google/benchmark.git"
-    GIT_TAG "v1.9.4"
-    GIT_SHALLOW TRUE
-)
-set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
-set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-set(BENCHMARK_INSTALL_DOCS   OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(benchmark)
+if(CRISP_BUILD_BENCHMARKS)
+    FetchContent_Declare(benchmark
+        GIT_REPOSITORY "https://github.com/google/benchmark.git"
+        GIT_TAG "v1.9.4"
+        GIT_SHALLOW TRUE
+    )
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_INSTALL_DOCS   OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(benchmark)
+endif()
 
 FetchContent_Declare(tinygltf
     GIT_REPOSITORY "https://github.com/syoyo/tinygltf.git"

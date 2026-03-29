@@ -3,7 +3,12 @@ project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-enable_testing()
+option(CRISP_BUILD_TESTS      "Build Crisp unit tests"  ON)
+option(CRISP_BUILD_BENCHMARKS "Build Crisp benchmarks"  ON)
+
+if(CRISP_BUILD_TESTS)
+    enable_testing()
+endif()
 
 include(cmake/TargetHelpers.cmake)
 include(cmake/Dependencies.cmake)
