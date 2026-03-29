@@ -8,14 +8,17 @@ enable_testing()
 
 # Enables C++23 and high amount of warnings for a C++ target.
 function(enable_default_cpp_compile_options targetName optionType)
-    # set_target_properties(${targetName} PROPERTIES CXX_STANDARD 23 LINKER_LANGUAGE CXX)
     set_target_properties(${targetName} PROPERTIES LANGUAGE CXX LINKER_LANGUAGE CXX)
+    # Propagate C++ standard requirement to consumers, but keep compiler flags private.
+    # INTERFACE targets (header-only libs) skip flags entirely since they have no sources.
     target_compile_features(${targetName} ${optionType} cxx_std_23)
 
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
-        target_compile_options(${targetName} ${optionType} /MP /JMC /Zi /W4 /Zc:preprocessor)
-    else()
-        target_compile_options(${targetName} ${optionType} -W -Wall)
+    if(NOT optionType STREQUAL "INTERFACE")
+        if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
+            target_compile_options(${targetName} PRIVATE /MP /JMC /Zi /W4 /Zc:preprocessor)
+        else()
+            target_compile_options(${targetName} PRIVATE -W -Wall)
+        endif()
     endif()
 endfunction()
 
