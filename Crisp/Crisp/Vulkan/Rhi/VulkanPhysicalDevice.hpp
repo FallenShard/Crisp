@@ -182,6 +182,7 @@ struct VulkanDeviceFeatureRequest {
     std::vector<VulkanDeviceFeatureRequest> dependencies;
 
     void appendTo(FlatStringHashSet& extensionsToEnable, VulkanDeviceFeatureChain& featureChainToEnable) const;
+    bool isSupported(const VulkanPhysicalDevice& physicalDevice) const;
 };
 
 std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests();

@@ -324,6 +324,27 @@ void VulkanDeviceFeatureRequest::appendTo(
     }
 }
 
+bool VulkanDeviceFeatureRequest::isSupported(const VulkanPhysicalDevice& physicalDevice) const {
+    const bool extensionSupported =
+        extensionName.empty() || physicalDevice.getAvailableExtensions().contains(extensionName);
+    if (!extensionSupported) {
+        return false;
+    }
+
+    const bool featureSupported = isSupportedFunc(physicalDevice);
+    if (!featureSupported) {
+        return false;
+    }
+
+    for (const auto& dep : dependencies) {
+        if (!dep.isSupported(physicalDevice)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
     return {
         VulkanDeviceFeatureRequest{
@@ -426,16 +447,6 @@ bool isPhysicalDeviceSuitable(
     const std::span<const VulkanDeviceFeatureRequest> featureRequests,
     VulkanDeviceFeatureChain& supportedFeatures,
     FlatStringHashSet& supportedExtensions) {
-    const auto isFeatureSupported = [&physicalDevice](const VulkanDeviceFeatureRequest& featureRequest) {
-        const bool extensionSupported =
-            featureRequest.extensionName.empty() ||
-            physicalDevice.getAvailableExtensions().contains(featureRequest.extensionName);
-        if (!extensionSupported) {
-            return false;
-        }
-
-        return featureRequest.isSupportedFunc ? featureRequest.isSupportedFunc(physicalDevice) : true;
-    };
 
     const auto queueFamilySupport = physicalDevice.queryQueueFamilySupport(instance.getSurface());
     if (instance.getSurface() == VK_NULL_HANDLE) {
@@ -459,14 +470,14 @@ bool isPhysicalDeviceSuitable(
     }
 
     for (const auto& featureRequest : featureRequests) {
-        if (isFeatureSupported(featureRequest)) {
+        if (featureRequest.isSupported(physicalDevice)) {
             featureRequest.appendTo(supportedExtensions, supportedFeatures);
         } else {
             if (featureRequest.isOptional) {
                 spdlog::warn("Optional extension {} is not supported.", featureRequest.extensionName);
             } else {
                 spdlog::error("Required extension {} is not supported.", featureRequest.extensionName);
-                break; // Break out of the loop if a required feature is not supported.
+                return false;
             }
         }
     }
