@@ -166,7 +166,7 @@ VkSemaphore VulkanDevice::createSemaphore() const {
     VkSemaphoreCreateInfo semInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 
     VkSemaphore semaphore{VK_NULL_HANDLE};
-    vkCreateSemaphore(m_handle, &semInfo, nullptr, &semaphore);
+    VK_FATAL(vkCreateSemaphore(m_handle, &semInfo, nullptr, &semaphore));
     return semaphore;
 }
 
@@ -175,7 +175,7 @@ VkFence VulkanDevice::createFence(VkFenceCreateFlags flags) const {
     fenceInfo.flags = flags;
 
     VkFence fence{VK_NULL_HANDLE};
-    vkCreateFence(m_handle, &fenceInfo, nullptr, &fence);
+    VK_FATAL(vkCreateFence(m_handle, &fenceInfo, nullptr, &fence));
     return fence;
 }
 

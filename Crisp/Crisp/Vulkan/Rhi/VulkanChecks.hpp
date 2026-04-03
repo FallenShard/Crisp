@@ -23,11 +23,12 @@ inline VkResult doVkAssert(const VkResult result, const LocationFormatString& fo
 }
 } // namespace crisp::detail
 
+// Always-on check — use for calls where failure is unrecoverable (allocation, submission, object creation).
+#define VK_FATAL(expr, ...) crisp::detail::doVkAssert(expr __VA_OPT__(, fmt::format(__VA_ARGS__)))
+
+// Debug-only check — use for hot-path calls where release overhead is undesirable.
 #ifdef _DEBUG
-// clang-format off
-// #define VK_CHECK(expr, ...) expr
 #define VK_CHECK(expr, ...) crisp::detail::doVkAssert(expr __VA_OPT__(, fmt::format(__VA_ARGS__)))
-// clang-format on
 #else
 #define VK_CHECK(expr, ...) expr
 #endif

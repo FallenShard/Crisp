@@ -1,6 +1,7 @@
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 
 namespace crisp {
@@ -73,7 +74,7 @@ std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLay
             createInfo.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
         }
 
-        vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &setLayouts[i]);
+        VK_FATAL(vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &setLayouts[i]));
     }
 
     return setLayouts;

@@ -1,6 +1,7 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 namespace {
@@ -297,7 +298,7 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
     pipelineInfo.basePipelineIndex = -1;
 
     VkPipeline pipeline{VK_NULL_HANDLE};
-    vkCreateGraphicsPipelines(device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline);
+    VK_FATAL(vkCreateGraphicsPipelines(device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline));
     return std::make_unique<VulkanPipeline>(
         device,
         pipeline,

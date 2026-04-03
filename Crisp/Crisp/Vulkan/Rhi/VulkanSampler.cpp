@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+
 namespace crisp {
 VulkanSampler::VulkanSampler(
     const VulkanDevice& device,
@@ -25,7 +27,7 @@ VulkanSampler::VulkanSampler(
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = maxLod;
-    vkCreateSampler(device.getHandle(), &samplerInfo, nullptr, &m_handle);
+    VK_FATAL(vkCreateSampler(device.getHandle(), &samplerInfo, nullptr, &m_handle));
 }
 
 std::unique_ptr<VulkanSampler> createLinearClampSampler(

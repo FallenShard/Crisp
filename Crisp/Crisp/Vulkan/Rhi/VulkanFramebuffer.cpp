@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+
 namespace crisp {
 VulkanFramebuffer::VulkanFramebuffer(
     const VulkanDevice& device,
@@ -18,7 +20,7 @@ VulkanFramebuffer::VulkanFramebuffer(
     createInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
     createInfo.pAttachments = m_attachments.data();
     createInfo.flags = flags;
-    vkCreateFramebuffer(device.getHandle(), &createInfo, nullptr, &m_handle);
+    VK_FATAL(vkCreateFramebuffer(device.getHandle(), &createInfo, nullptr, &m_handle));
 }
 
 std::unique_ptr<VulkanFramebuffer> createFramebuffer(

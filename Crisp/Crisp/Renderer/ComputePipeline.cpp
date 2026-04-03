@@ -1,5 +1,7 @@
 #include <Crisp/Renderer/ComputePipeline.hpp>
 
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -46,7 +48,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
     VkPipeline pipeline{VK_NULL_HANDLE};
-    vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+    VK_FATAL(vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline));
     workGroupSizes[pipeline] = workGroupSize;
 
     return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);

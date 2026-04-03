@@ -38,14 +38,14 @@ void VulkanQueue::submit(
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    VK_CHECK(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
+    VK_FATAL(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
 }
 
 void VulkanQueue::submit(const VkCommandBuffer cmdBuffer, const VkFence fence) const {
     VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &cmdBuffer;
-    VK_CHECK(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
+    VK_FATAL(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
 }
 
 VkResult VulkanQueue::present(
@@ -91,11 +91,11 @@ VulkanQueue::ExecutionInfo VulkanQueue::createExecutionInfo() const {
     cmdBufferAllocInfo.commandBufferCount = 1;
 
     VkCommandBuffer cmdBuffer{VK_NULL_HANDLE};
-    vkAllocateCommandBuffers(m_deviceHandle, &cmdBufferAllocInfo, &cmdBuffer);
+    VK_FATAL(vkAllocateCommandBuffers(m_deviceHandle, &cmdBufferAllocInfo, &cmdBuffer));
 
     VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+    VK_FATAL(vkBeginCommandBuffer(cmdBuffer, &beginInfo));
     return {
         .commandPool = cmdPool,
         .commandBuffer = cmdBuffer,
@@ -103,9 +103,9 @@ VulkanQueue::ExecutionInfo VulkanQueue::createExecutionInfo() const {
 }
 
 void VulkanQueue::submitAndWait(const ExecutionInfo& executionInfo) const {
-    vkEndCommandBuffer(executionInfo.commandBuffer);
+    VK_FATAL(vkEndCommandBuffer(executionInfo.commandBuffer));
     submit(executionInfo.commandBuffer);
-    vkQueueWaitIdle(m_handle);
+    VK_FATAL(vkQueueWaitIdle(m_handle));
 
     vkFreeCommandBuffers(m_deviceHandle, executionInfo.commandPool, 1, &executionInfo.commandBuffer);
     vkResetCommandPool(m_deviceHandle, executionInfo.commandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);

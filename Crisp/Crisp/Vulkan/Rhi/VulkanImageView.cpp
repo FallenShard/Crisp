@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+
 namespace crisp {
 VulkanImageView::VulkanImageView(
     const VulkanDevice& device,
@@ -28,7 +30,7 @@ VulkanImageView::VulkanImageView(
 
     m_subresourceRange = viewInfo.subresourceRange;
 
-    vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_handle);
+    VK_FATAL(vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_handle));
 }
 
 VkDescriptorImageInfo VulkanImageView::getDescriptorInfo(const VulkanSampler* sampler, VkImageLayout layout) const {
