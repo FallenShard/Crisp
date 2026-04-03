@@ -261,7 +261,7 @@ void VulkanDevice::loadPipelineCache(std::filesystem::path&& cachePath) {
 }
 
 VkPipelineCache VulkanDevice::getPipelineCacheHandle() const {
-    return m_pipelineCache ? VK_NULL_HANDLE : m_pipelineCache->getHandle();
+    return m_pipelineCache ? m_pipelineCache->getHandle() : VK_NULL_HANDLE;
 }
 
 VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, const VulkanDeviceConfiguration& config) {
