@@ -32,6 +32,15 @@ const char* getDeviceTypeString(const VkPhysicalDeviceType type) {
     }
 }
 
+void logRequestedExtensions(const VulkanDeviceFeatureRequest& request) {
+    if (!request.extensionName.empty()) {
+        CRISP_LOGI(" - [{}] {}", request.isOptional ? "Optional" : "Required", request.extensionName);
+    }
+    for (const auto& dep : request.dependencies) {
+        logRequestedExtensions(dep);
+    }
+}
+
 void logSelectedDevice(const VulkanPhysicalDevice& physicalDevice) {
     const auto apiVersion = physicalDevice.getProperties().apiVersion;
     CRISP_LOGI(
@@ -53,7 +62,7 @@ void logSelectedDevice(const VulkanPhysicalDevice& physicalDevice) {
             (driverVersion >> 6) & 0xFF,
             driverVersion & 0x3F);
     } else {
-        CRISP_LOGI("  Driver version: {}", driverVersion);
+        CRISP_LOGI(" - Driver version: {}", driverVersion);
     }
 }
 
@@ -263,7 +272,7 @@ Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(const VkDevice
 Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevice device) const {
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = 1;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VkBuffer dummyBuffer(VK_NULL_HANDLE);
@@ -313,7 +322,7 @@ const FlatStringHashSet& VulkanPhysicalDevice::getAvailableExtensions() const {
 std::vector<VkPhysicalDevice> enumeratePhysicalDevices(const VulkanInstance& instance) {
     uint32_t deviceCount = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, nullptr));
-    CRISP_CHECK_GE(deviceCount, 0, "Vulkan found no physical devices.");
+    CRISP_CHECK_GT(deviceCount, 0, "Vulkan found no physical devices.");
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, devices.data()));
@@ -443,12 +452,15 @@ void addMeshShadingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequ
             .addFeatureFunc =
                 [](VulkanDeviceFeatureChain& featureChain) {
                     featureChain.link(featureChain.meshShaderFeatures);
-                    featureChain.link(featureChain.fragmentShadingRateFeatures);
                 },
             .dependencies =
                 {
                     VulkanDeviceFeatureRequest{
                         .extensionName = VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME,
+                        .addFeatureFunc =
+                            [](VulkanDeviceFeatureChain& featureChain) {
+                                featureChain.link(featureChain.fragmentShadingRateFeatures);
+                            },
                     },
                 },
         });
@@ -506,17 +518,9 @@ Result<VulkanPhysicalDevice> selectPhysicalDevice(
     const auto devices = enumeratePhysicalDevices(instance);
 
     if (!featureRequests.empty()) {
-        const auto logExtensions = [&](this const auto& self, const VulkanDeviceFeatureRequest& request) -> void {
-            if (!request.extensionName.empty()) {
-                CRISP_LOGI(" - [{}] {}", request.isOptional ? "Optional" : "Required", request.extensionName);
-            }
-            for (const auto& dep : request.dependencies) {
-                self(dep);
-            }
-        };
         CRISP_LOGI("Requesting {} device features with the following extensions:", featureRequests.size());
         for (const auto& featureRequest : featureRequests) {
-            logExtensions(featureRequest);
+            logRequestedExtensions(featureRequest);
         }
     }
 
