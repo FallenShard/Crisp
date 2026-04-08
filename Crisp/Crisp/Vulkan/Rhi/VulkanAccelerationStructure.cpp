@@ -98,20 +98,15 @@ void VulkanAccelerationStructure::build(const VkCommandBuffer cmdBuffer) {
             0,
             m_instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
             m_instances.data());
-        VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(
-            cmdBuffer,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-            0,
-            1,
-            &barrier,
-            0,
-            nullptr,
-            0,
-            nullptr);
+        VkMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        barrier.dstAccessMask = VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+        VkDependencyInfo info{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+        info.memoryBarrierCount = 1;
+        info.pMemoryBarriers = &barrier;
+        vkCmdPipelineBarrier2(cmdBuffer, &info);
     }
     std::vector<VkAccelerationStructureBuildRangeInfoKHR*> rangeInfos{&m_buildRange};
     vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &m_buildInfo, rangeInfos.data());

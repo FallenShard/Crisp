@@ -103,16 +103,14 @@ void addToRenderGraph(
             // Before culling can start, zero out the light index count buffer
             glm::uvec4 zero(0);
 
-            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.buffer = lightCountBuffer->getHandle();
-            barrier.offset = frameIndex * sizeof(zero);
-            barrier.size = sizeof(zero);
-
-            vkCmdUpdateBuffer(cmdBuffer.getHandle(), barrier.buffer, barrier.offset, barrier.size, &zero);
+            const VkDeviceSize offset = frameIndex * sizeof(zero);
+            vkCmdUpdateBuffer(
+                cmdBuffer.getHandle(), lightCountBuffer->getHandle(), offset, sizeof(zero), &zero);
             cmdBuffer.insertBufferMemoryBarrier(
-                barrier, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                lightCountBuffer->getHandle(),
+                offset,
+                sizeof(zero),
+                kTransferWrite >> (kComputeStorageRead | kComputeStorageWrite));
         };
 
     // m_renderGraph->addDependency(DepthPrePass, LightCullingPass, 0);
@@ -121,16 +119,8 @@ void addToRenderGraph(
         "MainPass",
         [lightIndexBuffer = lightClustering.m_lightIndexListBuffer.get()](
             const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            auto info = lightIndexBuffer->getDescriptorInfo();
-            barrier.buffer = info.buffer;
-            barrier.offset = info.offset;
-            barrier.size = info.range;
-
             cmdBuffer.insertBufferMemoryBarrier(
-                barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                lightIndexBuffer->getDescriptorInfo(), kComputeWrite >> kFragmentRead);
         });
 }
 

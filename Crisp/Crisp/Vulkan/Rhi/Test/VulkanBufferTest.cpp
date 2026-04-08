@@ -69,19 +69,11 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            deviceBuffer.createDescriptorInfo(),
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_READ_BIT);
+            deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            downloadBuffer.createDescriptorInfo(),
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_HOST_BIT,
-            VK_ACCESS_HOST_READ_BIT);
+            downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
 
     const auto* ptr = downloadBuffer.getHostVisibleData<float>();
@@ -124,18 +116,15 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     // Copy and sync
     deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
     cmdBuffer.insertBufferMemoryBarrier(
-        deviceBuffer.createDescriptorInfo(),
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_READ_BIT);
+        deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
     // Unassigned queue family for now, until first command
     StagingVulkanBuffer downloadBuffer(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
     // Transfer ownership to the transfer queue FOR DMA
     const VulkanQueue& transferQueue = device->getTransferQueue();
-    cmdBuffer.transferOwnership(deviceBuffer.getHandle(), generalQueue.getFamilyIndex(), transferQueue.getFamilyIndex());
+    cmdBuffer.transferOwnership(
+        deviceBuffer.getHandle(), generalQueue.getFamilyIndex(), transferQueue.getFamilyIndex(), kTransferWrite >> kTransferRead);
 
     // Create the transfer execution context
     const VulkanCommandPool transferPool(transferQueue.createCommandPool(), device->getResourceDeallocator());
@@ -145,23 +134,15 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     downloadBuffer.copyFrom(transferCmdBuffer.getHandle(), deviceBuffer);
     transferCmdBuffer.insertBufferMemoryBarrier(
-        downloadBuffer.createDescriptorInfo(),
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_HOST_BIT,
-        VK_ACCESS_HOST_READ_BIT);
+        downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     transferCmdBuffer.transferOwnership(
-        deviceBuffer.getHandle(), transferQueue.getFamilyIndex(), generalQueue.getFamilyIndex());
+        deviceBuffer.getHandle(), transferQueue.getFamilyIndex(), generalQueue.getFamilyIndex(), kTransferWrite >> kTransferRead);
     transferCmdBuffer.end();
 
     StagingVulkanBuffer downloadBuffer2(*device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
     cmdBuffer.insertBufferMemoryBarrier(
-        downloadBuffer2.createDescriptorInfo(),
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_HOST_BIT,
-        VK_ACCESS_HOST_READ_BIT);
+        downloadBuffer2.createDescriptorInfo(), kTransferWrite >> kHostRead);
 
     cmdBuffer.end();
 

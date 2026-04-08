@@ -111,11 +111,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "compute-cell-count",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             cmdBuffer.insertBufferMemoryBarrier(
-                m_cellCountBuffer->createDescriptorInfo(),
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_READ_BIT);
+                m_cellCountBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
         });
 
     // Compute particle count per cell
@@ -147,11 +143,14 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "compute-cell-count",
         "scan",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            std::array<VkBufferMemoryBarrier, 2> barriers;
+            constexpr auto scope = kComputeWrite >> kComputeRead;
+            std::array<VkBufferMemoryBarrier2, 2> barriers{};
             for (auto& barrier : barriers) {
-                barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+                barrier.srcStageMask = scope.srcStage;
+                barrier.srcAccessMask = scope.srcAccess;
+                barrier.dstStageMask = scope.dstStage;
+                barrier.dstAccessMask = scope.dstAccess;
                 barrier.size = m_gridParams.numCells * sizeof(uint32_t);
                 barrier.offset = m_currentSection * m_gridParams.numCells * sizeof(uint32_t);
             }
@@ -160,8 +159,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_numParticles * sizeof(uint32_t);
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(uint32_t);
             barriers[1].buffer = m_cellIdBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(
-                barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            cmdBuffer.insertBufferMemoryBarriers(barriers);
         });
 
     // Scan for individual blocks
@@ -189,11 +187,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "scan-block",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             cmdBuffer.insertBufferMemoryBarrier(
-                m_blockSumBuffer->createDescriptorInfo(),
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_READ_BIT);
+                m_blockSumBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
         });
 
     // Scan for the block sums
@@ -222,18 +216,17 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "scan-block",
         "scan-combine",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            std::array<VkBufferMemoryBarrier, 1> barriers;
-            for (auto& barrier : barriers) {
-                barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                barrier.size = m_blockSumRegionSize;
-                barrier.offset = m_currentSection * m_blockSumRegionSize;
-            }
+            constexpr auto scope = kComputeWrite >> kComputeRead;
+            std::array<VkBufferMemoryBarrier2, 1> barriers{};
+            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+            barriers[0].srcStageMask = scope.srcStage;
+            barriers[0].srcAccessMask = scope.srcAccess;
+            barriers[0].dstStageMask = scope.dstStage;
+            barriers[0].dstAccessMask = scope.dstAccess;
             barriers[0].buffer = m_blockSumBuffer->getHandle();
-
-            cmdBuffer.insertBufferMemoryBarriers(
-                barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            barriers[0].size = m_blockSumRegionSize;
+            barriers[0].offset = m_currentSection * m_blockSumRegionSize;
+            cmdBuffer.insertBufferMemoryBarriers(barriers);
         });
 
     // Add block prefix sum to intra-block prefix sums
@@ -259,11 +252,14 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "scan-combine",
         "reindex", //"reindex",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            std::array<VkBufferMemoryBarrier, 2> barriers;
+            constexpr auto scope = kComputeWrite >> kComputeRead;
+            std::array<VkBufferMemoryBarrier2, 2> barriers{};
             for (auto& barrier : barriers) {
-                barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+                barrier.srcStageMask = scope.srcStage;
+                barrier.srcAccessMask = scope.srcAccess;
+                barrier.dstStageMask = scope.dstStage;
+                barrier.dstAccessMask = scope.dstAccess;
                 barrier.size = m_gridParams.numCells * sizeof(uint32_t);
                 barrier.offset = m_currentSection * m_gridParams.numCells * sizeof(uint32_t);
             }
@@ -272,9 +268,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_blockSumRegionSize;
             barriers[1].offset = m_currentSection * m_blockSumRegionSize;
             barriers[1].buffer = m_blockSumBuffer->getHandle();
-
-            cmdBuffer.insertBufferMemoryBarriers(
-                barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            cmdBuffer.insertBufferMemoryBarriers(barriers);
         });
 
     auto& reindex = renderGraph->addComputePass("reindex");
@@ -310,11 +304,14 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "reindex",
         "compute-density-and-pressure",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            std::array<VkBufferMemoryBarrier, 2> barriers;
+            constexpr auto scope = kComputeWrite >> kComputeRead;
+            std::array<VkBufferMemoryBarrier2, 2> barriers{};
             for (auto& barrier : barriers) {
-                barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+                barrier.srcStageMask = scope.srcStage;
+                barrier.srcAccessMask = scope.srcAccess;
+                barrier.dstStageMask = scope.dstStage;
+                barrier.dstAccessMask = scope.dstAccess;
                 barrier.size = m_numParticles * sizeof(uint32_t);
                 barrier.offset = m_currentSection * m_numParticles * sizeof(uint32_t);
             }
@@ -322,8 +319,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_numParticles * sizeof(glm::vec4);
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
             barriers[1].buffer = m_reorderedPositionBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(
-                barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            cmdBuffer.insertBufferMemoryBarriers(barriers);
         });
 
     auto& computePressure = renderGraph->addComputePass("compute-density-and-pressure");
@@ -361,18 +357,20 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "compute-density-and-pressure",
         "compute-forces",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            std::array<VkBufferMemoryBarrier, 2> barriers;
+            constexpr auto scope = kComputeWrite >> kComputeRead;
+            std::array<VkBufferMemoryBarrier2, 2> barriers{};
             for (auto& barrier : barriers) {
-                barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+                barrier.srcStageMask = scope.srcStage;
+                barrier.srcAccessMask = scope.srcAccess;
+                barrier.dstStageMask = scope.dstStage;
+                barrier.dstAccessMask = scope.dstAccess;
                 barrier.size = m_numParticles * sizeof(float);
                 barrier.offset = m_currentSection * m_numParticles * sizeof(float);
             }
             barriers[0].buffer = m_densityBuffer->getHandle();
             barriers[1].buffer = m_pressureBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(
-                barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+            cmdBuffer.insertBufferMemoryBarriers(barriers);
         });
 
     auto& computeForces = renderGraph->addComputePass("compute-forces");
@@ -419,11 +417,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         [this,
          vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
             cmdBuffer.insertBufferMemoryBarrier(
-                m_forcesBuffer->createDescriptorInfo(),
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_ACCESS_SHADER_READ_BIT);
+                m_forcesBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
         });
 
     auto& integrateNode = renderGraph->addComputePass("integrate");
@@ -477,18 +471,20 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "mainPass",
         [this,
          vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            std::array<VkBufferMemoryBarrier, 2> barriers;
+            constexpr auto scope = kComputeWrite >> kVertexInputRead;
+            std::array<VkBufferMemoryBarrier2, 2> barriers{};
             for (auto& barrier : barriers) {
-                barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-                barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+                barrier.srcStageMask = scope.srcStage;
+                barrier.srcAccessMask = scope.srcAccess;
+                barrier.dstStageMask = scope.dstStage;
+                barrier.dstAccessMask = scope.dstAccess;
                 barrier.size = vertexBufferSize;
                 barrier.offset = m_currentSection * vertexBufferSize;
             }
             barriers[0].buffer = m_vertexBuffer->getHandle();
             barriers[1].buffer = m_colorBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(
-                barriers, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+            cmdBuffer.insertBufferMemoryBarriers(barriers);
         });
 }
 

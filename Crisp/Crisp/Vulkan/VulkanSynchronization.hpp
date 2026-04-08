@@ -162,4 +162,24 @@ inline constexpr VulkanSynchronizationStage kHostWrite = {
     .access = VK_ACCESS_2_HOST_WRITE_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kHostRead = {
+    .stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+    .access = VK_ACCESS_2_HOST_READ_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kComputeStorageWrite = {
+    .stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+    .access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kComputeStorageRead = {
+    .stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+    .access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+};
+
+inline constexpr VulkanSynchronizationStage kAccelerationStructureWrite = {
+    .stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+    .access = VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+};
+
 } // namespace crisp

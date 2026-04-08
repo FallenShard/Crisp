@@ -284,15 +284,17 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
         SkyViewLutPass,
         [tex = &imageCache.getImage("multiScatTex"),
          views](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
-            VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            const auto scope = kComputeWrite >> kFragmentRead;
+            VkImageMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+            barrier.srcStageMask = scope.srcStage;
+            barrier.srcAccessMask = scope.srcAccess;
+            barrier.dstStageMask = scope.dstStage;
+            barrier.dstAccessMask = scope.dstAccess;
             barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
             barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
             barrier.image = tex->getHandle();
             barrier.subresourceRange = views.at(frameIndex)->getSubresourceRange();
-            cmdBuffer.insertImageMemoryBarrier(
-                barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            cmdBuffer.insertImageMemoryBarrier(barrier);
         });
 
     const auto createPostProcessingRenderNode =

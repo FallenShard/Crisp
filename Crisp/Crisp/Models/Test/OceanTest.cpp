@@ -67,19 +67,11 @@ TEST_F(OceanTest, VulkanBuffer) {
 
         deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            deviceBuffer.createDescriptorInfo(),
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_READ_BIT);
+            deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
         downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
         cmdBuffer.insertBufferMemoryBarrier(
-            downloadBuffer.createDescriptorInfo(),
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_HOST_BIT,
-            VK_ACCESS_HOST_READ_BIT);
+            downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
 
     const float* ptr = downloadBuffer.getHostVisibleData<float>();

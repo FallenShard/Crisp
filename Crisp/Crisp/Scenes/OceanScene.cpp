@@ -60,10 +60,13 @@ struct GeometryPassData {
     RenderGraphResourceHandle buffer;
 };
 
-VkImageMemoryBarrier createImageMemoryReadBarrier(const VkImage imageHandle, const uint32_t layerIdx) {
-    VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+VkImageMemoryBarrier2 createImageMemoryReadBarrier(
+    const VkImage imageHandle, const uint32_t layerIdx, const VulkanSynchronizationScope& scope) {
+    VkImageMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+    barrier.srcStageMask = scope.srcStage;
+    barrier.srcAccessMask = scope.srcAccess;
+    barrier.dstStageMask = scope.dstStage;
+    barrier.dstAccessMask = scope.dstAccess;
     barrier.image = imageHandle;
     barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -603,9 +606,9 @@ int OceanScene::applyFFT(std::string image) {
                 const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                 cmdBuffer.insertImageMemoryBarrier(
                     createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerRead,
+                        kComputeWrite >> kComputeRead));
             });
         CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass0", imageLayerRead, imageLayerWrite);
 
@@ -644,9 +647,9 @@ int OceanScene::applyFFT(std::string image) {
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                            m_resourceContext->imageCache.getImage(image).getHandle(),
+                            imageLayerRead,
+                            kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -659,9 +662,9 @@ int OceanScene::applyFFT(std::string image) {
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                            m_resourceContext->imageCache.getImage(image).getHandle(),
+                            imageLayerRead,
+                            kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -697,9 +700,9 @@ int OceanScene::applyFFT(std::string image) {
                 const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                 cmdBuffer.insertImageMemoryBarrier(
                     createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerRead,
+                        kComputeWrite >> kComputeRead));
             });
         std::swap(imageLayerRead, imageLayerWrite);
     }
@@ -736,19 +739,11 @@ int OceanScene::applyFFT(std::string image) {
                 kGeometryPass,
                 [this, image, imageLayerWrite](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-                    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                    barrier.image = m_resourceContext->imageCache.getImage(image).getHandle();
-                    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-                    barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-                    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    barrier.subresourceRange.baseArrayLayer = imageLayerWrite;
-                    barrier.subresourceRange.layerCount = 1;
-                    barrier.subresourceRange.baseMipLevel = 0;
-                    barrier.subresourceRange.levelCount = 1;
                     cmdBuffer.insertImageMemoryBarrier(
-                        barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+                        createImageMemoryReadBarrier(
+                            m_resourceContext->imageCache.getImage(image).getHandle(),
+                            imageLayerWrite,
+                            kComputeWrite >> kVertexRead));
                 });
         } else if (i == 0) {
             m_renderGraph->addDependency(
@@ -758,9 +753,9 @@ int OceanScene::applyFFT(std::string image) {
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                            m_resourceContext->imageCache.getImage(image).getHandle(),
+                            imageLayerRead,
+                            kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -773,9 +768,9 @@ int OceanScene::applyFFT(std::string image) {
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
                     cmdBuffer.insertImageMemoryBarrier(
                         createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(), imageLayerRead),
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+                            m_resourceContext->imageCache.getImage(image).getHandle(),
+                            imageLayerRead,
+                            kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -814,24 +809,11 @@ void OceanScene::buildNewFFT() {
             OscillationPassDispatch.pipeline->setPushConstants(
                 ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
 
-            VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer()->getHandle();
-            barrier.offset = 0;
-            barrier.size = VK_WHOLE_SIZE;
-
-            vkCmdPipelineBarrier(
-                ctx.cmdBuffer.getHandle(),
-                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            ctx.cmdBuffer.insertBufferMemoryBarrier(
+                m_resourceContext->getGeometry("ocean").getVertexBuffer()->getHandle(),
                 0,
-                0,
-                nullptr,
-                1,
-                &barrier,
-                0,
-                nullptr);
+                VK_WHOLE_SIZE,
+                kVertexRead >> (kComputeStorageRead | kComputeStorageWrite));
 
             ctx.cmdBuffer.dispatchCompute(OscillationPassDispatch.dispatchSize);
         });

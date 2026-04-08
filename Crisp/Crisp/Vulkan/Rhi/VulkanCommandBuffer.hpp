@@ -6,6 +6,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 namespace crisp {
 struct MemoryRegion {
@@ -41,26 +42,18 @@ public:
         return m_state;
     }
 
-    void transferOwnership(VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const;
-    void insertMemoryBarrier(
-        VkPipelineStageFlags srcStage, VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess)
+    void insertBarrier(const VulkanSynchronizationScope& scope) const;
+    void insertBufferMemoryBarrier(
+        VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size, const VulkanSynchronizationScope& scope) const;
+    void insertBufferMemoryBarrier(const VkDescriptorBufferInfo& bufferInfo, const VulkanSynchronizationScope& scope)
         const;
-    void insertBufferMemoryBarrier(
-        const VkDescriptorBufferInfo& bufferInfo,
-        VkPipelineStageFlags srcStage,
-        VkAccessFlags srcAccess,
-        VkPipelineStageFlags dstStage,
-        VkAccessFlags dstAccess) const;
-    void insertBufferMemoryBarrier(
-        const VkBufferMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const;
     void insertBufferMemoryBarriers(
-        std::span<VkBufferMemoryBarrier> barriers, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const;
-    void insertImageMemoryBarrier(
-        const VkImageMemoryBarrier& barrier, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) const;
-    // void insertImageMemoryBarrier(const VulkanBufferView& bufferView, VkPipelineStageFlags srcStage,
-    //     VkAccessFlags srcAccess, VkPipelineStageFlags dstStage, VkAccessFlags dstAccess) const;
-    // void insertMemoryBarrier(VkPipelineStageFlags srcStage, VkAccessFlags srcAccess, VkPipelineStageFlags dstStage,
-    //     VkAccessFlags dstAccess) const;
+        std::span<const VkBufferMemoryBarrier2> barriers) const;
+    void insertImageMemoryBarrier(const VkImageMemoryBarrier2& barrier) const;
+
+    void transferOwnership(
+        VkBuffer buffer, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex,
+        const VulkanSynchronizationScope& scope) const;
 
     void executeSecondaryBuffers(const std::vector<VkCommandBuffer>& commandBuffers) const;
 
