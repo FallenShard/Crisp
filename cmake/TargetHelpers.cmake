@@ -7,7 +7,7 @@ function(enable_default_cpp_compile_options targetName optionType)
 
     if(NOT optionType STREQUAL "INTERFACE")
         if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
-            target_compile_options(${targetName} PRIVATE /MP /JMC /Zi /W4 /Zc:preprocessor)
+            target_compile_options(${targetName} PRIVATE /MP /JMC /Zi /W4 /Zc:preprocessor /EHsc)
         else()
             target_compile_options(${targetName} PRIVATE -W -Wall)
         endif()
