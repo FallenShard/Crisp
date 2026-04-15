@@ -89,6 +89,10 @@ public:
         return m_memoryAllocator;
     }
 
+    VkDeviceSize getNonCoherentAtomSize() const {
+        return m_nonCoherentAtomSize;
+    }
+
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorBufferInfo& bufferInfo);
     void postDescriptorWrite(const VkWriteDescriptorSet& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorImageInfo& imageInfo);

@@ -56,5 +56,12 @@ private:
     SceneDescription m_sceneDesc;
 
     IntegratorParameters m_integratorParams;
+
+    VulkanBuffer* m_cameraBuffer{};
+    VulkanBuffer* m_integratorBuffer{};
+    VulkanBuffer* m_brdfParamsBuffer{};
+    VulkanBuffer* m_lightParamsBuffer{};
+    VulkanBuffer* m_instancePropsBuffer{};
+    VulkanBuffer* m_aliasTableBuffer{};
 };
 } // namespace crisp

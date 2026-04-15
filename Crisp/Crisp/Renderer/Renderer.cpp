@@ -80,6 +80,8 @@ Renderer::Renderer(
         w = std::make_unique<VulkanWorker>(*m_device, m_device->getGeneralQueue(), NumVirtualFrames);
     }
 
+    m_stagingBelt = std::make_unique<VulkanStagingBelt>(*m_device, 16 * 1024 * 1024);
+
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRenderPass());
@@ -188,6 +190,10 @@ void Renderer::flushResourceUpdates(bool waitOnAllQueues) {
     m_device->flushResourceUpdates(waitOnAllQueues);
 }
 
+VulkanStagingBelt& Renderer::getStagingBelt() {
+    return *m_stagingBelt;
+}
+
 std::optional<FrameContext> Renderer::beginFrame() {
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     // Obtain a frame that we can safely draw into
@@ -228,12 +234,16 @@ std::optional<FrameContext> Renderer::beginFrame() {
     auto* commandBuffer = m_workers[0]->resetAndGetCmdBuffer(*m_device, virtualFrameIndex);
     commandBuffer->setIdleState();
     commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    m_stagingBelt->beginFrame(virtualFrameIndex);
+
     return FrameContext{
         .frameIndex = m_currentFrameIndex,
         .virtualFrameIndex = virtualFrameIndex,
         .swapChainImageIndex = *swapChainImageIndex,
         .commandBuffer = commandBuffer,
         .commandEncoder = VulkanCommandEncoder(commandBuffer->getHandle()),
+        .stagingBelt = m_stagingBelt.get(),
     };
 }
 
@@ -273,6 +283,7 @@ void Renderer::record(const FrameContext& frameContext) {
 }
 
 void Renderer::endFrame(const FrameContext& frameContext) {
+    m_stagingBelt->endFrame();
     frameContext.commandBuffer->end();
     auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
     frame.addSubmission(*frameContext.commandBuffer);
@@ -364,12 +375,7 @@ void Renderer::recreateSwapChain() {
 
 void fillDeviceBuffer(
     Renderer& renderer, VulkanBuffer* buffer, const void* data, const VkDeviceSize size, const VkDeviceSize offset) {
-    auto stagingBuffer = std::make_shared<StagingVulkanBuffer>(renderer.getDevice(), size);
-    stagingBuffer->updateFromHost(data);
-    renderer.getDevice().getGeneralQueue().submitAndWait(
-        [stagingBuffer, buffer, offset, size](VkCommandBuffer cmdBuffer) {
-            buffer->copyFrom(cmdBuffer, *stagingBuffer, 0, offset, size);
-        });
+    renderer.getStagingBelt().uploadBufferBlocking(renderer.getDevice().getGeneralQueue(), *buffer, offset, data, size);
 }
 
 } // namespace crisp

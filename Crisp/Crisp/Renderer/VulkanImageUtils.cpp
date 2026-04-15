@@ -1,7 +1,6 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Renderer/VulkanBufferUtils.hpp>
 
 namespace crisp {
 void fillImageLayer(VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx) {
@@ -10,15 +9,16 @@ void fillImageLayer(VulkanImage& image, Renderer& renderer, const void* data, Vk
 
 void fillImageLayers(
     VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx, uint32_t numLayers) {
-    auto stagingBuffer = createStagingBuffer(renderer.getDevice(), size, data);
+    auto& belt = renderer.getStagingBelt();
     renderer.getDevice().getGeneralQueue().submitAndWait(
-        [&stagingBuffer, &image, layerIdx, numLayers](VkCommandBuffer cmdBuffer) {
+        [&belt, &image, layerIdx, numLayers, data, size](VkCommandBuffer cmdBuffer) {
             image.transitionLayout(
                 cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layerIdx, numLayers, kNullStage >> kTransferWrite);
-            image.copyFrom(cmdBuffer, *stagingBuffer, layerIdx, numLayers);
+            belt.uploadImage(cmdBuffer, image, layerIdx, numLayers, 0, data, size);
             image.transitionLayout(
                 cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, layerIdx, numLayers, kTransferWrite >> kFragmentRead);
         });
+    belt.reclaimAll();
 }
 
 std::unique_ptr<VulkanImage> createVulkanImage(Renderer& renderer, const Image& image, const VkFormat format) {
@@ -33,19 +33,21 @@ std::unique_ptr<VulkanImage> createVulkanImage(Renderer& renderer, const Image& 
             .usageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         });
 
-    auto stagingBuffer = createStagingBuffer(renderer.getDevice(), image.getByteSize(), image.getData());
-    renderer.getDevice().getGeneralQueue().submitAndWait([&stagingBuffer, &vulkanImage](VkCommandBuffer cmdBuffer) {
-        VulkanCommandEncoder commandEncoder(cmdBuffer);
-        commandEncoder.transitionLayout(
-            *vulkanImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            kNullStage >> kTransferWrite,
-            vulkanImage->getFirstMipRange());
-        vulkanImage->copyFrom(cmdBuffer, *stagingBuffer, 0, 1);
-        vulkanImage->buildMipmaps(cmdBuffer, kTransferWrite);
-        commandEncoder.transitionLayout(
-            *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
-    });
+    auto& belt = renderer.getStagingBelt();
+    renderer.getDevice().getGeneralQueue().submitAndWait(
+        [&belt, &vulkanImage, &image](VkCommandBuffer cmdBuffer) {
+            VulkanCommandEncoder commandEncoder(cmdBuffer);
+            commandEncoder.transitionLayout(
+                *vulkanImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                kNullStage >> kTransferWrite,
+                vulkanImage->getFirstMipRange());
+            belt.uploadImage(cmdBuffer, *vulkanImage, 0, 1, 0, image.getData(), image.getByteSize());
+            vulkanImage->buildMipmaps(cmdBuffer, kTransferWrite);
+            commandEncoder.transitionLayout(
+                *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
+        });
+    belt.reclaimAll();
 
     return vulkanImage;
 }
@@ -65,27 +67,33 @@ std::unique_ptr<VulkanImage> createVulkanCubeMap(
             .createFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
         });
 
+    auto& belt = renderer.getStagingBelt();
     for (uint32_t mipLevel = 0; mipLevel < cubeMapFaceMips.size(); ++mipLevel) { // NOLINT
         const auto& cubeMapMipLevel{cubeMapFaceMips[mipLevel]};
         const uint32_t mipSize{cubeMapMipLevel.front().getWidth()};
-        renderer.getDevice().getGeneralQueue().submitAndWait([&vulkanImage](const VkCommandBuffer cmdBuffer) {
-            VulkanCommandEncoder commandEncoder(cmdBuffer);
-            commandEncoder.transitionLayout(
-                *vulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
-        });
-        for (uint32_t face = 0; face < cubeMapMipLevel.size(); ++face) { // NOLINT
-            auto stagingBuffer = createStagingBuffer(
-                renderer.getDevice(), cubeMapMipLevel[face].getByteSize(), cubeMapMipLevel[face].getData());
-            renderer.getDevice().getGeneralQueue().submitAndWait(
-                [mipSize, &vulkanImage, &stagingBuffer, face, mipLevel](const VkCommandBuffer cmdBuffer) {
-                    vulkanImage->copyFrom(cmdBuffer, *stagingBuffer, VkExtent3D{mipSize, mipSize, 1}, face, 1, mipLevel);
-                });
-        }
-        renderer.getDevice().getGeneralQueue().submitAndWait([&vulkanImage](const VkCommandBuffer cmdBuffer) {
-            VulkanCommandEncoder commandEncoder(cmdBuffer);
-            commandEncoder.transitionLayout(
-                *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
-        });
+
+        // Stage all face data first, then submit one command buffer for this mip level.
+        renderer.getDevice().getGeneralQueue().submitAndWait(
+            [&belt, &vulkanImage, &cubeMapMipLevel, mipLevel, mipSize](const VkCommandBuffer cmdBuffer) {
+                VulkanCommandEncoder commandEncoder(cmdBuffer);
+                commandEncoder.transitionLayout(
+                    *vulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+                for (uint32_t face = 0; face < cubeMapMipLevel.size(); ++face) { // NOLINT
+                    const VkExtent3D extent{mipSize, mipSize, 1};
+                    belt.uploadImage(
+                        cmdBuffer,
+                        *vulkanImage,
+                        extent,
+                        face,
+                        1,
+                        mipLevel,
+                        cubeMapMipLevel[face].getData(),
+                        cubeMapMipLevel[face].getByteSize());
+                }
+                commandEncoder.transitionLayout(
+                    *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
+            });
+        belt.reclaimAll();
     }
 
     return vulkanImage;
@@ -95,21 +103,23 @@ std::unique_ptr<VulkanImage> createVulkanImage(
     Renderer& renderer, const VkDeviceSize size, const void* data, const VkImageCreateInfo imageCreateInfo) {
     auto image = std::make_unique<VulkanImage>(renderer.getDevice(), imageCreateInfo);
 
-    std::shared_ptr<VulkanBuffer> stagingBuffer = createStagingBuffer(renderer.getDevice(), size, data);
-    renderer.enqueueResourceUpdate([stagingBuffer, image = image.get()](VkCommandBuffer cmdBuffer) {
-        image->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, kNullStage >> kTransferWrite);
-        image->copyFrom(cmdBuffer, *stagingBuffer, 0, 1);
-        image->buildMipmaps(cmdBuffer);
+    auto& belt = renderer.getStagingBelt();
+    renderer.getDevice().getGeneralQueue().submitAndWait(
+        [&belt, img = image.get(), data, size](VkCommandBuffer cmdBuffer) {
+            img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, kNullStage >> kTransferWrite);
+            belt.uploadImage(cmdBuffer, *img, 0, 1, 0, data, size);
+            img->buildMipmaps(cmdBuffer);
 
-        VkImageSubresourceRange mipRange = {};
-        mipRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        mipRange.baseMipLevel = 0;
-        mipRange.levelCount = image->getMipLevels();
-        mipRange.baseArrayLayer = 0;
-        mipRange.layerCount = 1;
-        image->transitionLayout(
-            cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, kTransferWrite >> kFragmentRead);
-    });
+            VkImageSubresourceRange mipRange = {};
+            mipRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            mipRange.baseMipLevel = 0;
+            mipRange.levelCount = img->getMipLevels();
+            mipRange.baseArrayLayer = 0;
+            mipRange.layerCount = 1;
+            img->transitionLayout(
+                cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, kTransferWrite >> kFragmentRead);
+        });
+    belt.reclaimAll();
 
     return image;
 }
@@ -118,24 +128,27 @@ void updateCubeMap(
     VulkanImage& image, Renderer& renderer, const std::vector<Image>& cubeMapFaces, const uint32_t mipLevel) {
     CRISP_CHECK_EQ(cubeMapFaces.size(), 6);
     const uint32_t mipSize{cubeMapFaces.front().getWidth()};
-    for (uint32_t i = 0; i < cubeMapFaces.size(); ++i) {
-        std::shared_ptr<VulkanBuffer> stagingBuffer =
-            createStagingBuffer(renderer.getDevice(), cubeMapFaces[i].getByteSize(), cubeMapFaces[i].getData());
-        renderer.enqueueResourceUpdate([&image, layer = i, mipLevel, mipSize, stagingBuffer](VkCommandBuffer cmdBuffer) {
-            const VkExtent3D extent{mipSize, mipSize, 1};
-            image.transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layer, 1, mipLevel, 1, kFragmentRead >> kTransferWrite);
-            image.copyFrom(cmdBuffer, *stagingBuffer, extent, layer, 1, mipLevel);
-            image.transitionLayout(
-                cmdBuffer,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                layer,
-                1,
-                mipLevel,
-                1,
-                kTransferWrite >> kFragmentRead);
+
+    auto& belt = renderer.getStagingBelt();
+    renderer.getDevice().getGeneralQueue().submitAndWait(
+        [&belt, &image, &cubeMapFaces, mipLevel, mipSize](VkCommandBuffer cmdBuffer) {
+            for (uint32_t i = 0; i < cubeMapFaces.size(); ++i) {
+                const VkExtent3D extent{mipSize, mipSize, 1};
+                image.transitionLayout(
+                    cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i, 1, mipLevel, 1, kFragmentRead >> kTransferWrite);
+                belt.uploadImage(
+                    cmdBuffer, image, extent, i, 1, mipLevel, cubeMapFaces[i].getData(), cubeMapFaces[i].getByteSize());
+                image.transitionLayout(
+                    cmdBuffer,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    i,
+                    1,
+                    mipLevel,
+                    1,
+                    kTransferWrite >> kFragmentRead);
+            }
         });
-    }
+    belt.reclaimAll();
 }
 
 std::unique_ptr<VulkanImage> createMipmapCubeMap(

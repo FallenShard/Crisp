@@ -306,16 +306,13 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
 
         const auto& restPositions = renderObject.mesh.getPositions();
         const auto vertexCount = static_cast<uint32_t>(restPositions.size());
-        auto restVertexBuffer =
-            m_resourceContext->addBuffer("restPositions", createStorageBuffer(m_renderer->getDevice(), restPositions));
+        auto restVertexBuffer = m_resourceContext->createStorageBuffer("restPositions", restPositions);
         const auto& weightsData = renderObject.mesh.getCustomAttribute("weights0");
-        auto weightsBuffer =
-            m_resourceContext->addBuffer("weights", createStorageBuffer(m_renderer->getDevice(), weightsData.buffer));
+        auto weightsBuffer = m_resourceContext->createStorageBuffer("weights", weightsData.buffer);
         const auto& jointIndices = renderObject.mesh.getCustomAttribute("indices0");
-        auto indicesBuffer =
-            m_resourceContext->addBuffer("indices", createStorageBuffer(m_renderer->getDevice(), jointIndices.buffer));
-        auto jointMatrices = m_resourceContext->addBuffer(
-            "jointMatrices", createStorageBuffer(m_renderer->getDevice(), m_skinningData.skeleton.jointTransforms));
+        auto indicesBuffer = m_resourceContext->createStorageBuffer("indices", jointIndices.buffer);
+        auto jointMatrices =
+            m_resourceContext->createStorageBuffer("jointMatrices", m_skinningData.skeleton.jointTransforms);
         auto& skinningPass = m_renderGraph->addComputePass("SkinningPass");
         skinningPass.workGroupSize = {256, 1, 1};
         skinningPass.numWorkGroups = {(vertexCount + 256 - 1) / 256, 1, 1};

@@ -70,16 +70,16 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     setCameraParameters(*m_cameraController, json["camera"]);
-    m_resourceContext->createUniformRingBuffer<CameraParameters>("camera");
+    m_cameraBuffer = m_resourceContext->createUniformBuffer<CameraParameters>("camera");
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
     m_integratorParams.lightCount = static_cast<int32_t>(m_sceneDesc.lights.size());
-    m_resourceContext->createUniformRingBuffer<IntegratorParameters>("integrator");
+    m_integratorBuffer = m_resourceContext->createUniformBuffer<IntegratorParameters>("integrator");
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
-    m_resourceContext->createRingBufferFromStdVec("brdfParams", m_sceneDesc.brdfs);
-    m_resourceContext->createRingBufferFromStdVec("lightParams", m_sceneDesc.lights);
+    m_brdfParamsBuffer = m_resourceContext->createStorageBuffer("brdfParams", m_sceneDesc.brdfs);
+    m_lightParamsBuffer = m_resourceContext->createStorageBuffer("lightParams", m_sceneDesc.lights);
 
     AliasTable aliasTable{};
     TriangleMesh sceneMesh{};
@@ -116,9 +116,9 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
-    m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
+    m_aliasTableBuffer = m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
-    m_resourceContext->createRingBufferFromStdVec("instanceProps", m_sceneDesc.props);
+    m_instancePropsBuffer = m_resourceContext->createStorageBuffer("instanceProps", m_sceneDesc.props);
 
     m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -171,19 +171,12 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
 
-    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
-        m_cameraController->getCameraParameters(), frameContext.virtualFrameIndex);
-    m_resourceContext->getRingBuffer("integrator")
-        ->updateStagingBufferFromStruct(m_integratorParams, frameContext.virtualFrameIndex);
-    m_resourceContext->getRingBuffer("brdfParams")
-        ->updateStagingBufferFromStdVec(m_sceneDesc.brdfs, frameContext.virtualFrameIndex);
-    m_resourceContext->getRingBuffer("lightParams")
-        ->updateStagingBufferFromStdVec(m_sceneDesc.lights, frameContext.virtualFrameIndex);
-
-    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
-    m_resourceContext->getRingBuffer("integrator")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
-    m_resourceContext->getRingBuffer("brdfParams")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
-    m_resourceContext->getRingBuffer("lightParams")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    const auto cmdBuffer = frameContext.commandEncoder.getHandle();
+    const auto& cameraParams = m_cameraController->getCameraParameters();
+    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_cameraBuffer, 0, cameraParams);
+    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_integratorBuffer, 0, m_integratorParams);
+    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_brdfParamsBuffer, 0, m_sceneDesc.brdfs);
+    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 
@@ -305,18 +298,18 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
 void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(0, 0, m_topLevelAccelStructure->getDescriptorInfo());
     m_material->writeDescriptor(0, 1, m_rayTracedImage->getView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    m_material->writeDescriptor(0, 2, *m_resourceContext->getRingBuffer("camera"));
-    m_material->writeDescriptor(0, 3, *m_resourceContext->getRingBuffer("integrator"));
+    m_material->writeDescriptor(0, 2, *m_cameraBuffer);
+    m_material->writeDescriptor(0, 3, *m_integratorBuffer);
     m_material->writeDescriptor(
         1, 0, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(
         1, 1, m_resourceContext->getGeometry("scene-geometry").getIndexBuffer()->createDescriptorInfo());
     m_material->writeDescriptor(
         1, 6, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer(1)->createDescriptorInfo());
-    m_material->writeDescriptor(1, 2, *m_resourceContext->getRingBuffer("instanceProps"));
-    m_material->writeDescriptor(1, 3, *m_resourceContext->getRingBuffer("brdfParams"));
-    m_material->writeDescriptor(1, 4, *m_resourceContext->getRingBuffer("lightParams"));
-    m_material->writeDescriptor(1, 5, *m_resourceContext->getBuffer("aliasTable"));
+    m_material->writeDescriptor(1, 2, *m_instancePropsBuffer);
+    m_material->writeDescriptor(1, 3, *m_brdfParamsBuffer);
+    m_material->writeDescriptor(1, 4, *m_lightParamsBuffer);
+    m_material->writeDescriptor(1, 5, *m_aliasTableBuffer);
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 

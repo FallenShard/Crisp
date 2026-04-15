@@ -25,6 +25,16 @@ public:
     }
 
     template <typename T>
+    VulkanBuffer* createUniformBuffer(const std::string& id) {
+        auto buffer = std::make_unique<VulkanBuffer>(
+            m_renderer->getDevice(),
+            sizeof(T),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        return addBuffer(id, std::move(buffer));
+    }
+
+    template <typename T>
     VulkanRingBuffer* createRingBufferFromStdVec(const std::string& id, const std::vector<T>& data) {
         auto buffer = std::make_unique<VulkanRingBuffer>(
             &m_renderer->getDevice(), VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, sizeof(T) * data.size(), data.data());
@@ -64,9 +74,14 @@ public:
 
     template <typename T>
     VulkanBuffer* createStorageBuffer(const std::string& id, const std::vector<T>& data) {
-        auto buffer = ::crisp::createStorageBuffer(m_renderer->getDevice(), data);
-        m_renderer->getDevice().setObjectName(buffer->getHandle(), id.c_str());
-        return m_buffers.emplace(id, std::move(buffer)).first->second.get();
+        auto buffer = std::make_unique<VulkanBuffer>(
+            m_renderer->getDevice(),
+            data.size() * sizeof(T),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        auto* ptr = addBuffer(id, std::move(buffer));
+        m_renderer->getStagingBelt().uploadBufferBlocking(m_renderer->getDevice().getGeneralQueue(), *ptr, data);
+        return ptr;
     }
 
     VulkanPipeline* createPipeline(

@@ -24,6 +24,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
+#include <Crisp/Vulkan/VulkanStagingBelt.hpp>
 #include <Crisp/Vulkan/VulkanTracer.hpp>
 
 namespace crisp {
@@ -79,6 +80,8 @@ public:
     void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 
     void flushResourceUpdates(bool waitOnAllQueues);
+
+    VulkanStagingBelt& getStagingBelt();
 
     std::optional<FrameContext> beginFrame();
     void record(const FrameContext& frameContext);
@@ -150,6 +153,7 @@ private:
     ThreadPool m_threadPool;
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
 
+    std::unique_ptr<VulkanStagingBelt> m_stagingBelt;
     std::vector<std::unique_ptr<VulkanTracingContext>> m_gpuTracingContexts;
 };
 

@@ -32,7 +32,7 @@ Geometry::Geometry(
     , m_instanceCount(1)
     , m_meshViews(meshViews) {
     for (const auto& buffer : interleavedVertexBuffers) {
-        m_vertexBuffers.push_back(createVertexBuffer(renderer.getDevice(), buffer.buffer, usageFlags));
+        m_vertexBuffers.push_back(createVertexBuffer(renderer, buffer.buffer, usageFlags));
     }
 
     for (const auto& buffer : m_vertexBuffers) {

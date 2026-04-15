@@ -548,19 +548,15 @@ std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
     const auto oceanSpectrum{createOceanSpectrum(0, m_oceanParams)};
 
     auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32B32A32_SFLOAT);
-    std::shared_ptr<VulkanBuffer> buffer = createStagingBuffer(m_renderer->getDevice(), oceanSpectrum);
-    m_renderer->enqueueResourceUpdate([img = image.get(), stagingBuffer = buffer](VkCommandBuffer cmdBuffer) {
-        img->transitionLayout(
-            cmdBuffer,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-        img->copyFrom(cmdBuffer, *stagingBuffer, 0, 1);
-
-        img->transitionLayout(
-            cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-    });
+    auto& belt = m_renderer->getStagingBelt();
+    m_renderer->getDevice().getGeneralQueue().submitAndWait(
+        [&belt, img = image.get(), &oceanSpectrum](VkCommandBuffer cmdBuffer) {
+            img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+            belt.uploadImage(
+                cmdBuffer, *img, 0, 1, 0, oceanSpectrum.data(), oceanSpectrum.size() * sizeof(oceanSpectrum[0]));
+            img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageWrite);
+        });
+    belt.reclaimAll();
 
     return image;
 }

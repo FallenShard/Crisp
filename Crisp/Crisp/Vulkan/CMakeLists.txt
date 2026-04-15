@@ -55,6 +55,47 @@ target_link_libraries(
 )
 
 add_cpp_static_library(
+    CrispVulkanStagingBuffer
+    "VulkanStagingBuffer.cpp"
+    "VulkanStagingBuffer.hpp"
+)
+target_link_libraries(
+    CrispVulkanStagingBuffer
+    PUBLIC Crisp::VulkanBuffer
+)
+
+add_cpp_test(
+    CrispVulkanStagingBufferTest
+    "Test/VulkanStagingBufferTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanStagingBufferTest
+    PRIVATE Crisp::VulkanStagingBuffer
+    PRIVATE Crisp::VulkanTestUtils
+)
+
+add_cpp_static_library(
+    CrispVulkanStagingBelt
+    "VulkanStagingBelt.cpp"
+    "VulkanStagingBelt.hpp"
+)
+target_link_libraries(
+    CrispVulkanStagingBelt
+    PUBLIC Crisp::VulkanStagingBuffer
+    PRIVATE Crisp::VulkanImage
+)
+
+add_cpp_test(
+    CrispVulkanStagingBeltTest
+    "Test/VulkanStagingBeltTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanStagingBeltTest
+    PRIVATE Crisp::VulkanStagingBelt
+    PRIVATE Crisp::VulkanTestUtils
+)
+
+add_cpp_static_library(
     CrispVulkanRingBuffer
     "VulkanRingBuffer.cpp"
     "VulkanRingBuffer.hpp"
