@@ -10,7 +10,7 @@ std::unique_ptr<VulkanBuffer> createVertexBuffer(
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     auto& device = renderer.getDevice();
     auto buffer = std::make_unique<VulkanBuffer>(
-        device, data.size(), usageFlags | extraFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        device, data.size(), usageFlags | extraFlags, BufferMemoryType::GpuOnly);
     renderer.getStagingBelt().uploadBufferBlocking(device.getGeneralQueue(), *buffer, data.data(), data.size());
     return buffer;
 }
@@ -19,11 +19,11 @@ std::unique_ptr<VulkanBuffer> createVertexBuffer(
     VulkanDevice& device, const VkDeviceSize data, VkBufferUsageFlags extraFlags) {
     static constexpr VkBufferUsageFlags usageFlags =
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    return std::make_unique<VulkanBuffer>(device, data, usageFlags | extraFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    return std::make_unique<VulkanBuffer>(device, data, usageFlags | extraFlags, BufferMemoryType::GpuOnly);
 }
 
 std::unique_ptr<VulkanBuffer> createIndexBuffer(VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags extraFlags) {
     static constexpr VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    return std::make_unique<VulkanBuffer>(device, size, usageFlags | extraFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    return std::make_unique<VulkanBuffer>(device, size, usageFlags | extraFlags, BufferMemoryType::GpuOnly);
 }
 } // namespace crisp

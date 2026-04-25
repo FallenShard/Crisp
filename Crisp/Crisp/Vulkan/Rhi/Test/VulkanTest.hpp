@@ -81,7 +81,8 @@ protected:
     template <typename T>
     static std::vector<T> toStdVec(const VulkanBuffer& buffer) {
         std::vector<T> vec(buffer.getSize() / sizeof(T));
-        StagingVulkanBuffer stagingBuffer(*device_, buffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
+        VulkanBuffer stagingBuffer(
+            *device_, buffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
         device_->getGeneralQueue().submitAndWait([&stagingBuffer, &buffer](const VkCommandBuffer cmdBuffer) {
             stagingBuffer.copyFrom(cmdBuffer, buffer);
         });

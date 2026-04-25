@@ -180,11 +180,22 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 
-    if (m_screenshotBuffer && !m_screenshotRequestFrameIdx) {
+    if (m_screenshotRequested && !m_screenshotRequestFrameIdx) {
         m_screenshotRequestFrameIdx = frameContext.frameIndex;
         frameContext.commandEncoder.transitionLayout(
             *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> (kRayTracingStorageWrite | kTransferRead));
-        frameContext.commandEncoder.copyImageToBuffer(*m_rayTracedImage, *m_screenshotBuffer);
+
+        const VkDeviceSize size =
+            m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
+        m_screenshotBuffer = frameContext.stagingBelt->downloadImage(
+            cmdBuffer,
+            *m_rayTracedImage,
+            {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u},
+            0,
+            1,
+            0,
+            size);
+        m_screenshotRequested = false;
     }
 
     frameContext.commandEncoder.transitionLayout(
@@ -202,12 +213,12 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     if (m_screenshotRequestFrameIdx &&
         *m_screenshotRequestFrameIdx + Renderer::NumVirtualFrames == frameContext.frameIndex) {
         const std::span<const float> pixelData(
-            m_screenshotBuffer->getHostVisibleData<float>(),
+            m_screenshotBuffer.getMappedData<float>(),
             m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4);
         saveExr(m_outputDir / "screenshot.exr", pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
             .unwrap();
         m_screenshotRequestFrameIdx = std::nullopt;
-        m_screenshotBuffer.reset();
+        m_screenshotBuffer = {};
     }
 }
 
@@ -254,9 +265,7 @@ void VulkanRayTracingScene::drawGui() {
         m_integratorParams.frameIdx = 0;
     }
     if (ImGui::Button("Take Screenshot")) {
-        const VkDeviceSize size = m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
-        m_screenshotBuffer =
-            std::make_shared<StagingVulkanBuffer>(m_renderer->getDevice(), size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+        m_screenshotRequested = true;
     }
 
     ImGui::End();

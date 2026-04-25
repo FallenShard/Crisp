@@ -22,7 +22,8 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
     std::vector<float> data(m_extent.width * m_extent.height * m_numChannels, 0.01f);
     auto byteSize = data.size() * sizeof(float);
 
-    m_stagingBuffer = std::make_unique<StagingVulkanBuffer>(renderer->getDevice(), byteSize);
+    m_stagingBuffer = std::make_unique<VulkanBuffer>(
+        renderer->getDevice(), byteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     m_stagingBuffer->updateFromHost(data.data(), byteSize, 0);
 
     m_image = std::make_unique<VulkanImage>(

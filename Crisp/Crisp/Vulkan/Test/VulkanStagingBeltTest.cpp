@@ -16,7 +16,7 @@ TEST_F(VulkanStagingBeltTest, UploadBufferBlocking) {
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
         *device_, dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     ctx.uploadBufferBlocking(device_->getGeneralQueue(), *dstBuffer, srcData.data(), dataSize);
 
@@ -29,7 +29,7 @@ TEST_F(VulkanStagingBeltTest, UploadBufferBlockingWithOffset) {
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
         *device_, 32, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     // Zero-fill the buffer first.
     const std::vector<uint32_t> zeros(8, 0);
@@ -53,7 +53,7 @@ TEST_F(VulkanStagingBeltTest, PerFrameCycleDoesNotExhaustRing) {
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
         *device_, 64, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     const std::vector<uint32_t> frameData(16, 42); // 64 bytes
 
@@ -83,7 +83,7 @@ TEST_F(VulkanStagingBeltTest, UploadViaPerFramePathVerifyContents) {
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
         *device_, 16, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     const std::vector<uint32_t> data = {10, 20, 30, 40};
 
@@ -108,7 +108,7 @@ TEST_F(VulkanStagingBeltTest, OversizedBlockingUploadUsesTemporaryBuffer) {
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
         *device_, dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     ctx.uploadBufferBlocking(device_->getGeneralQueue(), *dstBuffer, bigData.data(), dataSize);
 

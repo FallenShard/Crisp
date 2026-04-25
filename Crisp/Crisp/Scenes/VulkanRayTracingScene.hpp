@@ -11,6 +11,7 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
+#include <Crisp/Vulkan/VulkanStagingBelt.hpp>
 
 namespace crisp {
 class VulkanRayTracingScene : public Scene {
@@ -36,7 +37,8 @@ private:
     std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;
 
     std::unique_ptr<VulkanImage> m_rayTracedImage;
-    std::shared_ptr<StagingVulkanBuffer> m_screenshotBuffer;
+    ReadbackBuffer m_screenshotBuffer;
+    bool m_screenshotRequested{false};
     std::optional<uint64_t> m_screenshotRequestFrameIdx;
 
     std::unique_ptr<VulkanPipeline> m_pipeline;

@@ -8,7 +8,8 @@ VulkanStagingBuffer::VulkanStagingBuffer(VulkanDevice& device, const VkDeviceSiz
     : m_capacity(capacity)
     , m_alignment(alignment > 0 ? alignment : 1) {
     CRISP_CHECK_GT(capacity, VkDeviceSize{0});
-    m_buffer = std::make_unique<StagingVulkanBuffer>(device, capacity);
+    m_buffer = std::make_unique<VulkanBuffer>(
+        device, capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
 }
 
 std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSize size) {

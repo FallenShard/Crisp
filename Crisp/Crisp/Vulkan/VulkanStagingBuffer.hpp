@@ -33,7 +33,7 @@ public:
 private:
     VkDeviceSize alignUp(VkDeviceSize value) const;
 
-    std::unique_ptr<StagingVulkanBuffer> m_buffer;
+    std::unique_ptr<VulkanBuffer> m_buffer;
     VkDeviceSize m_capacity;
     VkDeviceSize m_alignment;
     VkDeviceSize m_head{0};

@@ -91,7 +91,7 @@ ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkP
         shaderHandleStorage.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
     m_renderer.enqueueResourceUpdate(
         [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer) {
             vkCmdUpdateBuffer(cmdBuffer, buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());

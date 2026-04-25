@@ -11,8 +11,9 @@ VulkanBuffer::VulkanBuffer(
     const VulkanDevice& device,
     const VkDeviceSize size,
     const VkBufferUsageFlags usageFlags,
-    const VkMemoryPropertyFlags memProps)
+    const BufferMemoryType memoryType)
     : VulkanResource(device.getResourceDeallocator())
+    , m_allocator(device.getMemoryAllocator())
     , m_allocation(nullptr)
     , m_allocationInfo{}
     , m_size(size)
@@ -25,12 +26,18 @@ VulkanBuffer::VulkanBuffer(
     };
 
     VmaAllocationCreateInfo allocInfo{.usage = VMA_MEMORY_USAGE_AUTO};
-    if (memProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+    switch (memoryType) {
+    case BufferMemoryType::GpuOnly:
+        break;
+    case BufferMemoryType::HostUpload:
         allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        break;
+    case BufferMemoryType::HostReadback:
+        allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+        break;
     }
 
-    VK_CHECK(vmaCreateBuffer(
-        device.getMemoryAllocator(), &bufferInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
+    VK_CHECK(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
     if (usageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
         VkBufferDeviceAddressInfo getAddressInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
@@ -47,6 +54,7 @@ VulkanBuffer::~VulkanBuffer() {
 
 VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept
     : VulkanResource(std::move(other))
+    , m_allocator(other.m_allocator)
     , m_allocation(std::exchange(other.m_allocation, nullptr))
     , m_allocationInfo(other.m_allocationInfo)
     , m_size(other.m_size)
@@ -58,6 +66,7 @@ VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept {
     }
 
     VulkanResource::operator=(std::move(other));
+    m_allocator = other.m_allocator;
     m_allocation = std::exchange(other.m_allocation, nullptr);
     m_allocationInfo = other.m_allocationInfo;
     m_size = other.m_size;
@@ -102,31 +111,8 @@ VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo() const {
     return {m_handle, 0, m_size};
 }
 
-StagingVulkanBuffer::StagingVulkanBuffer(
-    VulkanDevice& device,
-    const VkDeviceSize size,
-    const VkBufferUsageFlags usageFlags,
-    const VkMemoryPropertyFlags memProps)
-    : VulkanBuffer(
-          device, size, usageFlags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memProps | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-    , m_device(&device) {}
-
-void StagingVulkanBuffer::updateFromHost(
-    const void* hostMemoryData, const VkDeviceSize size, const VkDeviceSize offset) {
-    memcpy(reinterpret_cast<char*>(m_allocationInfo.pMappedData) + offset, hostMemoryData, size); // NOLINT
-    vmaInvalidateAllocation(m_device->getMemoryAllocator(), m_allocation, offset, size);
-}
-
-void StagingVulkanBuffer::updateFromHost(const void* hostMemoryData) {
-    memcpy(reinterpret_cast<char*>(m_allocationInfo.pMappedData), hostMemoryData, m_size); // NOLINT
-    vmaInvalidateAllocation(m_device->getMemoryAllocator(), m_allocation, 0, VK_WHOLE_SIZE);
-}
-
-void StagingVulkanBuffer::updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer) {
-    memcpy(
-        reinterpret_cast<char*>(m_allocationInfo.pMappedData),                     // NOLINT
-        reinterpret_cast<char*>(stagingVulkanBuffer.m_allocationInfo.pMappedData), // NOLINT
-        stagingVulkanBuffer.m_allocationInfo.size);
-    vmaInvalidateAllocation(m_device->getMemoryAllocator(), m_allocation, 0, VK_WHOLE_SIZE);
+void VulkanBuffer::updateFromHost(const void* data, const VkDeviceSize size, const VkDeviceSize offset) {
+    std::memcpy(static_cast<char*>(getHostVisibleData<void>()) + offset, data, size); // NOLINT
+    vmaFlushAllocation(m_allocator, m_allocation, offset, size);
 }
 } // namespace crisp

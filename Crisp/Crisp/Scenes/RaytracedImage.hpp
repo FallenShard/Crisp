@@ -11,7 +11,6 @@ namespace crisp {
 class Renderer;
 class VulkanDevice;
 class VulkanBuffer;
-class StagingVulkanBuffer;
 class VulkanSampler;
 class Material;
 class VulkanImageView;
@@ -35,7 +34,7 @@ private:
     uint32_t m_numChannels;
 
     std::vector<std::pair<unsigned int, RayTracerUpdate>> m_textureUpdates;
-    std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
+    std::unique_ptr<VulkanBuffer> m_stagingBuffer;
 
     std::unique_ptr<VulkanImage> m_image;
     std::vector<std::unique_ptr<VulkanImageView>> m_imageViews;

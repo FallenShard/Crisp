@@ -63,7 +63,7 @@ public:
 private:
     VkDeviceSize m_size;
     std::unique_ptr<VulkanBuffer> m_buffer;
-    std::unique_ptr<StagingVulkanBuffer> m_stagingBuffer;
+    std::unique_ptr<VulkanBuffer> m_stagingBuffer;
 
     bool m_hasUpdate{false};
     uint32_t m_lastUpdatedRegion{~0u};

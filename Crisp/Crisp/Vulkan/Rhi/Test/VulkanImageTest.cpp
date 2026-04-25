@@ -78,10 +78,12 @@ TEST_F(VulkanImageTest, FillImageRoundtrip) {
         }
     }
 
-    StagingVulkanBuffer stagingBuffer(*device_, pixelData.size());
+    VulkanBuffer stagingBuffer(
+        *device_, pixelData.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     stagingBuffer.updateFromHost(pixelData);
 
-    StagingVulkanBuffer downloadBuffer(*device_, pixelData.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    VulkanBuffer downloadBuffer(
+        *device_, pixelData.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
 
     {
         const ScopeCommandExecutor executor(*device_);

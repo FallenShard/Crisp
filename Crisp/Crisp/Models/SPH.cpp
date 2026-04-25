@@ -54,7 +54,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         m_renderer->getDevice(),
         vertexBufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
     const std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
     fillDeviceBuffer(*m_renderer, m_vertexBuffer.get(), positions.data(), vertexBufferSize);
 
@@ -62,7 +62,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         m_renderer->getDevice(),
         vertexBufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
     const auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
     fillDeviceBuffer(*m_renderer, m_colorBuffer.get(), colors.data(), vertexBufferSize);
 

@@ -12,6 +12,23 @@ namespace crisp {
 class VulkanImage;
 class VulkanQueue;
 
+struct ReadbackBuffer {
+    std::unique_ptr<VulkanBuffer> buffer;
+
+    template <typename T>
+    const T* getMappedData() const {
+        return buffer->getHostVisibleData<T>();
+    }
+
+    VkDeviceSize getSize() const {
+        return buffer ? buffer->getSize() : 0;
+    }
+
+    explicit operator bool() const {
+        return static_cast<bool>(buffer);
+    }
+};
+
 class VulkanStagingBelt {
 public:
     VulkanStagingBelt(VulkanDevice& device, VkDeviceSize capacity);
@@ -45,6 +62,23 @@ public:
 
     void uploadBufferBlocking(
         const VulkanQueue& queue, const VulkanBuffer& dstBuffer, const void* data, VkDeviceSize size);
+
+    // --- Buffer / image downloads (GPU -> host readback) ---
+    // Allocates a host-visible buffer, records a copy from `src` into it, and returns the buffer.
+    // The mapped data is only safe to read after the submission containing `cmd` has completed
+    // (caller's responsibility — typically via fence wait, e.g. waiting Renderer::NumVirtualFrames).
+    // The source must already be in a layout/access that supports TRANSFER_READ.
+    ReadbackBuffer downloadBuffer(
+        VkCommandBuffer cmd, const VulkanBuffer& src, VkDeviceSize srcOffset, VkDeviceSize size);
+
+    ReadbackBuffer downloadImage(
+        VkCommandBuffer cmd,
+        const VulkanImage& src,
+        VkExtent3D extent,
+        uint32_t baseLayer,
+        uint32_t numLayers,
+        uint32_t mipLevel,
+        VkDeviceSize size);
 
     // --- Image uploads ---
     // Records a vkCmdCopyBufferToImage. The image must already be in TRANSFER_DST_OPTIMAL layout.

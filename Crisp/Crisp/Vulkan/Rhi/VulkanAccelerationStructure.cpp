@@ -61,7 +61,7 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(
         m_buildRange.primitiveCount * sizeof(VkAccelerationStructureInstanceKHR),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     m_geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
     m_geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
@@ -127,7 +127,7 @@ void VulkanAccelerationStructure::createAccelerationStructure(const VulkanDevice
         m_buildSizes.accelerationStructureSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
     const VkAccelerationStructureCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
@@ -147,7 +147,7 @@ void VulkanAccelerationStructure::createAccelerationStructure(const VulkanDevice
         device,
         m_buildSizes.buildScratchSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
     m_buildInfo.scratchData.deviceAddress = m_scratchBuffer->getDeviceAddress();
 }
 

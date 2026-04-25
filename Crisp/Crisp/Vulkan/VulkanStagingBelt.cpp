@@ -63,7 +63,8 @@ void VulkanStagingBelt::uploadBufferBlocking(
             size,
             m_stagingBuffer.getCapacity());
 
-        auto tempStaging = std::make_unique<StagingVulkanBuffer>(*m_device, size);
+        auto tempStaging = std::make_unique<VulkanBuffer>(
+            *m_device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
         tempStaging->updateFromHost(data, size, 0);
         queue.submitAndWait([&](const VkCommandBuffer cmdBuffer) {
             dstBuffer.copyFrom(cmdBuffer, *tempStaging);
@@ -128,6 +129,47 @@ void VulkanStagingBelt::uploadImage(
         dstImage.getLayout(baseLayer, mipLevel),
         1,
         &copyRegion);
+}
+
+ReadbackBuffer VulkanStagingBelt::downloadBuffer(
+    const VkCommandBuffer cmd, const VulkanBuffer& src, const VkDeviceSize srcOffset, const VkDeviceSize size) {
+    auto buffer = std::make_unique<VulkanBuffer>(
+        *m_device, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+
+    VkBufferCopy region{};
+    region.srcOffset = srcOffset;
+    region.dstOffset = 0;
+    region.size = size;
+    vkCmdCopyBuffer(cmd, src.getHandle(), buffer->getHandle(), 1, &region);
+
+    return {.buffer = std::move(buffer)};
+}
+
+ReadbackBuffer VulkanStagingBelt::downloadImage(
+    const VkCommandBuffer cmd,
+    const VulkanImage& src,
+    const VkExtent3D extent,
+    const uint32_t baseLayer,
+    const uint32_t numLayers,
+    const uint32_t mipLevel,
+    const VkDeviceSize size) {
+    auto buffer = std::make_unique<VulkanBuffer>(
+        *m_device, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+
+    VkBufferImageCopy copyRegion{};
+    copyRegion.bufferOffset = 0;
+    copyRegion.bufferRowLength = 0;
+    copyRegion.bufferImageHeight = 0;
+    copyRegion.imageExtent = extent;
+    copyRegion.imageOffset = {0, 0, 0};
+    copyRegion.imageSubresource.aspectMask = src.getAspectMask();
+    copyRegion.imageSubresource.baseArrayLayer = baseLayer;
+    copyRegion.imageSubresource.layerCount = numLayers;
+    copyRegion.imageSubresource.mipLevel = mipLevel;
+    vkCmdCopyImageToBuffer(
+        cmd, src.getHandle(), src.getLayout(baseLayer, mipLevel), buffer->getHandle(), 1, &copyRegion);
+
+    return {.buffer = std::move(buffer)};
 }
 
 VulkanStagingBuffer& VulkanStagingBelt::getStagingBuffer() {

@@ -560,7 +560,7 @@ void RenderGraph::createPhysicalResources(
     for (auto& res : m_physicalBuffers) {
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
         res.buffer =
-            std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, BufferMemoryType::GpuOnly);
         device.setObjectName(res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
     }
 }

@@ -30,7 +30,7 @@ public:
             m_renderer->getDevice(),
             sizeof(T),
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            BufferMemoryType::GpuOnly);
         return addBuffer(id, std::move(buffer));
     }
 
@@ -78,7 +78,7 @@ public:
             m_renderer->getDevice(),
             data.size() * sizeof(T),
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            BufferMemoryType::GpuOnly);
         auto* ptr = addBuffer(id, std::move(buffer));
         m_renderer->getStagingBelt().uploadBufferBlocking(m_renderer->getDevice().getGeneralQueue(), *ptr, data);
         return ptr;

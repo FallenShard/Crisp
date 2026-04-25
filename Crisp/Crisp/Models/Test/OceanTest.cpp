@@ -9,9 +9,6 @@ namespace crisp {
 namespace {
 using OceanTest = VulkanTest;
 
-using ::testing::IsNull;
-using ::testing::Not;
-
 TEST_F(OceanTest, PatchConstruction) {
     constexpr float kSize = 5.0;
     for (const int32_t N : {64, 128, 256}) {
@@ -51,16 +48,17 @@ TEST_F(OceanTest, VulkanBuffer) {
         *device_,
         size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        BufferMemoryType::GpuOnly);
 
-    StagingVulkanBuffer stagingBuffer(*device_, size);
+    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(stagingPtr[i], data[i]);
     }
 
-    StagingVulkanBuffer downloadBuffer(*device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    VulkanBuffer downloadBuffer(
+        *device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     {
         ScopeCommandExecutor executor(*device_);
         const auto& cmdBuffer = executor.cmdBuffer;

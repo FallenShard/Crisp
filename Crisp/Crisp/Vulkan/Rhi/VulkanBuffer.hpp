@@ -4,10 +4,22 @@
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
+
+enum class BufferMemoryType : uint8_t {
+    // Device-local memory. Not host-visible. Use with TRANSFER_DST + a staging upload, or BDA writes.
+    GpuOnly,
+    // Host-visible memory optimized for sequential CPU writes (typically write-combined).
+    // Use for staging-source buffers that the CPU writes once and the GPU reads via vkCmdCopy*.
+    HostUpload,
+    // Host-visible memory optimized for cached host reads (random access).
+    // Use for staging-destination buffers populated by the GPU and then read by the CPU.
+    HostReadback,
+};
+
 class VulkanBuffer : public VulkanResource<VkBuffer> {
 public:
     VulkanBuffer(
-        const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memProps);
+        const VulkanDevice& device, VkDeviceSize size, VkBufferUsageFlags usageFlags, BufferMemoryType memoryType);
     ~VulkanBuffer();
 
     VulkanBuffer(const VulkanBuffer&) = delete;
@@ -30,22 +42,7 @@ public:
     VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
     VkDescriptorBufferInfo createDescriptorInfo() const;
 
-protected:
-    VmaAllocation m_allocation;
-    VmaAllocationInfo m_allocationInfo;
-    VkDeviceSize m_size;
-    VkDeviceAddress m_address;
-};
-
-class StagingVulkanBuffer final : public VulkanBuffer {
-public:
-    StagingVulkanBuffer(
-        VulkanDevice& device,
-        VkDeviceSize size,
-        VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    void updateFromHost(const void* hostMemoryData, VkDeviceSize size, VkDeviceSize offset);
-    void updateFromHost(const void* hostMemoryData);
+    void updateFromHost(const void* data, VkDeviceSize size, VkDeviceSize offset);
 
     template <typename T>
     void updateFromHost(const std::vector<T>& buffer) {
@@ -57,30 +54,28 @@ public:
         updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
     }
 
-    void updateFromStaging(const StagingVulkanBuffer& stagingVulkanBuffer);
-
     template <typename T>
     const T* getHostVisibleData() const {
-        return reinterpret_cast<const T*>(m_allocationInfo.pMappedData); // NOLINT
+        return static_cast<const T*>(m_allocationInfo.pMappedData);
     }
 
     template <typename T>
     T* getHostVisibleData() {
-        return reinterpret_cast<T*>(m_allocationInfo.pMappedData); // NOLINT
-    }
-
-    const VulkanDevice& getDevice() const {
-        return *m_device;
+        return static_cast<T*>(m_allocationInfo.pMappedData);
     }
 
 private:
-    VulkanDevice* m_device;
+    VmaAllocator m_allocator;
+    VmaAllocation m_allocation;
+    VmaAllocationInfo m_allocationInfo;
+    VkDeviceSize m_size;
+    VkDeviceAddress m_address;
 };
 
 inline std::unique_ptr<VulkanBuffer> createStorageBuffer(
     const VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags additionalUsageFlags = 0) {
     return std::make_unique<VulkanBuffer>(
-        device, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        device, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags, BufferMemoryType::GpuOnly);
 }
 
 } // namespace crisp
