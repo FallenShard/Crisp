@@ -5,6 +5,7 @@
 namespace crisp {
 
 struct StagingAllocation {
+    VkBuffer buffer;     // Source buffer this allocation lives in.
     VkDeviceSize offset; // Byte offset within the staging buffer.
     VkDeviceSize size;   // Requested size (before alignment padding).
     void* mappedPtr;     // Host-visible pointer at this offset.

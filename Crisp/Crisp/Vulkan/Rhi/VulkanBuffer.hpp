@@ -75,7 +75,10 @@ private:
 inline std::unique_ptr<VulkanBuffer> createStorageBuffer(
     const VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags additionalUsageFlags = 0) {
     return std::make_unique<VulkanBuffer>(
-        device, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | additionalUsageFlags, BufferMemoryType::GpuOnly);
+        device,
+        size,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | additionalUsageFlags,
+        BufferMemoryType::GpuOnly);
 }
 
 } // namespace crisp

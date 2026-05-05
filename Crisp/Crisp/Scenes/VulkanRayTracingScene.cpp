@@ -185,16 +185,9 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
         frameContext.commandEncoder.transitionLayout(
             *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> (kRayTracingStorageWrite | kTransferRead));
 
-        const VkDeviceSize size =
-            m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
+        const VkDeviceSize size = m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
         m_screenshotBuffer = frameContext.stagingBelt->downloadImage(
-            cmdBuffer,
-            *m_rayTracedImage,
-            {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u},
-            0,
-            1,
-            0,
-            size);
+            cmdBuffer, *m_rayTracedImage, {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u}, 0, 1, 0, size);
         m_screenshotRequested = false;
     }
 
@@ -213,8 +206,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     if (m_screenshotRequestFrameIdx &&
         *m_screenshotRequestFrameIdx + Renderer::NumVirtualFrames == frameContext.frameIndex) {
         const std::span<const float> pixelData(
-            m_screenshotBuffer.getMappedData<float>(),
-            m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4);
+            m_screenshotBuffer.getMappedData<float>(), m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4);
         saveExr(m_outputDir / "screenshot.exr", pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
             .unwrap();
         m_screenshotRequestFrameIdx = std::nullopt;

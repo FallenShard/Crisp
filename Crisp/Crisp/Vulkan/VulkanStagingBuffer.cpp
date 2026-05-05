@@ -16,6 +16,7 @@ std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSiz
     CRISP_CHECK_GT(size, VkDeviceSize{0});
 
     const VkDeviceSize alignedSize = alignUp(size);
+    const VkBuffer handle = m_buffer->getHandle();
 
     if (m_empty) {
         // Ring is empty. Check if the allocation fits at all.
@@ -28,7 +29,7 @@ std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSiz
         void* ptr = static_cast<char*>(m_buffer->getHostVisibleData<void>()) + offset; // NOLINT
         m_head = offset + alignedSize;
         m_empty = false;
-        return StagingAllocation{offset, size, ptr};
+        return StagingAllocation{handle, offset, size, ptr};
     }
 
     if (m_head >= m_tail) {
@@ -38,7 +39,7 @@ std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSiz
             const VkDeviceSize offset = m_head;
             void* ptr = static_cast<char*>(m_buffer->getHostVisibleData<void>()) + offset; // NOLINT
             m_head = offset + alignedSize;
-            return StagingAllocation{offset, size, ptr};
+            return StagingAllocation{handle, offset, size, ptr};
         }
 
         // Not enough space at end. Try wrapping to the beginning.
@@ -46,7 +47,7 @@ std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSiz
         if (alignedSize <= m_tail) {
             m_head = alignedSize;
             void* ptr = m_buffer->getHostVisibleData<void>();
-            return StagingAllocation{0, size, ptr};
+            return StagingAllocation{handle, 0, size, ptr};
         }
 
         // No contiguous space available.
@@ -62,7 +63,7 @@ std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSiz
     const VkDeviceSize offset = m_head;
     void* ptr = static_cast<char*>(m_buffer->getHostVisibleData<void>()) + offset; // NOLINT
     m_head = offset + alignedSize;
-    return StagingAllocation{offset, size, ptr};
+    return StagingAllocation{handle, offset, size, ptr};
 }
 
 void VulkanStagingBuffer::reclaim(const VkDeviceSize reclaimOffset) {

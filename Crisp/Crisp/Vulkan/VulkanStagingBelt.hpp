@@ -31,18 +31,17 @@ struct ReadbackBuffer {
 
 class VulkanStagingBelt {
 public:
-    VulkanStagingBelt(VulkanDevice& device, VkDeviceSize capacity);
+    VulkanStagingBelt(VulkanDevice& device, VkDeviceSize initialCapacity);
 
     // --- Per-frame streaming ---
     void beginFrame(uint32_t virtualFrameIndex);
     void endFrame();
 
     // --- Low-level: stage data and get allocation info ---
-    // Copies `data` into the ring buffer and returns the allocation.
+    // Copies `data` into a chunk and returns the allocation (carrying its source VkBuffer).
     // Use this when you need to record custom copy commands (e.g. with layout transitions).
     // Call reclaimAll() after blocking submits.
     StagingAllocation stageData(const void* data, VkDeviceSize size);
-    VkBuffer getStagingBufferHandle() const;
     void reclaimAll();
 
     // --- Buffer uploads ---
@@ -165,15 +164,26 @@ public:
         uploadBufferBlocking(queue, dstBuffer, dstOffset, data.data(), data.size_bytes());
     }
 
-    VulkanStagingBuffer& getStagingBuffer();
-    const VulkanStagingBuffer& getStagingBuffer() const;
-
 private:
-    VulkanDevice* m_device;
-    VulkanStagingBuffer m_stagingBuffer;
-
     static constexpr uint32_t kMaxVirtualFrames = 4;
-    std::array<VkDeviceSize, kMaxVirtualFrames> m_frameWatermarks{};
+    static constexpr uint64_t kEvictionGraceFrames = 60;
+
+    struct Chunk {
+        VulkanStagingBuffer buffer;
+        std::array<VkDeviceSize, kMaxVirtualFrames> watermarks{};
+        uint64_t lastUsedFrame{0};
+    };
+
+    Chunk& addChunk(VkDeviceSize capacity);
+
+    VulkanDevice* m_device;
+    VkDeviceSize m_initialCapacity;
+    VkDeviceSize m_alignment;
+
+    std::vector<Chunk> m_chunks;
+    size_t m_activeChunkIdx{0};
+
+    uint64_t m_currentFrame{0};
     uint32_t m_currentVirtualFrame{0};
 };
 

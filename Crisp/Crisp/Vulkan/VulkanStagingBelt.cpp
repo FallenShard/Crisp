@@ -5,35 +5,104 @@
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
+#include <algorithm>
+
 namespace crisp {
 
-VulkanStagingBelt::VulkanStagingBelt(VulkanDevice& device, const VkDeviceSize capacity)
+VulkanStagingBelt::VulkanStagingBelt(VulkanDevice& device, const VkDeviceSize initialCapacity)
     : m_device(&device)
-    , m_stagingBuffer(device, capacity, device.getNonCoherentAtomSize()) {}
+    , m_initialCapacity(initialCapacity)
+    , m_alignment(device.getNonCoherentAtomSize()) {
+    addChunk(m_initialCapacity);
+}
+
+VulkanStagingBelt::Chunk& VulkanStagingBelt::addChunk(const VkDeviceSize capacity) {
+    return m_chunks.emplace_back(Chunk{
+        .buffer = VulkanStagingBuffer(*m_device, capacity, m_alignment),
+        .lastUsedFrame = m_currentFrame,
+    });
+}
 
 void VulkanStagingBelt::beginFrame(const uint32_t virtualFrameIndex) {
-    CRISP_CHECK_LT(virtualFrameIndex, kMaxVirtualFrames);
+    CRISP_CHECK_LT(
+        virtualFrameIndex,
+        kMaxVirtualFrames,
+        "virtualFrameIndex={} exceeds belt's kMaxVirtualFrames={}",
+        virtualFrameIndex,
+        kMaxVirtualFrames);
+    ++m_currentFrame;
     m_currentVirtualFrame = virtualFrameIndex;
-    m_stagingBuffer.reclaim(m_frameWatermarks[virtualFrameIndex]);
+
+    for (auto& chunk : m_chunks) {
+        chunk.buffer.reclaim(chunk.watermarks[virtualFrameIndex]);
+    }
+
+    // Evict chunks that haven't been touched for kMaxVirtualFrames + grace frames.
+    // The primary chunk at index 0 is preserved to avoid recreate thrash.
+    if (m_chunks.size() > 1) {
+        constexpr uint64_t kEvictionThreshold = kMaxVirtualFrames + kEvictionGraceFrames;
+        const auto newEnd = std::remove_if(
+            m_chunks.begin() + 1, m_chunks.end(), [&](const Chunk& c) {
+                return (m_currentFrame - c.lastUsedFrame) > kEvictionThreshold;
+            });
+        if (newEnd != m_chunks.end()) {
+            m_chunks.erase(newEnd, m_chunks.end());
+            m_activeChunkIdx = 0;
+        }
+    }
 }
 
 void VulkanStagingBelt::endFrame() {
-    m_frameWatermarks[m_currentVirtualFrame] = m_stagingBuffer.getHead();
+    for (auto& chunk : m_chunks) {
+        chunk.watermarks[m_currentVirtualFrame] = chunk.buffer.getHead();
+    }
 }
 
 StagingAllocation VulkanStagingBelt::stageData(const void* data, const VkDeviceSize size) {
-    auto alloc = m_stagingBuffer.allocate(size);
-    CRISP_CHECK(alloc.has_value());
-    std::memcpy(alloc->mappedPtr, data, size);
+    const auto tryAllocateAt = [&](const size_t idx) -> std::optional<StagingAllocation> {
+        auto alloc = m_chunks[idx].buffer.allocate(size);
+        if (!alloc.has_value()) {
+            return std::nullopt;
+        }
+        std::memcpy(alloc->mappedPtr, data, size);
+        m_chunks[idx].lastUsedFrame = m_currentFrame;
+        m_activeChunkIdx = idx;
+        return alloc;
+    };
+
+    if (m_activeChunkIdx < m_chunks.size()) {
+        if (auto alloc = tryAllocateAt(m_activeChunkIdx); alloc.has_value()) {
+            return *alloc;
+        }
+    }
+
+    for (size_t i = 0; i < m_chunks.size(); ++i) {
+        if (i == m_activeChunkIdx) {
+            continue;
+        }
+        if (auto alloc = tryAllocateAt(i); alloc.has_value()) {
+            return *alloc;
+        }
+    }
+
+    // No chunk has space; create one sized to fit.
+    const VkDeviceSize alignedSize = (size + m_alignment - 1) & ~(m_alignment - 1);
+    const VkDeviceSize chunkSize = std::max(m_initialCapacity, alignedSize);
+    addChunk(chunkSize);
+    auto alloc = tryAllocateAt(m_chunks.size() - 1);
+    CRISP_CHECK(
+        alloc.has_value(),
+        "freshly added staging chunk of {} bytes failed to satisfy a {}-byte allocation",
+        chunkSize,
+        size);
     return *alloc;
 }
 
-VkBuffer VulkanStagingBelt::getStagingBufferHandle() const {
-    return m_stagingBuffer.getHandle();
-}
-
 void VulkanStagingBelt::reclaimAll() {
-    m_stagingBuffer.reclaimAll();
+    for (auto& chunk : m_chunks) {
+        chunk.buffer.reclaimAll();
+        chunk.watermarks.fill(0);
+    }
 }
 
 void VulkanStagingBelt::uploadBuffer(
@@ -48,7 +117,7 @@ void VulkanStagingBelt::uploadBuffer(
     region.srcOffset = alloc.offset;
     region.dstOffset = dstOffset;
     region.size = size;
-    vkCmdCopyBuffer(cmdBuffer, m_stagingBuffer.getHandle(), dstBuffer.getHandle(), 1, &region);
+    vkCmdCopyBuffer(cmdBuffer, alloc.buffer, dstBuffer.getHandle(), 1, &region);
 }
 
 void VulkanStagingBelt::uploadBufferBlocking(
@@ -57,11 +126,12 @@ void VulkanStagingBelt::uploadBufferBlocking(
     const VkDeviceSize dstOffset,
     const void* data,
     const VkDeviceSize size) {
-    if (size > m_stagingBuffer.getCapacity()) {
+    if (size > m_initialCapacity) {
         spdlog::warn(
-            "VulkanStagingBelt: upload of {} bytes exceeds ring capacity of {}. Using temporary staging buffer.",
+            "VulkanStagingBelt: upload of {} bytes exceeds initial chunk capacity of {}. Using temporary staging "
+            "buffer.",
             size,
-            m_stagingBuffer.getCapacity());
+            m_initialCapacity);
 
         auto tempStaging = std::make_unique<VulkanBuffer>(
             *m_device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
@@ -78,10 +148,12 @@ void VulkanStagingBelt::uploadBufferBlocking(
         region.srcOffset = alloc.offset;
         region.dstOffset = dstOffset;
         region.size = size;
-        vkCmdCopyBuffer(cmdBuffer, m_stagingBuffer.getHandle(), dstBuffer.getHandle(), 1, &region);
+        vkCmdCopyBuffer(cmdBuffer, alloc.buffer, dstBuffer.getHandle(), 1, &region);
     });
 
-    m_stagingBuffer.reclaim(m_stagingBuffer.getHead());
+    // Queue is idle after submitAndWait; drain the chunk we staged into.
+    auto& chunk = m_chunks[m_activeChunkIdx];
+    chunk.buffer.reclaim(chunk.buffer.getHead());
 }
 
 void VulkanStagingBelt::uploadBufferBlocking(
@@ -124,7 +196,7 @@ void VulkanStagingBelt::uploadImage(
     copyRegion.imageSubresource.mipLevel = mipLevel;
     vkCmdCopyBufferToImage(
         cmdBuffer,
-        m_stagingBuffer.getHandle(),
+        alloc.buffer,
         dstImage.getHandle(),
         dstImage.getLayout(baseLayer, mipLevel),
         1,
@@ -170,14 +242,6 @@ ReadbackBuffer VulkanStagingBelt::downloadImage(
         cmd, src.getHandle(), src.getLayout(baseLayer, mipLevel), buffer->getHandle(), 1, &copyRegion);
 
     return {.buffer = std::move(buffer)};
-}
-
-VulkanStagingBuffer& VulkanStagingBelt::getStagingBuffer() {
-    return m_stagingBuffer;
-}
-
-const VulkanStagingBuffer& VulkanStagingBelt::getStagingBuffer() const {
-    return m_stagingBuffer;
 }
 
 } // namespace crisp
