@@ -113,7 +113,6 @@ void addToRenderGraph(
                 kTransferWrite >> (kComputeStorageRead | kComputeStorageWrite));
         };
 
-    // m_renderGraph->addDependency(DepthPrePass, LightCullingPass, 0);
     renderGraph.addDependency(
         kLightCullingPass,
         "MainPass",

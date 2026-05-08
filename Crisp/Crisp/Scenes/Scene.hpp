@@ -33,7 +33,6 @@ protected:
     std::vector<ConnectionHandler> m_connectionHandlers;
 
     std::unique_ptr<ResourceContext> m_resourceContext;
-    std::unique_ptr<RenderGraph> m_renderGraph;
 
     FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
 };

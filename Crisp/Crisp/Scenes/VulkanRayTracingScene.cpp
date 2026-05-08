@@ -152,13 +152,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
     m_renderer->setSceneImageView(&m_rayTracedImage->getView());
 }
 
-void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {
-    /* m_cameraController->onViewportResized(width, height);
-
-     m_renderGraph->resize(width, height);
-     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(),
-     0);*/
-}
+void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {}
 
 void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
     if (m_cameraController->update(updateParams.dt)) {

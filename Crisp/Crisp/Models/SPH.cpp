@@ -47,7 +47,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     , m_currentSection(0)
     , m_numParticles(m_fluidDim.x * m_fluidDim.y * m_fluidDim.z)
     , m_runSimulation{true}
-    , m_renderGraph(renderGraph) {
+    , m_renderGraphLegacy(renderGraph) {
 
     const VkDeviceSize vertexBufferSize = m_numParticles * sizeof(glm::vec4);
     m_vertexBuffer = std::make_unique<VulkanBuffer>(
@@ -498,15 +498,15 @@ void SPH::update(float dt) {
 
 
 
-    m_renderGraph->getNode("clear-hash-grid").isEnabled = true;
-    m_renderGraph->getNode("compute-cell-count").isEnabled = true;
-    m_renderGraph->getNode("scan").isEnabled = true;
-    m_renderGraph->getNode("scan-block").isEnabled = true;
-    m_renderGraph->getNode("scan-combine").isEnabled = true;
-    m_renderGraph->getNode("reindex").isEnabled = true;
-    m_renderGraph->getNode("compute-density-and-pressure").isEnabled = true;
-    m_renderGraph->getNode("compute-forces").isEnabled = true;
-    m_renderGraph->getNode("integrate").isEnabled = true;*/
+    m_renderGraphLegacy->getNode("clear-hash-grid").isEnabled = true;
+    m_renderGraphLegacy->getNode("compute-cell-count").isEnabled = true;
+    m_renderGraphLegacy->getNode("scan").isEnabled = true;
+    m_renderGraphLegacy->getNode("scan-block").isEnabled = true;
+    m_renderGraphLegacy->getNode("scan-combine").isEnabled = true;
+    m_renderGraphLegacy->getNode("reindex").isEnabled = true;
+    m_renderGraphLegacy->getNode("compute-density-and-pressure").isEnabled = true;
+    m_renderGraphLegacy->getNode("compute-forces").isEnabled = true;
+    m_renderGraphLegacy->getNode("integrate").isEnabled = true;*/
 }
 
 void SPH::onKeyPressed(Key key, int) {

@@ -31,7 +31,7 @@ private:
 
     void setupInput();
 
-    std::unique_ptr<rg::RenderGraph> m_rg;
+    std::unique_ptr<rg::RenderGraph> m_renderGraph;
     std::vector<std::unique_ptr<VulkanImageView>> m_sceneImageViews;
 
     std::vector<ConnectionHandler> m_connectionHandlers;

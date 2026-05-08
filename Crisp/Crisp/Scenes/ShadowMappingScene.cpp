@@ -97,26 +97,26 @@ ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Window* window)
     // m_cameraController = std::make_unique<CameraController>(app->getWindow());
     // m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-    // m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
+    // m_renderGraphLegacy = std::make_unique<RenderGraph>(m_renderer);
 
     //// Main render pass
-    // m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_4_BIT));
+    // m_renderGraphLegacy->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer, VK_SAMPLE_COUNT_4_BIT));
 
-    ////auto& depthPrePass = m_renderGraph->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
-    ////m_renderGraph->addDependency(DepthPrePass, MainPass, 0);
+    ////auto& depthPrePass = m_renderGraphLegacy->addRenderPass(DepthPrePass, std::make_unique<DepthPass>(m_renderer));
+    ////m_renderGraphLegacy->addDependency(DepthPrePass, MainPass, 0);
 
     //// Shadow map pass
-    // m_renderGraph->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
-    // m_renderGraph->addDependency(CsmPass, MainPass, 0, CascadeCount);
+    // m_renderGraphLegacy->addRenderPass(CsmPass, std::make_unique<ShadowPass>(m_renderer, ShadowMapSize, CascadeCount));
+    // m_renderGraphLegacy->addDependency(CsmPass, MainPass, 0, CascadeCount);
     ////
-    ////auto& vsmPassNode = m_renderGraph->addRenderPass(VsmPass, std::make_unique<VarianceShadowMapPass>(m_renderer,
-    /// ShadowMapSize)); /m_renderGraph->addDependency(VsmPass, MainPass, 0);
+    ////auto& vsmPassNode = m_renderGraphLegacy->addRenderPass(VsmPass, std::make_unique<VarianceShadowMapPass>(m_renderer,
+    /// ShadowMapSize)); /m_renderGraphLegacy->addDependency(VsmPass, MainPass, 0);
     ////
 
     //// Wrap-up render graph definition
-    // m_renderGraph->addDependency(MainPass, "SCREEN", 2);
-    // m_renderGraph->sortRenderPasses();
-    // m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
+    // m_renderGraphLegacy->addDependency(MainPass, "SCREEN", 2);
+    // m_renderGraphLegacy->sortRenderPasses();
+    // m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 2);
 
     // m_lightSystem = std::make_unique<LightSystem>(m_renderer, ShadowMapSize);
     // DirectionalLight dirLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5));
@@ -143,7 +143,7 @@ ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Window* window)
     //    {
     //        std::string key = "cascadedShadowMap" + std::to_string(i);
     //        auto csmPipeline = m_resourceContext->createPipeline(key, "ShadowMap.lua",
-    //        m_renderGraph->getRenderPass(CsmPass), i); auto csmMaterial = m_resourceContext->createMaterial(key,
+    //        m_renderGraphLegacy->getRenderPass(CsmPass), i); auto csmMaterial = m_resourceContext->createMaterial(key,
     //        csmPipeline); csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     //        csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
     //    }
@@ -156,7 +156,7 @@ ShadowMappingScene::ShadowMappingScene(Renderer* renderer, Window* window)
     //    createShaderballs();
     //}
 
-    // m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraph->getRenderPass(MainPass),
+    // m_skybox = std::make_unique<Skybox>(m_renderer, m_renderGraphLegacy->getRenderPass(MainPass),
     // *m_resourceContext->getImageView("cubeMap"), *m_resourceContext->getSampler("linearClamp"));
 
     // createTrees();
@@ -173,8 +173,8 @@ ShadowMappingScene::~ShadowMappingScene() {}
 void ShadowMappingScene::resize(int, int) {
     /* m_cameraController->resize(width, height);
 
-     m_renderGraph->resize(width, height);
-     m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);*/
+     m_renderGraphLegacy->resize(width, height);
+     m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 2);*/
 }
 
 void ShadowMappingScene::update(float /*dt*/) {
@@ -232,12 +232,12 @@ void ShadowMappingScene::render() {
     //     m_rayTracer->traceRays(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), *m_rayTracingMaterial);
     // });
 
-    /* m_renderGraph->clearCommandLists();
+    /* m_renderGraphLegacy->clearCommandLists();
      if (renderAll)
-         m_renderGraph->buildCommandLists(m_renderNodes);
+         m_renderGraphLegacy->buildCommandLists(m_renderNodes);
 
-     m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
-     m_renderGraph->executeCommandLists();*/
+     m_renderGraphLegacy->addToCommandLists(m_skybox->getRenderNode());
+     m_renderGraphLegacy->executeCommandLists();*/
 }
 
 void ShadowMappingScene::setBlurRadius(int /*radius*/) {
@@ -367,7 +367,7 @@ void ShadowMappingScene::createCommonTextures() {
     imageCache.addImageWithView("cubeMap", std::move(cubeMap), std::move(cubeMapView));
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
 
-    m_resourceContext->createPipeline("pbrTex", "PbrTex.lua", m_renderGraph->getRenderPass(MainPass), 0);
+    m_resourceContext->createPipeline("pbrTex", "PbrTex.lua", m_renderGraphLegacy->getRenderPass(MainPass), 0);
 }
 
 Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type) {
@@ -378,7 +378,7 @@ Material* ShadowMappingScene::createPbrTexMaterial(const std::string& type) {
 
     material->writeDescriptor(1, 0, *m_lightSystem->getCascadedDirectionalLightBuffer());
     material->writeDescriptor(
-        1, 1, *m_renderGraph->getNode(CsmPass).renderPass, 0, &imageCache.getSampler("nearestNeighbor"));
+        1, 1, *m_renderGraphLegacy->getNode(CsmPass).renderPass, 0, &imageCache.getSampler("nearestNeighbor"));
 
     const std::vector<std::string> texNames = {"diffuse", "metallic", "roughness", "normal", "ao"};
     const std::vector<VkFormat> formats = {
@@ -455,7 +455,7 @@ void ShadowMappingScene::createTerrain() {
     terrain.material = material;
     terrain.setPushConstantView(terrainPushConstants);*/
 
-    // m_renderGraph->getNode(MainPass).renderNodes.push_back(terrain);
+    // m_renderGraphLegacy->getNode(MainPass).renderNodes.push_back(terrain);
 }
 
 void ShadowMappingScene::createShaderballs() {
@@ -483,7 +483,7 @@ void ShadowMappingScene::createShaderballs() {
     // auto pbrTexMaterial = createPbrTexMaterial("RedBricks");
 
     // auto pbrPipeline = m_resourceContext->createPipeline("pbrUnif", "PbrUnif.lua",
-    // m_renderGraph->getRenderPass(MainPass), 0); auto pbrMaterial = m_resourceContext->createMaterial("pbrUnif",
+    // m_renderGraphLegacy->getRenderPass(MainPass), 0); auto pbrMaterial = m_resourceContext->createMaterial("pbrUnif",
     // pbrPipeline); pbrMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     // pbrMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));
 
@@ -494,7 +494,7 @@ void ShadowMappingScene::createShaderballs() {
     // m_pbrUnifMaterial, BufferUpdatePolicy::PerFrame)); pbrMaterial->writeDescriptor(0, 2,
     // *m_resourceContext->getUniformBuffer("pbrUnifParams")); pbrMaterial->writeDescriptor(1, 0,
     // *m_lightSystem->getCascadedDirectionalLightBuffer()); pbrMaterial->writeDescriptor(1, 1,
-    // m_renderGraph->getRenderPass(CsmPass), 0, m_resourceContext->getSampler("nearestNeighbor"));
+    // m_renderGraphLegacy->getRenderPass(CsmPass), 0, m_resourceContext->getSampler("nearestNeighbor"));
     // pbrMaterial->writeDescriptor(2, 0, *m_resourceContext->getImageView("envIrrMap"),
     // m_resourceContext->getSampler("linearClamp")); pbrMaterial->writeDescriptor(2, 1,
     // *m_resourceContext->getImageView("filteredMap"), m_resourceContext->getSampler("linearMipmap"));
@@ -527,7 +527,7 @@ void ShadowMappingScene::createTrees() {
 
     // Create the alpha-mask material
     auto alphaPipeline =
-        m_resourceContext->createPipeline("alphaMask", "AlphaMask.lua", m_renderGraph->getRenderPass(MainPass), 0);
+        m_resourceContext->createPipeline("alphaMask", "AlphaMask.lua", m_renderGraphLegacy->getRenderPass(MainPass), 0);
     auto alphaMaterial = m_resourceContext->createMaterial("alphaMask", alphaPipeline);
     alphaMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
@@ -546,14 +546,14 @@ void ShadowMappingScene::createTrees() {
     alphaMaterial->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
     alphaMaterial->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));
     alphaMaterial->writeDescriptor(
-        1, 4, m_renderGraph->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
+        1, 4, m_renderGraphLegacy->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
 
     alphaMaterial->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
     alphaMaterial->writeDescriptor(2, 1, imageCache.getImageView("filteredMap"), imageCache.getSampler("linearMipmap"));
     alphaMaterial->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 
     auto trunkPipeline =
-        m_resourceContext->createPipeline("treeTrunk", "TreeTrunk.lua", m_renderGraph->getRenderPass(MainPass), 0);
+        m_resourceContext->createPipeline("treeTrunk", "TreeTrunk.lua", m_renderGraphLegacy->getRenderPass(MainPass), 0);
 
     auto createOpaqueMaterial =
         [this, trunkPipeline](std::string materialKey, std::string diffuseMapFilename, std::string normalMapFilename) {
@@ -579,7 +579,7 @@ void ShadowMappingScene::createTrees() {
             material->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
             material->writeDescriptor(1, 3, *m_resourceContext->getUniformBuffer("camera"));
             material->writeDescriptor(
-                1, 4, m_renderGraph->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
+                1, 4, m_renderGraphLegacy->getRenderPass(CsmPass), 0, &imageCache.getSampler("nearestNeighbor"));
 
             material->writeDescriptor(2, 0, imageCache.getImageView("envIrrMap"), imageCache.getSampler("linearClamp"));
             material->writeDescriptor(
@@ -636,7 +636,7 @@ void ShadowMappingScene::createTrees() {
     for (uint32_t c = 0; c < CascadeCount; ++c) {
         std::string key = "cascadedShadowMapAlpha" + std::to_string(c);
         auto csmPipeline =
-            m_resourceContext->createPipeline(key, "ShadowMapAlpha.lua", m_renderGraph->getRenderPass(CsmPass), c);
+            m_resourceContext->createPipeline(key, "ShadowMapAlpha.lua", m_renderGraphLegacy->getRenderPass(CsmPass), c);
         auto csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
         csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
         csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(c));
@@ -680,7 +680,7 @@ void ShadowMappingScene::createPlane() {
     // auto floor = createRenderNode("floor", 0);
     // floor->transformPack->M = glm::scale(glm::vec3(100.0f, 1.0f, 100.0f));
     // floor->geometry = m_resourceContext->getGeometry("floor");
-    // auto pipeline = m_resourceContext->createPipeline("gooch", "Gooch.lua", m_renderGraph->getRenderPass(MainPass),
+    // auto pipeline = m_resourceContext->createPipeline("gooch", "Gooch.lua", m_renderGraphLegacy->getRenderPass(MainPass),
     // 0); auto material = m_resourceContext->createMaterial("gooch", pipeline); material->writeDescriptor(0, 0,
     // m_transformBuffer->getDescriptorInfo()); glm::vec4 goochMaterial[] =
     //{
@@ -691,10 +691,10 @@ void ShadowMappingScene::createPlane() {
     // material->writeDescriptor(1, 0, *m_resourceContext->getUniformBuffer("goochColors"));
     ////material->writeDescriptor(1, 1, *m_lightSystem->getDirectionalLightBuffer());
     // material->writeDescriptor(1, 1, *m_resourceContext->getUniformBuffer("camera"));
-    ////material->writeDescriptor(1, 3, *m_renderGraph->getNode(ShadowMapPass).renderPass, 0,
+    ////material->writeDescriptor(1, 3, *m_renderGraphLegacy->getNode(ShadowMapPass).renderPass, 0,
     /// m_resourceContext->getSampler("nearestNeighbor"));
     // material->writeDescriptor(1, 2, *m_lightSystem->getCascadedDirectionalLightBuffer());
-    // material->writeDescriptor(1, 3, *m_renderGraph->getNode(CsmPass).renderPass, 0,
+    // material->writeDescriptor(1, 3, *m_renderGraphLegacy->getNode(CsmPass).renderPass, 0,
     // m_resourceContext->getSampler("nearestNeighbor"));
     //
     // floor->pass(MainPass).material = material;

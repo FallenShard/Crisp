@@ -64,18 +64,18 @@ NormalMappingScene::NormalMappingScene(Renderer* renderer, Window* window)
     // 5.0f, 5.0f));
     // m_cameraController->getCamera().setTarget(glm::vec3(0.0f));
 
-    m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
+    m_renderGraphLegacy = std::make_unique<RenderGraph>(m_renderer);
 
     // Main render pass
-    m_renderGraph->addRenderPass(
+    m_renderGraphLegacy->addRenderPass(
         MainPass,
         createForwardLightingPass(
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
-    m_renderGraph->addDependency(MainPass, "SCREEN", 0);
-    m_renderGraph->sortRenderPasses().unwrap();
-    m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
+    m_renderGraphLegacy->addDependency(MainPass, "SCREEN", 0);
+    m_renderGraphLegacy->sortRenderPasses().unwrap();
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 0);
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
@@ -98,8 +98,8 @@ NormalMappingScene::~NormalMappingScene() {}
 void NormalMappingScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderGraph->resize(width, height);
-    m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
+    m_renderGraphLegacy->resize(width, height);
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 0);
 }
 
 void NormalMappingScene::update(float dt) {
@@ -123,9 +123,9 @@ void NormalMappingScene::update(float dt) {
 }
 
 void NormalMappingScene::render() {
-    m_renderGraph->clearCommandLists();
-    m_renderGraph->buildCommandLists(m_renderNodeList);
-    m_renderGraph->executeCommandLists();
+    m_renderGraphLegacy->clearCommandLists();
+    m_renderGraphLegacy->buildCommandLists(m_renderNodeList);
+    m_renderGraphLegacy->executeCommandLists();
 }
 
 RenderNode* NormalMappingScene::createRenderNode(std::string id, int transformIndex) {
@@ -169,7 +169,7 @@ void NormalMappingScene::createPlane() {
             VK_FORMAT_R8G8B8A8_UNORM));
 
     VulkanPipeline* pipeline =
-        m_resourceContext->createPipeline("normalMap", "NormalMap.lua", m_renderGraph->getRenderPass(MainPass), 0);
+        m_resourceContext->createPipeline("normalMap", "NormalMap.lua", m_renderGraphLegacy->getRenderPass(MainPass), 0);
     Material* material = m_resourceContext->createMaterial("normalMap", pipeline);
     material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     material->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));

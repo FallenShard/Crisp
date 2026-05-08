@@ -81,6 +81,6 @@ private:
     glm::vec3 m_gravity = {0.0f, -9.81f, 0.0f};
     bool m_runSimulation = false;
 
-    RenderGraph* m_renderGraph;
+    RenderGraph* m_renderGraphLegacy;
 };
 } // namespace crisp

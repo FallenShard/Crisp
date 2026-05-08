@@ -62,9 +62,9 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
     m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
 
-    m_rg = std::make_unique<rg::RenderGraph>();
+    m_renderGraph = std::make_unique<rg::RenderGraph>();
 
-    addCascadedShadowMapPasses(*m_rg, kShadowMapSize, [this](const FrameContext& ctx, const uint32_t cascadeIndex) {
+    addCascadedShadowMapPasses(*m_renderGraph, kShadowMapSize, [this](const FrameContext& ctx, const uint32_t cascadeIndex) {
         std::vector<DrawCommand> drawCommands{};
         for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes.values()) {
             if (idx++ >= m_nodesToDraw) {
@@ -78,7 +78,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         }
     });
 
-    addForwardLightingPass(*m_rg, [this](const FrameContext& ctx) {
+    addForwardLightingPass(*m_renderGraph, [this](const FrameContext& ctx) {
         std::vector<DrawCommand> drawCommands{};
         for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes) {
             if (idx++ >= m_nodesToDraw) {
@@ -100,9 +100,8 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         vkCmdDrawMeshTasksEXT(ctx.commandEncoder.getHandle(), m_meshletData.meshlets.size(), 1, 1);
     });
 
-    m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    m_renderer->setSceneImageView(
-        &m_rg->getResourceImageView(m_rg->getBlackboard().get<ForwardLightingPassData>().hdrImage));
+    m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
@@ -117,7 +116,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
         const std::string key = fmt::format("cascadedShadowMap{}", i);
         auto* csmPipeline =
-            m_resourceContext->createPipeline(key, "ShadowMap.json", m_rg->getRenderPass(kCsmPasses[i]), 0);
+            m_resourceContext->createPipeline(key, "ShadowMap.json", m_renderGraph->getRenderPass(kCsmPasses[i]), 0);
         auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
         csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
         csmMaterial->writeDescriptor(0, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
@@ -137,10 +136,9 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 void PbrScene::resize(const int32_t width, const int32_t height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_rg->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
-    m_renderer->setSceneImageView(
-        &m_rg->getResourceImageView(m_rg->getBlackboard().get<ForwardLightingPassData>().hdrImage));
+    m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
 }
 
 void PbrScene::update(const UpdateParams& updateParams) {
@@ -169,7 +167,7 @@ void PbrScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
 
-    m_rg->execute(frameContext);
+    m_renderGraph->execute(frameContext);
 }
 
 void PbrScene::drawGui() {
@@ -196,7 +194,7 @@ void PbrScene::drawGui() {
 
     ImGui::Begin("Render Graph");
     if (ImGui::CollapsingHeader("Overview")) {
-        ::crisp::drawGui(*m_rg);
+        ::crisp::drawGui(*m_renderGraph);
     }
     if (ImGui::CollapsingHeader("Nodes")) {
         ImGui::SliderInt("Nodes to Draw", &m_nodesToDraw, 0, static_cast<int32_t>(m_renderNodes.size()));
@@ -295,9 +293,9 @@ void PbrScene::createCommonTextures() {
     addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
     auto pipeline =
-        m_resourceContext->createPipeline("pbr", "PbrTex.json", m_rg->getRenderPass(kForwardLightingPass), 0);
+        m_resourceContext->createPipeline("pbr", "PbrTex.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
 
-    m_resourceContext->createPipeline("mesh", "MeshShading.json", m_rg->getRenderPass(kForwardLightingPass), 0);
+    m_resourceContext->createPipeline("mesh", "MeshShading.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
@@ -305,7 +303,7 @@ void PbrScene::createCommonTextures() {
 
     m_forwardPassMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 0, 1);
-    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_rg);
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
 }
 
 void PbrScene::setEnvironmentMap(const std::string& envMapName) {
@@ -314,7 +312,7 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
         envMapName);
     m_skybox = std::make_unique<Skybox>(
         m_renderer,
-        m_rg->getRenderPass(kForwardLightingPass),
+        m_renderGraph->getRenderPass(kForwardLightingPass),
         m_lightSystem->getEnvironmentLight()->getCubeMapView(),
         m_resourceContext->imageCache.getSampler("linearClamp"));
 }
@@ -419,7 +417,7 @@ void PbrScene::createSceneObject(const std::filesystem::path& path) {
     // sceneObject->pass(kForwardLightingPass).material =
     //     createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
     // setPbrMaterialSceneParams(
-    //     *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_rg);
+    //     *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_renderGraph);
     // m_renderer->getDevice().flushDescriptorUpdates();
 
     // for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {

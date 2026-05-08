@@ -37,7 +37,7 @@ private:
     void setupInput();
 
     int32_t m_nodesToDraw = 0;
-    std::unique_ptr<rg::RenderGraph> m_rg;
+    std::unique_ptr<rg::RenderGraph> m_renderGraph;
 
     std::unique_ptr<TargetCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;

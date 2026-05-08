@@ -429,7 +429,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             //     command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
             // }
         });
-    // resourceContext.createPipeline("TransmittanceLutPipeline", "SkyTransLut.json", m_rg->, 0);
+    // resourceContext.createPipeline("TransmittanceLutPipeline", "SkyTransLut.json", m_renderGraph->, 0);
 
     renderGraph.addPass(
         MultipleScatteringPass,

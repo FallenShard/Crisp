@@ -29,10 +29,10 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
     m_uniformBuffers.emplace(
         "camera", std::make_unique<UniformBuffer>(m_renderer, sizeof(CameraParameters), BufferUpdatePolicy::PerFrame));
 
-    auto& mainPassNode = m_renderGraph->addRenderPass(
+    auto& mainPassNode = m_renderGraphLegacy->addRenderPass(
         MainPass,
         createForwardLightingPass(m_renderer->getDevice(), m_renderTargetCache, renderer->getSwapChainExtent()));
-    m_renderGraph->addDependency(MainPass, "SCREEN", 0);
+    m_renderGraphLegacy->addDependency(MainPass, "SCREEN", 0);
 
     m_renderer->setSceneImageView(mainPassNode.renderPass.get(), 0);
 
@@ -46,7 +46,7 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
     m_pointSpriteMaterial->writeDescriptor(0, 0, *m_transformsBuffer);
     m_pointSpriteMaterial->writeDescriptor(1, 0, *m_uniformBuffers.at("params"));
 
-    m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraph.get());
+    m_fluidSimulation = std::make_unique<SPH>(m_renderer, m_renderGraphLegacy.get());
     m_window->keyPressed.subscribe<&FluidSimulation::onKeyPressed>(m_fluidSimulation.get());
 
     m_fluidGeometry = std::make_unique<Geometry>();
@@ -62,8 +62,8 @@ FluidSimulationScene::FluidSimulationScene(Renderer* renderer, Window* window)
     m_renderer->getDevice().flushDescriptorUpdates();
 
     // createGui();
-    m_renderGraph->sortRenderPasses().unwrap();
-    m_renderGraph->printExecutionOrder();
+    m_renderGraphLegacy->sortRenderPasses().unwrap();
+    m_renderGraphLegacy->printExecutionOrder();
 }
 
 FluidSimulationScene::~FluidSimulationScene() {
@@ -74,8 +74,8 @@ FluidSimulationScene::~FluidSimulationScene() {
 void FluidSimulationScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderGraph->resize(width, height);
-    m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 0);
+    m_renderGraphLegacy->resize(width, height);
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 0);
 }
 
 void FluidSimulationScene::update(float dt) {
@@ -102,9 +102,9 @@ void FluidSimulationScene::update(float dt) {
 }
 
 void FluidSimulationScene::render() {
-    m_renderGraph->clearCommandLists();
-    m_renderGraph->addToCommandLists(m_fluidRenderNode);
-    m_renderGraph->executeCommandLists();
+    m_renderGraphLegacy->clearCommandLists();
+    m_renderGraphLegacy->addToCommandLists(m_fluidRenderNode);
+    m_renderGraphLegacy->executeCommandLists();
 }
 
 void FluidSimulationScene::createGui() {

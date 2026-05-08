@@ -26,14 +26,14 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
     createCommonTextures();
 
     auto nodes = addAtmosphereRenderPasses(
-        *m_renderGraph, *m_renderer, *m_resourceContext, m_resourceContext->renderTargetCache, "SCREEN");
+        *m_renderGraphLegacy, *m_renderer, *m_resourceContext, m_resourceContext->renderTargetCache, "SCREEN");
     for (auto& [key, value] : nodes) {
         m_renderNodes.emplace(std::move(key), std::move(value));
     }
-    m_renderer->setSceneImageView(m_renderGraph->getNode("rayMarchingPass").renderPass.get(), 0);
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode("rayMarchingPass").renderPass.get(), 0);
 
-    m_renderGraph->sortRenderPasses().unwrap();
-    m_renderGraph->printExecutionOrder();
+    m_renderGraphLegacy->sortRenderPasses().unwrap();
+    m_renderGraphLegacy->printExecutionOrder();
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }
@@ -43,8 +43,8 @@ void AtmosphereScene::resize(int width, int height) {
 
     m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
 
-    m_renderGraph->resize(width, height);
-    // m_renderer->setSceneImageView(m_renderGraph->getNode(ForwardLightingPass).renderPass.get(), 0);
+    m_renderGraphLegacy->resize(width, height);
+    // m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(ForwardLightingPass).renderPass.get(), 0);
 }
 
 void AtmosphereScene::update(float dt) {
@@ -87,9 +87,9 @@ void AtmosphereScene::update(float dt) {
 }
 
 void AtmosphereScene::render() {
-    m_renderGraph->clearCommandLists();
-    m_renderGraph->buildCommandLists(m_renderNodes);
-    m_renderGraph->executeCommandLists();
+    m_renderGraphLegacy->clearCommandLists();
+    m_renderGraphLegacy->buildCommandLists(m_renderNodes);
+    m_renderGraphLegacy->executeCommandLists();
 }
 
 void AtmosphereScene::renderGui() {

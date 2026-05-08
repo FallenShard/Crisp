@@ -282,7 +282,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     // imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), MaxAnisotropy));
     // imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), MaxAnisotropy, 9.0f));
 
-    // auto& oscillationPass = m_renderGraph->addComputePass(kSpectrumPass);
+    // auto& oscillationPass = m_renderGraphLegacy->addComputePass(kSpectrumPass);
     // oscillationPass.workGroupSize = glm::ivec3(16, 16, 1);
     // oscillationPass.numWorkGroups = computeWorkGroupCount(glm::uvec3(N, N, 1), oscillationPass.workGroupSize);
     // oscillationPass.pipeline = createComputePipeline(*m_renderer, "ocean-spectrum.comp",
@@ -331,7 +331,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     // int ln1 = applyFFT("normalX");
     // int ln2 = applyFFT("normalZ");
 
-    // auto& geometryPass = m_renderGraph->addComputePass(kGeometryPass);
+    // auto& geometryPass = m_renderGraphLegacy->addComputePass(kGeometryPass);
     // geometryPass.workGroupSize = glm::ivec3(16, 16, 1);
     // geometryPass.numWorkGroups = computeWorkGroupCount(glm::uvec3(N + 1, N + 1, 1), geometryPass.workGroupSize);
     // geometryPass.pipeline = createComputePipeline(*m_renderer, "ocean-geometry.comp", geometryPass.workGroupSize);
@@ -407,12 +407,12 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     //         node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
     //     };
 
-    // m_renderGraph->addRenderPass(
+    // m_renderGraphLegacy->addRenderPass(
     //     kMainPass,
     //     createForwardLightingPass(
     //         m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
-    // m_renderGraph->addDependency(
+    // m_renderGraphLegacy->addDependency(
     //     kGeometryPass,
     //     kMainPass,
     //     [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
@@ -432,10 +432,10 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     //             barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
     //     });
 
-    // m_renderGraph->addDependency(kMainPass, "SCREEN", 0);
-    // m_renderGraph->sortRenderPasses().unwrap();
-    // m_renderGraph->printExecutionOrder();
-    // m_renderer->setSceneImageView(m_renderGraph->getNode(kMainPass).renderPass.get(), 0);
+    // m_renderGraphLegacy->addDependency(kMainPass, "SCREEN", 0);
+    // m_renderGraphLegacy->sortRenderPasses().unwrap();
+    // m_renderGraphLegacy->printExecutionOrder();
+    // m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(kMainPass).renderPass.get(), 0);
 
     // m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 200);
 
@@ -444,11 +444,11 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     //     loadImageBasedLightingData(m_renderer->getResourcesPath() /
     //     "Textures/EnvironmentMaps/TableMountain").unwrap());
     // m_skybox = m_envLight->createSkybox(
-    //     *m_renderer, m_renderGraph->getRenderPass(kMainPass), imageCache.getSampler("linearClamp"));
+    //     *m_renderer, m_renderGraphLegacy->getRenderPass(kMainPass), imageCache.getSampler("linearClamp"));
     // m_renderer->flushResourceUpdates(true);
 
     // VulkanPipeline* pipeline =
-    //     m_resourceContext->createPipeline("ocean", "ocean.json", m_renderGraph->getRenderPass(kMainPass), 0);
+    //     m_resourceContext->createPipeline("ocean", "ocean.json", m_renderGraphLegacy->getRenderPass(kMainPass), 0);
     // Material* material = m_resourceContext->createMaterial("ocean", pipeline);
     // material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     // material->writeDescriptor(
@@ -496,8 +496,8 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
 void OceanScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderGraph->resize(width, height);
-    m_renderer->setSceneImageView(m_renderGraph->getNode(kMainPass).renderPass.get(), 0);
+    m_renderGraphLegacy->resize(width, height);
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(kMainPass).renderPass.get(), 0);
 }
 
 void OceanScene::update(float dt) {
@@ -516,13 +516,13 @@ void OceanScene::update(float dt) {
 
 void OceanScene::render() {
     m_renderer->enqueueDrawCommand([this](const VkCommandBuffer cmdBuffer) {
-        m_rg->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), m_renderer->getDevice().getHandle());
+        m_renderGraph->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), m_renderer->getDevice().getHandle());
     });
 
-    // m_renderGraph->clearCommandLists();
-    // m_renderGraph->buildCommandLists(m_renderNodes);
-    // m_renderGraph->addToCommandLists(m_skybox->getRenderNode());
-    // m_renderGraph->executeCommandLists();
+    // m_renderGraphLegacy->clearCommandLists();
+    // m_renderGraphLegacy->buildCommandLists(m_renderNodes);
+    // m_renderGraphLegacy->addToCommandLists(m_skybox->getRenderNode());
+    // m_renderGraphLegacy->executeCommandLists();
 }
 
 void OceanScene::renderGui() {
@@ -579,7 +579,7 @@ int OceanScene::applyFFT(std::string image) {
         const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
-        auto& bitReversePass = m_renderGraph->addComputePass(image + "BitReversePass0");
+        auto& bitReversePass = m_renderGraphLegacy->addComputePass(image + "BitReversePass0");
         bitReversePass.workGroupSize = {16, 16, 1};
         bitReversePass.numWorkGroups = {N / 16, N / 16, 1};
         bitReversePass.pipeline =
@@ -595,7 +595,7 @@ int OceanScene::applyFFT(std::string image) {
                 node.pipeline->setPushConstants(
                     cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{0, logN});
             };
-        m_renderGraph->addDependency(
+        m_renderGraphLegacy->addDependency(
             kSpectrumPass,
             image + "BitReversePass0",
             [this, image, imageLayerRead](
@@ -617,7 +617,7 @@ int OceanScene::applyFFT(std::string image) {
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
         std::string name = image + "TrueFFTPass" + std::to_string(i);
-        auto& fftPass = m_renderGraph->addComputePass(name);
+        auto& fftPass = m_renderGraphLegacy->addComputePass(name);
         fftPass.workGroupSize = {16, 16, 1};
         fftPass.numWorkGroups = {N / 2 / 16, N / 16, 1};
         fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-hori.comp", fftPass.workGroupSize);
@@ -636,7 +636,7 @@ int OceanScene::applyFFT(std::string image) {
         CRISP_LOGI("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
 
         if (i == 0) {
-            m_renderGraph->addDependency(
+            m_renderGraphLegacy->addDependency(
                 image + "BitReversePass0",
                 name,
                 [this, image, imageLayerRead](
@@ -651,7 +651,7 @@ int OceanScene::applyFFT(std::string image) {
 
         if (i > 0) {
             std::string prevName = image + "TrueFFTPass" + std::to_string(i - 1);
-            m_renderGraph->addDependency(
+            m_renderGraphLegacy->addDependency(
                 prevName,
                 name,
                 [this, image, imageLayerRead](
@@ -670,7 +670,7 @@ int OceanScene::applyFFT(std::string image) {
     {
         const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
-        auto& bitReversePass2 = m_renderGraph->addComputePass(image + "BitReversePass1");
+        auto& bitReversePass2 = m_renderGraphLegacy->addComputePass(image + "BitReversePass1");
         bitReversePass2.workGroupSize = {16, 16, 1};
         bitReversePass2.numWorkGroups = {N / 16, N / 16, 1};
         bitReversePass2.pipeline =
@@ -689,7 +689,7 @@ int OceanScene::applyFFT(std::string image) {
 
         CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
 
-        m_renderGraph->addDependency(
+        m_renderGraphLegacy->addDependency(
             image + "TrueFFTPass" + std::to_string(logN - 1),
             image + "BitReversePass1",
             [this, image, imageLayerRead](
@@ -710,7 +710,7 @@ int OceanScene::applyFFT(std::string image) {
         const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
 
         std::string name = image + "TrueFFTPassVert" + std::to_string(i);
-        auto& fftPass = m_renderGraph->addComputePass(name);
+        auto& fftPass = m_renderGraphLegacy->addComputePass(name);
         fftPass.workGroupSize = {16, 16, 1};
         fftPass.numWorkGroups = {N / 16, N / 16 / 2, 1};
         fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-vert.comp", fftPass.workGroupSize);
@@ -730,7 +730,7 @@ int OceanScene::applyFFT(std::string image) {
 
         if (i == logN - 1) {
             finalImageView = imageViewWrite;
-            m_renderGraph->addDependency(
+            m_renderGraphLegacy->addDependency(
                 name,
                 kGeometryPass,
                 [this, image, imageLayerWrite](
@@ -742,7 +742,7 @@ int OceanScene::applyFFT(std::string image) {
                             kComputeWrite >> kVertexRead));
                 });
         } else if (i == 0) {
-            m_renderGraph->addDependency(
+            m_renderGraphLegacy->addDependency(
                 image + "BitReversePass1",
                 name,
                 [this, image, imageLayerRead](
@@ -757,7 +757,7 @@ int OceanScene::applyFFT(std::string image) {
 
         if (i > 0) {
             std::string prevName = image + "TrueFFTPassVert" + std::to_string(i - 1);
-            m_renderGraph->addDependency(
+            m_renderGraphLegacy->addDependency(
                 prevName,
                 name,
                 [this, image, imageLayerRead](
@@ -777,9 +777,9 @@ int OceanScene::applyFFT(std::string image) {
 }
 
 void OceanScene::buildNewFFT() {
-    m_rg = std::make_unique<rg::RenderGraph>();
-    m_rg->getBlackboard().insert<OscillationPassData>();
-    m_rg->addPass(
+    m_renderGraph = std::make_unique<rg::RenderGraph>();
+    m_renderGraph->getBlackboard().insert<OscillationPassData>();
+    m_renderGraph->addPass(
         "oscillation",
         [](rg::RenderGraph::Builder& builder) {
             builder.setType(PassType::Compute);
@@ -821,7 +821,7 @@ void OceanScene::buildNewFFT() {
         };
 
         const std::string bitReversePassHorName{fmt::format("bit-reverse-h-{}", Tag)};
-        m_rg->addPass(
+        m_renderGraph->addPass(
             bitReversePassHorName,
             [image, bitReversePassHorName](rg::RenderGraph::Builder& builder) {
                 builder.setType(PassType::Compute);
@@ -851,7 +851,7 @@ void OceanScene::buildNewFFT() {
         // for (int i = 0; i < logN; ++i) {
 
         //     const std::string passName = fmt::format("ifft-h-{}-{}", Tag, i);
-        //     m_rg->addPass(
+        //     m_renderGraph->addPass(
         //         passName,
         //         [passName, i](rg::RenderGraph::Builder& builder) {
         //             builder.setType(PassType::Compute);
@@ -878,7 +878,7 @@ void OceanScene::buildNewFFT() {
         // }
 
         // const std::string bitReversePassVertName{fmt::format("bit-reverse-v-{}", Tag)};
-        // m_rg->addPass(
+        // m_renderGraph->addPass(
         //     bitReversePassVertName,
         //     [bitReversePassVertName](rg::RenderGraph::Builder& builder) {
         //         builder.setType(PassType::Compute);
@@ -898,7 +898,7 @@ void OceanScene::buildNewFFT() {
 
         // for (int i = 0; i < logN; ++i) {
         //     const std::string passName = fmt::format("ifft-v-{}-{}", Tag, i);
-        //     m_rg->addPass(
+        //     m_renderGraph->addPass(
         //         passName,
         //         [passName, i](rg::RenderGraph::Builder& builder) {
         //             builder.setType(PassType::Compute);
@@ -924,13 +924,13 @@ void OceanScene::buildNewFFT() {
         //         });
         // }
     };
-    addFftPasses.operator()<0>(m_rg->getBlackboard().get<OscillationPassData>().displacementY);
-    // addFftPasses.operator()<1>(m_rg->getBlackboard().get<OscillationPassData>().displacementX);
-    // addFftPasses.operator()<2>(m_rg->getBlackboard().get<OscillationPassData>().displacementZ);
-    // addFftPasses.operator()<3>(m_rg->getBlackboard().get<OscillationPassData>().normalX);
-    // addFftPasses.operator()<4>(m_rg->getBlackboard().get<OscillationPassData>().normalZ);
+    addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY);
+    // addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX);
+    // addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ);
+    // addFftPasses.operator()<3>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX);
+    // addFftPasses.operator()<4>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
 
-    m_rg->addPass(
+    m_renderGraph->addPass(
         "geometry",
         [this](rg::RenderGraph::Builder& builder) {
             builder.setType(PassType::Compute);
@@ -982,7 +982,7 @@ void OceanScene::buildNewFFT() {
             // node.pipeline->setPushConstants(ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
         });
 
-    m_rg->addPass(
+    m_renderGraph->addPass(
         kForwardLightingPass,
         [](rg::RenderGraph::Builder& builder) {
             builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().buffer);
@@ -1006,24 +1006,24 @@ void OceanScene::buildNewFFT() {
         [this](const RenderPassExecutionContext& ctx) {});
 
     m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
-        m_rg->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
+        m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
     });
     m_renderer->flushResourceUpdates(true);
-    toGraphViz(*m_rg, "D:/graph.dot").unwrap();
+    toGraphViz(*m_renderGraph, "D:/graph.dot").unwrap();
 
-    OscillationPassDispatch = createOscillationPassDispatch(*m_renderer, *m_rg, m_resourceContext->imageCache);
+    OscillationPassDispatch = createOscillationPassDispatch(*m_renderer, *m_renderGraph, m_resourceContext->imageCache);
     createFftDispatches<0>(
-        *m_renderer, *m_rg, m_rg->getResourceImageView(m_rg->getBlackboard().get<OscillationPassData>().displacementY));
+        *m_renderer, *m_renderGraph, m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY));
     // createFftDispatches<1>(
-    //     *m_renderer, *m_rg,
-    //     m_rg->getResourceImageView(m_rg->getBlackboard().get<OscillationPassData>().displacementX));
+    //     *m_renderer, *m_renderGraph,
+    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX));
     // createFftDispatches<2>(
-    //     *m_renderer, *m_rg,
-    //     m_rg->getResourceImageView(m_rg->getBlackboard().get<OscillationPassData>().displacementZ));
+    //     *m_renderer, *m_renderGraph,
+    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ));
     // createFftDispatches<3>(
-    //     *m_renderer, *m_rg, m_rg->getResourceImageView(m_rg->getBlackboard().get<OscillationPassData>().normalX));
+    //     *m_renderer, *m_renderGraph, m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX));
     // createFftDispatches<4>(
-    //     *m_renderer, *m_rg, m_rg->getResourceImageView(m_rg->getBlackboard().get<OscillationPassData>().normalZ));
+    //     *m_renderer, *m_renderGraph, m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
 }
 
 } // namespace crisp

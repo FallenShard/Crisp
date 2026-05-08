@@ -57,20 +57,20 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
 
-    m_renderGraph = std::make_unique<RenderGraph>(m_renderer);
+    m_renderGraphLegacy = std::make_unique<RenderGraph>(m_renderer);
 
     // Main render pass
-    /*m_renderGraph->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer->getDevice(),
+    /*m_renderGraphLegacy->addRenderPass(MainPass, std::make_unique<ForwardLightingPass>(m_renderer->getDevice(),
                                                renderer->getSwapChainExtent(), VK_SAMPLE_COUNT_8_BIT));*/
-    m_renderGraph->addRenderPass(
+    m_renderGraphLegacy->addRenderPass(
         MainPass,
         createForwardLightingPass(
             m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
 
     // Wrap-up render graph definition
-    m_renderGraph->addDependency(MainPass, "SCREEN", 2);
+    m_renderGraphLegacy->addDependency(MainPass, "SCREEN", 2);
 
-    m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 2);
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
@@ -79,9 +79,9 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
         CascadeCount);
     m_lightSystem->createPointLightBuffer(createRandomPointLights(1024));
     m_lightSystem->createTileGridBuffers(m_cameraController->getCameraParameters());
-    m_lightSystem->addLightClusteringPass(*m_renderGraph, *m_resourceContext->getUniformBuffer("camera"));
+    m_lightSystem->addLightClusteringPass(*m_renderGraphLegacy, *m_resourceContext->getUniformBuffer("camera"));
 
-    m_renderGraph->sortRenderPasses().unwrap();
+    m_renderGraphLegacy->sortRenderPasses().unwrap();
 
     // Object transforms
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
@@ -99,7 +99,7 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
     //{
     //     std::string key = "cascadedShadowMap" + std::to_string(i);
     //     auto csmPipeline = m_resourceContext->createPipeline(key, "ShadowMap.lua",
-    //     m_renderGraph->getRenderPass(CsmPass), i); auto csmMaterial = m_resourceContext->createMaterial(key,
+    //     m_renderGraphLegacy->getRenderPass(CsmPass), i); auto csmMaterial = m_resourceContext->createMaterial(key,
     //     csmPipeline); csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     //     csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
     // }
@@ -119,8 +119,8 @@ ClusteredLightingScene::~ClusteredLightingScene() {
 void ClusteredLightingScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderGraph->resize(width, height);
-    m_renderer->setSceneImageView(m_renderGraph->getNode(MainPass).renderPass.get(), 2);
+    m_renderGraphLegacy->resize(width, height);
+    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(MainPass).renderPass.get(), 2);
 }
 
 void ClusteredLightingScene::update(float dt) {
@@ -138,9 +138,9 @@ void ClusteredLightingScene::update(float dt) {
 }
 
 void ClusteredLightingScene::render() {
-    m_renderGraph->clearCommandLists();
-    m_renderGraph->buildCommandLists(m_renderNodes);
-    m_renderGraph->executeCommandLists();
+    m_renderGraphLegacy->clearCommandLists();
+    m_renderGraphLegacy->buildCommandLists(m_renderNodes);
+    m_renderGraphLegacy->executeCommandLists();
 }
 
 void ClusteredLightingScene::setRedAlbedo(double red) {
@@ -228,7 +228,7 @@ void ClusteredLightingScene::createCommonTextures() {
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
 
     auto pbrPipeline = m_resourceContext->createPipeline(
-        "pbrUnif", "PbrClusteredLights.lua", m_renderGraph->getRenderPass(MainPass), 0);
+        "pbrUnif", "PbrClusteredLights.lua", m_renderGraphLegacy->getRenderPass(MainPass), 0);
     auto pbrMaterial = m_resourceContext->createMaterial("pbrUnif", pbrPipeline);
     pbrMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     pbrMaterial->writeDescriptor(0, 1, *m_resourceContext->getUniformBuffer("camera"));

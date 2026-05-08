@@ -24,7 +24,7 @@ private:
     int applyFFT(std::string image);
     void buildNewFFT();
 
-    std::unique_ptr<rg::RenderGraph> m_rg;
+    std::unique_ptr<rg::RenderGraph> m_renderGraph;
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<TransformBuffer> m_transformBuffer;

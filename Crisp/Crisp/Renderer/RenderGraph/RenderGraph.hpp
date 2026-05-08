@@ -8,6 +8,13 @@
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp::rg {
+namespace detail {
+// Unevaluated helper: deduces the class type from a pointer-to-member.
+// Used to enable `rg.getImageView<&Foo::bar>()` syntax without spelling out `Foo`.
+template <typename C, typename M>
+C inferMemberClass(M C::*);
+} // namespace detail
+
 class RenderGraph {
 public:
     class Builder {
@@ -64,6 +71,14 @@ public:
     std::unique_ptr<VulkanImageView> createViewFromResource(
         const VulkanDevice& device, RenderGraphResourceHandle handle) const;
     const VulkanImageView& getResourceImageView(RenderGraphResourceHandle handle) const;
+
+    // Convenience: fetch a blackboard-published handle by member pointer and resolve to its view.
+    // Usage: rg.getImageView<&ForwardLightingPassData::hdrImage>()
+    template <auto Member>
+    const VulkanImageView& getImageView() const {
+        using ClassType = decltype(detail::inferMemberClass(Member));
+        return getResourceImageView(m_blackboard.get<ClassType>().*Member);
+    }
 
     const RenderGraphBlackboard& getBlackboard() const;
 
