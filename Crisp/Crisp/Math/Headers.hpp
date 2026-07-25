@@ -12,11 +12,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
 #pragma warning(pop)
-
-#include <type_traits>
-#include <utility>
 
 namespace glm {
 template <std::size_t I, glm::length_t N, typename T, qualifier Q>

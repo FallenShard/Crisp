@@ -69,6 +69,8 @@ VmaAllocator createMemoryAllocator(
         .vkGetDeviceBufferMemoryRequirements = vkGetDeviceBufferMemoryRequirements,
         .vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements,
         .vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR,
+        // Required since VMA 3.4.0, which asserts on it in VmaAllocator_T::VmaAllocator_T.
+        .vkGetPhysicalDeviceProperties2KHR = vkGetPhysicalDeviceProperties2,
     };
 
     VmaAllocatorCreateInfo createInfo{
