@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.28...3.30)
 project(Crisp VERSION 0.1.0 LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -8,6 +8,7 @@ option(CRISP_BUILD_BENCHMARKS "Build Crisp benchmarks"  ON)
 
 if(CRISP_BUILD_TESTS)
     enable_testing()
+    include(GoogleTest)
 endif()
 
 include(cmake/TargetHelpers.cmake)

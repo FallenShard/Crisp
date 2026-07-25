@@ -7,7 +7,20 @@ function(enable_default_cpp_compile_options targetName optionType)
 
     if(NOT optionType STREQUAL "INTERFACE")
         if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
-            target_compile_options(${targetName} PRIVATE /MP /JMC /Zi /W4 /Zc:preprocessor /EHsc)
+            # /MP              - compile TUs in parallel across cores.
+            # /JMC             - Just My Code: the debugger steps over non-user frames.
+            # /Zi              - emit debug info into a PDB.
+            # /W4              - high warning level.
+            # /Zc:preprocessor - conforming preprocessor instead of MSVC's legacy one.
+            # /Zc:__cplusplus  - report the real __cplusplus; MSVC otherwise hardcodes 199711L.
+            # /EHsc            - standard C++ exceptions; assume extern "C" never throws.
+            # /utf-8           - read sources and encode narrow literals as UTF-8.
+            #
+            # The last two are also exported PUBLIC by spdlog/fmt, so setting them here is what
+            # keeps every target consistent rather than only those that happen to link spdlog.
+            # Headers branching on __cplusplus (e.g. GSL's gsl::byte) otherwise differ per TU.
+            target_compile_options(${targetName}
+                PRIVATE /MP /JMC /Zi /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8)
         else()
             target_compile_options(${targetName} PRIVATE -W -Wall)
         endif()
@@ -64,6 +77,7 @@ function(add_cpp_test targetName)
     target_link_libraries(${targetName} PRIVATE GTest::gmock_main)
 
     add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
+    gtest_discover_tests(${targetName})
 endfunction()
 
 # Creates a C++ binary benchmark target. No-op when CRISP_BUILD_BENCHMARKS is OFF.
