@@ -1,17 +1,16 @@
 ---
 CompileFlags:
+    # The database is not configured here on purpose: the root CMakeLists links
+    # build/presetName/compile_commands.json up into build/, where clangd finds it on its
+    # own. That keeps this file from pinning the index to one preset.
+    Compiler: clang-cl
+
+    # /JMC is MSVC-only and makes clang-cl bail on the whole command.
+    Remove: ["/JMC"]
+
     Add: [
-      #"-x c++",
-      "/std:c++latest",
-      "-D_HAS_CXX17=1",
-      "-D_HAS_CXX20=1",
-      "-D_HAS_CXX23=1",
-      "-D__cpp_consteval",
-      "-D__cpp_lib_concepts",
-      "-D__cpp_lib_ranges",
       "-Wno-missing-field-initializers"
     ]
-    Compiler: clang-cl
 
 InlayHints:
   Designators: No
