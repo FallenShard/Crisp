@@ -45,6 +45,21 @@ target_link_libraries(
     INTERFACE GTest::gmock
 )
 
+add_cpp_static_library(
+    CrispUniqueTemporaryFile
+    "UniqueTemporaryFile.cpp"
+    "UniqueTemporaryFile.hpp"
+)
+
+add_cpp_test(
+    CrispUniqueTemporaryFileTest
+    "Test/UniqueTemporaryFileTest.cpp"
+)
+target_link_libraries(
+    CrispUniqueTemporaryFileTest
+    PRIVATE Crisp::UniqueTemporaryFile
+)
+
 add_cpp_test(
     CrispResultTest
     "Test/ResultTest.cpp"

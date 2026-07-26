@@ -25,4 +25,5 @@ target_link_libraries(CrispRenderGraphGui
 add_cpp_test(CrispRenderGraphTest
     "Test/RenderGraphTest.cpp"
 )
-target_link_libraries(CrispRenderGraphTest PRIVATE Crisp::VulkanTestUtils Crisp::RenderGraph)
+target_link_libraries(CrispRenderGraphTest
+    PRIVATE Crisp::VulkanTestUtils Crisp::RenderGraph Crisp::UniqueTemporaryFile)

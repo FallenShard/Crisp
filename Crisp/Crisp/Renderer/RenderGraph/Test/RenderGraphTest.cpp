@@ -1,5 +1,6 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 
+#include <Crisp/Core/UniqueTemporaryFile.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
 #include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
@@ -113,7 +114,8 @@ TEST(RenderGraphTest2, BasicUsage) {
         },
         [](const FrameContext&) {});
 
-    toGraphViz(rg, "D:/graph.dot").unwrap();
+    const UniqueTemporaryFile graphFile("dot", "render-graph-");
+    toGraphViz(rg, graphFile.getPath()).unwrap();
 
     EXPECT_THAT(rg.getPassCount(), 17);
     EXPECT_THAT(rg.getResourceCount(), 17);
@@ -166,7 +168,8 @@ TEST_F(RenderGraphTest, BasicUsage) {
         rg.execute(context);
     }
 
-    toGraphViz(rg, "D:/graph_small.dot").unwrap();
+    const UniqueTemporaryFile graphFile("dot", "render-graph-", "-small");
+    toGraphViz(rg, graphFile.getPath()).unwrap();
 
     EXPECT_THAT(rg.getPassCount(), 2);
     EXPECT_THAT(rg.getResourceCount(), 3);
