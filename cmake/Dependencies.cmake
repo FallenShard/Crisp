@@ -5,6 +5,7 @@ FetchContent_Declare(glm
     GIT_TAG "1.0.3"
     GIT_SHALLOW TRUE
 )
+set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(glm)
 
 FetchContent_Declare(glfw
@@ -41,6 +42,8 @@ FetchContent_Declare(fmt
     GIT_SHALLOW TRUE
 )
 set(FMT_OS OFF CACHE BOOL "" FORCE)
+set(FMT_TEST OFF CACHE BOOL "" FORCE)
+set(FMT_DOC OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(fmt)
 
 FetchContent_Declare(spdlog
@@ -107,6 +110,7 @@ block()
     set(TBB_STRICT OFF CACHE BOOL "" FORCE) # Defaults ON: a new MSVC warning in TBB fails our build.
     set(TBB_INSTALL OFF CACHE BOOL "" FORCE)
     set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE)
+    set(TBB_VERIFY_DEPENDENCY_SIGNATURE ON CACHE BOOL "" FORCE)
     set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(onetbb)
 endblock()
@@ -116,9 +120,14 @@ FetchContent_Declare(embree
     GIT_TAG "v4.4.1"
     GIT_SHALLOW TRUE
 )
-set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
-set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(embree)
+block()
+    # Embree uses the parent project's generic BUILD_TESTING option. Keep Crisp's
+    # CTest support enabled without registering Embree's test suite.
+    set(BUILD_TESTING OFF)
+    set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
+    set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(embree)
+endblock()
 
 FetchContent_Declare(vulkan
     GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git"
@@ -159,6 +168,7 @@ FetchContent_Declare(GSL
     GIT_TAG "v4.2.2"
     GIT_SHALLOW TRUE
 )
+set(GSL_TEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(GSL)
 
 FetchContent_Declare(meshoptimizer

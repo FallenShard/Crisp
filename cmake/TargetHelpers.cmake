@@ -76,8 +76,7 @@ function(add_cpp_test targetName)
     target_link_libraries(${targetName} PRIVATE GTest::gmock)
     target_link_libraries(${targetName} PRIVATE GTest::gmock_main)
 
-    add_test(NAME ${targetName} COMMAND $<TARGET_FILE:${targetName}>)
-    gtest_discover_tests(${targetName})
+    gtest_discover_tests(${targetName} TEST_PREFIX ${targetName}.)
 endfunction()
 
 # Creates a C++ binary benchmark target. No-op when CRISP_BUILD_BENCHMARKS is OFF.
