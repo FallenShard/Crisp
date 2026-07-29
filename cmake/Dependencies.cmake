@@ -1,5 +1,8 @@
 include(FetchContent)
 
+block()
+set(CMAKE_FOLDER "ThirdParty")
+
 FetchContent_Declare(glm
     GIT_REPOSITORY "https://github.com/g-truc/glm.git"
     GIT_TAG "1.0.3"
@@ -216,3 +219,5 @@ add_subdirectory(Externals/stb SYSTEM)
 add_subdirectory(Externals/tinyexr SYSTEM)
 add_subdirectory(Externals/rapidxml SYSTEM)
 add_subdirectory(Externals/freetype SYSTEM)
+
+endblock()

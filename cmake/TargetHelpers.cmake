@@ -1,7 +1,5 @@
 # Enables C++23 and high amount of warnings for a C++ target.
 function(enable_default_cpp_compile_options targetName optionType)
-    set_target_properties(${targetName} PROPERTIES LANGUAGE CXX LINKER_LANGUAGE CXX)
-
     # Propagate C++ standard requirement to consumers, but keep compiler flags private.
     # INTERFACE targets (header-only libs) skip flags entirely since they have no sources.
     target_compile_features(${targetName} ${optionType} cxx_std_23)
@@ -9,8 +7,8 @@ function(enable_default_cpp_compile_options targetName optionType)
     if(NOT optionType STREQUAL "INTERFACE")
         if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
             # /MP              - compile TUs in parallel across cores.
-            # /JMC             - Just My Code: the debugger steps over non-user frames.
-            # /Zi              - emit debug info into a PDB.
+            # /JMC             - Just My Code in Debug builds.
+            # /Zi              - emit Debug information into a PDB.
             # /W4              - high warning level.
             # /Zc:preprocessor - conforming preprocessor instead of MSVC's legacy one.
             # /Zc:__cplusplus  - report the real __cplusplus; MSVC otherwise hardcodes 199711L.
@@ -21,7 +19,10 @@ function(enable_default_cpp_compile_options targetName optionType)
             # keeps every target consistent rather than only those that happen to link spdlog.
             # Headers branching on __cplusplus (e.g. GSL's gsl::byte) otherwise differ per TU.
             target_compile_options(${targetName}
-                PRIVATE /MP /JMC /Zi /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8)
+                PRIVATE
+                    /MP /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8
+                    $<$<CONFIG:Debug>:/JMC>
+                    $<$<CONFIG:Debug>:/Zi>)
         else()
             target_compile_options(${targetName} PRIVATE -W -Wall)
         endif()
