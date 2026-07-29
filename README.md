@@ -10,6 +10,40 @@ real-time rendering that I have encountered in computer graphics, both during my
 It is developed sporadically during my free time so updates are not very frequent.
 The real-time rendering code is developed with Vulkan API.
 
+## Building and development
+
+Crisp's supported developer environment is Windows with an MSVC x64 toolchain.
+Install Visual Studio with the Desktop development with C++ workload, CMake
+3.28 or newer, Ninja, Git, and Python 3.11 or newer.
+
+The standard CMake preset workflow works without any project-specific tooling.
+From a Visual Studio Developer PowerShell or Developer Command Prompt:
+
+```powershell
+cmake --preset x64-debug
+cmake --build --preset x64-debug-build --target CrispMain
+```
+
+cmuck is completely optional. It is a convenience layer over CMake presets, the
+CMake File API, and CTest that also activates the MSVC environment. To use it,
+install the project CLI and its Click/Rich dependencies from the repository:
+
+```powershell
+python -m pip install --editable .\tools\cmuck
+```
+
+The equivalent cmuck workflow is:
+
+```powershell
+cmuck @mode/dev configure
+cmuck @mode/dev build CrispMain
+cmuck @mode/dev run CrispMain -- --config Args.json
+```
+
+`@mode/dev` selects `x64-debug`; `@mode/opt` selects `x64-release`. See the
+[developer workflow guide](docs/development.md) for target discovery, tests,
+benchmarks, external assets, preset workflows, and recovery procedures.
+
 Currently, the following demos are implemented through the real-time renderer:
   - SSAO
   - (WC)SPH simulation with compute shaders
