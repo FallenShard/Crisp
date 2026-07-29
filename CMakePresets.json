@@ -1,67 +1,97 @@
 {
-  "version": 3,
-  "configurePresets": [
+  "version"             : 8,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets"    : [
     {
-      "name": "windows-base",
-      "description": "Target Windows with the VS development environment.",
-      "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "installDir": "${sourceDir}/install/${presetName}",
+      "name"          : "windows-base",
+      "description"   : "Target Windows with the VS development environment.",
+      "hidden"        : true,
+      "generator"     : "Ninja",
+      "binaryDir"     : "${sourceDir}/build/${presetName}",
+      "installDir"    : "${sourceDir}/install/${presetName}",
       "cacheVariables": {
         "CMAKE_C_COMPILER"             : "cl.exe",
         "CMAKE_CXX_COMPILER"           : "cl.exe",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CRISP_BUILD_TESTS"            : "ON",
+        "CRISP_BUILD_BENCHMARKS"       : "ON"
       },
-      "architecture": { "value": "x64", "strategy": "external" },
-      "toolset": { "value": "host=x64", "strategy": "external" },
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+      "architecture"  : { "value": "x64", "strategy": "external" },
+      "toolset"       : { "value": "host=x64", "strategy": "external" },
+      "condition"     : { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
     {
-      "name": "x64-debug",
-      "displayName": "Debug",
-      "description": "Windows MSVC Debug 64-bit",
-      "inherits": "windows-base",
+      "name"          : "x64-debug",
+      "displayName"   : "Debug",
+      "description"   : "Windows MSVC Debug 64-bit",
+      "inherits"      : "windows-base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
     },
     {
-      "name": "x64-release",
-      "displayName": "Release",
-      "description": "Windows MSVC Release 64-bit",
-      "inherits": "windows-base",
+      "name"          : "x64-release",
+      "displayName"   : "Release",
+      "description"   : "Windows MSVC Release 64-bit",
+      "inherits"      : "windows-base",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     }
   ],
-  "buildPresets": [
+  "buildPresets"        : [
+    { "name": "windows-build-base", "hidden": true, "jobs": 8, "inheritConfigureEnvironment": true },
     {
-      "name": "x64-debug-build",
-      "displayName": "Debug",
-      "description": "Windows MSVC Debug 64-bit",
-      "configurePreset": "x64-debug",
-      "inheritConfigureEnvironment": true
+      "name"           : "x64-debug-build",
+      "displayName"    : "Debug",
+      "description"    : "Windows MSVC Debug 64-bit",
+      "inherits"       : "windows-build-base",
+      "configurePreset": "x64-debug"
     },
     {
-      "name": "x64-release-build",
-      "displayName": "Release",
-      "description": "Windows MSVC Release 64-bit",
-      "configurePreset": "x64-release",
-      "inheritConfigureEnvironment": true
+      "name"           : "x64-release-build",
+      "displayName"    : "Release",
+      "description"    : "Windows MSVC Release 64-bit",
+      "inherits"       : "windows-build-base",
+      "configurePreset": "x64-release"
     }
   ],
-  "testPresets": [
+  "testPresets"         : [
     {
-      "name": "test-windows-debug",
-      "displayName": "Test Suite (Debug)",
-      "description": "Run all available unit tests with output on failure",
-      "configurePreset": "x64-debug",
-      "output": { "outputOnFailure": true }
+      "name"     : "windows-test-base",
+      "hidden"   : true,
+      "output"   : { "outputOnFailure": true },
+      "execution": { "jobs": 1, "noTestsAction": "error" }
     },
     {
-      "name": "test-windows-release",
-      "displayName": "Test Suite (Release)",
-      "description": "Run all available unit tests with output on failure",
-      "configurePreset": "x64-release",
-      "output": { "outputOnFailure": true }
+      "name"           : "test-windows-debug",
+      "displayName"    : "Test Suite (Debug)",
+      "description"    : "Run all available unit tests with output on failure",
+      "inherits"       : "windows-test-base",
+      "configurePreset": "x64-debug"
+    },
+    {
+      "name"           : "test-windows-release",
+      "displayName"    : "Test Suite (Release)",
+      "description"    : "Run all available unit tests with output on failure",
+      "inherits"       : "windows-test-base",
+      "configurePreset": "x64-release"
+    }
+  ],
+  "workflowPresets"     : [
+    {
+      "name"       : "check-windows-debug",
+      "displayName": "Configure, Build, and Test (Debug)",
+      "steps"      : [
+        { "type": "configure", "name": "x64-debug"          },
+        { "type": "build",     "name": "x64-debug-build"    },
+        { "type": "test",      "name": "test-windows-debug" }
+      ]
+    },
+    {
+      "name"       : "check-windows-release",
+      "displayName": "Configure, Build, and Test (Release)",
+      "steps"      : [
+        { "type": "configure", "name": "x64-release"          },
+        { "type": "build",     "name": "x64-release-build"    },
+        { "type": "test",      "name": "test-windows-release" }
+      ]
     }
   ]
 }

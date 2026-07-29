@@ -1,29 +1,43 @@
 {
-    "version": "0.2.0",
+    "version"       : "0.2.0",
+    "inputs"        : [
+        {
+            "id"     : "crispMainPath",
+            "type"   : "command",
+            "command": "cmake.launchTargetPath",
+            "args"   : { "targetName": "CrispMain" }
+        }
+    ],
     "configurations": [
         {
-            "name": "Launch CrispMain",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${command:cmake.buildDirectory}/Crisp/CrispMain.exe",
-            "args": [
-                "--config",
-                "${workspaceFolder}/Args.json",
-            ],
+            "name"       : "Debug CrispMain",
+            "type"       : "cppvsdbg",
+            "request"    : "launch",
+            "program"    : "${input:crispMainPath}",
+            "args"       : [ "--config", "${workspaceFolder}/Args.json" ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "preLaunchTask": "Crisp: Build Main",
+            "cwd"        : "${workspaceFolder}",
+            "console"    : "integratedTerminal"
         },
         {
-            "name": "Launch Current Target",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${command:cmake.launchTargetPath}",
-            "args": [],
+            "name"       : "Debug selected CMake target",
+            "type"       : "cppvsdbg",
+            "request"    : "launch",
+            "program"    : "${command:cmake.launchTargetPath}",
+            "args"       : [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
+            "cwd"        : "${workspaceFolder}",
+            "console"    : "integratedTerminal"
+        },
+        {
+            "name"        : "Debug selected CTest test",
+            "type"        : "cppvsdbg",
+            "request"     : "launch",
+            "presentation": { "hidden": true },
+            "program"     : "${cmake.testProgram}",
+            "args"        : [ "${cmake.testArgs}" ],
+            "cwd"         : "${cmake.testWorkingDirectory}",
+            "console"     : "integratedTerminal"
         }
     ]
 }

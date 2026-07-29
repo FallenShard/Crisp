@@ -278,12 +278,13 @@ TestBinaries/
 Intermediate/
 
 # VS Code stuff
-.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
+.vscode/*
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+
+# Local CMake preset overrides
+CMakeUserPresets.json
 
 # Clang stuff
 .cache/

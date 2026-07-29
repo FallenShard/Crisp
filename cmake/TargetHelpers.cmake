@@ -42,6 +42,7 @@ function(add_cpp_static_library targetName)
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
+    set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Libraries")
 endfunction()
 
 # Creates a C++ shared library target.
@@ -50,6 +51,7 @@ function(add_cpp_shared_library targetName)
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_include_directories(${targetName} PUBLIC ${CRISP_INCLUDE_DIR})
+    set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Libraries")
 endfunction()
 
 # Creates a C++ header-only library target.
@@ -58,12 +60,14 @@ function(add_cpp_header_library targetName)
     add_crisp_alias_target(${targetName})
     enable_default_cpp_compile_options(${targetName} INTERFACE)
     target_include_directories(${targetName} INTERFACE ${CRISP_INCLUDE_DIR})
+    set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Libraries")
 endfunction()
 
 # Creates a C++ binary target.
 function(add_cpp_binary targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
+    set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Applications")
 endfunction()
 
 # Creates a C++ binary test target. No-op when CRISP_BUILD_TESTS is OFF.
@@ -75,6 +79,7 @@ function(add_cpp_test targetName)
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE GTest::gmock)
     target_link_libraries(${targetName} PRIVATE GTest::gmock_main)
+    set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Tests")
 
     gtest_discover_tests(${targetName} TEST_PREFIX ${targetName}.)
 endfunction()
@@ -87,6 +92,7 @@ function(add_cpp_benchmark targetName)
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE benchmark::benchmark)
+    set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Benchmarks")
 endfunction()
 
 # Copies a list of shared libraries into the designated target's directory. To be used with DLL dependencies.
