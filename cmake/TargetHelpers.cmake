@@ -108,12 +108,8 @@ function(add_test_shader targetName sourceFile)
         return()
     endif()
 
-    if(NOT CRISP_GLSLANG_VALIDATOR_EXECUTABLE)
-        find_program(
-            CRISP_GLSLANG_VALIDATOR_EXECUTABLE
-            NAMES glslangValidator glslangValidator.exe
-            DOC "Path to glslangValidator used for test shader fixtures"
-            REQUIRED)
+    if(NOT TARGET glslang-standalone)
+        message(FATAL_ERROR "add_test_shader requires the glslang-standalone target")
     endif()
 
     get_filename_component(sourcePath "${sourceFile}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -124,9 +120,9 @@ function(add_test_shader targetName sourceFile)
     add_custom_command(
         OUTPUT "${outputPath}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${outputDirectory}"
-        COMMAND "${CRISP_GLSLANG_VALIDATOR_EXECUTABLE}"
-        --target-env vulkan1.3 -V "${sourcePath}" -o "${outputPath}"
-        DEPENDS "${sourcePath}"
+        COMMAND $<TARGET_FILE:glslang-standalone>
+            --target-env vulkan1.3 -V "${sourcePath}" -o "${outputPath}"
+        DEPENDS "${sourcePath}" glslang-standalone
         VERBATIM)
     set_source_files_properties("${outputPath}" PROPERTIES GENERATED TRUE)
     target_sources(${targetName} PRIVATE "${outputPath}")

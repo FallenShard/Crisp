@@ -13,6 +13,7 @@ FetchContent_Declare(glfw
     GIT_TAG "3.4"
     GIT_SHALLOW TRUE
 )
+
 # These stay CACHE/FORCE deliberately: CMP0077 (option() defers to a normal variable) is
 # resolved by each dependency's own cmake_minimum_required, and most of ours declare < 3.13,
 # so they get the OLD behaviour where option() overwrites a plain set().
@@ -64,6 +65,35 @@ if(CRISP_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
 endif()
 
+if(CRISP_BUILD_TESTS)
+    FetchContent_Declare(glslang
+        GIT_REPOSITORY "https://github.com/KhronosGroup/glslang.git"
+        GIT_TAG "16.4.0"
+        GIT_SHALLOW TRUE
+        EXCLUDE_FROM_ALL
+    )
+    block()
+    set(BUILD_EXTERNAL OFF)
+    set(GLSLANG_TESTS OFF)
+    set(GLSLANG_ENABLE_INSTALL OFF)
+    set(ENABLE_GLSLANG_BINARIES ON)
+    set(ENABLE_GLSLANG_JS OFF)
+    set(ENABLE_SPIRV ON)
+    set(ENABLE_OPT OFF)
+    set(ENABLE_HLSL OFF)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_RELEASE}")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+
+    if(MSVC)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "")
+    endif()
+
+    FetchContent_MakeAvailable(glslang)
+    endblock()
+    set_target_properties(glslang-standalone PROPERTIES FOLDER "ThirdParty/Tools")
+endif()
+
 if(CRISP_BUILD_BENCHMARKS)
     FetchContent_Declare(benchmark
         GIT_REPOSITORY "https://github.com/google/benchmark.git"
@@ -103,16 +133,17 @@ FetchContent_Declare(onetbb
     GIT_SHALLOW TRUE
 )
 block()
-    set(BUILD_SHARED_LIBS ON)
-    # oneTBB declares cmake_minimum_required 3.5, so its option() calls run with CMP0077 OLD
-    # and would ignore plain variables -- these have to go through the cache.
-    set(TBB_TEST OFF CACHE BOOL "" FORCE)
-    set(TBB_STRICT OFF CACHE BOOL "" FORCE) # Defaults ON: a new MSVC warning in TBB fails our build.
-    set(TBB_INSTALL OFF CACHE BOOL "" FORCE)
-    set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE)
-    set(TBB_VERIFY_DEPENDENCY_SIGNATURE ON CACHE BOOL "" FORCE)
-    set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(onetbb)
+set(BUILD_SHARED_LIBS ON)
+
+# oneTBB declares cmake_minimum_required 3.5, so its option() calls run with CMP0077 OLD
+# and would ignore plain variables -- these have to go through the cache.
+set(TBB_TEST OFF CACHE BOOL "" FORCE)
+set(TBB_STRICT OFF CACHE BOOL "" FORCE) # Defaults ON: a new MSVC warning in TBB fails our build.
+set(TBB_INSTALL OFF CACHE BOOL "" FORCE)
+set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE)
+set(TBB_VERIFY_DEPENDENCY_SIGNATURE ON CACHE BOOL "" FORCE)
+set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(onetbb)
 endblock()
 
 FetchContent_Declare(embree
@@ -121,12 +152,13 @@ FetchContent_Declare(embree
     GIT_SHALLOW TRUE
 )
 block()
-    # Embree uses the parent project's generic BUILD_TESTING option. Keep Crisp's
-    # CTest support enabled without registering Embree's test suite.
-    set(BUILD_TESTING OFF)
-    set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
-    set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(embree)
+
+# Embree uses the parent project's generic BUILD_TESTING option. Keep Crisp's
+# CTest support enabled without registering Embree's test suite.
+set(BUILD_TESTING OFF)
+set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
+set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(embree)
 endblock()
 
 FetchContent_Declare(vulkan
