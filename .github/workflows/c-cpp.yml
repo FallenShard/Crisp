@@ -2,25 +2,44 @@ name: Windows
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [master]
   pull_request:
-    branches: [ "master" ]
+    branches: [master]
+
+permissions:
+  contents: read
 
 jobs:
   build:
-
+    name: Release
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set Build Output Path
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-    - name: Configure
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-    - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Locate MSVC
+        id: msvc
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installationPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installationPath) {
+            throw "Visual Studio with the MSVC x64 toolchain was not found."
+          }
+          "installation-path=$installationPath" >> $env:GITHUB_OUTPUT
+
+      - name: Configure Release
+        shell: cmd
+        run: |
+          call "${{ steps.msvc.outputs.installation-path }}\VC\Auxiliary\Build\vcvarsall.bat" x64
+          if errorlevel 1 exit /b 1
+          cmake --preset x64-release
+
+      - name: Build Release
+        shell: cmd
+        run: |
+          call "${{ steps.msvc.outputs.installation-path }}\VC\Auxiliary\Build\vcvarsall.bat" x64
+          if errorlevel 1 exit /b 1
+          cmake --build --preset x64-release-build
 
