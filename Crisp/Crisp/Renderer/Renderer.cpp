@@ -345,7 +345,6 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     }
     if (result != VK_SUCCESS) {
         CRISP_LOGF("Encountered an unknown error with vkAcquireNextImageKHR!");
-        return std::nullopt;
     }
 
     return imageIndex;

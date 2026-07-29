@@ -120,9 +120,8 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
                 }
             }
             if (errorCount > 0) {
-                CRISP_LOGF("Encountered errors while compiling: {}", inputPath.stem().string());
                 std::filesystem::remove(tempInputPath);
-                std::abort();
+                CRISP_LOGF("Encountered errors while compiling: {}", inputPath.stem().string());
             }
 
             // Close the pipe and overwrite the output spv on success
