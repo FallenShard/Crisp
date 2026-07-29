@@ -60,3 +60,5 @@ target_link_libraries(CrispSpvReflection
 add_cpp_test(CrispSpvReflectionTest
     "Test/ReflectionTest.cpp")
 target_link_libraries(CrispSpvReflectionTest PRIVATE Crisp::SpvReflection)
+add_test_shader(CrispSpvReflectionTest "Test/Data/reflection.comp")
+add_test_shader(CrispSpvReflectionTest "Test/Data/reflection.vert")

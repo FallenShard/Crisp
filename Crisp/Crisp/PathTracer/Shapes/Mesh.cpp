@@ -6,8 +6,7 @@
 
 namespace crisp {
 Mesh::Mesh(const VariantMap& params)
-    : m_mesh(loadTriangleMesh("D:/version-control/Crisp/Resources/Meshes/" + params.get<std::string>("filename"))
-                 .unwrap()) {
+    : m_mesh(loadTriangleMesh(params.get<std::string>("filename")).unwrap()) {
     m_toWorld = params.get<Transform>("toWorld");
 
     m_mesh.transform(m_toWorld.mat);
@@ -24,8 +23,8 @@ void Mesh::fillIntersection(unsigned int triangleId, const Ray3& /*ray*/, Inters
     const glm::vec3 barycentric(1.0f - its.uv.x - its.uv.y, its.uv.x, its.uv.y);
     its.p = m_mesh.interpolatePosition(triangleId, barycentric);
     its.geoFrame = CoordinateFrame(m_mesh.calculateTriangleNormal(triangleId));
-    its.shFrame = !m_mesh.getNormals().empty() ? CoordinateFrame(m_mesh.interpolateNormal(triangleId, barycentric))
-                                               : its.geoFrame;
+    its.shFrame =
+        !m_mesh.getNormals().empty() ? CoordinateFrame(m_mesh.interpolateNormal(triangleId, barycentric)) : its.geoFrame;
 
     if (!m_mesh.getTexCoords().empty()) {
         its.uv = m_mesh.interpolateTexCoord(triangleId, barycentric);
@@ -40,8 +39,10 @@ void Mesh::sampleSurface(Shape::Sample& shapeSample, Sampler& sampler) const {
     const glm::vec3 barycentric = warp::squareToUniformTriangle(sample);
 
     shapeSample.p = m_mesh.interpolatePosition(triangleId, barycentric);
-    shapeSample.n = !m_mesh.getNormals().empty() ? m_mesh.interpolateNormal(triangleId, barycentric)
-                                                 : m_mesh.calculateTriangleNormal(triangleId);
+    shapeSample.n =
+        !m_mesh.getNormals().empty()
+            ? m_mesh.interpolateNormal(triangleId, barycentric)
+            : m_mesh.calculateTriangleNormal(triangleId);
     shapeSample.pdf = m_pdf.getNormFactor();
 }
 

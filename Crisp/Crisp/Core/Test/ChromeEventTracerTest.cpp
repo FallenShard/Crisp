@@ -1,5 +1,6 @@
 #include <Crisp/Core/ChromeEventTracer.hpp>
 #include <Crisp/Core/ChromeEventTracerIo.hpp>
+#include <Crisp/Core/UniqueTemporaryFile.hpp>
 
 #include <gmock/gmock.h>
 
@@ -38,7 +39,11 @@ TEST(ChromeEventTracerTest, WritesFiles) {
         }
     }
 
-    serializeTracedEvents("D:/Projects/Crisp/Output/test.trace");
+    const UniqueTemporaryFile traceFile{"trace"};
+    serializeTracedEvents(traceFile.getPath());
+
+    EXPECT_TRUE(std::filesystem::is_regular_file(traceFile.getPath()));
+    EXPECT_GT(std::filesystem::file_size(traceFile.getPath()), 0);
 }
 
 } // namespace

@@ -52,6 +52,7 @@ artifacts/
 *.ilk
 *.meta
 *.obj
+!Crisp/Crisp/Mesh/Io/Test/Data/simple.obj
 *.pch
 *.pdb
 *.pgc

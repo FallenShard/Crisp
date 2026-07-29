@@ -162,6 +162,7 @@ add_cpp_header_library(CrispRendererConfig
 add_cpp_test(CrispDescriptorUpdaterTest
     "Test/DescriptorUpdaterTest.cpp")
 target_link_libraries(CrispDescriptorUpdaterTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
+add_test_shader(CrispDescriptorUpdaterTest "Test/Data/bindless.frag")
 
 add_cpp_static_library(CrispRayTracingPipelineBuilder
     "RayTracingPipelineBuilder.hpp"

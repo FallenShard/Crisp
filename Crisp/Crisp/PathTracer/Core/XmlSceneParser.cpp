@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
 
 namespace crisp {
 using namespace rapidxml;
@@ -188,7 +189,7 @@ void parseParameters(VariantMap& params, xml_node<char>* node) {
 }
 
 template <typename Type, typename FactoryType>
-std::unique_ptr<Type> create(xml_node<char>* node) {
+std::unique_ptr<Type> create(xml_node<char>* node, const std::filesystem::path& meshDirectory = {}) {
     std::string type = "default";
     VariantMap params;
     if (node != nullptr) {
@@ -197,6 +198,16 @@ std::unique_ptr<Type> create(xml_node<char>* node) {
         auto typeAttrib = node->first_attribute("type");
         if (typeAttrib != nullptr) {
             type = typeAttrib->value();
+        }
+    }
+
+    if constexpr (std::is_same_v<Type, Shape>) {
+        if (params.contains("filename")) {
+            std::filesystem::path meshPath{params.get<std::string>("filename")};
+            if (meshPath.is_relative()) {
+                meshPath = meshDirectory / meshPath;
+            }
+            params.insert("filename", meshPath.string());
         }
     }
     return FactoryType::create(type, params);
@@ -220,7 +231,9 @@ std::unique_ptr<Texture<DataType>> create(xml_node<char>* node) {
 }
 } // namespace
 
-std::unique_ptr<pt::Scene> XmlSceneParser::parse(const std::string& filePath) {
+std::unique_ptr<pt::Scene> XmlSceneParser::parse(
+    const std::filesystem::path& sceneFilePath, const std::filesystem::path& meshDirectory) {
+    const auto filePath = sceneFilePath.string();
     file<> xmlFile(filePath.c_str());
     xml_document<> document;
     document.parse<0>(xmlFile.data());
@@ -268,7 +281,7 @@ std::unique_ptr<pt::Scene> XmlSceneParser::parse(const std::string& filePath) {
                 }
             }
 
-            auto shape = create<Shape, ShapeFactory>(shapeNode);
+            auto shape = create<Shape, ShapeFactory>(shapeNode, meshDirectory);
             shape->setBSSRDF(std::move(bssrdf));
 
             scene->addShape(std::move(shape), bsdf.get(), light.get());

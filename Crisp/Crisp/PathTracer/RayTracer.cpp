@@ -36,13 +36,14 @@ RayTracer::~RayTracer() {
     stop();
 }
 
-void RayTracer::initializeScene(const std::string& fileName) {
+void RayTracer::initializeScene(
+    const std::filesystem::path& sceneFilePath, const std::filesystem::path& resourceDirectory) {
     if (m_renderStatus == RenderStatus::Busy) {
         return;
     }
 
     XmlSceneParser xmlParser;
-    m_scene = xmlParser.parse(fileName);
+    m_scene = xmlParser.parse(sceneFilePath, resourceDirectory / "Meshes");
     if (m_scene) {
         m_image.initialize(m_scene->getCamera()->getImageSize(), m_scene->getCamera()->getReconstructionFilter());
         m_image.clear();

@@ -1,0 +1,7 @@
+#pragma once
+
+#include <filesystem>
+
+namespace crisp::test {
+inline const std::filesystem::path kExternalAssetDir{R"crisp(@CRISP_EXTERNAL_ASSET_DIR@)crisp"};
+} // namespace crisp::test

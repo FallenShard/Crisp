@@ -17,7 +17,6 @@
 #include <Crisp/Scenes/RaytracedImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
-
 namespace crisp {
 
 RayTracerScene::RayTracerScene(Renderer* renderer, Window* window)
@@ -71,7 +70,7 @@ void RayTracerScene::render() {
 }
 
 void RayTracerScene::openSceneFileFromDialog() {
-    std::string openedFile = "D:/version-control/Crisp/Resources/VesperScenes/cbox-test-mis.xml"; // openFileDialog();
+    const auto openedFile = m_renderer->getResourcesPath() / "VesperScenes" / "cbox-test-mis.xml"; // openFileDialog()
     if (openedFile.empty()) {
         return;
     }
@@ -107,7 +106,7 @@ void RayTracerScene::writeImageToExr() {
 void RayTracerScene::openSceneFile(const std::filesystem::path& filename) {
     m_renderer->flushResourceUpdates(true);
     m_projectName = filename.stem().string();
-    m_rayTracer->initializeScene(filename.string());
+    m_rayTracer->initializeScene(filename, m_renderer->getResourcesPath());
 
     glm::ivec2 imageSize = m_rayTracer->getImageSize();
     m_image = std::make_unique<RayTracedImage>(imageSize.x, imageSize.y, m_renderer);

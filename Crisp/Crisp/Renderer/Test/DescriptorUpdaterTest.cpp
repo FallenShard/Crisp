@@ -56,7 +56,8 @@ auto BindingIs(const uint32_t binding, const uint32_t count, const VkDescriptorT
 
 TEST_F(DescriptorUpdaterTest, BindlessDescriptor) {
     PipelineLayoutMetadata metadata{
-        reflectPipelineLayoutFromSpirv(std::filesystem::path{"D:/Projects/Crisp/Resources/Shaders/pbr.frag.spv"})
+        reflectPipelineLayoutFromSpirv(
+            std::filesystem::path{"TestData"} / "CrispDescriptorUpdaterTest" / "bindless.frag.spv")
             .unwrap()};
     EXPECT_THAT(
         metadata.descriptorSetLayoutBindings,

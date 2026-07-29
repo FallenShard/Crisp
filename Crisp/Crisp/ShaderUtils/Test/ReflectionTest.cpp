@@ -11,12 +11,11 @@ using ::testing::Field;
 using ::testing::SizeIs;
 
 std::filesystem::path getSpirvShaderPath(const std::string& shaderName) {
-    const std::filesystem::path kSpvAssetPath = "D:/Projects/Crisp/Resources/Shaders";
-    return kSpvAssetPath / (shaderName + ".spv");
+    return std::filesystem::path{"TestData"} / "CrispSpvReflectionTest" / (shaderName + ".spv");
 }
 
 TEST(ReflectionTest, ComputeShader) {
-    const auto reflection = reflectPipelineLayoutFromSpirv(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
+    const auto reflection = reflectPipelineLayoutFromSpirv(getSpirvShaderPath("reflection.comp")).unwrap();
     ASSERT_THAT(reflection.descriptorSetLayoutBindings, SizeIs(1));
     EXPECT_THAT(
         reflection.descriptorSetLayoutBindings[0],
@@ -56,7 +55,7 @@ TEST(ReflectionTest, ComputeShader) {
 
 TEST(ReflectionTest, SpirvReflect) {
     SpvReflectShaderModule module;
-    const auto spirv = readSpirvFile(getSpirvShaderPath("ocean-spectrum.comp")).unwrap();
+    const auto spirv = readSpirvFile(getSpirvShaderPath("reflection.comp")).unwrap();
     SpvReflectResult result = spvReflectCreateShaderModule(spirv.size(), spirv.data(), &module);
     EXPECT_THAT(result, SPV_REFLECT_RESULT_SUCCESS);
 
@@ -81,8 +80,7 @@ TEST(ReflectionTest, SpirvReflect) {
 
 TEST(ReflectionTest, VertexShader) {
     const auto reflection =
-        reflectVertexMetadataFromSpirvShader(readSpirvFile(getSpirvShaderPath("physically-based-tex.vert")).unwrap())
-            .unwrap();
+        reflectVertexMetadataFromSpirvShader(readSpirvFile(getSpirvShaderPath("reflection.vert")).unwrap()).unwrap();
     using AttribDesc = decltype(reflection)::VertexAttributeDescription;
     EXPECT_THAT(
         reflection.attributes,

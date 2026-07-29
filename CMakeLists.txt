@@ -5,6 +5,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(CRISP_BUILD_TESTS      "Build Crisp unit tests"  ON)
 option(CRISP_BUILD_BENCHMARKS "Build Crisp benchmarks"  ON)
+set(CRISP_EXTERNAL_ASSET_DIR "" CACHE PATH "Optional path to the full Crisp Resources directory")
 
 if(CRISP_BUILD_TESTS)
     include(CTest)

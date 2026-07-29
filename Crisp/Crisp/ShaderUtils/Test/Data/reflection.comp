@@ -1,0 +1,26 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, rgba32f) uniform image2D output0;
+layout(set = 0, binding = 1, rgba32f) uniform image2D output1;
+layout(set = 0, binding = 2, rgba32f) uniform image2D output2;
+layout(set = 0, binding = 3, rgba32f) uniform image2D output3;
+layout(set = 0, binding = 4, rgba32f) uniform image2D output4;
+layout(set = 0, binding = 5, rgba32f) uniform image2D output5;
+
+layout(push_constant) uniform PushConstants {
+    vec4 first;
+    vec4 second;
+    vec4 third;
+} pushConstants;
+
+void main() {
+    const ivec2 position = ivec2(gl_GlobalInvocationID.xy);
+    imageStore(output0, position, pushConstants.first);
+    imageStore(output1, position, pushConstants.second);
+    imageStore(output2, position, pushConstants.third);
+    imageStore(output3, position, pushConstants.first);
+    imageStore(output4, position, pushConstants.second);
+    imageStore(output5, position, pushConstants.third);
+}

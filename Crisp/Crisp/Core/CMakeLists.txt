@@ -252,6 +252,7 @@ target_link_libraries(
     CrispChromeEventTracerTest
     PRIVATE Crisp::ChromeEventTracer
     PRIVATE Crisp::ChromeEventTracerIo
+    PRIVATE Crisp::UniqueTemporaryFile
 )
 
 add_cpp_static_library(

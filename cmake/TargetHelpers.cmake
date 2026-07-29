@@ -1,6 +1,7 @@
 # Enables C++23 and high amount of warnings for a C++ target.
 function(enable_default_cpp_compile_options targetName optionType)
     set_target_properties(${targetName} PROPERTIES LANGUAGE CXX LINKER_LANGUAGE CXX)
+
     # Propagate C++ standard requirement to consumers, but keep compiler flags private.
     # INTERFACE targets (header-only libs) skip flags entirely since they have no sources.
     target_compile_features(${targetName} ${optionType} cxx_std_23)
@@ -75,13 +76,60 @@ function(add_cpp_test targetName)
     if(NOT CRISP_BUILD_TESTS)
         return()
     endif()
+
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE GTest::gmock)
     target_link_libraries(${targetName} PRIVATE GTest::gmock_main)
     set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Tests")
 
-    gtest_discover_tests(${targetName} TEST_PREFIX ${targetName}.)
+    gtest_discover_tests(
+        ${targetName}
+        TEST_PREFIX ${targetName}.
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+endfunction()
+
+# Copies a tracked fixture into a target-specific directory in the build tree.
+function(stage_test_file targetName sourceFile relativeOutputPath)
+    if(NOT TARGET ${targetName})
+        return()
+    endif()
+
+    get_filename_component(sourcePath "${sourceFile}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    set(outputPath "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}/${relativeOutputPath}")
+    get_filename_component(outputDirectory "${outputPath}" DIRECTORY)
+    file(MAKE_DIRECTORY "${outputDirectory}")
+    configure_file("${sourcePath}" "${outputPath}" COPYONLY)
+endfunction()
+
+# Compiles a tracked GLSL fixture to SPIR-V in a target-specific build directory.
+function(add_test_shader targetName sourceFile)
+    if(NOT TARGET ${targetName})
+        return()
+    endif()
+
+    if(NOT CRISP_GLSLANG_VALIDATOR_EXECUTABLE)
+        find_program(
+            CRISP_GLSLANG_VALIDATOR_EXECUTABLE
+            NAMES glslangValidator glslangValidator.exe
+            DOC "Path to glslangValidator used for test shader fixtures"
+            REQUIRED)
+    endif()
+
+    get_filename_component(sourcePath "${sourceFile}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    get_filename_component(sourceName "${sourceFile}" NAME)
+    set(outputDirectory "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}")
+    set(outputPath "${outputDirectory}/${sourceName}.spv")
+
+    add_custom_command(
+        OUTPUT "${outputPath}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${outputDirectory}"
+        COMMAND "${CRISP_GLSLANG_VALIDATOR_EXECUTABLE}"
+        --target-env vulkan1.3 -V "${sourcePath}" -o "${outputPath}"
+        DEPENDS "${sourcePath}"
+        VERBATIM)
+    set_source_files_properties("${outputPath}" PROPERTIES GENERATED TRUE)
+    target_sources(${targetName} PRIVATE "${outputPath}")
 endfunction()
 
 # Creates a C++ binary benchmark target. No-op when CRISP_BUILD_BENCHMARKS is OFF.
@@ -89,6 +137,7 @@ function(add_cpp_benchmark targetName)
     if(NOT CRISP_BUILD_BENCHMARKS)
         return()
     endif()
+
     add_executable(${targetName} ${ARGN})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
     target_link_libraries(${targetName} PRIVATE benchmark::benchmark)

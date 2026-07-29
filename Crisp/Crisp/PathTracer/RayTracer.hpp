@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <filesystem>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -23,7 +24,7 @@ public:
     RayTracer();
     ~RayTracer();
 
-    void initializeScene(const std::string& fileName);
+    void initializeScene(const std::filesystem::path& sceneFilePath, const std::filesystem::path& resourceDirectory);
     void start();
     void stop();
 
