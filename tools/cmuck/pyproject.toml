@@ -1,0 +1,19 @@
+[project]
+name = "cmuck"
+version = "0.1.0"
+description = "A thin developer CLI over CMake presets, the File API, and CTest"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.4,<9",
+    "rich>=15,<16"
+]
+
+[project.scripts]
+cmuck = "cmuck:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["cmuck", "cmucklib", "cmucklog"]

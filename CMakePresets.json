@@ -1,6 +1,14 @@
 {
   "version"             : 8,
   "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "vendor"              : {
+    "crisp.dev/cmuck/1.0": {
+      "modeAliases": {
+        "dev": "x64-debug",
+        "opt": "x64-release"
+      }
+    }
+  },
   "configurePresets"    : [
     {
       "name"          : "windows-base",
