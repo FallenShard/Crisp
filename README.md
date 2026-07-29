@@ -40,35 +40,35 @@ cmuck @mode/dev build CrispMain
 cmuck @mode/dev run CrispMain -- --config Args.json
 ```
 
-`@mode/dev` selects `x64-debug`; `@mode/opt` selects `x64-release`. See the
-[developer workflow guide](docs/development.md) for target discovery, tests,
-benchmarks, external assets, preset workflows, and recovery procedures.
+`@mode/dev` selects `x64-debug`; `@mode/opt` selects `x64-release`.
 
 Currently, the following demos are implemented through the real-time renderer:
-  - SSAO
-  - (WC)SPH simulation with compute shaders
-  - Shadow maps (standard, PCF, variance, cascaded)
-  - Simple physically-based shading model based on UE4-style metallic workflow
-  - Image-based lighting with split sum approximation
-  - Screen-space reflections
-  - Simple point sprite rendering
-  - Basic alpha masking for foliage
-  - Tiled forward shading demo with thousands of lights
-  - Dynamic terrain tessellation
-  - Atmospheric shading model based on https://sebh.github.io/publications/egsr2020.pdf
-  - FFT-based ocean simulation
+
+- SSAO
+- (WC)SPH simulation with compute shaders
+- Shadow maps (standard, PCF, variance, cascaded)
+- Simple physically-based shading model based on UE4-style metallic workflow
+- Image-based lighting with split sum approximation
+- Screen-space reflections
+- Simple point sprite rendering
+- Basic alpha masking for foliage
+- Tiled forward shading demo with thousands of lights
+- Dynamic terrain tessellation
+- Atmospheric shading model based on <https://sebh.github.io/publications/egsr2020.pdf>
+- FFT-based ocean simulation
   
 The ray tracing section of the code (codenamed Vesper in the source) has the following features:
-  - BRDFs
-    - Lambertian
-    - Oren Nayar
-    - Rough & smooth conductor
-    - Rough & smooth dielectric
-    - Beckmann and GGX microfacet models
-  - Integrators
-    - Ambient occlusion
-    - Direct lighting
-    - Path tracing with MIS
-  - Point, area, environment lighting
+
+- BRDFs
+  - Lambertian
+  - Oren Nayar
+  - Rough & smooth conductor
+  - Rough & smooth dielectric
+  - Beckmann and GGX microfacet models
+- Integrators
+  - Ambient occlusion
+  - Direct lighting
+  - Path tracing with MIS
+- Point, area, environment lighting
   
   Some pictures and more information are listed at the [project page](https://fallenshard.github.io/crisp-home.html)
