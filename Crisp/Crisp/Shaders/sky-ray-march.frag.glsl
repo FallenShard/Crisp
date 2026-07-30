@@ -21,11 +21,10 @@ layout(set = 1, binding = 2) uniform sampler2D SkyViewLutTexture;
 layout(set = 1, binding = 3) uniform sampler2DArray AtmosphereCameraScatteringVolume;
 layout(set = 1, binding = 4) uniform sampler2D ViewDepthTexture;
 
-
 struct SingleScatteringResult
 {
-    vec3 L;						// Scattered light (luminance)
-    vec3 Transmittance;			// Transmittance in [0,1] (unitless)
+    vec3 L; // Scattered light (luminance)
+    vec3 Transmittance; // Transmittance in [0,1] (unitless)
 };
 
 vec3 sampleTransmittanceLut(const float bottomRadius, const float topRadius, const float viewHeight, const float viewZenithCosAngle)
@@ -59,7 +58,9 @@ float getShadow(in AtmosphereParams atmosphere, vec3 P)
     return 1.0f;
 }
 
-float fromUnitToSubUvs(float u, float resolution) { return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f)); }
+float fromUnitToSubUvs(float u, float resolution) {
+    return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
+}
 
 vec3 sampleMultipleScattering(const AtmosphereParams atmosphere, const float viewHeight, float viewZenithCosAngle)
 {
@@ -76,11 +77,11 @@ SingleScatteringResult integrateScatteredLuminance(
     tMaxMax = 9000000.0f;
     SingleScatteringResult result;
     result.L = vec3(0.0f);
-    result.Transmittance = vec3(0.0f);			// Transmittance in [0,1] (unitless)
+    result.Transmittance = vec3(0.0f); // Transmittance in [0,1] (unitless)
 
-    vec3 ClipSpace = vec3((pixPos / vec2(atmosphere.screenResolution)) * vec2(2.0f, -2.0f) - vec2(1.0f, -1.0f), 1.0f);
+    vec3 ClipSpace = vec3(pixPos / vec2(atmosphere.screenResolution) * 2.0f - 1.0f, kFarPlaneDepth);
 
-    // Compute next intersection with atmosphere or ground 
+    // Compute next intersection with atmosphere or ground
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
     float tBottom = raySphereIntersectNearest(WorldPos, WorldDir, earthO, atmosphere.bottomRadius);
     float tTop = raySphereIntersectNearest(WorldPos, WorldDir, earthO, atmosphere.topRadius);
@@ -89,7 +90,7 @@ SingleScatteringResult integrateScatteredLuminance(
     {
         if (tTop < 0.0f)
         {
-            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away  
+            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away
             return result;
         }
         else
@@ -105,40 +106,39 @@ SingleScatteringResult integrateScatteredLuminance(
         }
     }
 
-    if (DepthBufferValue >= 0.0f)
+    if (DepthBufferValue != kNoDepthBuffer)
     {
         ClipSpace.z = DepthBufferValue;
-        if (ClipSpace.z < 1.0f)
+        if (ClipSpace.z > kFarPlaneDepth)
         {
             vec4 DepthBufferWorldPos = atmosphere.invVP * vec4(ClipSpace, 1.0);
             DepthBufferWorldPos /= DepthBufferWorldPos.w;
 
-            float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, 0.0, -atmosphere.bottomRadius))); // apply earth offset to go back to origin as top of earth mode. 
+            // Undo the planet offset baked into WorldPos so both sides are in the same space. This engine is Y up.
+            float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
             if (tDepth < tMax)
             {
                 tMax = tDepth;
             }
         }
-        //		if (VariableSampleCount && ClipSpace.z == 1.0f)
-        //			return result;
     }
     tMax = min(tMax, tMaxMax);
 
-    // Sample count 
+    // Sample count
     float SampleCount = SampleCountIni;
     float SampleCountFloor = SampleCountIni;
     float tMaxFloor = tMax;
     if (VariableSampleCount)
     {
-        SampleCount = mix(atmosphere.minRayMarchingSamples, atmosphere.maxRayMarchingSamples, clamp(tMax*0.01, 0, 1));
+        SampleCount = mix(atmosphere.minRayMarchingSamples, atmosphere.maxRayMarchingSamples, clamp(tMax * 0.01, 0, 1));
         SampleCountFloor = floor(SampleCount);
-        tMaxFloor = tMax * SampleCountFloor / SampleCount;	// rescale tMax to map to the last entire step segment.
+        tMaxFloor = tMax * SampleCountFloor / SampleCount; // rescale tMax to map to the last entire step segment.
     }
     float dt = tMax / SampleCount;
 
     // Phase functions
     const float cosTheta = dot(SunDir, WorldDir);
-    const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta);	// mnegate cosTheta because due to WorldDir being a "in" direction. 
+    const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta); // mnegate cosTheta because due to WorldDir being a "in" direction.
     const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta);
     const vec3 globalL = atmosphere.sunIlluminance.rgb;
 
@@ -168,7 +168,7 @@ SingleScatteringResult integrateScatteredLuminance(
             {
                 t1 = tMaxFloor * t1;
             }
-            t = t0 + (t1 - t0)*SampleSegmentT;
+            t = t0 + (t1 - t0) * SampleSegmentT;
             dt = t1 - t0;
         }
         else
@@ -188,11 +188,11 @@ SingleScatteringResult integrateScatteredLuminance(
         const vec3 UpVector = P / posHeight;
         const float sunZenithCosAngle = dot(SunDir, UpVector);
         const vec3 transmittanceToSun = sampleTransmittanceLut(atmosphere.bottomRadius, atmosphere.topRadius,
-            posHeight, sunZenithCosAngle);
+                posHeight, sunZenithCosAngle);
 
         const vec3 phaseTimesScattering = medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue;
 
-        // Earth shadow 
+        // Earth shadow
         const float tEarth = raySphereIntersectNearest(P, SunDir, earthO + PlanetRadiusOffset * UpVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
@@ -207,20 +207,20 @@ SingleScatteringResult integrateScatteredLuminance(
         throughput *= stepTransmittance;
     }
 
-//    if (ground && tMax == tBottom && tBottom > 0.0)
-//    {
-//        // Account for bounced light off the earth
-//        vec3 P = WorldPos + tBottom * WorldDir;
-//        float pHeight = length(P);
-//
-//        const vec3 UpVector = P / pHeight;
-//        float SunZenithCosAngle = dot(SunDir, UpVector);
-//        const vec3 transmittanceToSun = sampleTransmittanceLut(Atmosphere.BottomRadius, Atmosphere.TopRadius,
-//            pHeight, SunZenithCosAngle);
-//
-//        const float NdotL = clamp(dot(normalize(UpVector), normalize(SunDir)), 0, 1);
-//        L += globalL * TransmittanceToSun * throughput * NdotL * Atmosphere.GroundAlbedo / PI;
-//    }
+    //    if (ground && tMax == tBottom && tBottom > 0.0)
+    //    {
+    //        // Account for bounced light off the earth
+    //        vec3 P = WorldPos + tBottom * WorldDir;
+    //        float pHeight = length(P);
+    //
+    //        const vec3 UpVector = P / pHeight;
+    //        float SunZenithCosAngle = dot(SunDir, UpVector);
+    //        const vec3 transmittanceToSun = sampleTransmittanceLut(Atmosphere.BottomRadius, Atmosphere.TopRadius,
+    //            pHeight, SunZenithCosAngle);
+    //
+    //        const float NdotL = clamp(dot(normalize(UpVector), normalize(SunDir)), 0, 1);
+    //        L += globalL * TransmittanceToSun * throughput * NdotL * Atmosphere.GroundAlbedo / PI;
+    //    }
 
     result.L = L;
     result.Transmittance = throughput;
@@ -265,21 +265,21 @@ bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out ve
     color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     switch (atmosphere.debugViewMode)
     {
-    case 1:
+        case 1:
         color.rgb = textureLod(transmittanceLut, uv, 0).rgb;
         return true;
-    case 2:
+        case 2:
         color.rgb = textureLod(multiScatteringLut, uv, 0).rgb * atmosphere.exposure;
         return true;
-    case 3:
+        case 3:
         color.rgb = textureLod(SkyViewLutTexture, uv, 0).rgb * atmosphere.exposure;
         return true;
-    case 4:
+        case 4:
         // Sweep through the froxel slices horizontally so that the whole volume is visible at once.
         color.rgb = textureLod(
-            AtmosphereCameraScatteringVolume, vec3(fract(uv * vec2(AP_SLICE_COUNT, 1.0f)), floor(uv.x * AP_SLICE_COUNT)), 0).rgb * atmosphere.exposure;
+                AtmosphereCameraScatteringVolume, vec3(fract(uv * vec2(AP_SLICE_COUNT, 1.0f)), floor(uv.x * AP_SLICE_COUNT)), 0).rgb * atmosphere.exposure;
         return true;
-    default:
+        default:
         return false;
     }
 }
@@ -303,45 +303,44 @@ void main()
     const float viewHeight = length(worldPos);
     vec3 L = vec3(0.0f);
 
-    float fragmentDepth = -1.0f;
-    fragmentDepth = 1.0f;  // 1.0f - texture(ViewDepthTexture, pixPos).r;  // 1.0f;//ViewDepthTexture[pixPos].r;
+    // No depth pre-pass writes ViewDepthTexture yet, so every pixel is treated as open sky.
+    const float fragmentDepth = kFarPlaneDepth; // textureLod(ViewDepthTexture, screenUv, 0).r;
 
     // If we have no obstacle in the view, just get the luminance from the sky.
-    if (fragmentDepth == 1.0f)
+    if (fragmentDepth == kFarPlaneDepth)
         L += getSunLuminance(atmosphere, worldPos, worldDir);
 
-// #endif
+    // #endif
 
-//#if FASTAERIALPERSPECTIVE_ENABLED
-//    homogPos = atmosphere.invVP * vec4(ndcPos, fragmentDepth, 1.0f);
-//    const vec3 depthWorldPos = homogPos.xyz / homogPos.w;
-//
-//    // Figure out the depth slice that we need to sample our luminance from.
-//    const float tDepth = length(depthWorldPos.xyz - (worldPos + vec3(0.0f, -atmosphere.bottomRadius, 0.0f)));
-//    float slice = aerialPerspectiveDepthToSlice(tDepth);
-//    float weight = 1.0;
-//
-//    // For slice 0, we weigh everything down to 0 at depth 0.
-//    if (slice < 0.5)
-//    {
-//        weight = clamp(slice * 2.0, 0, 1);
-//        slice = 0.5;
-//    }
-//    float w = sqrt(slice / AP_SLICE_COUNT);  // squared distribution
+    //#if FASTAERIALPERSPECTIVE_ENABLED
+    //    homogPos = atmosphere.invVP * vec4(ndcPos, fragmentDepth, 1.0f);
+    //    const vec3 depthWorldPos = homogPos.xyz / homogPos.w;
+    //
+    //    // Figure out the depth slice that we need to sample our luminance from.
+    //    const float tDepth = length(depthWorldPos.xyz - (worldPos + vec3(0.0f, -atmosphere.bottomRadius, 0.0f)));
+    //    float slice = aerialPerspectiveDepthToSlice(tDepth);
+    //    float weight = 1.0;
+    //
+    //    // For slice 0, we weigh everything down to 0 at depth 0.
+    //    if (slice < 0.5)
+    //    {
+    //        weight = clamp(slice * 2.0, 0, 1);
+    //        slice = 0.5;
+    //    }
+    //    float w = sqrt(slice / AP_SLICE_COUNT);  // squared distribution
 
     //finalColor = vec4(tDepth, slice, weight, w);
 
-//    const vec4 AP = weight * textureLod(AtmosphereCameraScatteringVolume, vec3(pixPos / vec2(atmosphere.screenResolution), w), 0);
-//    L.rgb += AP.rgb;
-//    float Opacity = AP.a;
-//
-//    finalColor = vec4(L, Opacity);
-
+    //    const vec4 AP = weight * textureLod(AtmosphereCameraScatteringVolume, vec3(pixPos / vec2(atmosphere.screenResolution), w), 0);
+    //    L.rgb += AP.rgb;
+    //    float Opacity = AP.a;
+    //
+    //    finalColor = vec4(L, Opacity);
 
     //finalColor = vec4(L * 5, 1.0 - avgTransmittance);
     //utput.Luminance *= frac(clamp(w*AP_SLICE_COUNT, 0, AP_SLICE_COUNT));
 
-//#else // FASTAERIALPERSPECTIVE_ENABLED
+    //#else // FASTAERIALPERSPECTIVE_ENABLED
 
     // Move to top atmosphere as the starting point for ray marching.
     // This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
@@ -361,5 +360,5 @@ void main()
     const float avgTransmittance = dot(ss.Transmittance, vec3(1.0f / 3.0f));
     finalColor = vec4(L * atmosphere.exposure, 1.0f - avgTransmittance);
 
-// #endif // FASTAERIALPERSPECTIVE_ENABLED
+    // #endif // FASTAERIALPERSPECTIVE_ENABLED
 }

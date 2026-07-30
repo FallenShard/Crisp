@@ -94,6 +94,11 @@ struct MediumSample
 
 const float PlanetRadiusOffset = 0.01f;
 
+// The engine uses an infinite reverse-Z projection (Camera::reverseZPerspective): the near plane maps to 1 and
+// infinity maps to 0.
+const float kFarPlaneDepth = 0.0f;
+const float kNoDepthBuffer = -1.0f;
+
 vec3 getAlbedo3(vec3 scattering, vec3 extinction)
 {
     return scattering / max(vec3(0.001), extinction);
@@ -106,8 +111,8 @@ MediumSample sampleMedium(const vec3 worldPos, const AtmosphereParams atmosphere
     const float densityMie = exp(atmosphere.mieDensityExpScale * viewHeight);
     const float densityRay = exp(atmosphere.rayleighDensityExpScale * viewHeight);
     const float densityOzo = clamp(viewHeight < atmosphere.absorptionDensity0LayerWidth ?
-        atmosphere.absorptionDensity0LinearTerm * viewHeight + atmosphere.absorptionDensity0ConstantTerm :
-        atmosphere.absorptionDensity1LinearTerm * viewHeight + atmosphere.absorptionDensity1ConstantTerm, 0, 1);
+            atmosphere.absorptionDensity0LinearTerm * viewHeight + atmosphere.absorptionDensity0ConstantTerm :
+            atmosphere.absorptionDensity1LinearTerm * viewHeight + atmosphere.absorptionDensity1ConstantTerm, 0, 1);
 
     MediumSample s;
 
@@ -196,7 +201,6 @@ bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in f
 
     return true; // ok to start tracing.
 }
-
 
 void uvToTransmittanceLutParams(const float bottomRadius, const float topRadius, in vec2 uv, out float viewHeight, out float viewZenithCosAngle)
 {

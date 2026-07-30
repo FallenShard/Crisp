@@ -141,7 +141,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
     result.NewMultiScatStep0Out = vec3(0.0f);
     result.NewMultiScatStep1Out = vec3(0.0f);
 
-    vec3 ClipSpace = vec3((pixPos / vec2(32, 32)) * vec2(2.0, -2.0) - vec2(1.0, -1.0), 1.0);
+    vec3 ClipSpace = vec3(pixPos / vec2(32, 32) * 2.0f - 1.0f, kFarPlaneDepth);
 
     // Compute next intersection with atmosphere or ground 
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
@@ -168,22 +168,21 @@ SingleScatteringResult IntegrateScatteredLuminance(
         }
     }
 
-    if (DepthBufferValue >= 0.0f)
+    if (DepthBufferValue != kNoDepthBuffer)
     {
         ClipSpace.z = DepthBufferValue;
-        if (ClipSpace.z < 1.0f)
+        if (ClipSpace.z > kFarPlaneDepth)
         {
             vec4 DepthBufferWorldPos = atmosphere.invVP * vec4(ClipSpace, 1.0);
             DepthBufferWorldPos /= DepthBufferWorldPos.w;
 
-            float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, 0.0, -atmosphere.bottomRadius))); // apply earth offset to go back to origin as top of earth mode. 
+            // Undo the planet offset baked into WorldPos so both sides are in the same space. This engine is Y up.
+            float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
             if (tDepth < tMax)
             {
                 tMax = tDepth;
             }
         }
-        //		if (VariableSampleCount && ClipSpace.z == 1.0f)
-        //			return result;
     }
     tMax = min(tMax, tMaxMax);
 
@@ -276,9 +275,9 @@ SingleScatteringResult IntegrateScatteredLuminance(
 
 void main()
 {
-    // Compute viewing direction for the given pixel
+    // Compute viewing direction for the given pixel.
     const vec2 pixPos = gl_FragCoord.xy;
-    const vec3 ndcPos = vec3((pixPos / vec2(32, 32)) * vec2(2.0, -2.0) - vec2(1.0, -1.0), 0.5);
+    const vec3 ndcPos = vec3(pixPos / vec2(32, 32) * 2.0f - 1.0f, 0.5f);
     const vec4 HPos = atmosphere.invVP * vec4(ndcPos, 1.0);
     const vec3 eyePos = HPos.xyz / HPos.w;
     vec3 worldDir = normalize(eyePos - atmosphere.cameraPosition);
@@ -335,7 +334,7 @@ void main()
 
     const bool ground = false;
     const float SampleCountIni = max(1.0, float(gl_Layer + 1.0) * 2.0f);
-    const float DepthBufferValue = -1.0;
+    const float DepthBufferValue = kNoDepthBuffer;
     const bool MieRayPhase = true;
     const vec3 sunDir = atmosphere.sunDirection;
     const vec3 sunLuminance = vec3(0.0);

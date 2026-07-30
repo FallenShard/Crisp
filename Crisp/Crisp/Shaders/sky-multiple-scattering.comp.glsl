@@ -1,11 +1,12 @@
 #version 460 core
 
+#extension GL_GOOGLE_include_directive : require
+
 #define PI 3.1415926535897932384626433832795
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 #include "Common/atmosphere.part.glsl"
-
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -13,9 +14,9 @@ layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 struct SingleScatteringResult
 {
-    vec3 L;						// Scattered light (luminance)
-    vec3 OpticalDepth;			// Optical depth (1/m)
-    vec3 Transmittance;			// Transmittance in [0,1] (unitless)
+    vec3 L; // Scattered light (luminance)
+    vec3 OpticalDepth; // Optical depth (1/m)
+    vec3 Transmittance; // Transmittance in [0,1] (unitless)
     vec3 MultiScatAs1;
 };
 
@@ -27,8 +28,12 @@ layout(set = 0, binding = 0) uniform AtmosphereParamsBlock
 layout(set = 1, binding = 0, rgba16f) uniform writeonly image2D multiScatteringLut;
 layout(set = 1, binding = 1) uniform sampler2D transmittanceLut;
 
-float fromUnitToSubUvs(float u, float resolution) { return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f)); }
-float fromSubUvsToUnit(float u, float resolution) { return (u - 0.5f / resolution) * (resolution / (resolution - 1.0f)); }
+float fromUnitToSubUvs(float u, float resolution) {
+    return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
+}
+float fromSubUvsToUnit(float u, float resolution) {
+    return (u - 0.5f / resolution) * (resolution / (resolution - 1.0f));
+}
 
 float getShadow(in AtmosphereParams Atmosphere, vec3 P)
 {
@@ -72,7 +77,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 
     vec3 ClipSpace = vec3(ndcPos, 1.0);
 
-    // Compute next intersection with atmosphere or ground 
+    // Compute next intersection with atmosphere or ground
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
     float tBottom = raySphereIntersectNearest(WorldPos, WorldDir, earthO, atmosphere.bottomRadius);
     float tTop = raySphereIntersectNearest(WorldPos, WorldDir, earthO, atmosphere.topRadius);
@@ -81,7 +86,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
     {
         if (tTop < 0.0f)
         {
-            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away  
+            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away
             return result;
         }
         else
@@ -106,7 +111,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
     // 		vec4 DepthBufferWorldPos = mul(gSkyInvViewProjMat, vec4(ClipSpace, 1.0));
     // 		DepthBufferWorldPos /= DepthBufferWorldPos.w;
 
-    // 		float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, 0.0, -Atmosphere.BottomRadius))); // apply earth offset to go back to origin as top of earth mode. 
+    // 		float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, 0.0, -Atmosphere.BottomRadius))); // apply earth offset to go back to origin as top of earth mode.
     // 		if (tDepth < tMax)
     // 		{
     // 			tMax = tDepth;
@@ -117,7 +122,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
     // }
     tMax = min(tMax, tMaxMax);
 
-    // Sample count 
+    // Sample count
     float SampleCount = SampleCountIni;
     float SampleCountFloor = SampleCountIni;
     float tMaxFloor = tMax;
@@ -155,18 +160,22 @@ SingleScatteringResult IntegrateScatteredLuminance(
         const vec3 UpVector = P / pHeight;
         const float sunZenithCosAngle = dot(SunDir, UpVector);
         const vec3 transmittanceToSun = sampleTransmittanceLut(atmosphere.bottomRadius, atmosphere.topRadius,
-            pHeight, sunZenithCosAngle);
+                pHeight, sunZenithCosAngle);
 
-        const vec3 phaseTimesScattering = medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue;
+        // The whole point of this LUT is the assumption that scattering beyond the first order is isotropic, which
+        // is what lets orders 2..inf collapse into a geometric series. Using the directional phases here would
+        // compute a different quantity, so the caller passes MieRayPhase = false.
+        const vec3 phaseTimesScattering = MieRayPhase
+            ? medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue : medium.scattering * uniformPhaseValue;
 
-        // Earth shadow 
+        // Earth's shadow.
         const float tEarth = raySphereIntersectNearest(P, SunDir, earthO + PlanetRadiusOffset * UpVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
-        const float shadow = getShadow(atmosphere, P);;
+        const float shadow = getShadow(atmosphere, P);
 
-        const vec3 S = globalL * (earthShadow * shadow * transmittanceToSun * phaseTimesScattering * medium.scattering);
-
+        // phaseTimesScattering already carries sigma_s; multiplying by medium.scattering again would square it.
+        const vec3 S = globalL * (earthShadow * shadow * transmittanceToSun * phaseTimesScattering);
 
         const vec3 MS = medium.scattering;
         const vec3 integralMS = (MS - MS * SampleTransmittance) / medium.extinction;
@@ -186,7 +195,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
         const vec3 UpVector = P / pHeight;
         const float sunZenithCosAngle = dot(SunDir, UpVector);
         const vec3 transmittanceToSun = sampleTransmittanceLut(atmosphere.bottomRadius, atmosphere.topRadius,
-            pHeight, sunZenithCosAngle);
+                pHeight, sunZenithCosAngle);
 
         const float NdotL = clamp(dot(normalize(UpVector), normalize(SunDir)), 0, 1);
         L += globalL * transmittanceToSun * throughput * NdotL * atmosphere.groundAlbedo / PI;
@@ -198,7 +207,6 @@ SingleScatteringResult IntegrateScatteredLuminance(
 
 shared vec3 multiScatShared[64];
 shared vec3 radianceShared[64];
-
 
 void main()
 {
@@ -217,21 +225,20 @@ void main()
 
     const vec3 worldPos = vec3(0.0f, viewHeight, 0.0f);
 
-
     const bool ground = true;
     const float sampleCount = 20;
-    const float DepthBufferValue = -1.0;
+    const float DepthBufferValue = kNoDepthBuffer;
     const bool MieRayPhase = false;
 
     const float sphereSolidAngle = 4.0f * PI;
     const float isotropicPhaseValue = 1.0f / sphereSolidAngle;
 
-
-    // Reference. Since there are many sample, it requires MULTI_SCATTERING_POWER_SERIE to be true for accuracy and to avoid divergences (see declaration for explanations)
+    // Each invocation along z takes one direction of an 8x8 uniform sphere sampling, and the group reduces them.
+    const uint sampleIdx = gl_LocalInvocationID.z;
     const int SQRTSAMPLECOUNT = 8;
     const float sqrtSample = float(SQRTSAMPLECOUNT);
-    float i = 0.5f + float(gl_GlobalInvocationID.z / SQRTSAMPLECOUNT);
-    float j = 0.5f + float(gl_GlobalInvocationID.z - float((gl_GlobalInvocationID.z / SQRTSAMPLECOUNT)*SQRTSAMPLECOUNT));
+    const float i = 0.5f + float(sampleIdx / SQRTSAMPLECOUNT);
+    const float j = 0.5f + float(sampleIdx - (sampleIdx / SQRTSAMPLECOUNT) * SQRTSAMPLECOUNT);
     {
         const float randA = i / sqrtSample;
         const float randB = j / sqrtSample;
@@ -243,49 +250,51 @@ void main()
         const float sinTheta = sin(theta);
         const vec3 worldDir = vec3(cosTheta * sinPhi, cosPhi, -sinTheta * sinPhi);
         SingleScatteringResult result = IntegrateScatteredLuminance(
-            ndcPos,
-            worldPos,
-            worldDir,
-            sunDir,
-            atmosphere,
-            ground,
-            sampleCount,
-            DepthBufferValue,
-            MieRayPhase,
-            9000000.0f);
+                ndcPos,
+                worldPos,
+                worldDir,
+                sunDir,
+                atmosphere,
+                ground,
+                sampleCount,
+                DepthBufferValue,
+                MieRayPhase,
+                9000000.0f);
 
         const float weight = sphereSolidAngle / (sqrtSample * sqrtSample);
-        multiScatShared[gl_GlobalInvocationID.z] = result.MultiScatAs1 * weight;
-        radianceShared[gl_GlobalInvocationID.z] = result.L * weight;
+        multiScatShared[sampleIdx] = result.MultiScatAs1 * weight;
+        radianceShared[sampleIdx] = result.L * weight;
     }
 
     groupMemoryBarrier();
     barrier();
 
-    for (uint i = 32; i >= 1; i /= 2)
+    for (uint stride = 32; stride >= 1; stride /= 2)
     {
-        if (gl_GlobalInvocationID.z < i)
+        if (sampleIdx < stride)
         {
-            multiScatShared[gl_GlobalInvocationID.z] += multiScatShared[gl_GlobalInvocationID.z + i];
-            radianceShared[gl_GlobalInvocationID.z] += radianceShared[gl_GlobalInvocationID.z + i];
+            multiScatShared[sampleIdx] += multiScatShared[sampleIdx + stride];
+            radianceShared[sampleIdx] += radianceShared[sampleIdx + stride];
         }
         groupMemoryBarrier();
         barrier();
     }
 
-    if (gl_GlobalInvocationID.z > 0)
+    if (sampleIdx > 0)
         return;
 
-    vec3 multiScatteredRadiance = multiScatShared[0] * isotropicPhaseValue;	// Equation 7 f_ms
-    vec3 radiance	= radianceShared[0] * isotropicPhaseValue;				// Equation 5 L_2ndOrder
+    vec3 multiScatteredRadiance = multiScatShared[0] * isotropicPhaseValue; // Equation 7 f_ms
+    vec3 radiance = radianceShared[0] * isotropicPhaseValue; // Equation 5 L_2ndOrder
 
     // MultiScatAs1 represents the amount of luminance scattered as if the integral of scattered luminance over the sphere would be 1.
     //  - 1st order of scattering: one can ray-march a straight path as usual over the sphere. That is InScatteredLuminance.
     //  - 2nd order of scattering: the inscattered luminance is InScatteredLuminance at each of samples of fist order integration. Assuming a uniform phase function that is represented by MultiScatAs1,
     //  - 3nd order of scattering: the inscattered luminance is (InScatteredLuminance * MultiScatAs1 * MultiScatAs1)
     //  - etc.
-    // For a serie, sum_{n=0}^{n=+inf} = 1 + r + r^2 + r^3 + ... + r^n = 1 / (1.0 - r), see https://en.wikipedia.org/wiki/Geometric_series 
-    const vec3 multiScatteringSum = 1.0f / (1.0 - multiScatteredRadiance);
-    const vec3 L = radiance * multiScatteringSum;// Equation 10 Psi_ms
+    // For a serie, sum_{n=0}^{n=+inf} = 1 + r + r^2 + r^3 + ... + r^n = 1 / (1.0 - r), see https://en.wikipedia.org/wiki/Geometric_series
+    // Energy conservation puts f_ms below 1, but the ray march only approximates it, so clamp rather than risk a
+    // division by zero or a sign flip on the sum.
+    const vec3 multiScatteringSum = 1.0f / (1.0 - min(multiScatteredRadiance, vec3(0.999f)));
+    const vec3 L = radiance * multiScatteringSum; // Equation 10 Psi_ms
     imageStore(multiScatteringLut, ivec2(gl_GlobalInvocationID.xy), vec4(L, 1.0f));
 }
