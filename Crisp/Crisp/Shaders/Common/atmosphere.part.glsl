@@ -101,7 +101,7 @@ struct MediumSample {
     vec3 albedo;
 };
 
-const float PlanetRadiusOffset = 0.01f;
+const float kPlanetRadiusOffset = 0.01f;
 
 // The engine uses an infinite reverse-Z projection (Camera::reverseZPerspective): the near plane maps to 1 and
 // infinity maps to 0.
@@ -219,7 +219,7 @@ bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in f
         }
 
         const vec3 upVector = worldPos / viewHeight;
-        worldPos = worldPos + tTop * worldDir - PlanetRadiusOffset * upVector;
+        worldPos = worldPos + tTop * worldDir - kPlanetRadiusOffset * upVector;
     }
 
     return true; // ok to start tracing.
@@ -236,6 +236,49 @@ void uvToTransmittanceLutParams(
     const float d = dMin + uv.x * (dMax - dMin);
     viewZenithCosAngle = d == 0.0 ? 1.0f : (H * H - rho * rho - d * d) / (2.0 * viewHeight * d);
     viewZenithCosAngle = clamp(viewZenithCosAngle, -1.0, 1.0);
+}
+
+// Inverse of uvToTransmittanceLutParams.
+vec2 transmittanceLutParamsToUv(
+    const AtmosphereParams atmosphere, const float viewHeight, const float viewZenithCosAngle) {
+    const float horizon = sqrt(
+        max(0.0f, atmosphere.topRadius * atmosphere.topRadius - atmosphere.bottomRadius * atmosphere.bottomRadius));
+    const float rho = sqrt(max(0.0f, viewHeight * viewHeight - atmosphere.bottomRadius * atmosphere.bottomRadius));
+
+    const float discriminant =
+        viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0f) +
+        atmosphere.topRadius * atmosphere.topRadius;
+    const float d = max(0.0f, -viewHeight * viewZenithCosAngle + sqrt(max(0.0f, discriminant)));
+
+    const float dMin = atmosphere.topRadius - viewHeight;
+    const float dMax = rho + horizon;
+    return vec2((d - dMin) / (dMax - dMin), rho / horizon);
+}
+
+// The samplers are passed in because each pass binds them at its own set and binding.
+vec3 sampleTransmittanceLut(
+    const sampler2D lut, const AtmosphereParams atmosphere, const float viewHeight, const float viewZenithCosAngle) {
+    return textureLod(lut, transmittanceLutParamsToUv(atmosphere, viewHeight, viewZenithCosAngle), 0).rgb;
+}
+
+vec3 sampleMultipleScattering(
+    const sampler2D lut, const AtmosphereParams atmosphere, const float viewHeight, const float viewZenithCosAngle) {
+    vec2 uv = clamp(
+        vec2(
+            viewZenithCosAngle * 0.5f + 0.5f,
+            (viewHeight - atmosphere.bottomRadius) / (atmosphere.topRadius - atmosphere.bottomRadius)),
+        vec2(0.0f),
+        vec2(1.0f));
+    uv = vec2(
+        fromUnitToSubUvs(uv.x, atmosphere.multiScatteringLutResolution),
+        fromUnitToSubUvs(uv.y, atmosphere.multiScatteringLutResolution));
+
+    return textureLod(lut, uv, 0).rgb;
+}
+
+// Placeholder until a shadow map is wired in.
+float getShadow(const AtmosphereParams atmosphere, const vec3 worldPos) {
+    return 1.0f;
 }
 
 // The vertical axis splits at the horizon and spreads quadratically away from it on both sides, so the horizon -

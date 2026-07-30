@@ -17,60 +17,13 @@ layout(set = 0, binding = 0) uniform AtmosphereParamsBlock {
 layout(set = 1, binding = 0) uniform sampler2D transmittanceLut;
 layout(set = 1, binding = 1) uniform sampler2D multiScatteringLut;
 
-vec3 sampleTransmittanceLut(const AtmosphereParams atmosphere, const float viewHeight, const float viewZenithCosAngle) {
-    const float horizon = sqrt(
-        max(0.0f, atmosphere.topRadius * atmosphere.topRadius - atmosphere.bottomRadius * atmosphere.bottomRadius));
-    const float rho = sqrt(max(0.0f, viewHeight * viewHeight - atmosphere.bottomRadius * atmosphere.bottomRadius));
-
-    const float discriminant =
-        viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) +
-        atmosphere.topRadius * atmosphere.topRadius;
-    const float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(discriminant))); // Distance to atmosphere
-                                                                                       // boundary
-
-    const float d_min = atmosphere.topRadius - viewHeight;
-    const float d_max = rho + horizon;
-    const float x_mu = (d - d_min) / (d_max - d_min);
-    const float x_r = rho / horizon;
-
-    return textureLod(transmittanceLut, vec2(x_mu, x_r), 0).rgb;
-}
-
-vec3 sampleMultipleScattering(const AtmosphereParams atmosphere, const float viewHeight, float viewZenithCosAngle) {
-    vec2 uv = clamp(
-        vec2(
-            viewZenithCosAngle * 0.5f + 0.5f,
-            (viewHeight - atmosphere.bottomRadius) / (atmosphere.topRadius - atmosphere.bottomRadius)),
-        vec2(0),
-        vec2(1));
-    uv = vec2(
-        fromUnitToSubUvs(uv.x, atmosphere.multiScatteringLutResolution),
-        fromUnitToSubUvs(uv.y, atmosphere.multiScatteringLutResolution));
-
-    return textureLod(multiScatteringLut, uv, 0).rgb;
-}
-
-float getShadow(in AtmosphereParams atmosphere, vec3 P) {
-    // // First evaluate opaque shadow
-    // float4 shadowUv = mul(gShadowmapViewProjMat, float4(P + float3(0.0, 0.0, -Atmosphere.BottomRadius), 1.0));
-    // //shadowUv /= shadowUv.w;	// not be needed as it is an ortho projection
-    // shadowUv.x = shadowUv.x*0.5 + 0.5;
-    // shadowUv.y = -shadowUv.y*0.5 + 0.5;
-    // if (all(shadowUv.xyz >= 0.0) && all(shadowUv.xyz < 1.0))
-    // {
-    // 	return ShadowmapTexture.SampleCmpLevelZero(samplerShadow, shadowUv.xy, shadowUv.z);
-    // }
-    // return 1.0f;
-    return 1.0f;
-}
-
 vec3 integrateScatteredLuminance(
     const vec3 worldPos,
     const vec3 worldDir,
     const vec3 sunDir,
     in AtmosphereParams atmosphere,
-    const float SampleCountIni,
-    const bool VariableSampleCount,
+    const float sampleCountIni,
+    const bool variableSampleCount,
     const bool ground) {
     // Compute next intersection with atmosphere or ground
     const vec3 earthCenter = vec3(0.0f, 0.0f, 0.0f);
@@ -85,16 +38,16 @@ vec3 integrateScatteredLuminance(
     tMax = min(tMax, 9000000.0f);
 
     // Sample count
-    float SampleCount = SampleCountIni;
-    float SampleCountFloor = SampleCountIni;
+    float sampleCount = sampleCountIni;
+    float sampleCountFloor = sampleCountIni;
     float tMaxFloor = tMax;
-    if (VariableSampleCount) {
-        SampleCount =
+    if (variableSampleCount) {
+        sampleCount =
             mix(atmosphere.minRayMarchingSamples, atmosphere.maxRayMarchingSamples, clamp(tMax * 0.01f, 0.0f, 1.0f));
-        SampleCountFloor = floor(SampleCount);
-        tMaxFloor = tMax * SampleCountFloor / SampleCount; // rescale tMax to map to the last entire step segment.
+        sampleCountFloor = floor(sampleCount);
+        tMaxFloor = tMax * sampleCountFloor / sampleCount; // rescale tMax to map to the last entire step segment.
     }
-    float dt = tMax / SampleCount;
+    float dt = tMax / sampleCount;
 
     // Phase functions
     const float uniformPhase = 1.0 / (4.0 * PI);
@@ -102,7 +55,7 @@ vec3 integrateScatteredLuminance(
     const vec3 wo = worldDir;
     const float cosTheta = dot(wi, wo);
 
-    // negate cosTheta because due to WorldDir being a "in" direction.
+    // negate cosTheta because due to worldDir being a "in" direction.
     const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta);
     const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta);
     const vec3 globalL = atmosphere.sunIlluminance.rgb;
@@ -112,11 +65,11 @@ vec3 integrateScatteredLuminance(
     vec3 throughput = vec3(1.0f);
     float t = 0.0f;
     const float segmentBias = 0.3f;
-    for (float s = 0.0f; s < SampleCount; s += 1.0f) {
-        if (VariableSampleCount) {
+    for (float s = 0.0f; s < sampleCount; s += 1.0f) {
+        if (variableSampleCount) {
             // More expensive, but artifact-free.
-            float t0 = (s) / SampleCountFloor;
-            float t1 = (s + 1.0f) / SampleCountFloor;
+            float t0 = (s) / sampleCountFloor;
+            float t1 = (s + 1.0f) / sampleCountFloor;
             // Non linear distribution of sample within the range.
             t0 = t0 * t0;
             t1 = t1 * t1;
@@ -131,7 +84,7 @@ vec3 integrateScatteredLuminance(
             dt = t1 - t0;
             t = t0 + (t1 - t0) * segmentBias;
         } else {
-            const float tNext = tMax * (s + segmentBias) / SampleCount;
+            const float tNext = tMax * (s + segmentBias) / sampleCount;
             dt = tNext - t;
             t = tNext;
         }
@@ -144,21 +97,21 @@ vec3 integrateScatteredLuminance(
         const float posHeight = length(pos);
         const vec3 upVec = pos / posHeight;
         const float sunZenithCosAngle = dot(sunDir, upVec);
-        const vec3 transmittanceToSun = sampleTransmittanceLut(atmosphere, posHeight, sunZenithCosAngle);
+        const vec3 transmittanceToSun = sampleTransmittanceLut(transmittanceLut, atmosphere, posHeight, sunZenithCosAngle);
 
         const vec3 phaseTimesScattering =
             medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue;
 
         // Earth shadow
         const float tEarth =
-            raySphereIntersectNearest(pos, sunDir, earthCenter + PlanetRadiusOffset * upVec, atmosphere.bottomRadius);
+            raySphereIntersectNearest(pos, sunDir, earthCenter + kPlanetRadiusOffset * upVec, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
         // First evaluate opaque shadow
         const float shadow = getShadow(atmosphere, pos);
 
         const vec3 multiScatteredL =
-            atmosphere.multipleScatteringFactor * sampleMultipleScattering(atmosphere, posHeight, sunZenithCosAngle);
+            atmosphere.multipleScatteringFactor * sampleMultipleScattering(multiScatteringLut, atmosphere, posHeight, sunZenithCosAngle);
         const vec3 S =
             globalL *
             (earthShadow * shadow * transmittanceToSun * phaseTimesScattering + multiScatteredL * medium.scattering);
@@ -177,7 +130,7 @@ vec3 integrateScatteredLuminance(
         const float posHeight = length(pos);
         const vec3 upVec = pos / posHeight;
         const float sunZenithCosAngle = dot(sunDir, upVec);
-        const vec3 transmittanceToSun = sampleTransmittanceLut(atmosphere, posHeight, sunZenithCosAngle);
+        const vec3 transmittanceToSun = sampleTransmittanceLut(transmittanceLut, atmosphere, posHeight, sunZenithCosAngle);
 
         const float nDotL = clamp(sunZenithCosAngle, 0.0f, 1.0f);
         L += globalL * transmittanceToSun * throughput * nDotL * atmosphere.groundAlbedo / PI;
@@ -197,12 +150,12 @@ void main() {
     float lightViewCosAngle;
     uvToSkyViewLutParams(uv, atmosphere.bottomRadius, viewHeight, viewZenithCosAngle, lightViewCosAngle);
 
-    vec3 SunDir;
+    vec3 sunDir;
     {
         const vec3 upVec = worldPos / viewHeight;
         const float sunZenithCosAngle = dot(upVec, atmosphere.sunDirection);
         const float sunZenithSinAngle = sqrt(1.0 - sunZenithCosAngle * sunZenithCosAngle);
-        SunDir = normalize(vec3(sunZenithSinAngle, sunZenithCosAngle, 0.0f));
+        sunDir = normalize(vec3(sunZenithSinAngle, sunZenithCosAngle, 0.0f));
     }
 
     worldPos = vec3(0.0f, viewHeight, 0.0f);
@@ -220,12 +173,12 @@ void main() {
         return;
     }
 
-    const float SampleCountIni = 30;
-    const bool VariableSampleCount = true;
+    const float sampleCountIni = 30;
+    const bool variableSampleCount = true;
 
     // Must match the final ray march, or the two disagree below the horizon once the fast sky path takes over.
     const bool ground = atmosphere.renderGround != 0;
     const vec3 L = integrateScatteredLuminance(
-        worldPos, worldDir, SunDir, atmosphere, SampleCountIni, VariableSampleCount, ground);
+        worldPos, worldDir, sunDir, atmosphere, sampleCountIni, variableSampleCount, ground);
     finalColor = vec4(L, 1.0f);
 }
