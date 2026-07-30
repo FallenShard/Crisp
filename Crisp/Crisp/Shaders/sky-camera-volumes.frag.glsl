@@ -175,7 +175,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
             vec4 DepthBufferWorldPos = atmosphere.invVP * vec4(ClipSpace, 1.0);
             DepthBufferWorldPos /= DepthBufferWorldPos.w;
 
-            // Undo the planet offset baked into WorldPos so both sides are in the same space. This engine is Y up.
+            // Undo the planet offset in WorldPos to match; this engine is Y up.
             float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
             if (tDepth < tMax) {
                 tMax = tDepth;

@@ -17,8 +17,7 @@ glm::vec3 computeSunDirection(const float azimuthDegrees, const float altitudeDe
     };
 }
 
-// The medium is described by per-kilometer coefficients in the 1e-5 to 1e-1 range, which the default drag speed
-// and formatting are useless for.
+// The default drag speed and formatting are useless for coefficients in the 1e-5 to 1e-1 range.
 bool dragCoefficients(const char* label, glm::vec3& value, const float speed = 1e-4f) {
     return ImGui::DragFloat3(label, &value.x, speed, 0.0f, 1.0f, "%.6f");
 }

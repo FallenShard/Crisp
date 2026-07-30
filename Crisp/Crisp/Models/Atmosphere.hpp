@@ -73,32 +73,31 @@ struct AtmosphereParameters {
     int32_t minRayMarchingSamples{4};
     int32_t maxRayMarchingSamples{14};
 
-    // Multiplier applied to the ray marched luminance before it is written out.
     float exposure{5.0f};
 
-    // Angular diameter of the sun disk, in degrees. Earth's sun subtends roughly 0.545 degrees.
+    // Earth's sun subtends roughly 0.545 degrees.
     float sunAngularDiameterDegrees{0.545f};
 
-    // Luminance of the sun disk itself, in the same units as the ray marched sky.
-    float sunDiskLuminance{1e6f};
+    // Same units as the ray marched sky, which sits around 0.05 here. Sized from the real sun to sky luminance
+    // ratio of roughly 2e5, rather than the 1e6 the reference uses on its differently scaled sky.
+    float sunDiskLuminance{1e4f};
 
-    // Artistic scale on the multiple scattering contribution; 1 is the physically motivated value.
+    // 1 is the physically motivated value; 0 isolates single scattering.
     float multipleScatteringFactor{1.0f};
 
-    // See kDebugViewModeNames; 0 renders the atmosphere, everything else visualizes an intermediate LUT.
+    // Indexes kDebugViewModeNames.
     int32_t debugViewMode{0};
 
     int32_t drawSunDisk{1};
 
-    // Sample the sky view LUT for open sky instead of ray marching it per pixel. This is the payoff of the whole
-    // LUT chain; turning it off leaves the reference full march to compare against.
+    // Off leaves the reference full march to compare against.
     int32_t fastSkyEnabled{1};
 
-    // Shade the planet surface where a view ray ends on it, rather than leaving it black behind the haze.
+    // Off leaves the surface black behind the haze, as in the reference implementation.
     int32_t renderGround{1};
 
-    // Altitude in km above which the sky view LUT is abandoned for a full march. Its parameterization is built
-    // around the horizon as seen from the camera and loses the detail that matters once the ground is far below.
+    // In km. The LUT's axes are built around the horizon as seen from the camera, so it stops being usable once
+    // the ground is far below.
     float skyViewLutMaxAltitude{4.0f};
 
     // Keeps the block a multiple of 16 bytes; claim it when the next flag lands.

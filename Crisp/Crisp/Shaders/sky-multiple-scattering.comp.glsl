@@ -152,9 +152,8 @@ SingleScatteringResult IntegrateScatteredLuminance(
         const vec3 transmittanceToSun =
             sampleTransmittanceLut(atmosphere.bottomRadius, atmosphere.topRadius, pHeight, sunZenithCosAngle);
 
-        // The whole point of this LUT is the assumption that scattering beyond the first order is isotropic, which
-        // is what lets orders 2..inf collapse into a geometric series. Using the directional phases here would
-        // compute a different quantity, so the caller passes MieRayPhase = false.
+        // Orders 2..inf only collapse into a geometric series under the assumption that they scatter
+        // isotropically, so a directional phase here would compute a different quantity entirely.
         const vec3 phaseTimesScattering =
             MieRayPhase ? medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue
                         : medium.scattering * uniformPhaseValue;
@@ -225,7 +224,6 @@ void main() {
     const float sphereSolidAngle = 4.0f * PI;
     const float isotropicPhaseValue = 1.0f / sphereSolidAngle;
 
-    // Each invocation along z takes one direction of an 8x8 uniform sphere sampling, and the group reduces them.
     const uint sampleIdx = gl_LocalInvocationID.z;
     const int SQRTSAMPLECOUNT = 8;
     const float sqrtSample = float(SQRTSAMPLECOUNT);

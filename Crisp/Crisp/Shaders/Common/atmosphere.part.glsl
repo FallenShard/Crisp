@@ -112,7 +112,7 @@ const float kNoDepthBuffer = -1.0f;
 const float kSkyViewLutWidth = 192.0f;
 const float kSkyViewLutHeight = 108.0f;
 
-// Nudges a uv off the outermost half texel so that bilinear taps never reach past the edge of the LUT.
+// Keeps bilinear taps from reaching past the edge of the LUT.
 float fromUnitToSubUvs(float u, float resolution) {
     return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
 }
@@ -238,29 +238,27 @@ void uvToTransmittanceLutParams(
     viewZenithCosAngle = clamp(viewZenithCosAngle, -1.0, 1.0);
 }
 
-// Sky view LUT parameterization. The vertical axis is split at the horizon and spread quadratically away from it
-// on both sides, so that the horizon - where the sky changes fastest - gets the most texels and lands exactly on
-// a texel boundary. The horizontal axis is the cosine of the azimuth between the view and the sun, also spread
-// quadratically towards the sun.
+// The vertical axis splits at the horizon and spreads quadratically away from it on both sides, so the horizon -
+// where the sky changes fastest - gets the most texels and lands exactly on a texel boundary.
 //
-// uvToSkyViewLutParams and skyViewLutParamsToUv are exact inverses and have to stay that way, which is why they
-// live side by side rather than one in the producer and one in the consumer.
+// This and skyViewLutParamsToUv are exact inverses and have to stay that way, hence side by side rather than one
+// in the producer and one in the consumer.
 void uvToSkyViewLutParams(
     in vec2 uv, in float bottomRadius, in float viewHeight, out float viewZenithCosAngle, out float lightViewCosAngle) {
     uv = vec2(fromSubUvsToUnit(uv.x, kSkyViewLutWidth), fromSubUvsToUnit(uv.y, kSkyViewLutHeight));
 
     const float horizonDist = sqrt(max(0.0f, viewHeight * viewHeight - bottomRadius * bottomRadius));
     const float horizonAngle = acos(clamp(horizonDist / viewHeight, -1.0f, 1.0f));
-    const float zenithHorizonAngle = PI - horizonAngle; // in [0, PI]
+    const float zenithHorizonAngle = PI - horizonAngle;
 
     if (uv.y < 0.5f) {
-        float coord = 2.0f * uv.y; // in [0, 1] because we enter here if above the horizon.
-        coord = 1.0f - coord;      // in [1, 0]
-        coord *= coord;            // quadratic spread for [1, 0]
-        coord = 1.0f - coord;      // in [0, 1]
+        float coord = 2.0f * uv.y;
+        coord = 1.0f - coord;
+        coord *= coord;
+        coord = 1.0f - coord;
         viewZenithCosAngle = cos(zenithHorizonAngle * coord);
     } else {
-        float coord = 2.0f * uv.y - 1.0f; // in [0, 1]
+        float coord = 2.0f * uv.y - 1.0f;
         coord *= coord;
         viewZenithCosAngle = cos(zenithHorizonAngle + horizonAngle * coord);
     }
@@ -282,9 +280,9 @@ vec2 skyViewLutParamsToUv(
 
     vec2 uv;
     if (!intersectsGround) {
-        float coord = viewZenithAngle / zenithHorizonAngle; // in [0, 1]
+        float coord = viewZenithAngle / zenithHorizonAngle;
         coord = 1.0f - coord;
-        coord = sqrt(max(0.0f, coord)); // undoes the quadratic spread
+        coord = sqrt(max(0.0f, coord));
         coord = 1.0f - coord;
         uv.y = coord * 0.5f;
     } else {

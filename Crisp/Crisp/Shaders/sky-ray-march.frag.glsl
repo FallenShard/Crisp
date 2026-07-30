@@ -113,7 +113,7 @@ SingleScatteringResult integrateScatteredLuminance(
             vec4 DepthBufferWorldPos = atmosphere.invVP * vec4(ClipSpace, 1.0);
             DepthBufferWorldPos /= DepthBufferWorldPos.w;
 
-            // Undo the planet offset baked into WorldPos so both sides are in the same space. This engine is Y up.
+            // Undo the planet offset in WorldPos to match; this engine is Y up.
             float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
             if (tDepth < tMax) {
                 tMax = tDepth;
@@ -203,10 +203,9 @@ SingleScatteringResult integrateScatteredLuminance(
         throughput *= stepTransmittance;
     }
 
-    // The equality test is what distinguishes "the ray ended on the planet" from "the ray was cut short by
-    // geometry in front of it", since the depth clamp above can also have moved tMax.
+    // The equality separates "ended on the planet" from "cut short by geometry", since the depth clamp above
+    // can also have moved tMax.
     if (ground && tBottom > 0.0f && tMax == tBottom) {
-        // Account for the sunlight bounced off the ground, seen through the medium in front of it.
         const vec3 P = WorldPos + tBottom * WorldDir;
         const float pHeight = length(P);
         const vec3 UpVector = P / pHeight;
@@ -234,25 +233,48 @@ float aerialPerspectiveSliceToDepth(float slice) {
     return slice * AP_KM_PER_SLICE;
 }
 
-vec3 getSunLuminance(const AtmosphereParams atmosphere, const vec3 worldPos, const vec3 worldDir) {
+// The solar disc dims towards its limb, faster at short wavelengths, which is what warms the rim.
+//
+// D. Hestroffer and C. Magnan, "Wavelength dependency of the Solar limb darkening", Astronomy and Astrophysics
+// 333, 338-342 (1998). https://ui.adsabs.harvard.edu/abs/1998A&A...333..338H
+// Equation 1 with u = 1 (their section 2) gives I(mu) = mu^alpha; centerToEdge is their r.
+// Exponents from Table 2, Pierce and Slaughter solution, at 679.1 nm, 552.2 nm and 443.9 nm.
+vec3 computeSunLimbDarkening(const float centerToEdge) {
+    const vec3 alpha = vec3(0.397f, 0.503f, 0.652f);
+    const float mu = sqrt(max(0.0f, 1.0f - centerToEdge * centerToEdge));
+    return pow(vec3(mu), alpha);
+}
+
+// angleToSun and edgeFadeWidth come from the caller because the fade width needs a screen space derivative, which
+// is only well defined in uniform control flow.
+vec3 getSunLuminance(
+    const AtmosphereParams atmosphere,
+    const vec3 worldPos,
+    const vec3 worldDir,
+    const float angleToSun,
+    const float edgeFadeWidth) {
     if (atmosphere.drawSunDisk == 0) {
         return vec3(0.0f);
     }
 
-    // Check if we are looking towards the sun.
-    const float cosSunDiskRadius = cos(0.5f * radians(atmosphere.sunAngularDiameterDegrees));
-    if (dot(worldDir, atmosphere.sunDirection) > cosSunDiskRadius) {
-        // Are we maybe intersecting the planet? If not, we are looking into the sun.
-        const float t = raySphereIntersectNearest(worldPos, worldDir, vec3(0.0f), atmosphere.bottomRadius);
-        if (t < 0.0f) {
-            return vec3(atmosphere.sunDiskLuminance);
-        }
+    // Fading rather than thresholding also dims a sub-pixel disc, which is right for what is really a coverage
+    // fraction.
+    const float sunAngularRadius = 0.5f * radians(atmosphere.sunAngularDiameterDegrees);
+    const float coverage =
+        1.0f - smoothstep(sunAngularRadius - edgeFadeWidth, sunAngularRadius + edgeFadeWidth, angleToSun);
+    if (coverage <= 0.0f) {
+        return vec3(0.0f);
     }
-    return vec3(0.0f);
+
+    if (raySphereIntersectNearest(worldPos, worldDir, vec3(0.0f), atmosphere.bottomRadius) >= 0.0f) {
+        return vec3(0.0f);
+    }
+
+    const float centerToEdge = clamp(angleToSun / sunAngularRadius, 0.0f, 1.0f);
+    return atmosphere.sunDiskLuminance * coverage * computeSunLimbDarkening(centerToEdge);
 }
 
-// Visualizes one of the intermediate LUTs across the whole viewport, letting the parameterizations be inspected
-// directly instead of being inferred from the final image.
+// Lets the LUT parameterizations be inspected directly instead of inferred from the final image.
 bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out vec4 color) {
     color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     switch (atmosphere.debugViewMode) {
@@ -266,7 +288,7 @@ bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out ve
         color.rgb = textureLod(SkyViewLutTexture, uv, 0).rgb * atmosphere.exposure;
         return true;
     case 4:
-        // Sweep through the froxel slices horizontally so that the whole volume is visible at once.
+        // Sweeps the froxel slices horizontally so the whole volume is visible at once.
         color.rgb =
             textureLod(
                 AtmosphereCameraScatteringVolume,
@@ -288,8 +310,6 @@ void main() {
         return;
     }
 
-    // No Y flip here: the camera's projection matrix already carries one (Camera::InvertProjectionY), so invVP
-    // undoes it. Negating Y again would mirror the sky about the horizon.
     const vec2 ndcPos = screenUv * 2.0f - 1.0f;
     vec4 homogPos = atmosphere.invVP * vec4(ndcPos, 1.0f, 1.0f);
     const vec3 targetWorldPos = homogPos.xyz / homogPos.w;
@@ -299,31 +319,31 @@ void main() {
     const float viewHeight = length(worldPos);
     vec3 L = vec3(0.0f);
 
+    // Must stay ahead of any branch that can diverge across a quad: fwidth is only defined in uniform control flow.
+    const float angleToSun = acos(clamp(dot(worldDir, atmosphere.sunDirection), -1.0f, 1.0f));
+    const float sunEdgeFadeWidth = max(fwidth(angleToSun), 1e-7f);
+
     // No depth pre-pass writes ViewDepthTexture yet, so every pixel is treated as open sky.
     const float fragmentDepth = kFarPlaneDepth; // textureLod(ViewDepthTexture, screenUv, 0).r;
 
-    // If we have no obstacle in the view, just get the luminance from the sky.
     if (fragmentDepth == kFarPlaneDepth) {
-        L += getSunLuminance(atmosphere, worldPos, worldDir);
+        L += getSunLuminance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth);
     }
 
-    // Fast path: for open sky the sky view LUT already holds the answer, which is the entire point of building it.
-    // It is only valid near the ground - its vertical parameterization is built around the horizon as seen from
-    // the camera - so above the fallback altitude we drop back to the full march below.
+    // The sky view LUT is only valid near the ground, since its vertical axis is built around the horizon as seen
+    // from the camera. Above the fallback altitude we drop back to the full march.
     if (atmosphere.fastSkyEnabled != 0 && fragmentDepth == kFarPlaneDepth &&
         viewHeight < atmosphere.bottomRadius + atmosphere.skyViewLutMaxAltitude) {
         const vec3 upVector = worldPos / viewHeight;
         const float viewZenithCosAngle = dot(worldDir, upVector);
 
-        // Rebuild the frame the LUT was baked in: forward points along the sun's horizontal direction, so the
-        // x component of the view direction projected onto the horizon plane is the cosine the LUT indexes by.
+        // Rebuilds the frame the LUT was baked in, with forward along the sun's horizontal direction.
         vec3 sideVector = cross(upVector, worldDir);
         const float sideLength = length(sideVector);
         if (sideLength > 1e-6f) {
             sideVector /= sideLength;
         } else {
-            // Looking straight up or down leaves the azimuth undefined; any frame will do, the LUT barely varies
-            // in azimuth there.
+            // Straight up or down leaves the azimuth undefined; any frame will do, the LUT barely varies there.
             const vec3 fallbackAxis = abs(upVector.y) < 0.99f ? vec3(0.0f, 1.0f, 0.0f) : vec3(1.0f, 0.0f, 0.0f);
             sideVector = normalize(cross(upVector, fallbackAxis));
         }
@@ -333,7 +353,7 @@ void main() {
             vec2(dot(atmosphere.sunDirection, forwardVector), dot(atmosphere.sunDirection, sideVector));
         const float lightOnPlaneLength = length(lightOnPlane);
 
-        // A sun at the exact zenith has no azimuth either; the sky is rotationally symmetric then.
+        // A sun at the exact zenith has no azimuth either, and the sky is rotationally symmetric then.
         const float lightViewCosAngle = lightOnPlaneLength > 1e-6f ? lightOnPlane.x / lightOnPlaneLength : 1.0f;
 
         const bool intersectsGround =
@@ -381,7 +401,8 @@ void main() {
     // This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
     if (!moveToTopAtmosphere(worldPos, worldDir, atmosphere.topRadius)) {
         // Ray is not intersecting the atmosphere
-        finalColor = vec4(getSunLuminance(atmosphere, worldPos, worldDir) * atmosphere.exposure, 1.0f);
+        finalColor = vec4(
+            getSunLuminance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth) * atmosphere.exposure, 1.0f);
         return;
     }
 

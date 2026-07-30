@@ -79,8 +79,7 @@ vec3 integrateScatteredLuminance(
         return vec3(0.0f);
     }
 
-    // The ground sphere sits inside the atmosphere shell, so a ray that reaches it always does so before leaving
-    // the top: hitting it at all means tMax is that hit.
+    // The ground sits inside the atmosphere shell, so reaching it at all means tMax is that hit.
     const float tGround = raySphereIntersectNearest(worldPos, worldDir, earthCenter, atmosphere.bottomRadius);
 
     tMax = min(tMax, 9000000.0f);
@@ -174,7 +173,6 @@ vec3 integrateScatteredLuminance(
     }
 
     if (ground && tGround >= 0.0f) {
-        // The ray ended on the planet surface: add the sunlight it reflects, seen through the medium in front.
         const vec3 pos = worldPos + tGround * worldDir;
         const float posHeight = length(pos);
         const vec3 upVec = pos / posHeight;
@@ -225,8 +223,7 @@ void main() {
     const float SampleCountIni = 30;
     const bool VariableSampleCount = true;
 
-    // Has to match what the final ray march does below the horizon, or the two paths disagree once the fast sky
-    // path takes over.
+    // Must match the final ray march, or the two disagree below the horizon once the fast sky path takes over.
     const bool ground = atmosphere.renderGround != 0;
     const vec3 L = integrateScatteredLuminance(
         worldPos, worldDir, SunDir, atmosphere, SampleCountIni, VariableSampleCount, ground);
