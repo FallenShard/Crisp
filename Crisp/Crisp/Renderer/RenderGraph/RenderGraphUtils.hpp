@@ -59,7 +59,8 @@ struct RenderGraphImageDescription {
     VkImageUsageFlags imageUsageFlags{};
 
     bool canAlias(const RenderGraphImageDescription& desc) const {
-        return sizePolicy == desc.sizePolicy && width == desc.height && depth == desc.depth && format == desc.format &&
+        return sizePolicy == desc.sizePolicy && width == desc.width && height == desc.height && depth == desc.depth &&
+               format == desc.format &&
                layerCount == desc.layerCount && mipLevelCount == desc.mipLevelCount &&
                sampleCount == desc.sampleCount && createFlags == desc.createFlags;
     }

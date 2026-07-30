@@ -4,8 +4,8 @@ add_cpp_static_library(CrispScenes
 
     # "AmbientOcclusionScene.cpp"
     # "AmbientOcclusionScene.hpp"
-    # "AtmosphereScene.cpp"
-    # "AtmosphereScene.hpp"
+    "AtmosphereScene.cpp"
+    "AtmosphereScene.hpp"
     # "ClusteredLightingScene.cpp"
     # "ClusteredLightingScene.hpp"
     # "GltfViewerScene.cpp"
@@ -34,7 +34,7 @@ target_link_libraries(CrispScenes
     PRIVATE Crisp::PbrScene
     PRIVATE Crisp::VulkanRayTracingScene
 
-    # PUBLIC Crisp::Models
+    PUBLIC Crisp::Models
     PUBLIC Crisp::MeshIo
     PUBLIC Crisp::MaterialUtils
     PUBLIC Crisp::JsonUtils

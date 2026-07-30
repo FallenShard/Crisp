@@ -190,7 +190,10 @@ size_t RenderGraph::getResourceCount() const {
 std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(
     const VulkanDevice& device, const RenderGraphResourceHandle handle) const {
     const auto& res{getResource(handle)};
-    return createView(device, *m_physicalImages[res.physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
+    const auto& desc = getImageDescription(handle);
+    auto& image = *m_physicalImages[res.physicalResourceIndex].image;
+    const auto imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    return createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
 }
 
 const VulkanImageView& RenderGraph::getResourceImageView(RenderGraphResourceHandle handle) const {
@@ -468,6 +471,8 @@ std::pair<VkImageLayout, VulkanSynchronizationStage> RenderGraph::determineIniti
 
 void RenderGraph::determineAliasedResurces() {
     CRISP_LOGI("Determining resources to alias...");
+    m_physicalBuffers.clear();
+    m_physicalImages.clear();
     const auto timelines{calculateResourceTimelines()};
     std::vector<bool> processed(m_resources.size(), false);
     uint16_t currPhysBufferIdx{0};
@@ -525,6 +530,7 @@ void RenderGraph::determineAliasedResurces() {
 void RenderGraph::createPhysicalResources(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
     CRISP_LOGI("Creating physical resources...");
+    m_imageViews.clear();
     const VulkanCommandEncoder commandEncoder{cmdBuffer};
     for (auto& physicalImage : m_physicalImages) {
         const auto& desc = m_imageDescriptions[physicalImage.descriptionIndex];
@@ -552,8 +558,11 @@ void RenderGraph::createPhysicalResources(
     for (const auto& res : m_resources) {
         if (res.type == ResourceType::Image) {
             const auto physicalResourceIndex = res.physicalResourceIndex;
+            auto& image = *m_physicalImages[physicalResourceIndex].image;
+            const auto& desc = m_imageDescriptions[m_physicalImages[physicalResourceIndex].descriptionIndex];
+            const auto imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
             m_imageViews[physicalResourceIndex] =
-                createView(device, *m_physicalImages[physicalResourceIndex].image, VK_IMAGE_VIEW_TYPE_2D);
+                createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
         }
     }
 
@@ -635,8 +644,21 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
             attachmentViews.push_back(m_imageViews.at(depthResource.physicalResourceIndex)->getHandle());
         }
 
+        uint32_t framebufferLayerCount = 1;
+        if (!pass.colorAttachments.empty()) {
+            framebufferLayerCount = getImageDescription(pass.colorAttachments.front()).layerCount;
+        } else if (pass.depthStencilAttachment) {
+            framebufferLayerCount = getImageDescription(*pass.depthStencilAttachment).layerCount;
+        }
+        for (const auto resourceId : pass.colorAttachments) {
+            CRISP_CHECK_EQ(getImageDescription(resourceId).layerCount, framebufferLayerCount);
+        }
+        if (pass.depthStencilAttachment) {
+            CRISP_CHECK_EQ(getImageDescription(*pass.depthStencilAttachment).layerCount, framebufferLayerCount);
+        }
+
         m_framebuffers.push_back(std::make_unique<VulkanFramebuffer>(
-            device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews));
+            device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews, framebufferLayerCount));
         device.setObjectName(*m_framebuffers.back(), fmt::format("{}Framebuffer", pass.name).c_str());
     }
 }

@@ -254,7 +254,9 @@ void main()
 {
     const vec2 pixPos = vec2(gl_FragCoord.xy);
 
-    const vec2 ndcPos = pixPos / vec2(atmosphere.screenResolution) * vec2(2.0f, -2.0f) - vec2(1.0f, -1.0f);
+    // No Y flip here: the camera's projection matrix already carries one (Camera::InvertProjectionY), so invVP
+    // undoes it. Negating Y again would mirror the sky about the horizon.
+    const vec2 ndcPos = pixPos / vec2(atmosphere.screenResolution) * 2.0f - 1.0f;
     vec4 homogPos = atmosphere.invVP * vec4(ndcPos, 1.0f, 1.0f);
     const vec3 targetWorldPos = homogPos.xyz / homogPos.w;
     vec3 worldDir = normalize(targetWorldPos - atmosphere.cameraPosition);

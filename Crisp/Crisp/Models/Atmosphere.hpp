@@ -4,11 +4,8 @@
 #include <Crisp/Math/Headers.hpp>
 
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
-#include <Crisp/Renderer/RenderNode.hpp>
-#include <Crisp/Renderer/RenderTargetCache.hpp>
 
 namespace crisp {
-class RenderGraph;
 class Renderer;
 class ResourceContext;
 
@@ -107,13 +104,11 @@ struct AtmosphereParameters {
     AtmosphereParameters();
 };
 
-FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
-    RenderGraph& renderGraph,
-    Renderer& renderer,
-    ResourceContext& resourceContext,
-    RenderTargetCache& renderTargetCache,
-    const std::string& dependentPass);
+struct AtmospherePassData {
+    RenderGraphResourceHandle image;
+};
 
-void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer);
+void addAtmosphereRenderPasses(
+    rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext);
 
 } // namespace crisp

@@ -1,28 +1,17 @@
 #include <Crisp/Models/Atmosphere.hpp>
 
+#include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Renderer/VulkanRenderPassBuilder.hpp>
-
-
-#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
-constexpr const char* DepthPrePass = "depthPrePass";
-
 constexpr const char* TransmittanceLutPass = "transmittanceLutPass";
-constexpr const char* TransmittanceLut = "transmittanceLut";
-
 constexpr const char* MultipleScatteringPass = "multipleScatteringPass";
-
 constexpr const char* SkyViewLutPass = "skyViewLutPass";
-constexpr const char* SkyViewLut = "skyViewLut";
-
 constexpr const char* ViewVolumePass = "viewVolumePass";
-
 constexpr const char* RayMarchingPass = "rayMarchingPass";
 
 AtmosphereParameters::AtmosphereParameters() {
@@ -34,6 +23,7 @@ AtmosphereParameters::AtmosphereParameters() {
     invVP = glm::inverse(VP);
 }
 
+#if 0
 std::unique_ptr<VulkanRenderPass> createTransmittanceLutPass(
     const VulkanDevice& device, RenderTargetCache& renderTargetCache) {
     std::vector<RenderTarget*> renderTargets(1);
@@ -367,6 +357,7 @@ FlatHashMap<std::string, std::unique_ptr<RenderNode>> addAtmosphereRenderPasses(
 
     return renderNodes;
 }
+#endif
 
 struct TransmittanceLutData {
     RenderGraphResourceHandle lut;
@@ -384,11 +375,102 @@ struct SkyVolumeLutData {
     RenderGraphResourceHandle lut;
 };
 
-struct RayMarchingPassData {
-    RenderGraphResourceHandle image;
-};
+namespace {
+constexpr VkExtent3D kMultiScatWorkGroupSize{1, 1, 64};
+constexpr uint32_t kMultiScatLutSize = 32;
+constexpr uint32_t kCameraVolumeSliceCount = 32;
+
+constexpr const char* kAtmosphereBufferId = "atmosphereBuffer";
+constexpr const char* kLinearClampSamplerId = "linearClamp";
+constexpr const char* kVolumeGeometryId = "skyCameraVolumesGeometry";
+
+std::unique_ptr<VulkanPipeline> createMultiScatPipeline(Renderer& renderer, const VkExtent3D& workGroupSize) {
+    PipelineLayoutBuilder layoutBuilder;
+    layoutBuilder
+        .defineDescriptorSet(
+            0,
+            false,
+            {
+                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            })
+        .defineDescriptorSet(
+            1,
+            false,
+            {
+                {0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
+            });
+
+    VulkanDevice& device = renderer.getDevice();
+    auto layout = layoutBuilder.create(device);
+
+    // The shader declares its work group size through specialization constants 0, 1 and 2.
+    const std::vector<VkSpecializationMapEntry> specEntries = {
+        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
+        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
+        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
+    };
+
+    VkSpecializationInfo specInfo = {};
+    specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
+    specInfo.pMapEntries = specEntries.data();
+    specInfo.dataSize = sizeof(workGroupSize);
+    specInfo.pData = &workGroupSize;
+
+    VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
+    pipelineInfo.stage = createShaderStageInfo(
+        VK_SHADER_STAGE_COMPUTE_BIT, renderer.getOrLoadShaderModule("sky-multiple-scattering.comp"));
+    pipelineInfo.stage.pSpecializationInfo = &specInfo;
+    pipelineInfo.layout = layout->getHandle();
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+
+    return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
+}
+
+// Wires up the descriptors shared by every atmosphere pass: the parameter buffer in set 0, followed by the LUTs
+// this pass samples in set 1, in binding order. The render graph only allocates its physical images during
+// compile(), which runs after every pass has been declared, so materials can only be built once a pass first
+// executes.
+Material* createAtmosphereMaterial(
+    Renderer& renderer,
+    ResourceContext& resourceContext,
+    rg::RenderGraph& renderGraph,
+    const std::string& id,
+    const std::string& pipelineFilename,
+    const std::string& passName,
+    const std::vector<RenderGraphResourceHandle>& sampledLuts) {
+    VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
+        id,
+        pipelineFilename,
+        renderer.getShaderCache(),
+        renderer.getDevice(),
+        renderGraph.getRenderPass(passName),
+        0);
+    Material* material = resourceContext.createMaterial(id, pipeline);
+    material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
+
+    const VulkanSampler& sampler = resourceContext.imageCache.getSampler(kLinearClampSamplerId);
+    for (uint32_t binding = 0; binding < static_cast<uint32_t>(sampledLuts.size()); ++binding) {
+        material->writeDescriptor(1, binding, renderGraph.getResourceImageView(sampledLuts[binding]), sampler);
+    }
+    renderer.getDevice().flushDescriptorUpdates();
+    return material;
+}
+} // namespace
 
 void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
+    resourceContext.imageCache.addSampler(kLinearClampSamplerId, createLinearClampSampler(renderer.getDevice()));
+
+    // The camera volume is filled one layer per instance; the geometry shader routes each instance to its slice
+    // via gl_Layer, so this pass draws an instanced triangle rather than the shared full screen quad.
+    const std::vector<glm::vec2> volumeVertices{{-1.0f, -1.0f}, {3.0f, -1.0f}, {-1.0f, 3.0f}};
+    const std::vector<glm::uvec3> volumeFaces{{0, 2, 1}};
+    resourceContext.addGeometry(kVolumeGeometryId, Geometry(renderer, volumeVertices, volumeFaces))
+        .setInstanceCount(kCameraVolumeSliceCount);
+
     renderGraph.addPass(
         TransmittanceLutPass,
         [](rg::RenderGraph::Builder& builder) {
@@ -402,39 +484,34 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "transmittanceLut");
         },
-        [&renderer, &resourceContext, &renderGraph](const FrameContext& ctx) {
-            VulkanPipeline* pipeline = resourceContext.pipelineCache.getPipeline("transmittanceLut");
-            if (pipeline == nullptr) {
-                pipeline = resourceContext.pipelineCache.loadPipeline(
-                    &renderer, "transmittanceLut", "SkyTransLut.json", renderGraph.getRenderPass(TransmittanceLutPass), 0);
+        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
+            const FrameContext& ctx) mutable {
+            if (material == nullptr) {
+                material = createAtmosphereMaterial(
+                    renderer,
+                    resourceContext,
+                    renderGraph,
+                    "transmittanceLut",
+                    "SkyTransLut.json",
+                    TransmittanceLutPass,
+                    {});
             }
 
-            Material* material = resourceContext.createMaterial("transmittanceLut", pipeline);
-            material->writeDescriptor(0, 0, *resourceContext.getRingBuffer("atmosphereBuffer"));
-            renderer.getDevice().flushDescriptorUpdates();
-
             const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            material->bind(0, cmdBufferHandle);
+            material->getPipeline()->bind(cmdBufferHandle);
+            material->bind(cmdBufferHandle);
 
-            // command.pipeline->bind(cmdBuffer.getHandle());
-            renderer.setDefaultViewport(cmdBufferHandle);
-            renderer.setDefaultScissor(cmdBufferHandle);
-
+            // SkyTransLut.json bakes the viewport and scissor from the pass render area, so the pipeline
+            // declares neither as dynamic state. Setting them here would violate the static state and also
+            // cover the swap chain rather than the 256x64 LUT.
             renderer.drawFullScreenQuad(cmdBufferHandle);
-
-            // command.pipeline->getPipelineLayout()->setPushConstants(
-            //     cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
-
-            // if (command.material) {
-            //     command.material->bind(virtualFrameIndex, cmdBuffer.getHandle(), command.dynamicBufferOffsets);
-            // }
         });
-    // resourceContext.createPipeline("TransmittanceLutPipeline", "SkyTransLut.json", m_renderGraph->, 0);
 
     renderGraph.addPass(
         MultipleScatteringPass,
         [](rg::RenderGraph::Builder& builder) {
-            builder.readAttachment(builder.getBlackboard().get<TransmittanceLutData>().lut);
+            builder.setType(PassType::Compute);
+            builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
 
             auto& data = builder.getBlackboard().insert<MultipleScatteringData>();
             data.tex = builder.createStorageImage(
@@ -445,14 +522,56 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
                 },
                 "multiScatTex");
+
+            // The graph does not synchronize a compute pass's outputs, only its inputs, so declaring the storage
+            // image as an input of its own producer is what gets it transitioned into GENERAL before the dispatch.
+            // Without this it stays in the SHADER_READ_ONLY_OPTIMAL layout its sampled usage selected, which
+            // neither matches the storage descriptor nor leaves the tracked layout consistent for the readers.
+            builder.readStorageImage(data.tex);
         },
-        [](const FrameContext&) {});
+        [&renderer,
+         &resourceContext,
+         &renderGraph,
+         pipeline = std::shared_ptr<VulkanPipeline>{},
+         material = std::shared_ptr<Material>{}](const FrameContext& ctx) mutable {
+            if (material == nullptr) {
+                // Built by hand rather than from a json description because the work group size has to be fed in
+                // as a specialization constant. The material is likewise constructed directly instead of through
+                // ResourceContext, whose createMaterial() resolves the descriptor allocator through the pipeline
+                // cache - this pipeline never goes through the cache, so it has no entry there. The layout built
+                // above owns its own allocator, which is what Material picks up from the pipeline.
+                pipeline = createMultiScatPipeline(renderer, kMultiScatWorkGroupSize);
+                material = std::make_shared<Material>(pipeline.get());
+                material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
+
+                auto& blackboard = renderGraph.getBlackboard();
+                material->writeDescriptor(
+                    1,
+                    0,
+                    VkDescriptorImageInfo{
+                        VK_NULL_HANDLE,
+                        renderGraph.getResourceImageView(blackboard.get<MultipleScatteringData>().tex).getHandle(),
+                        VK_IMAGE_LAYOUT_GENERAL,
+                    });
+                material->writeDescriptor(
+                    1,
+                    1,
+                    renderGraph.getResourceImageView(blackboard.get<TransmittanceLutData>().lut),
+                    resourceContext.imageCache.getSampler(kLinearClampSamplerId));
+                renderer.getDevice().flushDescriptorUpdates();
+            }
+
+            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
+            pipeline->bind(cmdBufferHandle);
+            material->bind(cmdBufferHandle);
+            vkCmdDispatch(cmdBufferHandle, kMultiScatLutSize, kMultiScatLutSize, 1);
+        });
 
     renderGraph.addPass(
         SkyViewLutPass,
         [](rg::RenderGraph::Builder& builder) {
-            builder.readAttachment(builder.getBlackboard().get<TransmittanceLutData>().lut);
-            builder.readStorageImage(builder.getBlackboard().get<MultipleScatteringData>().tex);
+            builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<MultipleScatteringData>().tex);
 
             auto& data = builder.getBlackboard().insert<SkyViewLutData>();
             data.lut = builder.createAttachment(
@@ -464,12 +583,34 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 },
                 "skyViewLut");
         },
-        [](const FrameContext&) {});
+        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
+            const FrameContext& ctx) mutable {
+            if (material == nullptr) {
+                auto& blackboard = renderGraph.getBlackboard();
+                material = createAtmosphereMaterial(
+                    renderer,
+                    resourceContext,
+                    renderGraph,
+                    "skyViewLut",
+                    "SkyViewLut.json",
+                    SkyViewLutPass,
+                    {
+                        blackboard.get<TransmittanceLutData>().lut,
+                        blackboard.get<MultipleScatteringData>().tex,
+                    });
+            }
+
+            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
+            material->getPipeline()->bind(cmdBufferHandle);
+            material->bind(cmdBufferHandle);
+            renderer.drawFullScreenQuad(cmdBufferHandle);
+        });
 
     renderGraph.addPass(
         ViewVolumePass,
         [](rg::RenderGraph::Builder& builder) {
-            builder.readAttachment(builder.getBlackboard().get<SkyViewLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<MultipleScatteringData>().tex);
 
             auto& data = builder.getBlackboard().insert<SkyVolumeLutData>();
             data.lut = builder.createAttachment(
@@ -477,27 +618,77 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     .sizePolicy = SizePolicy::Absolute,
                     .width = 32,
                     .height = 32,
-                    .depth = 32,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                    .layerCount = 32,
                 },
                 "skyVolumeLut");
         },
-        [](const FrameContext&) {});
+        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
+            const FrameContext& ctx) mutable {
+            if (material == nullptr) {
+                auto& blackboard = renderGraph.getBlackboard();
+                material = createAtmosphereMaterial(
+                    renderer,
+                    resourceContext,
+                    renderGraph,
+                    "skyCameraVolumes",
+                    "SkyCameraVolumes.json",
+                    ViewVolumePass,
+                    {
+                        blackboard.get<TransmittanceLutData>().lut,
+                        blackboard.get<MultipleScatteringData>().tex,
+                    });
+            }
+
+            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
+            material->getPipeline()->bind(cmdBufferHandle);
+            material->bind(cmdBufferHandle);
+            resourceContext.getGeometry(kVolumeGeometryId).bindAndDraw(cmdBufferHandle);
+        });
 
     renderGraph.addPass(
         RayMarchingPass,
         [](rg::RenderGraph::Builder& builder) {
-            builder.readAttachment(builder.getBlackboard().get<SkyVolumeLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<MultipleScatteringData>().tex);
+            builder.readTexture(builder.getBlackboard().get<SkyViewLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<SkyVolumeLutData>().lut);
 
-            auto& data = builder.getBlackboard().insert<RayMarchingPassData>();
+            auto& data = builder.getBlackboard().insert<AtmospherePassData>();
             data.image = builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
                     .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 },
                 "rayMarchedImage");
+            builder.exportTexture(data.image);
         },
-        [](const FrameContext&) {});
+        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
+            const FrameContext& ctx) mutable {
+            if (material == nullptr) {
+                auto& blackboard = renderGraph.getBlackboard();
+                // Set 1 binding 4 is the view depth texture, which sky-ray-march.frag currently does not sample,
+                // so it is intentionally left unwritten until a depth pre-pass feeds it.
+                material = createAtmosphereMaterial(
+                    renderer,
+                    resourceContext,
+                    renderGraph,
+                    "rayMarching",
+                    "SkyRayMarching.json",
+                    RayMarchingPass,
+                    {
+                        blackboard.get<TransmittanceLutData>().lut,
+                        blackboard.get<MultipleScatteringData>().tex,
+                        blackboard.get<SkyViewLutData>().lut,
+                        blackboard.get<SkyVolumeLutData>().lut,
+                    });
+            }
+
+            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
+            material->getPipeline()->bind(cmdBufferHandle);
+            material->bind(cmdBufferHandle);
+            renderer.drawFullScreenQuad(cmdBufferHandle);
+        });
 }
 
 } // namespace crisp

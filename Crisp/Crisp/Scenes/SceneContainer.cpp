@@ -1,7 +1,7 @@
 #include <Crisp/Scenes/SceneContainer.hpp>
 
 // #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
-// #include <Crisp/Scenes/AtmosphereScene.hpp>
+#include <Crisp/Scenes/AtmosphereScene.hpp>
 // #include <Crisp/Scenes/ClusteredLightingScene.hpp>
 // #include <Crisp/Scenes/FluidSimulationScene.hpp>
 // #include <Crisp/Scenes/GltfViewerScene.hpp>
@@ -70,11 +70,11 @@ std::unique_ptr<Scene> createScene(
     // if (name == kSceneNames[9]) {
     //     return std::make_unique<GltfViewerScene>(renderer, window);
     // }
-    // if (name == kSceneNames[10]) {
-    //     return std::make_unique<AtmosphereScene>(renderer, window);
-    // }
+    if (name == kSceneNames[10]) {
+        return std::make_unique<AtmosphereScene>(renderer, window);
+    }
 
-    spdlog::warn("Scene with the name {} is invalid/disabled", name);
+    logger->warn("Scene with the name {} is invalid/disabled", name);
     return std::make_unique<TestScene>(renderer, window);
 }
 } // namespace

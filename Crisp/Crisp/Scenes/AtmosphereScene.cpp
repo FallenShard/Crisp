@@ -16,24 +16,13 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
     setupInput();
 
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
-    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
-    m_renderer->getDevice().setObjectName(m_resourceContext->getUniformBuffer("camera")->get(), "cameraBuffer");
+    m_resourceContext->createUniformRingBuffer<CameraParameters>("camera");
+    m_resourceContext->createUniformRingBuffer<AtmosphereParameters>("atmosphereBuffer");
 
-    // Object transforms
-    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
-    m_renderer->getDevice().setObjectName(m_transformBuffer->getUniformBuffer()->get(), "transformBuffer");
-
-    createCommonTextures();
-
-    auto nodes = addAtmosphereRenderPasses(
-        *m_renderGraphLegacy, *m_renderer, *m_resourceContext, m_resourceContext->renderTargetCache, "SCREEN");
-    for (auto& [key, value] : nodes) {
-        m_renderNodes.emplace(std::move(key), std::move(value));
-    }
-    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode("rayMarchingPass").renderPass.get(), 0);
-
-    m_renderGraphLegacy->sortRenderPasses().unwrap();
-    m_renderGraphLegacy->printExecutionOrder();
+    m_renderGraph = std::make_unique<rg::RenderGraph>();
+    addAtmosphereRenderPasses(*m_renderGraph, *m_renderer, *m_resourceContext);
+    m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&AtmospherePassData::image>());
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }
@@ -41,58 +30,35 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
 void AtmosphereScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_resourceContext->renderTargetCache.resizeRenderTargets(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-
-    m_renderGraphLegacy->resize(width, height);
-    // m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(ForwardLightingPass).renderPass.get(), 0);
+    m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&AtmospherePassData::image>());
 }
 
-void AtmosphereScene::update(float dt) {
-    // Camera
-    m_cameraController->update(dt);
-    const auto camParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(camParams);
-
-    // Object transforms
-    m_transformBuffer->update(camParams.V, camParams.P);
-
-    ////// auto svp = m_lightSystem->getDirectionalLight().getProjectionMatrix() *
-    ////// m_lightSystem->getDirectionalLight().getViewMatrix();
-    ///////*atmosphere.gShadowmapViewProjMat = svp;
-    ////// atmosphere.gSkyViewProjMat = P * V;
-    ////// atmosphere.gSkyInvViewProjMat = glm::inverse(P * V);
-    ////// atmosphere.camera = m_cameraController->getCamera().getPosition();
-    ////// atmosphere.view_ray = m_cameraController->getCamera().getLookDirection();
-    ////// atmosphere.sun_direction = m_lightSystem->getDirectionalLight().getDirection();*/
-
-    ////
-
-    ////// atmosphere.gSkyViewProjMat = VP;
-
-    ////// atmosphere.gSkyViewProjMat = glm::scale(glm::vec3(1.0f, -1.0f, 1.0f)) * camParams.P * camParams.V;
-    ////// atmosphere.camera = m_cameraController->getCamera().getPosition();
-    /////*atmosphere.view_ray = m_cameraController->getCamera().getLookDir();*/
-
-    ////// atmosphere.gSkyInvViewProjMat = glm::inverse(atmosphere.gSkyViewProjMat);
-    ////// m_resourceContext->getUniformBuffer("atmosphere")->updateStagingBuffer(atmosphere);
-
-    ////// commonConstantData.gSkyViewProjMat = atmosphere.gSkyViewProjMat;
-    ////// m_resourceContext->getUniformBuffer("atmosphereCommon")->updateStagingBuffer(commonConstantData);
-
-    //// atmoBuffer.cameraPosition = atmosphere.camera;
-
+void AtmosphereScene::update(const UpdateParams& updateParams) {
+    m_cameraController->update(updateParams.dt);
+    const auto& camParams = m_cameraController->getCameraParameters();
     const auto screenExtent = m_renderer->getSwapChainExtent();
     m_atmosphereParams.screenResolution = glm::vec2(screenExtent.width, screenExtent.height);
-    m_resourceContext->getUniformBuffer("atmosphereBuffer")->updateStagingBuffer2(m_atmosphereParams);
+    m_atmosphereParams.VP = camParams.P * camParams.V;
+    m_atmosphereParams.invVP = glm::inverse(m_atmosphereParams.VP);
+    m_atmosphereParams.cameraPosition = m_cameraController->getCamera().getPosition();
+
+    m_resourceContext->getRingBuffer("camera")
+        ->updateStagingBufferFromStruct(camParams, updateParams.frameInFlightIdx);
+    m_resourceContext->getRingBuffer("atmosphereBuffer")
+        ->updateStagingBufferFromStruct(m_atmosphereParams, updateParams.frameInFlightIdx);
 }
 
-void AtmosphereScene::render() {
-    m_renderGraphLegacy->clearCommandLists();
-    m_renderGraphLegacy->buildCommandLists(m_renderNodes);
-    m_renderGraphLegacy->executeCommandLists();
+void AtmosphereScene::render(const FrameContext& frameContext) {
+    frameContext.commandEncoder.insertBarrier(kFragmentUniformRead >> kTransferWrite);
+    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_resourceContext->getRingBuffer("atmosphereBuffer")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    frameContext.commandEncoder.insertBarrier(kTransferWrite >> kFragmentUniformRead);
+
+    m_renderGraph->execute(frameContext);
 }
 
-void AtmosphereScene::renderGui() {
+void AtmosphereScene::drawGui() {
     ImGui::Begin("Settings");
     if (ImGui::SliderFloat("Azimuth", &azimuth, 0.0f, 2.0f * glm::pi<float>())) {
         m_atmosphereParams.sunDirection.x = std::cos(azimuth) * std::cos(altitude);
@@ -105,26 +71,6 @@ void AtmosphereScene::renderGui() {
         m_atmosphereParams.sunDirection.z = std::sin(azimuth) * std::cos(altitude);
     }
     ImGui::End();
-}
-
-RenderNode* AtmosphereScene::createRenderNode(std::string id, bool hasTransform) {
-    if (!hasTransform) {
-        return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
-    } else {
-        const auto transformHandle{m_transformBuffer->getNextIndex()};
-        return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle))
-            .first->second.get();
-    }
-}
-
-void AtmosphereScene::createCommonTextures() {
-    constexpr float kAnisotropy{16.0f};
-    constexpr float kMaxLod{9.0f};
-    auto& imageCache = m_resourceContext->imageCache;
-    imageCache.addSampler("nearestNeighbor", createNearestClampSampler(m_renderer->getDevice()));
-    imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), kAnisotropy));
-    imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy, kMaxLod));
-    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy));
 }
 
 void AtmosphereScene::setupInput() {
