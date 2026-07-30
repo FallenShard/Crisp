@@ -48,7 +48,8 @@ struct AtmosphereParameters {
     float absorptionDensity1LinearTerm{-1.0f / 15.0f};
 
     // The albedo of the ground.
-    glm::vec3 groundAlbedo{0.0f};
+    // Earth's mean albedo. Feeds both the shaded surface and the bounced light term in the multiple scattering LUT.
+    glm::vec3 groundAlbedo{0.3f};
 
     // Radius of the planet (center to ground) in km.
     float bottomRadius{6360.0f};
@@ -88,6 +89,20 @@ struct AtmosphereParameters {
     int32_t debugViewMode{0};
 
     int32_t drawSunDisk{1};
+
+    // Sample the sky view LUT for open sky instead of ray marching it per pixel. This is the payoff of the whole
+    // LUT chain; turning it off leaves the reference full march to compare against.
+    int32_t fastSkyEnabled{1};
+
+    // Shade the planet surface where a view ray ends on it, rather than leaving it black behind the haze.
+    int32_t renderGround{1};
+
+    // Altitude in km above which the sky view LUT is abandoned for a full march. Its parameterization is built
+    // around the horizon as seen from the camera and loses the detail that matters once the ground is far below.
+    float skyViewLutMaxAltitude{4.0f};
+
+    // Keeps the block a multiple of 16 bytes; claim it when the next flag lands.
+    float pad0{0.0f};
 };
 
 inline constexpr std::array<const char*, 5> kDebugViewModeNames{

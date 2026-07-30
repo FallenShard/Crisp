@@ -1,8 +1,7 @@
 #ifndef CRISP_ATMOSPHERE_GLSL_H
 #define CRISP_ATMOSPHERE_GLSL_H
 
-struct AtmosphereParams
-{
+struct AtmosphereParams {
     mat4 VP;
     mat4 invVP;
 
@@ -69,10 +68,20 @@ struct AtmosphereParams
     int debugViewMode;
 
     int drawSunDisk;
+
+    // Sample the sky view LUT for open sky instead of ray marching it per pixel.
+    int fastSkyEnabled;
+
+    // Shade the planet surface where a view ray ends on it.
+    int renderGround;
+
+    // Altitude in km above which the sky view LUT is abandoned for a full march.
+    float skyViewLutMaxAltitude;
+
+    float pad0;
 };
 
-struct MediumSample
-{
+struct MediumSample {
     vec3 scattering;
     vec3 absorption;
     vec3 extinction;
@@ -99,20 +108,34 @@ const float PlanetRadiusOffset = 0.01f;
 const float kFarPlaneDepth = 0.0f;
 const float kNoDepthBuffer = -1.0f;
 
-vec3 getAlbedo3(vec3 scattering, vec3 extinction)
-{
+// Must match the attachment created for SkyViewLutPass in Models/Atmosphere.cpp.
+const float kSkyViewLutWidth = 192.0f;
+const float kSkyViewLutHeight = 108.0f;
+
+// Nudges a uv off the outermost half texel so that bilinear taps never reach past the edge of the LUT.
+float fromUnitToSubUvs(float u, float resolution) {
+    return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
+}
+
+float fromSubUvsToUnit(float u, float resolution) {
+    return (u - 0.5f / resolution) * (resolution / (resolution - 1.0f));
+}
+
+vec3 getAlbedo3(vec3 scattering, vec3 extinction) {
     return scattering / max(vec3(0.001), extinction);
 }
 
-MediumSample sampleMedium(const vec3 worldPos, const AtmosphereParams atmosphere)
-{
+MediumSample sampleMedium(const vec3 worldPos, const AtmosphereParams atmosphere) {
     const float viewHeight = length(worldPos) - atmosphere.bottomRadius;
 
     const float densityMie = exp(atmosphere.mieDensityExpScale * viewHeight);
     const float densityRay = exp(atmosphere.rayleighDensityExpScale * viewHeight);
-    const float densityOzo = clamp(viewHeight < atmosphere.absorptionDensity0LayerWidth ?
-            atmosphere.absorptionDensity0LinearTerm * viewHeight + atmosphere.absorptionDensity0ConstantTerm :
-            atmosphere.absorptionDensity1LinearTerm * viewHeight + atmosphere.absorptionDensity1ConstantTerm, 0, 1);
+    const float densityOzo = clamp(
+        viewHeight < atmosphere.absorptionDensity0LayerWidth
+            ? atmosphere.absorptionDensity0LinearTerm * viewHeight + atmosphere.absorptionDensity0ConstantTerm
+            : atmosphere.absorptionDensity1LinearTerm * viewHeight + atmosphere.absorptionDensity1ConstantTerm,
+        0,
+        1);
 
     MediumSample s;
 
@@ -136,61 +159,61 @@ MediumSample sampleMedium(const vec3 worldPos, const AtmosphereParams atmosphere
     return s;
 }
 
-float raySphereIntersectNearest(const vec3 rayOrigin, const vec3 rayDir, const vec3 sphereCenter, const float sphereRadius)
-{
+float raySphereIntersectNearest(
+    const vec3 rayOrigin, const vec3 rayDir, const vec3 sphereCenter, const float sphereRadius) {
     const float a = dot(rayDir, rayDir);
     const vec3 centerToOrigin = rayOrigin - sphereCenter;
     const float b = 2.0f * dot(rayDir, centerToOrigin);
     const float c = dot(centerToOrigin, centerToOrigin) - sphereRadius * sphereRadius;
     const float delta = b * b - 4.0f * a * c;
-    if (delta < 0.0f || a == 0.0f)
+    if (delta < 0.0f || a == 0.0f) {
         return -1.0f;
+    }
 
     float t1 = (-b - sqrt(delta)) / (2.0f * a);
     float t2 = (-b + sqrt(delta)) / (2.0f * a);
-    if (t1 < 0.0f && t2 < 0.0f)
+    if (t1 < 0.0f && t2 < 0.0f) {
         return -1.0f;
+    }
 
-    if (t1 < 0.0f)
+    if (t1 < 0.0f) {
         return max(0.0f, t2);
-    else if (t2 < 0.0f)
+    } else if (t2 < 0.0f) {
         return max(0.0f, t1);
+    }
 
     return max(0.0f, min(t1, t2));
 }
 
-float intersectAtmosphere(const vec3 worldPos, const vec3 worldDir, const float bottomRadius, const float topRadius)
-{
+float intersectAtmosphere(const vec3 worldPos, const vec3 worldDir, const float bottomRadius, const float topRadius) {
     const vec3 earthOrigin = vec3(0.0f);
     const float tBottom = raySphereIntersectNearest(worldPos, worldDir, earthOrigin, bottomRadius);
     const float tTop = raySphereIntersectNearest(worldPos, worldDir, earthOrigin, topRadius);
-    if (tBottom < 0.0f)
-    {
+    if (tBottom < 0.0f) {
         // No intersection occurs with either of the layers; we are outside of the atmosphere, looking towards space.
-        if (tTop < 0.0f)
+        if (tTop < 0.0f) {
             return -1.0f;
+        }
 
         // Intersection occurs with just the outer layer; we are in the atmosphere, looking above the horizon.
         return tTop;
     }
 
-    if (tTop < 0.0f)
+    if (tTop < 0.0f) {
         return tBottom;
+    }
 
     // We intersect both layers, pick the closer intersection; we look towards the ground.
     return min(tTop, tBottom);
 }
 
-bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in float atmosphereTopRadius)
-{
+bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in float atmosphereTopRadius) {
     const float viewHeight = length(worldPos);
 
     // Check if we are above the atmosphere (in the space).
-    if (viewHeight > atmosphereTopRadius)
-    {
+    if (viewHeight > atmosphereTopRadius) {
         const float tTop = raySphereIntersectNearest(worldPos, worldDir, vec3(0.0f, 0.0f, 0.0f), atmosphereTopRadius);
-        if (tTop < 0.0f)
-        {
+        if (tTop < 0.0f) {
             // Ray is not intersecting the atmosphere.
             return false;
         }
@@ -202,8 +225,8 @@ bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in f
     return true; // ok to start tracing.
 }
 
-void uvToTransmittanceLutParams(const float bottomRadius, const float topRadius, in vec2 uv, out float viewHeight, out float viewZenithCosAngle)
-{
+void uvToTransmittanceLutParams(
+    const float bottomRadius, const float topRadius, in vec2 uv, out float viewHeight, out float viewZenithCosAngle) {
     const float H = sqrt(topRadius * topRadius - bottomRadius * bottomRadius);
     const float rho = H * uv.y;
     viewHeight = sqrt(rho * rho + bottomRadius * bottomRadius);
@@ -215,15 +238,73 @@ void uvToTransmittanceLutParams(const float bottomRadius, const float topRadius,
     viewZenithCosAngle = clamp(viewZenithCosAngle, -1.0, 1.0);
 }
 
+// Sky view LUT parameterization. The vertical axis is split at the horizon and spread quadratically away from it
+// on both sides, so that the horizon - where the sky changes fastest - gets the most texels and lands exactly on
+// a texel boundary. The horizontal axis is the cosine of the azimuth between the view and the sun, also spread
+// quadratically towards the sun.
+//
+// uvToSkyViewLutParams and skyViewLutParamsToUv are exact inverses and have to stay that way, which is why they
+// live side by side rather than one in the producer and one in the consumer.
+void uvToSkyViewLutParams(
+    in vec2 uv, in float bottomRadius, in float viewHeight, out float viewZenithCosAngle, out float lightViewCosAngle) {
+    uv = vec2(fromSubUvsToUnit(uv.x, kSkyViewLutWidth), fromSubUvsToUnit(uv.y, kSkyViewLutHeight));
+
+    const float horizonDist = sqrt(max(0.0f, viewHeight * viewHeight - bottomRadius * bottomRadius));
+    const float horizonAngle = acos(clamp(horizonDist / viewHeight, -1.0f, 1.0f));
+    const float zenithHorizonAngle = PI - horizonAngle; // in [0, PI]
+
+    if (uv.y < 0.5f) {
+        float coord = 2.0f * uv.y; // in [0, 1] because we enter here if above the horizon.
+        coord = 1.0f - coord;      // in [1, 0]
+        coord *= coord;            // quadratic spread for [1, 0]
+        coord = 1.0f - coord;      // in [0, 1]
+        viewZenithCosAngle = cos(zenithHorizonAngle * coord);
+    } else {
+        float coord = 2.0f * uv.y - 1.0f; // in [0, 1]
+        coord *= coord;
+        viewZenithCosAngle = cos(zenithHorizonAngle + horizonAngle * coord);
+    }
+
+    const float coord = uv.x * uv.x;
+    lightViewCosAngle = -(coord * 2.0f - 1.0f);
+}
+
+vec2 skyViewLutParamsToUv(
+    const bool intersectsGround,
+    const float viewZenithCosAngle,
+    const float lightViewCosAngle,
+    const float viewHeight,
+    const float bottomRadius) {
+    const float horizonDist = sqrt(max(0.0f, viewHeight * viewHeight - bottomRadius * bottomRadius));
+    const float horizonAngle = acos(clamp(horizonDist / viewHeight, -1.0f, 1.0f));
+    const float zenithHorizonAngle = PI - horizonAngle;
+    const float viewZenithAngle = acos(clamp(viewZenithCosAngle, -1.0f, 1.0f));
+
+    vec2 uv;
+    if (!intersectsGround) {
+        float coord = viewZenithAngle / zenithHorizonAngle; // in [0, 1]
+        coord = 1.0f - coord;
+        coord = sqrt(max(0.0f, coord)); // undoes the quadratic spread
+        coord = 1.0f - coord;
+        uv.y = coord * 0.5f;
+    } else {
+        float coord = (viewZenithAngle - zenithHorizonAngle) / horizonAngle;
+        coord = sqrt(max(0.0f, coord));
+        uv.y = coord * 0.5f + 0.5f;
+    }
+
+    uv.x = sqrt(max(0.0f, -lightViewCosAngle * 0.5f + 0.5f));
+
+    return vec2(fromUnitToSubUvs(uv.x, kSkyViewLutWidth), fromUnitToSubUvs(uv.y, kSkyViewLutHeight));
+}
+
 // Cornette-Shanks phase function.
-float computeMiePhaseFunction(float g, float cosTheta)
-{
+float computeMiePhaseFunction(float g, float cosTheta) {
     const float k = 3.0f / (8.0f * PI) * (1.0f - g * g) / (2.0f + g * g);
     return k * (1.0f + cosTheta * cosTheta) / pow(1.0f + g * g - 2.0f * g * -cosTheta, 1.5f);
 }
 
-float computeRayleighPhaseFunction(float cosTheta)
-{
+float computeRayleighPhaseFunction(float cosTheta) {
     return 3.0f / (16.0f * PI) * (1.0f + cosTheta * cosTheta);
 }
 

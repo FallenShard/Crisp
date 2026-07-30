@@ -158,9 +158,15 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
         ImGui::DragFloat("Ground radius", &m_atmosphereParams.bottomRadius, 10.0f, 100.0f, 20000.0f, "%.0f km");
         ImGui::DragFloat("Atmosphere height", &m_settings.atmosphereHeight, 0.5f, 1.0f, 500.0f, "%.1f km");
         ImGui::ColorEdit3("Ground albedo", &m_atmosphereParams.groundAlbedo.x);
+        drawTooltip("Feeds both the shaded planet surface and the bounced light term in the multiple scattering LUT.");
+
+        bool renderGround = m_atmosphereParams.renderGround != 0;
+        if (ImGui::Checkbox("Render ground", &renderGround)) {
+            m_atmosphereParams.renderGround = renderGround ? 1 : 0;
+        }
         drawTooltip(
-            "Only feeds the bounced light term in the multiple scattering LUT; the ground itself is not "
-            "shaded by this scene.");
+            "Shades the planet surface where a view ray ends on it. With this off the surface stays black and "
+            "the lower hemisphere is only the haze in front of it.");
         ImGui::TextDisabled("Top radius: %.1f km", m_atmosphereParams.topRadius); // NOLINT
     }
 
@@ -195,6 +201,21 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
         ImGui::DragFloat("Upper linear", &m_atmosphereParams.absorptionDensity1LinearTerm, 1e-3f, -1.0f, 1.0f, "%.5f");
         ImGui::DragFloat(
             "Upper constant", &m_atmosphereParams.absorptionDensity1ConstantTerm, 1e-2f, -10.0f, 10.0f, "%.4f");
+    }
+
+    if (beginSection("Sky view LUT")) {
+        bool fastSkyEnabled = m_atmosphereParams.fastSkyEnabled != 0;
+        if (ImGui::Checkbox("Fast sky", &fastSkyEnabled)) {
+            m_atmosphereParams.fastSkyEnabled = fastSkyEnabled ? 1 : 0;
+        }
+        drawTooltip(
+            "Resolves open sky with a single fetch from the sky view LUT instead of ray marching every pixel. "
+            "Turn it off to compare against the reference full march.");
+        ImGui::SliderFloat("Fallback altitude", &m_atmosphereParams.skyViewLutMaxAltitude, 0.0f, 100.0f, "%.1f km");
+        drawTooltip(
+            "Above this altitude the LUT is abandoned for a full march. Its vertical parameterization is built "
+            "around the horizon as seen from the camera and loses the detail that matters once the ground is far "
+            "below.");
     }
 
     if (beginSection("Ray marching")) {
