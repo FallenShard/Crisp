@@ -1,4 +1,7 @@
 #version 450 core
+
+#extension GL_GOOGLE_include_directive : require
+
 #define PI 3.14159265358979323846
 
 layout(location = 0) in vec2 texCoord;
@@ -193,7 +196,8 @@ SingleScatteringResult integrateScatteredLuminance(
         const float tEarth = raySphereIntersectNearest(P, SunDir, earthO + PlanetRadiusOffset * UpVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
-        const vec3 multiScatteredL = sampleMultipleScattering(atmosphere, posHeight, sunZenithCosAngle);
+        const vec3 multiScatteredL =
+            atmosphere.multipleScatteringFactor * sampleMultipleScattering(atmosphere, posHeight, sunZenithCosAngle);
 
         const float shadow = getShadow(atmosphere, P);
 
@@ -235,28 +239,62 @@ float aerialPerspectiveSliceToDepth(float slice)
     return slice * AP_KM_PER_SLICE;
 }
 
-vec3 getSunLuminance(vec3 worldPos, vec3 worldDir, const vec3 sunDirection, float planetRadius)
+vec3 getSunLuminance(const AtmosphereParams atmosphere, const vec3 worldPos, const vec3 worldDir)
 {
+    if (atmosphere.drawSunDisk == 0)
+        return vec3(0.0f);
+
     // Check if we are looking towards the sun.
-    if (dot(worldDir, sunDirection) > cos(0.5f * 0.505f * PI / 180.0f))
+    const float cosSunDiskRadius = cos(0.5f * radians(atmosphere.sunAngularDiameterDegrees));
+    if (dot(worldDir, atmosphere.sunDirection) > cosSunDiskRadius)
     {
         // Are we maybe intersecting the planet? If not, we are looking into the sun.
-        const float t = raySphereIntersectNearest(worldPos, worldDir, vec3(0.0f, 0.0f, 0.0f), planetRadius);
+        const float t = raySphereIntersectNearest(worldPos, worldDir, vec3(0.0f), atmosphere.bottomRadius);
         if (t < 0.0f)
         {
-            return vec3(1000000.0);
+            return vec3(atmosphere.sunDiskLuminance);
         }
     }
     return vec3(0.0f);
 }
 
+// Visualizes one of the intermediate LUTs across the whole viewport, letting the parameterizations be inspected
+// directly instead of being inferred from the final image.
+bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out vec4 color)
+{
+    color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    switch (atmosphere.debugViewMode)
+    {
+    case 1:
+        color.rgb = textureLod(transmittanceLut, uv, 0).rgb;
+        return true;
+    case 2:
+        color.rgb = textureLod(multiScatteringLut, uv, 0).rgb * atmosphere.exposure;
+        return true;
+    case 3:
+        color.rgb = textureLod(SkyViewLutTexture, uv, 0).rgb * atmosphere.exposure;
+        return true;
+    case 4:
+        // Sweep through the froxel slices horizontally so that the whole volume is visible at once.
+        color.rgb = textureLod(
+            AtmosphereCameraScatteringVolume, vec3(fract(uv * vec2(AP_SLICE_COUNT, 1.0f)), floor(uv.x * AP_SLICE_COUNT)), 0).rgb * atmosphere.exposure;
+        return true;
+    default:
+        return false;
+    }
+}
+
 void main()
 {
     const vec2 pixPos = vec2(gl_FragCoord.xy);
+    const vec2 screenUv = pixPos / vec2(atmosphere.screenResolution);
+
+    if (tryRenderDebugView(atmosphere, screenUv, finalColor))
+        return;
 
     // No Y flip here: the camera's projection matrix already carries one (Camera::InvertProjectionY), so invVP
     // undoes it. Negating Y again would mirror the sky about the horizon.
-    const vec2 ndcPos = pixPos / vec2(atmosphere.screenResolution) * 2.0f - 1.0f;
+    const vec2 ndcPos = screenUv * 2.0f - 1.0f;
     vec4 homogPos = atmosphere.invVP * vec4(ndcPos, 1.0f, 1.0f);
     const vec3 targetWorldPos = homogPos.xyz / homogPos.w;
     vec3 worldDir = normalize(targetWorldPos - atmosphere.cameraPosition);
@@ -270,7 +308,7 @@ void main()
 
     // If we have no obstacle in the view, just get the luminance from the sky.
     if (fragmentDepth == 1.0f)
-        L += getSunLuminance(worldPos, worldDir, atmosphere.sunDirection, atmosphere.bottomRadius);
+        L += getSunLuminance(atmosphere, worldPos, worldDir);
 
 // #endif
 
@@ -310,7 +348,7 @@ void main()
     if (!moveToTopAtmosphere(worldPos, worldDir, atmosphere.topRadius))
     {
         // Ray is not intersecting the atmosphere
-        finalColor = vec4(getSunLuminance(worldPos, worldDir, atmosphere.sunDirection, atmosphere.bottomRadius), 1.0);
+        finalColor = vec4(getSunLuminance(atmosphere, worldPos, worldDir) * atmosphere.exposure, 1.0f);
         return;
     }
 
@@ -321,7 +359,7 @@ void main()
 
     L += ss.L;
     const float avgTransmittance = dot(ss.Transmittance, vec3(1.0f / 3.0f));
-    finalColor = vec4(L * 5, 1.0 - avgTransmittance);
+    finalColor = vec4(L * atmosphere.exposure, 1.0f - avgTransmittance);
 
 // #endif // FASTAERIALPERSPECTIVE_ENABLED
 }

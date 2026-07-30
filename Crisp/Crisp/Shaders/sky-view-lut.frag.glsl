@@ -1,4 +1,7 @@
 #version 450 core
+
+#extension GL_GOOGLE_include_directive : require
+
 #define PI 3.14159265358979323846
 
 layout(location = 0) in vec2 texCoord;
@@ -174,7 +177,8 @@ vec3 integrateScatteredLuminance(const vec3 worldPos, const vec3 worldDir, const
         // First evaluate opaque shadow
         const float shadow = getShadow(atmosphere, pos);
 
-        const vec3 multiScatteredL = sampleMultipleScattering(atmosphere, posHeight, sunZenithCosAngle);
+        const vec3 multiScatteredL =
+            atmosphere.multipleScatteringFactor * sampleMultipleScattering(atmosphere, posHeight, sunZenithCosAngle);
         const vec3 S = globalL * (earthShadow * shadow * transmittanceToSun * phaseTimesScattering + multiScatteredL * medium.scattering);
 
         // See slide 28 at http://www.frostbite.com/2015/08/physically-based-unified-volumetric-rendering-in-frostbite/.

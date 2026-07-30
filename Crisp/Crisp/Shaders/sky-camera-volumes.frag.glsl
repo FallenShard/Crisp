@@ -1,5 +1,6 @@
 #version 450 core
 
+#extension GL_GOOGLE_include_directive : require
 
 #define PI 3.1415926535897932384626433832795
 #define AP_SLICE_COUNT 32.0f
@@ -237,7 +238,8 @@ SingleScatteringResult IntegrateScatteredLuminance(
         const float tEarth = raySphereIntersectNearest(P, SunDir, earthO + PlanetRadiusOffset * UpVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
-        const vec3 multiScatteredL = sampleMultipleScattering(atmosphere, pHeight, SunZenithCosAngle);
+        const vec3 multiScatteredL =
+            atmosphere.multipleScatteringFactor * sampleMultipleScattering(atmosphere, pHeight, SunZenithCosAngle);
 
 
         const float shadow = getShadow(atmosphere, P);

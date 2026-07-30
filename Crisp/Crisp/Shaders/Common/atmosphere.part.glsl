@@ -1,4 +1,5 @@
-
+#ifndef CRISP_ATMOSPHERE_GLSL_H
+#define CRISP_ATMOSPHERE_GLSL_H
 
 struct AtmosphereParams
 {
@@ -51,6 +52,23 @@ struct AtmosphereParams
 
     int minRayMarchingSamples;
     int maxRayMarchingSamples;
+
+    // Multiplier applied to the ray marched luminance before it is written out.
+    float exposure;
+
+    // Angular diameter of the sun disk, in degrees.
+    float sunAngularDiameterDegrees;
+
+    // Luminance of the sun disk itself, in the same units as the ray marched sky.
+    float sunDiskLuminance;
+
+    // Artistic scale on the multiple scattering contribution; 1 is the physically motivated value.
+    float multipleScatteringFactor;
+
+    // 0 renders the atmosphere, everything else visualizes an intermediate LUT.
+    int debugViewMode;
+
+    int drawSunDisk;
 };
 
 struct MediumSample
@@ -204,3 +222,5 @@ float computeRayleighPhaseFunction(float cosTheta)
 {
     return 3.0f / (16.0f * PI) * (1.0f + cosTheta * cosTheta);
 }
+
+#endif // CRISP_ATMOSPHERE_GLSL_H
