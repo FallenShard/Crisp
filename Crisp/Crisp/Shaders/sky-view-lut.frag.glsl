@@ -198,11 +198,6 @@ void main()
     const vec2 pixPos = vec2(gl_FragCoord.xy);
     const vec2 uv = pixPos / vec2(192.0f, 108.0f);
 
-    const vec3 clipPos = vec3(uv * vec2(2.0, -2.0) - vec2(1.0, -1.0), 1.0);
-    const vec4 homogPos = atmosphere.invVP * vec4(clipPos, 1.0);
-    const vec3 eyePos = homogPos.xyz / homogPos.w;
-
-    vec3 worldDir = normalize(eyePos - atmosphere.cameraPosition);
     vec3 worldPos = atmosphere.cameraPosition + vec3(0, atmosphere.bottomRadius, 0);
     const float viewHeight = length(worldPos);
 
@@ -221,7 +216,7 @@ void main()
     worldPos = vec3(0.0f, viewHeight, 0.0f);
 
     const float viewZenithSinAngle = sqrt(max(0.0f, 1.0f - viewZenithCosAngle * viewZenithCosAngle));
-    worldDir = vec3(
+    const vec3 worldDir = vec3(
       viewZenithSinAngle * lightViewCosAngle,
       viewZenithCosAngle,
       -viewZenithSinAngle * sqrt(max(0, 1.0 - lightViewCosAngle * lightViewCosAngle))
