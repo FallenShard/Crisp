@@ -13,6 +13,10 @@ namespace crisp {
 class Renderer;
 class ResourceContext;
 
+// The distances in atmospheric shading are specified in kilometers, so we'll occasionally convert
+// from meters when interfacing with the scene's camera.
+inline constexpr float kMetersPerKilometer = 1000.0f;
+
 // Scale heights of the exponentially distributed media, in km.
 constexpr float kEarthMieScaleHeight = 1.2f;
 constexpr float kEarthRayleighScaleHeight = 8.0f;

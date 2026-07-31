@@ -76,6 +76,9 @@ struct MediumSample {
     vec3 albedo;
 };
 
+// Everything here is in kilometres, but invVP reconstructs scene space, which is metres.
+const float kMetersPerKilometer = 1000.0f;
+
 const float kPlanetRadiusOffset = 0.01f;
 
 // The engine uses an infinite reverse-Z projection (Camera::reverseZPerspective): the near plane maps to 1 and

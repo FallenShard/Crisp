@@ -61,11 +61,11 @@ SingleScatteringResult integrateScatteredRadiance(
     if (depthBufferValue != kNoDepthBuffer) {
         clipSpace.z = depthBufferValue;
         if (clipSpace.z > kFarPlaneDepth) {
-            vec4 depthBufferWorldPos = atmosphere.invVP * vec4(clipSpace, 1.0);
-            depthBufferWorldPos /= depthBufferWorldPos.w;
+            const vec4 homogDepthPos = atmosphere.invVP * vec4(clipSpace, 1.0);
+            const vec3 depthWorldPos = homogDepthPos.xyz / (homogDepthPos.w * kMetersPerKilometer);
 
             // Undo the planet offset in worldPos to match; this engine is Y up.
-            float tDepth = length(depthBufferWorldPos.xyz - (worldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
+            float tDepth = length(depthWorldPos - (worldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
             if (tDepth < tMax) {
                 tMax = tDepth;
             }
@@ -140,8 +140,8 @@ SingleScatteringResult integrateScatteredRadiance(
 void main() {
     const vec2 pixPos = gl_FragCoord.xy;
     const vec3 ndcPos = vec3(pixPos / vec2(kCameraVolumeLutWidth, kCameraVolumeLutHeight) * 2.0f - 1.0f, 0.5f);
-    const vec4 HPos = atmosphere.invVP * vec4(ndcPos, 1.0);
-    const vec3 eyePos = HPos.xyz / HPos.w;
+    const vec4 homogPos = atmosphere.invVP * vec4(ndcPos, 1.0);
+    const vec3 eyePos = homogPos.xyz / (homogPos.w * kMetersPerKilometer);
     vec3 worldDir = normalize(eyePos - atmosphere.cameraPosition);
 
     vec3 worldPosEcef = atmosphere.cameraPosition + vec3(0.0f, atmosphere.bottomRadius, 0.0f);

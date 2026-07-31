@@ -63,11 +63,11 @@ SingleScatteringResult integrateScatteredRadiance(
     if (depthBufferValue != kNoDepthBuffer) {
         clipSpace.z = depthBufferValue;
         if (clipSpace.z > kFarPlaneDepth) {
-            vec4 depthBufferWorldPos = atmosphere.invVP * vec4(clipSpace, 1.0);
-            depthBufferWorldPos /= depthBufferWorldPos.w;
+            const vec4 homogDepthPos = atmosphere.invVP * vec4(clipSpace, 1.0);
+            const vec3 depthWorldPos = homogDepthPos.xyz / (homogDepthPos.w * kMetersPerKilometer);
 
             // Undo the planet offset in worldPos to match; this engine is Y up.
-            float tDepth = length(depthBufferWorldPos.xyz - (worldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
+            float tDepth = length(depthWorldPos - (worldPos + vec3(0.0, -atmosphere.bottomRadius, 0.0)));
             if (tDepth < tMax) {
                 tMax = tDepth;
             }
@@ -276,7 +276,7 @@ void main() {
 
     const vec2 ndcPos = screenUv * 2.0f - 1.0f;
     vec4 homogPos = atmosphere.invVP * vec4(ndcPos, 1.0f, 1.0f);
-    const vec3 targetWorldPos = homogPos.xyz / homogPos.w;
+    const vec3 targetWorldPos = homogPos.xyz / (homogPos.w * kMetersPerKilometer);
     vec3 worldDir = normalize(targetWorldPos - atmosphere.cameraPosition);
 
     vec3 worldPos = atmosphere.cameraPosition + vec3(0.0f, atmosphere.bottomRadius, 0.0f);
@@ -335,9 +335,9 @@ void main() {
     // kCameraVolumeMaxDistance, so anything further away falls through to the full march.
     if (atmosphere.fastAerialPerspectiveEnabled != 0 && fragmentDepth != kFarPlaneDepth) {
         homogPos = atmosphere.invVP * vec4(ndcPos, fragmentDepth, 1.0f);
-        const vec3 depthWorldPos = homogPos.xyz / homogPos.w;
+        const vec3 depthWorldPos = homogPos.xyz / (homogPos.w * kMetersPerKilometer);
 
-        // Both sides are in scene space here, unlike worldPos, which carries the planet offset.
+        // Against cameraPosition rather than worldPos, which carries the planet offset.
         const float tDepth = length(depthWorldPos - atmosphere.cameraPosition);
         if (tDepth < kCameraVolumeMaxDistance) {
             const vec4 ap = sampleAerialPerspective(screenUv, tDepth);

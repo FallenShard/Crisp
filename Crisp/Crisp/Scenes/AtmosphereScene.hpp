@@ -39,6 +39,7 @@ private:
 
     AtmosphereParameters m_atmosphereParams;
     AtmosphereSettings m_settings;
-    float m_cameraSpeed{1.5f};
+    // In m/s.
+    float m_cameraSpeed{1500.0f};
 };
 } // namespace crisp

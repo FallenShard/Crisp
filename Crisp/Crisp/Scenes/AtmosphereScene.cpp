@@ -45,6 +45,7 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
 
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_cameraController->setSpeed(m_cameraSpeed);
+    m_cameraController->setPosition({0.0f, 1000.0f, 0.0f}); // In meters.
     m_resourceContext->createUniformRingBuffer<CameraParameters>("camera");
     m_resourceContext->createUniformRingBuffer<AtmosphereParameters>("atmosphereBuffer");
 
@@ -72,7 +73,7 @@ void AtmosphereScene::update(const UpdateParams& updateParams) {
     m_atmosphereParams.screenResolution = glm::vec2(screenExtent.width, screenExtent.height);
     m_atmosphereParams.VP = camParams.P * camParams.V;
     m_atmosphereParams.invVP = glm::inverse(m_atmosphereParams.VP);
-    m_atmosphereParams.cameraPosition = m_cameraController->getCamera().getPosition();
+    m_atmosphereParams.cameraPosition = m_cameraController->getCamera().getPosition() / kMetersPerKilometer;
     applyAtmosphereSettings();
 
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, updateParams.frameInFlightIdx);
@@ -262,16 +263,17 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
     }
 
     if (beginSection("Camera")) {
-        if (ImGui::SliderFloat("Speed", &m_cameraSpeed, 0.01f, 100.0f, "%.2f km/s", ImGuiSliderFlags_Logarithmic)) {
+        if (ImGui::SliderFloat("Speed", &m_cameraSpeed, 1.0f, 1e5f, "%.0f m/s", ImGuiSliderFlags_Logarithmic)) {
             m_cameraController->setSpeed(m_cameraSpeed);
         }
         float fovY = m_cameraController->getCamera().getVerticalFov();
         if (ImGui::SliderFloat("Vertical FOV", &fovY, 5.0f, 90.0f, "%.1f deg")) {
             m_cameraController->setFovY(fovY);
         }
-        const glm::vec3& pos = m_atmosphereParams.cameraPosition;
-        ImGui::TextDisabled("Position: (%.3f, %.3f, %.3f) km", pos.x, pos.y, pos.z); // NOLINT
-        ImGui::TextDisabled("Altitude: %.3f km", pos.y);                             // NOLINT
+        const glm::vec3 pos = m_cameraController->getCamera().getPosition();
+        ImGui::TextDisabled("Position: (%.1f, %.1f, %.1f) m", pos.x, pos.y, pos.z); // NOLINT
+        // In km, to read against skyViewLutMaxAltitude and the planet radii.
+        ImGui::TextDisabled("Altitude: %.3f km", m_atmosphereParams.cameraPosition.y); // NOLINT
     }
 
     ImGui::End();
