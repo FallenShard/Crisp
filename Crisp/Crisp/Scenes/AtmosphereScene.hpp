@@ -3,6 +3,7 @@
 #include <Crisp/Camera/FreeCameraController.hpp>
 
 #include <Crisp/Models/Atmosphere.hpp>
+#include <Crisp/Models/Tonemap.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
@@ -34,11 +35,14 @@ private:
 
     void drawAtmosphereGui();
 
+    void drawTonemapGui();
+
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
     std::unique_ptr<FreeCameraController> m_cameraController;
 
     AtmosphereParameters m_atmosphereParams;
     AtmosphereSettings m_settings;
+    TonemapParameters m_tonemapParams;
     // In m/s.
     float m_cameraSpeed{1500.0f};
 };

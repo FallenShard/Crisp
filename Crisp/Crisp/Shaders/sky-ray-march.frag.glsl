@@ -238,7 +238,8 @@ vec3 getSunRadiance(
     return atmosphere.sunDiskRadiance * coverage * computeSunLimbDarkening(centerToEdge);
 }
 
-// Lets the LUT parameterizations be inspected directly instead of inferred from the final image.
+// Lets the LUT parameterizations be inspected directly instead of inferred from the final image. The values go out
+// raw, like everything else this pass writes, and the tonemapper downstream is what makes them visible.
 bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out vec4 color) {
     color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     switch (atmosphere.debugViewMode) {
@@ -246,10 +247,10 @@ bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out ve
         color.rgb = textureLod(transmittanceLut, uv, 0).rgb;
         return true;
     case 2:
-        color.rgb = textureLod(multiScatteringLut, uv, 0).rgb * atmosphere.exposure;
+        color.rgb = textureLod(multiScatteringLut, uv, 0).rgb;
         return true;
     case 3:
-        color.rgb = textureLod(skyViewLut, uv, 0).rgb * atmosphere.exposure;
+        color.rgb = textureLod(skyViewLut, uv, 0).rgb;
         return true;
     case 4:
         // Sweeps the froxel slices horizontally so the whole volume is visible at once.
@@ -258,8 +259,7 @@ bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out ve
                 cameraVolumeLut,
                 vec3(fract(uv * vec2(kCameraVolumeLutSliceCount, 1.0f)), floor(uv.x * kCameraVolumeLutSliceCount)),
                 0)
-                .rgb *
-            atmosphere.exposure;
+                .rgb;
         return true;
     default:
         return false;
@@ -327,7 +327,7 @@ void main() {
             intersectsGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, atmosphere.bottomRadius);
 
         L += textureLod(skyViewLut, uv, 0).rgb;
-        finalColor = vec4(L * atmosphere.exposure, 1.0f);
+        finalColor = vec4(L, 1.0f);
         return;
     }
 
@@ -341,15 +341,14 @@ void main() {
         const float tDepth = length(depthWorldPos - atmosphere.cameraPosition);
         if (tDepth < kCameraVolumeMaxDistance) {
             const vec4 ap = sampleAerialPerspective(screenUv, tDepth);
-            finalColor = vec4((L + ap.rgb) * atmosphere.exposure, ap.a);
+            finalColor = vec4(L + ap.rgb, ap.a);
             return;
         }
     }
 
     // Must stay after the fast sky path above, which tests against the unmoved camera position.
     if (!moveToTopAtmosphere(worldPos, worldDir, atmosphere.topRadius)) {
-        finalColor = vec4(
-            getSunRadiance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth) * atmosphere.exposure, 1.0f);
+        finalColor = vec4(getSunRadiance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth), 1.0f);
         return;
     }
 
@@ -370,5 +369,5 @@ void main() {
 
     L += ss.L;
     const float avgTransmittance = dot(ss.transmittance, vec3(1.0f / 3.0f));
-    finalColor = vec4(L * atmosphere.exposure, 1.0f - avgTransmittance);
+    finalColor = vec4(L, 1.0f - avgTransmittance);
 }

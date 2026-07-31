@@ -89,8 +89,6 @@ struct AtmosphereParameters {
     // Indexes kDebugViewModeNames.
     int32_t debugViewMode{0};
 
-    float exposure{5.0f};
-
     // Earth's sun subtends roughly 0.545 degrees.
     float sunAngularDiameterDegrees{0.545f};
 

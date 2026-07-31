@@ -39,8 +39,6 @@ struct AtmosphereParams {
     int maxRayMarchingSamples;
     int debugViewMode;
 
-    float exposure;
-
     float sunAngularDiameterDegrees;
 
     // In the same units as the ray marched sky.

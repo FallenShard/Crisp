@@ -14,6 +14,9 @@ add_cpp_static_library(CrispModels
     "Ocean.cpp"
     "Ocean.hpp"
 
+    "Tonemap.cpp"
+    "Tonemap.hpp"
+
     # "SPH.cpp"
     # "SPH.hpp"
 )
