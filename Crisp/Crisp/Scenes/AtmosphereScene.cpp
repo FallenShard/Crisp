@@ -228,13 +228,18 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
             "Scales the second-and-higher order scattering contribution. 1 is the physically motivated "
             "value; 0 isolates single scattering.");
         ImGui::TextDisabled( // NOLINT
-            "Transmittance LUT: %dx%d",
-            m_atmosphereParams.transmittanceLutWidth,
-            m_atmosphereParams.transmittanceLutHeight);
+            "Transmittance LUT: %ux%u", kTransmittanceLutWidth, kTransmittanceLutHeight);
         ImGui::TextDisabled( // NOLINT
-            "Multiple scattering LUT: %dx%d",
-            m_atmosphereParams.multiScatteringLutResolution,
-            m_atmosphereParams.multiScatteringLutResolution);
+            "Multiple scattering LUT: %ux%u",
+            kMultiScatteringLutResolution,
+            kMultiScatteringLutResolution);
+        ImGui::TextDisabled("Sky view LUT: %ux%u", kSkyViewLutWidth, kSkyViewLutHeight); // NOLINT
+        ImGui::TextDisabled(                                                                // NOLINT
+            "Aerial perspective LUT: %ux%ux%u (%.1f km/slice)",
+            kCameraVolumeLutWidth,
+            kCameraVolumeLutHeight,
+            kCameraVolumeLutSliceCount,
+            kCameraVolumeKmPerSlice);
     }
 
     if (beginSection("Presentation")) {

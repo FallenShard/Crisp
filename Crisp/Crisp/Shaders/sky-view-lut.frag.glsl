@@ -97,7 +97,8 @@ vec3 integrateScatteredLuminance(
         const float posHeight = length(pos);
         const vec3 upVec = pos / posHeight;
         const float sunZenithCosAngle = dot(sunDir, upVec);
-        const vec3 transmittanceToSun = sampleTransmittanceLut(transmittanceLut, atmosphere, posHeight, sunZenithCosAngle);
+        const vec3 transmittanceToSun =
+            sampleTransmittanceLut(transmittanceLut, atmosphere, posHeight, sunZenithCosAngle);
 
         const vec3 phaseTimesScattering =
             medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue;
@@ -111,7 +112,8 @@ vec3 integrateScatteredLuminance(
         const float shadow = getShadow(atmosphere, pos);
 
         const vec3 multiScatteredL =
-            atmosphere.multipleScatteringFactor * sampleMultipleScattering(multiScatteringLut, atmosphere, posHeight, sunZenithCosAngle);
+            atmosphere.multipleScatteringFactor *
+            sampleMultipleScattering(multiScatteringLut, atmosphere, posHeight, sunZenithCosAngle);
         const vec3 S =
             globalL *
             (earthShadow * shadow * transmittanceToSun * phaseTimesScattering + multiScatteredL * medium.scattering);
@@ -130,7 +132,8 @@ vec3 integrateScatteredLuminance(
         const float posHeight = length(pos);
         const vec3 upVec = pos / posHeight;
         const float sunZenithCosAngle = dot(sunDir, upVec);
-        const vec3 transmittanceToSun = sampleTransmittanceLut(transmittanceLut, atmosphere, posHeight, sunZenithCosAngle);
+        const vec3 transmittanceToSun =
+            sampleTransmittanceLut(transmittanceLut, atmosphere, posHeight, sunZenithCosAngle);
 
         const float nDotL = clamp(sunZenithCosAngle, 0.0f, 1.0f);
         L += globalL * transmittanceToSun * throughput * nDotL * atmosphere.groundAlbedo / PI;

@@ -31,10 +31,6 @@ struct SkyVolumeLutData {
     RenderGraphResourceHandle lut;
 };
 
-constexpr VkExtent3D kMultiScatWorkGroupSize{1, 1, 64};
-constexpr uint32_t kMultiScatLutSize = 32;
-constexpr uint32_t kCameraVolumeSliceCount = 32;
-
 constexpr const char* kAtmosphereBufferId = "atmosphereBuffer";
 constexpr const char* kLinearClampSamplerId = "linearClamp";
 constexpr const char* kVolumeGeometryId = "skyCameraVolumesGeometry";
@@ -119,7 +115,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
     const std::vector<glm::vec2> volumeVertices{{-1.0f, -1.0f}, {3.0f, -1.0f}, {-1.0f, 3.0f}};
     const std::vector<glm::uvec3> volumeFaces{{0, 2, 1}};
     resourceContext.addGeometry(kVolumeGeometryId, Geometry(renderer, volumeVertices, volumeFaces))
-        .setInstanceCount(kCameraVolumeSliceCount);
+        .setInstanceCount(kCameraVolumeLutSliceCount);
 
     renderGraph.addPass(
         TransmittanceLutPass,
@@ -128,8 +124,8 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             data.lut = builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::Absolute,
-                    .width = 256,
-                    .height = 64,
+                    .width = kTransmittanceLutWidth,
+                    .height = kTransmittanceLutHeight,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
                 },
                 "transmittanceLut");
@@ -153,7 +149,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
 
             // SkyTransLut.json bakes the viewport and scissor from the pass render area, so the pipeline
             // declares neither as dynamic state. Setting them here would violate the static state and also
-            // cover the swap chain rather than the 256x64 LUT.
+            // cover the swap chain rather than the LUT.
             renderer.drawFullScreenQuad(cmdBufferHandle);
         });
 
@@ -167,8 +163,8 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             data.tex = builder.createStorageImage(
                 {
                     .sizePolicy = SizePolicy::Absolute,
-                    .width = 32,
-                    .height = 32,
+                    .width = kMultiScatteringLutResolution,
+                    .height = kMultiScatteringLutResolution,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
                 },
                 "multiScatTex");
@@ -190,7 +186,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 // ResourceContext, whose createMaterial() resolves the descriptor allocator through the pipeline
                 // cache - this pipeline never goes through the cache, so it has no entry there. The layout built
                 // above owns its own allocator, which is what Material picks up from the pipeline.
-                pipeline = createMultiScatteringPipeline(renderer, kMultiScatWorkGroupSize);
+                pipeline = createMultiScatteringPipeline(renderer, {1, 1, 64});
                 material = std::make_shared<Material>(pipeline.get());
                 material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
 
@@ -214,7 +210,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
             pipeline->bind(cmdBufferHandle);
             material->bind(cmdBufferHandle);
-            vkCmdDispatch(cmdBufferHandle, kMultiScatLutSize, kMultiScatLutSize, 1);
+            vkCmdDispatch(cmdBufferHandle, kMultiScatteringLutResolution, kMultiScatteringLutResolution, 1);
         });
 
     renderGraph.addPass(
@@ -227,8 +223,8 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             data.lut = builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::Absolute,
-                    .width = 192,
-                    .height = 108,
+                    .width = kSkyViewLutWidth,
+                    .height = kSkyViewLutHeight,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
                 },
                 "skyViewLut");
@@ -266,10 +262,10 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             data.lut = builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::Absolute,
-                    .width = 32,
-                    .height = 32,
+                    .width = kCameraVolumeLutWidth,
+                    .height = kCameraVolumeLutHeight,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
-                    .layerCount = 32,
+                    .layerCount = kCameraVolumeLutSliceCount,
                 },
                 "skyVolumeLut");
         },

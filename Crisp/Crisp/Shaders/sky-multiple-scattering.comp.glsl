@@ -154,7 +154,7 @@ shared vec3 radianceShared[64];
 
 void main() {
     const vec2 pixPos = vec2(gl_GlobalInvocationID.xy) + 0.5f;
-    const float lutSize = atmosphere.multiScatteringLutResolution;
+    const float lutSize = kMultiScatteringLutResolution;
     vec2 uv = pixPos / lutSize;
     uv = vec2(fromSubUvsToUnit(uv.x, lutSize), fromSubUvsToUnit(uv.y, lutSize));
 

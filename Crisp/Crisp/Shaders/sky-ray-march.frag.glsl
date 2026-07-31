@@ -145,7 +145,8 @@ SingleScatteringResult integrateScatteredLuminance(
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
 
         const vec3 multiScatteredL =
-            atmosphere.multipleScatteringFactor * sampleMultipleScattering(multiScatteringLut, atmosphere, posHeight, sunZenithCosAngle);
+            atmosphere.multipleScatteringFactor *
+            sampleMultipleScattering(multiScatteringLut, atmosphere, posHeight, sunZenithCosAngle);
 
         const float shadow = getShadow(atmosphere, P);
 
@@ -164,8 +165,7 @@ SingleScatteringResult integrateScatteredLuminance(
         const float pHeight = length(P);
         const vec3 upVector = P / pHeight;
         const float sunZenithCosAngle = dot(sunDir, upVector);
-        const vec3 transmittanceToSun =
-            sampleTransmittanceLut(transmittanceLut, atmosphere, pHeight, sunZenithCosAngle);
+        const vec3 transmittanceToSun = sampleTransmittanceLut(transmittanceLut, atmosphere, pHeight, sunZenithCosAngle);
 
         const float nDotL = clamp(sunZenithCosAngle, 0.0f, 1.0f);
         L += globalL * transmittanceToSun * throughput * nDotL * atmosphere.groundAlbedo / PI;
@@ -176,15 +176,12 @@ SingleScatteringResult integrateScatteredLuminance(
     return result;
 }
 
-#define AP_SLICE_COUNT 32.0f
-#define AP_KM_PER_SLICE 4.0f
-
 float aerialPerspectiveDepthToSlice(float depth) {
-    return depth * (1.0f / AP_KM_PER_SLICE);
+    return depth * (1.0f / kCameraVolumeKmPerSlice);
 }
 
 float aerialPerspectiveSliceToDepth(float slice) {
-    return slice * AP_KM_PER_SLICE;
+    return slice * kCameraVolumeKmPerSlice;
 }
 
 // The solar disc dims towards its limb, faster at short wavelengths, which is what warms the rim.
@@ -246,7 +243,7 @@ bool tryRenderDebugView(const AtmosphereParams atmosphere, const vec2 uv, out ve
         color.rgb =
             textureLod(
                 cameraVolumeLut,
-                vec3(fract(uv * vec2(AP_SLICE_COUNT, 1.0f)), floor(uv.x * AP_SLICE_COUNT)),
+                vec3(fract(uv * vec2(kCameraVolumeLutSliceCount, 1.0f)), floor(uv.x * kCameraVolumeLutSliceCount)),
                 0)
                 .rgb *
             atmosphere.exposure;
@@ -337,7 +334,7 @@ void main() {
     //         weight = clamp(slice * 2.0, 0, 1);
     //         slice = 0.5;
     //     }
-    //     float w = sqrt(slice / AP_SLICE_COUNT);  // squared distribution
+    //     float w = sqrt(slice / kCameraVolumeLutSliceCount);  // squared distribution
 
     // finalColor = vec4(tDepth, slice, weight, w);
 
@@ -347,7 +344,8 @@ void main() {
     //    finalColor = vec4(L, Opacity);
 
     // finalColor = vec4(L * 5, 1.0 - avgTransmittance);
-    // utput.Luminance *= frac(clamp(w*AP_SLICE_COUNT, 0, AP_SLICE_COUNT));
+    // output.Luminance *= frac(
+    //     clamp(w * kCameraVolumeLutSliceCount, 0.0f, kCameraVolumeLutSliceCount));
 
     // #else // FASTAERIALPERSPECTIVE_ENABLED
 

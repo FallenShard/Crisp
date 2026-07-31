@@ -3,8 +3,6 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define PI 3.1415926535897932384626433832795
-#define AP_SLICE_COUNT 32.0f
-#define AP_KM_PER_SLICE 4.0f
 
 layout(location = 0) out vec4 finalColor;
 
@@ -45,7 +43,7 @@ SingleScatteringResult integrateScatteredLuminance(
     result.transmittance = vec3(0.0f); // transmittance in [0,1] (unitless)
     result.multiScatAs1 = vec3(0.0f);
 
-    vec3 clipSpace = vec3(pixPos / vec2(32, 32) * 2.0f - 1.0f, kFarPlaneDepth);
+    vec3 clipSpace = vec3(pixPos / vec2(kCameraVolumeLutWidth, kCameraVolumeLutHeight) * 2.0f - 1.0f, kFarPlaneDepth);
 
     // Compute next intersection with atmosphere or ground
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
@@ -157,7 +155,7 @@ SingleScatteringResult integrateScatteredLuminance(
 void main() {
     // Compute viewing direction for the given pixel.
     const vec2 pixPos = gl_FragCoord.xy;
-    const vec3 ndcPos = vec3(pixPos / vec2(32, 32) * 2.0f - 1.0f, 0.5f);
+    const vec3 ndcPos = vec3(pixPos / vec2(kCameraVolumeLutWidth, kCameraVolumeLutHeight) * 2.0f - 1.0f, 0.5f);
     const vec4 HPos = atmosphere.invVP * vec4(ndcPos, 1.0);
     const vec3 eyePos = HPos.xyz / HPos.w;
     vec3 worldDir = normalize(eyePos - atmosphere.cameraPosition);
@@ -166,12 +164,12 @@ void main() {
     vec3 worldPosEcef = atmosphere.cameraPosition + vec3(0.0f, atmosphere.bottomRadius, 0.0f);
     vec3 worldPos = worldPosEcef;
 
-    float sliceT = (float(gl_Layer) + 0.5f) / AP_SLICE_COUNT;
-    sliceT *= sliceT;         // squared distribution
-    sliceT *= AP_SLICE_COUNT; // in [0, 1]
+    float sliceT = (float(gl_Layer) + 0.5f) / kCameraVolumeLutSliceCount;
+    sliceT *= sliceT; // squared distribution
+    sliceT *= kCameraVolumeLutSliceCount;
 
     // Compute position from froxel information
-    float tMax = sliceT * AP_KM_PER_SLICE;
+    float tMax = sliceT * kCameraVolumeKmPerSlice;
     vec3 newWorldPos = worldPos + tMax * worldDir;
 
     // If the voxel is under the ground, make sure to offset it out on the ground.

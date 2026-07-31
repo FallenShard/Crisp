@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
@@ -15,6 +16,17 @@ class ResourceContext;
 // Scale heights of the exponentially distributed media, in km.
 constexpr float kEarthMieScaleHeight = 1.2f;
 constexpr float kEarthRayleighScaleHeight = 8.0f;
+
+// Must match the LUT constants in Shaders/Common/atmosphere.part.glsl.
+inline constexpr uint32_t kTransmittanceLutWidth = 256;
+inline constexpr uint32_t kTransmittanceLutHeight = 64;
+inline constexpr uint32_t kMultiScatteringLutResolution = 32;
+inline constexpr uint32_t kSkyViewLutWidth = 192;
+inline constexpr uint32_t kSkyViewLutHeight = 108;
+inline constexpr uint32_t kCameraVolumeLutWidth = 32;
+inline constexpr uint32_t kCameraVolumeLutHeight = 32;
+inline constexpr uint32_t kCameraVolumeLutSliceCount = 32;
+inline constexpr float kCameraVolumeKmPerSlice = 4.0f;
 
 // Mirrors the AtmosphereParams struct in Shaders/Common/atmosphere.part.glsl.
 struct AtmosphereParameters {
@@ -64,14 +76,12 @@ struct AtmosphereParameters {
 
     // Camera position in km, relative to the ground directly below it.
     glm::vec3 cameraPosition{0.0f, 0.5f, 1.0f};
-    int32_t multiScatteringLutResolution{32};
+    int32_t minRayMarchingSamples{4};
 
     glm::vec2 screenResolution{};
-    int32_t transmittanceLutWidth{256};
-    int32_t transmittanceLutHeight{64};
-
-    int32_t minRayMarchingSamples{4};
     int32_t maxRayMarchingSamples{14};
+    // Indexes kDebugViewModeNames.
+    int32_t debugViewMode{0};
 
     float exposure{5.0f};
 
@@ -85,9 +95,6 @@ struct AtmosphereParameters {
     // 1 is the physically motivated value; 0 isolates single scattering.
     float multipleScatteringFactor{1.0f};
 
-    // Indexes kDebugViewModeNames.
-    int32_t debugViewMode{0};
-
     int32_t drawSunDisk{1};
 
     // Off leaves the reference full march to compare against.
@@ -99,9 +106,6 @@ struct AtmosphereParameters {
     // In km. The LUT's axes are built around the horizon as seen from the camera, so it stops being usable once
     // the ground is far below.
     float skyViewLutMaxAltitude{4.0f};
-
-    // Keeps the block a multiple of 16 bytes; claim it when the next flag lands.
-    float pad0{0.0f};
 };
 
 inline constexpr std::array<const char*, 5> kDebugViewModeNames{

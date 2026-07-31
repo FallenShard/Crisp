@@ -7,17 +7,17 @@ layout(location = 0) out vec4 finalColor;
 
 #include "Common/atmosphere.part.glsl"
 
-layout(set = 0, binding = 0) uniform AtmosphereParamsBlock
-{
+layout(set = 0, binding = 0) uniform AtmosphereParamsBlock {
     AtmosphereParams atmosphere;
 };
 
-vec3 integrateOpticalDepth(const vec3 worldPos, const vec3 worldDir, in AtmosphereParams atmosphere, in float sampleCount)
-{
+vec3 integrateOpticalDepth(
+    const vec3 worldPos, const vec3 worldDir, in AtmosphereParams atmosphere, in float sampleCount) {
     // Compute next intersection with atmosphere or ground in ECEF.
     const float tEnd = intersectAtmosphere(worldPos, worldDir, atmosphere.bottomRadius, atmosphere.topRadius);
-    if (tEnd < 0.0f)
+    if (tEnd < 0.0f) {
         return vec3(0.0f);
+    }
 
     // Ray march the atmosphere to integrate optical depth.
     vec3 opticalDepth = vec3(0.0f);
@@ -25,8 +25,7 @@ vec3 integrateOpticalDepth(const vec3 worldPos, const vec3 worldDir, in Atmosphe
     // Traversed distance along the ray being evaluated.
     float t = 0.0f;
     const float segmentBias = 0.3f;
-    for (float s = 0.0f; s < sampleCount; s += 1.0f)
-    {
+    for (float s = 0.0f; s < sampleCount; s += 1.0f) {
         // Exact difference, important for accuracy of multiple scattering.
         const float tNext = tEnd * (s + segmentBias) / sampleCount;
         const float dt = tNext - t;
@@ -42,12 +41,11 @@ vec3 integrateOpticalDepth(const vec3 worldPos, const vec3 worldDir, in Atmosphe
     return opticalDepth;
 }
 
-void main()
-{
+void main() {
     // Transform texel's UV coordinates into suitable parameterization.
     float viewHeight;
     float viewZenithCosAngle;
-    const vec2 uv = vec2(gl_FragCoord.xy) / vec2(atmosphere.transmittanceLutWidth, atmosphere.transmittanceLutHeight);
+    const vec2 uv = vec2(gl_FragCoord.xy) / vec2(kTransmittanceLutWidth, kTransmittanceLutHeight);
     uvToTransmittanceLutParams(atmosphere.bottomRadius, atmosphere.topRadius, uv, viewHeight, viewZenithCosAngle);
 
     // Compute camera position from LUT coords.

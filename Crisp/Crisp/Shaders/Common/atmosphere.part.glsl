@@ -43,14 +43,11 @@ struct AtmosphereParams {
     vec4 sunIlluminance;
 
     vec3 cameraPosition;
-    int multiScatteringLutResolution;
+    int minRayMarchingSamples;
 
     vec2 screenResolution;
-    int transmittanceLutWidth;
-    int transmittanceLutHeight;
-
-    int minRayMarchingSamples;
     int maxRayMarchingSamples;
+    int debugViewMode;
 
     // Multiplier applied to the ray marched luminance before it is written out.
     float exposure;
@@ -64,9 +61,6 @@ struct AtmosphereParams {
     // Artistic scale on the multiple scattering contribution; 1 is the physically motivated value.
     float multipleScatteringFactor;
 
-    // 0 renders the atmosphere, everything else visualizes an intermediate LUT.
-    int debugViewMode;
-
     int drawSunDisk;
 
     // Sample the sky view LUT for open sky instead of ray marching it per pixel.
@@ -77,8 +71,6 @@ struct AtmosphereParams {
 
     // Altitude in km above which the sky view LUT is abandoned for a full march.
     float skyViewLutMaxAltitude;
-
-    float pad0;
 };
 
 struct MediumSample {
@@ -108,9 +100,16 @@ const float kPlanetRadiusOffset = 0.01f;
 const float kFarPlaneDepth = 0.0f;
 const float kNoDepthBuffer = -1.0f;
 
-// Must match the attachment created for SkyViewLutPass in Models/Atmosphere.cpp.
+// Must match the LUT constants in Models/Atmosphere.hpp.
+const float kTransmittanceLutWidth = 256.0f;
+const float kTransmittanceLutHeight = 64.0f;
+const float kMultiScatteringLutResolution = 32.0f;
 const float kSkyViewLutWidth = 192.0f;
 const float kSkyViewLutHeight = 108.0f;
+const float kCameraVolumeLutWidth = 32.0f;
+const float kCameraVolumeLutHeight = 32.0f;
+const float kCameraVolumeLutSliceCount = 32.0f;
+const float kCameraVolumeKmPerSlice = 4.0f;
 
 // Keeps bilinear taps from reaching past the edge of the LUT.
 float fromUnitToSubUvs(float u, float resolution) {
@@ -270,8 +269,7 @@ vec3 sampleMultipleScattering(
         vec2(0.0f),
         vec2(1.0f));
     uv = vec2(
-        fromUnitToSubUvs(uv.x, atmosphere.multiScatteringLutResolution),
-        fromUnitToSubUvs(uv.y, atmosphere.multiScatteringLutResolution));
+        fromUnitToSubUvs(uv.x, kMultiScatteringLutResolution), fromUnitToSubUvs(uv.y, kMultiScatteringLutResolution));
 
     return textureLod(lut, uv, 0).rgb;
 }
