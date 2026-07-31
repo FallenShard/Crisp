@@ -91,7 +91,7 @@ void AtmosphereScene::render(const FrameContext& frameContext) {
 
 void AtmosphereScene::applyAtmosphereSettings() {
     m_atmosphereParams.sunDirection = computeSunDirection(m_settings.sunAzimuthDegrees, m_settings.sunElevationDegrees);
-    m_atmosphereParams.sunIlluminance = glm::vec4(m_settings.sunColor * m_settings.sunIlluminanceScale, 1.0f);
+    m_atmosphereParams.sunIrradiance = glm::vec4(m_settings.sunColor * m_settings.sunIrradianceScale, 1.0f);
 
     // The shaders evaluate exp(densityScale * altitude), so they want the negated reciprocal scale height.
     m_atmosphereParams.rayleighDensityScale = -1.0f / std::max(m_settings.rayleighScaleHeight, 1e-3f);
@@ -133,7 +133,7 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
         ImGui::SliderFloat("Azimuth", &m_settings.sunAzimuthDegrees, 0.0f, 360.0f, "%.1f deg");
         ImGui::SliderFloat("Elevation", &m_settings.sunElevationDegrees, -90.0f, 90.0f, "%.1f deg");
         ImGui::ColorEdit3("Color", &m_settings.sunColor.x);
-        ImGui::SliderFloat("Illuminance", &m_settings.sunIlluminanceScale, 0.0f, 20.0f, "%.2f");
+        ImGui::SliderFloat("Irradiance", &m_settings.sunIrradianceScale, 0.0f, 20.0f, "%.2f");
 
         bool drawSunDisk = m_atmosphereParams.drawSunDisk != 0;
         if (ImGui::Checkbox("Draw sun disk", &drawSunDisk)) {
@@ -141,8 +141,8 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
         }
         ImGui::SliderFloat("Angular diameter", &m_atmosphereParams.sunAngularDiameterDegrees, 0.05f, 5.0f, "%.3f deg");
         ImGui::DragFloat(
-            "Disk luminance",
-            &m_atmosphereParams.sunDiskLuminance,
+            "Disk radiance",
+            &m_atmosphereParams.sunDiskRadiance,
             1000.0f,
             1.0f,
             1e9f,
@@ -215,6 +215,17 @@ void AtmosphereScene::drawAtmosphereGui() { // NOLINT(readability-function-size)
             "Above this altitude the LUT is abandoned for a full march. Its vertical parameterization is built "
             "around the horizon as seen from the camera and loses the detail that matters once the ground is far "
             "below.");
+    }
+
+    if (beginSection("Aerial perspective")) {
+        bool fastAerialPerspective = m_atmosphereParams.fastAerialPerspectiveEnabled != 0;
+        if (ImGui::Checkbox("Fast aerial perspective", &fastAerialPerspective)) {
+            m_atmosphereParams.fastAerialPerspectiveEnabled = fastAerialPerspective ? 1 : 0;
+        }
+        drawTooltip(
+            "Resolves shaded geometry from the froxel volume with a single fetch instead of marching it. Inert "
+            "until a depth pre-pass writes the view depth texture, since every pixel currently reads as open sky.");
+        ImGui::TextDisabled("Volume range: %.0f km", kCameraVolumeMaxDistance); // NOLINT
     }
 
     if (beginSection("Ray marching")) {

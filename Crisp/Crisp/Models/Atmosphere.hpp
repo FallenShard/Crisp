@@ -27,6 +27,7 @@ inline constexpr uint32_t kCameraVolumeLutWidth = 32;
 inline constexpr uint32_t kCameraVolumeLutHeight = 32;
 inline constexpr uint32_t kCameraVolumeLutSliceCount = 32;
 inline constexpr float kCameraVolumeKmPerSlice = 4.0f;
+inline constexpr float kCameraVolumeMaxDistance = kCameraVolumeLutSliceCount * kCameraVolumeKmPerSlice;
 
 // Mirrors the AtmosphereParams struct in Shaders/Common/atmosphere.part.glsl.
 struct AtmosphereParameters {
@@ -72,7 +73,8 @@ struct AtmosphereParameters {
     // Maximum considered atmosphere height (center to atmosphere top) in km.
     float topRadius{6460.0f};
 
-    glm::vec4 sunIlluminance{1.0f};
+    // Irradiance in, radiance out; this term is what picks the convention. Normalized, not physical.
+    glm::vec4 sunIrradiance{1.0f};
 
     // Camera position in km, relative to the ground directly below it.
     glm::vec3 cameraPosition{0.0f, 0.5f, 1.0f};
@@ -88,9 +90,9 @@ struct AtmosphereParameters {
     // Earth's sun subtends roughly 0.545 degrees.
     float sunAngularDiameterDegrees{0.545f};
 
-    // Same units as the ray marched sky, which sits around 0.05 here. Sized from the real sun to sky luminance
+    // Same units as the ray marched sky, which sits around 0.05 here. Sized from the real sun to sky radiance
     // ratio of roughly 2e5, rather than the 1e6 the reference uses on its differently scaled sky.
-    float sunDiskLuminance{1e4f};
+    float sunDiskRadiance{1e4f};
 
     // 1 is the physically motivated value; 0 isolates single scattering.
     float multipleScatteringFactor{1.0f};
@@ -106,6 +108,10 @@ struct AtmosphereParameters {
     // In km. The LUT's axes are built around the horizon as seen from the camera, so it stops being usable once
     // the ground is far below.
     float skyViewLutMaxAltitude{4.0f};
+
+    // Resolves shaded geometry from the froxel volume instead of marching. Inert until a depth pre-pass writes
+    // viewDepthTexture; see docs/atmosphere.md.
+    int32_t fastAerialPerspectiveEnabled{1};
 };
 
 inline constexpr std::array<const char*, 5> kDebugViewModeNames{

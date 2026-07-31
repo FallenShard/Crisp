@@ -21,7 +21,7 @@ private:
         float sunAzimuthDegrees{270.0f};
         float sunElevationDegrees{25.8f};
         glm::vec3 sunColor{1.0f, 1.0f, 1.0f};
-        float sunIlluminanceScale{1.0f};
+        float sunIrradianceScale{1.0f};
 
         float rayleighScaleHeight{kEarthRayleighScaleHeight};
         float mieScaleHeight{kEarthMieScaleHeight};

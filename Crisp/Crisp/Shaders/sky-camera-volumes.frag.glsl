@@ -15,18 +15,14 @@ layout(set = 0, binding = 0) uniform AtmosphereParamsBlock {
 layout(set = 1, binding = 0) uniform sampler2D transmittanceLut;
 layout(set = 1, binding = 1) uniform sampler2D multiScatteringLut;
 
-// 	vec3 multiScatteredLuminance = MultiScatTexture.SampleLevel(samplerLinearClamp, uv, 0).rgb;
-// 	return multiScatteredLuminance;
-// }
-
 struct SingleScatteringResult {
-    vec3 L;             // Scattered light (luminance)
-    vec3 opticalDepth;  // Optical depth (1/m)
-    vec3 transmittance; // transmittance in [0,1] (unitless)
+    vec3 L;
+    vec3 opticalDepth;
+    vec3 transmittance;
     vec3 multiScatAs1;
 };
 
-SingleScatteringResult integrateScatteredLuminance(
+SingleScatteringResult integrateScatteredRadiance(
     in vec2 pixPos,
     in vec3 worldPos,
     in vec3 worldDir,
@@ -39,20 +35,19 @@ SingleScatteringResult integrateScatteredLuminance(
     float tMaxMax) {
     SingleScatteringResult result;
     result.L = vec3(0.0f);
-    result.opticalDepth = vec3(0.0f);  // Optical depth (1/m)
-    result.transmittance = vec3(0.0f); // transmittance in [0,1] (unitless)
+    result.opticalDepth = vec3(0.0f);
+    result.transmittance = vec3(0.0f);
     result.multiScatAs1 = vec3(0.0f);
 
     vec3 clipSpace = vec3(pixPos / vec2(kCameraVolumeLutWidth, kCameraVolumeLutHeight) * 2.0f - 1.0f, kFarPlaneDepth);
 
-    // Compute next intersection with atmosphere or ground
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
     float tBottom = raySphereIntersectNearest(worldPos, worldDir, earthO, atmosphere.bottomRadius);
     float tTop = raySphereIntersectNearest(worldPos, worldDir, earthO, atmosphere.topRadius);
     float tMax = 0.0f;
     if (tBottom < 0.0f) {
         if (tTop < 0.0f) {
-            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away
+            tMax = 0.0f;
             return result;
         } else {
             tMax = tTop;
@@ -78,25 +73,18 @@ SingleScatteringResult integrateScatteredLuminance(
     }
     tMax = min(tMax, tMaxMax);
 
-    // Sample count
     float sampleCount = sampleCountIni;
     float sampleCountFloor = sampleCountIni;
     float tMaxFloor = tMax;
     float dt = tMax / sampleCount;
 
-    // Phase functions
-    const float uniformPhase = 1.0 / (4.0 * PI);
-    const vec3 wi = sunDir;
-    const vec3 wo = worldDir;
-    float cosTheta = dot(wi, wo);
-    const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta); // mnegate cosTheta because
-                                                                                          // due to worldDir being a
-                                                                                          // "in" direction.
-    const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta); // mnegate cosTheta because due to worldDir
-                                                                             // being a "in" direction.
-    const vec3 globalL = atmosphere.sunIlluminance.rgb;
+    float cosTheta = dot(sunDir, worldDir);
 
-    // Ray march the atmosphere to integrate optical depth
+    // Negated because worldDir is an incoming direction.
+    const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta);
+    const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta);
+    const vec3 globalL = atmosphere.sunIrradiance.rgb;
+
     vec3 L = vec3(0.0f);
     vec3 throughput = vec3(1.0);
     vec3 opticalDepth = vec3(0.0);
@@ -104,9 +92,7 @@ SingleScatteringResult integrateScatteredLuminance(
     float tPrev = 0.0;
     const float sampleSegmentT = 0.3f;
     for (float s = 0.0f; s < sampleCount; s += 1.0f) {
-
-        // t = tMax * (s + sampleSegmentT) / sampleCount;
-        //  Exact difference, important for accuracy of multiple scattering
+        // Stepping by the exact difference rather than the nominal step keeps the integration accurate.
         float newT = tMax * (s + sampleSegmentT) / sampleCount;
         dt = newT - t;
         t = newT;
@@ -125,7 +111,6 @@ SingleScatteringResult integrateScatteredLuminance(
         const vec3 phaseTimesScattering =
             medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue;
 
-        // Earth shadow
         const float tEarth =
             raySphereIntersectNearest(P, sunDir, earthO + kPlanetRadiusOffset * upVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
@@ -153,52 +138,46 @@ SingleScatteringResult integrateScatteredLuminance(
 }
 
 void main() {
-    // Compute viewing direction for the given pixel.
     const vec2 pixPos = gl_FragCoord.xy;
     const vec3 ndcPos = vec3(pixPos / vec2(kCameraVolumeLutWidth, kCameraVolumeLutHeight) * 2.0f - 1.0f, 0.5f);
     const vec4 HPos = atmosphere.invVP * vec4(ndcPos, 1.0);
     const vec3 eyePos = HPos.xyz / HPos.w;
     vec3 worldDir = normalize(eyePos - atmosphere.cameraPosition);
 
-    // In ECEF coordinates
     vec3 worldPosEcef = atmosphere.cameraPosition + vec3(0.0f, atmosphere.bottomRadius, 0.0f);
     vec3 worldPos = worldPosEcef;
 
     float sliceT = (float(gl_Layer) + 0.5f) / kCameraVolumeLutSliceCount;
-    sliceT *= sliceT; // squared distribution
+    sliceT *= sliceT; // Squared distribution puts more slices near the camera.
     sliceT *= kCameraVolumeLutSliceCount;
 
-    // Compute position from froxel information
     float tMax = sliceT * kCameraVolumeKmPerSlice;
     vec3 newWorldPos = worldPos + tMax * worldDir;
 
-    // If the voxel is under the ground, make sure to offset it out on the ground.
     float viewHeight = length(newWorldPos);
-
     if (viewHeight <= (atmosphere.bottomRadius + kPlanetRadiusOffset)) {
-        // Apply a position offset to make sure no artefact are visible close to the earth boundaries for large voxel.
+        // Lift a voxel that ended up under the ground back onto it, or large voxels show artifacts at the boundary.
         newWorldPos = normalize(newWorldPos) * (atmosphere.bottomRadius + kPlanetRadiusOffset + 0.001f);
         worldDir = normalize(newWorldPos - worldPosEcef);
         tMax = length(newWorldPos - worldPosEcef);
     }
     float tMaxMax = tMax;
 
-    // Move ray marching start up to top atmosphere.
     viewHeight = length(worldPos);
     if (viewHeight >= atmosphere.topRadius) {
         vec3 prevWorldPos = worldPos;
         if (!moveToTopAtmosphere(worldPos, worldDir, atmosphere.topRadius)) {
-            // Ray is not intersecting the atmosphere
             finalColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
             return;
         }
         const float lengthToAtmosphere = length(prevWorldPos - worldPos);
         if (tMaxMax < lengthToAtmosphere) {
-            // tMaxMax for this voxel is not within earth atmosphere
+            // This voxel ends before the atmosphere even starts.
             finalColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
             return;
         }
-        // Now world position has been moved to the atmosphere boundary: we need to reduce tMaxMax accordingly.
+
+        // The start moved forward to the atmosphere boundary, so the remaining distance shrinks by as much.
         tMaxMax = max(0.0, tMaxMax - lengthToAtmosphere);
     }
 
@@ -207,8 +186,7 @@ void main() {
     const float depthBufferValue = kNoDepthBuffer;
     const bool mieRayPhase = true;
     const vec3 sunDir = atmosphere.sunDirection;
-    const vec3 sunLuminance = vec3(0.0);
-    SingleScatteringResult ss = integrateScatteredLuminance(
+    SingleScatteringResult ss = integrateScatteredRadiance(
         pixPos, worldPos, worldDir, sunDir, atmosphere, ground, sampleCountIni, depthBufferValue, mieRayPhase, tMaxMax);
 
     const float transmittance = dot(ss.transmittance, vec3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));

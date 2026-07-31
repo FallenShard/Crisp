@@ -5,42 +5,32 @@ struct AtmosphereParams {
     mat4 VP;
     mat4 invVP;
 
-    // Rayleigh scattering coefficients + exponential distribution scale in the atmosphere
     vec3 rayleighScattering;
     float rayleighDensityExpScale;
 
-    // Mie scattering coefficients + exponential distribution scale in the atmosphere
     vec3 mieScattering;
     float mieDensityExpScale;
 
-    // Mie extinction coefficients + phase function excentricity
     vec3 mieExtinction;
     float miePhaseG;
 
-    // Mie absorption coefficients
     vec4 mieAbsorption;
 
-    // Ozone absorption and layer width
     vec3 ozoneAbsorption;
 
-    // Another medium type in the atmosphere
     float absorptionDensity0LayerWidth;
     float absorptionDensity0ConstantTerm;
     float absorptionDensity0LinearTerm;
     float absorptionDensity1ConstantTerm;
     float absorptionDensity1LinearTerm;
 
-    // The albedo of the ground.
     vec3 groundAlbedo;
-    // Radius of the planet (center to ground) in km.
     float bottomRadius;
 
-    // Direction from where the sun is facing
     vec3 sunDirection;
-    // Maximum considered atmosphere height (center to atmosphere top) in km.
     float topRadius;
 
-    vec4 sunIlluminance;
+    vec4 sunIrradiance;
 
     vec3 cameraPosition;
     int minRayMarchingSamples;
@@ -49,28 +39,21 @@ struct AtmosphereParams {
     int maxRayMarchingSamples;
     int debugViewMode;
 
-    // Multiplier applied to the ray marched luminance before it is written out.
     float exposure;
 
-    // Angular diameter of the sun disk, in degrees.
     float sunAngularDiameterDegrees;
 
-    // Luminance of the sun disk itself, in the same units as the ray marched sky.
-    float sunDiskLuminance;
+    // In the same units as the ray marched sky.
+    float sunDiskRadiance;
 
-    // Artistic scale on the multiple scattering contribution; 1 is the physically motivated value.
+    // 1 is the physically motivated value.
     float multipleScatteringFactor;
 
     int drawSunDisk;
-
-    // Sample the sky view LUT for open sky instead of ray marching it per pixel.
     int fastSkyEnabled;
-
-    // Shade the planet surface where a view ray ends on it.
     int renderGround;
-
-    // Altitude in km above which the sky view LUT is abandoned for a full march.
     float skyViewLutMaxAltitude;
+    int fastAerialPerspectiveEnabled;
 };
 
 struct MediumSample {
@@ -110,6 +93,9 @@ const float kCameraVolumeLutWidth = 32.0f;
 const float kCameraVolumeLutHeight = 32.0f;
 const float kCameraVolumeLutSliceCount = 32.0f;
 const float kCameraVolumeKmPerSlice = 4.0f;
+
+// Furthest distance the froxel volume reaches; geometry beyond it has to fall back to a full march.
+const float kCameraVolumeMaxDistance = kCameraVolumeLutSliceCount * kCameraVolumeKmPerSlice;
 
 // Keeps bilinear taps from reaching past the edge of the LUT.
 float fromUnitToSubUvs(float u, float resolution) {
@@ -208,12 +194,9 @@ float intersectAtmosphere(const vec3 worldPos, const vec3 worldDir, const float 
 
 bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in float atmosphereTopRadius) {
     const float viewHeight = length(worldPos);
-
-    // Check if we are above the atmosphere (in the space).
     if (viewHeight > atmosphereTopRadius) {
         const float tTop = raySphereIntersectNearest(worldPos, worldDir, vec3(0.0f, 0.0f, 0.0f), atmosphereTopRadius);
         if (tTop < 0.0f) {
-            // Ray is not intersecting the atmosphere.
             return false;
         }
 
@@ -221,7 +204,7 @@ bool moveToTopAtmosphere(inout vec3 worldPos, const in vec3 worldDir, const in f
         worldPos = worldPos + tTop * worldDir - kPlanetRadiusOffset * upVector;
     }
 
-    return true; // ok to start tracing.
+    return true;
 }
 
 void uvToTransmittanceLutParams(

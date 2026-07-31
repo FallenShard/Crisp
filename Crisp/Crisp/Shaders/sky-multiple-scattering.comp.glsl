@@ -9,9 +9,9 @@ layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 #include "Common/atmosphere.part.glsl"
 
 struct SingleScatteringResult {
-    vec3 L;             // Scattered light (luminance)
-    vec3 opticalDepth;  // Optical depth (1/m)
-    vec3 transmittance; // transmittance in [0,1] (unitless)
+    vec3 L;
+    vec3 opticalDepth;
+    vec3 transmittance;
     vec3 multiScatAs1;
 };
 
@@ -22,7 +22,7 @@ layout(set = 0, binding = 0) uniform AtmosphereParamsBlock {
 layout(set = 1, binding = 0, rgba16f) uniform writeonly image2D multiScatteringLut;
 layout(set = 1, binding = 1) uniform sampler2D transmittanceLut;
 
-SingleScatteringResult integrateScatteredLuminance(
+SingleScatteringResult integrateScatteredRadiance(
     in vec2 ndcPos,
     in vec3 worldPos,
     in vec3 worldDir,
@@ -39,14 +39,13 @@ SingleScatteringResult integrateScatteredLuminance(
 
     vec3 clipSpace = vec3(ndcPos, 1.0);
 
-    // Compute next intersection with atmosphere or ground
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
     float tBottom = raySphereIntersectNearest(worldPos, worldDir, earthO, atmosphere.bottomRadius);
     float tTop = raySphereIntersectNearest(worldPos, worldDir, earthO, atmosphere.topRadius);
     float tMax = 0.0f;
     if (tBottom < 0.0f) {
         if (tTop < 0.0f) {
-            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away
+            tMax = 0.0f;
             return result;
         } else {
             tMax = tTop;
@@ -58,40 +57,27 @@ SingleScatteringResult integrateScatteredLuminance(
     }
 
     depthBufferValue = 0.0f;
-    // 		float tDepth = length(DepthBufferWorldPos.xyz - (worldPos + vec3(0.0, 0.0, -Atmosphere.BottomRadius))); //
-    // apply earth offset to go back to origin as top of earth mode. 		if (tDepth < tMax)
-    // 		{
-    // 			tMax = tDepth;
-    // 		}
-    // 	}
-    // 	//		if (variableSampleCount && clipSpace.z == 1.0f)
-    // 	//			return result;
-    // }
     tMax = min(tMax, tMaxMax);
 
-    // Sample count
     float sampleCount = sampleCountIni;
     float sampleCountFloor = sampleCountIni;
     float tMaxFloor = tMax;
     float dt = tMax / sampleCount;
 
-    // Phase functions
     const float cosTheta = dot(sunDir, worldDir);
     const float uniformPhaseValue = 1.0f / (4.0f * PI);
     const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta);
     const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta);
 
-    vec3 globalL = atmosphere.sunIlluminance.rgb;
+    vec3 globalL = atmosphere.sunIrradiance.rgb;
 
-    // Ray march the atmosphere to integrate optical depth
     vec3 L = vec3(0.0f);
     vec3 throughput = vec3(1.0);
     vec3 opticalDepth = vec3(0.0);
     float t = 0.0f;
     const float sampleSegmentT = 0.3f;
     for (float s = 0.0f; s < sampleCount; s += 1.0f) {
-        // t = tMax * (s + sampleSegmentT) / sampleCount;
-        //  Exact difference, important for accuracy of multiple scattering
+        // Stepping by the exact difference rather than the nominal step keeps the integration accurate.
         float newT = tMax * (s + sampleSegmentT) / sampleCount;
         dt = newT - t;
         t = newT;
@@ -113,7 +99,6 @@ SingleScatteringResult integrateScatteredLuminance(
             mieRayPhase ? medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue
                         : medium.scattering * uniformPhaseValue;
 
-        // Earth's shadow.
         const float tEarth =
             raySphereIntersectNearest(P, sunDir, earthO + kPlanetRadiusOffset * upVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
@@ -193,7 +178,7 @@ void main() {
         const float cosTheta = cos(theta);
         const float sinTheta = sin(theta);
         const vec3 worldDir = vec3(cosTheta * sinPhi, cosPhi, -sinTheta * sinPhi);
-        SingleScatteringResult result = integrateScatteredLuminance(
+        SingleScatteringResult result = integrateScatteredRadiance(
             ndcPos, worldPos, worldDir, sunDir, atmosphere, ground, sampleCount, depthBufferValue, mieRayPhase, 9000000.0f);
 
         const float weight = sphereSolidAngle / (sqrtSample * sqrtSample);
@@ -220,17 +205,9 @@ void main() {
     vec3 multiScatteredRadiance = multiScatShared[0] * isotropicPhaseValue; // Equation 7 f_ms
     vec3 radiance = radianceShared[0] * isotropicPhaseValue;                // Equation 5 L_2ndOrder
 
-    // multiScatAs1 represents the amount of luminance scattered as if the integral of scattered luminance over the
-    // sphere would be 1.
-    //  - 1st order of scattering: one can ray-march a straight path as usual over the sphere. That is
-    //  InScatteredLuminance.
-    //  - 2nd order of scattering: the inscattered luminance is InScatteredLuminance at each of samples of fist order
-    //  integration. Assuming a uniform phase function that is represented by multiScatAs1,
-    //  - 3nd order of scattering: the inscattered luminance is (InScatteredLuminance * multiScatAs1 * multiScatAs1)
-    //  - etc.
-    // For a serie, sum_{n=0}^{n=+inf} = 1 + r + r^2 + r^3 + ... + r^n = 1 / (1.0 - r), see
-    // https://en.wikipedia.org/wiki/Geometric_series Energy conservation puts f_ms below 1, but the ray march only
-    // approximates it, so clamp rather than risk a division by zero or a sign flip on the sum.
+    // Each further order scales the previous one by multiScatAs1, so orders 2..inf collapse into the geometric
+    // series 1 / (1 - f_ms). Energy conservation puts f_ms below 1, but the ray march only approximates it, so
+    // clamp rather than risk a division by zero or a sign flip on the sum.
     const vec3 multiScatteringSum = 1.0f / (1.0 - min(multiScatteredRadiance, vec3(0.999f)));
     const vec3 L = radiance * multiScatteringSum; // Equation 10 Psi_ms
     imageStore(multiScatteringLut, ivec2(gl_GlobalInvocationID.xy), vec4(L, 1.0f));

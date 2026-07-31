@@ -21,11 +21,11 @@ layout(set = 1, binding = 3) uniform sampler2DArray cameraVolumeLut;
 layout(set = 1, binding = 4) uniform sampler2D viewDepthTexture;
 
 struct SingleScatteringResult {
-    vec3 L;             // Scattered light (luminance)
-    vec3 transmittance; // transmittance in [0,1] (unitless)
+    vec3 L;
+    vec3 transmittance;
 };
 
-SingleScatteringResult integrateScatteredLuminance(
+SingleScatteringResult integrateScatteredRadiance(
     in vec2 pixPos,
     in vec3 worldPos,
     in vec3 worldDir,
@@ -39,18 +39,17 @@ SingleScatteringResult integrateScatteredLuminance(
     tMaxMax = 9000000.0f;
     SingleScatteringResult result;
     result.L = vec3(0.0f);
-    result.transmittance = vec3(0.0f); // transmittance in [0,1] (unitless)
+    result.transmittance = vec3(0.0f);
 
     vec3 clipSpace = vec3(pixPos / vec2(atmosphere.screenResolution) * 2.0f - 1.0f, kFarPlaneDepth);
 
-    // Compute next intersection with atmosphere or ground
     vec3 earthO = vec3(0.0f, 0.0f, 0.0f);
     float tBottom = raySphereIntersectNearest(worldPos, worldDir, earthO, atmosphere.bottomRadius);
     float tTop = raySphereIntersectNearest(worldPos, worldDir, earthO, atmosphere.topRadius);
     float tMax = 0.0f;
     if (tBottom < 0.0f) {
         if (tTop < 0.0f) {
-            tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away
+            tMax = 0.0f;
             return result;
         } else {
             tMax = tTop;
@@ -76,7 +75,6 @@ SingleScatteringResult integrateScatteredLuminance(
     }
     tMax = min(tMax, tMaxMax);
 
-    // Sample count
     float sampleCount = sampleCountIni;
     float sampleCountFloor = sampleCountIni;
     float tMaxFloor = tMax;
@@ -87,40 +85,34 @@ SingleScatteringResult integrateScatteredLuminance(
     }
     float dt = tMax / sampleCount;
 
-    // Phase functions
     const float cosTheta = dot(sunDir, worldDir);
-    const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta); // mnegate cosTheta because
-                                                                                          // due to worldDir being a
-                                                                                          // "in" direction.
-    const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta);
-    const vec3 globalL = atmosphere.sunIlluminance.rgb;
 
-    // Ray march the atmosphere to integrate optical depth
+    // Negated because worldDir is an incoming direction.
+    const float miePhaseValue = computeMiePhaseFunction(atmosphere.miePhaseG, -cosTheta);
+    const float rayleighPhaseValue = computeRayleighPhaseFunction(cosTheta);
+    const vec3 globalL = atmosphere.sunIrradiance.rgb;
+
     vec3 L = vec3(0.0f);
     vec3 throughput = vec3(1.0);
     float t = 0.0f;
     const float sampleSegmentT = 0.3f;
     for (float s = 0.0f; s < sampleCount; s += 1.0f) {
         if (variableSampleCount) {
-            // More expenssive but artefact free
+            // More expensive than a uniform step, but artifact free.
             float t0 = (s) / sampleCountFloor;
             float t1 = (s + 1.0f) / sampleCountFloor;
-            // Non linear distribution of sample within the range.
             t0 = t0 * t0;
             t1 = t1 * t1;
-            // Make t0 and t1 world space distances.
             t0 = tMaxFloor * t0;
             if (t1 > 1.0) {
                 t1 = tMax;
-                //	t1 = tMaxFloor;	// this reveal depth slices
             } else {
                 t1 = tMaxFloor * t1;
             }
             t = t0 + (t1 - t0) * sampleSegmentT;
             dt = t1 - t0;
         } else {
-            // t = tMax * (s + sampleSegmentT) / sampleCount;
-            //  Exact difference, important for accuracy of multiple scattering
+            // Stepping by the exact difference rather than the nominal step keeps the integration accurate.
             float newT = tMax * (s + sampleSegmentT) / sampleCount;
             dt = newT - t;
             t = newT;
@@ -139,7 +131,6 @@ SingleScatteringResult integrateScatteredLuminance(
         const vec3 phaseTimesScattering =
             medium.scatteringMie * miePhaseValue + medium.scatteringRay * rayleighPhaseValue;
 
-        // Earth shadow
         const float tEarth =
             raySphereIntersectNearest(P, sunDir, earthO + kPlanetRadiusOffset * upVector, atmosphere.bottomRadius);
         const float earthShadow = tEarth >= 0.0f ? 0.0f : 1.0f;
@@ -153,6 +144,7 @@ SingleScatteringResult integrateScatteredLuminance(
         const vec3 S =
             globalL *
             (earthShadow * shadow * transmittanceToSun * phaseTimesScattering + multiScatteredL * medium.scattering);
+        // Energy conserving segment integration; Hillaire, Frostbite SIGGRAPH 2015, slide 28.
         const vec3 integralS = (S - S * stepTransmittance) / medium.extinction;
         L += throughput * integralS;
         throughput *= stepTransmittance;
@@ -176,12 +168,33 @@ SingleScatteringResult integrateScatteredLuminance(
     return result;
 }
 
-float aerialPerspectiveDepthToSlice(float depth) {
-    return depth * (1.0f / kCameraVolumeKmPerSlice);
-}
+// The froxel volume holds the in-scattering and opacity already accumulated between the camera and each slice, so
+// a shaded pixel needs one fetch instead of a march.
+//
+// sky-camera-volumes.frag stores layer i at ((i + 0.5) / N)^2 * N * kmPerSlice, a squared distribution that packs
+// slices near the camera where the haze changes fastest. Inverting it for a distance t gives
+// layer = sqrt(N * t / kmPerSlice) - 0.5.
+//
+// The volume is a 2D array rather than a 3D texture, so the sampler cannot filter across slices and the two
+// neighbouring layers have to be blended by hand.
+vec4 sampleAerialPerspective(const vec2 screenUv, const float tDepth) {
+    float slice = tDepth / kCameraVolumeKmPerSlice;
 
-float aerialPerspectiveSliceToDepth(float slice) {
-    return slice * kCameraVolumeKmPerSlice;
+    // The nearest slice is centred at a finite distance, but there is no haze at all at zero range, so fade the
+    // whole contribution out over the first half slice rather than extrapolating below it.
+    float weight = 1.0f;
+    if (slice < 0.5f) {
+        weight = clamp(slice * 2.0f, 0.0f, 1.0f);
+        slice = 0.5f;
+    }
+
+    const float layer = sqrt(slice * kCameraVolumeLutSliceCount) - 0.5f;
+    const float layer0 = clamp(floor(layer), 0.0f, kCameraVolumeLutSliceCount - 1.0f);
+    const float layer1 = min(layer0 + 1.0f, kCameraVolumeLutSliceCount - 1.0f);
+
+    const vec4 ap0 = textureLod(cameraVolumeLut, vec3(screenUv, layer0), 0);
+    const vec4 ap1 = textureLod(cameraVolumeLut, vec3(screenUv, layer1), 0);
+    return weight * mix(ap0, ap1, clamp(layer - layer0, 0.0f, 1.0f));
 }
 
 // The solar disc dims towards its limb, faster at short wavelengths, which is what warms the rim.
@@ -198,7 +211,7 @@ vec3 computeSunLimbDarkening(const float centerToEdge) {
 
 // angleToSun and edgeFadeWidth come from the caller because the fade width needs a screen space derivative, which
 // is only well defined in uniform control flow.
-vec3 getSunLuminance(
+vec3 getSunRadiance(
     const AtmosphereParams atmosphere,
     const vec3 worldPos,
     const vec3 worldDir,
@@ -222,7 +235,7 @@ vec3 getSunLuminance(
     }
 
     const float centerToEdge = clamp(angleToSun / sunAngularRadius, 0.0f, 1.0f);
-    return atmosphere.sunDiskLuminance * coverage * computeSunLimbDarkening(centerToEdge);
+    return atmosphere.sunDiskRadiance * coverage * computeSunLimbDarkening(centerToEdge);
 }
 
 // Lets the LUT parameterizations be inspected directly instead of inferred from the final image.
@@ -274,11 +287,12 @@ void main() {
     const float angleToSun = acos(clamp(dot(worldDir, atmosphere.sunDirection), -1.0f, 1.0f));
     const float sunEdgeFadeWidth = max(fwidth(angleToSun), 1e-7f);
 
-    // No depth pre-pass writes viewDepthTexture yet, so every pixel is treated as open sky.
+    // The one seam left: nothing writes viewDepthTexture yet, so every pixel reads as open sky and the aerial
+    // perspective path below stays unreachable. A depth pre-pass turns this back into the texture fetch.
     const float fragmentDepth = kFarPlaneDepth; // textureLod(viewDepthTexture, screenUv, 0).r;
 
     if (fragmentDepth == kFarPlaneDepth) {
-        L += getSunLuminance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth);
+        L += getSunRadiance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth);
     }
 
     // The sky view LUT is only valid near the ground, since its vertical axis is built around the horizon as seen
@@ -317,51 +331,32 @@ void main() {
         return;
     }
 
-    // #endif
+    // Shaded geometry within reach of the froxel volume is resolved from it; the volume only spans
+    // kCameraVolumeMaxDistance, so anything further away falls through to the full march.
+    if (atmosphere.fastAerialPerspectiveEnabled != 0 && fragmentDepth != kFarPlaneDepth) {
+        homogPos = atmosphere.invVP * vec4(ndcPos, fragmentDepth, 1.0f);
+        const vec3 depthWorldPos = homogPos.xyz / homogPos.w;
 
-    // #if FASTAERIALPERSPECTIVE_ENABLED
-    //     homogPos = atmosphere.invVP * vec4(ndcPos, fragmentDepth, 1.0f);
-    //     const vec3 depthWorldPos = homogPos.xyz / homogPos.w;
-    //
-    //     // Figure out the depth slice that we need to sample our luminance from.
-    //     const float tDepth = length(depthWorldPos.xyz - (worldPos + vec3(0.0f, -atmosphere.bottomRadius, 0.0f)));
-    //     float slice = aerialPerspectiveDepthToSlice(tDepth);
-    //     float weight = 1.0;
-    //
-    //     // For slice 0, we weigh everything down to 0 at depth 0.
-    //     if (slice < 0.5)
-    //     {
-    //         weight = clamp(slice * 2.0, 0, 1);
-    //         slice = 0.5;
-    //     }
-    //     float w = sqrt(slice / kCameraVolumeLutSliceCount);  // squared distribution
+        // Both sides are in scene space here, unlike worldPos, which carries the planet offset.
+        const float tDepth = length(depthWorldPos - atmosphere.cameraPosition);
+        if (tDepth < kCameraVolumeMaxDistance) {
+            const vec4 ap = sampleAerialPerspective(screenUv, tDepth);
+            finalColor = vec4((L + ap.rgb) * atmosphere.exposure, ap.a);
+            return;
+        }
+    }
 
-    // finalColor = vec4(tDepth, slice, weight, w);
-
-    //    const vec4 AP = weight * textureLod(cameraVolumeLut, vec3(pixPos /
-    //    vec2(atmosphere.screenResolution), w), 0); L.rgb += AP.rgb; float Opacity = AP.a;
-    //
-    //    finalColor = vec4(L, Opacity);
-
-    // finalColor = vec4(L * 5, 1.0 - avgTransmittance);
-    // output.Luminance *= frac(
-    //     clamp(w * kCameraVolumeLutSliceCount, 0.0f, kCameraVolumeLutSliceCount));
-
-    // #else // FASTAERIALPERSPECTIVE_ENABLED
-
-    // Move to top atmosphere as the starting point for ray marching.
-    // This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
+    // Must stay after the fast sky path above, which tests against the unmoved camera position.
     if (!moveToTopAtmosphere(worldPos, worldDir, atmosphere.topRadius)) {
-        // Ray is not intersecting the atmosphere
         finalColor = vec4(
-            getSunLuminance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth) * atmosphere.exposure, 1.0f);
+            getSunRadiance(atmosphere, worldPos, worldDir, angleToSun, sunEdgeFadeWidth) * atmosphere.exposure, 1.0f);
         return;
     }
 
     const bool ground = atmosphere.renderGround != 0;
     const float sampleCount = 0.0f;
     const bool variableSampleCount = true;
-    const SingleScatteringResult ss = integrateScatteredLuminance(
+    const SingleScatteringResult ss = integrateScatteredRadiance(
         pixPos,
         worldPos,
         worldDir,
@@ -376,6 +371,4 @@ void main() {
     L += ss.L;
     const float avgTransmittance = dot(ss.transmittance, vec3(1.0f / 3.0f));
     finalColor = vec4(L * atmosphere.exposure, 1.0f - avgTransmittance);
-
-    // #endif // FASTAERIALPERSPECTIVE_ENABLED
 }
