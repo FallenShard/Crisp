@@ -113,6 +113,7 @@ VulkanDevice::VulkanDevice(
 }
 
 VulkanDevice::~VulkanDevice() {
+    waitIdle();
     m_pipelineCache.reset();
     m_resourceDeallocator->freeAllResources();
     vmaDestroyAllocator(m_memoryAllocator);
