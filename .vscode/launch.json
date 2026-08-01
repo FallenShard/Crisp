@@ -14,7 +14,7 @@
             "type"       : "cppvsdbg",
             "request"    : "launch",
             "program"    : "${input:crispMainPath}",
-            "args"       : [ "--config", "${workspaceFolder}/Args.json" ],
+            "args"       : [ "--config_path", "${workspaceFolder}/Args.json" ],
             "stopAtEntry": false,
             "cwd"        : "${workspaceFolder}",
             "console"    : "integratedTerminal"

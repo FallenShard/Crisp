@@ -79,4 +79,18 @@ std::optional<T> getIfExists(const nlohmann::json& json, const std::string_view 
     return json[key];
 }
 
+#define CRISP_PARSE_OPT(valueRef, json, key)                                                                           \
+    {                                                                                                                  \
+        if (json.contains(key)) {                                                                                      \
+            valueRef = json[key].get<std::decay_t<decltype(valueRef)>>();                                              \
+        }                                                                                                              \
+    }
+
+#define CRISP_PARSE_OPT_TYPED(valueRef, json, key, type)                                                               \
+    {                                                                                                                  \
+        if (json.contains(key)) {                                                                                      \
+            valueRef = json[key].get<type>();                                                                          \
+        }                                                                                                              \
+    }
+
 } // namespace crisp

@@ -44,6 +44,7 @@ Application::Application(const ApplicationEnvironment& environment)
         .requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
         .deviceFeatureRequests = createDefaultFeatureRequests(),
         .presentationMode = PresentationMode::DoubleBuffered,
+        .includeValidation = environment.getConfigParams().enableValidationLayers,
     };
     addPageableMemoryFeatures(vulkanCoreParams.deviceFeatureRequests);
     if (environment.getConfigParams().enableRayTracingExtension) {

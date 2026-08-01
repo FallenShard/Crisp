@@ -37,8 +37,15 @@ The equivalent cmuck workflow is:
 ```powershell
 cmuck @mode/dev configure
 cmuck @mode/dev build CrispMain
-cmuck @mode/dev run CrispMain -- --config Args.json
+cmuck @mode/dev run CrispMain -- --config_path Args.json
 ```
+
+The configuration file is selected with `--config_path`. Ray tracing, log level,
+and scene can be overridden after loading it, for example with
+`--enable_ray_tracing true --log_level debug --scene atmosphere`.
+The `--enable_ray_tracing` override exists solely to support RenderDoc: set it
+to `false` for scenes that do not require the Vulkan ray-tracing extensions so
+that those extensions are not enabled while capturing.
 
 `@mode/dev` selects `x64-debug`; `@mode/opt` selects `x64-release`.
 

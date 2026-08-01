@@ -6,8 +6,7 @@
 int main(int argc, char** argv) {
     CRISP_MAKE_LOGGER_ST("Main");
     {
-        const auto cliParams = crisp::parse(argc, argv).unwrap();
-        auto configParams = crisp::parseConfig(cliParams.configPath).unwrap();
+        auto configParams = crisp::parseConfig(argc, argv).unwrap();
         crisp::ApplicationEnvironment environment(std::move(configParams));
         crisp::Application application(environment);
         application.run();

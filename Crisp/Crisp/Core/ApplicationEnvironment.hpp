@@ -8,10 +8,6 @@ namespace crisp {
 class ApplicationEnvironment // NOLINT
 {
 public:
-    struct CliParams {
-        std::filesystem::path configPath;
-    };
-
     struct ConfigParams {
         std::string logLevel{"info"};
 
@@ -20,10 +16,11 @@ public:
         std::filesystem::path outputDir{"D:/Projects/Crisp/Output"};
         std::optional<std::filesystem::path> imGuiFontPath{std::nullopt};
 
+        bool enableValidationLayers{true};
         bool enableRayTracingExtension{false};
 
         std::string scene{"ocean"};
-        nlohmann::json sceneArgs;
+        nlohmann::json sceneArgs{nlohmann::json::object()};
     };
 
     explicit ApplicationEnvironment(ConfigParams&& configParams);
@@ -46,8 +43,7 @@ private:
     ConfigParams m_configParams;
 };
 
-Result<ApplicationEnvironment::CliParams> parse(int32_t argc, char** argv);
-
 Result<ApplicationEnvironment::ConfigParams> parseConfig(const std::filesystem::path& configPath);
+Result<ApplicationEnvironment::ConfigParams> parseConfig(int32_t argc, char** argv);
 
 } // namespace crisp

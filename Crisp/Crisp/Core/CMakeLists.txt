@@ -154,6 +154,16 @@ target_link_libraries(
     PRIVATE Crisp::CommandLineParser
 )
 
+add_cpp_test(
+    CrispApplicationEnvironmentTest
+    "Test/ApplicationEnvironmentTest.cpp"
+)
+target_link_libraries(
+    CrispApplicationEnvironmentTest
+    PRIVATE Crisp::ApplicationEnvironment
+    PRIVATE Crisp::UniqueTemporaryFile
+)
+
 add_cpp_static_library(
     CrispApplication
     "Application.cpp"
