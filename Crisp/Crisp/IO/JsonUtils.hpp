@@ -60,10 +60,14 @@ bool hasField(const nlohmann::json& json, const std::string_view key) {
 inline Result<nlohmann::json> loadJsonFromFile(const std::filesystem::path& filePath) {
     auto maybeString = fileToString(filePath);
     if (!maybeString) {
-        return resultError("Failed to load json from a file: {}", maybeString.getError());
+        return resultError("Failed to load JSON from {}: {}", filePath.string(), maybeString.getError());
     }
 
-    return nlohmann::json::parse(maybeString.extract());
+    try {
+        return nlohmann::json::parse(maybeString.extract());
+    } catch (const nlohmann::json::parse_error& exception) {
+        return resultError("Failed to parse JSON from {}: {}", filePath.string(), exception.what());
+    }
 }
 
 template <typename T>

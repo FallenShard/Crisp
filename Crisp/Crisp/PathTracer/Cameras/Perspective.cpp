@@ -7,7 +7,7 @@
 namespace crisp {
 PerspectiveCamera::PerspectiveCamera(const VariantMap& params) {
     m_imageSize = params.get<glm::ivec2>("imageSize", {960, 540});
-    m_fov = params.get<float>("fov", 30.0f);
+    m_fovY = params.get<float>("fovY", 30.0f);
     m_nearZ = params.get<float>("zNear", 1e-4f);
     m_farZ = params.get<float>("zFar", 1e4f);
 
@@ -24,7 +24,7 @@ PerspectiveCamera::PerspectiveCamera(const VariantMap& params) {
 
     Transform ndcScale = Transform::createScale(glm::vec3(2.0f, 2.0f / aspect, 1.0f));
     Transform screenShift = Transform::createTranslation(glm::vec3(-1.0f, -1.0f / aspect, 0.0f));
-    Transform unprojection = Transform(glm::perspective(glm::radians(m_fov), 1.0f, m_nearZ, m_farZ)).invert();
+    Transform unprojection = Transform(glm::perspective(glm::radians(m_fovY), 1.0f, m_nearZ, m_farZ)).invert();
 
     Transform mirror = Transform::createScale(glm::vec3(mirrorHor ? -1.0f : 1.0f, 1.0f, 1.0f));
 

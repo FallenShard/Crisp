@@ -11,16 +11,12 @@
 //     OrenNayarBSDF::OrenNayarBSDF(const VariantMap& params)
 //     {
 //         VariantMap texParams;
-//         Spectrum albedo(1.0f);
-//         if (params.contains("albedo"))
-//         {
-//             albedo = params.get<Spectrum>("albedo");
-//         }
+//         Spectrum reflectance(1.0f);
 //         if (params.contains("reflectance"))
 //         {
-//             albedo = params.get<Spectrum>("reflectance");
+//             reflectance = params.get<Spectrum>("reflectance");
 //         }
-//         texParams.insert("value", albedo);
+//         texParams.insert("value", reflectance);
 //
 //         m_albedo = TextureFactory<Spectrum>::create("constant", texParams);
 //     }
@@ -31,10 +27,7 @@
 //
 //     void OrenNayarBSDF::setTexture(std::shared_ptr<Texture<Spectrum>> texture)
 //     {
-//         if (texture->getName() == "albedo" || texture->getName() == "reflectance")
-//         {
-//             m_albedo = texture;
-//         }
+//         m_albedo = std::move(texture);
 //     }
 //
 //     Spectrum OrenNayarBSDF::eval(const BSDF::Sample& bsdfSample) const

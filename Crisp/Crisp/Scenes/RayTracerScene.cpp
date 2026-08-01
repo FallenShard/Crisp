@@ -70,7 +70,7 @@ void RayTracerScene::render() {
 }
 
 void RayTracerScene::openSceneFileFromDialog() {
-    const auto openedFile = m_renderer->getResourcesPath() / "VesperScenes" / "cbox-test-mis.xml"; // openFileDialog()
+    const auto openedFile = m_renderer->getResourcesPath() / "VesperScenes" / "cbox-test-mis.json"; // openFileDialog()
     if (openedFile.empty()) {
         return;
     }

@@ -7,8 +7,8 @@
 namespace crisp {
 DielectricBSDF::DielectricBSDF(const VariantMap& params)
     : BSDF(Lobe::Delta) {
-    m_intIOR = params.get("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
-    m_extIOR = params.get("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
+    m_intIOR = params.get("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass));
+    m_extIOR = params.get("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air));
 }
 
 Spectrum DielectricBSDF::eval(const BSDF::Sample& /*bsdfSample*/) const {

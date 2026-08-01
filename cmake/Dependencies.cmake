@@ -248,17 +248,6 @@ add_library(stb INTERFACE)
 target_include_directories(stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
 set_target_properties(stb PROPERTIES FOLDER "ThirdParty")
 
-FetchContent_Declare(rapidxml
-    URL "https://sourceforge.net/projects/rapidxml/files/rapidxml/rapidxml%201.13/rapidxml-1.13.zip/download"
-    URL_HASH "SHA256=c3f0b886374981bb20fabcf323d755db4be6dba42064599481da64a85f5b3571"
-    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-)
-FetchContent_MakeAvailable(rapidxml)
-
-add_library(rapidxml INTERFACE)
-target_include_directories(rapidxml SYSTEM INTERFACE "${rapidxml_SOURCE_DIR}")
-set_target_properties(rapidxml PROPERTIES FOLDER "ThirdParty")
-
 FetchContent_Declare(OpenEXR
     GIT_REPOSITORY "https://github.com/AcademySoftwareFoundation/openexr.git"
     GIT_TAG "v3.4.12"

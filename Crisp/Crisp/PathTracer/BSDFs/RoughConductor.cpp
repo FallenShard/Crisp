@@ -9,10 +9,10 @@
 namespace crisp {
 RoughConductorBSDF::RoughConductorBSDF(const VariantMap& params)
     : BSDF(Lobe::Glossy) {
-    auto materialName = params.get("material", std::string("Au"));
+    auto materialName = params.get("conductorIorPreset", std::string("Au"));
     m_IOR = Fresnel::getComplexIOR(materialName);
 
-    std::string distribType = params.get<std::string>("distribution", "beckmann");
+    std::string distribType = params.get<std::string>("microfacetDistribution", "beckmann");
     m_distrib = MicrofacetDistributionFactory::create(distribType, params);
 }
 

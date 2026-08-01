@@ -33,6 +33,7 @@ target_link_libraries(PathTracerBSDF
     PUBLIC PathTracerUtils
     PUBLIC PathTracerTextures
     PUBLIC Crisp::Optics
+    PRIVATE Crisp::Logger
     PRIVATE PathTracerSamplers
 )
 
@@ -199,13 +200,14 @@ add_cpp_static_library(PathTracerTextures
 )
 target_link_libraries(PathTracerTextures
     PUBLIC PathTracerUtils
+    PUBLIC Crisp::Logger
 )
 
 add_cpp_static_library(CrispPathTracer
     "Core/Scene.cpp"
     "Core/Scene.hpp"
-    "Core/XmlSceneParser.cpp"
-    "Core/XmlSceneParser.hpp"
+    "Core/JsonSceneParser.cpp"
+    "Core/JsonSceneParser.hpp"
     "ImageBlock.cpp"
     "ImageBlock.hpp"
     "RayTracer.cpp"
@@ -223,9 +225,9 @@ target_link_libraries(CrispPathTracer
     PUBLIC PathTracerUtils
     PUBLIC embree
     PUBLIC tbb
-    PUBLIC rapidxml
     PRIVATE Crisp::Logger
     PRIVATE Crisp::ImageIo
+    PRIVATE Crisp::JsonUtils
 )
 
 add_cpp_static_library(

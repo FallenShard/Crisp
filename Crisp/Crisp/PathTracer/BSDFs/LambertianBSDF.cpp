@@ -8,22 +8,13 @@ namespace crisp {
 LambertianBSDF::LambertianBSDF(const VariantMap& params)
     : BSDF(Lobe::Diffuse) {
     VariantMap texParams;
-    Spectrum albedo(1.0f);
-    if (params.contains("albedo")) {
-        albedo = params.get<Spectrum>("albedo");
-    }
-    if (params.contains("reflectance")) {
-        albedo = params.get<Spectrum>("reflectance");
-    }
-    texParams.insert("value", albedo);
+    texParams.insert("value", params.get<Spectrum>("reflectance", Spectrum(1.0f)));
 
     m_albedo = TextureFactory::create<Spectrum>("constant-spectrum", texParams);
 }
 
 void LambertianBSDF::setTexture(std::shared_ptr<Texture<Spectrum>> texture) {
-    if (texture->getName() == "albedo" || texture->getName() == "reflectance") {
-        m_albedo = texture;
-    }
+    m_albedo = std::move(texture);
 }
 
 Spectrum LambertianBSDF::eval(const BSDF::Sample& bsdfSample) const {

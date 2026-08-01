@@ -41,9 +41,9 @@ public:
     CheckerboardTexture(const VariantMap& variantMap = VariantMap())
         : Texture<T>(variantMap) {
         m_offset = variantMap.get<glm::vec2>("offset", glm::vec2(0.0f));
-        m_scale = variantMap.get<glm::vec2>("scale", glm::vec2(1.0f));
-        m_value1 = variantMap.get<T>("value1", internal::Default1<T>::value);
-        m_value2 = variantMap.get<T>("value2", internal::Default2<T>::value);
+        m_scale = variantMap.get<glm::vec2>("tileSize", glm::vec2(1.0f));
+        m_value1 = variantMap.get<T>("evenValue", internal::Default1<T>::value);
+        m_value2 = variantMap.get<T>("oddValue", internal::Default2<T>::value);
     }
 
     virtual T eval(const glm::vec2& uv) const override {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <string>
 
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/PathTracer/Core/VariantMap.hpp>
 #include <Crisp/PathTracer/Textures/CheckerboardTexture.hpp>
 #include <Crisp/PathTracer/Textures/ConstantTexture.hpp>
@@ -21,8 +21,7 @@ public:
             } else if (type == "checkerboard-float") {
                 return std::make_unique<CheckerboardTexture<float>>(parameters);
             } else {
-                std::cerr << "Unknown texture type \"" << type << "\" requested! Creating default constant texture"
-                          << std::endl;
+                spdlog::warn("Unknown texture type '{}'; using a constant float texture.", type);
                 return std::make_unique<ConstantTexture<float>>(parameters);
             }
         } else if constexpr (std::is_same_v<T, Spectrum>) {
@@ -33,16 +32,10 @@ public:
             } else if (type == "uv") {
                 return std::make_unique<UVTexture>(parameters);
             } else {
-                std::cerr << "Unknown texture type \"" << type << "\" requested! Creating default constant texture"
-                          << std::endl;
+                spdlog::warn("Unknown texture type '{}'; using a constant spectrum texture.", type);
                 return std::make_unique<ConstantTexture<Spectrum>>(parameters);
             }
         }
-
-        /*std::cerr << "Unknown texture type" << std::endl;
-        if (std::sin(1) < 1)
-            std::terminate();*/
-        // return nullptr;
     }
 };
 } // namespace crisp

@@ -6,16 +6,15 @@
 #include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistributionFactory.hpp>
 #include <Crisp/PathTracer/Optics/Fresnel.hpp>
 
-
 namespace crisp {
 MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)
     : BSDF(LobeFlags(Lobe::Diffuse | Lobe::Glossy)) {
-    auto distribType = params.get<std::string>("distribution", "beckmann");
+    auto distribType = params.get<std::string>("microfacetDistribution", "beckmann");
     m_distrib = MicrofacetDistributionFactory::create(distribType, params);
 
-    m_intIOR = params.get<float>("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
-    m_extIOR = params.get<float>("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
-    m_kd = params.get<Spectrum>("kd", Spectrum(0.5f));
+    m_intIOR = params.get<float>("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass));
+    m_extIOR = params.get<float>("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air));
+    m_kd = params.get<Spectrum>("diffuseReflectance", Spectrum(0.5f));
 
     m_ks = 1.0f - m_kd.maxCoeff();
 }

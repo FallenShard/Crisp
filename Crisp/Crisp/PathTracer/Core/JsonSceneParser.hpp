@@ -3,14 +3,16 @@
 #include <filesystem>
 #include <memory>
 
+#include <Crisp/Core/Result.hpp>
+
 namespace crisp {
 namespace pt {
 class Scene;
-}
+} // namespace pt
 
-class XmlSceneParser {
+class JsonSceneParser {
 public:
-    std::unique_ptr<pt::Scene> parse(
+    Result<std::unique_ptr<pt::Scene>> parse(
         const std::filesystem::path& sceneFilePath, const std::filesystem::path& meshDirectory);
 };
 } // namespace crisp

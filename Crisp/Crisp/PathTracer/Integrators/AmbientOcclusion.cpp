@@ -10,7 +10,7 @@
 
 namespace crisp {
 AmbientOcclusionIntegrator::AmbientOcclusionIntegrator(const VariantMap& params) {
-    m_rayLength = params.get<float>("rayLength", 1.0f);
+    m_rayLength = params.get<float>("maxDistance", 1.0f);
 }
 
 AmbientOcclusionIntegrator::~AmbientOcclusionIntegrator() {}

@@ -32,18 +32,46 @@ BrdfParameters createMirrorBrdf() {
 BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     const auto& type{brdf["type"]};
     if (type == "lambertian") {
-        return createLambertianBrdf(parseVec3(brdf["albedo"]));
+        return createLambertianBrdf(parseVec3(brdf["reflectance"]));
     }
     if (type == "dielectric") {
-        return createDielectricBrdf(brdf["intIOR"].get<float>());
+        return createDielectricBrdf(brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)));
     }
     if (type == "mirror") {
         return createMirrorBrdf();
     }
     if (type == "microfacet") {
-        return createMicrofacetBrdf(glm::vec3(0.5, 0.2, 0.0), 0.2f);
+        return createMicrofacetBrdf(parseVec3(brdf["diffuseReflectance"]), brdf.value("microfacetAlpha", 0.1f));
     }
     return createLambertianBrdf(glm::vec3(1.0, 1.0, 0.0));
+}
+
+glm::mat4 parseTransform(const nlohmann::json& shape) {
+    if (shape.value("type", std::string("mesh")) == "sphere") {
+        return glm::translate(parseVec3(shape["center"])) * glm::scale(glm::vec3(shape["radius"].get<float>()));
+    }
+
+    glm::mat4 transform(1.0f);
+    if (shape.contains("toWorld")) {
+        for (const auto& operation : shape["toWorld"]) {
+            if (operation.contains("translation")) {
+                transform = glm::translate(parseVec3(operation["translation"])) * transform;
+            }
+            if (operation.contains("scale")) {
+                transform = glm::scale(parseVec3(operation["scale"])) * transform;
+            }
+            if (operation.contains("rotation")) {
+                const auto& rotation = operation["rotation"];
+                transform =
+                    glm::rotate(
+                        glm::radians(rotation["angleDegrees"].get<float>()),
+                        glm::normalize(parseVec3(rotation["axis"]))) *
+                    transform;
+            }
+        }
+        return transform;
+    }
+    return transform;
 }
 
 } // namespace
@@ -65,9 +93,13 @@ glm::vec3 parseVec3(const nlohmann::json& json) {
 SceneDescription parseSceneDescription(const nlohmann::json& shapeList) {
     SceneDescription scene{};
     for (const auto& shape : shapeList) {
-        scene.meshFilenames.push_back(shape["path"]);
+        if (shape.value("type", std::string("mesh")) == "sphere") {
+            scene.meshFilenames.emplace_back("sphere.obj");
+        } else {
+            scene.meshFilenames.push_back(shape["filename"]);
+        }
 
-        scene.brdfs.push_back(parseBrdfParameters(shape["brdf"]));
+        scene.brdfs.push_back(parseBrdfParameters(shape["bsdf"]));
 
         if (shape.contains("light")) {
             const auto lightIdx = static_cast<int32_t>(scene.lights.size());
@@ -83,13 +115,7 @@ SceneDescription parseSceneDescription(const nlohmann::json& shapeList) {
             scene.props.push_back({.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = -1});
         }
 
-        const glm::mat4 translation =
-            shape.contains("translation") ? glm::translate(parseVec3(shape["translation"])) : glm::mat4(1.0f);
-        const glm::mat4 rotation = glm::mat4(1.0f);
-        const glm::mat4 scale =
-            shape.contains("scale") ? glm::scale(glm::vec3(shape["scale"].get<float>())) : glm::mat4(1.0f);
-
-        scene.transforms.push_back(translation * rotation * scale);
+        scene.transforms.push_back(parseTransform(shape));
     }
     return scene;
 }

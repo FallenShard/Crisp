@@ -16,7 +16,7 @@ std::unique_ptr<Sampler> FixedSampler::clone() const {
     other->m_values = m_values;
     other->m_index = m_index;
 
-    return std::move(other);
+    return other;
 }
 
 void FixedSampler::prepare() {

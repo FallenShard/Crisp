@@ -1,7 +1,6 @@
 #include <Crisp/PathTracer/RayTracer.hpp>
 
 #include <chrono>
-#include <iostream>
 #include <pmmintrin.h>
 #include <xmmintrin.h>
 
@@ -9,12 +8,13 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/PathTracer/Cameras/Camera.hpp>
+#include <Crisp/PathTracer/Core/JsonSceneParser.hpp>
 #include <Crisp/PathTracer/Core/Scene.hpp>
 #include <Crisp/PathTracer/Integrators/Integrator.hpp>
 #include <Crisp/PathTracer/Samplers/Sampler.hpp>
 
-#include <Crisp/PathTracer/Core/XmlSceneParser.hpp>
 
 namespace crisp {
 namespace {
@@ -42,14 +42,16 @@ void RayTracer::initializeScene(
         return;
     }
 
-    XmlSceneParser xmlParser;
-    m_scene = xmlParser.parse(sceneFilePath, resourceDirectory / "Meshes");
-    if (m_scene) {
-        m_image.initialize(m_scene->getCamera()->getImageSize(), m_scene->getCamera()->getReconstructionFilter());
-        m_image.clear();
-    } else {
-        std::cerr << "Failed to load scene!" << std::endl;
+    JsonSceneParser jsonParser;
+    auto sceneResult = jsonParser.parse(sceneFilePath, resourceDirectory / "Meshes");
+    if (!sceneResult) {
+        m_scene.reset();
+        return;
     }
+
+    m_scene = sceneResult.extract();
+    m_image.initialize(m_scene->getCamera()->getImageSize(), m_scene->getCamera()->getReconstructionFilter());
+    m_image.clear();
 }
 
 void RayTracer::start() {
@@ -66,7 +68,7 @@ void RayTracer::start() {
         auto size = m_image.getSize();
         generateImageBlocks(size.x, size.y);
 
-        std::cout << "Using " << tbb::this_task_arena::max_concurrency() << " thread(s)." << std::endl;
+        spdlog::info("Using {} thread(s).", tbb::this_task_arena::max_concurrency());
 
         tbb::concurrent_vector<std::unique_ptr<Sampler>> samplers(m_totalBlocks);
         for (auto& it : samplers) {
@@ -108,7 +110,7 @@ void RayTracer::start() {
 
         auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-        std::cout << "Finished rendering scene. Computed in " << duration / 1'000'000'000.0 << " s. " << std::endl;
+        spdlog::info("Finished rendering scene in {} s.", duration / 1'000'000'000.0);
 
         if (m_renderStatus != RenderStatus::Interrupted) {
             m_renderThread.detach();
@@ -123,7 +125,7 @@ void RayTracer::stop() {
         m_renderStatus = RenderStatus::Interrupted;
         m_renderThread.join();
         m_renderStatus = RenderStatus::Free;
-        std::cout << "Rendering cancelled." << std::endl;
+        spdlog::info("Rendering cancelled.");
     }
 }
 

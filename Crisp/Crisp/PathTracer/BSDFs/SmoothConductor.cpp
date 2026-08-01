@@ -7,7 +7,7 @@
 namespace crisp {
 SmoothConductorBSDF::SmoothConductorBSDF(const VariantMap& params)
     : BSDF(Lobe::Delta) {
-    auto materialName = params.get("material", std::string("Au"));
+    auto materialName = params.get("conductorIorPreset", std::string("Au"));
     m_IOR = Fresnel::getComplexIOR(materialName);
 }
 

@@ -1,8 +1,10 @@
 #include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/MicrofacetDistributionFactory.hpp>
 
+#include <Crisp/Core/Logger.hpp>
 #include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/Beckmann.hpp>
 #include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/GGX.hpp>
 #include <Crisp/PathTracer/BSDFs/MicrofacetDistributions/Phong.hpp>
+
 
 namespace crisp {
 std::unique_ptr<MicrofacetDistribution> MicrofacetDistributionFactory::create(std::string type, VariantMap params) {
@@ -13,7 +15,7 @@ std::unique_ptr<MicrofacetDistribution> MicrofacetDistributionFactory::create(st
     } else if (type == "phong") {
         return std::make_unique<PhongDistribution>(params);
     } else {
-        std::cout << "Unknown microfacet distribution specified! Creating Beckmann as default!\n";
+        spdlog::warn("Unknown microfacet distribution '{}'; using Beckmann.", type);
         return std::make_unique<BeckmannDistribution>(params);
     }
 }

@@ -37,10 +37,10 @@ inline glm::vec3 refract(const glm::vec3& wi, const glm::vec3& n, float eta, flo
 
 RoughDielectricBSDF::RoughDielectricBSDF(const VariantMap& params)
     : BSDF(Lobe::Glossy) {
-    m_intIOR = params.get<float>("intIOR", Fresnel::getIOR(IndexOfRefraction::Glass));
-    m_extIOR = params.get<float>("extIOR", Fresnel::getIOR(IndexOfRefraction::Air));
+    m_intIOR = params.get<float>("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass));
+    m_extIOR = params.get<float>("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air));
 
-    std::string distribType = params.get<std::string>("distribution", "beckmann");
+    std::string distribType = params.get<std::string>("microfacetDistribution", "beckmann");
 
     m_distrib = MicrofacetDistributionFactory::create(distribType, params);
 }

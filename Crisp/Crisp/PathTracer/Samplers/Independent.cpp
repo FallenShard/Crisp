@@ -4,7 +4,7 @@ namespace crisp {
 IndependentSampler::IndependentSampler(const VariantMap& attribs)
     : m_randomEngine(std::random_device()())
     , m_distribution(0.0f, 1.0f) {
-    m_sampleCount = attribs.get("numSamples", 64);
+    m_sampleCount = attribs.get("samplesPerPixel", 64);
 }
 
 IndependentSampler::~IndependentSampler() {}
@@ -15,7 +15,7 @@ std::unique_ptr<Sampler> IndependentSampler::clone() const {
     other->m_distribution = m_distribution;
     other->m_sampleCount = m_sampleCount;
 
-    return std::move(other);
+    return other;
 }
 
 void IndependentSampler::prepare() {

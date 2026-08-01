@@ -13,7 +13,7 @@ public:
 private:
     glm::vec2 m_invImageSize;
 
-    float m_fov;
+    float m_fovY;
     float m_nearZ;
     float m_farZ;
 

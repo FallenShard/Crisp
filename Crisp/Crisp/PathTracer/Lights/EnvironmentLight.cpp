@@ -40,8 +40,8 @@ inline glm::vec2 squareToTent(const glm::vec2& sample) {
 } // namespace
 
 EnvironmentLight::EnvironmentLight(const VariantMap& params) {
-    auto probeFilename = params.get<std::string>("fileName", "uffizi-large.exr");
-    m_scale = params.get<float>("scale", 1.0f);
+    auto probeFilename = params.get<std::string>("filename", "uffizi-large.exr");
+    m_scale = params.get<float>("radianceScale", 1.0f);
 
     m_probe = std::make_unique<MipMap>("../../Resources/Textures/" + probeFilename);
 

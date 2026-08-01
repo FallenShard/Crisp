@@ -5,7 +5,7 @@
 
 namespace crisp {
 GGXDistribution::GGXDistribution(const VariantMap& params) {
-    m_alpha = params.get<float>("alpha", 0.1f);
+    m_alpha = params.get<float>("microfacetAlpha", 0.1f);
 
     m_alpha = clamp(m_alpha, 0.0f, 1.0f);
 }

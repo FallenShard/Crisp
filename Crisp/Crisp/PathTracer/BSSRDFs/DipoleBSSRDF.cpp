@@ -150,8 +150,8 @@ private:
 } // namespace
 
 DipoleBSSRDF::DipoleBSSRDF(const VariantMap& /*params*/) {
-    std::string mat = "Ketchup"; // params.get("material", "");
-    SubsurfaceParams ssParams = materials[mat];
+    std::string presetName = "Ketchup"; // params.get("subsurfacePreset", "");
+    SubsurfaceParams ssParams = materials[presetName];
     m_sigmaA = ssParams.sigmaA;
     m_sigmaPrimeS = ssParams.sigmaPrimeS;
     m_eta = ssParams.eta;

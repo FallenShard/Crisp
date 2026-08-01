@@ -26,4 +26,5 @@ add_cpp_test(
 target_link_libraries(
     CrispJsonUtilsTest
     PRIVATE Crisp::JsonUtils
+    PRIVATE Crisp::UniqueTemporaryFile
 )
