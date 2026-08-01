@@ -44,7 +44,7 @@ target_link_libraries(
 )
 copy_shared_libs(
     CrispMain
-    freetype embree TBB::tbb
+    embree TBB::tbb
 )
 target_sources(
     CrispMain

@@ -9,17 +9,6 @@ target_link_libraries(
     PUBLIC Crisp::Format
 )
 
-add_cpp_static_library(
-    CrispFontIo
-    "FontLoader.cpp"
-    "FontLoader.hpp"
-)
-target_link_libraries(
-    CrispFontIo
-    PUBLIC freetype
-    PRIVATE Crisp::Logger
-)
-
 add_cpp_header_library(
     CrispJsonUtils
     "JsonUtils.hpp"

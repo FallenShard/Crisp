@@ -14,10 +14,10 @@
 
 #pragma warning(push)
 #pragma warning(disable : 26495) // initialization
-#include <rapidxml/rapidxml.hpp>
-#include <rapidxml/rapidxml_iterators.hpp>
-#include <rapidxml/rapidxml_print.hpp>
-#include <rapidxml/rapidxml_utils.hpp>
+#include <rapidxml.hpp>
+#include <rapidxml_iterators.hpp>
+#include <rapidxml_print.hpp>
+#include <rapidxml_utils.hpp>
 #pragma warning(pop)
 
 #include <fstream>
