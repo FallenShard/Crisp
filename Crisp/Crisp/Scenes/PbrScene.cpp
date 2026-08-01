@@ -194,7 +194,7 @@ void PbrScene::drawGui() {
 
     ImGui::Begin("Render Graph");
     if (ImGui::CollapsingHeader("Overview")) {
-        ::crisp::drawGui(*m_renderGraph);
+        drawRenderGraphGui(*m_renderGraph);
     }
     if (ImGui::CollapsingHeader("Nodes")) {
         ImGui::SliderInt("Nodes to Draw", &m_nodesToDraw, 0, static_cast<int32_t>(m_renderNodes.size()));

@@ -118,7 +118,7 @@ void AtmosphereScene::drawGui() {
 
     ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Render Graph")) {
-        ::crisp::drawGui(*m_renderGraph);
+        drawRenderGraphGui(*m_renderGraph);
     }
     ImGui::End();
 }
