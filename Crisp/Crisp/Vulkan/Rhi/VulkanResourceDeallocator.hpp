@@ -8,13 +8,13 @@ class VulkanResourceDeallocator;
 using VulkanDestructorCallback = void (*)(void*, VulkanResourceDeallocator*);
 
 struct DeferredHandleDestructor {
-    uint64_t frameIndex;
+    uint64_t retirementValue;
     void* handle;
     VulkanDestructorCallback destructorCallback;
 };
 
 struct DeferredMemoryDestructor {
-    uint64_t frameIndex;
+    uint64_t retirementValue;
     VmaAllocation allocation;
 };
 
@@ -29,26 +29,42 @@ public:
     VulkanResourceDeallocator(VulkanResourceDeallocator&&) noexcept = default;
     VulkanResourceDeallocator& operator=(VulkanResourceDeallocator&&) noexcept = default;
 
+    void setRetirementValue(uint64_t value);
+    uint64_t getRetirementValue() const;
+
+    void collect(uint64_t completedValue);
+
+    // Fallback path for now.
     void advanceFrame();
 
     void freeAllResources();
 
     template <typename VulkanHandleType>
     void deferDestruction(const VulkanHandleType handle, const VulkanDestructorCallback callback) {
-        m_deferredDestructors.push_back({m_frameIndex + m_framesInFlight, handle, callback});
+        m_deferredDestructors.push_back({m_retirementValue, handle, callback});
     }
 
     template <typename VulkanHandleType>
     void deferDestruction(const VulkanHandleType handle) {
+        deferDestructionAt(m_retirementValue, handle);
+    }
+
+    // Escape hatch for work submitted outside the owner's regular cadence, which knows its own protecting value.
+    template <typename VulkanHandleType>
+    void deferDestructionAt(const uint64_t retirementValue, const VulkanHandleType handle) {
         m_deferredDestructors.push_back(
-            {m_frameIndex + m_framesInFlight, handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+            {retirementValue, handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
                  getDestroyFunc<VulkanHandleType>()(
                      deallocator->getDeviceHandle(), static_cast<VulkanHandleType>(handle), nullptr);
              }});
     }
 
     void deferMemoryDeallocation(const VmaAllocation allocation) {
-        m_deferredMemoryDeallocations.emplace_back(m_frameIndex + m_framesInFlight, allocation);
+        deferMemoryDeallocationAt(m_retirementValue, allocation);
+    }
+
+    void deferMemoryDeallocationAt(const uint64_t retirementValue, const VmaAllocation allocation) {
+        m_deferredMemoryDeallocations.emplace_back(retirementValue, allocation);
     }
 
     VkDevice getDeviceHandle() const {
@@ -63,6 +79,10 @@ public:
         return m_deferredDestructors.size();
     }
 
+    size_t getDeferredMemoryDeallocationCount() const {
+        return m_deferredMemoryDeallocations.size();
+    }
+
     uint32_t getFramesInFlight() const {
         return m_framesInFlight;
     }
@@ -72,6 +92,7 @@ private:
     VmaAllocator m_allocator{VK_NULL_HANDLE};
     uint64_t m_frameIndex{0};
     uint32_t m_framesInFlight{0};
+    uint64_t m_retirementValue{0};
 
     std::vector<DeferredHandleDestructor> m_deferredDestructors;
     std::vector<DeferredMemoryDestructor> m_deferredMemoryDeallocations;

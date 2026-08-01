@@ -10,23 +10,20 @@ VkBuffer createBuffer(const VulkanDevice& device, const VkBufferCreateInfo& crea
     return buffer;
 }
 
-TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
-    constexpr VkDeviceSize size = 100;
-
+VkBuffer createTransferBuffer(const VulkanDevice& device) {
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufferInfo.size = size;
+    bufferInfo.size = 100;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    const VkBuffer buffer1 = createBuffer(*device_, bufferInfo);
-    const VkBuffer buffer2 = createBuffer(*device_, bufferInfo);
-    const VkBuffer buffer3 = createBuffer(*device_, bufferInfo);
+    return createBuffer(device, bufferInfo);
+}
 
+TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
     auto& deallocator = device_->getResourceDeallocator();
 
-    const auto deferDeallocation = [&deallocator](VkBuffer buffer) { deallocator.deferDestruction(buffer); };
+    deallocator.deferDestruction(createTransferBuffer(*device_));
+    deallocator.deferDestruction(createTransferBuffer(*device_));
+    deallocator.deferDestruction(createTransferBuffer(*device_));
 
-    deferDeallocation(buffer1);
-    deferDeallocation(buffer2);
-    deferDeallocation(buffer3);
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
     deallocator.advanceFrame();
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
@@ -37,6 +34,72 @@ TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
     deallocator.advanceFrame();
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
     deallocator.advanceFrame();
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
+}
+
+TEST_F(VulkanResourceDeallocatorTest, DestructionRetiresAtTheStampedValue) {
+    constexpr uint64_t retirementValue = 7;
+
+    auto& deallocator = device_->getResourceDeallocator();
+    deallocator.setRetirementValue(retirementValue);
+    deallocator.deferDestruction(createTransferBuffer(*device_));
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+
+    deallocator.collect(retirementValue - 1);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+
+    deallocator.collect(retirementValue);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
+}
+
+TEST_F(VulkanResourceDeallocatorTest, DestructionRetiresHandleAndMemoryTogether) {
+    constexpr uint64_t retirementValue = 11;
+
+    auto& deallocator = device_->getResourceDeallocator();
+    deallocator.setRetirementValue(retirementValue);
+    {
+        const VulkanBuffer buffer(*device_, 256, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    }
+
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    EXPECT_EQ(deallocator.getDeferredMemoryDeallocationCount(), 1);
+
+    deallocator.collect(retirementValue - 1);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    EXPECT_EQ(deallocator.getDeferredMemoryDeallocationCount(), 1);
+
+    deallocator.collect(retirementValue);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
+    EXPECT_EQ(deallocator.getDeferredMemoryDeallocationCount(), 0);
+}
+
+// The frame-throttle path relies on this: a resource destroyed while a frame is recorded must outlive that frame's
+// submission, not be retired by the value the previous one already signaled.
+TEST_F(VulkanResourceDeallocatorTest, LaterStampSurvivesAnEarlierCollect) {
+    auto& deallocator = device_->getResourceDeallocator();
+
+    deallocator.setRetirementValue(4);
+    deallocator.deferDestruction(createTransferBuffer(*device_));
+    deallocator.setRetirementValue(5);
+    deallocator.deferDestruction(createTransferBuffer(*device_));
+
+    deallocator.collect(4);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+
+    deallocator.collect(5);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
+}
+
+TEST_F(VulkanResourceDeallocatorTest, ExplicitStampIgnoresTheCurrentRetirementValue) {
+    auto& deallocator = device_->getResourceDeallocator();
+
+    deallocator.setRetirementValue(2);
+    deallocator.deferDestructionAt(9, createTransferBuffer(*device_));
+
+    deallocator.collect(2);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+
+    deallocator.collect(9);
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
 }
 } // namespace

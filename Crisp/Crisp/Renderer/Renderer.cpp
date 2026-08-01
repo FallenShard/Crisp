@@ -207,15 +207,15 @@ std::optional<FrameContext> Renderer::beginFrame() {
         CRISP_TRACE_SCOPE("frame_wait");
         frame.waitCompletion(*m_frameTimeline);
     }
+    auto& deallocator = m_device->getResourceDeallocator();
+    deallocator.collect(m_frameTimeline->getCompletedValue());
+    deallocator.setRetirementValue(m_frameTimeline->getScheduledValue() + 1);
     CRISP_TRACE_VK_ADVANCE(virtualFrameIndex);
 
     std::function<void()> task;
     while (m_mainThreadQueue.tryPop(task)) {
         task();
     }
-
-    // Destroy AFTER acquiring command buffer when NumVirtualFrames have passed
-    m_device->getResourceDeallocator().advanceFrame();
 
     // Flush all noncoherent updates
     m_device->flushMappedRanges();

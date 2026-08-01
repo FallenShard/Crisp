@@ -20,7 +20,7 @@ public:
 
     void waitCompletion(const VulkanTimelineSemaphore& timeline) const;
     void addSubmission(const VulkanCommandBuffer& cmdBuffer);
-    void submitToQueue(const VulkanQueue& queue, VulkanTimelineSemaphore& timeline);
+    uint64_t submitToQueue(const VulkanQueue& queue, VulkanTimelineSemaphore& timeline);
 
     VkSemaphore getImageAvailableSemaphoreHandle() const;
     VkSemaphore getRenderFinishedSemaphoreHandle() const;

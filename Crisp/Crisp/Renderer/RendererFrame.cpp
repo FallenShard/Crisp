@@ -1,5 +1,6 @@
 #include <Crisp/Renderer/RendererFrame.hpp>
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
@@ -57,10 +58,8 @@ void RendererFrame::addSubmission(const VulkanCommandBuffer& cmdBuffer) {
     m_submissions.push_back(submission);
 }
 
-void RendererFrame::submitToQueue(const VulkanQueue& queue, VulkanTimelineSemaphore& timeline) {
-    if (m_submissions.empty()) {
-        return;
-    }
+uint64_t RendererFrame::submitToQueue(const VulkanQueue& queue, VulkanTimelineSemaphore& timeline) {
+    CRISP_CHECK(!m_submissions.empty());
 
     m_submittedValue = timeline.advance();
     m_submissions.back().signals.push_back(
@@ -112,6 +111,7 @@ void RendererFrame::submitToQueue(const VulkanQueue& queue, VulkanTimelineSemaph
     VK_FATAL(vkQueueSubmit2(
         queue.getHandle(), static_cast<uint32_t>(submitInfos.size()), submitInfos.data(), VK_NULL_HANDLE));
     m_submissions.clear();
+    return m_submittedValue;
 }
 
 VkSemaphore RendererFrame::getImageAvailableSemaphoreHandle() const {
