@@ -3,7 +3,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)
 #pragma warning(disable : 4244) // conversion warnings
-#include <stb/stb_image.h>
+#include <stb_image.h>
 #pragma warning(pop)
 
 #include <Crisp/Core/Checks.hpp>

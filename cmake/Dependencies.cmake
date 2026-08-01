@@ -238,8 +238,17 @@ target_link_libraries(ImGui
     PUBLIC Vulkan::Headers
 )
 
+FetchContent_Declare(stb
+    GIT_REPOSITORY "https://github.com/nothings/stb.git"
+    GIT_TAG "31c1ad37456438565541f4919958214b6e762fb4"
+)
+FetchContent_MakeAvailable(stb)
+
+add_library(stb INTERFACE)
+target_include_directories(stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
+set_target_properties(stb PROPERTIES FOLDER "ThirdParty")
+
 # SYSTEM: these are all third-party sources, so their headers should not be held to our /W4.
-add_subdirectory(Externals/stb SYSTEM)
 add_subdirectory(Externals/tinyexr SYSTEM)
 add_subdirectory(Externals/rapidxml SYSTEM)
 add_subdirectory(Externals/freetype SYSTEM)
