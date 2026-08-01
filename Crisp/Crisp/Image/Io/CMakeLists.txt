@@ -10,8 +10,7 @@ target_link_libraries(
     CrispImageIo
     PUBLIC Crisp::Result
     PUBLIC Crisp::Image
-    PRIVATE Crisp::Logger
     PRIVATE Crisp::Format
-    PRIVATE tinyexr
+    PRIVATE OpenEXR::OpenEXR
     PRIVATE stb
 )

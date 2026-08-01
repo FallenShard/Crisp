@@ -259,7 +259,29 @@ add_library(rapidxml INTERFACE)
 target_include_directories(rapidxml SYSTEM INTERFACE "${rapidxml_SOURCE_DIR}")
 set_target_properties(rapidxml PROPERTIES FOLDER "ThirdParty")
 
-# SYSTEM: these are all third-party sources, so their headers should not be held to our /W4.
-add_subdirectory(Externals/tinyexr SYSTEM)
+FetchContent_Declare(OpenEXR
+    GIT_REPOSITORY "https://github.com/AcademySoftwareFoundation/openexr.git"
+    GIT_TAG "v3.4.12"
+    GIT_SHALLOW TRUE
+    SYSTEM
+    EXCLUDE_FROM_ALL
+)
+block()
+set(OPENEXR_INSTALL OFF)
+set(OPENEXR_INSTALL_PKG_CONFIG OFF)
+set(OPENEXR_BUILD_TOOLS OFF)
+set(OPENEXR_INSTALL_TOOLS OFF)
+set(OPENEXR_INSTALL_DEVELOPER_TOOLS OFF)
+set(OPENEXR_BUILD_EXAMPLES OFF)
+set(OPENEXR_BUILD_PYTHON OFF)
+set(OPENEXR_BUILD_OSS_FUZZ OFF)
+set(OPENEXR_TEST_LIBRARIES OFF)
+set(OPENEXR_TEST_TOOLS OFF)
+set(OPENEXR_TEST_PYTHON OFF)
+set(OPENEXR_FORCE_INTERNAL_IMATH ON)
+set(OPENEXR_FORCE_INTERNAL_DEFLATE ON)
+set(OPENEXR_FORCE_INTERNAL_OPENJPH ON)
+FetchContent_MakeAvailable(OpenEXR)
+endblock()
 
 endblock()

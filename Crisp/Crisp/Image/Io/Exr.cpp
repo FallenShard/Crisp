@@ -1,126 +1,145 @@
 #include <Crisp/Image/Io/Exr.hpp>
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <exception>
+#include <limits>
+#include <string>
+#include <string_view>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 4018)
-#pragma warning(disable : 4706)
-#pragma warning(disable : 4389)
-#pragma warning(disable : 4100)
-#pragma warning(disable : 6387)
-#pragma warning(disable : 6386)
-#pragma warning(disable : 6385)
-#pragma warning(disable : 6001)
-#pragma warning(disable : 6011)
-#pragma warning(disable : 26451)
-#pragma warning(disable : 26819)
-#pragma warning(disable : 26812)
-#pragma warning(disable : 26495)
-#define TINYEXR_IMPLEMENTATION
-#include <tinyexr/tinyexr.h>
-#pragma warning(pop)
-
-#include <Crisp/Core/Checks.hpp>
-#include <Crisp/Core/Logger.hpp>
+#include <ImfChannelList.h>
+#include <ImfFrameBuffer.h>
+#include <ImfHeader.h>
+#include <ImfInputPart.h>
+#include <ImfMultiPartInputFile.h>
+#include <ImfOutputFile.h>
+#include <ImfPartType.h>
+#include <ImfTiledInputPart.h>
 
 namespace crisp {
 namespace {
-auto logger = spdlog::stdout_color_st("Exr");
+namespace openexr = OPENEXR_IMF_NAMESPACE;
 
-class ExrHeaderGuard {
-public:
-    explicit ExrHeaderGuard(EXRHeader& header)
-        : m_header(header) {
-        InitEXRHeader(&m_header);
-    }
+constexpr uint32_t kRgbaChannelCount = 4;
 
-    ~ExrHeaderGuard() {
-        FreeEXRHeader(&m_header);
-    }
+std::string pathToUtf8(const std::filesystem::path& path) {
+    const auto utf8Path = path.u8string();
+    return {reinterpret_cast<const char*>(utf8Path.data()), utf8Path.size()};
+}
 
-    ExrHeaderGuard(const ExrHeaderGuard&) = delete;
-    ExrHeaderGuard& operator=(const ExrHeaderGuard&) = delete;
+std::vector<std::string> getChannelNames(const openexr::ChannelList& channels) {
+    std::vector<std::string> channelNames;
 
-    ExrHeaderGuard(ExrHeaderGuard&&) = delete;
-    ExrHeaderGuard& operator=(ExrHeaderGuard&&) = delete;
-
-private:
-    EXRHeader& m_header;
-};
-
-class ExrImageGuard {
-public:
-    explicit ExrImageGuard(EXRImage& image)
-        : m_image(image) {
-        InitEXRImage(&m_image);
-    }
-
-    ~ExrImageGuard() {
-        FreeEXRImage(&m_image);
-    }
-
-    ExrImageGuard(const ExrImageGuard&) = delete;
-    ExrImageGuard& operator=(const ExrImageGuard&) = delete;
-
-    ExrImageGuard(ExrImageGuard&&) = delete;
-    ExrImageGuard& operator=(ExrImageGuard&&) = delete;
-
-private:
-    EXRImage& m_image;
-};
-} // namespace
-
-Result<ExrImageData> loadExr(const std::filesystem::path& imagePath) {
-    const std::string pathString = imagePath.string();
-
-    // Read EXR version
-    EXRVersion version;
-    if (ParseEXRVersionFromFile(&version, pathString.c_str()) != TINYEXR_SUCCESS) {
-        return resultError("Could not parse version from EXR file: {}", pathString);
-    }
-
-    if (version.multipart > 0) { // Unsupported.
-        return resultError("Multipart EXR files are not supported: {}", pathString);
-    }
-
-    EXRHeader header;
-    ExrHeaderGuard headerGuard(header);
-    const char* err = nullptr;
-    if (ParseEXRHeaderFromFile(&header, &version, pathString.c_str(), &err) != TINYEXR_SUCCESS) {
-        return resultError("Failed to parse EXR header from file {}: {}", pathString, err);
-    }
-
-    // Request half-floats to be converted to 32bit floats.
-    for (int32_t i = 0; i < header.num_channels; ++i) {
-        if (header.pixel_types[i] == TINYEXR_PIXELTYPE_HALF) {         // NOLINT
-            header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // NOLINT
+    constexpr std::array<std::string_view, kRgbaChannelCount> preferredOrder = {"R", "G", "B", "A"};
+    for (const auto name : preferredOrder) {
+        if (channels.findChannel(name.data()) != nullptr) {
+            channelNames.emplace_back(name);
         }
     }
 
-    EXRImage image;
-    ExrImageGuard imageGuard(image);
-    if (LoadEXRImageFromFile(&image, &header, pathString.c_str(), &err) != TINYEXR_SUCCESS) {
-        return resultError("Failed to load EXR image from file {}: {}", pathString, err);
+    for (auto channel = channels.begin(); channel != channels.end(); ++channel) {
+        const std::string_view name(channel.name());
+        if (std::ranges::find(preferredOrder, name) == preferredOrder.end()) {
+            channelNames.emplace_back(name);
+        }
+    }
+
+    return channelNames;
+}
+
+Result<ExrImageData> loadSinglePartExr(openexr::MultiPartInputFile& inputFile, const std::string& path) {
+    const auto& header = inputFile.header(0);
+    const auto& dataWindow = header.dataWindow();
+    const int64_t width = static_cast<int64_t>(dataWindow.max.x) - dataWindow.min.x + 1;
+    const int64_t height = static_cast<int64_t>(dataWindow.max.y) - dataWindow.min.y + 1;
+    if (width <= 0 || height <= 0 || width > std::numeric_limits<uint32_t>::max() ||
+        height > std::numeric_limits<uint32_t>::max()) {
+        return resultError("EXR file has invalid dimensions: {}", path);
+    }
+
+    const auto channelNames = getChannelNames(header.channels());
+    if (channelNames.empty() || channelNames.size() > std::numeric_limits<uint32_t>::max()) {
+        return resultError("EXR file has an invalid channel count: {}", path);
+    }
+
+    for (const auto& channelName : channelNames) {
+        const auto* channel = header.channels().findChannel(channelName);
+        if (channel == nullptr || channel->xSampling != 1 || channel->ySampling != 1) {
+            return resultError("Subsampled EXR channels are not supported: {}", path);
+        }
+    }
+
+    const size_t channelCount = channelNames.size();
+    const size_t imageWidth = static_cast<size_t>(width);
+    const size_t imageHeight = static_cast<size_t>(height);
+    if (imageHeight > std::numeric_limits<size_t>::max() / imageWidth) {
+        return resultError("EXR image is too large to load: {}", path);
+    }
+
+    const size_t pixelCount = imageWidth * imageHeight;
+    if (channelCount > std::numeric_limits<size_t>::max() / pixelCount) {
+        return resultError("EXR image is too large to load: {}", path);
     }
 
     ExrImageData data{};
-    data.width = static_cast<uint32_t>(image.width);
-    data.height = static_cast<uint32_t>(image.height);
-    data.channelCount = static_cast<uint32_t>(image.num_channels);
-    data.pixelData.reserve(data.width * data.height * data.channelCount);
+    data.width = static_cast<uint32_t>(width);
+    data.height = static_cast<uint32_t>(height);
+    data.channelCount = static_cast<uint32_t>(channelCount);
+    data.pixelData.resize(pixelCount * channelCount);
 
-    float** pixelPtr = reinterpret_cast<float**>(image.images); // NOLINT
-    for (int32_t i = 0; i < image.height; i++) {
-        for (int32_t j = 0; j < image.width; j++) {
-            const auto pixelIdx = static_cast<uint32_t>(image.width * i + j);
+    const size_t xStride = channelCount * sizeof(float);
+    const size_t yStride = static_cast<size_t>(width) * xStride;
+    openexr::FrameBuffer frameBuffer;
+    for (size_t channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
+        frameBuffer.insert(
+            channelNames[channelIndex],
+            openexr::Slice::Make(openexr::FLOAT, data.pixelData.data() + channelIndex, dataWindow, xStride, yStride));
+    }
 
-            for (int32_t k = 0; k < image.num_channels; ++k) {
-                data.pixelData.push_back(std::max(0.0f, pixelPtr[k][pixelIdx])); // NOLINT
-            }
+    const std::string partType =
+        header.hasType() ? header.type() : (header.hasTileDescription() ? openexr::TILEDIMAGE : openexr::SCANLINEIMAGE);
+    if (partType == openexr::SCANLINEIMAGE) {
+        openexr::InputPart inputPart(inputFile, 0);
+        if (!inputPart.isComplete()) {
+            return resultError("EXR file is incomplete: {}", path);
         }
+        inputPart.setFrameBuffer(frameBuffer);
+        inputPart.readPixels(dataWindow.min.y, dataWindow.max.y);
+    } else if (partType == openexr::TILEDIMAGE) {
+        openexr::TiledInputPart inputPart(inputFile, 0);
+        if (!inputPart.isComplete()) {
+            return resultError("EXR file is incomplete: {}", path);
+        }
+        inputPart.setFrameBuffer(frameBuffer);
+        inputPart.readTiles(0, inputPart.numXTiles(0) - 1, 0, inputPart.numYTiles(0) - 1, 0);
+    } else {
+        return resultError("Unsupported EXR part type '{}' in file: {}", partType, path);
+    }
+
+    for (float& value : data.pixelData) {
+        value = std::max(0.0f, value);
     }
 
     return data;
+}
+} // namespace
+
+Result<ExrImageData> loadExr(const std::filesystem::path& imagePath) {
+    const std::string path = pathToUtf8(imagePath);
+
+    try {
+        openexr::MultiPartInputFile inputFile(path.c_str());
+        if (inputFile.parts() != 1) {
+            return resultError("Multipart EXR files are not supported: {}", path);
+        }
+
+        return loadSinglePartExr(inputFile, path);
+    } catch (const std::exception& exception) {
+        return resultError("Failed to load EXR file {}: {}", path, exception.what());
+    }
 }
 
 Result<> saveExr(
@@ -129,64 +148,60 @@ Result<> saveExr(
     const uint32_t width,
     const uint32_t height,
     const FlipAxis flipAxis) {
-    EXRHeader header;
-    ExrHeaderGuard headerGuard(header);
+    if (width == 0 || height == 0 || width > static_cast<uint32_t>(std::numeric_limits<int>::max()) ||
+        height > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
+        return resultError("Invalid EXR output dimensions {}x{} for {}", width, height, pathToUtf8(outputPath));
+    }
 
-    EXRImage image;
-    ExrImageGuard imageGuard(image);
+    const uint64_t expectedValueCount = static_cast<uint64_t>(width) * static_cast<uint64_t>(height) * kRgbaChannelCount;
+    if (expectedValueCount > std::numeric_limits<size_t>::max() || hdrPixelData.size() != expectedValueCount) {
+        return resultError(
+            "Invalid RGBA data for EXR output {}: {}x{} requires {} values, received {}",
+            pathToUtf8(outputPath),
+            width,
+            height,
+            expectedValueCount,
+            hdrPixelData.size());
+    }
 
-    // 4 = RGBA channels
-    image.num_channels = 4;
-    CRISP_CHECK_EQ(hdrPixelData.size(), width * height * image.num_channels);
-    std::vector<std::vector<float>> channels(image.num_channels, std::vector<float>(width * height, 0.0f));
-    for (int32_t y = 0; y < static_cast<int32_t>(height); ++y) {
-        for (int32_t x = 0; x < static_cast<int32_t>(width); ++x) {
-            int32_t rowIdx = flipAxis == FlipAxis::Y ? static_cast<int32_t>(height) - 1 - y : y;
-            int32_t colIdx = x;
-
-            for (int32_t c = 0; c < image.num_channels; c++) {
-                const int32_t channelIdx = image.num_channels - 1 - c;
-                // OpenEXR expects (A)BGR
-                channels[c][y * width + colIdx] =
-                    hdrPixelData[image.num_channels * (rowIdx * width + colIdx) + channelIdx];
-            }
+    std::vector<float> flippedPixelData;
+    std::span<const float> pixelData = hdrPixelData;
+    if (flipAxis == FlipAxis::Y) {
+        flippedPixelData.resize(hdrPixelData.size());
+        const size_t rowValueCount = static_cast<size_t>(width) * kRgbaChannelCount;
+        for (uint32_t y = 0; y < height; ++y) {
+            const auto source = hdrPixelData.begin() + static_cast<size_t>(height - 1 - y) * rowValueCount;
+            std::ranges::copy_n(
+                source, rowValueCount, flippedPixelData.begin() + static_cast<size_t>(y) * rowValueCount);
         }
+        pixelData = flippedPixelData;
     }
 
-    std::vector<float*> channelPtrs(image.num_channels, nullptr);
-    for (int32_t c = 0; c < image.num_channels; c++) {
-        channelPtrs[c] = channels[c].data();
+    const std::string path = pathToUtf8(outputPath);
+    try {
+        openexr::Header header(static_cast<int>(width), static_cast<int>(height));
+        header.channels().insert("R", openexr::Channel(openexr::FLOAT));
+        header.channels().insert("G", openexr::Channel(openexr::FLOAT));
+        header.channels().insert("B", openexr::Channel(openexr::FLOAT));
+        header.channels().insert("A", openexr::Channel(openexr::FLOAT));
+
+        const size_t xStride = kRgbaChannelCount * sizeof(float);
+        const size_t yStride = static_cast<size_t>(width) * xStride;
+        openexr::FrameBuffer frameBuffer;
+        constexpr std::array<std::string_view, kRgbaChannelCount> channelNames = {"R", "G", "B", "A"};
+        for (size_t channelIndex = 0; channelIndex < channelNames.size(); ++channelIndex) {
+            frameBuffer.insert(
+                channelNames[channelIndex].data(),
+                openexr::Slice::Make(
+                    openexr::FLOAT, pixelData.data() + channelIndex, header.dataWindow(), xStride, yStride));
+        }
+
+        openexr::OutputFile outputFile(path.c_str(), header);
+        outputFile.setFrameBuffer(frameBuffer);
+        outputFile.writePixels(static_cast<int>(height));
+    } catch (const std::exception& exception) {
+        return resultError("Failed to save EXR file {}: {}", path, exception.what());
     }
-
-    image.images = reinterpret_cast<unsigned char**>(channelPtrs.data()); // NOLINT
-    image.width = static_cast<int32_t>(width);
-    image.height = static_cast<int32_t>(height);
-
-    header.num_channels = image.num_channels;
-    header.channels = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * header.num_channels); // NOLINT
-    header.channels[0].name[0] = 'A';                                                        // NOLINT
-    header.channels[0].name[1] = '\0';                                                       // NOLINT
-    header.channels[1].name[0] = 'B';                                                        // NOLINT
-    header.channels[1].name[1] = '\0';                                                       // NOLINT
-    header.channels[2].name[0] = 'G';                                                        // NOLINT
-    header.channels[2].name[1] = '\0';                                                       // NOLINT
-    header.channels[3].name[0] = 'R';                                                        // NOLINT
-    header.channels[3].name[1] = '\0';                                                       // NOLINT
-
-    header.pixel_types = (int*)malloc(sizeof(int) * header.num_channels);           // NOLINT
-    header.requested_pixel_types = (int*)malloc(sizeof(int) * header.num_channels); // NOLINT
-    for (int32_t i = 0; i < header.num_channels; i++) {
-        header.pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT;           // NOLINT pixel type of input image
-        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // NOLINT pixel type of output in .EXR
-    }
-
-    const char* err = nullptr;
-    if (SaveEXRImageToFile(&image, &header, outputPath.string().c_str(), &err) != TINYEXR_SUCCESS) {
-        return resultError("Failed to save EXR image into file {}: {}", outputPath.string(), err);
-    }
-
-    // Prevent double free on the vector memory once the image goes out of scope.
-    image.images = nullptr;
 
     return kResultSuccess;
 }
