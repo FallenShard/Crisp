@@ -49,10 +49,10 @@ VkBool32 debugMessengerCallback(
 }
 
 Result<> assertRequiredExtensionSupport(const std::span<const char* const> requiredExtensions) {
-    CRISP_LOGI("Requesting {} instance extensions.", requiredExtensions.size());
+    CRISP_LOGD("Requesting {} instance extensions.", requiredExtensions.size());
     std::unordered_set<std::string> pendingExtensions;
     for (const auto* const extensionName : requiredExtensions) {
-        CRISP_LOGI(" - {}", extensionName);
+        CRISP_LOGD(" - {}", extensionName);
         pendingExtensions.insert(std::string(extensionName));
     }
 
@@ -81,10 +81,10 @@ Result<> assertRequiredExtensionSupport(const std::span<const char* const> requi
 }
 
 Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredLayers) {
-    CRISP_LOGI("Requesting {} instance layers.", requiredLayers.size());
+    CRISP_LOGD("Requesting {} instance layers.", requiredLayers.size());
     std::unordered_set<std::string> pendingLayers;
     for (const auto* const layerName : requiredLayers) {
-        CRISP_LOGI(" - {}", layerName);
+        CRISP_LOGD(" - {}", layerName);
         pendingLayers.insert(std::string(layerName));
     }
 

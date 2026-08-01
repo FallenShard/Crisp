@@ -19,7 +19,7 @@ VulkanPipelineCache::VulkanPipelineCache(const VulkanDevice& device, std::filesy
     if (binaryFileResult.hasValue()) {
         initialData = binaryFileResult->data();
         dataSize = binaryFileResult->size();
-        CRISP_LOGI("Creating pipeline cache from {}.", m_cachePath.generic_string());
+        CRISP_LOGD("Creating pipeline cache from {}.", m_cachePath.generic_string());
     }
 
     VkPipelineCacheCreateInfo createInfo = {

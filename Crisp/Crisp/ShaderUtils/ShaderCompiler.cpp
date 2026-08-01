@@ -28,8 +28,8 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
         return;
     }
 
-    CRISP_LOGI("Processing and compiling shaders from: {}", inputDir.string());
-    CRISP_LOGI("Saving .spv modules in: {}", outputDir.string());
+    CRISP_LOGD("Processing and compiling shaders from: {}", inputDir.string());
+    CRISP_LOGD("Saving .spv modules in: {}", outputDir.string());
 
     if (!std::filesystem::exists(outputDir)) {
         if (!std::filesystem::create_directories(outputDir)) {

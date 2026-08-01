@@ -225,7 +225,7 @@ VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExten
 }
 
 void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent) {
-    CRISP_LOGI("Compiling RenderGraph...");
+    CRISP_LOGD("Compiling RenderGraph...");
     m_swapChainExtent = swapChainExtent;
     determineAliasedResurces();
     device.getGeneralQueue().submitAndWait([this, &device, &swapChainExtent](const VkCommandBuffer cmdBuffer) {
@@ -233,7 +233,11 @@ void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChai
     });
     createPhysicalPasses(device, swapChainExtent);
     m_passProfiler.initialize(device, m_passes.size());
-    CRISP_LOGI("RenderGraph compiled!");
+    CRISP_LOGI(
+        "RenderGraph compiled: {} pass(es), {} physical image(s), {} physical buffer(s).",
+        m_passes.size(),
+        m_physicalImages.size(),
+        m_physicalBuffers.size());
 }
 
 void RenderGraph::execute(const FrameContext& frameContext) {
@@ -466,7 +470,7 @@ std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelin
     }
 
     for (auto&& [idx, t] : std::views::enumerate(timelines)) {
-        CRISP_LOGI(
+        CRISP_LOGD(
             "{}. {}-{}: W: {} ({}), R: {} ({})",
             idx,
             m_resources[idx].name,
@@ -538,7 +542,7 @@ std::pair<VkImageLayout, VulkanSynchronizationStage> RenderGraph::determineIniti
 };
 
 void RenderGraph::determineAliasedResurces() {
-    CRISP_LOGI("Determining resources to alias...");
+    CRISP_LOGD("Determining resources to alias...");
     m_physicalBuffers.clear();
     m_physicalImages.clear();
     const auto timelines{calculateResourceTimelines()};
@@ -592,12 +596,12 @@ void RenderGraph::determineAliasedResurces() {
         }
     }
 
-    CRISP_LOGI("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
+    CRISP_LOGD("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
 }
 
 void RenderGraph::createPhysicalResources(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
-    CRISP_LOGI("Creating physical resources...");
+    CRISP_LOGD("Creating physical resources...");
     m_imageViews.clear();
     const VulkanCommandEncoder commandEncoder{cmdBuffer};
     for (auto& physicalImage : m_physicalImages) {
@@ -642,7 +646,7 @@ void RenderGraph::createPhysicalResources(
 }
 
 void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent) {
-    CRISP_LOGI("Creating physical passes...");
+    CRISP_LOGD("Creating physical passes...");
     m_physicalPassIndices.clear();
     m_physicalPassIndices.resize(m_passes.size(), -1);
     m_physicalPasses.clear();
@@ -652,7 +656,7 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
         if (pass.type != PassType::Rasterizer) {
             continue;
         }
-        CRISP_LOGD("Building render pass: {}\n", pass.name);
+        CRISP_LOGD("Building render pass: {}", pass.name);
 
         VulkanRenderPassBuilder builder{};
         builder.setSubpassCount(1).setAttachmentCount(pass.getAttachmentCount());
