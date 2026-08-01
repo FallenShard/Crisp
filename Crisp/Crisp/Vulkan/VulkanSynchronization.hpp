@@ -85,6 +85,11 @@ inline constexpr VulkanSynchronizationStage kVertexUniformRead = {
     .access = VK_ACCESS_2_UNIFORM_READ_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kComputeUniformRead = {
+    .stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+    .access = VK_ACCESS_2_UNIFORM_READ_BIT,
+};
+
 inline constexpr VulkanSynchronizationStage kFragmentUniformRead = {
     .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
     .access = VK_ACCESS_2_UNIFORM_READ_BIT,
