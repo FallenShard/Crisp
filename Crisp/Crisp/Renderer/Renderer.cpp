@@ -70,7 +70,8 @@ Renderer::Renderer(
     m_defaultViewport = m_swapChain->getViewport();
     m_defaultScissor = m_swapChain->getScissorRect();
 
-    // Create frame resources, such as command buffer, fence and semaphores.
+    // Create frame resources, such as command buffers and semaphores.
+    m_frameTimeline = std::make_unique<VulkanTimelineSemaphore>(*m_device, 0, "Frame Timeline");
     m_virtualFrames.reserve(kRendererVirtualFrameCount);
     for (int32_t i = 0; i < static_cast<int32_t>(kRendererVirtualFrameCount); ++i) {
         m_virtualFrames.emplace_back(*m_device, i);
@@ -204,7 +205,7 @@ std::optional<FrameContext> Renderer::beginFrame() {
     auto& frame = m_virtualFrames[virtualFrameIndex];
     {
         CRISP_TRACE_SCOPE("frame_wait");
-        frame.waitCompletion(*m_device);
+        frame.waitCompletion(*m_frameTimeline);
     }
     CRISP_TRACE_VK_ADVANCE(virtualFrameIndex);
 
@@ -293,7 +294,7 @@ void Renderer::endFrame(const FrameContext& frameContext) {
     frame.addSubmission(*frameContext.commandBuffer);
     frameContext.commandBuffer->setExecutionState();
 
-    frame.submitToQueue(m_device->getGeneralQueue());
+    frame.submitToQueue(m_device->getGeneralQueue(), *m_frameTimeline);
 
     present(frame, frameContext.swapChainImageIndex);
 

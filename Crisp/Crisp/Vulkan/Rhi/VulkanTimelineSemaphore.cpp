@@ -51,7 +51,6 @@ uint64_t VulkanTimelineSemaphore::getCompletedValue() const {
 }
 
 void VulkanTimelineSemaphore::wait(const uint64_t value) const {
-    // An infinite timeout cannot report VK_TIMEOUT, and any real failure aborts inside the timed overload.
     std::ignore = wait(value, std::numeric_limits<uint64_t>::max());
 }
 

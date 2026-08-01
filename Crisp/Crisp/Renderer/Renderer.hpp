@@ -23,6 +23,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanTimelineSemaphore.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 #include <Crisp/Vulkan/VulkanStagingBelt.hpp>
 #include <Crisp/Vulkan/VulkanTracer.hpp>
@@ -133,6 +134,7 @@ private:
     VkRect2D m_defaultScissor;
 
     std::vector<RendererFrame> m_virtualFrames;
+    std::unique_ptr<VulkanTimelineSemaphore> m_frameTimeline;
 
     std::unique_ptr<ShaderCache> m_shaderCache;
 
