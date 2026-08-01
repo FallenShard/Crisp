@@ -250,3 +250,13 @@ target_link_libraries(
     CrispOptics
     INTERFACE Crisp::Spectrum
 )
+
+add_cpp_test(
+    CrispOrenNayarTest
+    "Test/OrenNayarTest.cpp"
+)
+target_link_libraries(
+    CrispOrenNayarTest
+    PRIVATE PathTracerBSDF
+    PRIVATE PathTracerSamplers
+)

@@ -31,7 +31,7 @@ BrdfParameters createMirrorBrdf() {
 
 BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     const auto& type{brdf["type"]};
-    if (type == "lambertian") {
+    if (type == "lambertian" || type == "oren-nayar") {
         return createLambertianBrdf(parseVec3(brdf["reflectance"]));
     }
     if (type == "dielectric") {

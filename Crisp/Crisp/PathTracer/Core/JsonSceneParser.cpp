@@ -70,6 +70,10 @@ constexpr std::array kSphereParameters{
 constexpr std::array kLambertianParameters{
     ParameterSpec{"reflectance", ParameterType::Spectrum},
 };
+constexpr std::array kOrenNayarParameters{
+    ParameterSpec{"reflectance", ParameterType::Spectrum},
+    ParameterSpec{"roughnessDegrees", ParameterType::Float},
+};
 constexpr std::array kDielectricParameters{
     ParameterSpec{"interiorIor", ParameterType::Float},
     ParameterSpec{"exteriorIor", ParameterType::Float},
@@ -111,7 +115,7 @@ constexpr std::array kEnvironmentLightParameters{
     ParameterSpec{"radianceScale", ParameterType::Float},
 };
 constexpr std::array<std::string_view, 3> kShapeNestedFields{"bsdf", "bssrdf", "light"};
-constexpr std::array<std::string_view, 1> kLambertianNestedFields{"reflectanceTexture"};
+constexpr std::array<std::string_view, 1> kReflectanceTextureNestedFields{"reflectanceTexture"};
 
 const Json* findChild(const Json& node, const std::string_view name) {
     const auto iter = node.find(name);
@@ -268,6 +272,9 @@ std::span<const ParameterSpec> getParameterSpecs(const std::string_view type) {
         if (type == "lambertian") {
             return kLambertianParameters;
         }
+        if (type == "oren-nayar") {
+            return kOrenNayarParameters;
+        }
         if (type == "dielectric") {
             return kDielectricParameters;
         }
@@ -308,8 +315,8 @@ std::span<const std::string_view> getNestedFields(const std::string_view type) {
     if constexpr (std::is_same_v<Type, Shape>) {
         return kShapeNestedFields;
     } else if constexpr (std::is_same_v<Type, BSDF>) {
-        if (type == "lambertian") {
-            return kLambertianNestedFields;
+        if (type == "lambertian" || type == "oren-nayar") {
+            return kReflectanceTextureNestedFields;
         }
         return kNoNestedFields;
     } else {
