@@ -6,7 +6,6 @@ function(enable_default_cpp_compile_options targetName optionType)
 
     if(NOT optionType STREQUAL "INTERFACE")
         if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") # no Clang no Intel
-            # /MP              - compile TUs in parallel across cores.
             # /JMC             - Just My Code in Debug builds.
             # /Zi              - emit Debug information into a PDB.
             # /W4              - high warning level.
@@ -20,7 +19,7 @@ function(enable_default_cpp_compile_options targetName optionType)
             # Headers branching on __cplusplus (e.g. GSL's gsl::byte) otherwise differ per TU.
             target_compile_options(${targetName}
                 PRIVATE
-                    /MP /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8
+                    /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8
                     $<$<CONFIG:Debug>:/JMC>
                     $<$<CONFIG:Debug>:/Zi>)
         else()

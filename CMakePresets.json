@@ -2,12 +2,7 @@
   "version"             : 8,
   "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
   "vendor"              : {
-    "crisp.dev/cmuck/1.0": {
-      "modeAliases": {
-        "dev": "x64-debug",
-        "opt": "x64-release"
-      }
-    }
+    "crisp.dev/cmuck/1.0": { "modeAliases": { "dev": "x64-debug", "opt": "x64-release" } }
   },
   "configurePresets"    : [
     {
@@ -44,7 +39,7 @@
     }
   ],
   "buildPresets"        : [
-    { "name": "windows-build-base", "hidden": true, "jobs": 8, "inheritConfigureEnvironment": true },
+    { "name": "windows-build-base", "hidden": true, "inheritConfigureEnvironment": true },
     {
       "name"           : "x64-debug-build",
       "displayName"    : "Debug",
@@ -65,7 +60,7 @@
       "name"     : "windows-test-base",
       "hidden"   : true,
       "output"   : { "outputOnFailure": true },
-      "execution": { "jobs": 1, "noTestsAction": "error" }
+      "execution": { "jobs": 16, "noTestsAction": "error" }
     },
     {
       "name"           : "test-windows-debug",
