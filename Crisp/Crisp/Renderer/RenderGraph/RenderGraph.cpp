@@ -650,7 +650,6 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
     m_framebuffers.clear();
     for (auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         if (pass.type != PassType::Rasterizer) {
-            CRISP_LOGI("Skipping pass {} as it's not a rasterizer pass.", pass.name);
             continue;
         }
         CRISP_LOGD("Building render pass: {}\n", pass.name);
