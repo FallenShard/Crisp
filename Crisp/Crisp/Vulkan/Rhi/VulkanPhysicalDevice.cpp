@@ -369,8 +369,8 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
             .isSupportedFunc =
                 [](const VulkanPhysicalDevice& physicalDevice) {
                     const auto f12 = physicalDevice.queryFeatures<VkPhysicalDeviceVulkan12Features>();
-                    return f12.bufferDeviceAddress && f12.hostQueryReset && f12.scalarBlockLayout &&
-                           f12.descriptorIndexing && f12.runtimeDescriptorArray &&
+                    return f12.bufferDeviceAddress && f12.hostQueryReset && f12.timelineSemaphore &&
+                           f12.scalarBlockLayout && f12.descriptorIndexing && f12.runtimeDescriptorArray &&
                            f12.descriptorBindingPartiallyBound && f12.descriptorBindingVariableDescriptorCount &&
                            f12.descriptorBindingUniformBufferUpdateAfterBind;
                 },
@@ -379,6 +379,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     auto& f12 = featureChain.link(featureChain.features12);
                     f12.bufferDeviceAddress = VK_TRUE;
                     f12.hostQueryReset = VK_TRUE;
+                    f12.timelineSemaphore = VK_TRUE;
                     f12.scalarBlockLayout = VK_TRUE;
                     f12.descriptorIndexing = VK_TRUE;
                     f12.runtimeDescriptorArray = VK_TRUE;

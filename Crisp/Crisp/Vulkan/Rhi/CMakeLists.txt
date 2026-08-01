@@ -66,6 +66,8 @@ add_cpp_static_library(
     "VulkanQueue.hpp"
     "VulkanQueueConfiguration.cpp"
     "VulkanQueueConfiguration.hpp"
+    "VulkanTimelineSemaphore.cpp"
+    "VulkanTimelineSemaphore.hpp"
     "VulkanTimestampQueryPool.cpp"
     "VulkanTimestampQueryPool.hpp"
     "VulkanDescriptorSetAllocator.cpp"
@@ -85,6 +87,16 @@ add_cpp_test(
 )
 target_link_libraries(
     CrispVulkanDeviceTest
+    PRIVATE Crisp::VulkanDevice
+    PRIVATE Crisp::VulkanTestUtils
+)
+
+add_cpp_test(
+    CrispVulkanTimelineSemaphoreTest
+    "Test/VulkanTimelineSemaphoreTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanTimelineSemaphoreTest
     PRIVATE Crisp::VulkanDevice
     PRIVATE Crisp::VulkanTestUtils
 )
