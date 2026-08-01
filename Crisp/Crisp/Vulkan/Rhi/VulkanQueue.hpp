@@ -21,6 +21,7 @@ public:
 
     VkCommandPool createCommandPool(VkCommandPoolCreateFlags flags = 0) const;
     uint32_t getFamilyIndex() const;
+    uint32_t getTimestampValidBits() const;
 
     bool supportsOperations(VkQueueFlags queueFlags) const;
 

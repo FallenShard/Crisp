@@ -78,6 +78,10 @@ uint32_t VulkanQueue::getFamilyIndex() const {
     return m_familyIndex;
 }
 
+uint32_t VulkanQueue::getTimestampValidBits() const {
+    return m_familyProperties.timestampValidBits;
+}
+
 bool VulkanQueue::supportsOperations(const VkQueueFlags queueFlags) const {
     return m_familyProperties.queueFlags & queueFlags;
 }

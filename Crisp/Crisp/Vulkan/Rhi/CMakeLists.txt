@@ -66,6 +66,8 @@ add_cpp_static_library(
     "VulkanQueue.hpp"
     "VulkanQueueConfiguration.cpp"
     "VulkanQueueConfiguration.hpp"
+    "VulkanTimestampQueryPool.cpp"
+    "VulkanTimestampQueryPool.hpp"
     "VulkanDescriptorSetAllocator.cpp"
     "VulkanDescriptorSetAllocator.hpp"
 )

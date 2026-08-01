@@ -97,6 +97,7 @@ VulkanDevice::VulkanDevice(
     : m_handle(createLogicalDeviceHandle(physicalDevice, config))
     , m_config(std::move(config))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
+    , m_timestampPeriod(physicalDevice.getLimits().timestampPeriod)
     , m_generalQueue(
           std::make_unique<VulkanQueue>(m_handle, physicalDevice, ::crisp::getGeneralQueue(m_config.queueConfig)))
     , m_computeQueue(

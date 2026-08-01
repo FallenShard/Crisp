@@ -93,6 +93,10 @@ public:
         return m_nonCoherentAtomSize;
     }
 
+    float getTimestampPeriod() const {
+        return m_timestampPeriod;
+    }
+
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorBufferInfo& bufferInfo);
     void postDescriptorWrite(const VkWriteDescriptorSet& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorImageInfo& imageInfo);
@@ -237,6 +241,7 @@ private:
     VulkanDeviceConfiguration m_config;
 
     VkDeviceSize m_nonCoherentAtomSize;
+    float m_timestampPeriod;
 
     std::unique_ptr<VulkanQueue> m_generalQueue;
     std::unique_ptr<VulkanQueue> m_computeQueue;
