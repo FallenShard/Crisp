@@ -13,7 +13,6 @@
 
 namespace crisp {
 class Renderer;
-class RenderGraph;
 class VulkanImage;
 class VulkanImageView;
 
@@ -41,8 +40,6 @@ public:
 
     void createPointLightBuffer(std::vector<PointLight>&& pointLights);
     void createTileGridBuffers(const CameraParameters& cameraParams);
-    void addLightClusteringPass(RenderGraph& renderGraph, const VulkanRingBuffer& cameraBuffer);
-
     VulkanRingBuffer* getPointLightBuffer() const;
     VulkanRingBuffer* getLightIndexBuffer() const;
     const VulkanImageView& getTileGridView() const;

@@ -2,7 +2,6 @@
 
 #include <Crisp/Core/ConnectionHandler.hpp>
 #include <Crisp/Core/Window.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>

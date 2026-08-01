@@ -95,8 +95,6 @@ add_cpp_static_library(
     "Renderer.cpp"
     "Renderer.hpp"
     "RendererConfig.hpp"
-    "RenderGraph.cpp"
-    "RenderGraph.hpp"
     "RenderNode.cpp"
     "RenderNode.hpp"
     "ResourceContext.cpp"

@@ -1,15 +1,11 @@
 #include <Crisp/Lights/LightClustering.hpp>
 
-#include <Crisp/Renderer/ComputePipeline.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 #pragma warning(disable : 26451) // Arithmetic overflow.
 
 namespace crisp {
 namespace {
-constexpr const char* kLightCullingPass = "lightCullingPass";
-
 struct Tile {
     std::array<glm::vec3, 4> screenSpacePoints;
     std::array<glm::vec3, 4> viewSpacePoints;
@@ -20,15 +16,6 @@ glm::vec4 computePlaneFromSpan(const glm::vec3& a, const glm::vec3& b) {
     return {n, glm::dot(n, a)};
 }
 
-std::unique_ptr<VulkanPipeline> createLightCullingComputePipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
-    return createComputePipeline(*renderer, "light-culling.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
-        builder.setDescriptorDynamic(0, 1, true);
-        builder.setDescriptorDynamic(0, 2, true);
-        builder.setDescriptorDynamic(0, 3, true);
-        builder.setDescriptorDynamic(0, 4, true);
-        builder.setDescriptorSetBuffering(1, true);
-    });
-}
 } // namespace
 
 glm::ivec2 calculateTileGridDims(glm::ivec2 tileSize, glm::ivec2 screenSize) {
@@ -71,56 +58,6 @@ std::vector<TileFrustum> createTileFrusta(
     }
 
     return tilePlanes;
-}
-
-void addToRenderGraph(
-    Renderer* renderer,
-    RenderGraph& renderGraph,
-    const LightClustering& lightClustering,
-    const VulkanRingBuffer& cameraBuffer,
-    const VulkanRingBuffer& pointLightBuffer) {
-    auto& cullingPass = renderGraph.addComputePass(kLightCullingPass);
-    cullingPass.workGroupSize = {
-        static_cast<uint32_t>(lightClustering.m_tileSize.x), static_cast<uint32_t>(lightClustering.m_tileSize.y), 1};
-    cullingPass.numWorkGroups = {
-        static_cast<uint32_t>(lightClustering.m_gridSize.x), static_cast<uint32_t>(lightClustering.m_tileSize.y), 1};
-    cullingPass.pipeline = createLightCullingComputePipeline(renderer, cullingPass.workGroupSize);
-    cullingPass.material = std::make_unique<Material>(cullingPass.pipeline.get());
-    cullingPass.material->writeDescriptor(0, 0, lightClustering.m_tilePlaneBuffer->getDescriptorInfo());
-    cullingPass.material->writeDescriptor(0, 1, lightClustering.m_lightIndexCountBuffer->getDescriptorInfo());
-    cullingPass.material->writeDescriptor(0, 2, pointLightBuffer.getDescriptorInfo());
-    cullingPass.material->writeDescriptor(0, 3, cameraBuffer.getDescriptorInfo());
-    cullingPass.material->writeDescriptor(0, 4, lightClustering.m_lightIndexListBuffer->getDescriptorInfo());
-    cullingPass.material->writeDescriptor(
-        1, 0, lightClustering.m_lightGridView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    // cullingPass.material->setDynamicBufferView(0, *lightClustering.m_lightIndexCountBuffer, 0);
-    // cullingPass.material->setDynamicBufferView(1, pointLightBuffer, 0);
-    // cullingPass.material->setDynamicBufferView(2, cameraBuffer, 0);
-    // cullingPass.material->setDynamicBufferView(3, *lightClustering.m_lightIndexListBuffer, 0);
-    cullingPass.preDispatchCallback =
-        [lightCountBuffer = lightClustering.m_lightIndexCountBuffer.get()](
-            RenderGraph::Node& /*node*/, VulkanCommandBuffer& cmdBuffer, uint32_t frameIndex) {
-            // Before culling can start, zero out the light index count buffer
-            glm::uvec4 zero(0);
-
-            const VkDeviceSize offset = frameIndex * sizeof(zero);
-            vkCmdUpdateBuffer(
-                cmdBuffer.getHandle(), lightCountBuffer->getHandle(), offset, sizeof(zero), &zero);
-            cmdBuffer.insertBufferMemoryBarrier(
-                lightCountBuffer->getHandle(),
-                offset,
-                sizeof(zero),
-                kTransferWrite >> (kComputeStorageRead | kComputeStorageWrite));
-        };
-
-    renderGraph.addDependency(
-        kLightCullingPass,
-        "MainPass",
-        [lightIndexBuffer = lightClustering.m_lightIndexListBuffer.get()](
-            const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            cmdBuffer.insertBufferMemoryBarrier(
-                lightIndexBuffer->getDescriptorInfo(), kComputeWrite >> kFragmentRead);
-        });
 }
 
 void LightClustering::configure(

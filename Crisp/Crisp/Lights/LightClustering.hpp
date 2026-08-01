@@ -9,7 +9,6 @@
 
 namespace crisp {
 class Renderer;
-class RenderGraph;
 
 struct TileFrustum {
     std::array<glm::vec4, 4> frustumPlanes;
@@ -35,12 +34,5 @@ struct LightClustering {
 
     void configure(Renderer* renderer, const CameraParameters& cameraParameters, uint32_t maximumLightCount);
 };
-
-void addToRenderGraph(
-    Renderer* renderer,
-    RenderGraph& renderGraph,
-    const LightClustering& lightClustering,
-    const VulkanRingBuffer& cameraBuffer,
-    const VulkanRingBuffer& pointLightBuffer);
 
 } // namespace crisp

@@ -3,7 +3,6 @@
 #include <random>
 
 #include <Crisp/Camera/Camera.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
@@ -88,10 +87,6 @@ void LightSystem::createPointLightBuffer(std::vector<PointLight>&& pointLights) 
 
 void LightSystem::createTileGridBuffers(const CameraParameters& cameraParams) {
     m_lightClustering.configure(m_renderer, cameraParams, static_cast<uint32_t>(m_pointLights.size()));
-}
-
-void LightSystem::addLightClusteringPass(RenderGraph& /*renderGraph*/, const VulkanRingBuffer& /*cameraBuffer*/) {
-    // addToRenderGraph(m_renderer, renderGraph, m_lightClustering, cameraBuffer, *m_pointLightBuffer);
 }
 
 VulkanRingBuffer* LightSystem::getPointLightBuffer() const {
