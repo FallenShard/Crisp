@@ -334,6 +334,20 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
         .unwrap();
 }
 
+std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
+    const std::string_view pipelineName,
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
+    CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
+    return createPipelineFromFile(
+               absolutePipelinePath,
+               m_assetPaths.spvShaderDir,
+               *m_shaderCache,
+               *m_device,
+               rasterizationPassDescriptor)
+        .unwrap();
+}
+
 std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     uint32_t imageIndex{};
     const VkResult result = vkAcquireNextImageKHR(

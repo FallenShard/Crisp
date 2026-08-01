@@ -19,4 +19,11 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const VulkanRenderPass& renderPass,
     uint32_t subpassIndex = 0);
 
+Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
+    const std::filesystem::path& path,
+    const std::filesystem::path& spvShaderDir,
+    ShaderCache& shaderCache,
+    const VulkanDevice& device,
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
+
 } // namespace crisp

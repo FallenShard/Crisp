@@ -93,7 +93,8 @@ public:
 
     RenderGraphBlackboard& getBlackboard();
 
-    const VulkanRenderPass& getRenderPass(const std::string& name) const;
+    VulkanRasterizationPassDescriptor getRasterizationPassDescriptor(RenderGraphPassHandle passHandle) const;
+    VulkanRasterizationPassDescriptor getRasterizationPassDescriptor(const std::string& name) const;
 
     void resize(const VulkanDevice& device, VkExtent2D swapChainExtent);
 
@@ -177,7 +178,6 @@ private:
 
     void determineAliasedResurces();
     void createPhysicalResources(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
-    void createPhysicalPasses(const VulkanDevice& device, VkExtent2D swapChainExtent);
 
     struct PassProfiler {
         struct Frame {
@@ -208,7 +208,6 @@ private:
     // The list of passes that are part of the render graph.
     std::vector<RenderGraphPass> m_passes;
     FlatStringHashMap<RenderGraphPassHandle> m_passMap;
-    std::vector<int32_t> m_physicalPassIndices;
 
     std::vector<RenderGraphImageDescription> m_imageDescriptions;
     std::vector<RenderGraphBufferDescription> m_bufferDescriptions;
@@ -217,8 +216,6 @@ private:
     std::vector<RenderGraphPhysicalImage> m_physicalImages;
     std::vector<RenderGraphPhysicalBuffer> m_physicalBuffers;
     std::vector<RenderGraphImportedBuffer> m_importedBuffers;
-    std::vector<std::unique_ptr<VulkanRenderPass>> m_physicalPasses;
-    std::vector<std::unique_ptr<VulkanFramebuffer>> m_framebuffers;
 
     FlatHashMap<uint32_t, std::unique_ptr<VulkanImageView>> m_imageViews;
 

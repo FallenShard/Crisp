@@ -10,6 +10,14 @@
 #include <Crisp/Vulkan/Rhi/VulkanResource.hpp>
 
 namespace crisp {
+struct VulkanRasterizationPassDescriptor {
+    std::vector<VkFormat> colorAttachmentFormats;
+    VkFormat depthAttachmentFormat{VK_FORMAT_UNDEFINED};
+    VkFormat stencilAttachmentFormat{VK_FORMAT_UNDEFINED};
+    VkSampleCountFlagBits sampleCount{VK_SAMPLE_COUNT_1_BIT};
+    uint32_t viewMask{0};
+};
+
 struct RenderTargetInfo {
     // Required to set correct initial layout.
     VkPipelineStageFlags2 initSrcStageFlags{VK_PIPELINE_STAGE_2_NONE};

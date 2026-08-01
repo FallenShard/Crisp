@@ -31,10 +31,6 @@ struct RenderGraphPass {
     std::vector<RenderGraphResourceHandle> colorAttachments;
     std::optional<RenderGraphResourceHandle> depthStencilAttachment;
 
-    uint32_t getAttachmentCount() const {
-        return static_cast<uint32_t>(colorAttachments.size() + (depthStencilAttachment.has_value() ? 1 : 0));
-    };
-
     std::function<void(const FrameContext&)> executeFunc;
 };
 
@@ -60,8 +56,7 @@ struct RenderGraphImageDescription {
 
     bool canAlias(const RenderGraphImageDescription& desc) const {
         return sizePolicy == desc.sizePolicy && width == desc.width && height == desc.height && depth == desc.depth &&
-               format == desc.format &&
-               layerCount == desc.layerCount && mipLevelCount == desc.mipLevelCount &&
+               format == desc.format && layerCount == desc.layerCount && mipLevelCount == desc.mipLevelCount &&
                sampleCount == desc.sampleCount && createFlags == desc.createFlags;
     }
 };

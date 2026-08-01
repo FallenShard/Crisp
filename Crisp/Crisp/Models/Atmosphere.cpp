@@ -94,7 +94,11 @@ Material* createAtmosphereMaterial(
     const std::string& passName,
     const std::vector<RenderGraphResourceHandle>& sampledLuts) {
     VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
-        id, pipelineFilename, renderer.getShaderCache(), renderer.getDevice(), renderGraph.getRenderPass(passName), 0);
+        id,
+        pipelineFilename,
+        renderer.getShaderCache(),
+        renderer.getDevice(),
+        renderGraph.getRasterizationPassDescriptor(passName));
     Material* material = resourceContext.createMaterial(id, pipeline);
     material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
 

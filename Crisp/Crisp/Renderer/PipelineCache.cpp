@@ -16,22 +16,58 @@ VulkanPipeline* PipelineCache::loadPipeline(
     VulkanDevice& device,
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
-    auto& pipelineInfo = m_pipelineInfos[id];
-    pipelineInfo.filename = filename;
-    pipelineInfo.renderPass = &renderPass;
-    pipelineInfo.subpassIndex = subpassIndex;
+    return loadPipelineImpl(
+        id,
+        shaderCache,
+        device,
+        {.filename = std::string(filename), .renderPass = &renderPass, .subpassIndex = subpassIndex});
+}
 
-    const std::filesystem::path pipelineAbsolutePath{m_assetPaths.getPipelineConfigPath(filename)};
+VulkanPipeline* PipelineCache::loadPipeline(
+    const std::string& id,
+    const std::string_view filename,
+    ShaderCache& shaderCache,
+    VulkanDevice& device,
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    return loadPipelineImpl(
+        id,
+        shaderCache,
+        device,
+        {
+            .filename = std::string(filename),
+            .rasterizationPassDescriptor = rasterizationPassDescriptor,
+        });
+}
+
+VulkanPipeline* PipelineCache::loadPipelineImpl(
+    const std::string& id, ShaderCache& shaderCache, VulkanDevice& device, PipelineInfo pipelineInfo) {
+    auto& storedPipelineInfo = m_pipelineInfos[id];
+    storedPipelineInfo = std::move(pipelineInfo);
+
+    const std::filesystem::path pipelineAbsolutePath{m_assetPaths.getPipelineConfigPath(storedPipelineInfo.filename)};
     CRISP_CHECK(exists(pipelineAbsolutePath), "Path {} doesn't exist!", pipelineAbsolutePath.string());
 
-    auto& pipeline =
-        m_pipelines
-            .emplace(
-                id,
-                createPipelineFromFile(
-                    pipelineAbsolutePath, m_assetPaths.spvShaderDir, shaderCache, device, renderPass, subpassIndex)
-                    .unwrap())
-            .first->second;
+    auto pipelineResult = [&]() -> Result<std::unique_ptr<VulkanPipeline>> {
+        if (storedPipelineInfo.rasterizationPassDescriptor) {
+            return createPipelineFromFile(
+                pipelineAbsolutePath,
+                m_assetPaths.spvShaderDir,
+                shaderCache,
+                device,
+                *storedPipelineInfo.rasterizationPassDescriptor);
+        }
+
+        CRISP_CHECK(storedPipelineInfo.renderPass != nullptr);
+        return createPipelineFromFile(
+            pipelineAbsolutePath,
+            m_assetPaths.spvShaderDir,
+            shaderCache,
+            device,
+            *storedPipelineInfo.renderPass,
+            storedPipelineInfo.subpassIndex);
+    }();
+
+    auto& pipeline = m_pipelines.emplace(id, pipelineResult.unwrap()).first->second;
 
     auto layout = pipeline->getPipelineLayout();
     m_descriptorAllocators[layout] = layout->createVulkanDescriptorSetAllocator(device);
@@ -49,10 +85,23 @@ void PipelineCache::recreatePipelines(ShaderCache& shaderCache, const VulkanDevi
     for (auto& [id, info] : m_pipelineInfos) {
         const std::filesystem::path pipelineAbsolutePath{m_assetPaths.getPipelineConfigPath(info.filename)};
         CRISP_CHECK(exists(pipelineAbsolutePath), "Path {} doesn't exist!", pipelineAbsolutePath.string());
-        auto pipeline =
-            createPipelineFromFile(
-                pipelineAbsolutePath, m_assetPaths.spvShaderDir, shaderCache, device, *info.renderPass, info.subpassIndex)
-                .unwrap();
+
+        auto pipelineResult = [&]() -> Result<std::unique_ptr<VulkanPipeline>> {
+            if (info.rasterizationPassDescriptor) {
+                return createPipelineFromFile(
+                    pipelineAbsolutePath,
+                    m_assetPaths.spvShaderDir,
+                    shaderCache,
+                    device,
+                    *info.rasterizationPassDescriptor);
+            }
+
+            CRISP_CHECK(info.renderPass != nullptr);
+            return createPipelineFromFile(
+                pipelineAbsolutePath, m_assetPaths.spvShaderDir, shaderCache, device, *info.renderPass, info.subpassIndex);
+        }();
+
+        auto pipeline = pipelineResult.unwrap();
         m_pipelines[id]->swapAll(*pipeline);
     }
 }

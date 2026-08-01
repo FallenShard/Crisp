@@ -64,19 +64,20 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     m_renderGraph = std::make_unique<rg::RenderGraph>();
 
-    addCascadedShadowMapPasses(*m_renderGraph, kShadowMapSize, [this](const FrameContext& ctx, const uint32_t cascadeIndex) {
-        std::vector<DrawCommand> drawCommands{};
-        for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes.values()) {
-            if (idx++ >= m_nodesToDraw) {
-                break;
+    addCascadedShadowMapPasses(
+        *m_renderGraph, kShadowMapSize, [this](const FrameContext& ctx, const uint32_t cascadeIndex) {
+            std::vector<DrawCommand> drawCommands{};
+            for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes.values()) {
+                if (idx++ >= m_nodesToDraw) {
+                    break;
+                }
+                createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex]);
             }
-            createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex]);
-        }
 
-        for (const auto& drawCommand : drawCommands) {
-            executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
-        }
-    });
+            for (const auto& drawCommand : drawCommands) {
+                executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
+            }
+        });
 
     addForwardLightingPass(*m_renderGraph, [this](const FrameContext& ctx) {
         std::vector<DrawCommand> drawCommands{};
@@ -115,8 +116,8 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
         const std::string key = fmt::format("cascadedShadowMap{}", i);
-        auto* csmPipeline =
-            m_resourceContext->createPipeline(key, "ShadowMap.json", m_renderGraph->getRenderPass(kCsmPasses[i]), 0);
+        auto* csmPipeline = m_resourceContext->createPipeline(
+            key, "ShadowMap.json", m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i]));
         auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
         csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
         csmMaterial->writeDescriptor(0, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
@@ -292,10 +293,11 @@ void PbrScene::createCommonTextures() {
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy));
     addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
-    auto pipeline =
-        m_resourceContext->createPipeline("pbr", "PbrTex.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
+    auto pipeline = m_resourceContext->createPipeline(
+        "pbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
 
-    m_resourceContext->createPipeline("mesh", "MeshShading.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
+    m_resourceContext->createPipeline(
+        "mesh", "MeshShading.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
@@ -312,7 +314,7 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
         envMapName);
     m_skybox = std::make_unique<Skybox>(
         m_renderer,
-        m_renderGraph->getRenderPass(kForwardLightingPass),
+        m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
         m_lightSystem->getEnvironmentLight()->getCubeMapView(),
         m_resourceContext->imageCache.getSampler("linearClamp"));
 }

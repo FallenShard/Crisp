@@ -17,6 +17,14 @@ VulkanPipeline* ResourceContext::createPipeline(
         id, filename, m_renderer->getShaderCache(), m_renderer->getDevice(), renderPass, subpassIndex);
 }
 
+VulkanPipeline* ResourceContext::createPipeline(
+    const std::string& id,
+    const std::string_view filename,
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    return pipelineCache.loadPipeline(
+        id, filename, m_renderer->getShaderCache(), m_renderer->getDevice(), rasterizationPassDescriptor);
+}
+
 Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {
     m_materials[materialId] = std::make_unique<Material>(pipelineCache.getPipeline(pipelineId));
     return m_materials.at(materialId).get();

@@ -119,6 +119,14 @@ void VulkanCommandEncoder::endRenderPass(VulkanRenderPass& renderPass) const {
     renderPass.end(m_cmdBuffer);
 }
 
+void VulkanCommandEncoder::beginRendering(const VkRenderingInfo& renderingInfo) const {
+    vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
+}
+
+void VulkanCommandEncoder::endRendering() const {
+    vkCmdEndRendering(m_cmdBuffer);
+}
+
 void VulkanCommandEncoder::copyImageToBuffer(const VulkanImage& srcImage, const VulkanBuffer& dstBuffer) const {
     const VkDeviceSize size = srcImage.getWidth() * srcImage.getHeight() * 4 * sizeof(float);
     CRISP_CHECK_EQ(size, dstBuffer.getSize());

@@ -45,8 +45,7 @@ void addTonemapPass(
                     "Tonemap.json",
                     renderer.getShaderCache(),
                     renderer.getDevice(),
-                    renderGraph.getRenderPass(kTonemapPass),
-                    0);
+                    renderGraph.getRasterizationPassDescriptor(kTonemapPass));
                 material = resourceContext.createMaterial(kTonemapMaterialId, pipeline);
                 material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kTonemapBufferId));
                 material->writeDescriptor(

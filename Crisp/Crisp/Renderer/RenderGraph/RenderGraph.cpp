@@ -3,40 +3,25 @@
 #include <ranges>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp::rg {
 namespace {
 
 const auto logger = createLoggerMt("RenderGraph");
 
-VkAttachmentDescription toAttachmentDescription(
+VkRenderingAttachmentInfo createRenderingAttachmentInfo(
     const RenderGraphResource& resource,
     const RenderGraphImageDescription& imageDescription,
-    const VkImageLayout optimalAttachmentLayout) {
+    const VulkanImageView& imageView,
+    const VkImageLayout imageLayout) {
     return {
-        .format = imageDescription.format,
-        .samples = imageDescription.sampleCount,
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = imageView.getHandle(),
+        .imageLayout = imageLayout,
         .loadOp = imageDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .storeOp = resource.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout =
-            imageDescription.imageUsageFlags & VK_IMAGE_USAGE_SAMPLED_BIT
-                ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                : optimalAttachmentLayout,
-        .finalLayout = optimalAttachmentLayout,
+        .clearValue = imageDescription.clearValue.value_or(VkClearValue{}),
     };
-}
-
-VkAttachmentDescription toColorAttachmentDescription(
-    const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
-    return toAttachmentDescription(resource, imageDescription, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-}
-
-VkAttachmentDescription toDepthAttachmentDescription(
-    const RenderGraphResource& resource, const RenderGraphImageDescription& imageDescription) {
-    return toAttachmentDescription(resource, imageDescription, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 } // namespace
@@ -231,7 +216,6 @@ void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChai
     device.getGeneralQueue().submitAndWait([this, &device, &swapChainExtent](const VkCommandBuffer cmdBuffer) {
         createPhysicalResources(device, swapChainExtent, cmdBuffer);
     });
-    createPhysicalPasses(device, swapChainExtent);
     m_passProfiler.initialize(device, m_passes.size());
     CRISP_LOGI(
         "RenderGraph compiled: {} pass(es), {} physical image(s), {} physical buffer(s).",
@@ -275,31 +259,75 @@ void RenderGraph::execute(const FrameContext& frameContext) {
         if (pass.type == PassType::Rasterizer) {
             synchronizeInputResources(pass, frameContext);
 
-            auto& renderPass = *m_physicalPasses.at(m_physicalPassIndices.at(idx));
-            auto& framebuffer = *m_framebuffers.at(m_physicalPassIndices.at(idx));
-            encoder.beginRenderPass(renderPass, framebuffer);
-            pass.executeFunc(frameContext);
-            encoder.endRenderPass(renderPass);
+            std::vector<VkRenderingAttachmentInfo> colorAttachments;
+            colorAttachments.reserve(pass.colorAttachments.size());
+            uint32_t layerCount{0};
+            const auto validateLayerCount = [this, &layerCount](const RenderGraphResourceHandle attachment) {
+                const uint32_t attachmentLayerCount = getImageDescription(attachment).layerCount;
+                if (layerCount == 0) {
+                    layerCount = attachmentLayerCount;
+                } else {
+                    CRISP_CHECK_EQ(layerCount, attachmentLayerCount);
+                }
+            };
 
-            std::vector<const VulkanImageView*> attachmentViews{};
             for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
-                const auto& colorImageResource{getResource(resourceId)};
-                attachmentViews.push_back(m_imageViews.at(colorImageResource.physicalResourceIndex).get());
-            }
-            if (pass.depthStencilAttachment) {
-                const auto& depthResource{getResource(*pass.depthStencilAttachment)};
-                attachmentViews.push_back(m_imageViews.at(depthResource.physicalResourceIndex).get());
-            }
-            for (const auto& [i, attachmentView] : std::views::enumerate(attachmentViews)) {
-                attachmentView->getImage().setImageLayout(
-                    renderPass.getFinalLayout(static_cast<uint32_t>(i)), attachmentView->getSubresourceRange());
+                const auto& resource = getResource(resourceId);
+                const auto& imageDescription = getImageDescription(resourceId);
+                auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
+                encoder.transitionLayout(
+                    imageView.getImage(),
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    kAllStages >> kColorWrite,
+                    imageView.getSubresourceRange());
+                colorAttachments.push_back(createRenderingAttachmentInfo(
+                    resource, imageDescription, imageView, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+                validateLayerCount(resourceId);
             }
 
-            // for (const auto& [i, attachmentView] : std::views::enumerate(m_attachmentViews)) {
-            //     // We unconditionally set the layout here because the render pass did an automatic layout transition.
-            //     attachmentView->getImage().setImageLayout(
-            //         m_params.attachmentDescriptions.at(i).finalLayout, attachmentView->getSubresourceRange());
-            // }
+            std::optional<VkRenderingAttachmentInfo> depthStencilAttachment;
+            const VkRenderingAttachmentInfo* depthAttachment{nullptr};
+            const VkRenderingAttachmentInfo* stencilAttachment{nullptr};
+            if (pass.depthStencilAttachment) {
+                const auto resourceId = *pass.depthStencilAttachment;
+                const auto& resource = getResource(resourceId);
+                const auto& imageDescription = getImageDescription(resourceId);
+                auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
+                encoder.transitionLayout(
+                    imageView.getImage(),
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    kAllStages >> kDepthWrite,
+                    imageView.getSubresourceRange());
+                depthStencilAttachment = createRenderingAttachmentInfo(
+                    resource, imageDescription, imageView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+                const auto aspectFlags = determineImageAspect(imageDescription.format);
+                depthAttachment = aspectFlags & VK_IMAGE_ASPECT_DEPTH_BIT ? &*depthStencilAttachment : nullptr;
+                stencilAttachment = aspectFlags & VK_IMAGE_ASPECT_STENCIL_BIT ? &*depthStencilAttachment : nullptr;
+                validateLayerCount(resourceId);
+            }
+
+            const VkExtent2D renderArea = getRenderArea(pass, m_swapChainExtent);
+            CRISP_CHECK_GT(renderArea.width, 0);
+            CRISP_CHECK_GT(renderArea.height, 0);
+            CRISP_CHECK_GT(layerCount, 0);
+
+            const VkRenderingInfo renderingInfo{
+                .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+                .renderArea = {.offset = {0, 0}, .extent = renderArea},
+                .layerCount = layerCount,
+                .colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
+                .pColorAttachments = colorAttachments.empty() ? nullptr : colorAttachments.data(),
+                .pDepthAttachment = depthAttachment,
+                .pStencilAttachment = stencilAttachment,
+            };
+
+            encoder.beginRendering(renderingInfo);
+            encoder.setViewport(
+                {0.0f, 0.0f, static_cast<float>(renderArea.width), static_cast<float>(renderArea.height), 0.0f, 1.0f});
+            encoder.setScissor({.offset = {0, 0}, .extent = renderArea});
+            pass.executeFunc(frameContext);
+            encoder.endRendering();
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
             // for (const auto resHandle : pass.outputs) {
             //     const auto& res = getResource(resHandle);
@@ -417,8 +445,46 @@ RenderGraphBlackboard& RenderGraph::getBlackboard() {
     return m_blackboard;
 }
 
-const VulkanRenderPass& RenderGraph::getRenderPass(const std::string& name) const {
-    return *m_physicalPasses.at(m_physicalPassIndices.at(m_passMap.at(name).id));
+VulkanRasterizationPassDescriptor RenderGraph::getRasterizationPassDescriptor(
+    const RenderGraphPassHandle passHandle) const {
+    const auto& pass = getPass(passHandle);
+    CRISP_CHECK_EQ(pass.type, PassType::Rasterizer);
+
+    VulkanRasterizationPassDescriptor descriptor{};
+    bool hasAttachment{false};
+    const auto addSampleCount = [&descriptor, &hasAttachment](const VkSampleCountFlagBits sampleCount) {
+        if (hasAttachment) {
+            CRISP_CHECK_EQ(descriptor.sampleCount, sampleCount);
+        } else {
+            descriptor.sampleCount = sampleCount;
+            hasAttachment = true;
+        }
+    };
+
+    descriptor.colorAttachmentFormats.reserve(pass.colorAttachments.size());
+    for (const auto attachment : pass.colorAttachments) {
+        const auto& imageDescription = getImageDescription(attachment);
+        descriptor.colorAttachmentFormats.push_back(imageDescription.format);
+        addSampleCount(imageDescription.sampleCount);
+    }
+
+    if (pass.depthStencilAttachment) {
+        const auto& imageDescription = getImageDescription(*pass.depthStencilAttachment);
+        const auto aspectFlags = determineImageAspect(imageDescription.format);
+        if (aspectFlags & VK_IMAGE_ASPECT_DEPTH_BIT) {
+            descriptor.depthAttachmentFormat = imageDescription.format;
+        }
+        if (aspectFlags & VK_IMAGE_ASPECT_STENCIL_BIT) {
+            descriptor.stencilAttachmentFormat = imageDescription.format;
+        }
+        addSampleCount(imageDescription.sampleCount);
+    }
+
+    return descriptor;
+}
+
+VulkanRasterizationPassDescriptor RenderGraph::getRasterizationPassDescriptor(const std::string& name) const {
+    return getRasterizationPassDescriptor(m_passMap.at(name));
 }
 
 const VulkanImageView& RenderGraph::getImageView(const std::string& name, const uint32_t attachmentIndex) const {
@@ -608,12 +674,16 @@ void RenderGraph::createPhysicalResources(
         const auto& desc = m_imageDescriptions[physicalImage.descriptionIndex];
         physicalImage.image = std::make_unique<VulkanImage>(
             device,
-            calculateImageExtent(desc, swapChainExtent),
-            desc.layerCount,
-            desc.mipLevelCount,
-            desc.format,
-            determineUsageFlags(physicalImage.aliasedResourceIndices),
-            determineCreateFlags(physicalImage.aliasedResourceIndices));
+            VulkanImageDescription{
+                .imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D,
+                .format = desc.format,
+                .sampleCount = desc.sampleCount,
+                .extent = calculateImageExtent(desc, swapChainExtent),
+                .mipLevelCount = desc.mipLevelCount,
+                .layerCount = desc.layerCount,
+                .usageFlags = determineUsageFlags(physicalImage.aliasedResourceIndices),
+                .createFlags = determineCreateFlags(physicalImage.aliasedResourceIndices),
+            });
         device.setObjectName(*physicalImage.image, m_resources[physicalImage.aliasedResourceIndices[0]].name.c_str());
         CRISP_LOGT(
             "Created image: {} with size: {}x{}",
@@ -642,95 +712,6 @@ void RenderGraph::createPhysicalResources(
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
         res.buffer = std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, BufferMemoryType::GpuOnly);
         device.setObjectName(res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
-    }
-}
-
-void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExtent2D swapChainExtent) {
-    CRISP_LOGD("Creating physical passes...");
-    m_physicalPassIndices.clear();
-    m_physicalPassIndices.resize(m_passes.size(), -1);
-    m_physicalPasses.clear();
-    m_physicalPasses.reserve(m_passes.size());
-    m_framebuffers.clear();
-    for (auto&& [idx, pass] : std::views::enumerate(m_passes)) {
-        if (pass.type != PassType::Rasterizer) {
-            continue;
-        }
-        CRISP_LOGD("Building render pass: {}", pass.name);
-
-        VulkanRenderPassBuilder builder{};
-        builder.setSubpassCount(1).setAttachmentCount(pass.getAttachmentCount());
-
-        std::vector<VkAttachmentReference> colorAttachmentRefs{};
-        uint32_t attachmentIndex = 0;
-        for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
-            const auto& colorImageResource{getResource(resourceId)};
-            const auto& colorDescription{getImageDescription(resourceId)};
-            builder
-                .setAttachmentDescription(
-                    attachmentIndex, toColorAttachmentDescription(colorImageResource, colorDescription))
-                .addColorAttachmentRef(0, attachmentIndex);
-
-            if (colorDescription.clearValue) {
-                builder.setAttachmentClearValue(attachmentIndex, *colorDescription.clearValue);
-            }
-            ++attachmentIndex;
-        }
-
-        if (pass.depthStencilAttachment) {
-            const auto& depthResource{getResource(*pass.depthStencilAttachment)};
-            const auto& depthDescription{getImageDescription(*pass.depthStencilAttachment)};
-            builder
-                .setAttachmentDescription(attachmentIndex, toDepthAttachmentDescription(depthResource, depthDescription))
-                .setDepthAttachmentRef(0, attachmentIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-            if (depthDescription.clearValue) {
-                builder.setAttachmentClearValue(attachmentIndex, *depthDescription.clearValue);
-            }
-
-            // Ensure that we are synchronizing the load.
-            const VkAttachmentLoadOp loadOp =
-                depthDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            if (loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-                builder.addDependency(VK_SUBPASS_EXTERNAL, 0, kNullStage >> kDepthWrite);
-            }
-
-            ++attachmentIndex;
-        }
-
-        builder.addDependency(VK_SUBPASS_EXTERNAL, 0, kFragmentRead >> kColorWrite);
-
-        auto& physicalPass = m_physicalPasses.emplace_back(builder.create(device, getRenderArea(pass, swapChainExtent)));
-        m_physicalPassIndices[idx] = static_cast<int32_t>(m_physicalPasses.size()) - 1;
-        device.setObjectName(*physicalPass, pass.name.c_str());
-
-        std::vector<VkImageView> attachmentViews{};
-        for (const RenderGraphResourceHandle resourceId : pass.colorAttachments) {
-            const auto& colorImageResource{getResource(resourceId)};
-            attachmentViews.push_back(m_imageViews.at(colorImageResource.physicalResourceIndex)->getHandle());
-        }
-        if (pass.depthStencilAttachment) {
-            const auto& depthResource{getResource(*pass.depthStencilAttachment)};
-            attachmentViews.push_back(m_imageViews.at(depthResource.physicalResourceIndex)->getHandle());
-        }
-
-        uint32_t framebufferLayerCount = 1;
-        if (!pass.colorAttachments.empty()) {
-            framebufferLayerCount = getImageDescription(pass.colorAttachments.front()).layerCount;
-        } else if (pass.depthStencilAttachment) {
-            framebufferLayerCount = getImageDescription(*pass.depthStencilAttachment).layerCount;
-        }
-        for (const auto resourceId : pass.colorAttachments) {
-            CRISP_CHECK_EQ(getImageDescription(resourceId).layerCount, framebufferLayerCount);
-        }
-        if (pass.depthStencilAttachment) {
-            CRISP_CHECK_EQ(getImageDescription(*pass.depthStencilAttachment).layerCount, framebufferLayerCount);
-        }
-
-        m_framebuffers.push_back(
-            std::make_unique<VulkanFramebuffer>(
-                device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews, framebufferLayerCount));
-        device.setObjectName(*m_framebuffers.back(), fmt::format("{}Framebuffer", pass.name).c_str());
     }
 }
 

@@ -6,6 +6,7 @@
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 
@@ -51,9 +52,16 @@ public:
         std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
         VkRenderPass renderPass,
         uint32_t subpassIndex);
+    std::unique_ptr<VulkanPipeline> create(
+        const VulkanDevice& device,
+        std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
     PipelineDynamicStateFlags createDynamicStateFlags() const;
 
 private:
+    void populatePipelineCreateInfo(
+        VkGraphicsPipelineCreateInfo& pipelineInfo, const VulkanPipelineLayout& pipelineLayout) const;
+
     std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
     VulkanVertexLayout m_vertexLayout;

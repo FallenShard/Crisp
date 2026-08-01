@@ -8,6 +8,7 @@
 namespace crisp {
 namespace {
 
+using ::testing::ElementsAre;
 using ::testing::SizeIs;
 
 struct FluidSimulationData {
@@ -119,6 +120,32 @@ TEST(RenderGraphTest2, BasicUsage) {
 
     EXPECT_THAT(rg.getPassCount(), 17);
     EXPECT_THAT(rg.getResourceCount(), 17);
+}
+
+TEST(RenderGraphTest2, RasterizationPassDescriptor) {
+    rg::RenderGraph renderGraph;
+    const auto passHandle = renderGraph.addPass(
+        "raster-pass",
+        [](rg::RenderGraph::Builder& builder) {
+            builder.createAttachment(
+                {.format = VK_FORMAT_R16G16B16A16_SFLOAT, .sampleCount = VK_SAMPLE_COUNT_4_BIT}, "hdr");
+            builder.createAttachment(
+                {.format = VK_FORMAT_R16G16_SFLOAT, .sampleCount = VK_SAMPLE_COUNT_4_BIT}, "velocity");
+            builder.createAttachment(
+                {.format = VK_FORMAT_D24_UNORM_S8_UINT, .sampleCount = VK_SAMPLE_COUNT_4_BIT}, "depth-stencil");
+        },
+        [](const FrameContext&) {});
+
+    const auto descriptor = renderGraph.getRasterizationPassDescriptor(passHandle);
+    EXPECT_THAT(descriptor.colorAttachmentFormats, ElementsAre(VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16_SFLOAT));
+    EXPECT_EQ(descriptor.depthAttachmentFormat, VK_FORMAT_D24_UNORM_S8_UINT);
+    EXPECT_EQ(descriptor.stencilAttachmentFormat, VK_FORMAT_D24_UNORM_S8_UINT);
+    EXPECT_EQ(descriptor.sampleCount, VK_SAMPLE_COUNT_4_BIT);
+    EXPECT_EQ(descriptor.viewMask, 0);
+
+    EXPECT_EQ(
+        renderGraph.getRasterizationPassDescriptor("raster-pass").colorAttachmentFormats,
+        descriptor.colorAttachmentFormats);
 }
 
 TEST_F(RenderGraphTest, BasicUsage) {

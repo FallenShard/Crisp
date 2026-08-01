@@ -279,26 +279,55 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
     std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
     const VkRenderPass renderPass,
     const uint32_t subpassIndex) {
-    VkGraphicsPipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-    pipelineInfo.stageCount = static_cast<uint32_t>(m_shaderStages.size());
-    pipelineInfo.pStages = m_shaderStages.data();
-    pipelineInfo.pVertexInputState = &m_vertexInputState;
-    pipelineInfo.pInputAssemblyState = &m_inputAssemblyState;
-    pipelineInfo.pTessellationState = &m_tessellationState;
-    pipelineInfo.pViewportState = &m_viewportState;
-    pipelineInfo.pRasterizationState = &m_rasterizationState;
-    pipelineInfo.pMultisampleState = &m_multisampleState;
-    pipelineInfo.pColorBlendState = &m_colorBlendState;
-    pipelineInfo.pDepthStencilState = &m_depthStencilState;
-    pipelineInfo.pDynamicState = &m_dynamicState;
-    pipelineInfo.layout = pipelineLayout->getHandle();
+    VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+    populatePipelineCreateInfo(pipelineInfo, *pipelineLayout);
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = subpassIndex;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.basePipelineIndex = -1;
 
     VkPipeline pipeline{VK_NULL_HANDLE};
-    VK_FATAL(vkCreateGraphicsPipelines(device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline));
+    VK_FATAL(vkCreateGraphicsPipelines(
+        device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline));
+    return std::make_unique<VulkanPipeline>(
+        device,
+        pipeline,
+        std::move(pipelineLayout),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        VulkanVertexLayout(m_vertexLayout),
+        createDynamicStateFlags());
+}
+
+std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
+    const VulkanDevice& device,
+    std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+    populatePipelineCreateInfo(pipelineInfo, *pipelineLayout);
+
+    const auto& colorFormats = rasterizationPassDescriptor.colorAttachmentFormats;
+    const VkPipelineRenderingCreateInfo renderingInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .viewMask = rasterizationPassDescriptor.viewMask,
+        .colorAttachmentCount = static_cast<uint32_t>(colorFormats.size()),
+        .pColorAttachmentFormats = !colorFormats.empty() ? colorFormats.data() : nullptr,
+        .depthAttachmentFormat = rasterizationPassDescriptor.depthAttachmentFormat,
+        .stencilAttachmentFormat = rasterizationPassDescriptor.stencilAttachmentFormat,
+    };
+    pipelineInfo.pNext = &renderingInfo;
+
+    auto multisampleState = m_multisampleState;
+    multisampleState.rasterizationSamples = rasterizationPassDescriptor.sampleCount;
+    pipelineInfo.pMultisampleState = &multisampleState;
+
+    auto colorBlendAttachmentStates = m_colorBlendAttachmentStates;
+    colorBlendAttachmentStates.resize(colorFormats.size(), createDefaultColorBlendAttachmentState());
+    auto colorBlendState = m_colorBlendState;
+    colorBlendState.attachmentCount = static_cast<uint32_t>(colorBlendAttachmentStates.size());
+    colorBlendState.pAttachments = colorBlendAttachmentStates.empty() ? nullptr : colorBlendAttachmentStates.data();
+    pipelineInfo.pColorBlendState = &colorBlendState;
+
+    VkPipeline pipeline{VK_NULL_HANDLE};
+    VK_FATAL(vkCreateGraphicsPipelines(
+        device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline));
     return std::make_unique<VulkanPipeline>(
         device,
         pipeline,
@@ -315,6 +344,26 @@ PipelineDynamicStateFlags PipelineBuilder::createDynamicStateFlags() const {
     }
 
     return dynamicStateFlags;
+}
+
+void PipelineBuilder::populatePipelineCreateInfo(
+    VkGraphicsPipelineCreateInfo& pipelineInfo, const VulkanPipelineLayout& pipelineLayout) const {
+    pipelineInfo.stageCount = static_cast<uint32_t>(m_shaderStages.size());
+    pipelineInfo.pStages = m_shaderStages.data();
+    pipelineInfo.pVertexInputState = &m_vertexInputState;
+    pipelineInfo.pInputAssemblyState = &m_inputAssemblyState;
+    pipelineInfo.pTessellationState = &m_tessellationState;
+    pipelineInfo.pViewportState = &m_viewportState;
+    pipelineInfo.pRasterizationState = &m_rasterizationState;
+    pipelineInfo.pMultisampleState = &m_multisampleState;
+    pipelineInfo.pColorBlendState = &m_colorBlendState;
+    pipelineInfo.pDepthStencilState = &m_depthStencilState;
+    pipelineInfo.pDynamicState = &m_dynamicState;
+    pipelineInfo.layout = pipelineLayout.getHandle();
+    pipelineInfo.renderPass = VK_NULL_HANDLE;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;
 }
 
 VkPipelineShaderStageCreateInfo createShaderStageInfo(

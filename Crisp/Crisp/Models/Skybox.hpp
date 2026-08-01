@@ -7,10 +7,13 @@ namespace crisp {
 
 class Skybox {
 public:
-    Skybox(Renderer* renderer, const VulkanRenderPass& renderPass, const std::string& cubeMapFolder);
     Skybox(
         Renderer* renderer,
-        const VulkanRenderPass& renderPass,
+        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+        const std::string& cubeMapFolder);
+    Skybox(
+        Renderer* renderer,
+        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
         const VulkanImageView& cubeMapView,
         const VulkanSampler& sampler);
 
