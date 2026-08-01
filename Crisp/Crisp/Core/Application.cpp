@@ -69,6 +69,7 @@ Application::Application(const ApplicationEnvironment& environment)
     gui::initImGui(
         m_window.getHandle(),
         m_renderer->getInstance().getHandle(),
+        m_renderer->getInstance().getApiVersion(),
         m_renderer->getPhysicalDevice().getHandle(),
         m_renderer->getDevice(),
         m_renderer->getSwapChain().getImageCount(),
@@ -79,7 +80,7 @@ Application::Application(const ApplicationEnvironment& environment)
 }
 
 Application::~Application() {
-    gui::shutdownImGui(m_renderer->getDevice().getHandle());
+    gui::shutdownImGui();
     serializeTracedEvents(m_outputDir / "profiler.json");
 }
 

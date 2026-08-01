@@ -13,12 +13,13 @@ namespace crisp::gui {
 void initImGui(
     GLFWwindow* window,
     VkInstance instance,
+    uint32_t apiVersion,
     VkPhysicalDevice physicalDevice,
     const VulkanDevice& device,
     uint32_t swapChainImageCount,
     VkRenderPass renderPass,
     const std::optional<std::filesystem::path>& fontPath);
-void shutdownImGui(VkDevice device);
+void shutdownImGui();
 void prepareImGui();
 void renderImGui(VkCommandBuffer cmdBuffer);
 

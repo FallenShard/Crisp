@@ -3,13 +3,10 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
-#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 namespace crisp::gui {
 namespace {
-VkDescriptorPool imGuiPool{VK_NULL_HANDLE};
-
 void setupTheme(ImGuiStyle& style) {
     style.Colors[ImGuiCol_WindowBg] = ImVec4(0.05f, 0.09f, 0.10f, 0.94f);
     style.Colors[ImGuiCol_ChildBg] = ImVec4(0.07f, 0.12f, 0.14f, 0.50f);
@@ -89,71 +86,47 @@ void setupTheme(ImGuiStyle& style) {
 void initImGui(
     GLFWwindow* window,
     VkInstance instance,
+    const uint32_t apiVersion,
     VkPhysicalDevice physicalDevice,
     const VulkanDevice& device,
     const uint32_t swapChainImageCount,
     const VkRenderPass renderPass,
     const std::optional<std::filesystem::path>& fontPath) {
-    VkDescriptorPoolSize poolSizes[] = /* NOLINT */ {
-        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000},
-    };
-
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.maxSets = 1000;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
-    poolInfo.pPoolSizes = poolSizes; // NOLINT
-
-    VK_CHECK(vkCreateDescriptorPool(device.getHandle(), &poolInfo, nullptr, &imGuiPool));
-
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForVulkan(window, true);
 
     ImGui_ImplVulkan_InitInfo initInfo{};
+    initInfo.ApiVersion = apiVersion;
     initInfo.Instance = instance;
     initInfo.PhysicalDevice = physicalDevice;
     initInfo.Device = device.getHandle();
     initInfo.QueueFamily = device.getGeneralQueue().getFamilyIndex();
     initInfo.Queue = device.getGeneralQueue().getHandle();
-    initInfo.DescriptorPool = imGuiPool;
+    initInfo.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
     initInfo.MinImageCount = swapChainImageCount;
     initInfo.ImageCount = swapChainImageCount;
-    initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    initInfo.PipelineInfoMain.RenderPass = renderPass;
+    initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     ImGui_ImplVulkan_LoadFunctions(
+        apiVersion,
         [](const char* funcName, void* userData) {
             return vkGetInstanceProcAddr(static_cast<VkInstance>(userData), funcName);
         },
         initInfo.Instance);
-    ImGui_ImplVulkan_Init(&initInfo, renderPass);
+    ImGui_ImplVulkan_Init(&initInfo);
 
     if (fontPath) {
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->string().c_str(), 16);
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath->string().c_str(), 16.0f);
     }
-
-    device.getGeneralQueue().submitAndWait([&](VkCommandBuffer commandBuffer) {
-        ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-    });
-    ImGui_ImplVulkan_DestroyFontUploadObjects();
 
     setupTheme(ImGui::GetStyle());
 }
 
-void shutdownImGui(const VkDevice device) {
-    if (imGuiPool) {
-        vkDestroyDescriptorPool(device, imGuiPool, nullptr);
-        ImGui_ImplVulkan_Shutdown();
-    }
+void shutdownImGui() {
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void prepareImGui() {
@@ -167,10 +140,4 @@ void renderImGui(const VkCommandBuffer cmdBuffer) {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
 }
 
-// void renderImGuiFrame(Renderer& renderer) {
-//     ImGui::Render();
-//     renderer.enqueueDefaultPassDrawCommand([](VkCommandBuffer cmdBuffer) {
-//         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
-//     });
-// }
 } // namespace crisp::gui

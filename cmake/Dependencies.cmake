@@ -213,8 +213,32 @@ FetchContent_Declare(meshoptimizer
 )
 FetchContent_MakeAvailable(meshoptimizer)
 
+FetchContent_Declare(imgui
+    GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
+    GIT_TAG "v1.92.9b"
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(imgui)
+
+add_cpp_static_library(ImGui
+    "${imgui_SOURCE_DIR}/imgui.cpp"
+    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+    "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+    "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
+)
+target_include_directories(ImGui SYSTEM PUBLIC
+    "${imgui_SOURCE_DIR}"
+    "${imgui_SOURCE_DIR}/backends"
+)
+target_compile_definitions(ImGui PUBLIC IMGUI_IMPL_VULKAN_NO_PROTOTYPES)
+target_link_libraries(ImGui
+    PUBLIC glfw
+    PUBLIC Vulkan::Headers
+)
+
 # SYSTEM: these are all third-party sources, so their headers should not be held to our /W4.
-add_subdirectory(Externals/imgui SYSTEM)
 add_subdirectory(Externals/stb SYSTEM)
 add_subdirectory(Externals/tinyexr SYSTEM)
 add_subdirectory(Externals/rapidxml SYSTEM)
