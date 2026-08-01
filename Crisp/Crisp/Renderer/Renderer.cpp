@@ -89,7 +89,7 @@ Renderer::Renderer(
 
     m_gpuTracingContexts.resize(kRendererVirtualFrameCount);
     for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
-        m_gpuTracingContexts[i] = std::make_unique<VulkanTracingContext>(*m_device, *m_physicalDevice);
+        m_gpuTracingContexts[i] = std::make_unique<VulkanTracingContext>(*m_device);
     }
     detail::setTraceContexts(m_gpuTracingContexts);
 }

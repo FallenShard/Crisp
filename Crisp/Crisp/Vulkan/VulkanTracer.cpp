@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/VulkanTracer.hpp>
 
+#include <array>
+
 namespace crisp {
 namespace {
 
@@ -10,73 +12,42 @@ uint32_t contextIdx{0};
 
 } // namespace
 
-VulkanTracingContext::VulkanTracingContext(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice)
-    : m_device(&device)
-    , m_queryPool(VK_NULL_HANDLE)
-    , m_maxQueryCount(1 << 17)
-    , m_timestampPeriod(physicalDevice.getLimits().timestampPeriod)
+VulkanTracingContext::VulkanTracingContext(const VulkanDevice& device)
+    : m_queryPool(device, device.getGeneralQueue(), kMaxQueryCount, "Vulkan Tracing Queries")
     , m_referenceTimepoint{0}
-    , m_first(0)
     , m_count(0)
-    , m_retrievedQueries(m_maxQueryCount)
+    , m_retrievedQueries(kMaxQueryCount)
     , m_resolvedEvents(0) {
-    VkQueryPoolCreateInfo queryPoolInfo{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
-    queryPoolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-    queryPoolInfo.queryCount = m_maxQueryCount;
-    vkCreateQueryPool(m_device->getHandle(), &queryPoolInfo, nullptr, &m_queryPool);
-
-    vkResetQueryPool(m_device->getHandle(), m_queryPool, 0, m_maxQueryCount);
-
     device.getGeneralQueue().submitAndWait([this](const VkCommandBuffer cmdBuffer) {
-        vkCmdWriteTimestamp2(cmdBuffer, VK_PIPELINE_STAGE_2_NONE, m_queryPool, 0);
+        m_queryPool.writeTimestamp(cmdBuffer, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0);
     });
-    vkGetQueryPoolResults(
-        m_device->getHandle(),
-        m_queryPool,
-        0,
-        1,
-        sizeof(uint64_t),
-        &m_referenceTimepoint,
-        sizeof(uint64_t),
-        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+    std::array<uint64_t, 1> referenceTimestamp{};
+    m_queryPool.getResultsAndWait(referenceTimestamp);
     const auto cpuTimestampNs = std::chrono::steady_clock::now().time_since_epoch().count();
-    vkResetQueryPool(m_device->getHandle(), m_queryPool, 0, m_maxQueryCount);
+    m_queryPool.reset();
 
-    const auto gpuTimestampNs = static_cast<int64_t>(static_cast<double>(m_referenceTimepoint) * m_timestampPeriod);
+    const auto gpuTimestampNs = static_cast<int64_t>(m_queryPool.toNanoseconds(referenceTimestamp.front()));
 
     m_referenceTimepoint = gpuTimestampNs - cpuTimestampNs;
 }
 
-VulkanTracingContext::~VulkanTracingContext() {
-    vkDestroyQueryPool(m_device->getHandle(), m_queryPool, nullptr);
-}
-
 void VulkanTracingContext::retrieveResults() {
     if (m_count > 0) {
-        const auto status = vkGetQueryPoolResults(
-            m_device->getHandle(),
-            m_queryPool,
-            m_first,
-            m_count,
-            m_count * sizeof(uint64_t),
-            m_retrievedQueries.data(),
-            sizeof(uint64_t),
-            VK_QUERY_RESULT_64_BIT);
-        if (status == VK_NOT_READY) {
+        auto queryResults = std::span(m_retrievedQueries).first(m_count);
+        if (!m_queryPool.tryGetResults(queryResults)) {
             return;
         }
-        vkResetQueryPool(m_device->getHandle(), m_queryPool, 0, m_maxQueryCount);
+        m_queryPool.reset();
 
         const size_t prevEventOffset = m_events.size() - m_count;
         for (size_t i = 0; i < m_count; ++i) {
             auto& event = m_events[prevEventOffset + i];
             event.timestamp =
-                static_cast<uint64_t>(static_cast<double>(m_retrievedQueries[event.timestamp]) * m_timestampPeriod) -
+                static_cast<uint64_t>(m_queryPool.toNanoseconds(m_retrievedQueries[event.timestamp])) -
                 m_referenceTimepoint;
         }
 
         m_resolvedEvents += m_count;
-        m_first = 0;
         m_count = 0;
     }
 }

@@ -7,15 +7,14 @@
 
 #include <Crisp/Core/ChromeEventTracer.hpp>
 #include <Crisp/Core/StringLiteral.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 
 namespace crisp {
 
 class VulkanTracingContext {
 public:
-    VulkanTracingContext(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice);
-    ~VulkanTracingContext();
+    explicit VulkanTracingContext(const VulkanDevice& device);
+    ~VulkanTracingContext() = default;
 
     VulkanTracingContext(const VulkanTracingContext&) = delete;
     VulkanTracingContext& operator=(const VulkanTracingContext&) = delete;
@@ -31,7 +30,7 @@ public:
         const LiteralWrapper name,
         const ScopeEventType eventType) {
         m_events.emplace_back(ScopeEvent{m_count, name, eventType});
-        vkCmdWriteTimestamp2(cmdBuffer, stageFlags, m_queryPool, m_count++);
+        m_queryPool.writeTimestamp(cmdBuffer, stageFlags, m_count++);
     }
 
     std::span<const ScopeEvent> getTracedEvents() const {
@@ -39,13 +38,11 @@ public:
     }
 
 private:
-    gsl::not_null<const VulkanDevice*> m_device;
-    VkQueryPool m_queryPool;
-    uint32_t m_maxQueryCount;
-    float m_timestampPeriod;
+    static constexpr uint32_t kMaxQueryCount = 1 << 17;
+
+    VulkanTimestampQueryPool m_queryPool;
     int64_t m_referenceTimepoint;
 
-    uint32_t m_first;
     uint32_t m_count;
 
     std::vector<uint64_t> m_retrievedQueries;
@@ -66,7 +63,7 @@ public:
         VulkanTracingContext* context,
         const VkCommandBuffer cmdBuffer,
         const LiteralWrapper name,
-        const VkPipelineStageFlags2 stageFlags = VK_PIPELINE_STAGE_2_NONE)
+        const VkPipelineStageFlags2 stageFlags = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT)
         : m_context(context)
         , m_cmdBuffer(cmdBuffer)
         , m_name(name) {
@@ -77,7 +74,7 @@ public:
 
     ~VulkanTracingScope() {
         if (m_context) {
-            m_context->writeTimestamp(m_cmdBuffer, VK_PIPELINE_STAGE_2_NONE, m_name, ScopeEventType::End);
+            m_context->writeTimestamp(m_cmdBuffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, m_name, ScopeEventType::End);
         }
     }
 
