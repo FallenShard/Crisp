@@ -37,4 +37,7 @@ Checks: >
     -readability-function-cognitive-complexity,
     -readability-math-missing-parentheses,
 
+CheckOptions:
+  cppcoreguidelines-avoid-do-while.IgnoreMacros: true
+
 WarningsAsErrors: "*"
