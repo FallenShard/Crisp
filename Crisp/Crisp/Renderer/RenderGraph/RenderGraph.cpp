@@ -3,7 +3,6 @@
 #include <ranges>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp::rg {
@@ -227,11 +226,13 @@ VkExtent2D RenderGraph::getRenderArea(const RenderGraphPass& pass, const VkExten
 
 void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChainExtent) {
     CRISP_LOGI("Compiling RenderGraph...");
+    m_swapChainExtent = swapChainExtent;
     determineAliasedResurces();
     device.getGeneralQueue().submitAndWait([this, &device, &swapChainExtent](const VkCommandBuffer cmdBuffer) {
         createPhysicalResources(device, swapChainExtent, cmdBuffer);
     });
     createPhysicalPasses(device, swapChainExtent);
+    m_passProfiler.initialize(device, m_passes.size());
     CRISP_LOGI("RenderGraph compiled!");
 }
 
@@ -257,8 +258,15 @@ void RenderGraph::execute(const FrameContext& frameContext) {
     };
 
     const auto& encoder{frameContext.commandEncoder};
+    const auto cmdBuffer = encoder.getHandle();
+    auto* gpuProfileFrame = m_passProfiler.beginFrame(frameContext.virtualFrameIndex);
 
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
+        if (gpuProfileFrame) {
+            gpuProfileFrame->queryPool->writeTimestamp(
+                cmdBuffer, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2);
+        }
+
         // CRISP_LOGI("Executing pass: {}", pass.name);
         if (pass.type == PassType::Rasterizer) {
             synchronizeInputResources(pass, frameContext);
@@ -338,7 +346,67 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             synchronizeInputResources(pass, frameContext);
             pass.executeFunc(frameContext);
         }
+
+        if (gpuProfileFrame) {
+            gpuProfileFrame->queryPool->writeTimestamp(
+                cmdBuffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2 + 1);
+        }
     }
+
+    m_passProfiler.endFrame(gpuProfileFrame);
+}
+
+void RenderGraph::PassProfiler::initialize(const VulkanDevice& vulkanDevice, const size_t passCount) {
+    const uint32_t requiredQueryCount = static_cast<uint32_t>(passCount) * 2;
+    const uint32_t timestampValidBits = vulkanDevice.getGeneralQueue().getTimestampValidBits();
+
+    if (device != &vulkanDevice || queryCount != requiredQueryCount || timestampValidBits == 0) {
+        frames.clear();
+    }
+
+    device = &vulkanDevice;
+    queryCount = timestampValidBits == 0 ? 0 : requiredQueryCount;
+    passTimingsMs.assign(passCount, std::nullopt);
+    graphTimingMs.reset();
+
+    for (auto& frame : frames) {
+        frame.queryPool->reset();
+        frame.pending = false;
+    }
+}
+
+RenderGraph::PassProfiler::Frame* RenderGraph::PassProfiler::beginFrame(const uint32_t virtualFrameIndex) {
+    if (!device || queryCount == 0) {
+        return nullptr;
+    }
+
+    while (frames.size() <= virtualFrameIndex) {
+        auto& frame = frames.emplace_back();
+        frame.timestamps.resize(queryCount);
+        frame.queryPool = std::make_unique<VulkanTimestampQueryPool>(
+            *device, device->getGeneralQueue(), queryCount, fmt::format("RenderGraph GPU Queries {}", frames.size() - 1));
+    }
+
+    auto& frame = frames[virtualFrameIndex];
+    if (!frame.pending) {
+        return &frame;
+    }
+
+    // Renderer has already retired this virtual frame's previous submission before RenderGraph::execute().
+    if (!frame.queryPool->tryGetResults(frame.timestamps)) {
+        return nullptr;
+    }
+
+    for (size_t passIndex = 0; passIndex < passTimingsMs.size(); ++passIndex) {
+        const uint64_t begin = frame.timestamps[passIndex * 2];
+        const uint64_t end = frame.timestamps[passIndex * 2 + 1];
+        passTimingsMs[passIndex] = frame.queryPool->getElapsedMilliseconds(begin, end);
+    }
+    graphTimingMs = frame.queryPool->getElapsedMilliseconds(frame.timestamps.front(), frame.timestamps.back());
+
+    frame.queryPool->reset();
+    frame.pending = false;
+    return &frame;
 }
 
 RenderGraphBlackboard& RenderGraph::getBlackboard() {
@@ -568,8 +636,7 @@ void RenderGraph::createPhysicalResources(
 
     for (auto& res : m_physicalBuffers) {
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
-        res.buffer =
-            std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, BufferMemoryType::GpuOnly);
+        res.buffer = std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, BufferMemoryType::GpuOnly);
         device.setObjectName(res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
     }
 }
@@ -657,8 +724,9 @@ void RenderGraph::createPhysicalPasses(const VulkanDevice& device, const VkExten
             CRISP_CHECK_EQ(getImageDescription(*pass.depthStencilAttachment).layerCount, framebufferLayerCount);
         }
 
-        m_framebuffers.push_back(std::make_unique<VulkanFramebuffer>(
-            device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews, framebufferLayerCount));
+        m_framebuffers.push_back(
+            std::make_unique<VulkanFramebuffer>(
+                device, physicalPass->getHandle(), physicalPass->getRenderArea(), attachmentViews, framebufferLayerCount));
         device.setObjectName(*m_framebuffers.back(), fmt::format("{}Framebuffer", pass.name).c_str());
     }
 }

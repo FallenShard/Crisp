@@ -1,11 +1,14 @@
 #pragma once
 
+#include <span>
+
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphBlackboard.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 
 namespace crisp::rg {
 namespace detail {
@@ -108,6 +111,38 @@ public:
 
     const VulkanImageView& getImageView(const std::string& name, uint32_t attachmentIndex) const;
 
+    std::span<const std::optional<double>> getGpuPassTimingsMs() const {
+        return m_passProfiler.passTimingsMs;
+    }
+
+    std::optional<double> getGpuFrameTimingMs() const {
+        return m_passProfiler.graphTimingMs;
+    }
+
+    bool isGpuProfilingSupported() const {
+        return m_passProfiler.queryCount > 0;
+    }
+
+    const RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) const {
+        return m_imageDescriptions.at(getResource(handle).descriptionIndex);
+    }
+
+    const RenderGraphBufferDescription& getBufferDescription(const RenderGraphResourceHandle handle) const {
+        return m_bufferDescriptions.at(getResource(handle).descriptionIndex);
+    }
+
+    VkExtent3D getImageExtent(const RenderGraphResourceHandle handle) const {
+        return calculateImageExtent(getImageDescription(handle), m_swapChainExtent);
+    }
+
+    size_t getPhysicalImageCount() const {
+        return m_physicalImages.size();
+    }
+
+    size_t getPhysicalBufferCount() const {
+        return m_physicalBuffers.size();
+    }
+
 private:
     struct ResourceTimeline {
         uint32_t firstWrite{~0u};
@@ -135,10 +170,6 @@ private:
         return m_imageDescriptions.at(getResource(handle).descriptionIndex);
     }
 
-    const RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) const {
-        return m_imageDescriptions.at(getResource(handle).descriptionIndex);
-    }
-
     VkImageUsageFlags determineUsageFlags(const std::vector<uint32_t>& imageResourceIndices) const;
     VkImageCreateFlags determineCreateFlags(const std::vector<uint32_t>& imageResourceIndices) const;
     std::pair<VkImageLayout, VulkanSynchronizationStage> determineInitialLayout(
@@ -147,6 +178,29 @@ private:
     void determineAliasedResurces();
     void createPhysicalResources(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
     void createPhysicalPasses(const VulkanDevice& device, VkExtent2D swapChainExtent);
+
+    struct PassProfiler {
+        struct Frame {
+            std::unique_ptr<VulkanTimestampQueryPool> queryPool;
+            std::vector<uint64_t> timestamps;
+            bool pending{false};
+        };
+
+        const VulkanDevice* device{nullptr};
+        std::vector<Frame> frames;
+        std::vector<std::optional<double>> passTimingsMs;
+        std::optional<double> graphTimingMs;
+        uint32_t queryCount{0};
+
+        void initialize(const VulkanDevice& vulkanDevice, size_t passCount);
+        Frame* beginFrame(uint32_t virtualFrameIndex);
+
+        void endFrame(Frame* frame) const { // NOLINT
+            if (frame) {
+                frame->pending = true;
+            }
+        }
+    };
 
     // The list of resources used by the render graph.
     std::vector<RenderGraphResource> m_resources;
@@ -170,5 +224,8 @@ private:
 
     // Used to facilitate communication of pass dependencies across the codebase.
     RenderGraphBlackboard m_blackboard;
+
+    VkExtent2D m_swapChainExtent{};
+    PassProfiler m_passProfiler;
 };
 } // namespace crisp::rg

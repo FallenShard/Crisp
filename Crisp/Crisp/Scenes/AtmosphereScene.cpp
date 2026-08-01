@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 
+#include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
+
 namespace crisp {
 namespace {
 const auto logger = createLoggerMt("AtmosphereScene");
@@ -55,10 +57,7 @@ AtmosphereScene::AtmosphereScene(Renderer* renderer, Window* window)
     m_renderGraph = std::make_unique<rg::RenderGraph>();
     addAtmosphereRenderPasses(*m_renderGraph, *m_renderer, *m_resourceContext);
     addTonemapPass(
-        *m_renderGraph,
-        *m_renderer,
-        *m_resourceContext,
-        m_renderGraph->getBlackboard().get<AtmospherePassData>().image);
+        *m_renderGraph, *m_renderer, *m_resourceContext, m_renderGraph->getBlackboard().get<AtmospherePassData>().image);
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&TonemapPassData::image>());
 
@@ -116,6 +115,12 @@ void AtmosphereScene::applyAtmosphereSettings() {
 void AtmosphereScene::drawGui() {
     drawAtmosphereGui();
     drawTonemapGui();
+
+    ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Render Graph")) {
+        ::crisp::drawGui(*m_renderGraph);
+    }
+    ImGui::End();
 }
 
 void AtmosphereScene::drawTonemapGui() {
@@ -138,8 +143,7 @@ void AtmosphereScene::drawTonemapGui() {
         "None clamps to [0, 1] after exposure, which is what this scene did before the pass existed. The "
         "others roll the highlights off instead of clipping them.");
 
-    ImGui::SliderFloat(
-        "Exposure", &m_tonemapParams.exposure, 0.01f, 1000.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("Exposure", &m_tonemapParams.exposure, 0.01f, 1000.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     drawTooltip(
         "Linear scale on scene radiance before the curve. The ray march now writes raw radiance, so this is "
         "the only place brightness is set.");

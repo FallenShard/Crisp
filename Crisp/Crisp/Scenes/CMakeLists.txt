@@ -42,8 +42,7 @@ target_link_libraries(CrispScenes
 
     PRIVATE Crisp::Application
 
-    # PRIVATE Crisp::RenderGraph
-    # PRIVATE Crisp::RenderGraphGui
+    PRIVATE Crisp::RenderGraphGui
     PRIVATE Crisp::ImGuiCameraUtils
 )
 
