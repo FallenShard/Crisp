@@ -1,8 +1,43 @@
 #include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
 namespace crisp {
+
+std::unique_ptr<VulkanBuffer> createStagingBuffer(
+    VulkanDevice& device, const void* data, const VkDeviceSize size) {
+    auto buffer = std::make_unique<VulkanBuffer>(
+        device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    buffer->updateFromHost(data, size, 0);
+    return buffer;
+}
+
+void uploadBufferBlocking(
+    VulkanDevice& device,
+    const VulkanQueue& queue,
+    const VulkanBuffer& dstBuffer,
+    const VkDeviceSize dstOffset,
+    const void* data,
+    const VkDeviceSize size) {
+    const auto staging = createStagingBuffer(device, data, size);
+    queue.submitAndWait([&](const VkCommandBuffer cmdBuffer) {
+        VkBufferCopy region{};
+        region.srcOffset = 0;
+        region.dstOffset = dstOffset;
+        region.size = size;
+        vkCmdCopyBuffer(cmdBuffer, staging->getHandle(), dstBuffer.getHandle(), 1, &region);
+    });
+}
+
+void uploadBufferBlocking(
+    VulkanDevice& device,
+    const VulkanQueue& queue,
+    const VulkanBuffer& dstBuffer,
+    const void* data,
+    const VkDeviceSize size) {
+    uploadBufferBlocking(device, queue, dstBuffer, 0, data, size);
+}
 
 VulkanStagingBuffer::VulkanStagingBuffer(VulkanDevice& device, const VkDeviceSize capacity, const VkDeviceSize alignment)
     : m_capacity(capacity)
@@ -69,7 +104,7 @@ std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSiz
 void VulkanStagingBuffer::reclaim(const VkDeviceSize reclaimOffset) {
     m_tail = reclaimOffset;
     if (m_tail == m_head) {
-        m_empty = true;
+        reclaimAll();
     }
 }
 

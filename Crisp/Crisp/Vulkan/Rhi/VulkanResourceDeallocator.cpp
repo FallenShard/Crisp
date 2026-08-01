@@ -27,15 +27,6 @@ uint64_t VulkanResourceDeallocator::getRetirementValue() const {
     return m_retirementValue;
 }
 
-void VulkanResourceDeallocator::advanceFrame() {
-    ++m_frameIndex;
-    // Frame m_frameIndex - m_framesInFlight - 1 is the newest one the GPU is guaranteed to be done with.
-    if (m_frameIndex > m_framesInFlight) {
-        collect(m_frameIndex - m_framesInFlight - 1);
-    }
-    setRetirementValue(m_frameIndex);
-}
-
 void VulkanResourceDeallocator::collect(const uint64_t completedValue) {
     const auto isRetired = [completedValue](const auto& entry) { return entry.retirementValue <= completedValue; };
 

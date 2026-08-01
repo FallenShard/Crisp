@@ -34,9 +34,6 @@ public:
 
     void collect(uint64_t completedValue);
 
-    // Fallback path for now.
-    void advanceFrame();
-
     void freeAllResources();
 
     template <typename VulkanHandleType>
@@ -90,7 +87,6 @@ public:
 private:
     VkDevice m_deviceHandle{VK_NULL_HANDLE};
     VmaAllocator m_allocator{VK_NULL_HANDLE};
-    uint64_t m_frameIndex{0};
     uint32_t m_framesInFlight{0};
     uint64_t m_retirementValue{0};
 

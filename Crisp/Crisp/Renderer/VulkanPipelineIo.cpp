@@ -344,7 +344,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const VulkanDevice& device,
     const VulkanRenderPass& renderPass,
     const uint32_t subpassIndex) {
-    CRISP_TRY(const auto json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
+    CRISP_TRY(const auto& json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
     CRISP_TRY(
         auto pipeline,
         createPipelineFromJson(json, spvShaderDir, shaderCache, device, renderPass, subpassIndex),

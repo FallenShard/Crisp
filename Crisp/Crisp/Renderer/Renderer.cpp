@@ -207,9 +207,14 @@ std::optional<FrameContext> Renderer::beginFrame() {
         CRISP_TRACE_SCOPE("frame_wait");
         frame.waitCompletion(*m_frameTimeline);
     }
+    const uint64_t completedValue = m_frameTimeline->getCompletedValue();
+    // This frame's submission signals one past what is currently scheduled.
+    const uint64_t retirementValue = m_frameTimeline->getScheduledValue() + 1;
     auto& deallocator = m_device->getResourceDeallocator();
-    deallocator.collect(m_frameTimeline->getCompletedValue());
-    deallocator.setRetirementValue(m_frameTimeline->getScheduledValue() + 1);
+    deallocator.collect(completedValue);
+    deallocator.setRetirementValue(retirementValue);
+    m_stagingBelt->collect(completedValue);
+    m_stagingBelt->setRetirementValue(retirementValue);
     CRISP_TRACE_VK_ADVANCE(virtualFrameIndex);
 
     std::function<void()> task;
@@ -239,8 +244,6 @@ std::optional<FrameContext> Renderer::beginFrame() {
     auto* commandBuffer = m_workers[0]->resetAndGetCmdBuffer(*m_device, virtualFrameIndex);
     commandBuffer->setIdleState();
     commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
-    m_stagingBelt->beginFrame(virtualFrameIndex);
 
     return FrameContext{
         .frameIndex = m_currentFrameIndex,
@@ -288,7 +291,6 @@ void Renderer::record(const FrameContext& frameContext) {
 }
 
 void Renderer::endFrame(const FrameContext& frameContext) {
-    m_stagingBelt->endFrame();
     frameContext.commandBuffer->end();
     auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
     frame.addSubmission(*frameContext.commandBuffer);
@@ -379,7 +381,8 @@ void Renderer::recreateSwapChain() {
 
 void fillDeviceBuffer(
     Renderer& renderer, VulkanBuffer* buffer, const void* data, const VkDeviceSize size, const VkDeviceSize offset) {
-    renderer.getStagingBelt().uploadBufferBlocking(renderer.getDevice().getGeneralQueue(), *buffer, offset, data, size);
+    auto& device = renderer.getDevice();
+    uploadBufferBlocking(device, device.getGeneralQueue(), *buffer, offset, data, size);
 }
 
 } // namespace crisp

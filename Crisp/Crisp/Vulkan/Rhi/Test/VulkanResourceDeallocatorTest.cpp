@@ -20,20 +20,21 @@ VkBuffer createTransferBuffer(const VulkanDevice& device) {
 TEST_F(VulkanResourceDeallocatorTest, DeferredDeallocation) {
     auto& deallocator = device_->getResourceDeallocator();
 
+    // Two frames' worth of destruction, stamped with the value each frame's submission signals.
+    deallocator.setRetirementValue(1);
     deallocator.deferDestruction(createTransferBuffer(*device_));
     deallocator.deferDestruction(createTransferBuffer(*device_));
+    deallocator.setRetirementValue(2);
     deallocator.deferDestruction(createTransferBuffer(*device_));
 
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
-    deallocator.advanceFrame();
+    deallocator.collect(0);
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 3);
-    deallocator.advanceFrame();
+    deallocator.collect(1);
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
+    deallocator.collect(2);
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
-    deallocator.advanceFrame();
-    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
-    deallocator.advanceFrame();
-    EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
-    deallocator.advanceFrame();
+    deallocator.collect(3);
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 0);
 }
 

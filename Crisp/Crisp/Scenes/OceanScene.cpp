@@ -11,6 +11,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
 
 namespace crisp {
 namespace {
@@ -516,7 +517,8 @@ void OceanScene::update(float dt) {
 
 void OceanScene::render() {
     m_renderer->enqueueDrawCommand([this](const VkCommandBuffer cmdBuffer) {
-        m_renderGraph->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), m_renderer->getDevice().getHandle());
+        m_renderGraph->execute(
+            cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), m_renderer->getDevice().getHandle());
     });
 
     // m_renderGraphLegacy->clearCommandLists();
@@ -548,15 +550,13 @@ std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
     const auto oceanSpectrum{createOceanSpectrum(0, m_oceanParams)};
 
     auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32B32A32_SFLOAT);
-    auto& belt = m_renderer->getStagingBelt();
-    m_renderer->getDevice().getGeneralQueue().submitAndWait(
-        [&belt, img = image.get(), &oceanSpectrum](VkCommandBuffer cmdBuffer) {
-            img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
-            belt.uploadImage(
-                cmdBuffer, *img, 0, 1, 0, oceanSpectrum.data(), oceanSpectrum.size() * sizeof(oceanSpectrum[0]));
-            img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageWrite);
-        });
-    belt.reclaimAll();
+    const auto staging = createStagingBuffer(
+        m_renderer->getDevice(), oceanSpectrum.data(), oceanSpectrum.size() * sizeof(oceanSpectrum[0]));
+    m_renderer->getDevice().getGeneralQueue().submitAndWait([&staging, img = image.get()](VkCommandBuffer cmdBuffer) {
+        img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+        img->copyFrom(cmdBuffer, *staging, 0, 1);
+        img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageWrite);
+    });
 
     return image;
 }
@@ -600,11 +600,10 @@ int OceanScene::applyFFT(std::string image) {
             image + "BitReversePass0",
             [this, image, imageLayerRead](
                 const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                cmdBuffer.insertImageMemoryBarrier(
-                    createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerRead,
-                        kComputeWrite >> kComputeRead));
+                cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                    m_resourceContext->imageCache.getImage(image).getHandle(),
+                    imageLayerRead,
+                    kComputeWrite >> kComputeRead));
             });
         CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass0", imageLayerRead, imageLayerWrite);
 
@@ -641,11 +640,10 @@ int OceanScene::applyFFT(std::string image) {
                 name,
                 [this, image, imageLayerRead](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(
-                        createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(),
-                            imageLayerRead,
-                            kComputeWrite >> kComputeRead));
+                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerRead,
+                        kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -656,11 +654,10 @@ int OceanScene::applyFFT(std::string image) {
                 name,
                 [this, image, imageLayerRead](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(
-                        createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(),
-                            imageLayerRead,
-                            kComputeWrite >> kComputeRead));
+                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerRead,
+                        kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -694,11 +691,10 @@ int OceanScene::applyFFT(std::string image) {
             image + "BitReversePass1",
             [this, image, imageLayerRead](
                 const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                cmdBuffer.insertImageMemoryBarrier(
-                    createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerRead,
-                        kComputeWrite >> kComputeRead));
+                cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                    m_resourceContext->imageCache.getImage(image).getHandle(),
+                    imageLayerRead,
+                    kComputeWrite >> kComputeRead));
             });
         std::swap(imageLayerRead, imageLayerWrite);
     }
@@ -735,11 +731,10 @@ int OceanScene::applyFFT(std::string image) {
                 kGeometryPass,
                 [this, image, imageLayerWrite](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(
-                        createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(),
-                            imageLayerWrite,
-                            kComputeWrite >> kVertexRead));
+                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerWrite,
+                        kComputeWrite >> kVertexRead));
                 });
         } else if (i == 0) {
             m_renderGraphLegacy->addDependency(
@@ -747,11 +742,10 @@ int OceanScene::applyFFT(std::string image) {
                 name,
                 [this, image, imageLayerRead](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(
-                        createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(),
-                            imageLayerRead,
-                            kComputeWrite >> kComputeRead));
+                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerRead,
+                        kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -762,11 +756,10 @@ int OceanScene::applyFFT(std::string image) {
                 name,
                 [this, image, imageLayerRead](
                     const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(
-                        createImageMemoryReadBarrier(
-                            m_resourceContext->imageCache.getImage(image).getHandle(),
-                            imageLayerRead,
-                            kComputeWrite >> kComputeRead));
+                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
+                        m_resourceContext->imageCache.getImage(image).getHandle(),
+                        imageLayerRead,
+                        kComputeWrite >> kComputeRead));
                 });
         }
 
@@ -1013,7 +1006,9 @@ void OceanScene::buildNewFFT() {
 
     OscillationPassDispatch = createOscillationPassDispatch(*m_renderer, *m_renderGraph, m_resourceContext->imageCache);
     createFftDispatches<0>(
-        *m_renderer, *m_renderGraph, m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY));
+        *m_renderer,
+        *m_renderGraph,
+        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY));
     // createFftDispatches<1>(
     //     *m_renderer, *m_renderGraph,
     //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX));
@@ -1021,9 +1016,11 @@ void OceanScene::buildNewFFT() {
     //     *m_renderer, *m_renderGraph,
     //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ));
     // createFftDispatches<3>(
-    //     *m_renderer, *m_renderGraph, m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX));
+    //     *m_renderer, *m_renderGraph,
+    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX));
     // createFftDispatches<4>(
-    //     *m_renderer, *m_renderGraph, m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
+    //     *m_renderer, *m_renderGraph,
+    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
 }
 
 } // namespace crisp

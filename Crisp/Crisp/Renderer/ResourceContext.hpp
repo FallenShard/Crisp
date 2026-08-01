@@ -80,7 +80,8 @@ public:
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             BufferMemoryType::GpuOnly);
         auto* ptr = addBuffer(id, std::move(buffer));
-        m_renderer->getStagingBelt().uploadBufferBlocking(m_renderer->getDevice().getGeneralQueue(), *ptr, data);
+        auto& device = m_renderer->getDevice();
+        uploadBufferBlocking(device, device.getGeneralQueue(), *ptr, data);
         return ptr;
     }
 

@@ -3,7 +3,6 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
 #include <algorithm>
 
@@ -19,53 +18,72 @@ VulkanStagingBelt::VulkanStagingBelt(VulkanDevice& device, const VkDeviceSize in
 VulkanStagingBelt::Chunk& VulkanStagingBelt::addChunk(const VkDeviceSize capacity) {
     return m_chunks.emplace_back(Chunk{
         .buffer = VulkanStagingBuffer(*m_device, capacity, m_alignment),
-        .lastUsedFrame = m_currentFrame,
+        .lastUsedTick = m_tick,
     });
 }
 
-void VulkanStagingBelt::beginFrame(const uint32_t virtualFrameIndex) {
-    CRISP_CHECK_LT(
-        virtualFrameIndex,
-        kMaxVirtualFrames,
-        "virtualFrameIndex={} exceeds belt's kMaxVirtualFrames={}",
-        virtualFrameIndex,
-        kMaxVirtualFrames);
-    ++m_currentFrame;
-    m_currentVirtualFrame = virtualFrameIndex;
-
-    for (auto& chunk : m_chunks) {
-        chunk.buffer.reclaim(chunk.watermarks[virtualFrameIndex]);
-    }
-
-    // Evict chunks that haven't been touched for kMaxVirtualFrames + grace frames.
-    // The primary chunk at index 0 is preserved to avoid recreate thrash.
-    if (m_chunks.size() > 1) {
-        constexpr uint64_t kEvictionThreshold = kMaxVirtualFrames + kEvictionGraceFrames;
-        const auto newEnd = std::remove_if(
-            m_chunks.begin() + 1, m_chunks.end(), [&](const Chunk& c) {
-                return (m_currentFrame - c.lastUsedFrame) > kEvictionThreshold;
-            });
-        if (newEnd != m_chunks.end()) {
-            m_chunks.erase(newEnd, m_chunks.end());
-            m_activeChunkIdx = 0;
-        }
-    }
+void VulkanStagingBelt::setRetirementValue(const uint64_t value) {
+    m_retirementValue = value;
 }
 
-void VulkanStagingBelt::endFrame() {
+uint64_t VulkanStagingBelt::getRetirementValue() const {
+    return m_retirementValue;
+}
+
+void VulkanStagingBelt::collect(const uint64_t completedValue) {
+    ++m_tick;
+
     for (auto& chunk : m_chunks) {
-        chunk.watermarks[m_currentVirtualFrame] = chunk.buffer.getHead();
+        size_t retiredCount = 0;
+        while (retiredCount < chunk.pending.size() && chunk.pending[retiredCount].retirementValue <= completedValue) {
+            ++retiredCount;
+        }
+        if (retiredCount == 0) {
+            continue;
+        }
+
+        chunk.buffer.reclaim(chunk.pending[retiredCount - 1].head);
+        chunk.pending.erase(chunk.pending.begin(), chunk.pending.begin() + retiredCount);
+    }
+
+    evictStaleChunks();
+}
+
+void VulkanStagingBelt::evictStaleChunks() {
+    // The primary chunk at index 0 is preserved to avoid recreate thrash.
+    if (m_chunks.size() <= 1) {
+        return;
+    }
+
+    const auto newEnd = std::remove_if(m_chunks.begin() + 1, m_chunks.end(), [this](const Chunk& c) {
+        return c.pending.empty() && (m_tick - c.lastUsedTick) > kEvictionGraceTicks;
+    });
+    if (newEnd != m_chunks.end()) {
+        m_chunks.erase(newEnd, m_chunks.end());
+        m_activeChunkIdx = 0;
     }
 }
 
 StagingAllocation VulkanStagingBelt::stageData(const void* data, const VkDeviceSize size) {
+    return stageData(data, size, m_retirementValue);
+}
+
+StagingAllocation VulkanStagingBelt::stageData(
+    const void* data, const VkDeviceSize size, const uint64_t retirementValue) {
     const auto tryAllocateAt = [&](const size_t idx) -> std::optional<StagingAllocation> {
-        auto alloc = m_chunks[idx].buffer.allocate(size);
+        auto& chunk = m_chunks[idx];
+        auto alloc = chunk.buffer.allocate(size);
         if (!alloc.has_value()) {
             return std::nullopt;
         }
         std::memcpy(alloc->mappedPtr, data, size);
-        m_chunks[idx].lastUsedFrame = m_currentFrame;
+
+        if (!chunk.pending.empty() && chunk.pending.back().retirementValue == retirementValue) {
+            chunk.pending.back().head = chunk.buffer.getHead();
+        } else {
+            chunk.pending.push_back({retirementValue, chunk.buffer.getHead()});
+        }
+        chunk.lastUsedTick = m_tick;
         m_activeChunkIdx = idx;
         return alloc;
     };
@@ -98,13 +116,6 @@ StagingAllocation VulkanStagingBelt::stageData(const void* data, const VkDeviceS
     return *alloc;
 }
 
-void VulkanStagingBelt::reclaimAll() {
-    for (auto& chunk : m_chunks) {
-        chunk.buffer.reclaimAll();
-        chunk.watermarks.fill(0);
-    }
-}
-
 void VulkanStagingBelt::uploadBuffer(
     const VkCommandBuffer cmdBuffer,
     const VulkanBuffer& dstBuffer,
@@ -118,47 +129,6 @@ void VulkanStagingBelt::uploadBuffer(
     region.dstOffset = dstOffset;
     region.size = size;
     vkCmdCopyBuffer(cmdBuffer, alloc.buffer, dstBuffer.getHandle(), 1, &region);
-}
-
-void VulkanStagingBelt::uploadBufferBlocking(
-    const VulkanQueue& queue,
-    const VulkanBuffer& dstBuffer,
-    const VkDeviceSize dstOffset,
-    const void* data,
-    const VkDeviceSize size) {
-    if (size > m_initialCapacity) {
-        spdlog::warn(
-            "VulkanStagingBelt: upload of {} bytes exceeds initial chunk capacity of {}. Using temporary staging "
-            "buffer.",
-            size,
-            m_initialCapacity);
-
-        auto tempStaging = std::make_unique<VulkanBuffer>(
-            *m_device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
-        tempStaging->updateFromHost(data, size, 0);
-        queue.submitAndWait([&](const VkCommandBuffer cmdBuffer) {
-            dstBuffer.copyFrom(cmdBuffer, *tempStaging);
-        });
-        return;
-    }
-
-    const auto alloc = stageData(data, size);
-    queue.submitAndWait([&](const VkCommandBuffer cmdBuffer) {
-        VkBufferCopy region{};
-        region.srcOffset = alloc.offset;
-        region.dstOffset = dstOffset;
-        region.size = size;
-        vkCmdCopyBuffer(cmdBuffer, alloc.buffer, dstBuffer.getHandle(), 1, &region);
-    });
-
-    // Queue is idle after submitAndWait; drain the chunk we staged into.
-    auto& chunk = m_chunks[m_activeChunkIdx];
-    chunk.buffer.reclaim(chunk.buffer.getHead());
-}
-
-void VulkanStagingBelt::uploadBufferBlocking(
-    const VulkanQueue& queue, const VulkanBuffer& dstBuffer, const void* data, const VkDeviceSize size) {
-    uploadBufferBlocking(queue, dstBuffer, 0, data, size);
 }
 
 void VulkanStagingBelt::uploadImage(

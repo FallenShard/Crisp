@@ -11,6 +11,27 @@ struct StagingAllocation {
     void* mappedPtr;     // Host-visible pointer at this offset.
 };
 
+class VulkanQueue;
+
+std::unique_ptr<VulkanBuffer> createStagingBuffer(VulkanDevice& device, const void* data, VkDeviceSize size);
+
+void uploadBufferBlocking(
+    VulkanDevice& device,
+    const VulkanQueue& queue,
+    const VulkanBuffer& dstBuffer,
+    VkDeviceSize dstOffset,
+    const void* data,
+    VkDeviceSize size);
+
+void uploadBufferBlocking(
+    VulkanDevice& device, const VulkanQueue& queue, const VulkanBuffer& dstBuffer, const void* data, VkDeviceSize size);
+
+template <typename T>
+void uploadBufferBlocking(
+    VulkanDevice& device, const VulkanQueue& queue, const VulkanBuffer& dstBuffer, const std::vector<T>& data) {
+    uploadBufferBlocking(device, queue, dstBuffer, data.data(), data.size() * sizeof(T));
+}
+
 class VulkanStagingBuffer {
 public:
     // Creates a persistent-mapped host-visible buffer of `capacity` bytes.

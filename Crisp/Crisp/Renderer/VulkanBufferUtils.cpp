@@ -1,6 +1,7 @@
 #include <Crisp/Renderer/VulkanBufferUtils.hpp>
 
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
 
 namespace crisp {
 
@@ -9,9 +10,9 @@ std::unique_ptr<VulkanBuffer> createVertexBuffer(
     static constexpr VkBufferUsageFlags usageFlags =
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     auto& device = renderer.getDevice();
-    auto buffer = std::make_unique<VulkanBuffer>(
-        device, data.size(), usageFlags | extraFlags, BufferMemoryType::GpuOnly);
-    renderer.getStagingBelt().uploadBufferBlocking(device.getGeneralQueue(), *buffer, data.data(), data.size());
+    auto buffer =
+        std::make_unique<VulkanBuffer>(device, data.size(), usageFlags | extraFlags, BufferMemoryType::GpuOnly);
+    uploadBufferBlocking(device, device.getGeneralQueue(), *buffer, data.data(), data.size());
     return buffer;
 }
 

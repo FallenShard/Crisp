@@ -8,6 +8,51 @@ using VulkanStagingBufferTest = VulkanTest;
 
 constexpr VkDeviceSize kAlignment = 64;
 
+TEST_F(VulkanStagingBufferTest, UploadBufferBlocking) {
+    const std::vector<uint32_t> srcData = {1, 2, 3, 4, 5, 6, 7, 8};
+    const VkDeviceSize dataSize = srcData.size() * sizeof(uint32_t);
+
+    auto dstBuffer = std::make_unique<VulkanBuffer>(
+        *device_, dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        BufferMemoryType::GpuOnly);
+
+    uploadBufferBlocking(*device_, device_->getGeneralQueue(), *dstBuffer, srcData.data(), dataSize);
+
+    EXPECT_EQ(toStdVec<uint32_t>(*dstBuffer), srcData);
+}
+
+TEST_F(VulkanStagingBufferTest, UploadBufferBlockingWithOffset) {
+    auto dstBuffer = std::make_unique<VulkanBuffer>(
+        *device_, 32, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        BufferMemoryType::GpuOnly);
+
+    const std::vector<uint32_t> zeros(8, 0);
+    uploadBufferBlocking(*device_, device_->getGeneralQueue(), *dstBuffer, zeros.data(), 32);
+
+    // Write 2 uint32s at byte offset 8.
+    const std::vector<uint32_t> patch = {0xAA, 0xBB};
+    uploadBufferBlocking(*device_, device_->getGeneralQueue(), *dstBuffer, 8, patch.data(), 8);
+
+    const auto readBack = toStdVec<uint32_t>(*dstBuffer);
+    EXPECT_EQ(readBack[0], 0u);
+    EXPECT_EQ(readBack[1], 0u);
+    EXPECT_EQ(readBack[2], 0xAAu);
+    EXPECT_EQ(readBack[3], 0xBBu);
+    EXPECT_EQ(readBack[4], 0u);
+}
+
+TEST_F(VulkanStagingBufferTest, UploadBufferBlockingFromVector) {
+    const std::vector<uint32_t> srcData(64, 0xDEAD);
+
+    auto dstBuffer = std::make_unique<VulkanBuffer>(
+        *device_, srcData.size() * sizeof(uint32_t),
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::GpuOnly);
+
+    uploadBufferBlocking(*device_, device_->getGeneralQueue(), *dstBuffer, srcData);
+
+    EXPECT_EQ(toStdVec<uint32_t>(*dstBuffer), srcData);
+}
+
 TEST_F(VulkanStagingBufferTest, AllocationsAreMonotonicallyIncreasingAndAligned) {
     VulkanStagingBuffer staging(*device_, 4096, kAlignment);
 
