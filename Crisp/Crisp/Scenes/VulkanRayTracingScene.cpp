@@ -113,9 +113,12 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
                     sceneGeometry, m_sceneDesc.props[idx].triangleOffset * sizeof(glm::uvec3)),
                 m_sceneDesc.props[idx].triangleCount,
                 glm::mat4(1.0f)));
+        m_bottomLevelAccelStructures.back()->setDebugName(
+            m_renderer->getDevice(), fmt::format("Path Tracer BLAS [{}]", m_sceneDesc.meshFilenames[idx]));
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
+    m_topLevelAccelStructure->setDebugName(m_renderer->getDevice(), "Path Tracer TLAS");
     m_aliasTableBuffer = m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
     m_instancePropsBuffer = m_resourceContext->createStorageBuffer("instanceProps", m_sceneDesc.props);
@@ -142,10 +145,13 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
     createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     m_rayTracedImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
+    m_renderer->getDevice().setObjectName(*m_rayTracedImage, "Path Tracer Output");
+    m_renderer->getDevice().setObjectName(m_rayTracedImage->getView(), "Path Tracer Output View");
 
     m_pipeline = createPipeline();
 
     m_material = std::make_unique<Material>(m_pipeline.get());
+    m_material->setDebugName("Path Tracer");
 
     updateDescriptorSets();
 
@@ -288,9 +294,12 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
 
     const VkPipeline pipeline{pipelineBuilder.createHandle(pipelineLayout->getHandle())};
     m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
+    m_renderer->getDevice().setObjectName(*m_shaderBindingTable.buffer, "Path Tracer Shader Binding Table");
 
-    return std::make_unique<VulkanPipeline>(
+    auto result = std::make_unique<VulkanPipeline>(
         m_renderer->getDevice(), pipeline, std::move(pipelineLayout), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+    result->setDebugName(m_renderer->getDevice(), "Path Tracer");
+    return result;
 }
 
 void VulkanRayTracingScene::updateDescriptorSets() {

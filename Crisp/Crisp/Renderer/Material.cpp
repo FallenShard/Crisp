@@ -1,5 +1,7 @@
 #include <Crisp/Renderer/Material.hpp>
 
+#include <Crisp/Core/Format.hpp>
+
 namespace crisp {
 Material::Material(VulkanPipeline* pipeline)
     : Material(
@@ -38,6 +40,12 @@ Material::Material(
         m_dynamicOffsetCount += pipelineLayout.getDynamicBufferCount(i);
     }
     m_dynamicOffsets.resize(m_dynamicOffsetCount);
+}
+
+void Material::setDebugName(const std::string_view name) const {
+    for (uint32_t setIndex = 0; setIndex < m_sets.size(); ++setIndex) {
+        m_device->setObjectName(m_sets[setIndex], fmt::format("{} Descriptor Set {}", name, m_firstSet + setIndex));
+    }
 }
 
 void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, const VkDescriptorImageInfo& imageInfo) {

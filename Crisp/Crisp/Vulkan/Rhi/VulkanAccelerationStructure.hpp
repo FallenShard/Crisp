@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanCommandPool.hpp>
@@ -21,6 +23,7 @@ public:
     void setBuildRangeOffsets(uint32_t primitiveOffset, uint32_t firstVertex);
 
     void build(VkCommandBuffer cmdBuffer);
+    void setDebugName(const VulkanDevice& device, std::string_view name) const;
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
 

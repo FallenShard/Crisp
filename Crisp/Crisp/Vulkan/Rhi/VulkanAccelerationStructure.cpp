@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 
+#include <Crisp/Core/Format.hpp>
+
 namespace crisp {
 namespace {
 VkAccelerationStructureBuildSizesInfoKHR getBuildSizes(
@@ -110,6 +112,15 @@ void VulkanAccelerationStructure::build(const VkCommandBuffer cmdBuffer) {
     }
     std::vector<VkAccelerationStructureBuildRangeInfoKHR*> rangeInfos{&m_buildRange};
     vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &m_buildInfo, rangeInfos.data());
+}
+
+void VulkanAccelerationStructure::setDebugName(const VulkanDevice& device, const std::string_view name) const {
+    device.setObjectName(*this, fmt::format("{} Acceleration Structure", name));
+    device.setObjectName(*m_accelerationStructureBuffer, fmt::format("{} Acceleration Structure Buffer", name));
+    device.setObjectName(*m_scratchBuffer, fmt::format("{} Acceleration Structure Scratch Buffer", name));
+    if (m_instanceBuffer) {
+        device.setObjectName(*m_instanceBuffer, fmt::format("{} Acceleration Structure Instance Buffer", name));
+    }
 }
 
 VkWriteDescriptorSetAccelerationStructureKHR VulkanAccelerationStructure::getDescriptorInfo() const {

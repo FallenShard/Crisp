@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
@@ -19,6 +21,8 @@ public:
         VulkanDescriptorSetAllocator* VulkanDescriptorSetAllocator,
         uint32_t firstSet,
         uint32_t setCount);
+
+    void setDebugName(std::string_view name) const;
 
     // Methods to update a descriptor referencing an image.
     void writeDescriptor(uint32_t setIndex, uint32_t binding, const VkDescriptorImageInfo& imageInfo);

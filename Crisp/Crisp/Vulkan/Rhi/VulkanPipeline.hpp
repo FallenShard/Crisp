@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string_view>
 #include <utility>
 
 #include <Crisp/Utils/BitFlags.hpp>
@@ -29,6 +30,7 @@ public:
     }
 
     void bind(VkCommandBuffer buffer) const;
+    void setDebugName(const VulkanDevice& device, std::string_view name) const;
 
     VulkanDescriptorSet allocateDescriptorSet(uint32_t setId) const;
 
