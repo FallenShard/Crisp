@@ -43,15 +43,6 @@ public:
     VulkanRenderPassBuilder& addPreserveAttachmentRef(uint32_t subpass, uint32_t attachmentIndex);
 
     VulkanRenderPassBuilder& addDependency(
-        uint32_t srcSubpass,
-        uint32_t dstSubpass,
-        VkPipelineStageFlags srcStageMask,
-        VkAccessFlags srcAccessMask,
-        VkPipelineStageFlags dstStageMask,
-        VkAccessFlags dstAccessMask,
-        VkDependencyFlags flags = 0);
-
-    VulkanRenderPassBuilder& addDependency(
         uint32_t srcSubpass, uint32_t dstSubpass, const VulkanSynchronizationScope& scope, VkDependencyFlags flags = 0);
 
     std::unique_ptr<VulkanRenderPass> create(const VulkanDevice& device, const VkExtent2D& renderArea) const;
@@ -67,6 +58,7 @@ private:
     std::vector<VkAttachmentReference> m_depthAttachmentRefs;
     std::vector<std::vector<uint32_t>> m_preserveAttachments;
     std::vector<VkSubpassDescription> m_subpasses;
-    std::vector<VkSubpassDependency> m_dependencies;
+    std::vector<VkSubpassDependency2> m_dependencies;
+    std::vector<VkMemoryBarrier2> m_dependencyBarriers;
 };
 } // namespace crisp

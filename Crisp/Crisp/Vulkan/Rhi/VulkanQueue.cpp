@@ -21,31 +21,48 @@ void VulkanQueue::submit(
     const VkSemaphore signalSemaphore,
     const VkCommandBuffer commandBuffer,
     const VkFence fence,
-    const VkPipelineStageFlags waitPipelineStage) const {
-    const std::array<VkPipelineStageFlags, 1> waitStages{waitPipelineStage};
+    const VkPipelineStageFlags2 waitPipelineStage,
+    const VkPipelineStageFlags2 signalPipelineStage) const {
+    const VkSemaphoreSubmitInfo waitInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = waitSemaphore,
+        .stageMask = waitPipelineStage,
+    };
+    const VkSemaphoreSubmitInfo signalInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = signalSemaphore,
+        .stageMask = signalPipelineStage,
+    };
+    const VkCommandBufferSubmitInfo cmdBufferInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = commandBuffer,
+    };
 
-    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    VkSubmitInfo2 submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO_2};
     if (waitSemaphore != VK_NULL_HANDLE) {
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &waitSemaphore;
-        submitInfo.pWaitDstStageMask = waitStages.data();
+        submitInfo.waitSemaphoreInfoCount = 1;
+        submitInfo.pWaitSemaphoreInfos = &waitInfo;
     }
     if (signalSemaphore != VK_NULL_HANDLE) {
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &signalSemaphore;
+        submitInfo.signalSemaphoreInfoCount = 1;
+        submitInfo.pSignalSemaphoreInfos = &signalInfo;
     }
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &cmdBufferInfo;
 
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    VK_FATAL(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
+    VK_FATAL(vkQueueSubmit2(m_handle, 1, &submitInfo, fence));
 }
 
 void VulkanQueue::submit(const VkCommandBuffer cmdBuffer, const VkFence fence) const {
-    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuffer;
-    VK_FATAL(vkQueueSubmit(m_handle, 1, &submitInfo, fence));
+    const VkCommandBufferSubmitInfo cmdBufferInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cmdBuffer,
+    };
+
+    VkSubmitInfo2 submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO_2};
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &cmdBufferInfo;
+    VK_FATAL(vkQueueSubmit2(m_handle, 1, &submitInfo, fence));
 }
 
 VkResult VulkanQueue::present(

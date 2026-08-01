@@ -3,8 +3,27 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 
 namespace crisp {
+namespace {
+
+VkAttachmentDescription2 toAttachmentDescription2(const VkAttachmentDescription& description) {
+    return {
+        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+        .flags = description.flags,
+        .format = description.format,
+        .samples = description.samples,
+        .loadOp = description.loadOp,
+        .storeOp = description.storeOp,
+        .stencilLoadOp = description.stencilLoadOp,
+        .stencilStoreOp = description.stencilStoreOp,
+        .initialLayout = description.initialLayout,
+        .finalLayout = description.finalLayout,
+    };
+}
+
+} // namespace
 
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::setAttachmentCount(const uint32_t count) {
     m_attachments.resize(count);
@@ -153,28 +172,23 @@ VulkanRenderPassBuilder& VulkanRenderPassBuilder::addPreserveAttachmentRef(uint3
 VulkanRenderPassBuilder& VulkanRenderPassBuilder::addDependency(
     const uint32_t srcSubpass,
     const uint32_t dstSubpass,
-    const VkPipelineStageFlags srcStageMask,
-    const VkAccessFlags srcAccessMask,
-    const VkPipelineStageFlags dstStageMask,
-    const VkAccessFlags dstAccessMask,
-    const VkDependencyFlags flags) {
-    m_dependencies.push_back({srcSubpass, dstSubpass, srcStageMask, dstStageMask, srcAccessMask, dstAccessMask, flags});
-    return *this;
-}
-
-VulkanRenderPassBuilder& VulkanRenderPassBuilder::addDependency(
-    const uint32_t srcSubpass,
-    const uint32_t dstSubpass,
     const VulkanSynchronizationScope& scope,
     const VkDependencyFlags flags) {
-    m_dependencies.push_back(
-        {srcSubpass,
-         dstSubpass,
-         static_cast<uint32_t>(scope.srcStage),
-         static_cast<uint32_t>(scope.dstStage),
-         static_cast<uint32_t>(scope.srcAccess),
-         static_cast<uint32_t>(scope.dstAccess),
-         flags});
+    m_dependencyBarriers.push_back({
+        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+        .srcStageMask = scope.srcStage,
+        .srcAccessMask = scope.srcAccess,
+        .dstStageMask = scope.dstStage,
+        .dstAccessMask = scope.dstAccess,
+    });
+    // The stage and access masks live entirely in the chained VkMemoryBarrier2; the ones on VkSubpassDependency2
+    // are ignored when a barrier is chained, so they stay zero.
+    m_dependencies.push_back({
+        .sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+        .srcSubpass = srcSubpass,
+        .dstSubpass = dstSubpass,
+        .dependencyFlags = flags,
+    });
     return *this;
 }
 
@@ -187,16 +201,77 @@ std::unique_ptr<VulkanRenderPass> VulkanRenderPassBuilder::create(
     params.clearValues = m_clearValues;
     params.attachmentDescriptions = m_attachments;
 
-    VkRenderPassCreateInfo renderPassInfo{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
-    renderPassInfo.pAttachments = m_attachments.data();
-    renderPassInfo.subpassCount = static_cast<uint32_t>(m_subpasses.size());
-    renderPassInfo.pSubpasses = m_subpasses.data();
-    renderPassInfo.dependencyCount = static_cast<uint32_t>(m_dependencies.size());
-    renderPassInfo.pDependencies = m_dependencies.data();
+    std::vector<VkAttachmentDescription2> attachments;
+    attachments.reserve(m_attachments.size());
+    for (const auto& attachment : m_attachments) {
+        attachments.push_back(toAttachmentDescription2(attachment));
+    }
+
+    const auto toReference2 = [this](const VkAttachmentReference& ref) {
+        return VkAttachmentReference2{
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+            .attachment = ref.attachment,
+            .layout = ref.layout,
+            .aspectMask =
+                ref.attachment < m_attachments.size()
+                    ? determineImageAspect(m_attachments[ref.attachment].format)
+                    : VkImageAspectFlags{VK_IMAGE_ASPECT_COLOR_BIT},
+        };
+    };
+    const auto toReferences2 = [&toReference2](const std::vector<VkAttachmentReference>& refs) {
+        std::vector<VkAttachmentReference2> result;
+        result.reserve(refs.size());
+        for (const auto& ref : refs) {
+            result.push_back(toReference2(ref));
+        }
+        return result;
+    };
+
+    const size_t subpassCount = m_subpasses.size();
+    std::vector<std::vector<VkAttachmentReference2>> inputRefs(subpassCount);
+    std::vector<std::vector<VkAttachmentReference2>> colorRefs(subpassCount);
+    std::vector<std::vector<VkAttachmentReference2>> resolveRefs(subpassCount);
+    std::vector<VkAttachmentReference2> depthRefs(subpassCount);
+    std::vector<VkSubpassDescription2> subpasses;
+    subpasses.reserve(subpassCount);
+
+    for (size_t i = 0; i < subpassCount; ++i) {
+        inputRefs[i] = toReferences2(m_inputAttachmentRefs[i]);
+        colorRefs[i] = toReferences2(m_colorAttachmentRefs[i]);
+        resolveRefs[i] = toReferences2(m_resolveAttachmentRefs[i]);
+        depthRefs[i] = toReference2(m_depthAttachmentRefs[i]);
+
+        const auto& subpass = m_subpasses[i];
+        subpasses.push_back({
+            .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+            .flags = subpass.flags,
+            .pipelineBindPoint = subpass.pipelineBindPoint,
+            .inputAttachmentCount = static_cast<uint32_t>(inputRefs[i].size()),
+            .pInputAttachments = inputRefs[i].data(),
+            .colorAttachmentCount = static_cast<uint32_t>(colorRefs[i].size()),
+            .pColorAttachments = colorRefs[i].data(),
+            .pResolveAttachments = subpass.pResolveAttachments ? resolveRefs[i].data() : nullptr,
+            .pDepthStencilAttachment = subpass.pDepthStencilAttachment ? &depthRefs[i] : nullptr,
+            .preserveAttachmentCount = static_cast<uint32_t>(m_preserveAttachments[i].size()),
+            .pPreserveAttachments = m_preserveAttachments[i].data(),
+        });
+    }
+
+    std::vector<VkSubpassDependency2> dependencies(m_dependencies);
+    for (size_t i = 0; i < dependencies.size(); ++i) {
+        dependencies[i].pNext = &m_dependencyBarriers[i];
+    }
+
+    VkRenderPassCreateInfo2 renderPassInfo{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2};
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = static_cast<uint32_t>(subpasses.size());
+    renderPassInfo.pSubpasses = subpasses.data();
+    renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+    renderPassInfo.pDependencies = dependencies.data();
 
     VkRenderPass renderPass{VK_NULL_HANDLE};
-    VK_CHECK(vkCreateRenderPass(device.getHandle(), &renderPassInfo, nullptr, &renderPass));
+    VK_CHECK(vkCreateRenderPass2(device.getHandle(), &renderPassInfo, nullptr, &renderPass));
     return std::make_unique<VulkanRenderPass>(device, renderPass, std::move(params));
 }
 

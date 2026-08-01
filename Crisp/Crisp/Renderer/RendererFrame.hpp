@@ -38,9 +38,10 @@ private:
         std::vector<VkCommandBuffer> cmdBufferHandles;
 
         std::vector<VkSemaphore> waitSemaphores;
-        std::vector<VkPipelineStageFlags> waitStages;
+        std::vector<VkPipelineStageFlags2> waitStages;
 
         std::vector<VkSemaphore> signalSemaphores;
+        std::vector<VkPipelineStageFlags2> signalStages;
     };
 
     std::vector<Submission> m_submissions;

@@ -13,7 +13,8 @@ public:
         VkSemaphore signalSemaphore,
         VkCommandBuffer commandBuffer,
         VkFence fence,
-        VkPipelineStageFlags waitPipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT) const;
+        VkPipelineStageFlags2 waitPipelineStage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VkPipelineStageFlags2 signalPipelineStage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT) const;
     void submit(VkCommandBuffer cmdBuffer, VkFence fence = VK_NULL_HANDLE) const;
     VkResult present(VkSemaphore waitSemaphore, VkSwapchainKHR VulkanSwapChain, uint32_t imageIndex) const;
 

@@ -61,26 +61,60 @@ void RendererFrame::addSubmission(const VulkanCommandBuffer& cmdBuffer) {
     Submission submission{};
     submission.cmdBufferHandles.push_back(cmdBuffer.getHandle());
     submission.waitSemaphores.push_back(m_imageAvailableSemaphore);
-    submission.waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    submission.waitStages.push_back(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
     submission.signalSemaphores.push_back(m_renderFinishedSemaphore);
+    // Waited on by vkQueuePresentKHR, so this stays broad on purpose. Narrowing to COLOR_ATTACHMENT_OUTPUT would
+    // be correct only while a render pass is the last thing to write the swapchain image - a compute or blit pass
+    // writing it afterwards is not logically earlier, and would race. There is also nothing to gain: the waiter is
+    // the display engine at end of frame, with no subsequent GPU work to overlap.
+    submission.signalStages.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
     m_submissions.push_back(submission);
 }
 
 void RendererFrame::submitToQueue(const VulkanQueue& queue) {
-    std::vector<VkSubmitInfo> submitInfos{};
+    // The per-submission info arrays are held in these outer vectors, sized up front, because VkSubmitInfo2
+    // stores pointers into them and must stay valid until vkQueueSubmit2 returns.
+    std::vector<std::vector<VkSemaphoreSubmitInfo>> waitInfos(m_submissions.size());
+    std::vector<std::vector<VkSemaphoreSubmitInfo>> signalInfos(m_submissions.size());
+    std::vector<std::vector<VkCommandBufferSubmitInfo>> cmdBufferInfos(m_submissions.size());
+    std::vector<VkSubmitInfo2> submitInfos{};
     submitInfos.reserve(m_submissions.size());
-    for (const auto& submission : m_submissions) {
-        VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(submission.waitSemaphores.size());
-        submitInfo.pWaitSemaphores = submission.waitSemaphores.data();
-        submitInfo.pWaitDstStageMask = submission.waitStages.data();
-        submitInfo.commandBufferCount = static_cast<uint32_t>(submission.cmdBufferHandles.size());
-        submitInfo.pCommandBuffers = submission.cmdBufferHandles.data();
-        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(submission.signalSemaphores.size());
-        submitInfo.pSignalSemaphores = submission.signalSemaphores.data();
-        submitInfos.push_back(submitInfo);
+
+    for (size_t i = 0; i < m_submissions.size(); ++i) {
+        const auto& submission = m_submissions[i];
+        for (size_t j = 0; j < submission.waitSemaphores.size(); ++j) {
+            waitInfos[i].push_back({
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = submission.waitSemaphores[j],
+                .stageMask = submission.waitStages[j],
+            });
+        }
+        for (size_t j = 0; j < submission.signalSemaphores.size(); ++j) {
+            signalInfos[i].push_back({
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = submission.signalSemaphores[j],
+                .stageMask = submission.signalStages[j],
+            });
+        }
+        for (const auto cmdBuffer : submission.cmdBufferHandles) {
+            cmdBufferInfos[i].push_back({
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+                .commandBuffer = cmdBuffer,
+            });
+        }
+
+        submitInfos.push_back({
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = static_cast<uint32_t>(waitInfos[i].size()),
+            .pWaitSemaphoreInfos = waitInfos[i].data(),
+            .commandBufferInfoCount = static_cast<uint32_t>(cmdBufferInfos[i].size()),
+            .pCommandBufferInfos = cmdBufferInfos[i].data(),
+            .signalSemaphoreInfoCount = static_cast<uint32_t>(signalInfos[i].size()),
+            .pSignalSemaphoreInfos = signalInfos[i].data(),
+        });
     }
-    vkQueueSubmit(queue.getHandle(), static_cast<uint32_t>(submitInfos.size()), submitInfos.data(), m_completionFence);
+
+    vkQueueSubmit2(queue.getHandle(), static_cast<uint32_t>(submitInfos.size()), submitInfos.data(), m_completionFence);
     m_submissions.clear();
     m_status = Status::Submitted;
 }
