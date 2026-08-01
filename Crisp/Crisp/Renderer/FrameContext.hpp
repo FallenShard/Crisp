@@ -15,5 +15,11 @@ struct FrameContext {
     VulkanCommandBuffer* commandBuffer;
     VulkanCommandEncoder commandEncoder;
     VulkanStagingBelt* stagingBelt;
+
+    // Timeline value this frame's submission signals. Stamp anything recorded now that must outlive it.
+    uint64_t completionValue;
+
+    // Highest timeline value the GPU has finished, sampled at the start of this frame.
+    uint64_t completedValue;
 };
 } // namespace crisp

@@ -174,14 +174,21 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 
-    if (m_screenshotRequested && !m_screenshotRequestFrameIdx) {
-        m_screenshotRequestFrameIdx = frameContext.frameIndex;
+    if (m_screenshotRequested && !m_screenshot.isPending()) {
         frameContext.commandEncoder.transitionLayout(
             *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> (kRayTracingStorageWrite | kTransferRead));
 
         const VkDeviceSize size = m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
-        m_screenshotBuffer = frameContext.stagingBelt->downloadImage(
-            cmdBuffer, *m_rayTracedImage, {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u}, 0, 1, 0, size);
+        m_screenshot.record(
+            frameContext.stagingBelt->downloadImage(
+                cmdBuffer,
+                *m_rayTracedImage,
+                {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u},
+                0,
+                1,
+                0,
+                size),
+            frameContext.completionValue);
         m_screenshotRequested = false;
     }
 
@@ -197,14 +204,10 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     m_integratorParams.frameIdx++;
 
-    if (m_screenshotRequestFrameIdx &&
-        *m_screenshotRequestFrameIdx + Renderer::NumVirtualFrames == frameContext.frameIndex) {
-        const std::span<const float> pixelData(
-            m_screenshotBuffer.getMappedData<float>(), m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4);
-        saveExr(m_outputDir / "screenshot.exr", pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
+    if (const auto pixelData = m_screenshot.tryRead<float>(frameContext.completedValue)) {
+        saveExr(m_outputDir / "screenshot.exr", *pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
             .unwrap();
-        m_screenshotRequestFrameIdx = std::nullopt;
-        m_screenshotBuffer = {};
+        m_screenshot.reset();
     }
 }
 

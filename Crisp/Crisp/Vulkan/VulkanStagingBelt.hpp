@@ -2,6 +2,7 @@
 
 #include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
 
+#include <optional>
 #include <span>
 #include <type_traits>
 #include <vector>
@@ -21,10 +22,39 @@ struct ReadbackBuffer {
     VkDeviceSize getSize() const {
         return buffer ? buffer->getSize() : 0;
     }
+};
 
-    explicit operator bool() const {
-        return static_cast<bool>(buffer);
+// A GPU -> host copy in flight. The recorded copy is only readable once the submission carrying it has signaled,
+// so the owner keeps this around and polls it with FrameContext::completedValue until it yields data.
+class AsyncReadback {
+public:
+    void record(ReadbackBuffer&& buffer, const uint64_t completionValue) {
+        m_buffer = std::move(buffer);
+        m_completionValue = completionValue;
     }
+
+    bool isPending() const {
+        return static_cast<bool>(m_buffer.buffer);
+    }
+
+    // Returns the mapped data once the GPU has finished writing it, nullopt while the copy is still in flight.
+    template <typename T>
+    std::optional<std::span<const T>> tryRead(const uint64_t completedValue) {
+        if (!m_buffer.buffer || completedValue < m_completionValue) {
+            return std::nullopt;
+        }
+        m_buffer.buffer->invalidateMappedRange();
+        return std::span<const T>(m_buffer.getMappedData<T>(), m_buffer.getSize() / sizeof(T));
+    }
+
+    void reset() {
+        m_buffer = {};
+        m_completionValue = 0;
+    }
+
+private:
+    ReadbackBuffer m_buffer;
+    uint64_t m_completionValue{0};
 };
 
 class VulkanStagingBelt {

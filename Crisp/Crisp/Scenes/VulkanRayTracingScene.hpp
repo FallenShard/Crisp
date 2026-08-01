@@ -37,9 +37,8 @@ private:
     std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;
 
     std::unique_ptr<VulkanImage> m_rayTracedImage;
-    ReadbackBuffer m_screenshotBuffer;
+    AsyncReadback m_screenshot;
     bool m_screenshotRequested{false};
-    std::optional<uint64_t> m_screenshotRequestFrameIdx;
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<Material> m_material;

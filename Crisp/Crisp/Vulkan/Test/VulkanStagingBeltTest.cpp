@@ -89,6 +89,38 @@ TEST_F(VulkanStagingBeltTest, StagedRangeIsReusedOnceItsValueIsReached) {
     EXPECT_EQ(third.offset, first.offset);
 }
 
+// A readback must stay closed until the value carrying its copy has been reached, then hand back the pixels.
+TEST_F(VulkanStagingBeltTest, AsyncReadbackOpensOnlyAtItsCompletionValue) {
+    constexpr uint64_t kCompletionValue = 9;
+    const std::vector<uint32_t> srcData = {11, 22, 33, 44};
+    const VkDeviceSize dataSize = srcData.size() * sizeof(uint32_t);
+
+    VulkanStagingBelt ctx(*device_, kCapacity);
+    auto srcBuffer = std::make_unique<VulkanBuffer>(
+        *device_, dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        BufferMemoryType::GpuOnly);
+    uploadBufferBlocking(*device_, device_->getGeneralQueue(), *srcBuffer, srcData.data(), dataSize);
+
+    AsyncReadback readback;
+    EXPECT_FALSE(readback.isPending());
+
+    {
+        ScopeCommandExecutor exec(*device_);
+        readback.record(ctx.downloadBuffer(exec.cmdBuffer.getHandle(), *srcBuffer, 0, dataSize), kCompletionValue);
+    }
+    EXPECT_TRUE(readback.isPending());
+
+    EXPECT_FALSE(readback.tryRead<uint32_t>(kCompletionValue - 1).has_value());
+
+    const auto pixels = readback.tryRead<uint32_t>(kCompletionValue);
+    ASSERT_TRUE(pixels.has_value());
+    EXPECT_EQ(std::vector<uint32_t>(pixels->begin(), pixels->end()), srcData);
+
+    readback.reset();
+    EXPECT_FALSE(readback.isPending());
+    EXPECT_FALSE(readback.tryRead<uint32_t>(kCompletionValue).has_value());
+}
+
 // A staged range larger than the ring gets a chunk of its own rather than failing.
 TEST_F(VulkanStagingBeltTest, OversizedStagingGetsItsOwnChunk) {
     constexpr VkDeviceSize kTinyCapacity = 64;

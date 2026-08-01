@@ -252,6 +252,8 @@ std::optional<FrameContext> Renderer::beginFrame() {
         .commandBuffer = commandBuffer,
         .commandEncoder = VulkanCommandEncoder(commandBuffer->getHandle()),
         .stagingBelt = m_stagingBelt.get(),
+        .completionValue = retirementValue,
+        .completedValue = completedValue,
     };
 }
 

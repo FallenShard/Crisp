@@ -74,6 +74,10 @@ VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept {
     return *this;
 }
 
+void VulkanBuffer::invalidateMappedRange() const {
+    VK_CHECK(vmaInvalidateAllocation(m_allocator, m_allocation, 0, VK_WHOLE_SIZE));
+}
+
 VkDeviceSize VulkanBuffer::getSize() const {
     return m_size;
 }

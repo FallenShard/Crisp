@@ -44,6 +44,8 @@ public:
 
     void updateFromHost(const void* data, VkDeviceSize size, VkDeviceSize offset);
 
+    void invalidateMappedRange() const;
+
     template <typename T>
     void updateFromHost(const std::vector<T>& buffer) {
         updateFromHost(buffer.data(), buffer.size() * sizeof(T), 0);
