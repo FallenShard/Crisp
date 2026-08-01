@@ -8,6 +8,7 @@ import subprocess
 import sys
 from functools import wraps
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Callable, Sequence, TypeVar
 
 import click
@@ -369,27 +370,31 @@ def test(ctx: click.Context, selectors: tuple[str, ...], label: tuple[str, ...],
 
 
 def main() -> int:
+    start_time = perf_counter()
     configure_logging()
+    exit_code = 0
     try:
         cli(standalone_mode=False)
     except click.UsageError as error:
         error.show()
-        return error.exit_code
+        exit_code = error.exit_code
     except click.ClickException as error:
         logger.error("%s", error.format_message())
-        return error.exit_code
+        exit_code = error.exit_code
     except click.exceptions.Exit as error:
-        return error.exit_code
+        exit_code = error.exit_code
     except KeyboardInterrupt:
         logger.warning("Interrupted")
-        return 130
+        exit_code = 130
     except Exception as error:
         if logger.isEnabledFor(logging.DEBUG):
             logger.exception("Unexpected failure")
         else:
             logger.error("Unexpected failure: %s", error)
-        return 1
-    return 0
+        exit_code = 1
+    finally:
+        logger.info("Total execution time: %.2f s", perf_counter() - start_time)
+    return exit_code
 
 
 if __name__ == "__main__":

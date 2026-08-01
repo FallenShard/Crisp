@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
@@ -411,6 +413,21 @@ class ClickInterfaceTest(unittest.TestCase):
         result = self.runner.invoke(cmuck.cli, ["--verbose", "--quiet", "targets"])
         self.assertEqual(result.exit_code, 2)
         self.assertIn("--verbose and --quiet cannot be used together", result.stderr)
+
+
+class MainTest(unittest.TestCase):
+    def test_reports_total_execution_time(self) -> None:
+        stderr = io.StringIO()
+        with (
+            redirect_stderr(stderr),
+            patch.object(cmuck, "cli"),
+            patch.object(cmuck, "perf_counter", side_effect=[10.0, 12.345]),
+        ):
+            exit_code = cmuck.main()
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Total execution time: 2.35 s", stderr.getvalue())
+        logging.getLogger("cmuck").handlers.clear()
 
 
 if __name__ == "__main__":
