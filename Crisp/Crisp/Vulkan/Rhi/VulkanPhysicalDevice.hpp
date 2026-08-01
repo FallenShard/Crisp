@@ -50,6 +50,7 @@ public:
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR};
     VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR};
+    VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR};
     VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageableDeviceLocalMemoryFeatures{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT};
     VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT};
@@ -73,6 +74,7 @@ public:
         clear(features14);
         clear(rayTracingFeatures);
         clear(accelerationStructureFeatures);
+        clear(rayQueryFeatures);
         clear(pageableDeviceLocalMemoryFeatures);
         clear(meshShaderFeatures);
         clear(fragmentDensityMapFeatures);
@@ -111,6 +113,7 @@ struct VulkanPhysicalDeviceProperties {
 
 struct VulkanDeviceFeatures {
     bool rayTracing{false};
+    bool rayQuery{false};
     bool pageableMemory{false};
     bool meshShading{false};
 };
@@ -136,6 +139,8 @@ consteval VkStructureType getFeatureStructureType() {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
     } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceAccelerationStructureFeaturesKHR>) {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceRayQueryFeaturesKHR>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
     } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT>) {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT;
     } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceMeshShaderFeaturesEXT>) {
@@ -266,6 +271,7 @@ struct VulkanDeviceFeatureRequest {
 std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests();
 void addPageableMemoryFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addRayTracingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
+void addRayQueryFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addMeshShadingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 
 bool isPhysicalDeviceSuitable(

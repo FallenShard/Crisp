@@ -50,6 +50,7 @@ Application::Application(const ApplicationEnvironment& environment)
     if (environment.getConfigParams().enableRayTracingExtension) {
         addRayTracingFeatures(vulkanCoreParams.deviceFeatureRequests);
     }
+    addRayQueryFeatures(vulkanCoreParams.deviceFeatureRequests);
     addMeshShadingFeatures(vulkanCoreParams.deviceFeatureRequests);
 
     m_renderer = std::make_unique<Renderer>(
