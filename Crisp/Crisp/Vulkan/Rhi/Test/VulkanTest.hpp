@@ -54,7 +54,11 @@ protected:
         VulkanDeviceConfiguration deviceConfig{};
         physicalDevice_ = std::make_unique<VulkanPhysicalDevice>(
             selectPhysicalDevice(
-                *instance_, createDefaultFeatureRequests(), *deviceConfig.featureChain, deviceConfig.extensions)
+                *instance_,
+                createDefaultFeatureRequests(),
+                *deviceConfig.featureChain,
+                deviceConfig.extensions,
+                deviceConfig.enabledFeatures)
                 .unwrap());
         deviceConfig.queueConfig =
             surfacePolicy == SurfacePolicy::HiddenWindow

@@ -273,8 +273,6 @@ VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, c
         return ext.c_str();
     });
 
-    vkGetPhysicalDeviceFeatures2(physicalDevice.getHandle(), &config.featureChain->features);
-
     VkDeviceCreateInfo createInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     createInfo.pNext = &config.featureChain->features;
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(config.queueConfig.createInfos.size());

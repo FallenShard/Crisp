@@ -58,6 +58,7 @@ struct VulkanDeviceConfiguration {
     VulkanQueueConfiguration queueConfig;
     std::unique_ptr<VulkanDeviceFeatureChain> featureChain = std::make_unique<VulkanDeviceFeatureChain>();
     FlatStringHashSet extensions;
+    VulkanDeviceFeatures enabledFeatures;
 };
 
 class VulkanDevice {
@@ -78,6 +79,10 @@ public:
     const VulkanQueue& getGeneralQueue() const;
     const VulkanQueue& getComputeQueue() const;
     const VulkanQueue& getTransferQueue() const;
+
+    const VulkanDeviceFeatures& getEnabledFeatures() const {
+        return m_config.enabledFeatures;
+    }
 
     void invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
     void flushMappedRanges();

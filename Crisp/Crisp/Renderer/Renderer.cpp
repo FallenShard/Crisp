@@ -54,7 +54,11 @@ Renderer::Renderer(
     VulkanDeviceConfiguration deviceConfig{};
     m_physicalDevice = std::make_unique<VulkanPhysicalDevice>(
         selectPhysicalDevice(
-            *m_instance, vulkanCoreParams.deviceFeatureRequests, *deviceConfig.featureChain, deviceConfig.extensions)
+            *m_instance,
+            vulkanCoreParams.deviceFeatureRequests,
+            *deviceConfig.featureChain,
+            deviceConfig.extensions,
+            deviceConfig.enabledFeatures)
             .unwrap());
     deviceConfig.queueConfig = createDefaultQueueConfiguration(*m_instance, *m_physicalDevice);
     m_device = std::make_unique<VulkanDevice>(

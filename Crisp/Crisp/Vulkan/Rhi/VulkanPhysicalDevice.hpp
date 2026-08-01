@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <optional>
 #include <span>
 #include <string>
@@ -25,12 +26,8 @@ struct QueueFamilySupport {
     std::optional<uint32_t> compute;
     std::optional<uint32_t> transfer;
 
-    bool isComplete() const {
-        return graphics && present && compute && transfer;
-    }
-
-    bool isCompleteWithoutPresentation() const {
-        return graphics && compute && transfer;
+    bool isComplete(const bool requirePresentation) const {
+        return graphics && compute && transfer && (!requirePresentation || present);
     }
 };
 
@@ -61,30 +58,44 @@ public:
     VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragmentShadingRateFeatures{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR};
 
+    // Clears both the chain and every feature value. Device selection reuses one chain across candidates, so
+    // without zeroing the values a rejected device's requests would leak into the next candidate's create info.
     void reset() {
-        features.pNext = nullptr;
+        const auto clear = [](auto& featureStruct) {
+            const auto sType = featureStruct.sType;
+            featureStruct = {};
+            featureStruct.sType = sType;
+        };
+        clear(features);
+        clear(features11);
+        clear(features12);
+        clear(features13);
+        clear(features14);
+        clear(rayTracingFeatures);
+        clear(accelerationStructureFeatures);
+        clear(pageableDeviceLocalMemoryFeatures);
+        clear(meshShaderFeatures);
+        clear(fragmentDensityMapFeatures);
+        clear(fragmentShadingRateFeatures);
         linkedStructs.clear();
     }
 
     template <typename FeatureStruct>
-    void link(FeatureStruct& featureStruct) {
+    FeatureStruct& link(FeatureStruct& featureStruct) {
         if (linkedStructs.contains(typeid(FeatureStruct))) {
-            return;
+            return featureStruct;
         }
         featureStruct.pNext = features.pNext;
         features.pNext = &featureStruct;
 
         linkedStructs.emplace(typeid(FeatureStruct));
+        return featureStruct;
     }
 
     FlatHashSet<std::type_index> linkedStructs;
 };
 
-struct VulkanPhysicalDeviceCapabilities {
-    FlatStringHashSet extensions;
-
-    VulkanDeviceFeatureChain features;
-
+struct VulkanPhysicalDeviceProperties {
     VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
     VkPhysicalDeviceVulkan11Properties properties11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES};
     VkPhysicalDeviceVulkan12Properties properties12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES};
@@ -98,15 +109,50 @@ struct VulkanPhysicalDeviceCapabilities {
     VkPhysicalDeviceMemoryProperties2 memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 };
 
-struct DeviceRequirements {
+struct VulkanDeviceFeatures {
     bool rayTracing{false};
     bool pageableMemory{false};
     bool meshShading{false};
 };
 
+namespace detail {
+// The sType is not derivable from the type name by token pasting (VkPhysicalDeviceVulkan11Features carries
+// VULKAN_1_1_FEATURES), so the pairing is spelled out once here - the only place a struct new to
+// VulkanDeviceFeatureChain has to be registered. Kept in the header so queryFeatures resolves it at compile time
+// and an unregistered struct fails the build rather than the run.
+template <typename FeatureStruct>
+consteval VkStructureType getFeatureStructureType() {
+    if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceFeatures2>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceVulkan11Features>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceVulkan12Features>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceVulkan13Features>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceVulkan14Features>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceRayTracingPipelineFeaturesKHR>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceAccelerationStructureFeaturesKHR>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceMeshShaderFeaturesEXT>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceFragmentDensityMapFeaturesEXT>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceFragmentShadingRateFeaturesKHR>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
+    } else {
+        static_assert(!sizeof(FeatureStruct), "Failed to retrieve an sType for a Vulkan feature struct!");
+    }
+}
+} // namespace detail
+
 class VulkanPhysicalDevice {
 public:
-    explicit VulkanPhysicalDevice(VkPhysicalDevice handle);
+    VulkanPhysicalDevice(VkPhysicalDevice handle, uint32_t requestedApiVersion);
     ~VulkanPhysicalDevice() = default;
 
     VulkanPhysicalDevice(const VulkanPhysicalDevice& other) = delete;
@@ -119,12 +165,8 @@ public:
         return m_handle;
     }
 
-    const VulkanPhysicalDeviceCapabilities& getCapabilities() const {
+    const VulkanPhysicalDeviceProperties& getCapabilities() const {
         return *m_capabilities;
-    }
-
-    const VkPhysicalDeviceFeatures2& getFeatures() const {
-        return m_capabilities->features.features;
     }
 
     const VkPhysicalDeviceProperties& getProperties() const {
@@ -141,6 +183,34 @@ public:
 
     const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
         return m_capabilities->memoryProperties.memoryProperties;
+    }
+
+    uint32_t getRequestedApiVersion() const {
+        return m_requestedApiVersion;
+    }
+
+    uint32_t getSupportedApiVersion() const {
+        return m_capabilities->properties.properties.apiVersion;
+    }
+
+    uint32_t getApiVersion() const {
+        return std::min(m_requestedApiVersion, getSupportedApiVersion());
+    }
+
+    template <typename FeatureStruct>
+    FeatureStruct queryFeatures() const {
+        FeatureStruct featureStruct{detail::getFeatureStructureType<FeatureStruct>()};
+
+        VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+        features.pNext = &featureStruct;
+        vkGetPhysicalDeviceFeatures2(m_handle, &features);
+        return featureStruct;
+    }
+
+    VkPhysicalDeviceFeatures queryFeatures() const {
+        VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+        vkGetPhysicalDeviceFeatures2(m_handle, &features);
+        return features.features;
     }
 
     bool supportsPresentation(uint32_t queueFamilyIndex, VkSurfaceKHR surface) const;
@@ -165,7 +235,9 @@ public:
 private:
     VkPhysicalDevice m_handle{VK_NULL_HANDLE}; // Implicitly cleaned up with VkInstance.
 
-    std::unique_ptr<VulkanPhysicalDeviceCapabilities> m_capabilities;
+    uint32_t m_requestedApiVersion{VK_API_VERSION_1_0};
+    FlatStringHashSet m_extensions;
+    std::unique_ptr<VulkanPhysicalDeviceProperties> m_capabilities;
 };
 
 std::vector<VkPhysicalDevice> enumeratePhysicalDevices(const VulkanInstance& instance);
@@ -173,14 +245,22 @@ std::vector<VkExtensionProperties> querySupportedExtensions(VkPhysicalDevice phy
 
 struct VulkanDeviceFeatureRequest {
     std::string extensionName;
-    bool isOptional{false};
+    std::string symbolicName;
+    std::string getLoggingName() const;
+
+    // Checked against VulkanPhysicalDevice::getApiVersion() before anything else, so isSupportedFunc never has to
+    // guard against reading a feature struct the device is too old to populate.
+    uint32_t minApiVersion{VK_API_VERSION_1_0};
+    bool isRequired{true};
     std::function<bool(const VulkanPhysicalDevice&)> isSupportedFunc = [](const VulkanPhysicalDevice&) { return true; };
-    std::function<void(VulkanDeviceFeatureChain&)> addFeatureFunc = [](VulkanDeviceFeatureChain&) {};
+    std::function<void(VulkanDeviceFeatureChain&)> linkFunc = [](VulkanDeviceFeatureChain&) {};
+    std::function<void(VulkanDeviceFeatures&)> setFunc = [](VulkanDeviceFeatures&) {};
 
-    std::vector<VulkanDeviceFeatureRequest> dependencies;
+    std::vector<VulkanDeviceFeatureRequest> prerequisites;
 
-    void appendTo(FlatStringHashSet& extensionsToEnable, VulkanDeviceFeatureChain& featureChainToEnable) const;
     bool isSupported(const VulkanPhysicalDevice& physicalDevice) const;
+    void link(FlatStringHashSet& extensionsToEnable, VulkanDeviceFeatureChain& featureChainToEnable) const;
+    void set(VulkanDeviceFeatures& features) const;
 };
 
 std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests();
@@ -192,12 +272,14 @@ bool isPhysicalDeviceSuitable(
     const VulkanPhysicalDevice& physicalDevice,
     const VulkanInstance& instance,
     std::span<const VulkanDeviceFeatureRequest> featureRequests,
-    VulkanDeviceFeatureChain& supportedFeatures,
-    FlatStringHashSet& supportedExtensions);
+    VulkanDeviceFeatureChain& featureChainToEnable,
+    FlatStringHashSet& extensionsToEnable,
+    VulkanDeviceFeatures& supportedFeatures);
 Result<VulkanPhysicalDevice> selectPhysicalDevice(
     const VulkanInstance& instance,
     std::span<const VulkanDeviceFeatureRequest> featureRequests,
-    VulkanDeviceFeatureChain& supportedFeatures,
-    FlatStringHashSet& supportedExtensions);
+    VulkanDeviceFeatureChain& featureChainToEnable,
+    FlatStringHashSet& extensionsToEnable,
+    VulkanDeviceFeatures& supportedFeatures);
 
 } // namespace crisp
