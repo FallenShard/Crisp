@@ -63,6 +63,7 @@ TEST(RenderGraphTest2, BasicUsage) {
     rg.addPass(
         "spectrum-pass",
         [&output](rg::RenderGraph::Builder& builder) {
+            builder.setType(PassType::Compute);
             output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image");
         },
         [](const FrameContext&) {});
@@ -71,6 +72,7 @@ TEST(RenderGraphTest2, BasicUsage) {
         rg.addPass(
             fmt::format("fft-pass-{}", i),
             [&output, i](rg::RenderGraph::Builder& builder) {
+                builder.setType(PassType::Compute);
                 builder.readStorageImage(output);
                 output = builder.createStorageImage(
                     {.format = VK_FORMAT_R32G32_SFLOAT}, fmt::format("fft-pass-image-{}", i));
@@ -120,6 +122,23 @@ TEST(RenderGraphTest2, BasicUsage) {
 
     EXPECT_THAT(rg.getPassCount(), 17);
     EXPECT_THAT(rg.getResourceCount(), 17);
+}
+
+TEST(RenderGraphTest2, ExportTextureDeclaresExternalAccess) {
+    rg::RenderGraph renderGraph;
+    RenderGraphResourceHandle image{};
+    renderGraph.addPass(
+        "export-pass",
+        [&image](rg::RenderGraph::Builder& builder) {
+            image = builder.createAttachment({.format = VK_FORMAT_R16G16B16A16_SFLOAT}, "exported-image");
+            builder.exportTexture(image, kComputeRead);
+        },
+        [](const FrameContext&) {});
+
+    const auto& externalAccess = renderGraph.getResources().at(image.id).externalAccess;
+    ASSERT_TRUE(externalAccess);
+    EXPECT_EQ(externalAccess->stage, kComputeRead.stage);
+    EXPECT_EQ(externalAccess->access, kComputeRead.access);
 }
 
 TEST(RenderGraphTest2, RasterizationPassDescriptor) {

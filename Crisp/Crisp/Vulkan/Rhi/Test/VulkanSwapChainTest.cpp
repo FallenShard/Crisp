@@ -68,15 +68,20 @@ TEST_F(VulkanSwapChainTest, SwapImagesAreDifferent) {
     EXPECT_THAT(swapChain, HandleIsValid());
 
     EXPECT_EQ(swapChain.getImageCount(), 2u);
+    EXPECT_NE(swapChain.getImage(0), swapChain.getImage(1));
     EXPECT_NE(swapChain.getImageView(0), swapChain.getImageView(1));
 }
 
 TEST_F(VulkanSwapChainTest, Recreate) {
     VulkanSwapChain swapChain(createSwapChain(PresentationMode::DoubleBuffered));
     EXPECT_THAT(swapChain, HandleIsValid());
+    EXPECT_EQ(swapChain.getImageLayout(0), VK_IMAGE_LAYOUT_UNDEFINED);
+    swapChain.setImageLayout(0, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    EXPECT_EQ(swapChain.getImageLayout(0), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     for (uint32_t i = 0; i < 5; ++i) {
         swapChain.recreate(*device_, *physicalDevice_, instance_->getSurface());
+        EXPECT_EQ(swapChain.getImageLayout(0), VK_IMAGE_LAYOUT_UNDEFINED);
     }
     EXPECT_THAT(swapChain, HandleIsValid());
     EXPECT_EQ(swapChain.getImageCount(), 2u);

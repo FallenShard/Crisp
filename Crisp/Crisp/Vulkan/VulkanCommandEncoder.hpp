@@ -24,6 +24,12 @@ public:
         VkImageLayout newLayout,
         const VulkanSynchronizationScope& scope,
         const VkImageSubresourceRange& range) const;
+    void transitionLayout(
+        VkImage image,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout,
+        const VulkanSynchronizationScope& scope,
+        const VkImageSubresourceRange& range) const;
 
     void beginRenderPass(const VulkanRenderPass& renderPass, const VulkanFramebuffer& framebuffer) const;
     void endRenderPass(VulkanRenderPass& renderPass) const;

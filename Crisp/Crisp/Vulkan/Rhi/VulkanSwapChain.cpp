@@ -56,12 +56,24 @@ VkRect2D VulkanSwapChain::getScissorRect() const {
     return {{0, 0}, m_extent};
 }
 
+VkImage VulkanSwapChain::getImage(const size_t index) const {
+    return m_images.at(index);
+}
+
+VkImageLayout VulkanSwapChain::getImageLayout(const size_t index) const {
+    return m_imageLayouts.at(index);
+}
+
 VkImageView VulkanSwapChain::getImageView(size_t index) const {
     return m_imageViews.at(index);
 }
 
 uint32_t VulkanSwapChain::getImageCount() const {
     return static_cast<uint32_t>(m_imageViews.size());
+}
+
+void VulkanSwapChain::setImageLayout(const size_t index, const VkImageLayout layout) {
+    m_imageLayouts.at(index) = layout;
 }
 
 void VulkanSwapChain::recreate(
@@ -124,6 +136,7 @@ void VulkanSwapChain::createSwapChain(
     VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, nullptr));
     m_images.resize(imageCount);
     VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data()));
+    m_imageLayouts.assign(imageCount, VK_IMAGE_LAYOUT_UNDEFINED);
     for (uint32_t i = 0; i < m_images.size(); ++i) {
         device.setObjectName(m_images[i], fmt::format("Swap Chain Image {}", i));
     }

@@ -78,7 +78,9 @@ std::unique_ptr<VulkanPipeline> createMultiScatteringPipeline(Renderer& renderer
     VkPipeline pipeline = VK_NULL_HANDLE;
     vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
-    return std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
+    auto result = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
+    result->setDebugName(device, MultipleScatteringPass);
+    return result;
 }
 
 // Wires up the descriptors shared by every atmosphere pass: the parameter buffer in set 0, followed by the LUTs
@@ -172,12 +174,6 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
                 },
                 "multiScatTex");
-
-            // The graph does not synchronize a compute pass's outputs, only its inputs, so declaring the storage
-            // image as an input of its own producer is what gets it transitioned into GENERAL before the dispatch.
-            // Without this it stays in the SHADER_READ_ONLY_OPTIMAL layout its sampled usage selected, which
-            // neither matches the storage descriptor nor leaves the tracked layout consistent for the readers.
-            builder.readStorageImage(data.tex);
         },
         [&renderer,
          &resourceContext,
@@ -192,6 +188,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 // above owns its own allocator, which is what Material picks up from the pipeline.
                 pipeline = createMultiScatteringPipeline(renderer, {1, 1, 64});
                 material = std::make_shared<Material>(pipeline.get());
+                material->setDebugName(MultipleScatteringPass);
                 material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
 
                 auto& blackboard = renderGraph.getBlackboard();

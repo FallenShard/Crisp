@@ -7,28 +7,10 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/VulkanPipelineIo.hpp>
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
-#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp {
 namespace {
 auto logger = spdlog::stdout_color_mt("Renderer");
-
-std::unique_ptr<VulkanRenderPass> createSwapChainRenderPass(
-    const VulkanDevice& device, const VulkanSwapChain& swapChain) {
-    auto renderPass =
-        VulkanRenderPassBuilder()
-            .setAttachmentCount(1)
-            .setAttachmentFormat(0, swapChain.getImageFormat())
-            .setAttachmentOps(0, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE)
-            .setAttachmentLayouts(0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-            .setAttachmentClearColor(0, {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}})
-            .setSubpassCount(1)
-            .addColorAttachmentRef(0, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            .addDependency(VK_SUBPASS_EXTERNAL, 0, kExternalColorSubpass >> kColorWrite)
-            .create(device, swapChain.getExtent());
-    device.setObjectName(*renderPass, "Default Render Pass");
-    return renderPass;
-}
 
 std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer) {
     const std::vector<glm::vec2> vertices = {{-1.0f, -1.0f}, {+3.0f, -1.0f}, {-1.0f, +3.0f}};
@@ -65,7 +47,6 @@ Renderer::Renderer(
         std::move(deviceConfig), *m_physicalDevice, *m_instance, kRendererVirtualFrameCount);
     m_swapChain = std::make_unique<VulkanSwapChain>(
         *m_device, *m_physicalDevice, m_instance->getSurface(), vulkanCoreParams.presentationMode);
-    m_defaultRenderPass = createSwapChainRenderPass(*m_device, *m_swapChain);
 
     m_defaultViewport = m_swapChain->getViewport();
     m_defaultScissor = m_swapChain->getScissorRect();
@@ -89,7 +70,7 @@ Renderer::Renderer(
 
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
-    m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRenderPass());
+    m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRasterizationPassDescriptor());
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 
     m_gpuTracingContexts.resize(kRendererVirtualFrameCount);
@@ -133,8 +114,8 @@ VkExtent3D Renderer::getSwapChainExtent3D() const {
     return {m_swapChain->getExtent().width, m_swapChain->getExtent().height, 1};
 }
 
-VulkanRenderPass& Renderer::getDefaultRenderPass() const {
-    return *m_defaultRenderPass;
+VulkanRasterizationPassDescriptor Renderer::getDefaultRasterizationPassDescriptor() const {
+    return {.colorAttachmentFormats = {m_swapChain->getImageFormat()}};
 }
 
 VkViewport Renderer::getDefaultViewport() const {
@@ -232,15 +213,6 @@ std::optional<FrameContext> Renderer::beginFrame() {
         return std::nullopt;
     }
 
-    const VkImageView swapChainImageView = m_swapChain->getImageView(*swapChainImageIndex);
-    if (!m_swapChainFramebuffers.contains(swapChainImageView)) {
-        const auto attachmentViews = {swapChainImageView};
-        m_swapChainFramebuffers.emplace(
-            swapChainImageView,
-            std::make_unique<VulkanFramebuffer>(
-                *m_device, m_defaultRenderPass->getHandle(), m_swapChain->getExtent(), attachmentViews));
-    }
-
     auto* commandBuffer = m_workers[0]->resetAndGetCmdBuffer(*m_device, virtualFrameIndex);
     commandBuffer->setIdleState();
     commandBuffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -269,15 +241,37 @@ void Renderer::record(const FrameContext& frameContext) {
         drawCommand(cmdBuffer);
     }
 
-    if (m_sceneImageView) {
-        encoder.transitionLayout(
-            m_sceneImageView->getImage(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kColorWrite >> kFragmentSampledRead);
-    }
+    const VkImage swapChainImage = m_swapChain->getImage(frameContext.swapChainImageIndex);
+    const VkImageSubresourceRange swapChainImageRange{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+    encoder.transitionLayout(
+        swapChainImage,
+        m_swapChain->getImageLayout(frameContext.swapChainImageIndex),
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        kExternalColorSubpass >> kColorWrite,
+        swapChainImageRange);
 
-    const auto& swapChainImageView{m_swapChain->getImageView(frameContext.swapChainImageIndex)};
-    const auto& framebuffer{*m_swapChainFramebuffers.at(swapChainImageView)};
-
-    encoder.beginRenderPass(*m_defaultRenderPass, framebuffer);
+    const VkRenderingAttachmentInfo colorAttachment{
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = m_swapChain->getImageView(frameContext.swapChainImageIndex),
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = VkClearValue{.color{{0.0f, 0.0f, 0.0f, 1.0f}}},
+    };
+    const VkRenderingInfo renderingInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {.offset = {0, 0}, .extent = m_swapChain->getExtent()},
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachment,
+    };
+    encoder.beginRendering(renderingInfo);
     if (m_sceneImageView) {
         encoder.bindPipeline(*m_scenePipeline);
         encoder.setViewport(m_defaultViewport);
@@ -289,7 +283,14 @@ void Renderer::record(const FrameContext& frameContext) {
     for (const auto& drawCommand : m_defaultPassDrawCommands) {
         drawCommand(cmdBuffer);
     }
-    m_defaultRenderPass->end(cmdBuffer);
+    encoder.endRendering();
+    encoder.transitionLayout(
+        swapChainImage,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        kColorWrite >> kNullStage,
+        swapChainImageRange);
+    m_swapChain->setImageLayout(frameContext.swapChainImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 }
 
 void Renderer::endFrame(const FrameContext& frameContext) {
@@ -335,16 +336,11 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
 }
 
 std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
-    const std::string_view pipelineName,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    const std::string_view pipelineName, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
     return createPipelineFromFile(
-               absolutePipelinePath,
-               m_assetPaths.spvShaderDir,
-               *m_shaderCache,
-               *m_device,
-               rasterizationPassDescriptor)
+               absolutePipelinePath, m_assetPaths.spvShaderDir, *m_shaderCache, *m_device, rasterizationPassDescriptor)
         .unwrap();
 }
 
@@ -391,8 +387,6 @@ void Renderer::recreateSwapChain() {
     m_defaultScissor.extent = m_swapChain->getExtent();
     m_defaultViewport.width = static_cast<float>(m_defaultScissor.extent.width);
     m_defaultViewport.height = static_cast<float>(m_defaultScissor.extent.height);
-
-    m_defaultRenderPass->setRenderArea(m_swapChain->getExtent());
 }
 
 void fillDeviceBuffer(

@@ -24,7 +24,8 @@ public:
     public:
         Builder(RenderGraph& renderGraph, RenderGraphPassHandle passHandle);
 
-        void exportTexture(RenderGraphResourceHandle res);
+        void exportTexture(
+            RenderGraphResourceHandle res, VulkanSynchronizationStage externalAccess = kFragmentSampledRead);
         void readTexture(RenderGraphResourceHandle res);
         void readBuffer(RenderGraphResourceHandle res);
         void readAttachment(RenderGraphResourceHandle res);

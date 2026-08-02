@@ -17,7 +17,7 @@ void initImGui(
     VkPhysicalDevice physicalDevice,
     const VulkanDevice& device,
     uint32_t swapChainImageCount,
-    VkRenderPass renderPass,
+    VkFormat swapChainImageFormat,
     const std::optional<std::filesystem::path>& fontPath);
 void shutdownImGui();
 void prepareImGui();

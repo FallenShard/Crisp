@@ -24,15 +24,69 @@ VkRenderingAttachmentInfo createRenderingAttachmentInfo(
     };
 }
 
+std::string createPhysicalResourceDebugName(
+    const std::string_view type,
+    const std::vector<RenderGraphResource>& resources,
+    const std::vector<uint32_t>& aliasedResourceIndices) {
+    std::string name = fmt::format("RenderGraph {} [", type);
+    for (size_t i = 0; i < aliasedResourceIndices.size(); ++i) {
+        if (i > 0) {
+            name += ", ";
+        }
+        name += resources.at(aliasedResourceIndices[i]).name;
+    }
+    name += "]";
+    return name;
+}
+
+VulkanSynchronizationStage getSampledImageReadAccess(const PassType passType) {
+    switch (passType) {
+    case PassType::Compute:
+        return kComputeRead;
+    case PassType::RayTracing:
+        return kRayTracingRead;
+    case PassType::Rasterizer:
+        return kFragmentSampledRead;
+    }
+    CRISP_FATAL("Unsupported render graph pass type.");
+}
+
+VulkanSynchronizationStage getStorageImageReadAccess(const PassType passType) {
+    switch (passType) {
+    case PassType::Compute:
+        return kComputeStorageRead;
+    case PassType::RayTracing:
+        return kRayTracingStorageRead;
+    case PassType::Rasterizer:
+        return kFragmentRead;
+    }
+    CRISP_FATAL("Unsupported render graph pass type.");
+}
+
+VulkanSynchronizationStage getStorageImageWriteAccess(const PassType passType) {
+    switch (passType) {
+    case PassType::Compute:
+        return kComputeStorageWrite;
+    case PassType::RayTracing:
+        return kRayTracingStorageWrite;
+    case PassType::Rasterizer:
+        CRISP_FATAL("Rasterization passes cannot create storage-image outputs.");
+    }
+    CRISP_FATAL("Unsupported render graph pass type.");
+}
+
 } // namespace
 
 RenderGraph::Builder::Builder(RenderGraph& renderGraph, const RenderGraphPassHandle passHandle)
     : m_renderGraph(renderGraph)
     , m_passHandle(passHandle) {}
 
-void RenderGraph::Builder::exportTexture(RenderGraphResourceHandle res) {
+void RenderGraph::Builder::exportTexture(
+    const RenderGraphResourceHandle res, const VulkanSynchronizationStage externalAccess) {
     auto& resource = m_renderGraph.getResource(res);
+    CRISP_CHECK_EQ(resource.type, ResourceType::Image);
     resource.readPasses.push_back({RenderGraphPassHandle::kExternalPass});
+    resource.externalAccess = externalAccess;
     m_renderGraph.getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
 }
 
@@ -43,7 +97,8 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Texture, .stage = kFragmentRead});
+    pass.inputAccesses.push_back(
+        {.usageType = ResourceUsageType::Texture, .stage = getSampledImageReadAccess(pass.type)});
 }
 
 void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
@@ -72,7 +127,8 @@ void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Storage, .stage = kComputeRead});
+    pass.inputAccesses.push_back(
+        {.usageType = ResourceUsageType::Storage, .stage = getStorageImageReadAccess(pass.type)});
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
@@ -88,11 +144,10 @@ RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
-    resource.producerAccess.usageType = ResourceUsageType::Attachment;
-    resource.producerAccess.stage.stage =
-        isDepthAttachment ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    resource.producerAccess.stage.access =
-        isDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    resource.producerAccess = {
+        .usageType = ResourceUsageType::Attachment,
+        .stage = isDepthAttachment ? kDepthWrite : kColorWrite,
+    };
     if (isDepthAttachment) {
         pass.depthStencilAttachment = handle;
     } else {
@@ -106,7 +161,10 @@ RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
     const auto handle = m_renderGraph.addImageResource(description, std::move(name));
     auto& resource = m_renderGraph.getResource(handle);
     resource.producer = m_passHandle;
-    resource.producerAccess = {.usageType = ResourceUsageType::Storage, .stage = kComputeWrite};
+    resource.producerAccess = {
+        .usageType = ResourceUsageType::Storage,
+        .stage = getStorageImageWriteAccess(m_renderGraph.getPass(m_passHandle).type),
+    };
 
     m_renderGraph.getImageDescription(handle).imageUsageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
 
@@ -177,7 +235,9 @@ std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(
     const auto& desc = getImageDescription(handle);
     auto& image = *m_physicalImages[res.physicalResourceIndex].image;
     const auto imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
-    return createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
+    auto view = createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
+    device.setObjectName(*view, fmt::format("RenderGraph {} Auxiliary View", res.name));
+    return view;
 }
 
 const VulkanImageView& RenderGraph::getResourceImageView(RenderGraphResourceHandle handle) const {
@@ -225,27 +285,63 @@ void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChai
 }
 
 void RenderGraph::execute(const FrameContext& frameContext) {
-    const auto synchronizeInputResources = [this](const RenderGraphPass& pass, const FrameContext& ctx) {
-        for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
-            const auto& res = getResource(pass.inputs[inIdx]);
-
-            if (res.type == ResourceType::Image) {
-                const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
-                const VkImageLayout newLayout =
-                    inputAccess.usageType == ResourceUsageType::Texture
-                        ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                        : VK_IMAGE_LAYOUT_GENERAL;
-                ctx.commandEncoder.transitionLayout(
-                    *physicalImage.image, newLayout, res.producerAccess.stage >> inputAccess.stage);
-            } else if (res.type == ResourceType::Buffer) {
-                const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
-                ctx.commandEncoder.insertBufferMemoryBarrier(
-                    *physicalBuffer.buffer, res.producerAccess.stage >> inputAccess.stage);
-            }
-        }
-    };
-
     const auto& encoder{frameContext.commandEncoder};
+    const auto synchronizeImageAccess =
+        [this, &encoder](
+            const RenderGraphResource& resource,
+            const VkImageLayout newLayout,
+            const VulkanSynchronizationStage access,
+            const bool isWrite,
+            const VkImageSubresourceRange& range) {
+            auto& physicalImage = m_physicalImages.at(resource.physicalResourceIndex);
+            auto& image = *physicalImage.image;
+            const bool layoutChanges = image.getLayout(range.baseArrayLayer, range.baseMipLevel) != newLayout;
+            const bool requiresBarrier = isWrite || physicalImage.lastAccessWasWrite || layoutChanges;
+
+            // Read-after-read in an unchanged layout requires no barrier. All other cases either carry a memory
+            // dependency or perform a layout transition.
+            if (requiresBarrier) {
+                auto destinationAccess = access;
+                if (!isWrite && layoutChanges) {
+                    if (newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+                        destinationAccess = destinationAccess | physicalImage.shaderReadAccess;
+                    } else if (newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+                        destinationAccess = destinationAccess | physicalImage.generalReadAccess;
+                    }
+                }
+                encoder.transitionLayout(image, newLayout, physicalImage.lastAccess >> destinationAccess, range);
+            }
+
+            if (isWrite) {
+                physicalImage.lastAccess = access;
+                physicalImage.lastAccessWasWrite = true;
+            } else {
+                physicalImage.lastAccess = requiresBarrier ? access : physicalImage.lastAccess | access;
+                physicalImage.lastAccessWasWrite = false;
+            }
+        };
+
+    const auto synchronizeInputResources =
+        [this, &synchronizeImageAccess](const RenderGraphPass& pass, const FrameContext& ctx) {
+            for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
+                const auto& res = getResource(pass.inputs[inIdx]);
+
+                if (res.type == ResourceType::Image) {
+                    const VkImageLayout newLayout =
+                        inputAccess.usageType == ResourceUsageType::Texture
+                            ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                            : VK_IMAGE_LAYOUT_GENERAL;
+                    const auto& imageView = *m_imageViews.at(res.physicalResourceIndex);
+                    synchronizeImageAccess(
+                        res, newLayout, inputAccess.stage, /*isWrite=*/false, imageView.getSubresourceRange());
+                } else if (res.type == ResourceType::Buffer) {
+                    const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
+                    ctx.commandEncoder.insertBufferMemoryBarrier(
+                        *physicalBuffer.buffer, res.producerAccess.stage >> inputAccess.stage);
+                }
+            }
+        };
+
     const auto cmdBuffer = encoder.getHandle();
     auto* gpuProfileFrame = m_passProfiler.beginFrame(frameContext.virtualFrameIndex);
 
@@ -275,10 +371,11 @@ void RenderGraph::execute(const FrameContext& frameContext) {
                 const auto& resource = getResource(resourceId);
                 const auto& imageDescription = getImageDescription(resourceId);
                 auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
-                encoder.transitionLayout(
-                    imageView.getImage(),
+                synchronizeImageAccess(
+                    resource,
                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    kAllStages >> kColorWrite,
+                    resource.producerAccess.stage,
+                    /*isWrite=*/true,
                     imageView.getSubresourceRange());
                 colorAttachments.push_back(createRenderingAttachmentInfo(
                     resource, imageDescription, imageView, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
@@ -293,10 +390,11 @@ void RenderGraph::execute(const FrameContext& frameContext) {
                 const auto& resource = getResource(resourceId);
                 const auto& imageDescription = getImageDescription(resourceId);
                 auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
-                encoder.transitionLayout(
-                    imageView.getImage(),
+                synchronizeImageAccess(
+                    resource,
                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    kAllStages >> kDepthWrite,
+                    resource.producerAccess.stage,
+                    /*isWrite=*/true,
                     imageView.getSubresourceRange());
                 depthStencilAttachment = createRenderingAttachmentInfo(
                     resource, imageDescription, imageView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -329,53 +427,22 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             pass.executeFunc(frameContext);
             encoder.endRendering();
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
-            // for (const auto resHandle : pass.outputs) {
-            //     const auto& res = getResource(resHandle);
-            //     const auto& outputAccess = res.producerAccess;
-
-            //     // if (res.type == ResourceType::Image) {
-            //     //     const auto& physicalImage{m_physicalImages.at(res.physicalResourceIndex)};
-            //     //     if (outputAccess.usageType == ResourceUsageType::Texture) {
-            //     //         physicalImage.image->transitionLayoutDirect(
-            //     //             executionCtx.cmdBuffer.getHandle(),
-            //     //             // glayouts[res.physicalResourceIndex],
-            //     //             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            //     //             glastPipelineStage[res.physicalResourceIndex],
-            //     //             glastAccessFlags[res.physicalResourceIndex],
-            //     //             // res.producerAccess.pipelineStage,
-            //     //             // res.producerAccess.access,
-            //     //             outputAccess.pipelineStage,
-            //     //             outputAccess.access);
-            //     //     } else if (outputAccess.usageType == ResourceUsageType::Storage) {
-            //     //         physicalImage.image->transitionLayoutDirect(
-            //     //             executionCtx.cmdBuffer.getHandle(),
-            //     //             // glayouts[res.physicalResourceIndex],
-            //     //             VK_IMAGE_LAYOUT_GENERAL,
-            //     //             glastPipelineStage[res.physicalResourceIndex],
-            //     //             glastAccessFlags[res.physicalResourceIndex],
-            //     //             // res.producerAccess.pipelineStage,
-            //     //             // res.producerAccess.access,
-            //     //             outputAccess.pipelineStage,
-            //     //             outputAccess.access);
-            //     //     }
-            //     //     // glayouts[res.physicalResourceIndex] =
-            //     //     //     outputAccess.usageType == ResourceUsageType::Texture
-            //     //     //         ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            //     //     //         : VK_IMAGE_LAYOUT_GENERAL;
-            //     //     glastPipelineStage[res.physicalResourceIndex] = outputAccess.pipelineStage;
-            //     //     glastAccessFlags[res.physicalResourceIndex] = outputAccess.access;
-            //     // } else if (res.type == ResourceType::Buffer) {
-            //     //     const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
-            //     //     executionCtx.cmdBuffer.insertBufferMemoryBarrier(
-            //     //         physicalBuffer.buffer->createDescriptorInfo(),
-            //     //         res.producerAccess.pipelineStage,
-            //     //         res.producerAccess.access,
-            //     //         outputAccess.pipelineStage,
-            //     //         outputAccess.access);
-            //     // }
-            // }
-
             synchronizeInputResources(pass, frameContext);
+            for (const RenderGraphResourceHandle resourceId : pass.outputs) {
+                const auto& resource = getResource(resourceId);
+                if (resource.type != ResourceType::Image) {
+                    continue;
+                }
+
+                CRISP_CHECK_EQ(resource.producerAccess.usageType, ResourceUsageType::Storage);
+                const auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
+                synchronizeImageAccess(
+                    resource,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    resource.producerAccess.stage,
+                    /*isWrite=*/true,
+                    imageView.getSubresourceRange());
+            }
             pass.executeFunc(frameContext);
         }
 
@@ -383,6 +450,20 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             gpuProfileFrame->queryPool->writeTimestamp(
                 cmdBuffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2 + 1);
         }
+    }
+
+    for (const auto& resource : m_resources) {
+        if (resource.type != ResourceType::Image || !resource.externalAccess) {
+            continue;
+        }
+
+        const auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
+        synchronizeImageAccess(
+            resource,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            *resource.externalAccess,
+            /*isWrite=*/false,
+            imageView.getSubresourceRange());
     }
 
     m_passProfiler.endFrame(gpuProfileFrame);
@@ -662,6 +743,29 @@ void RenderGraph::determineAliasedResurces() {
         }
     }
 
+    for (const auto& pass : m_passes) {
+        for (const auto& [inputIndex, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
+            const auto& resource = getResource(pass.inputs[inputIndex]);
+            if (resource.type != ResourceType::Image) {
+                continue;
+            }
+
+            auto& physicalImage = m_physicalImages.at(resource.physicalResourceIndex);
+            auto& readAccess =
+                inputAccess.usageType == ResourceUsageType::Texture
+                    ? physicalImage.shaderReadAccess
+                    : physicalImage.generalReadAccess;
+            readAccess = readAccess | inputAccess.stage;
+        }
+    }
+
+    for (const auto& resource : m_resources) {
+        if (resource.type == ResourceType::Image && resource.externalAccess) {
+            auto& physicalImage = m_physicalImages.at(resource.physicalResourceIndex);
+            physicalImage.shaderReadAccess = physicalImage.shaderReadAccess | *resource.externalAccess;
+        }
+    }
+
     CRISP_LOGD("{} physical buffer(s), {} physical image(s).", currPhysBufferIdx, currPhysImageIdx);
 }
 
@@ -671,6 +775,8 @@ void RenderGraph::createPhysicalResources(
     m_imageViews.clear();
     const VulkanCommandEncoder commandEncoder{cmdBuffer};
     for (auto& physicalImage : m_physicalImages) {
+        const auto debugName =
+            createPhysicalResourceDebugName("Image", m_resources, physicalImage.aliasedResourceIndices);
         const auto& desc = m_imageDescriptions[physicalImage.descriptionIndex];
         physicalImage.image = std::make_unique<VulkanImage>(
             device,
@@ -684,10 +790,11 @@ void RenderGraph::createPhysicalResources(
                 .usageFlags = determineUsageFlags(physicalImage.aliasedResourceIndices),
                 .createFlags = determineCreateFlags(physicalImage.aliasedResourceIndices),
             });
-        device.setObjectName(*physicalImage.image, m_resources[physicalImage.aliasedResourceIndices[0]].name.c_str());
+        device.setObjectName(*physicalImage.image, debugName);
+        device.setObjectName(physicalImage.image->getView(), fmt::format("{} Default View", debugName));
         CRISP_LOGT(
             "Created image: {} with size: {}x{}",
-            m_resources[physicalImage.aliasedResourceIndices[0]].name,
+            debugName,
             physicalImage.image->getWidth(),
             physicalImage.image->getHeight());
 
@@ -697,21 +804,22 @@ void RenderGraph::createPhysicalResources(
         commandEncoder.transitionLayout(*physicalImage.image, initialLayout, kNullStage >> stage);
     }
 
-    for (const auto& res : m_resources) {
-        if (res.type == ResourceType::Image) {
-            const auto physicalResourceIndex = res.physicalResourceIndex;
-            auto& image = *m_physicalImages[physicalResourceIndex].image;
-            const auto& desc = m_imageDescriptions[m_physicalImages[physicalResourceIndex].descriptionIndex];
-            const auto imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
-            m_imageViews[physicalResourceIndex] =
-                createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
-        }
+    for (auto&& [physicalResourceIndex, physicalImage] : std::views::enumerate(m_physicalImages)) {
+        auto& image = *physicalImage.image;
+        const auto& desc = m_imageDescriptions[physicalImage.descriptionIndex];
+        const auto imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+        auto view = createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
+        const auto debugName =
+            createPhysicalResourceDebugName("Image", m_resources, physicalImage.aliasedResourceIndices);
+        device.setObjectName(*view, fmt::format("{} View", debugName));
+        m_imageViews[static_cast<uint32_t>(physicalResourceIndex)] = std::move(view);
     }
 
     for (auto& res : m_physicalBuffers) {
         const auto& desc = m_bufferDescriptions[res.descriptionIndex];
         res.buffer = std::make_unique<VulkanBuffer>(device, desc.size, desc.usageFlags, BufferMemoryType::GpuOnly);
-        device.setObjectName(res.buffer->getHandle(), m_resources[res.aliasedResourceIndices[0]].name.c_str());
+        device.setObjectName(
+            *res.buffer, createPhysicalResourceDebugName("Buffer", m_resources, res.aliasedResourceIndices));
     }
 }
 

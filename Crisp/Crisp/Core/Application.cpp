@@ -75,7 +75,7 @@ Application::Application(const ApplicationEnvironment& environment)
         m_renderer->getPhysicalDevice().getHandle(),
         m_renderer->getDevice(),
         m_renderer->getSwapChain().getImageCount(),
-        m_renderer->getDefaultRenderPass().getHandle(),
+        m_renderer->getSwapChain().getImageFormat(),
         environment.getConfigParams().imGuiFontPath);
 
     m_renderer->flushResourceUpdates(true);

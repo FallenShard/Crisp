@@ -100,6 +100,33 @@ void VulkanCommandEncoder::transitionLayout(
     image.setImageLayout(newLayout, range);
 }
 
+void VulkanCommandEncoder::transitionLayout(
+    const VkImage image,
+    const VkImageLayout oldLayout,
+    const VkImageLayout newLayout,
+    const VulkanSynchronizationScope& scope,
+    const VkImageSubresourceRange& range) const {
+    const VkImageMemoryBarrier2 barrier{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = scope.srcStage,
+        .srcAccessMask = scope.srcAccess,
+        .dstStageMask = scope.dstStage,
+        .dstAccessMask = scope.dstAccess,
+        .oldLayout = oldLayout,
+        .newLayout = newLayout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
+        .subresourceRange = range,
+    };
+    const VkDependencyInfo info{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier,
+    };
+    vkCmdPipelineBarrier2(m_cmdBuffer, &info);
+}
+
 void VulkanCommandEncoder::beginRenderPass(
     const VulkanRenderPass& renderPass, const VulkanFramebuffer& framebuffer) const {
     const auto& clearValues = renderPass.getClearValues();

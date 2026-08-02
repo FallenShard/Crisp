@@ -89,6 +89,14 @@ struct RenderGraphPhysicalImage {
     uint32_t descriptionIndex{}; // Index into the descriptions for metadata.
     std::unique_ptr<VulkanImage> image;
     std::vector<uint32_t> aliasedResourceIndices;
+
+    // Access history belongs to the physical allocation, not a logical resource, because resources may alias.
+    VulkanSynchronizationStage lastAccess{kNullStage};
+    bool lastAccessWasWrite{false};
+
+    // Aggregate destinations make a layout transition visible to every declared reader of that layout.
+    VulkanSynchronizationStage shaderReadAccess{kNullStage};
+    VulkanSynchronizationStage generalReadAccess{kNullStage};
 };
 
 struct RenderGraphPhysicalBuffer {

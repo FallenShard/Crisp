@@ -16,7 +16,6 @@
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanFramebuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
@@ -60,7 +59,7 @@ public:
     VkExtent2D getSwapChainExtent() const;
     VkExtent3D getSwapChainExtent3D() const;
 
-    VulkanRenderPass& getDefaultRenderPass() const;
+    VulkanRasterizationPassDescriptor getDefaultRasterizationPassDescriptor() const;
     VkViewport getDefaultViewport() const;
     VkRect2D getDefaultScissor() const;
 
@@ -90,6 +89,7 @@ public:
 
     void finish();
 
+    // The producer must leave the image in SHADER_READ_ONLY_OPTIMAL.
     void setSceneImageView(const VulkanImageView* imageView);
 
     Geometry* getFullScreenGeometry() const;
@@ -128,9 +128,6 @@ private:
     std::unique_ptr<VulkanPhysicalDevice> m_physicalDevice;
     std::unique_ptr<VulkanDevice> m_device;
     std::unique_ptr<VulkanSwapChain> m_swapChain;
-    std::unique_ptr<VulkanRenderPass> m_defaultRenderPass;
-
-    FlatHashMap<VkImageView, std::unique_ptr<VulkanFramebuffer>> m_swapChainFramebuffers;
 
     VkViewport m_defaultViewport;
     VkRect2D m_defaultScissor;

@@ -30,8 +30,11 @@ public:
     VkViewport getViewport(float minDepth = 0.0f, float maxDepth = 1.0f) const;
     VkRect2D getScissorRect() const;
 
+    VkImage getImage(size_t index) const;
+    VkImageLayout getImageLayout(size_t index) const;
     VkImageView getImageView(size_t index) const;
     uint32_t getImageCount() const;
+    void setImageLayout(size_t index, VkImageLayout layout);
 
     void recreate(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
 
@@ -46,6 +49,7 @@ private:
     static VkExtent2D determineExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
     std::vector<VkImage> m_images;
+    std::vector<VkImageLayout> m_imageLayouts;
     std::vector<VkImageView> m_imageViews;
     VkFormat m_imageFormat;
     VkExtent2D m_extent;

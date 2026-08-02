@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,10 @@ struct RenderGraphResource {
 
     RenderGraphPassHandle producer;     // Pass that created and/or wrote to this resource.
     ResourceAccessState producerAccess; // How the producer created this resource.
+
+    // Access performed outside the graph after execution. Keeping this explicit lets the graph close the
+    // synchronization cycle and use that access as the source dependency when the physical image is reused.
+    std::optional<VulkanSynchronizationStage> externalAccess;
 
     std::string name; // Symbolic name of the resource. Useful for debugging and logging.
 

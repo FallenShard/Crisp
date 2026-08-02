@@ -90,7 +90,7 @@ void initImGui(
     VkPhysicalDevice physicalDevice,
     const VulkanDevice& device,
     const uint32_t swapChainImageCount,
-    const VkRenderPass renderPass,
+    const VkFormat swapChainImageFormat,
     const std::optional<std::filesystem::path>& fontPath) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -106,7 +106,12 @@ void initImGui(
     initInfo.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
     initInfo.MinImageCount = swapChainImageCount;
     initInfo.ImageCount = swapChainImageCount;
-    initInfo.PipelineInfoMain.RenderPass = renderPass;
+    initInfo.UseDynamicRendering = true;
+    initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &swapChainImageFormat,
+    };
     initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     ImGui_ImplVulkan_LoadFunctions(
         apiVersion,
