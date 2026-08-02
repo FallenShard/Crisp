@@ -62,10 +62,9 @@ public:
     ~Window();
 
     Window(const Window& other) = delete;
-    Window(Window&& other) noexcept;
-
     Window& operator=(const Window& other) = delete;
-    Window& operator=(Window&& other) noexcept;
+    Window(Window&& other) = delete;
+    Window& operator=(Window&& other) = delete;
 
     std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)> createSurfaceCallback() const;
 
@@ -110,6 +109,14 @@ public:
     Event<> minimized;
     Event<> restored;
 
+    BitFlags<EventType> getActiveEventMask() const {
+        return m_activeEventMask;
+    }
+
+    void setActiveEventMask(BitFlags<EventType> eventMask) {
+        m_activeEventMask = eventMask;
+    }
+
 private:
     static void resizeCallback(GLFWwindow* window, int width, int height);
     static void keyboardCallback(GLFWwindow* window, int key, int scanCode, int action, int mode);
@@ -120,7 +127,7 @@ private:
     static void closeCallback(GLFWwindow* window);
     static void focusCallback(GLFWwindow* window, int isFocused);
     static void iconifyCallback(GLFWwindow* window, int isIconified);
-    GLFWwindow* m_window;
+    GLFWwindow* m_window{nullptr};
 
     BitFlags<EventType> m_activeEventMask{EventType::AllEvents};
 };
@@ -128,12 +135,13 @@ private:
 class WindowEventGuard {
 public:
     WindowEventGuard(Window& window, BitFlags<EventType> eventMask)
-        : window(window) {
+        : m_window(window)
+        , m_previousEventMask(window.getActiveEventMask()) {
         window.disableEvents(eventMask);
     }
 
     ~WindowEventGuard() {
-        window.enableEvents(EventType::AllEvents);
+        m_window.setActiveEventMask(m_previousEventMask);
     }
 
     WindowEventGuard(const WindowEventGuard&) = delete;
@@ -143,6 +151,7 @@ public:
     WindowEventGuard& operator=(WindowEventGuard&&) = delete;
 
 private:
-    Window& window;
+    Window& m_window;
+    BitFlags<EventType> m_previousEventMask;
 };
 } // namespace crisp

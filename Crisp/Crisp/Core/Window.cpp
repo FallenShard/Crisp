@@ -21,13 +21,14 @@ int32_t toGlfw(const CursorState state) {
 
 Window::Window(
     const glm::ivec2& position, const glm::ivec2& size, const std::string& title, const WindowVisibility visibility) {
-    if (visibility == WindowVisibility::Hidden) {
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    }
+    glfwWindowHint(GLFW_VISIBLE, visibility == WindowVisibility::Hidden ? GLFW_FALSE : GLFW_TRUE);
 
     // Disable OpenGL Context creation - we'll use Vulkan.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     m_window = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+    if (m_window == nullptr) {
+        CRISP_LOGF("Failed to create GLFW window '{}'.", title);
+    }
     glfwSetWindowPos(m_window, position.x, position.y);
 
     glfwSetWindowUserPointer(m_window, this);
@@ -38,6 +39,7 @@ Window::Window(
     glfwSetScrollCallback(m_window, mouseWheelCallback);
     glfwSetCursorPosCallback(m_window, mouseMoveCallback);
     glfwSetCursorEnterCallback(m_window, mouseEnterCallback);
+    glfwSetWindowFocusCallback(m_window, focusCallback);
     glfwSetWindowIconifyCallback(m_window, iconifyCallback);
 
     if (glfwRawMouseMotionSupported()) {
@@ -47,52 +49,22 @@ Window::Window(
 
 Window::~Window() {
     if (m_window) {
+        glfwSetWindowUserPointer(m_window, nullptr);
         glfwDestroyWindow(m_window);
     }
 }
 
-Window::Window(Window&& other) noexcept
-    : resized(std::move(other.resized))
-    , keyPressed(std::move(other.keyPressed))
-    , mouseMoved(std::move(other.mouseMoved))
-    , mouseButtonPressed(std::move(other.mouseButtonPressed))
-    , mouseButtonReleased(std::move(other.mouseButtonReleased))
-    , mouseWheelScrolled(std::move(other.mouseWheelScrolled))
-    , mouseEntered(std::move(other.mouseEntered))
-    , mouseExited(std::move(other.mouseExited))
-    , closed(std::move(other.closed))
-    , focusGained(std::move(other.focusGained))
-    , focusLost(std::move(other.focusLost))
-    , minimized(std::move(other.minimized))
-    , restored(std::move(other.restored))
-    , m_window(std::exchange(other.m_window, nullptr)) {}
-
-Window& Window::operator=(Window&& other) noexcept {
-    resized = std::move(other.resized);
-    keyPressed = std::move(other.keyPressed);
-    mouseMoved = std::move(other.mouseMoved);
-    mouseButtonPressed = std::move(other.mouseButtonPressed);
-    mouseButtonReleased = std::move(other.mouseButtonReleased);
-    mouseWheelScrolled = std::move(other.mouseWheelScrolled);
-    mouseEntered = std::move(other.mouseEntered);
-    mouseExited = std::move(other.mouseExited);
-    closed = std::move(other.closed);
-    focusGained = std::move(other.focusGained);
-    focusLost = std::move(other.focusLost);
-    minimized = std::move(other.minimized);
-    restored = std::move(other.restored);
-    m_window = std::exchange(other.m_window, nullptr);
-    return *this;
-}
-
 std::function<VkResult(VkInstance, const VkAllocationCallbacks*, VkSurfaceKHR*)> Window::createSurfaceCallback() const {
-    return [this](VkInstance instance, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface) {
-        return glfwCreateWindowSurface(instance, m_window, allocator, surface);
+    return [window = m_window](VkInstance instance, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface) {
+        return glfwCreateWindowSurface(instance, window, allocator, surface);
     };
 }
 
 glm::ivec2 Window::getDesktopResolution() {
     const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    if (mode == nullptr) {
+        CRISP_LOGF("Failed to query the primary monitor video mode.");
+    }
     return {mode->width, mode->height};
 }
 
@@ -156,6 +128,8 @@ void Window::clearAllEvents() {
     closed.clear();
     focusGained.clear();
     focusLost.clear();
+    minimized.clear();
+    restored.clear();
 }
 
 void Window::enableEvents(BitFlags<EventType> eventMask) {
