@@ -81,25 +81,6 @@ void Material::writeDescriptor(
         imageView.getDescriptorInfo(&sampler, imageLayout.value_or(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)));
 }
 
-void Material::writeDescriptor(
-    const uint32_t setIndex,
-    const uint32_t binding,
-    const VulkanRenderPass& renderPass,
-    const uint32_t renderTargetIndex,
-    const VulkanSampler* sampler) {
-    CRISP_CHECK_GE_LT(setIndex, 0, m_sets.size());
-    m_device->postDescriptorWrite(
-        {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = m_sets[setIndex],
-            .dstBinding = binding,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = m_pipeline->getDescriptorType(setIndex, binding),
-        },
-        renderPass.getAttachmentView(renderTargetIndex).getDescriptorInfo(sampler));
-}
-
 void Material::writeBindlessDescriptor(
     const uint32_t setIndex,
     const uint32_t binding,

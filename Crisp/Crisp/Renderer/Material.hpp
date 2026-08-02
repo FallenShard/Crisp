@@ -1,13 +1,14 @@
 #pragma once
 
+#include <optional>
 #include <string_view>
+#include <vector>
 
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
@@ -33,12 +34,6 @@ public:
         const VulkanImageView& imageView,
         const VulkanSampler& sampler,
         std::optional<VkImageLayout> imageLayout = std::nullopt);
-    void writeDescriptor(
-        uint32_t setIndex,
-        uint32_t binding,
-        const VulkanRenderPass& renderPass,
-        uint32_t renderTargetIndex,
-        const VulkanSampler* sampler);
     void writeBindlessDescriptor(
         uint32_t setIndex,
         uint32_t binding,

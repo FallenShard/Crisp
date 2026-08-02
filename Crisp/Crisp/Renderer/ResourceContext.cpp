@@ -11,15 +11,6 @@ ResourceContext::ResourceContext(Renderer* renderer)
 VulkanPipeline* ResourceContext::createPipeline(
     const std::string& id,
     const std::string_view filename,
-    const VulkanRenderPass& renderPass,
-    const uint32_t subpassIndex) {
-    return pipelineCache.loadPipeline(
-        id, filename, m_renderer->getShaderCache(), m_renderer->getDevice(), renderPass, subpassIndex);
-}
-
-VulkanPipeline* ResourceContext::createPipeline(
-    const std::string& id,
-    const std::string_view filename,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
     return pipelineCache.loadPipeline(
         id, filename, m_renderer->getShaderCache(), m_renderer->getDevice(), rasterizationPassDescriptor);
@@ -46,19 +37,6 @@ Geometry& ResourceContext::addGeometry(const std::string_view id, Geometry&& geo
 
 Geometry& ResourceContext::getGeometry(const std::string_view id) const {
     return *m_geometries.at(id);
-}
-
-RenderNode* ResourceContext::createPostProcessingEffectNode(
-    std::string renderNodeId,
-    const std::string_view pipelineFilename,
-    const VulkanRenderPass& renderPass,
-    const std::string& renderPassName) {
-    auto renderNode = m_renderNodes.emplace(renderNodeId, std::make_unique<RenderNode>()).first->second.get();
-    renderNode->geometry = m_renderer->getFullScreenGeometry();
-    auto pipeline = createPipeline(renderNodeId, pipelineFilename, renderPass);
-    renderNode->pass(renderPassName).pipeline = pipeline;
-    renderNode->pass(renderPassName).material = createMaterial(renderNodeId, pipeline);
-    return renderNode;
 }
 
 void ResourceContext::recreatePipelines() {

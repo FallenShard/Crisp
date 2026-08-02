@@ -1,6 +1,7 @@
 #pragma once
 
-#include <optional>
+#include <memory>
+#include <string>
 #include <string_view>
 
 #include <Crisp/Renderer/AssetPaths.hpp>
@@ -8,21 +9,12 @@
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
 
 class PipelineCache {
 public:
     explicit PipelineCache(AssetPaths assetPaths);
-
-    VulkanPipeline* loadPipeline(
-        const std::string& id,
-        std::string_view filename,
-        ShaderCache& shaderCache,
-        VulkanDevice& device,
-        const VulkanRenderPass& renderPass,
-        uint32_t subpassIndex);
 
     VulkanPipeline* loadPipeline(
         const std::string& id,
@@ -44,13 +36,8 @@ private:
 
     struct PipelineInfo {
         std::string filename;
-        const VulkanRenderPass* renderPass{nullptr};
-        std::optional<VulkanRasterizationPassDescriptor> rasterizationPassDescriptor;
-        uint32_t subpassIndex{0};
+        VulkanRasterizationPassDescriptor rasterizationPassDescriptor;
     };
-
-    VulkanPipeline* loadPipelineImpl(
-        const std::string& id, ShaderCache& shaderCache, VulkanDevice& device, PipelineInfo pipelineInfo);
 
     FlatHashMap<std::string, PipelineInfo> m_pipelineInfos;
     FlatHashMap<std::string, std::unique_ptr<VulkanPipeline>> m_pipelines;

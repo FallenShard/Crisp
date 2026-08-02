@@ -3,12 +3,8 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphHandles.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
-#include <Crisp/Vulkan/VulkanRenderPassBuilder.hpp>
 
 namespace crisp {
-std::unique_ptr<VulkanRenderPass> createForwardLightingPass(
-    const VulkanDevice& device, RenderTargetCache& renderTargetCache, VkExtent2D renderArea);
 
 inline constexpr const char* kForwardLightingPass = "forwardLightingPass";
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 
 #include <nlohmann/json.hpp>
@@ -8,17 +9,8 @@
 #include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {
-
-Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
-    const std::filesystem::path& path,
-    const std::filesystem::path& spvShaderDir,
-    ShaderCache& shaderCache,
-    const VulkanDevice& device,
-    const VulkanRenderPass& renderPass,
-    uint32_t subpassIndex = 0);
 
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& path,

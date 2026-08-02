@@ -277,28 +277,6 @@ PipelineBuilder& PipelineBuilder::addDynamicState(VkDynamicState dynamicState) {
 std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
     const VulkanDevice& device,
     std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
-    const VkRenderPass renderPass,
-    const uint32_t subpassIndex) {
-    VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-    populatePipelineCreateInfo(pipelineInfo, *pipelineLayout);
-    pipelineInfo.renderPass = renderPass;
-    pipelineInfo.subpass = subpassIndex;
-
-    VkPipeline pipeline{VK_NULL_HANDLE};
-    VK_FATAL(vkCreateGraphicsPipelines(
-        device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline));
-    return std::make_unique<VulkanPipeline>(
-        device,
-        pipeline,
-        std::move(pipelineLayout),
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        VulkanVertexLayout(m_vertexLayout),
-        createDynamicStateFlags());
-}
-
-std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
-    const VulkanDevice& device,
-    std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
     VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
     populatePipelineCreateInfo(pipelineInfo, *pipelineLayout);

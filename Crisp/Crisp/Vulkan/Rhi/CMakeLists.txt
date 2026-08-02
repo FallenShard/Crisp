@@ -246,16 +246,6 @@ target_link_libraries(
     PUBLIC Crisp::VulkanVertexLayout
 )
 
-add_cpp_static_library(
-    CrispVulkanFramebuffer
-    "VulkanFramebuffer.cpp"
-    "VulkanFramebuffer.hpp"
-)
-target_link_libraries(
-    CrispVulkanFramebuffer
-    PUBLIC Crisp::VulkanDevice
-)
-
 add_cpp_header_library(
     CrispVulkanRasterizationPassDescriptor
     "VulkanRasterizationPassDescriptor.hpp"
@@ -263,18 +253,6 @@ add_cpp_header_library(
 target_link_libraries(
     CrispVulkanRasterizationPassDescriptor
     INTERFACE Crisp::VulkanHeader
-)
-
-add_cpp_static_library(
-    CrispVulkanRenderPass
-    "VulkanRenderPass.cpp"
-    "VulkanRenderPass.hpp"
-)
-target_link_libraries(
-    CrispVulkanRenderPass
-    PUBLIC Crisp::VulkanDevice
-    PUBLIC Crisp::VulkanImageView
-    PUBLIC Crisp::VulkanFramebuffer
 )
 
 add_cpp_static_library(

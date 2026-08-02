@@ -3,7 +3,6 @@
 #include <Crisp/Vulkan/Rhi/VulkanCommandBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 namespace crisp {
@@ -31,8 +30,6 @@ public:
         const VulkanSynchronizationScope& scope,
         const VkImageSubresourceRange& range) const;
 
-    void beginRenderPass(const VulkanRenderPass& renderPass, const VulkanFramebuffer& framebuffer) const;
-    void endRenderPass(VulkanRenderPass& renderPass) const;
     void beginRendering(const VkRenderingInfo& renderingInfo) const;
     void endRendering() const;
 

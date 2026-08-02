@@ -327,15 +327,6 @@ Geometry* Renderer::getFullScreenGeometry() const {
 }
 
 std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
-    const std::string_view pipelineName, const VulkanRenderPass& renderPass, const uint32_t subpassIndex) {
-    const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
-    CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
-    return createPipelineFromFile(
-               absolutePipelinePath, m_assetPaths.spvShaderDir, *m_shaderCache, *m_device, renderPass, subpassIndex)
-        .unwrap();
-}
-
-std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
     const std::string_view pipelineName, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());

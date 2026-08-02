@@ -50,11 +50,6 @@ public:
     std::unique_ptr<VulkanPipeline> create(
         const VulkanDevice& device,
         std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
-        VkRenderPass renderPass,
-        uint32_t subpassIndex);
-    std::unique_ptr<VulkanPipeline> create(
-        const VulkanDevice& device,
-        std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
         const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
     PipelineDynamicStateFlags createDynamicStateFlags() const;
 

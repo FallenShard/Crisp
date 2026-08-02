@@ -5,7 +5,6 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/ShaderUtils/Reflection.hpp>
 
 #include <string_view>
@@ -13,12 +12,6 @@
 namespace crisp {
 namespace {
 const auto logger = createLoggerMt("VulkanPipelineIo");
-
-struct PipelineCreationTarget {
-    const VulkanRenderPass* renderPass{nullptr};
-    const VulkanRasterizationPassDescriptor* rasterizationPassDescriptor{nullptr};
-    uint32_t subpassIndex{0};
-};
 
 Result<FlatHashMap<VkShaderStageFlagBits, std::string>> parseShaderFiles(const nlohmann::json& json) {
     FlatHashMap<VkShaderStageFlagBits, std::string> shaderFiles;
@@ -130,27 +123,18 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
     return {};
 }
 
-[[nodiscard]] Result<> readViewportState(
-    const nlohmann::json& json, const VulkanRenderPass* renderPass, PipelineBuilder& builder) {
+[[nodiscard]] Result<> readViewportState(const nlohmann::json& json, PipelineBuilder& builder) {
     if (json.contains("viewports")) {
         CRISP_CHECK(json["viewports"].is_array());
         for (const auto& viewport : json["viewports"]) {
             if (viewport == "pass") {
-                if (renderPass != nullptr) {
-                    builder.setViewport(renderPass->createViewport());
-                } else {
-                    builder.setViewport({}).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
-                }
+                builder.setViewport({}).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
             }
         }
         CRISP_CHECK(json["scissors"].is_array());
         for (const auto& scissor : json["scissors"]) {
             if (scissor == "pass") {
-                if (renderPass != nullptr) {
-                    builder.setScissor(renderPass->createScissor());
-                } else {
-                    builder.setScissor({}).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
-                }
+                builder.setScissor({}).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
             }
         }
     }
@@ -279,7 +263,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const std::filesystem::path& spvShaderDir,
     ShaderCache& shaderCache,
     const VulkanDevice& device,
-    const PipelineCreationTarget& target) {
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
     CRISP_CHECK(pipelineJson.is_object());
 
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
@@ -317,7 +301,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
 
     // Optional state - if no viewport information is supposed, we assume screen size.
     if (hasField<JsonType::Object>(pipelineJson, "viewport")) {
-        readViewportState(pipelineJson["viewport"], target.renderPass, builder).unwrap();
+        readViewportState(pipelineJson["viewport"], builder).unwrap();
     } else {
         builder.setViewport({}).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
         builder.setScissor({}).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
@@ -345,25 +329,19 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder).unwrap();
     }
 
-    if (target.rasterizationPassDescriptor != nullptr) {
-        return builder.create(device, layoutBuilder.create(device), *target.rasterizationPassDescriptor);
-    }
-
-    CRISP_CHECK(target.renderPass != nullptr);
-    return builder.create(
-        device, layoutBuilder.create(device), target.renderPass->getHandle(), target.subpassIndex);
+    return builder.create(device, layoutBuilder.create(device), rasterizationPassDescriptor);
 }
 
-Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileForTarget(
+Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
     const std::filesystem::path& path,
     const std::filesystem::path& spvShaderDir,
     ShaderCache& shaderCache,
     const VulkanDevice& device,
-    const PipelineCreationTarget& target) {
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
     CRISP_TRY(const auto& json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
     CRISP_TRY(
         auto pipeline,
-        createPipelineFromJson(json, spvShaderDir, shaderCache, device, target),
+        createPipelineFromJson(json, spvShaderDir, shaderCache, device, rasterizationPassDescriptor),
         "Failed to create pipeline from json");
     device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
     return pipeline;
@@ -376,28 +354,8 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& spvShaderDir,
     ShaderCache& shaderCache,
     const VulkanDevice& device,
-    const VulkanRenderPass& renderPass,
-    const uint32_t subpassIndex) {
-    return createPipelineFromFileForTarget(
-        path,
-        spvShaderDir,
-        shaderCache,
-        device,
-        {.renderPass = &renderPass, .subpassIndex = subpassIndex});
-}
-
-Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
-    const std::filesystem::path& path,
-    const std::filesystem::path& spvShaderDir,
-    ShaderCache& shaderCache,
-    const VulkanDevice& device,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
-    return createPipelineFromFileForTarget(
-        path,
-        spvShaderDir,
-        shaderCache,
-        device,
-        {.rasterizationPassDescriptor = &rasterizationPassDescriptor});
+    return createPipelineFromFileImpl(path, spvShaderDir, shaderCache, device, rasterizationPassDescriptor);
 }
 
 } // namespace crisp

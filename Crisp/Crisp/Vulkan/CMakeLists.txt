@@ -17,9 +17,7 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::VulkanPipelineLayout
     PUBLIC Crisp::VulkanDescriptorSet
     PUBLIC Crisp::VulkanPipeline
-    PUBLIC Crisp::VulkanFramebuffer
     PUBLIC Crisp::VulkanRasterizationPassDescriptor
-    PUBLIC Crisp::VulkanRenderPass
     PUBLIC Crisp::VulkanCommandBuffer
     PUBLIC Crisp::VulkanAccelerationStructure
     PUBLIC Crisp::VulkanFormatTraits
@@ -156,14 +154,4 @@ target_link_libraries(
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::ChromeEventTracer
     PUBLIC Microsoft.GSL::GSL
-)
-
-add_cpp_static_library(
-    CrispVulkanRenderPassBuilder
-    "VulkanRenderPassBuilder.cpp"
-    "VulkanRenderPassBuilder.hpp"
-)
-target_link_libraries(
-    CrispVulkanRenderPassBuilder
-    PUBLIC Crisp::Vulkan
 )

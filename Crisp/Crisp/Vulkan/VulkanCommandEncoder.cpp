@@ -127,25 +127,6 @@ void VulkanCommandEncoder::transitionLayout(
     vkCmdPipelineBarrier2(m_cmdBuffer, &info);
 }
 
-void VulkanCommandEncoder::beginRenderPass(
-    const VulkanRenderPass& renderPass, const VulkanFramebuffer& framebuffer) const {
-    const auto& clearValues = renderPass.getClearValues();
-
-    VkRenderPassBeginInfo renderPassInfo = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-    renderPassInfo.renderPass = renderPass.getHandle();
-    renderPassInfo.framebuffer = framebuffer.getHandle();
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = renderPass.getRenderArea();
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
-
-    vkCmdBeginRenderPass(m_cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-}
-
-void VulkanCommandEncoder::endRenderPass(VulkanRenderPass& renderPass) const {
-    renderPass.end(m_cmdBuffer);
-}
-
 void VulkanCommandEncoder::beginRendering(const VkRenderingInfo& renderingInfo) const {
     vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
 }

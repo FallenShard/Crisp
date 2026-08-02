@@ -35,13 +35,11 @@ concept VulkanHandle = IsAnyOf<
     VkShaderModule,
     VkPipelineCache,
     VkPipelineLayout,
-    VkRenderPass,
     VkPipeline,
     VkDescriptorSetLayout,
     VkSampler,
     VkDescriptorPool,
     VkDescriptorSet,
-    VkFramebuffer,
     VkCommandPool,
     VkSamplerYcbcrConversion,
     VkDescriptorUpdateTemplate,
@@ -198,8 +196,6 @@ private:
             return VK_OBJECT_TYPE_PIPELINE_CACHE;
         } else if constexpr (std::same_as<VkHandle, VkPipelineLayout>) {
             return VK_OBJECT_TYPE_PIPELINE_LAYOUT;
-        } else if constexpr (std::same_as<VkHandle, VkRenderPass>) {
-            return VK_OBJECT_TYPE_RENDER_PASS;
         } else if constexpr (std::same_as<VkHandle, VkPipeline>) {
             return VK_OBJECT_TYPE_PIPELINE;
         } else if constexpr (std::same_as<VkHandle, VkDescriptorSetLayout>) {
@@ -210,8 +206,6 @@ private:
             return VK_OBJECT_TYPE_DESCRIPTOR_POOL;
         } else if constexpr (std::same_as<VkHandle, VkDescriptorSet>) {
             return VK_OBJECT_TYPE_DESCRIPTOR_SET;
-        } else if constexpr (std::same_as<VkHandle, VkFramebuffer>) {
-            return VK_OBJECT_TYPE_FRAMEBUFFER;
         } else if constexpr (std::same_as<VkHandle, VkCommandPool>) {
             return VK_OBJECT_TYPE_COMMAND_POOL;
         } else if constexpr (std::same_as<VkHandle, VkSamplerYcbcrConversion>) {

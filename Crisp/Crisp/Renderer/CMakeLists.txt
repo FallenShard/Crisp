@@ -85,26 +85,6 @@ target_link_libraries(
 # "RenderPasses/TexturePass.hpp"
 # )
 add_cpp_static_library(
-    CrispCubeMapRenderPass
-    "RenderPasses/CubeMapRenderPass.cpp"
-    "RenderPasses/CubeMapRenderPass.hpp"
-)
-target_link_libraries(
-    CrispCubeMapRenderPass
-    PUBLIC Crisp::Renderer
-)
-
-add_cpp_static_library(
-    CrispTexturePass
-    "RenderPasses/TexturePass.cpp"
-    "RenderPasses/TexturePass.hpp"
-)
-target_link_libraries(
-    CrispTexturePass
-    PUBLIC Crisp::Renderer
-)
-
-add_cpp_static_library(
     CrispRenderer
     "BufferUpdatePolicy.hpp"
     "ComputePipeline.cpp"
@@ -131,8 +111,6 @@ add_cpp_static_library(
     "ImageCache.cpp"
     "PipelineCache.cpp"
     "PipelineCache.hpp"
-    "RenderTargetCache.cpp"
-    "RenderTargetCache.hpp"
 )
 target_link_libraries(CrispRenderer
     PUBLIC Crisp::BitFlags
@@ -155,7 +133,6 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Crisp::AssetPaths
     PUBLIC Crisp::VulkanTracer
-    PUBLIC Crisp::VulkanRenderPassBuilder
     PUBLIC Crisp::VulkanStagingBelt
 )
 

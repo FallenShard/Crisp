@@ -6,10 +6,8 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/PipelineCache.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
-#include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
@@ -88,8 +86,6 @@ public:
     }
 
     VulkanPipeline* createPipeline(
-        const std::string& id, std::string_view filename, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
-    VulkanPipeline* createPipeline(
         const std::string& id,
         std::string_view filename,
         const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
@@ -99,12 +95,6 @@ public:
 
     Geometry& addGeometry(std::string_view id, Geometry&& geometry);
     Geometry& getGeometry(std::string_view id) const;
-
-    RenderNode* createPostProcessingEffectNode(
-        std::string renderNodeId,
-        std::string_view pipelineFilename,
-        const VulkanRenderPass& renderPass,
-        const std::string& renderPassName);
 
     void recreatePipelines();
 
@@ -118,7 +108,6 @@ public:
 
     ImageCache imageCache;
     PipelineCache pipelineCache;
-    RenderTargetCache renderTargetCache;
 
 private:
     Renderer* m_renderer;

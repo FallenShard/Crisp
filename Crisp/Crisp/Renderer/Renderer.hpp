@@ -9,7 +9,6 @@
 #include <Crisp/Renderer/AssetPaths.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
 #include <Crisp/Renderer/ShaderCache.hpp>
@@ -20,7 +19,6 @@
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanTimelineSemaphore.hpp>
@@ -95,8 +93,6 @@ public:
 
     Geometry* getFullScreenGeometry() const;
 
-    std::unique_ptr<VulkanPipeline> createPipeline(
-        std::string_view pipelineName, const VulkanRenderPass& renderPass, uint32_t subpassIndex = 0);
     std::unique_ptr<VulkanPipeline> createPipeline(
         std::string_view pipelineName, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
 
