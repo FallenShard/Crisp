@@ -7,6 +7,7 @@
 #include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 
 namespace crisp {

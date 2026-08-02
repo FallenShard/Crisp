@@ -8,6 +8,8 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/RenderTargetCache.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {

@@ -19,6 +19,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>

@@ -2,6 +2,7 @@
 
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 
 namespace crisp {
 

@@ -7,7 +7,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraphUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 
 namespace crisp::rg {

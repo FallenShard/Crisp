@@ -18,6 +18,7 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::VulkanDescriptorSet
     PUBLIC Crisp::VulkanPipeline
     PUBLIC Crisp::VulkanFramebuffer
+    PUBLIC Crisp::VulkanRasterizationPassDescriptor
     PUBLIC Crisp::VulkanRenderPass
     PUBLIC Crisp::VulkanCommandBuffer
     PUBLIC Crisp::VulkanAccelerationStructure

@@ -6,7 +6,7 @@
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 
 namespace crisp {
 

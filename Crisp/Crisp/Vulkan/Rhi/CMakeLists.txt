@@ -256,6 +256,15 @@ target_link_libraries(
     PUBLIC Crisp::VulkanDevice
 )
 
+add_cpp_header_library(
+    CrispVulkanRasterizationPassDescriptor
+    "VulkanRasterizationPassDescriptor.hpp"
+)
+target_link_libraries(
+    CrispVulkanRasterizationPassDescriptor
+    INTERFACE Crisp::VulkanHeader
+)
+
 add_cpp_static_library(
     CrispVulkanRenderPass
     "VulkanRenderPass.cpp"
