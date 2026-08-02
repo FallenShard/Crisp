@@ -382,7 +382,10 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     return f12.bufferDeviceAddress && f12.hostQueryReset && f12.timelineSemaphore &&
                            f12.scalarBlockLayout && f12.descriptorIndexing && f12.runtimeDescriptorArray &&
                            f12.descriptorBindingPartiallyBound && f12.descriptorBindingVariableDescriptorCount &&
-                           f12.descriptorBindingUniformBufferUpdateAfterBind;
+                           f12.descriptorBindingUniformBufferUpdateAfterBind &&
+                           f12.shaderSampledImageArrayNonUniformIndexing &&
+                           f12.shaderStorageImageArrayNonUniformIndexing &&
+                           f12.shaderStorageBufferArrayNonUniformIndexing;
                 },
             .linkFunc =
                 [](VulkanDeviceFeatureChain& featureChain) {
@@ -399,6 +402,9 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     f12.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
                     f12.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
                     f12.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+                    f12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+                    f12.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+                    f12.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
                 },
         },
         VulkanDeviceFeatureRequest{

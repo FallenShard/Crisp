@@ -45,6 +45,26 @@ add_cpp_header_library(
     "AssetPaths.hpp"
 )
 
+add_cpp_static_library(
+    CrispBindlessImageRegistry
+    "BindlessImageRegistry.cpp"
+    "BindlessImageRegistry.hpp"
+)
+target_link_libraries(
+    CrispBindlessImageRegistry
+    PUBLIC Crisp::Vulkan
+)
+
+add_cpp_test(
+    CrispBindlessImageRegistryTest
+    "Test/BindlessImageRegistryTest.cpp"
+)
+target_link_libraries(
+    CrispBindlessImageRegistryTest
+    PRIVATE Crisp::BindlessImageRegistry
+    PRIVATE Crisp::VulkanTestUtils
+)
+
 # add_cpp_static_library(
 # CrispRenderPasses
 # "RenderPasses/BlurPass.cpp"
