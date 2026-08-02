@@ -230,20 +230,6 @@ target_link_libraries(
     PRIVATE Crisp::Event
 )
 
-add_cpp_header_library(
-    CrispSlotMap
-    "SlotMap.hpp"
-)
-
-add_cpp_test(
-    CrispSlotMapTest
-    "Test/SlotMapTest.cpp"
-)
-target_link_libraries(
-    CrispSlotMapTest
-    PRIVATE Crisp::SlotMap
-)
-
 add_cpp_static_library(
     CrispChromeEventTracer
     "ChromeEventTracer.cpp"
