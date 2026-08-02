@@ -45,7 +45,5 @@ target_link_libraries(CrispLights
     PUBLIC Crisp::CascadedShadowMapping
     PUBLIC Crisp::DirectionalLight
     PRIVATE Crisp::Logger
-    PRIVATE Crisp::CubeMapRenderPass
-    PRIVATE Crisp::TexturePass
     PRIVATE Crisp::DirectionalLight
 )
