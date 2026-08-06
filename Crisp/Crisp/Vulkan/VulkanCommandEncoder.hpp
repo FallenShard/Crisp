@@ -35,6 +35,8 @@ public:
 
     void copyImageToBuffer(const VulkanImage& srcImage, const VulkanBuffer& dstBuffer) const;
 
+    void drawMeshTasks(VkExtent3D groupCount) const;
+    void drawMeshTasks(uint32_t groupCount) const;
     void traceRays(std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const;
 
     VkCommandBuffer getHandle() const {

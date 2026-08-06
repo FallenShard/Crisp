@@ -150,6 +150,14 @@ void VulkanCommandEncoder::copyImageToBuffer(const VulkanImage& srcImage, const 
         m_cmdBuffer, srcImage.getHandle(), VK_IMAGE_LAYOUT_GENERAL, dstBuffer.getHandle(), 1, &region);
 }
 
+void VulkanCommandEncoder::drawMeshTasks(const VkExtent3D groupCount) const {
+    vkCmdDrawMeshTasksEXT(m_cmdBuffer, groupCount.width, groupCount.height, groupCount.depth);
+}
+
+void VulkanCommandEncoder::drawMeshTasks(const uint32_t groupCount) const {
+    vkCmdDrawMeshTasksEXT(m_cmdBuffer, groupCount, 1, 1);
+}
+
 void VulkanCommandEncoder::traceRays(
     const std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const {
     CRISP_CHECK_GE(bindingRegions.size(), 4);

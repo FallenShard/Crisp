@@ -98,8 +98,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         meshPipeline->bind(ctx.commandEncoder.getHandle());
         auto* meshMaterial = m_resourceContext->getMaterial("mesh");
         meshMaterial->bind(ctx.commandEncoder.getHandle());
-        vkCmdDrawMeshTasksEXT(
-            ctx.commandEncoder.getHandle(), static_cast<uint32_t>(m_meshletData.meshlets.size()), 1, 1);
+        ctx.commandEncoder.drawMeshTasks(static_cast<uint32_t>(m_meshletData.meshlets.size()));
     });
 
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
