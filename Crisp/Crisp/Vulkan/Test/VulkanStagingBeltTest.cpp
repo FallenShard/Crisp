@@ -13,7 +13,7 @@ TEST_F(VulkanStagingBeltTest, PerFrameCycleDoesNotExhaustRing) {
     VulkanStagingBelt ctx(*device_, kSmallCapacity);
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
-        *device_, 64, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        *device_, 64, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
         BufferMemoryType::GpuOnly);
 
     const std::vector<uint32_t> frameData(16, 42); // 64 bytes
@@ -39,7 +39,7 @@ TEST_F(VulkanStagingBeltTest, UploadViaPerFramePathVerifyContents) {
     VulkanStagingBelt ctx(*device_, kCapacity);
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
-        *device_, 16, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        *device_, 16, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
         BufferMemoryType::GpuOnly);
 
     const std::vector<uint32_t> data = {10, 20, 30, 40};
@@ -97,7 +97,7 @@ TEST_F(VulkanStagingBeltTest, AsyncReadbackOpensOnlyAtItsCompletionValue) {
 
     VulkanStagingBelt ctx(*device_, kCapacity);
     auto srcBuffer = std::make_unique<VulkanBuffer>(
-        *device_, dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        *device_, dataSize, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
         BufferMemoryType::GpuOnly);
     uploadBufferBlocking(*device_, device_->getGeneralQueue(), *srcBuffer, srcData.data(), dataSize);
 

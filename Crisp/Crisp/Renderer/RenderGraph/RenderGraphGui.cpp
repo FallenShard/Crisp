@@ -300,17 +300,17 @@ std::string imageUsage(const VkImageUsageFlags flags) {
     return value.empty() ? "None" : value;
 }
 
-std::string bufferUsage(const VkBufferUsageFlags flags) {
+std::string bufferUsage(const VkBufferUsageFlags2 flags) {
     std::string value;
-    appendFlag(value, flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "Transfer src");
-    appendFlag(value, flags, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "Transfer dst");
-    appendFlag(value, flags, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, "Uniform texel");
-    appendFlag(value, flags, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, "Storage texel");
-    appendFlag(value, flags, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, "Uniform");
-    appendFlag(value, flags, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, "Storage");
-    appendFlag(value, flags, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, "Index");
-    appendFlag(value, flags, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, "Vertex");
-    appendFlag(value, flags, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, "Indirect");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, "Transfer src");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, "Transfer dst");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT, "Uniform texel");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_STORAGE_TEXEL_BUFFER_BIT, "Storage texel");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT, "Uniform");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, "Storage");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT, "Index");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT, "Vertex");
+    appendFlag(value, flags, VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT, "Indirect");
     return value.empty() ? "None" : value;
 }
 

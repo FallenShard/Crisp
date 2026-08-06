@@ -222,9 +222,13 @@ Result<uint32_t> VulkanPhysicalDevice::findDeviceImageMemoryType(const VkDevice 
 }
 
 Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(const VkDevice device) const {
+    const VkBufferUsageFlags2CreateInfo usageInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO,
+        .usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT,
+    };
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.pNext = &usageInfo;
     bufferInfo.size = 1;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VkBuffer dummyBuffer(VK_NULL_HANDLE);
@@ -237,9 +241,13 @@ Result<uint32_t> VulkanPhysicalDevice::findDeviceBufferMemoryType(const VkDevice
 }
 
 Result<uint32_t> VulkanPhysicalDevice::findStagingBufferMemoryType(const VkDevice device) const {
+    const VkBufferUsageFlags2CreateInfo usageInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO,
+        .usage = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
+    };
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.pNext = &usageInfo;
     bufferInfo.size = 1;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VkBuffer dummyBuffer(VK_NULL_HANDLE);
@@ -424,12 +432,16 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                 },
         },
         VulkanDeviceFeatureRequest{
-            // Optional because it enables nothing yet - a 1.3 device should run, not be rejected over an empty
-            // feature struct. Make it required once something here is actually used.
             .symbolicName = "Core 1.4 Features",
             .minApiVersion = VK_API_VERSION_1_4,
-            .isRequired = false,
-            .linkFunc = [](VulkanDeviceFeatureChain& featureChain) { featureChain.link(featureChain.features14); },
+            .isSupportedFunc =
+                [](const VulkanPhysicalDevice& physicalDevice) {
+                    return physicalDevice.queryFeatures<VkPhysicalDeviceVulkan14Features>().maintenance5 == VK_TRUE;
+                },
+            .linkFunc =
+                [](VulkanDeviceFeatureChain& featureChain) {
+                    featureChain.link(featureChain.features14).maintenance5 = VK_TRUE;
+                },
         },
         VulkanDeviceFeatureRequest{
             .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,

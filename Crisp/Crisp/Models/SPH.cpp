@@ -53,7 +53,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     m_vertexBuffer = std::make_unique<VulkanBuffer>(
         m_renderer->getDevice(),
         vertexBufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT,
         BufferMemoryType::GpuOnly);
     const std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
     fillDeviceBuffer(*m_renderer, m_vertexBuffer.get(), positions.data(), vertexBufferSize);
@@ -61,7 +61,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
     m_colorBuffer = std::make_unique<VulkanBuffer>(
         m_renderer->getDevice(),
         vertexBufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT,
         BufferMemoryType::GpuOnly);
     const auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
     fillDeviceBuffer(*m_renderer, m_colorBuffer.get(), colors.data(), vertexBufferSize);
@@ -86,7 +86,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
 
     m_densityBuffer = createStorageBuffer(m_renderer->getDevice(), m_numParticles * sizeof(float));
     m_pressureBuffer = createStorageBuffer(m_renderer->getDevice(), m_numParticles * sizeof(float));
-    m_velocityBuffer = createStorageBuffer(m_renderer->getDevice(), vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    m_velocityBuffer = createStorageBuffer(m_renderer->getDevice(), vertexBufferSize, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
     auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
     fillDeviceBuffer(*m_renderer, m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 0);
     m_forcesBuffer = createStorageBuffer(m_renderer->getDevice(), vertexBufferSize);

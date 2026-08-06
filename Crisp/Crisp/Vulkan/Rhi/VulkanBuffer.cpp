@@ -10,7 +10,7 @@ CRISP_MAKE_LOGGER_ST("VulkanBuffer");
 VulkanBuffer::VulkanBuffer(
     const VulkanDevice& device,
     const VkDeviceSize size,
-    const VkBufferUsageFlags usageFlags,
+    const VkBufferUsageFlags2 usageFlags,
     const BufferMemoryType memoryType)
     : VulkanResource(device.getResourceDeallocator())
     , m_allocator(device.getMemoryAllocator())
@@ -18,10 +18,15 @@ VulkanBuffer::VulkanBuffer(
     , m_allocationInfo{}
     , m_size(size)
     , m_address{} {
+    const VkBufferUsageFlags2CreateInfo usageInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO,
+        .usage = usageFlags,
+    };
+
     VkBufferCreateInfo bufferInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = &usageInfo,
         .size = size,
-        .usage = usageFlags,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
@@ -39,7 +44,7 @@ VulkanBuffer::VulkanBuffer(
 
     VK_CHECK(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
-    if (usageFlags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+    if (usageFlags & VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT) {
         VkBufferDeviceAddressInfo getAddressInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
         getAddressInfo.buffer = m_handle;
         m_address = vkGetBufferDeviceAddress(device.getHandle(), &getAddressInfo);

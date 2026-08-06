@@ -230,7 +230,7 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
         {VertexAttribute::Position}, {VertexAttribute::Normal}};
     TriangleMesh mesh = createGridMesh(kGeometryPatchWorldSize, N);
     m_resourceContext->addGeometry(
-        "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+        "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT));
     m_resourceContext->getGeometry("ocean")->setInstanceCount(kInstanceCount);
 
     auto displacementYImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
@@ -939,7 +939,7 @@ void OceanScene::buildNewFFT() {
                 {
                     .formatHint = VK_FORMAT_R8_UINT,
                     .size = 100,
-                    .usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                    .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
                 },
                 "dummy-geometry");
 
@@ -947,7 +947,7 @@ void OceanScene::buildNewFFT() {
             //     {
             //         .formatHint = VK_FORMAT_R32G32B32_SFLOAT,
             //         .size = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getSize(),
-            //         .usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            //         .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
             //         .externalBuffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getHandle(),
             //     },
             //     "geometry-positions");

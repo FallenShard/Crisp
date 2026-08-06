@@ -13,7 +13,7 @@ TEST_F(VulkanStagingBufferTest, UploadBufferBlocking) {
     const VkDeviceSize dataSize = srcData.size() * sizeof(uint32_t);
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
-        *device_, dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        *device_, dataSize, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
         BufferMemoryType::GpuOnly);
 
     uploadBufferBlocking(*device_, device_->getGeneralQueue(), *dstBuffer, srcData.data(), dataSize);
@@ -23,7 +23,7 @@ TEST_F(VulkanStagingBufferTest, UploadBufferBlocking) {
 
 TEST_F(VulkanStagingBufferTest, UploadBufferBlockingWithOffset) {
     auto dstBuffer = std::make_unique<VulkanBuffer>(
-        *device_, 32, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        *device_, 32, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
         BufferMemoryType::GpuOnly);
 
     const std::vector<uint32_t> zeros(8, 0);
@@ -46,7 +46,7 @@ TEST_F(VulkanStagingBufferTest, UploadBufferBlockingFromVector) {
 
     auto dstBuffer = std::make_unique<VulkanBuffer>(
         *device_, srcData.size() * sizeof(uint32_t),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::GpuOnly);
+        VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::GpuOnly);
 
     uploadBufferBlocking(*device_, device_->getGeneralQueue(), *dstBuffer, srcData);
 

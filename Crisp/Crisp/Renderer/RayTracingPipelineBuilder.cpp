@@ -89,8 +89,8 @@ ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkP
     auto buffer = std::make_unique<VulkanBuffer>(
         m_renderer.getDevice(),
         shaderHandleStorage.size(),
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_SHADER_BINDING_TABLE_BIT_KHR |
+            VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
         BufferMemoryType::GpuOnly);
     m_renderer.enqueueResourceUpdate(
         [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer) {

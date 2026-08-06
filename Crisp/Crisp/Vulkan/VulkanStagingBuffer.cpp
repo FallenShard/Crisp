@@ -8,7 +8,7 @@ namespace crisp {
 std::unique_ptr<VulkanBuffer> createStagingBuffer(
     VulkanDevice& device, const void* data, const VkDeviceSize size) {
     auto buffer = std::make_unique<VulkanBuffer>(
-        device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+        device, size, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     buffer->updateFromHost(data, size, 0);
     return buffer;
 }
@@ -44,7 +44,7 @@ VulkanStagingBuffer::VulkanStagingBuffer(VulkanDevice& device, const VkDeviceSiz
     , m_alignment(alignment > 0 ? alignment : 1) {
     CRISP_CHECK_GT(capacity, VkDeviceSize{0});
     m_buffer = std::make_unique<VulkanBuffer>(
-        device, capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+        device, capacity, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
 }
 
 std::optional<StagingAllocation> VulkanStagingBuffer::allocate(const VkDeviceSize size) {

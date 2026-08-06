@@ -14,7 +14,7 @@ TEST_F(VulkanBufferTest, HostUploadBuffer) {
     std::iota(data.begin(), data.end(), 0.0f); // NOLINT
 
     constexpr VkDeviceSize size = data.size() * sizeof(float);
-    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     EXPECT_THAT(stagingBuffer, HandleIsValid());
 
     ASSERT_EQ(stagingBuffer.getSize(), size);
@@ -32,7 +32,7 @@ TEST_F(VulkanBufferTest, MoveConstruction) {
     std::iota(data.begin(), data.end(), 0.0f); // NOLINT
 
     constexpr VkDeviceSize size = data.size() * sizeof(float);
-    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     EXPECT_THAT(stagingBuffer, HandleIsValid());
     EXPECT_EQ(stagingBuffer.getSize(), size);
 
@@ -52,10 +52,10 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
     VulkanBuffer deviceBuffer(
         *device_,
         size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT,
         BufferMemoryType::GpuOnly);
 
-    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    VulkanBuffer stagingBuffer(*device_, size, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i) {
@@ -63,7 +63,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
     }
 
     VulkanBuffer downloadBuffer(
-        *device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+        *device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     {
         const ScopeCommandExecutor executor(*device_);
         const auto& cmdBuffer = executor.cmdBuffer;
@@ -95,10 +95,10 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     VulkanBuffer deviceBuffer(
         *device,
         kSize,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT,
         BufferMemoryType::GpuOnly);
 
-    VulkanBuffer stagingBuffer(*device, kSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    VulkanBuffer stagingBuffer(*device, kSize, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     std::vector<float> data(kSize / sizeof(float));
     std::iota(data.begin(), data.end(), 0.0f); // NOLINT
     const auto* stagingPtr = stagingBuffer.getHostVisibleData<float>();
@@ -121,7 +121,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     // Unassigned queue family for now, until first command
     VulkanBuffer downloadBuffer(
-        *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+        *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
 
     // Transfer ownership to the transfer queue FOR DMA
     const VulkanQueue& transferQueue = device->getTransferQueue();
@@ -142,7 +142,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     transferCmdBuffer.end();
 
     VulkanBuffer downloadBuffer2(
-        *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+        *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
     cmdBuffer.insertBufferMemoryBarrier(
         downloadBuffer2.createDescriptorInfo(), kTransferWrite >> kHostRead);

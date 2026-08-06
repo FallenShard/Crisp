@@ -25,7 +25,7 @@ Geometry::Geometry(
     const std::vector<InterleavedVertexBuffer>& interleavedVertexBuffers,
     const std::vector<glm::uvec3>& faces,
     const std::vector<TriangleMeshView>& meshViews,
-    const VkBufferUsageFlags usageFlags)
+    const VkBufferUsageFlags2 usageFlags)
     : m_vertexLayout(std::move(vertexLayout))
     , m_vertexCount(::crisp::getVertexCount(interleavedVertexBuffers))
     , m_indexCount(static_cast<uint32_t>(faces.size() * 3))
@@ -145,7 +145,7 @@ Geometry createGeometry(
     Renderer& renderer,
     const TriangleMesh& mesh,
     const VertexLayoutDescription& vertexLayoutDescription,
-    const VkBufferUsageFlags usageFlags) {
+    const VkBufferUsageFlags2 usageFlags) {
     return {
         renderer,
         createVertexLayout(vertexLayoutDescription),

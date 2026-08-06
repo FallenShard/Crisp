@@ -17,7 +17,7 @@ VulkanRingBuffer::VulkanRingBuffer(
     m_buffer = std::make_unique<VulkanBuffer>(
         *device, size, usageFlags | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR, BufferMemoryType::GpuOnly);
     m_stagingBuffer = std::make_unique<VulkanBuffer>(
-        *device, size * m_regionCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+        *device, size * m_regionCount, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
 
     if (data) {
         updateStagingBuffer({.data = data, .size = size}, 0);

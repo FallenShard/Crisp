@@ -64,7 +64,7 @@ struct RenderGraphImageDescription {
 struct RenderGraphBufferDescription {
     VkFormat formatHint;
     VkDeviceSize size;
-    VkBufferUsageFlags usageFlags;
+    VkBufferUsageFlags2 usageFlags;
     VkBuffer externalBuffer;
 
     bool canAlias(const RenderGraphBufferDescription& desc) const {

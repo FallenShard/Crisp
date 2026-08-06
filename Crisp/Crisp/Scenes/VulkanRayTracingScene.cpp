@@ -47,8 +47,8 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
         renderer,
         mesh,
         {{VertexAttribute::Position}, {VertexAttribute::Normal}},
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+        VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
+            VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
 
 void setCameraParameters(FreeCameraController& cameraController, const nlohmann::json& camera) {

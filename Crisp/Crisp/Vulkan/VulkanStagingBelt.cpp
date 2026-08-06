@@ -176,7 +176,7 @@ void VulkanStagingBelt::uploadImage(
 ReadbackBuffer VulkanStagingBelt::downloadBuffer(
     const VkCommandBuffer cmd, const VulkanBuffer& src, const VkDeviceSize srcOffset, const VkDeviceSize size) {
     auto buffer = std::make_unique<VulkanBuffer>(
-        *m_device, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+        *m_device, size, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
 
     VkBufferCopy region{};
     region.srcOffset = srcOffset;
@@ -196,7 +196,7 @@ ReadbackBuffer VulkanStagingBelt::downloadImage(
     const uint32_t mipLevel,
     const VkDeviceSize size) {
     auto buffer = std::make_unique<VulkanBuffer>(
-        *m_device, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+        *m_device, size, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
 
     VkBufferImageCopy copyRegion{};
     copyRegion.bufferOffset = 0;

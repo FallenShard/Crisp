@@ -20,7 +20,7 @@ public:
         const std::vector<InterleavedVertexBuffer>& interleavedVertexBuffers,
         const std::vector<glm::uvec3>& faces,
         const std::vector<TriangleMeshView>& meshViews = {},
-        VkBufferUsageFlags usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        VkBufferUsageFlags2 usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);
 
     template <typename VertexType, typename IndexType>
     Geometry(Renderer& renderer, const std::vector<VertexType>& vertices, const std::vector<IndexType>& faces)
@@ -125,7 +125,7 @@ Geometry createGeometry(
     Renderer& renderer,
     const TriangleMesh& mesh,
     const VertexLayoutDescription& vertexLayoutDescription,
-    VkBufferUsageFlags usageFlags = 0);
+    VkBufferUsageFlags2 usageFlags = 0);
 
 VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(
     const Geometry& geometry, uint64_t indexByteOffset);

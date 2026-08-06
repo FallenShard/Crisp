@@ -11,9 +11,13 @@ VkBuffer createBuffer(const VulkanDevice& device, const VkBufferCreateInfo& crea
 }
 
 VkBuffer createTransferBuffer(const VulkanDevice& device) {
+    const VkBufferUsageFlags2CreateInfo usageInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO,
+        .usage = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
+    };
     VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.pNext = &usageInfo;
     bufferInfo.size = 100;
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     return createBuffer(device, bufferInfo);
 }
 
@@ -59,7 +63,7 @@ TEST_F(VulkanResourceDeallocatorTest, DestructionRetiresHandleAndMemoryTogether)
     auto& deallocator = device_->getResourceDeallocator();
     deallocator.setRetirementValue(retirementValue);
     {
-        const VulkanBuffer buffer(*device_, 256, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+        const VulkanBuffer buffer(*device_, 256, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
     }
 
     EXPECT_EQ(deallocator.getDeferredDestructorCount(), 1);
