@@ -23,6 +23,19 @@ auto AttributeIs(const uint32_t location, const uint32_t binding, const uint32_t
         Field(&VkVertexInputAttributeDescription::format, format));
 }
 
+static_assert(getChannelCount(VK_FORMAT_R32G32B32_SFLOAT) == 3);
+static_assert(getSizeOf(VK_FORMAT_R8G8B8A8_SRGB) == 4);
+static_assert(getFormatTraits(VK_FORMAT_B8G8R8A8_UNORM).channelCount == 4);
+static_assert(getFormatTraits(VK_FORMAT_R16G16B16A16_SFLOAT).byteSize == 8);
+static_assert(FormatSizeofValue<VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32_SFLOAT> == 20);
+
+TEST(VulkanFormatTraitsTest, SupportsRuntimeQueries) {
+    VkFormat format = VK_FORMAT_R32G32_SFLOAT;
+
+    EXPECT_EQ(getChannelCount(format), 2);
+    EXPECT_EQ(getSizeOf(format), 2 * sizeof(float));
+}
+
 TEST(VulkanVertexLayoutTest, AddBindings) {
     VulkanVertexLayout layout{};
 
