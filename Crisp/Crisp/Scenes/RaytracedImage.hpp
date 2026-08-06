@@ -24,14 +24,14 @@ public:
     void postTextureUpdate(RayTracerUpdate rayTracerUpdate);
 
     void draw(Renderer* renderer);
-    void resize(int width, int height);
+    void resize(uint32_t width, uint32_t height);
 
 private:
     std::unique_ptr<VulkanPipeline> m_pipeline;
-    std::unique_ptr<Material> m_material;
+    std::vector<std::unique_ptr<Material>> m_materials;
 
     VkExtent3D m_extent;
-    uint32_t m_numChannels;
+    uint32_t m_channelCount;
 
     std::vector<std::pair<unsigned int, RayTracerUpdate>> m_textureUpdates;
     std::unique_ptr<VulkanBuffer> m_stagingBuffer;

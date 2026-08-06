@@ -64,7 +64,8 @@ TriangleMeshlets convertToTriangleMeshlets(
     MeshletData meshletData{};
     meshletData.maxVertices = max_vertices;
     meshletData.maxTriangles = max_triangles;
-    meshletData.maxMeshletCount = meshopt_buildMeshletsBound(mesh.getIndexCount(), max_vertices, max_triangles);
+    meshletData.maxMeshletCount =
+        static_cast<uint32_t>(meshopt_buildMeshletsBound(mesh.getIndexCount(), max_vertices, max_triangles));
 
     meshletData.meshlets.resize(meshletData.maxMeshletCount);
     meshletData.meshletVertices.resize(meshletData.maxMeshletCount * max_vertices);

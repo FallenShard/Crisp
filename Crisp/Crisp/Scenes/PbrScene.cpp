@@ -98,7 +98,8 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         meshPipeline->bind(ctx.commandEncoder.getHandle());
         auto* meshMaterial = m_resourceContext->getMaterial("mesh");
         meshMaterial->bind(ctx.commandEncoder.getHandle());
-        vkCmdDrawMeshTasksEXT(ctx.commandEncoder.getHandle(), m_meshletData.meshlets.size(), 1, 1);
+        vkCmdDrawMeshTasksEXT(
+            ctx.commandEncoder.getHandle(), static_cast<uint32_t>(m_meshletData.meshlets.size()), 1, 1);
     });
 
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
@@ -235,7 +236,7 @@ void PbrScene::drawGui() {
     // form->add(std::move(panel));
 }
 
-void PbrScene::onMaterialSelected(const std::string& materialName) {
+void PbrScene::onMaterialSelected(const std::string&) {
     // m_renderer->finish();
 
     // const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialName};
@@ -319,7 +320,7 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
         m_resourceContext->imageCache.getSampler("linearClamp"));
 }
 
-void PbrScene::createSceneObject(const std::filesystem::path& path) {
+void PbrScene::createSceneObject(const std::filesystem::path&) {
     // const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
     // if (absPath.extension() == ".gltf") {
     //     auto [images, models] = loadGltfAsset(absPath).unwrap();

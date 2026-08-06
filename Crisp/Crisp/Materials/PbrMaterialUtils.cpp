@@ -56,8 +56,11 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
             }
             for (const auto& alias : aliases) {
                 const auto& aliasPath = materialDir / fmt::format("{}.png", alias);
-                images.push_back(loadImage(aliasPath, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
-                return;
+                if (std::filesystem::exists(aliasPath)) {
+                    images.push_back(
+                        loadImage(aliasPath, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
+                    return;
+                }
             }
 
             CRISP_LOGW("Image does not exist at path: '{}'.", path.string()); // NOLINT
@@ -75,7 +78,7 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
     };
     for (auto&& [idx, mapArray] : std::views::enumerate(mapArrays)) {
         loadImageIfExists(
-            *mapArray, kTexInfos[idx].name, kTextureFileAliases[idx], getNumChannels(kTexInfos[idx].defaultFormat));
+            *mapArray, kTexInfos[idx].name, kTextureFileAliases[idx], getChannelCount(kTexInfos[idx].defaultFormat));
     }
     return group;
 }
