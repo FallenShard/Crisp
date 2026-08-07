@@ -27,7 +27,7 @@ public:
         void exportTexture(
             RenderGraphResourceHandle res, VulkanSynchronizationStage externalAccess = kFragmentSampledRead);
         void readTexture(RenderGraphResourceHandle res);
-        void readBuffer(RenderGraphResourceHandle res);
+        void readBuffer(RenderGraphResourceHandle res, VulkanSynchronizationStage access = kFragmentRead);
         void readAttachment(RenderGraphResourceHandle res);
         void readStorageImage(RenderGraphResourceHandle res);
 

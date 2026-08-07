@@ -101,13 +101,14 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
         {.usageType = ResourceUsageType::Texture, .stage = getSampledImageReadAccess(pass.type)});
 }
 
-void RenderGraph::Builder::readBuffer(RenderGraphResourceHandle res) {
+void RenderGraph::Builder::readBuffer(
+    const RenderGraphResourceHandle res, const VulkanSynchronizationStage access) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Storage, .stage = kFragmentRead});
+    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Storage, .stage = access});
 }
 
 void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
@@ -335,9 +336,27 @@ void RenderGraph::execute(const FrameContext& frameContext) {
                     synchronizeImageAccess(
                         res, newLayout, inputAccess.stage, /*isWrite=*/false, imageView.getSubresourceRange());
                 } else if (res.type == ResourceType::Buffer) {
-                    const auto& physicalBuffer{m_physicalBuffers.at(res.physicalResourceIndex)};
-                    ctx.commandEncoder.insertBufferMemoryBarrier(
-                        *physicalBuffer.buffer, res.producerAccess.stage >> inputAccess.stage);
+                    const auto scope = res.producerAccess.stage >> inputAccess.stage;
+                    if (res.isExternal) {
+                        const auto& description = getBufferDescription(pass.inputs[inIdx]);
+                        CRISP_CHECK(
+                            description.externalBuffer != VK_NULL_HANDLE,
+                            "Render graph pass '{}' reads external buffer '{}', but its Vulkan buffer handle is null.",
+                            pass.name,
+                            res.name);
+                        ctx.commandEncoder.insertBufferMemoryBarrier(description.externalBuffer, scope);
+                    } else {
+                        CRISP_CHECK(
+                            res.physicalResourceIndex < m_physicalBuffers.size(),
+                            "Render graph pass '{}' reads internal buffer '{}' with invalid physical index {} "
+                            "(physical buffer count: {}).",
+                            pass.name,
+                            res.name,
+                            res.physicalResourceIndex,
+                            m_physicalBuffers.size());
+                        const auto& physicalBuffer{m_physicalBuffers[res.physicalResourceIndex]};
+                        ctx.commandEncoder.insertBufferMemoryBarrier(*physicalBuffer.buffer, scope);
+                    }
                 }
             }
         };
