@@ -66,14 +66,13 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
         *device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     {
         const ScopeCommandExecutor executor(*device_);
-        const auto& cmdBuffer = executor.cmdBuffer;
+        const auto& cmdEncoder = executor.cmdEncoder;
 
-        deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(
-            deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
+        deviceBuffer.copyFrom(cmdEncoder.getHandle(), stagingBuffer);
+        cmdEncoder.insertBufferMemoryBarrier(deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
-        downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(
+        downloadBuffer.copyFrom(cmdEncoder.getHandle(), deviceBuffer);
+        cmdEncoder.insertBufferMemoryBarrier(
             downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
 
@@ -110,13 +109,14 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     const VulkanQueue& generalQueue = device->getGeneralQueue();
     const VulkanCommandPool commandPool(generalQueue.createCommandPool(), device->getResourceDeallocator());
     VulkanCommandBuffer cmdBuffer(commandPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    const VulkanCommandEncoder cmdEncoder(cmdBuffer.getHandle());
     VkFence fence = device->createFence();
     cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     EXPECT_EQ(cmdBuffer.getState(), VulkanCommandBuffer::State::Recording);
 
     // Copy and sync
     deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-    cmdBuffer.insertBufferMemoryBarrier(
+    cmdEncoder.insertBufferMemoryBarrier(
         deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
     // Unassigned queue family for now, until first command
@@ -125,26 +125,33 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     // Transfer ownership to the transfer queue FOR DMA
     const VulkanQueue& transferQueue = device->getTransferQueue();
-    cmdBuffer.transferOwnership(
-        deviceBuffer.getHandle(), generalQueue.getFamilyIndex(), transferQueue.getFamilyIndex(), kTransferWrite >> kTransferRead);
+    cmdEncoder.transferBufferOwnership(
+        deviceBuffer.getHandle(),
+        generalQueue.getFamilyIndex(),
+        transferQueue.getFamilyIndex(),
+        kTransferWrite >> kTransferRead);
 
     // Create the transfer execution context
     const VulkanCommandPool transferPool(transferQueue.createCommandPool(), device->getResourceDeallocator());
     VulkanCommandBuffer transferCmdBuffer(transferPool.allocateCommandBuffer(*device, VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    const VulkanCommandEncoder transferCmdEncoder(transferCmdBuffer.getHandle());
     VkFence transferFence = device->createFence();
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     downloadBuffer.copyFrom(transferCmdBuffer.getHandle(), deviceBuffer);
-    transferCmdBuffer.insertBufferMemoryBarrier(
+    transferCmdEncoder.insertBufferMemoryBarrier(
         downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
-    transferCmdBuffer.transferOwnership(
-        deviceBuffer.getHandle(), transferQueue.getFamilyIndex(), generalQueue.getFamilyIndex(), kTransferWrite >> kTransferRead);
+    transferCmdEncoder.transferBufferOwnership(
+        deviceBuffer.getHandle(),
+        transferQueue.getFamilyIndex(),
+        generalQueue.getFamilyIndex(),
+        kTransferWrite >> kTransferRead);
     transferCmdBuffer.end();
 
     VulkanBuffer downloadBuffer2(
         *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-    cmdBuffer.insertBufferMemoryBarrier(
+    cmdEncoder.insertBufferMemoryBarrier(
         downloadBuffer2.createDescriptorInfo(), kTransferWrite >> kHostRead);
 
     cmdBuffer.end();

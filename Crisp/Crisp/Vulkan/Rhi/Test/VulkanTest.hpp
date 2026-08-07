@@ -14,6 +14,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueueConfiguration.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 MATCHER(HandleIsValid, "Checks whether the handle is not null.") {
@@ -111,6 +112,7 @@ struct ScopeCommandExecutor {
         : device(device)
         , commandPool(device.getGeneralQueue().createCommandPool(), device.getResourceDeallocator())
         , cmdBuffer(commandPool.allocateCommandBuffer(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY))
+        , cmdEncoder(cmdBuffer.getHandle())
         , fence(device.createFence(0)) {
         cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     }
@@ -131,6 +133,7 @@ struct ScopeCommandExecutor {
     const VulkanDevice& device;
     const VulkanCommandPool commandPool;
     VulkanCommandBuffer cmdBuffer;
+    VulkanCommandEncoder cmdEncoder;
     VkFence fence;
 };
 

@@ -285,6 +285,7 @@ add_cpp_header_library(
 target_link_libraries(
     CrispVulkanTestUtils
     INTERFACE Crisp::Vulkan
+    INTERFACE Crisp::VulkanCommandEncoder
     INTERFACE Crisp::Window
     INTERFACE Crisp::ApplicationEnvironment
     INTERFACE Crisp::ResultTestUtils

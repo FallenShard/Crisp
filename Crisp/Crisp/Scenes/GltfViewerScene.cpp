@@ -10,6 +10,7 @@
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 #include <imgui.h>
 
@@ -327,7 +328,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
 
         skinningPass.preDispatchCallback =
             [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                cmdBuffer.insertBufferMemoryBarrier(
+                VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
                     gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
                     kVertexRead >> (kComputeStorageRead | kComputeStorageWrite));
 
@@ -343,7 +344,7 @@ void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
             "SkinningPass",
             kForwardLightingPass,
             [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/) {
-                cmdBuffer.insertBufferMemoryBarrier(
+                VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
                     gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
                     kComputeWrite >> kVertexRead);
             });

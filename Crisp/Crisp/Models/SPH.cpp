@@ -3,6 +3,7 @@
 #include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 namespace {
@@ -110,7 +111,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "clear-hash-grid",
         "compute-cell-count",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            cmdBuffer.insertBufferMemoryBarrier(
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
                 m_cellCountBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
         });
 
@@ -159,7 +160,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_numParticles * sizeof(uint32_t);
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(uint32_t);
             barriers[1].buffer = m_cellIdBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(barriers);
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
         });
 
     // Scan for individual blocks
@@ -186,7 +187,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "scan",
         "scan-block",
         [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            cmdBuffer.insertBufferMemoryBarrier(
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
                 m_blockSumBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
         });
 
@@ -226,7 +227,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[0].buffer = m_blockSumBuffer->getHandle();
             barriers[0].size = m_blockSumRegionSize;
             barriers[0].offset = m_currentSection * m_blockSumRegionSize;
-            cmdBuffer.insertBufferMemoryBarriers(barriers);
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
         });
 
     // Add block prefix sum to intra-block prefix sums
@@ -268,7 +269,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_blockSumRegionSize;
             barriers[1].offset = m_currentSection * m_blockSumRegionSize;
             barriers[1].buffer = m_blockSumBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(barriers);
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
         });
 
     auto& reindex = renderGraph->addComputePass("reindex");
@@ -319,7 +320,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             barriers[1].size = m_numParticles * sizeof(glm::vec4);
             barriers[1].offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
             barriers[1].buffer = m_reorderedPositionBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(barriers);
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
         });
 
     auto& computePressure = renderGraph->addComputePass("compute-density-and-pressure");
@@ -370,7 +371,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             }
             barriers[0].buffer = m_densityBuffer->getHandle();
             barriers[1].buffer = m_pressureBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(barriers);
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
         });
 
     auto& computeForces = renderGraph->addComputePass("compute-forces");
@@ -416,7 +417,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
         "integrate",
         [this,
          vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            cmdBuffer.insertBufferMemoryBarrier(
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
                 m_forcesBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
         });
 
@@ -484,7 +485,7 @@ SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
             }
             barriers[0].buffer = m_vertexBuffer->getHandle();
             barriers[1].buffer = m_colorBuffer->getHandle();
-            cmdBuffer.insertBufferMemoryBarriers(barriers);
+            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
         });
 }
 

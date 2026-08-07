@@ -61,14 +61,14 @@ TEST_F(OceanTest, VulkanBuffer) {
         *device_, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     {
         ScopeCommandExecutor executor(*device_);
-        const auto& cmdBuffer = executor.cmdBuffer;
+        const auto& cmdEncoder = executor.cmdEncoder;
 
-        deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(
+        deviceBuffer.copyFrom(cmdEncoder.getHandle(), stagingBuffer);
+        cmdEncoder.insertBufferMemoryBarrier(
             deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
-        downloadBuffer.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
-        cmdBuffer.insertBufferMemoryBarrier(
+        downloadBuffer.copyFrom(cmdEncoder.getHandle(), deviceBuffer);
+        cmdEncoder.insertBufferMemoryBarrier(
             downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
 

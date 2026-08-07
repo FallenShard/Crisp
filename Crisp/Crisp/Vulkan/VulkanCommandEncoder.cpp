@@ -31,11 +31,14 @@ void VulkanCommandEncoder::insertBarrier(const VulkanSynchronizationScope& scope
 }
 
 void VulkanCommandEncoder::insertBufferMemoryBarrier(
-    const VulkanBuffer& buffer, const VulkanSynchronizationScope& scope) const {
+    const VkBuffer buffer,
+    const VkDeviceSize offset,
+    const VkDeviceSize size,
+    const VulkanSynchronizationScope& scope) const {
     VkBufferMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2};
-    barrier.buffer = buffer.getHandle();
-    barrier.offset = 0;
-    barrier.size = VK_WHOLE_SIZE;
+    barrier.buffer = buffer;
+    barrier.offset = offset;
+    barrier.size = size;
     barrier.srcStageMask = scope.srcStage;
     barrier.srcAccessMask = scope.srcAccess;
     barrier.dstStageMask = scope.dstStage;
@@ -47,6 +50,44 @@ void VulkanCommandEncoder::insertBufferMemoryBarrier(
         .pBufferMemoryBarriers = &barrier,
     };
     vkCmdPipelineBarrier2(m_cmdBuffer, &info);
+}
+
+void VulkanCommandEncoder::insertBufferMemoryBarriers(
+    const std::span<const VkBufferMemoryBarrier2> barriers) const {
+    const VkDependencyInfo info{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .bufferMemoryBarrierCount = static_cast<uint32_t>(barriers.size()),
+        .pBufferMemoryBarriers = barriers.data(),
+    };
+    vkCmdPipelineBarrier2(m_cmdBuffer, &info);
+}
+
+void VulkanCommandEncoder::insertImageMemoryBarrier(const VkImageMemoryBarrier2& barrier) const {
+    const VkDependencyInfo info{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier,
+    };
+    vkCmdPipelineBarrier2(m_cmdBuffer, &info);
+}
+
+void VulkanCommandEncoder::transferBufferOwnership(
+    const VkBuffer buffer,
+    const uint32_t srcQueueFamilyIndex,
+    const uint32_t dstQueueFamilyIndex,
+    const VulkanSynchronizationScope& scope) const {
+    VkBufferMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2};
+    barrier.buffer = buffer;
+    barrier.offset = 0;
+    barrier.size = VK_WHOLE_SIZE;
+    barrier.srcStageMask = scope.srcStage;
+    barrier.srcAccessMask = scope.srcAccess;
+    barrier.dstStageMask = scope.dstStage;
+    barrier.dstAccessMask = scope.dstAccess;
+    barrier.srcQueueFamilyIndex = srcQueueFamilyIndex;
+    barrier.dstQueueFamilyIndex = dstQueueFamilyIndex;
+
+    insertBufferMemoryBarriers(std::span{&barrier, 1});
 }
 
 void VulkanCommandEncoder::transitionLayout(
@@ -150,7 +191,11 @@ void VulkanCommandEncoder::copyImageToBuffer(const VulkanImage& srcImage, const 
         m_cmdBuffer, srcImage.getHandle(), VK_IMAGE_LAYOUT_GENERAL, dstBuffer.getHandle(), 1, &region);
 }
 
-void VulkanCommandEncoder::drawMeshTasks(const VkExtent3D groupCount) const {
+void VulkanCommandEncoder::dispatchCompute(const VkExtent3D& workGroupCount) const {
+    vkCmdDispatch(m_cmdBuffer, workGroupCount.width, workGroupCount.height, workGroupCount.depth);
+}
+
+void VulkanCommandEncoder::drawMeshTasks(const VkExtent3D& groupCount) const {
     vkCmdDrawMeshTasksEXT(m_cmdBuffer, groupCount.width, groupCount.height, groupCount.depth);
 }
 
