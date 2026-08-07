@@ -173,10 +173,10 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     const auto cmdBuffer = frameContext.commandEncoder.getHandle();
     const auto& cameraParams = m_cameraController->getCameraParameters();
-    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_cameraBuffer, 0, cameraParams);
-    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_integratorBuffer, 0, m_integratorParams);
-    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_brdfParamsBuffer, 0, m_sceneDesc.brdfs);
-    frameContext.stagingBelt->uploadBuffer(cmdBuffer, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
+    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_cameraBuffer, 0, cameraParams);
+    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_integratorBuffer, 0, m_integratorParams);
+    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_brdfParamsBuffer, 0, m_sceneDesc.brdfs);
+    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 

@@ -25,7 +25,7 @@ TEST_F(VulkanStagingBeltTest, PerFrameCycleDoesNotExhaustRing) {
         ctx.setRetirementValue(frame);
 
         ScopeCommandExecutor exec(*device_);
-        ctx.uploadBuffer(exec.cmdBuffer.getHandle(), *dstBuffer, 0, frameData.data(), 64);
+        ctx.uploadBuffer(exec.cmdEncoder, *dstBuffer, 0, frameData.data(), 64);
     }
 
     // If we got here without hitting CRISP_CHECK, the ring reclamation works.
@@ -47,7 +47,7 @@ TEST_F(VulkanStagingBeltTest, UploadViaPerFramePathVerifyContents) {
     ctx.setRetirementValue(1);
     {
         ScopeCommandExecutor exec(*device_);
-        ctx.uploadBuffer(exec.cmdBuffer.getHandle(), *dstBuffer, 0, data.data(), 16);
+        ctx.uploadBuffer(exec.cmdEncoder, *dstBuffer, 0, data.data(), 16);
     }
     ctx.collect(1);
 
@@ -106,7 +106,7 @@ TEST_F(VulkanStagingBeltTest, AsyncReadbackOpensOnlyAtItsCompletionValue) {
 
     {
         ScopeCommandExecutor exec(*device_);
-        readback.record(ctx.downloadBuffer(exec.cmdBuffer.getHandle(), *srcBuffer, 0, dataSize), kCompletionValue);
+        readback.record(ctx.downloadBuffer(exec.cmdEncoder, *srcBuffer, 0, dataSize), kCompletionValue);
     }
     EXPECT_TRUE(readback.isPending());
 

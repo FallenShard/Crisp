@@ -68,10 +68,10 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
         const ScopeCommandExecutor executor(*device_);
         const auto& cmdEncoder = executor.cmdEncoder;
 
-        deviceBuffer.copyFrom(cmdEncoder.getHandle(), stagingBuffer);
+        cmdEncoder.copyBuffer(stagingBuffer, deviceBuffer);
         cmdEncoder.insertBufferMemoryBarrier(deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
-        downloadBuffer.copyFrom(cmdEncoder.getHandle(), deviceBuffer);
+        cmdEncoder.copyBuffer(deviceBuffer, downloadBuffer);
         cmdEncoder.insertBufferMemoryBarrier(
             downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
@@ -115,7 +115,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     EXPECT_EQ(cmdBuffer.getState(), VulkanCommandBuffer::State::Recording);
 
     // Copy and sync
-    deviceBuffer.copyFrom(cmdBuffer.getHandle(), stagingBuffer);
+    cmdEncoder.copyBuffer(stagingBuffer, deviceBuffer);
     cmdEncoder.insertBufferMemoryBarrier(
         deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
@@ -138,7 +138,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     VkFence transferFence = device->createFence();
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-    downloadBuffer.copyFrom(transferCmdBuffer.getHandle(), deviceBuffer);
+    transferCmdEncoder.copyBuffer(deviceBuffer, downloadBuffer);
     transferCmdEncoder.insertBufferMemoryBarrier(
         downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     transferCmdEncoder.transferBufferOwnership(
@@ -150,7 +150,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     VulkanBuffer downloadBuffer2(
         *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
-    downloadBuffer2.copyFrom(cmdBuffer.getHandle(), deviceBuffer);
+    cmdEncoder.copyBuffer(deviceBuffer, downloadBuffer2);
     cmdEncoder.insertBufferMemoryBarrier(
         downloadBuffer2.createDescriptorInfo(), kTransferWrite >> kHostRead);
 

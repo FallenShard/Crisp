@@ -79,8 +79,8 @@ VulkanImageView* Skybox::getSkyboxView() const {
     return m_cubeMapView.get();
 }
 
-void Skybox::updateDeviceBuffer(const VkCommandBuffer cmdBuffer) {
-    m_transformBuffer->updateDeviceBuffer(cmdBuffer);
+void Skybox::updateDeviceBuffer(const VulkanCommandEncoder& encoder) {
+    m_transformBuffer->updateDeviceBuffer(encoder);
 }
 
 } // namespace crisp

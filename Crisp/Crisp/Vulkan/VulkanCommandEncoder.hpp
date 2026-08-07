@@ -36,6 +36,11 @@ public:
         uint32_t srcQueueFamilyIndex,
         uint32_t dstQueueFamilyIndex,
         const VulkanSynchronizationScope& scope) const;
+
+    void copyBuffer(VkBuffer src, VkBuffer dst, std::span<const VkBufferCopy> regions) const;
+    void copyBuffer(const VulkanBuffer& src, const VulkanBuffer& dst, const VkBufferCopy& region) const;
+    void copyBuffer(const VulkanBuffer& src, const VulkanBuffer& dst) const;
+
     void transitionLayout(VulkanImage& image, VkImageLayout newLayout, const VulkanSynchronizationScope& scope) const;
     void transitionLayout(
         VulkanImage& image,

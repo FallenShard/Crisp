@@ -31,14 +31,6 @@ public:
     VkDeviceSize getSize() const;
     VkDeviceAddress getDeviceAddress() const;
 
-    void copyFrom(VkCommandBuffer cmdBuffer, const VulkanBuffer& srcBuffer) const;
-    void copyFrom(
-        VkCommandBuffer cmdBuffer,
-        const VulkanBuffer& srcBuffer,
-        VkDeviceSize srcOffset,
-        VkDeviceSize dstOffset,
-        VkDeviceSize size) const;
-
     VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
     VkDescriptorBufferInfo createDescriptorInfo() const;
 

@@ -22,7 +22,7 @@ VulkanRingBuffer::VulkanRingBuffer(
     if (data) {
         updateStagingBuffer({.data = data, .size = size}, 0);
         device->getGeneralQueue().submitAndWait([this](const VkCommandBuffer cmdBuffer) {
-            updateDeviceBuffer(cmdBuffer);
+            updateDeviceBuffer(VulkanCommandEncoder{cmdBuffer});
         });
     }
 }
@@ -46,12 +46,13 @@ void VulkanRingBuffer::updateStagingBuffer(const void* data, VkDeviceSize size, 
     m_lastUpdatedRegion = regionToUpdate;
 }
 
-void VulkanRingBuffer::updateDeviceBuffer(const VkCommandBuffer commandBuffer) {
+void VulkanRingBuffer::updateDeviceBuffer(const VulkanCommandEncoder& encoder) {
     if (!m_hasUpdate) {
         return;
     }
 
-    m_buffer->copyFrom(commandBuffer, *m_stagingBuffer, m_lastUpdatedRegion * m_size, 0, m_size);
+    const VkBufferCopy region{.srcOffset = m_lastUpdatedRegion * m_size, .size = m_size};
+    encoder.copyBuffer(*m_stagingBuffer, *m_buffer, region);
 
     m_hasUpdate = false;
 }

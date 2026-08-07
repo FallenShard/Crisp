@@ -90,6 +90,22 @@ void VulkanCommandEncoder::transferBufferOwnership(
     insertBufferMemoryBarriers(std::span{&barrier, 1});
 }
 
+void VulkanCommandEncoder::copyBuffer(
+    const VkBuffer src, const VkBuffer dst, const std::span<const VkBufferCopy> regions) const {
+    vkCmdCopyBuffer(m_cmdBuffer, src, dst, static_cast<uint32_t>(regions.size()), regions.data());
+}
+
+void VulkanCommandEncoder::copyBuffer(
+    const VulkanBuffer& src, const VulkanBuffer& dst, const VkBufferCopy& region) const {
+    copyBuffer(src.getHandle(), dst.getHandle(), std::span{&region, 1});
+}
+
+void VulkanCommandEncoder::copyBuffer(const VulkanBuffer& src, const VulkanBuffer& dst) const {
+    CRISP_CHECK_LE(dst.getSize(), src.getSize());
+    const VkBufferCopy region{.size = dst.getSize()};
+    copyBuffer(src, dst, region);
+}
+
 void VulkanCommandEncoder::transitionLayout(
     VulkanImage& image, const VkImageLayout newLayout, const VulkanSynchronizationScope& scope) const {
     const auto range = image.getFullRange();

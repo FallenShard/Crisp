@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 #include <optional>
 #include <span>
@@ -76,7 +77,7 @@ public:
 
     // --- Buffer uploads ---
     void uploadBuffer(
-        VkCommandBuffer cmdBuffer,
+        const VulkanCommandEncoder& encoder,
         const VulkanBuffer& dstBuffer,
         VkDeviceSize dstOffset,
         const void* data,
@@ -88,7 +89,10 @@ public:
     // (caller's responsibility — typically by waiting on the timeline value that submission signals).
     // The source must already be in a layout/access that supports TRANSFER_READ.
     ReadbackBuffer downloadBuffer(
-        VkCommandBuffer cmd, const VulkanBuffer& src, VkDeviceSize srcOffset, VkDeviceSize size);
+        const VulkanCommandEncoder& encoder,
+        const VulkanBuffer& src,
+        VkDeviceSize srcOffset,
+        VkDeviceSize size);
 
     ReadbackBuffer downloadImage(
         VkCommandBuffer cmd,
@@ -123,20 +127,30 @@ public:
     // --- Typed overloads ---
     template <typename T>
         requires std::is_trivially_copyable_v<T>
-    void uploadBuffer(VkCommandBuffer cmdBuffer, const VulkanBuffer& dstBuffer, VkDeviceSize dstOffset, const T& value) {
-        uploadBuffer(cmdBuffer, dstBuffer, dstOffset, &value, sizeof(T));
+    void uploadBuffer(
+        const VulkanCommandEncoder& encoder,
+        const VulkanBuffer& dstBuffer,
+        VkDeviceSize dstOffset,
+        const T& value) {
+        uploadBuffer(encoder, dstBuffer, dstOffset, &value, sizeof(T));
     }
 
     template <typename T>
     void uploadBuffer(
-        VkCommandBuffer cmdBuffer, const VulkanBuffer& dstBuffer, VkDeviceSize dstOffset, const std::vector<T>& data) {
-        uploadBuffer(cmdBuffer, dstBuffer, dstOffset, data.data(), data.size() * sizeof(T));
+        const VulkanCommandEncoder& encoder,
+        const VulkanBuffer& dstBuffer,
+        VkDeviceSize dstOffset,
+        const std::vector<T>& data) {
+        uploadBuffer(encoder, dstBuffer, dstOffset, data.data(), data.size() * sizeof(T));
     }
 
     template <typename T>
     void uploadBuffer(
-        VkCommandBuffer cmdBuffer, const VulkanBuffer& dstBuffer, VkDeviceSize dstOffset, std::span<T> data) {
-        uploadBuffer(cmdBuffer, dstBuffer, dstOffset, data.data(), data.size_bytes());
+        const VulkanCommandEncoder& encoder,
+        const VulkanBuffer& dstBuffer,
+        VkDeviceSize dstOffset,
+        std::span<T> data) {
+        uploadBuffer(encoder, dstBuffer, dstOffset, data.data(), data.size_bytes());
     }
 
 private:

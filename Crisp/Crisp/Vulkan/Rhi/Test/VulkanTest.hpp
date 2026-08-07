@@ -89,7 +89,7 @@ protected:
         VulkanBuffer stagingBuffer(
             *device_, buffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
         device_->getGeneralQueue().submitAndWait([&stagingBuffer, &buffer](const VkCommandBuffer cmdBuffer) {
-            stagingBuffer.copyFrom(cmdBuffer, buffer);
+            VulkanCommandEncoder{cmdBuffer}.copyBuffer(buffer, stagingBuffer);
         });
         std::memcpy(vec.data(), stagingBuffer.getHostVisibleData<T>(), buffer.getSize());
         return vec;

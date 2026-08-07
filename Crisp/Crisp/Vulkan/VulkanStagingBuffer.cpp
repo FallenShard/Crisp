@@ -2,6 +2,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 
@@ -22,11 +23,9 @@ void uploadBufferBlocking(
     const VkDeviceSize size) {
     const auto staging = createStagingBuffer(device, data, size);
     queue.submitAndWait([&](const VkCommandBuffer cmdBuffer) {
-        VkBufferCopy region{};
-        region.srcOffset = 0;
-        region.dstOffset = dstOffset;
-        region.size = size;
-        vkCmdCopyBuffer(cmdBuffer, staging->getHandle(), dstBuffer.getHandle(), 1, &region);
+        const VulkanCommandEncoder encoder(cmdBuffer);
+        const VkBufferCopy region{.dstOffset = dstOffset, .size = size};
+        encoder.copyBuffer(*staging, dstBuffer, region);
     });
 }
 

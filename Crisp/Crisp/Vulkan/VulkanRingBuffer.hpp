@@ -5,6 +5,7 @@
 #include <gsl/pointers>
 
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 
@@ -55,7 +56,7 @@ public:
             regionIndex);
     }
 
-    void updateDeviceBuffer(VkCommandBuffer commandBuffer);
+    void updateDeviceBuffer(const VulkanCommandEncoder& encoder);
 
     VkDescriptorBufferInfo getDescriptorInfo() const;
     VkDescriptorBufferInfo getDescriptorInfo(VkDeviceSize offset, VkDeviceSize range) const;

@@ -155,16 +155,16 @@ void PbrScene::render(const FrameContext& frameContext) {
 
     const auto& camParams = m_cameraController->getCameraParameters();
     m_lightSystem->update(m_cameraController->getCamera(), frameContext.virtualFrameIndex);
-    m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
 
     m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
-    m_skybox->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_skybox->updateDeviceBuffer(frameContext.commandEncoder);
 
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, frameContext.virtualFrameIndex);
-    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder);
 
     m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
-    m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
 

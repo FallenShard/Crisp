@@ -28,7 +28,7 @@ TEST_F(VulkanRingBufferTest, Updates) {
     }
     buffer.updateStagingBuffer({.data = data2.data(), .size = data2.size() * sizeof(float)}, 0);
     device_->getGeneralQueue().submitAndWait([&buffer](const VkCommandBuffer cmdBuffer) {
-        buffer.updateDeviceBuffer(cmdBuffer);
+        buffer.updateDeviceBuffer(VulkanCommandEncoder{cmdBuffer});
     });
     EXPECT_THAT(toStdVec<float>(buffer.getDeviceBuffer()), ElementsAreArray(data2));
 }

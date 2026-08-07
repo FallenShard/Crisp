@@ -117,7 +117,7 @@ StagingAllocation VulkanStagingBelt::stageData(
 }
 
 void VulkanStagingBelt::uploadBuffer(
-    const VkCommandBuffer cmdBuffer,
+    const VulkanCommandEncoder& encoder,
     const VulkanBuffer& dstBuffer,
     const VkDeviceSize dstOffset,
     const void* data,
@@ -128,7 +128,7 @@ void VulkanStagingBelt::uploadBuffer(
     region.srcOffset = alloc.offset;
     region.dstOffset = dstOffset;
     region.size = size;
-    vkCmdCopyBuffer(cmdBuffer, alloc.buffer, dstBuffer.getHandle(), 1, &region);
+    encoder.copyBuffer(alloc.buffer, dstBuffer.getHandle(), std::span{&region, 1});
 }
 
 void VulkanStagingBelt::uploadImage(
@@ -174,7 +174,10 @@ void VulkanStagingBelt::uploadImage(
 }
 
 ReadbackBuffer VulkanStagingBelt::downloadBuffer(
-    const VkCommandBuffer cmd, const VulkanBuffer& src, const VkDeviceSize srcOffset, const VkDeviceSize size) {
+    const VulkanCommandEncoder& encoder,
+    const VulkanBuffer& src,
+    const VkDeviceSize srcOffset,
+    const VkDeviceSize size) {
     auto buffer = std::make_unique<VulkanBuffer>(
         *m_device, size, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
 
@@ -182,7 +185,7 @@ ReadbackBuffer VulkanStagingBelt::downloadBuffer(
     region.srcOffset = srcOffset;
     region.dstOffset = 0;
     region.size = size;
-    vkCmdCopyBuffer(cmd, src.getHandle(), buffer->getHandle(), 1, &region);
+    encoder.copyBuffer(src, *buffer, region);
 
     return {.buffer = std::move(buffer)};
 }

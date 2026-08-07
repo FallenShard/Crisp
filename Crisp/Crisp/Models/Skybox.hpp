@@ -24,7 +24,7 @@ public:
 
     VulkanImageView* getSkyboxView() const;
 
-    void updateDeviceBuffer(VkCommandBuffer cmdBuffer);
+    void updateDeviceBuffer(const VulkanCommandEncoder& encoder);
 
 private:
     void updateRenderNode(const VulkanSampler& sampler, const VulkanImageView& cubeMapView);

@@ -61,6 +61,7 @@ add_cpp_static_library(
 target_link_libraries(
     CrispVulkanStagingBuffer
     PUBLIC Crisp::VulkanBuffer
+    PRIVATE Crisp::VulkanCommandEncoder
 )
 
 add_cpp_test(
@@ -81,6 +82,7 @@ add_cpp_static_library(
 target_link_libraries(
     CrispVulkanStagingBelt
     PUBLIC Crisp::VulkanStagingBuffer
+    PUBLIC Crisp::VulkanCommandEncoder
     PRIVATE Crisp::VulkanImage
 )
 
@@ -102,6 +104,7 @@ add_cpp_static_library(
 target_link_libraries(
     CrispVulkanRingBuffer
     PUBLIC Crisp::VulkanBuffer
+    PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Microsoft.GSL::GSL
 )
 

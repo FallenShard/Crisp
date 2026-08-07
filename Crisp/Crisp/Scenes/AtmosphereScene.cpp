@@ -91,9 +91,9 @@ void AtmosphereScene::update(const UpdateParams& updateParams) {
 void AtmosphereScene::render(const FrameContext& frameContext) {
     constexpr auto kUniformReads = kComputeUniformRead | kFragmentUniformRead;
     frameContext.commandEncoder.insertBarrier(kUniformReads >> kTransferWrite);
-    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
-    m_resourceContext->getRingBuffer("atmosphereBuffer")->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
-    m_resourceContext->getRingBuffer(kTonemapBufferId)->updateDeviceBuffer(frameContext.commandEncoder.getHandle());
+    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder);
+    m_resourceContext->getRingBuffer("atmosphereBuffer")->updateDeviceBuffer(frameContext.commandEncoder);
+    m_resourceContext->getRingBuffer(kTonemapBufferId)->updateDeviceBuffer(frameContext.commandEncoder);
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kUniformReads);
 
     m_renderGraph->execute(frameContext);
