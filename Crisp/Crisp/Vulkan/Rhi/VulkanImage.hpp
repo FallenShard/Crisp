@@ -44,6 +44,7 @@ public:
     VulkanImage& operator=(VulkanImage&&) noexcept = default;
 
     uint32_t getMipLevels() const;
+    const VkExtent3D& getExtent() const;
     uint32_t getWidth() const;
     uint32_t getHeight() const;
     VkImageAspectFlags getAspectMask() const;
@@ -53,41 +54,10 @@ public:
     VkImageSubresourceRange getFullRange() const;
     VkImageLayout getLayout() const;
     VkImageLayout getLayout(uint32_t layer, uint32_t mipLevel) const;
+    bool matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const;
+    bool isSameLayoutInRange(const VkImageSubresourceRange& range) const;
 
     void setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range);
-    void transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout, const VulkanSynchronizationScope& scope);
-    void transitionLayout(
-        VkCommandBuffer buffer,
-        VkImageLayout newLayout,
-        uint32_t baseLayer,
-        uint32_t numLayers,
-        const VulkanSynchronizationScope& scope);
-    void transitionLayout(
-        VkCommandBuffer buffer,
-        VkImageLayout newLayout,
-        uint32_t baseLayer,
-        uint32_t numLayers,
-        uint32_t baseLevel,
-        uint32_t levelCount,
-        const VulkanSynchronizationScope& scope);
-    void transitionLayout(
-        VkCommandBuffer buffer,
-        VkImageLayout newLayout,
-        VkImageSubresourceRange subresRange,
-        const VulkanSynchronizationScope& scope);
-
-    void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer);
-    void copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers);
-    void copyFrom(
-        VkCommandBuffer commandBuffer,
-        const VulkanBuffer& buffer,
-        const VkExtent3D& extent,
-        uint32_t baseLayer,
-        uint32_t numLayers,
-        uint32_t mipLevel);
-    void copyTo(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers);
-    void buildMipmaps(VkCommandBuffer commandBuffer, const VulkanSynchronizationStage& stage = kTransferRead);
-    void blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t mipLevel);
 
     VkImageSubresourceRange getFirstMipRange() const;
 
@@ -97,11 +67,6 @@ public:
     VulkanImageView& getView();
 
 private:
-    bool matchesLayout(VkImageLayout imageLayout, const VkImageSubresourceRange& range) const;
-    bool isSameLayoutInRange(const VkImageSubresourceRange& range) const;
-
-    VkImageLayout getLayoutUnchecked(uint32_t layer, uint32_t mipLevel) const;
-
     VmaAllocation m_allocation{nullptr};
     VmaAllocationInfo m_allocationInfo{};
 

@@ -95,9 +95,9 @@ public:
         VkDeviceSize size);
 
     ReadbackBuffer downloadImage(
-        VkCommandBuffer cmd,
+        const VulkanCommandEncoder& encoder,
         const VulkanImage& src,
-        VkExtent3D extent,
+        const VkExtent3D& extent,
         uint32_t baseLayer,
         uint32_t numLayers,
         uint32_t mipLevel,
@@ -106,8 +106,8 @@ public:
     // --- Image uploads ---
     // Records a vkCmdCopyBufferToImage. The image must already be in TRANSFER_DST_OPTIMAL layout.
     void uploadImage(
-        VkCommandBuffer cmdBuffer,
-        const VulkanImage& dstImage,
+        const VulkanCommandEncoder& encoder,
+        VulkanImage& dstImage,
         uint32_t baseLayer,
         uint32_t numLayers,
         uint32_t mipLevel,
@@ -115,9 +115,9 @@ public:
         VkDeviceSize size);
 
     void uploadImage(
-        VkCommandBuffer cmdBuffer,
-        const VulkanImage& dstImage,
-        VkExtent3D extent,
+        const VulkanCommandEncoder& encoder,
+        VulkanImage& dstImage,
+        const VkExtent3D& extent,
         uint32_t baseLayer,
         uint32_t numLayers,
         uint32_t mipLevel,

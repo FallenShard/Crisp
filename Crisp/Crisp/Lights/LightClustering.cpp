@@ -80,7 +80,8 @@ void LightClustering::configure(
     m_lightGridView = createView(renderer->getDevice(), *m_lightGrid, VK_IMAGE_VIEW_TYPE_2D);
 
     renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
-        m_lightGrid->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeRead);
+        VulkanCommandEncoder{cmdBuffer}.transitionLayout(
+            *m_lightGrid, VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeRead);
     });
 }
 

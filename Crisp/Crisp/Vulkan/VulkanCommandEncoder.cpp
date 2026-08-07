@@ -1,5 +1,7 @@
 #include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
+#include <algorithm>
+
 namespace crisp {
 
 VulkanCommandEncoder::VulkanCommandEncoder(const VkCommandBuffer cmdBuffer)
@@ -109,26 +111,7 @@ void VulkanCommandEncoder::copyBuffer(const VulkanBuffer& src, const VulkanBuffe
 void VulkanCommandEncoder::transitionLayout(
     VulkanImage& image, const VkImageLayout newLayout, const VulkanSynchronizationScope& scope) const {
     const auto range = image.getFullRange();
-
-    VkImageMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
-    barrier.oldLayout = image.getLayout();
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image.getHandle();
-    barrier.subresourceRange = range;
-    barrier.srcStageMask = scope.srcStage;
-    barrier.srcAccessMask = scope.srcAccess;
-    barrier.dstStageMask = scope.dstStage;
-    barrier.dstAccessMask = scope.dstAccess;
-
-    VkDependencyInfo info{
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &barrier,
-    };
-    vkCmdPipelineBarrier2(m_cmdBuffer, &info);
-    image.setImageLayout(newLayout, range);
+    transitionLayout(image, newLayout, scope, range);
 }
 
 void VulkanCommandEncoder::transitionLayout(
@@ -136,6 +119,8 @@ void VulkanCommandEncoder::transitionLayout(
     const VkImageLayout newLayout,
     const VulkanSynchronizationScope& scope,
     const VkImageSubresourceRange& range) const {
+    CRISP_CHECK(image.isSameLayoutInRange(range), "Attempting to transition an image across different layouts!");
+
     VkImageMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
     barrier.oldLayout = image.getLayout(range.baseArrayLayer, range.baseMipLevel);
     barrier.newLayout = newLayout;
@@ -192,19 +177,100 @@ void VulkanCommandEncoder::endRendering() const {
     vkCmdEndRendering(m_cmdBuffer);
 }
 
-void VulkanCommandEncoder::copyImageToBuffer(const VulkanImage& srcImage, const VulkanBuffer& dstBuffer) const {
-    const VkDeviceSize size = srcImage.getWidth() * srcImage.getHeight() * 4 * sizeof(float);
-    CRISP_CHECK_EQ(size, dstBuffer.getSize());
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageSubresource.mipLevel = 0;
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {.width = srcImage.getWidth(), .height = srcImage.getHeight(), .depth = 1};
+void VulkanCommandEncoder::copyBufferToImage(
+    const VkBuffer src, VulkanImage& dst, const std::span<const VkBufferImageCopy> regions) const {
+    CRISP_CHECK(!regions.empty());
+    const auto& subresource = regions.front().imageSubresource;
+    vkCmdCopyBufferToImage(
+        m_cmdBuffer,
+        src,
+        dst.getHandle(),
+        dst.getLayout(subresource.baseArrayLayer, subresource.mipLevel),
+        static_cast<uint32_t>(regions.size()),
+        regions.data());
+}
+
+void VulkanCommandEncoder::copyBufferToImage(
+    const VulkanBuffer& src, VulkanImage& dst, const VkBufferImageCopy& region) const {
+    copyBufferToImage(src.getHandle(), dst, std::span{&region, 1});
+}
+
+void VulkanCommandEncoder::copyImageToBuffer(
+    const VulkanImage& src, const VkBuffer dst, const std::span<const VkBufferImageCopy> regions) const {
+    CRISP_CHECK(!regions.empty());
+    const auto& subresource = regions.front().imageSubresource;
     vkCmdCopyImageToBuffer(
-        m_cmdBuffer, srcImage.getHandle(), VK_IMAGE_LAYOUT_GENERAL, dstBuffer.getHandle(), 1, &region);
+        m_cmdBuffer,
+        src.getHandle(),
+        src.getLayout(subresource.baseArrayLayer, subresource.mipLevel),
+        dst,
+        static_cast<uint32_t>(regions.size()),
+        regions.data());
+}
+
+void VulkanCommandEncoder::copyImageToBuffer(
+    const VulkanImage& src, const VulkanBuffer& dst, const VkBufferImageCopy& region) const {
+    copyImageToBuffer(src, dst.getHandle(), std::span{&region, 1});
+}
+
+void VulkanCommandEncoder::blitImage(
+    const VulkanImage& src, VulkanImage& dst, const VkImageBlit& region, const VkFilter filter) const {
+    vkCmdBlitImage(
+        m_cmdBuffer,
+        src.getHandle(),
+        src.getLayout(region.srcSubresource.baseArrayLayer, region.srcSubresource.mipLevel),
+        dst.getHandle(),
+        dst.getLayout(region.dstSubresource.baseArrayLayer, region.dstSubresource.mipLevel),
+        1,
+        &region,
+        filter);
+}
+
+void VulkanCommandEncoder::generateMipmaps(
+    VulkanImage& image, const VulkanSynchronizationStage& initialStage) const {
+    if (image.getMipLevels() <= 1) {
+        return;
+    }
+
+    VkImageSubresourceRange mipRange{
+        .aspectMask = image.getAspectMask(),
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = image.getLayerCount(),
+    };
+    transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, initialStage >> kTransferRead, mipRange);
+
+    for (uint32_t mipLevel = 1; mipLevel < image.getMipLevels(); ++mipLevel) {
+        VkImageBlit region{};
+        region.srcSubresource = {
+            .aspectMask = image.getAspectMask(),
+            .mipLevel = mipLevel - 1,
+            .baseArrayLayer = 0,
+            .layerCount = image.getLayerCount(),
+        };
+        region.srcOffsets[1] = {
+            std::max(static_cast<int32_t>(image.getWidth() >> (mipLevel - 1)), 1),
+            std::max(static_cast<int32_t>(image.getHeight() >> (mipLevel - 1)), 1),
+            1,
+        };
+        region.dstSubresource = {
+            .aspectMask = image.getAspectMask(),
+            .mipLevel = mipLevel,
+            .baseArrayLayer = 0,
+            .layerCount = image.getLayerCount(),
+        };
+        region.dstOffsets[1] = {
+            std::max(static_cast<int32_t>(image.getWidth() >> mipLevel), 1),
+            std::max(static_cast<int32_t>(image.getHeight() >> mipLevel), 1),
+            1,
+        };
+
+        mipRange.baseMipLevel = mipLevel;
+        transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, initialStage >> kTransferWrite, mipRange);
+        blitImage(image, image, region);
+        transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kTransferWrite >> kTransferRead, mipRange);
+    }
 }
 
 void VulkanCommandEncoder::dispatchCompute(const VkExtent3D& workGroupCount) const {

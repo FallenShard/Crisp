@@ -229,229 +229,6 @@ void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRang
     }
 }
 
-void VulkanImage::transitionLayout(
-    const VkCommandBuffer cmdBuffer,
-    const VkImageLayout newLayout,
-    const uint32_t baseLayer,
-    const uint32_t numLayers,
-    const VulkanSynchronizationScope& scope) {
-    const VkImageSubresourceRange subresRange{
-        .aspectMask = m_aspect,
-        .baseMipLevel = 0,
-        .levelCount = m_mipLevelCount,
-        .baseArrayLayer = baseLayer,
-        .layerCount = numLayers};
-    transitionLayout(cmdBuffer, newLayout, subresRange, scope);
-}
-
-void VulkanImage::transitionLayout(
-    VkCommandBuffer buffer,
-    VkImageLayout newLayout,
-    uint32_t baseLayer,
-    uint32_t numLayers,
-    uint32_t baseLevel,
-    uint32_t levelCount,
-    const VulkanSynchronizationScope& scope) {
-    VkImageSubresourceRange subresRange{
-        .aspectMask = m_aspect,
-        .baseMipLevel = baseLevel,
-        .levelCount = levelCount,
-        .baseArrayLayer = baseLayer,
-        .layerCount = numLayers};
-    transitionLayout(buffer, newLayout, subresRange, scope);
-}
-
-void VulkanImage::transitionLayout(
-    VkCommandBuffer cmdBuffer,
-    VkImageLayout newLayout,
-    VkImageSubresourceRange subresRange,
-    const VulkanSynchronizationScope& scope) {
-    subresRange.baseArrayLayer = m_imageType == VK_IMAGE_TYPE_3D ? 0 : subresRange.baseArrayLayer;
-    subresRange.layerCount = m_imageType == VK_IMAGE_TYPE_3D ? 1 : subresRange.layerCount;
-
-    if (matchesLayout(newLayout, subresRange)) {
-        // CRISP_LOGI(
-        //     "Matching {} : {} - {} from {} to {}",
-        //     m_deallocator->getTag(m_handle),
-        //     static_cast<void*>(m_handle),
-        //     subresRange,
-        //     toString(m_layouts[subresRange.baseArrayLayer][subresRange.baseMipLevel]),
-        //     toString(newLayout));
-        return;
-    }
-
-    CRISP_CHECK(isSameLayoutInRange(subresRange), "Attempting to transition an image across different layouts!");
-
-    VkImageMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
-    barrier.oldLayout = getLayout(subresRange.baseArrayLayer, subresRange.baseMipLevel);
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = m_handle;
-    barrier.subresourceRange = subresRange;
-    barrier.srcStageMask = scope.srcStage;
-    barrier.srcAccessMask = scope.srcAccess;
-    barrier.dstStageMask = scope.dstStage;
-    barrier.dstAccessMask = scope.dstAccess;
-
-    VkDependencyInfo info{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
-    info.imageMemoryBarrierCount = 1;
-    info.pImageMemoryBarriers = &barrier;
-    vkCmdPipelineBarrier2(cmdBuffer, &info);
-    setImageLayout(newLayout, subresRange);
-}
-
-void VulkanImage::transitionLayout(
-    const VkCommandBuffer cmdBuffer, const VkImageLayout newLayout, const VulkanSynchronizationScope& scope) {
-    const auto subresRange = getFullRange();
-    VkImageMemoryBarrier2 barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
-    barrier.oldLayout = getLayout(subresRange.baseArrayLayer, subresRange.baseMipLevel);
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = m_handle;
-    barrier.subresourceRange = subresRange;
-    barrier.srcStageMask = scope.srcStage;
-    barrier.srcAccessMask = scope.srcAccess;
-    barrier.dstStageMask = scope.dstStage;
-    barrier.dstAccessMask = scope.dstAccess;
-
-    VkDependencyInfo info{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
-    info.imageMemoryBarrierCount = 1;
-    info.pImageMemoryBarriers = &barrier;
-    vkCmdPipelineBarrier2(cmdBuffer, &info);
-    setImageLayout(newLayout, subresRange);
-}
-
-void VulkanImage::copyFrom(VkCommandBuffer commandBuffer, const VulkanBuffer& buffer) {
-    copyFrom(commandBuffer, buffer, m_extent, 0, m_layerCount, 0);
-}
-
-void VulkanImage::copyFrom(
-    VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers) {
-    copyFrom(commandBuffer, buffer, m_extent, baseLayer, numLayers, 0);
-}
-
-void VulkanImage::copyFrom(
-    VkCommandBuffer commandBuffer,
-    const VulkanBuffer& buffer,
-    const VkExtent3D& extent,
-    const uint32_t baseLayer,
-    const uint32_t numLayers,
-    const uint32_t mipLevel) {
-    VkBufferImageCopy copyRegion{};
-    copyRegion.bufferOffset = 0;
-    copyRegion.bufferImageHeight = extent.height;
-    copyRegion.bufferRowLength = extent.width;
-    copyRegion.imageExtent = extent;
-    copyRegion.imageOffset = {0, 0, 0};
-    copyRegion.imageSubresource.aspectMask = m_aspect;
-    copyRegion.imageSubresource.baseArrayLayer = baseLayer;
-    copyRegion.imageSubresource.layerCount = numLayers;
-    copyRegion.imageSubresource.mipLevel = mipLevel;
-    vkCmdCopyBufferToImage(commandBuffer, buffer.getHandle(), m_handle, getLayout(baseLayer, mipLevel), 1, &copyRegion);
-}
-
-void VulkanImage::copyTo(
-    VkCommandBuffer commandBuffer, const VulkanBuffer& buffer, uint32_t baseLayer, uint32_t numLayers) {
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.baseArrayLayer = baseLayer;
-    region.imageSubresource.layerCount = numLayers;
-    region.imageSubresource.mipLevel = 0;
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = m_extent;
-    vkCmdCopyImageToBuffer(commandBuffer, m_handle, getLayout(baseLayer, 0), buffer.getHandle(), 1, &region);
-}
-
-void VulkanImage::buildMipmaps(VkCommandBuffer commandBuffer, const VulkanSynchronizationStage& stage) {
-    if (m_mipLevelCount > 1) {
-        VkImageSubresourceRange currSubresource = {};
-        currSubresource.aspectMask = m_aspect;
-        currSubresource.baseMipLevel = 0;
-        currSubresource.levelCount = 1;
-        currSubresource.baseArrayLayer = 0;
-        currSubresource.layerCount = m_layerCount;
-
-        transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currSubresource, stage >> kTransferRead);
-
-        for (uint32_t i = 1; i < m_mipLevelCount; i++) {
-            VkImageBlit imageBlit = {};
-
-            imageBlit.srcSubresource.aspectMask = m_aspect;
-            imageBlit.srcSubresource.baseArrayLayer = 0;
-            imageBlit.srcSubresource.layerCount = m_layerCount;
-            imageBlit.srcSubresource.mipLevel = i - 1;
-            imageBlit.srcOffsets[1].x = std::max(static_cast<int32_t>(m_extent.width >> (i - 1)), 1);
-            imageBlit.srcOffsets[1].y = std::max(static_cast<int32_t>(m_extent.height >> (i - 1)), 1);
-            imageBlit.srcOffsets[1].z = 1;
-
-            imageBlit.dstSubresource.aspectMask = m_aspect;
-            imageBlit.dstSubresource.baseArrayLayer = 0;
-            imageBlit.dstSubresource.layerCount = m_layerCount;
-            imageBlit.dstSubresource.mipLevel = i;
-            imageBlit.dstOffsets[1].x = std::max(static_cast<int32_t>(m_extent.width >> i), 1);
-            imageBlit.dstOffsets[1].y = std::max(static_cast<int32_t>(m_extent.height >> i), 1);
-            imageBlit.dstOffsets[1].z = 1;
-
-            currSubresource.baseMipLevel = i;
-
-            transitionLayout(
-                commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, currSubresource, stage >> kTransferWrite);
-            vkCmdBlitImage(
-                commandBuffer,
-                m_handle,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                m_handle,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                1,
-                &imageBlit,
-                VK_FILTER_LINEAR);
-            transitionLayout(
-                commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, currSubresource, kTransferWrite >> kTransferRead);
-        }
-    }
-}
-
-void VulkanImage::blit(VkCommandBuffer commandBuffer, const VulkanImage& image, uint32_t mipLevel) {
-    VkImageBlit imageBlit = {};
-    imageBlit.srcSubresource.aspectMask = m_aspect;
-    imageBlit.srcSubresource.baseArrayLayer = 0;
-    imageBlit.srcSubresource.layerCount = 6;
-    imageBlit.srcSubresource.mipLevel = 0;
-    imageBlit.srcOffsets[1].x = static_cast<int32_t>(image.m_extent.width);
-    imageBlit.srcOffsets[1].y = static_cast<int32_t>(image.m_extent.height);
-    imageBlit.srcOffsets[1].z = 1;
-
-    imageBlit.dstSubresource.aspectMask = m_aspect;
-    imageBlit.dstSubresource.baseArrayLayer = 0;
-    imageBlit.dstSubresource.layerCount = 6;
-    imageBlit.dstSubresource.mipLevel = mipLevel;
-    imageBlit.dstOffsets[1].x = static_cast<int32_t>(image.m_extent.width);
-    imageBlit.dstOffsets[1].y = static_cast<int32_t>(image.m_extent.height);
-    imageBlit.dstOffsets[1].z = 1;
-
-    VkImageSubresourceRange mipRange = {};
-    mipRange.aspectMask = m_aspect;
-    mipRange.baseMipLevel = mipLevel;
-    mipRange.levelCount = 1;
-    mipRange.baseArrayLayer = 0;
-    mipRange.layerCount = 6;
-
-    transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipRange, kTransferRead >> kTransferWrite);
-    vkCmdBlitImage(
-        commandBuffer,
-        image.getHandle(),
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        m_handle,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &imageBlit,
-        VK_FILTER_LINEAR);
-    transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipRange, kTransferWrite >> kFragmentRead);
-}
-
 VkImageSubresourceRange VulkanImage::getFirstMipRange() const {
     return {
         .aspectMask = m_aspect,
@@ -468,6 +245,10 @@ VkExtent2D VulkanImage::getExtent2D() const {
 
 uint32_t VulkanImage::getMipLevels() const {
     return m_mipLevelCount;
+}
+
+const VkExtent3D& VulkanImage::getExtent() const {
+    return m_extent;
 }
 
 uint32_t VulkanImage::getWidth() const {
@@ -515,38 +296,29 @@ VkImageLayout VulkanImage::getLayout() const {
 bool VulkanImage::matchesLayout(const VkImageLayout imageLayout, const VkImageSubresourceRange& range) const {
     CRISP_CHECK_LE(range.baseArrayLayer + range.layerCount, m_layerCount);
     CRISP_CHECK_LE(range.baseMipLevel + range.levelCount, m_mipLevelCount);
-    for (uint32_t i = range.baseArrayLayer; i < range.baseArrayLayer + range.layerCount; ++i) {
-        for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j) {
-            if (getLayoutUnchecked(i, j) != imageLayout) {
+    for (uint32_t layer = range.baseArrayLayer; layer < range.baseArrayLayer + range.layerCount; ++layer) {
+        for (uint32_t mipLevel = range.baseMipLevel; mipLevel < range.baseMipLevel + range.levelCount; ++mipLevel) {
+            if (m_layouts[layer * m_mipLevelCount + mipLevel] != imageLayout) {
                 return false;
             }
         }
     }
-
     return true;
 }
 
 bool VulkanImage::isSameLayoutInRange(const VkImageSubresourceRange& range) const {
     CRISP_CHECK_LE(range.baseArrayLayer + range.layerCount, m_layerCount);
     CRISP_CHECK_LE(range.baseMipLevel + range.levelCount, m_mipLevelCount);
+    CRISP_CHECK_GT(range.layerCount, 0);
+    CRISP_CHECK_GT(range.levelCount, 0);
 
-    FlatHashSet<VkImageLayout> uniqueLayouts{};
-    for (uint32_t i = range.baseArrayLayer; i < range.baseArrayLayer + range.layerCount; ++i) {
-        for (uint32_t j = range.baseMipLevel; j < range.baseMipLevel + range.levelCount; ++j) {
-            uniqueLayouts.insert(getLayoutUnchecked(i, j));
-        }
-    }
-
-    return uniqueLayouts.size() <= 1;
+    const VkImageLayout expectedLayout = getLayout(range.baseArrayLayer, range.baseMipLevel);
+    return matchesLayout(expectedLayout, range);
 }
 
 VkImageLayout VulkanImage::getLayout(const uint32_t layer, const uint32_t mipLevel) const {
     CRISP_CHECK_LT(layer, m_layerCount);
     CRISP_CHECK_LT(mipLevel, m_mipLevelCount);
-    return m_layouts[layer * m_mipLevelCount + mipLevel];
-}
-
-VkImageLayout VulkanImage::getLayoutUnchecked(const uint32_t layer, const uint32_t mipLevel) const {
     return m_layouts[layer * m_mipLevelCount + mipLevel];
 }
 

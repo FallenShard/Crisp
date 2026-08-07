@@ -6,6 +6,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -38,11 +39,30 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
 
     for (uint32_t i = 0; i < kRendererVirtualFrameCount; ++i) {
         renderer->enqueueResourceUpdate([this, i, stagingBuffer = m_stagingBuffer.get()](VkCommandBuffer cmdBuffer) {
-            m_image->transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, i, 1, kNullStage >> kTransferWrite);
-            m_image->copyFrom(cmdBuffer, *stagingBuffer, i, 1);
-            m_image->transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, i, 1, kTransferWrite >> kFragmentRead);
+            const VulkanCommandEncoder encoder(cmdBuffer);
+            const VkImageSubresourceRange range{
+                .aspectMask = m_image->getAspectMask(),
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = i,
+                .layerCount = 1,
+            };
+            encoder.transitionLayout(
+                *m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite, range);
+            const VkBufferImageCopy region{
+                .bufferRowLength = m_extent.width,
+                .bufferImageHeight = m_extent.height,
+                .imageSubresource = {
+                    .aspectMask = m_image->getAspectMask(),
+                    .mipLevel = 0,
+                    .baseArrayLayer = i,
+                    .layerCount = 1,
+                },
+                .imageExtent = m_extent,
+            };
+            encoder.copyBufferToImage(*stagingBuffer, *m_image, region);
+            encoder.transitionLayout(
+                *m_image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead, range);
         });
         m_imageViews.push_back(createView(renderer->getDevice(), *m_image, VK_IMAGE_VIEW_TYPE_2D, i, 1));
     }
@@ -78,9 +98,17 @@ void RayTracedImage::draw(Renderer* renderer) {
     if (!m_textureUpdates.empty()) {
         renderer->enqueueResourceUpdate([this, renderer](VkCommandBuffer cmdBuffer) {
             uint32_t frameIdx = renderer->getCurrentVirtualFrameIndex();
+            const VulkanCommandEncoder encoder(cmdBuffer);
+            const VkImageSubresourceRange range{
+                .aspectMask = m_image->getAspectMask(),
+                .baseMipLevel = 0,
+                .levelCount = m_image->getMipLevels(),
+                .baseArrayLayer = frameIdx,
+                .layerCount = 1,
+            };
 
-            m_image->transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, frameIdx, 1, kFragmentRead >> kTransferWrite);
+            encoder.transitionLayout(
+                *m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kFragmentRead >> kTransferWrite, range);
 
             // Perform the copy from the buffer that has accumulated the updates through memcpy
             std::vector<VkBufferImageCopy> copyRegions;
@@ -105,18 +133,12 @@ void RayTracedImage::draw(Renderer* renderer) {
                 texUpdateItem.first--;
                 i++;
             }
-            vkCmdCopyBufferToImage(
-                cmdBuffer,
-                m_stagingBuffer->getHandle(),
-                m_image->getHandle(),
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                static_cast<uint32_t>(copyRegions.size()),
-                copyRegions.data());
+            encoder.copyBufferToImage(m_stagingBuffer->getHandle(), *m_image, copyRegions);
 
             std::erase_if(m_textureUpdates, [](const auto& item) { return item.first == 0; });
 
-            m_image->transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, frameIdx, 1, kTransferWrite >> kFragmentRead);
+            encoder.transitionLayout(
+                *m_image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead, range);
         });
     }
 

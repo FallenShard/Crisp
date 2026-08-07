@@ -171,7 +171,6 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
 
-    const auto cmdBuffer = frameContext.commandEncoder.getHandle();
     const auto& cameraParams = m_cameraController->getCameraParameters();
     frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_cameraBuffer, 0, cameraParams);
     frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_integratorBuffer, 0, m_integratorParams);
@@ -187,7 +186,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
         const VkDeviceSize size = m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
         m_screenshot.record(
             frameContext.stagingBelt->downloadImage(
-                cmdBuffer,
+                frameContext.commandEncoder,
                 *m_rayTracedImage,
                 {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u},
                 0,

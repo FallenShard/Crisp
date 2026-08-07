@@ -57,7 +57,20 @@ public:
     void beginRendering(const VkRenderingInfo& renderingInfo) const;
     void endRendering() const;
 
-    void copyImageToBuffer(const VulkanImage& srcImage, const VulkanBuffer& dstBuffer) const;
+    void copyBufferToImage(
+        VkBuffer src, VulkanImage& dst, std::span<const VkBufferImageCopy> regions) const;
+    void copyBufferToImage(
+        const VulkanBuffer& src, VulkanImage& dst, const VkBufferImageCopy& region) const;
+    void copyImageToBuffer(
+        const VulkanImage& src, VkBuffer dst, std::span<const VkBufferImageCopy> regions) const;
+    void copyImageToBuffer(
+        const VulkanImage& src, const VulkanBuffer& dst, const VkBufferImageCopy& region) const;
+    void blitImage(
+        const VulkanImage& src,
+        VulkanImage& dst,
+        const VkImageBlit& region,
+        VkFilter filter = VK_FILTER_LINEAR) const;
+    void generateMipmaps(VulkanImage& image, const VulkanSynchronizationStage& initialStage = kTransferRead) const;
 
     void dispatchCompute(const VkExtent3D& workGroupCount) const;
     void drawMeshTasks(const VkExtent3D& groupCount) const;

@@ -132,21 +132,21 @@ void VulkanStagingBelt::uploadBuffer(
 }
 
 void VulkanStagingBelt::uploadImage(
-    const VkCommandBuffer cmdBuffer,
-    const VulkanImage& dstImage,
+    const VulkanCommandEncoder& encoder,
+    VulkanImage& dstImage,
     const uint32_t baseLayer,
     const uint32_t numLayers,
     const uint32_t mipLevel,
     const void* data,
     const VkDeviceSize size) {
     const auto extent2D = dstImage.getExtent2D();
-    uploadImage(cmdBuffer, dstImage, {extent2D.width, extent2D.height, 1u}, baseLayer, numLayers, mipLevel, data, size);
+    uploadImage(encoder, dstImage, {extent2D.width, extent2D.height, 1u}, baseLayer, numLayers, mipLevel, data, size);
 }
 
 void VulkanStagingBelt::uploadImage(
-    const VkCommandBuffer cmdBuffer,
-    const VulkanImage& dstImage,
-    const VkExtent3D extent,
+    const VulkanCommandEncoder& encoder,
+    VulkanImage& dstImage,
+    const VkExtent3D& extent,
     const uint32_t baseLayer,
     const uint32_t numLayers,
     const uint32_t mipLevel,
@@ -164,13 +164,7 @@ void VulkanStagingBelt::uploadImage(
     copyRegion.imageSubresource.baseArrayLayer = baseLayer;
     copyRegion.imageSubresource.layerCount = numLayers;
     copyRegion.imageSubresource.mipLevel = mipLevel;
-    vkCmdCopyBufferToImage(
-        cmdBuffer,
-        alloc.buffer,
-        dstImage.getHandle(),
-        dstImage.getLayout(baseLayer, mipLevel),
-        1,
-        &copyRegion);
+    encoder.copyBufferToImage(alloc.buffer, dstImage, std::span{&copyRegion, 1});
 }
 
 ReadbackBuffer VulkanStagingBelt::downloadBuffer(
@@ -191,9 +185,9 @@ ReadbackBuffer VulkanStagingBelt::downloadBuffer(
 }
 
 ReadbackBuffer VulkanStagingBelt::downloadImage(
-    const VkCommandBuffer cmd,
+    const VulkanCommandEncoder& encoder,
     const VulkanImage& src,
-    const VkExtent3D extent,
+    const VkExtent3D& extent,
     const uint32_t baseLayer,
     const uint32_t numLayers,
     const uint32_t mipLevel,
@@ -211,8 +205,7 @@ ReadbackBuffer VulkanStagingBelt::downloadImage(
     copyRegion.imageSubresource.baseArrayLayer = baseLayer;
     copyRegion.imageSubresource.layerCount = numLayers;
     copyRegion.imageSubresource.mipLevel = mipLevel;
-    vkCmdCopyImageToBuffer(
-        cmd, src.getHandle(), src.getLayout(baseLayer, mipLevel), buffer->getHandle(), 1, &copyRegion);
+    encoder.copyImageToBuffer(src, *buffer, copyRegion);
 
     return {.buffer = std::move(buffer)};
 }

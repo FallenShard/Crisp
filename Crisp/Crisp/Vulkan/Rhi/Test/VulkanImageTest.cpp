@@ -25,11 +25,11 @@ TEST_F(VulkanImageTest, ChangingLayouts) {
 
     {
         const ScopeCommandExecutor executor(*device_);
-        const auto& cmdBuffer = executor.cmdBuffer.getHandle();
-        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kNullStage >> kFragmentRead);
+        const auto& encoder = executor.cmdEncoder;
+        encoder.transitionLayout(image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kNullStage >> kFragmentRead);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kComputeWrite);
+        encoder.transitionLayout(image, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kComputeWrite);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_GENERAL);
     }
 }
@@ -54,6 +54,20 @@ TEST_F(VulkanImageTest, CreateLayeredImageWithMipMaps) {
     EXPECT_THAT(image.getFullRange().levelCount, 3);
     EXPECT_THAT(image.getFormat(), VK_FORMAT_R8G8_UNORM);
     EXPECT_THAT(image.getLayout(), VK_IMAGE_LAYOUT_UNDEFINED);
+    EXPECT_TRUE(image.matchesLayout(VK_IMAGE_LAYOUT_UNDEFINED, image.getFullRange()));
+    EXPECT_TRUE(image.isSameLayoutInRange(image.getFullRange()));
+
+    const VkImageSubresourceRange firstMipRange{
+        .aspectMask = image.getAspectMask(),
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = image.getLayerCount(),
+    };
+    image.setImageLayout(VK_IMAGE_LAYOUT_GENERAL, firstMipRange);
+    EXPECT_TRUE(image.matchesLayout(VK_IMAGE_LAYOUT_GENERAL, firstMipRange));
+    EXPECT_FALSE(image.matchesLayout(VK_IMAGE_LAYOUT_GENERAL, image.getFullRange()));
+    EXPECT_FALSE(image.isSameLayoutInRange(image.getFullRange()));
 }
 
 TEST_F(VulkanImageTest, FillImageRoundtrip) {
@@ -87,20 +101,29 @@ TEST_F(VulkanImageTest, FillImageRoundtrip) {
 
     {
         const ScopeCommandExecutor executor(*device_);
-        const auto& cmdBuffer = executor.cmdBuffer.getHandle();
+        const auto& encoder = executor.cmdEncoder;
 
-        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+        encoder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        image.copyFrom(cmdBuffer, stagingBuffer, 0, 1);
+        const VkBufferImageCopy region{
+            .imageSubresource = {
+                .aspectMask = image.getAspectMask(),
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .imageExtent = {image.getWidth(), image.getHeight(), 1},
+        };
+        encoder.copyBufferToImage(stagingBuffer, image, region);
 
-        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeRead);
+        encoder.transitionLayout(image, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeRead);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_GENERAL);
 
-        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kComputeRead >> kTransferRead);
+        encoder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kComputeRead >> kTransferRead);
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        image.copyTo(cmdBuffer, downloadBuffer, 0, 1);
+        encoder.copyImageToBuffer(image, downloadBuffer, region);
     }
 
     const std::span dataSpan(downloadBuffer.getHostVisibleData<uint8_t>(), downloadBuffer.getSize());

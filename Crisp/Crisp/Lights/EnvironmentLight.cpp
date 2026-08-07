@@ -130,11 +130,18 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
                 unitCube.bindAndDraw(cmdBuffer);
                 commandEncoder.endRendering();
             }
-            cubeMap->transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, kCubeMapFaceCount, 0, 1, kColorWrite >> kTransferRead);
-            cubeMap->buildMipmaps(cmdBuffer, kNullStage);
-            cubeMap->transitionLayout(
-                cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentSampledRead);
+            const VkImageSubresourceRange firstMipRange{
+                .aspectMask = cubeMap->getAspectMask(),
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = kCubeMapFaceCount,
+            };
+            commandEncoder.transitionLayout(
+                *cubeMap, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kColorWrite >> kTransferRead, firstMipRange);
+            commandEncoder.generateMipmaps(*cubeMap, kNullStage);
+            commandEncoder.transitionLayout(
+                *cubeMap, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentSampledRead);
         });
     return cubeMap;
 }
