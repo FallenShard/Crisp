@@ -126,7 +126,7 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
                 commandEncoder.bindPipeline(*cubeMapPipeline);
                 cubeMapPipeline->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
 
-                cubeMapMaterial->bind(commandEncoder);
+                commandEncoder.bindDescriptorSets(cubeMapMaterial->getDescriptorSetBinding());
                 unitCube.bindAndDraw(commandEncoder);
                 commandEncoder.endRendering();
             }

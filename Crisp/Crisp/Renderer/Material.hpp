@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
@@ -13,8 +14,6 @@
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
-class VulkanCommandEncoder;
-
 class Material {
 public:
     explicit Material(VulkanPipeline* pipeline);
@@ -56,8 +55,8 @@ public:
 
     void setDynamicOffset(uint32_t index, uint32_t offset);
 
-    void bind(const VulkanCommandEncoder& encoder) const;
-    void bind(const VulkanCommandEncoder& encoder, std::span<const uint32_t> dynamicBufferOffsets) const;
+    VulkanDescriptorSetBinding getDescriptorSetBinding() const;
+    VulkanDescriptorSetBinding getDescriptorSetBinding(std::span<const uint32_t> dynamicBufferOffsets) const;
 
     VulkanPipeline* getPipeline() const {
         return m_pipeline;

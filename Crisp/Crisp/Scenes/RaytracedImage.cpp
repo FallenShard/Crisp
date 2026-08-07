@@ -52,12 +52,13 @@ RayTracedImage::RayTracedImage(uint32_t width, uint32_t height, Renderer* render
             const VkBufferImageCopy region{
                 .bufferRowLength = m_extent.width,
                 .bufferImageHeight = m_extent.height,
-                .imageSubresource = {
-                    .aspectMask = m_image->getAspectMask(),
-                    .mipLevel = 0,
-                    .baseArrayLayer = i,
-                    .layerCount = 1,
-                },
+                .imageSubresource =
+                    {
+                        .aspectMask = m_image->getAspectMask(),
+                        .mipLevel = 0,
+                        .baseArrayLayer = i,
+                        .layerCount = 1,
+                    },
                 .imageExtent = m_extent,
             };
             encoder.copyBufferToImage(*stagingBuffer, *m_image, region);
@@ -145,7 +146,7 @@ void RayTracedImage::draw(Renderer* renderer) {
     renderer->enqueueDefaultPassDrawCommand([this, renderer](VkCommandBuffer cmdBuffer) {
         const VulkanCommandEncoder encoder(cmdBuffer);
         encoder.bindPipeline(*m_pipeline);
-        m_materials[renderer->getCurrentVirtualFrameIndex()]->bind(encoder);
+        encoder.bindDescriptorSets(m_materials[renderer->getCurrentVirtualFrameIndex()]->getDescriptorSetBinding());
         encoder.setViewport(m_viewport);
 
         renderer->drawFullScreenQuad(encoder);

@@ -276,7 +276,7 @@ void Renderer::record(const FrameContext& frameContext) {
         encoder.bindPipeline(*m_scenePipeline);
         encoder.setViewport(m_defaultViewport);
         encoder.setScissor(m_defaultScissor);
-        m_sceneMaterial->bind(encoder);
+        encoder.bindDescriptorSets(m_sceneMaterial->getDescriptorSetBinding());
         drawFullScreenQuad(encoder);
     }
 

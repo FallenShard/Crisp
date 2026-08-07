@@ -78,7 +78,7 @@ void drawPostProcessEffect(
         for (std::size_t i = 0; i < dynamicBufferOffsets.size(); ++i) {
             dynamicBufferOffsets[i] = 0 + dynamicBufferViews[i].subOffset;
         }
-        command.material->bind(encoder, dynamicBufferOffsets);
+        encoder.bindDescriptorSets(command.material->getDescriptorSetBinding(dynamicBufferOffsets));
     }
 
     renderer.getFullScreenGeometry()->bindAndDraw(encoder);
@@ -250,24 +250,28 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     ssao.pushConstantView.set(m_ssaoParams);
 
     auto& blurH = m_postProcessingCommands["blur-h"];
-    blurH.pipeline = m_resourceContext->createPipeline("blur-h", "GaussianBlur.json", m_renderGraph->getRenderPass("blur-h"), 0);
+    blurH.pipeline =
+        m_resourceContext->createPipeline("blur-h", "GaussianBlur.json", m_renderGraph->getRenderPass("blur-h"), 0);
     blurH.material = m_resourceContext->createMaterial("blur-h", blurH.pipeline);
-    blurH.material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("ssao"), 0, &imageCache.getSampler("linearClamp"));
+    blurH.material->writeDescriptor(
+        0, 0, m_renderGraph->getRenderPass("ssao"), 0, &imageCache.getSampler("linearClamp"));
     blurH.pushConstantView.set(kBlurH);
 
     auto& blurV = m_postProcessingCommands["blur-v"];
-    blurV.pipeline = m_resourceContext->createPipeline("blur-v", "GaussianBlur.json", m_renderGraph->getRenderPass("blur-v"), 0);
+    blurV.pipeline =
+        m_resourceContext->createPipeline("blur-v", "GaussianBlur.json", m_renderGraph->getRenderPass("blur-v"), 0);
     blurV.material = m_resourceContext->createMaterial("blur-v", blurV.pipeline);
-    blurV.material->writeDescriptor(0, 0, m_renderGraph->getRenderPass("blur-h"), 0, &imageCache.getSampler("linearClamp"));
+    blurV.material->writeDescriptor(
+        0, 0, m_renderGraph->getRenderPass("blur-h"), 0, &imageCache.getSampler("linearClamp"));
     blurV.pushConstantView.set(kBlurV);
 
-    VulkanPipeline* colorPipeline =
-        m_resourceContext->createPipeline("color", "UniformColor.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
+    VulkanPipeline* colorPipeline = m_resourceContext->createPipeline(
+        "color", "UniformColor.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
     Material* colorMaterial = m_resourceContext->createMaterial("color", colorPipeline);
     colorMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
-    VulkanPipeline* normalPipeline =
-        m_resourceContext->createPipeline("normal", "DepthNormal.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
+    VulkanPipeline* normalPipeline = m_resourceContext->createPipeline(
+        "normal", "DepthNormal.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
     Material* normalMaterial = m_resourceContext->createMaterial("normal", normalPipeline);
     normalMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 

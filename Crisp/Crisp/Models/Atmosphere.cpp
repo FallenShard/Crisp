@@ -150,7 +150,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             }
 
             ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            material->bind(ctx.commandEncoder);
+            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
 
             // SkyTransLut.json bakes the viewport and scissor from the pass render area, so the pipeline
             // declares neither as dynamic state. Setting them here would violate the static state and also
@@ -208,9 +208,8 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             }
 
             ctx.commandEncoder.bindPipeline(*pipeline);
-            material->bind(ctx.commandEncoder);
-            ctx.commandEncoder.dispatchCompute(
-                {kMultiScatteringLutResolution, kMultiScatteringLutResolution, 1});
+            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+            ctx.commandEncoder.dispatchCompute({kMultiScatteringLutResolution, kMultiScatteringLutResolution, 1});
         });
 
     renderGraph.addPass(
@@ -247,7 +246,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             }
 
             ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            material->bind(ctx.commandEncoder);
+            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
             renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 
@@ -286,7 +285,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             }
 
             ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            material->bind(ctx.commandEncoder);
+            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
             resourceContext.getGeometry(kVolumeGeometryId).bindAndDraw(ctx.commandEncoder);
         });
 
@@ -329,7 +328,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             }
 
             ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            material->bind(ctx.commandEncoder);
+            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
             renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 }

@@ -200,7 +200,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     frameContext.commandEncoder.transitionLayout(
         *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kRayTracingStorageWrite);
     frameContext.commandEncoder.bindPipeline(*m_pipeline);
-    m_material->bind(frameContext.commandEncoder);
+    frameContext.commandEncoder.bindDescriptorSets(m_material->getDescriptorSetBinding());
 
     const auto extent = m_renderer->getSwapChainExtent();
     frameContext.commandEncoder.traceRays(m_shaderBindingTable.bindings, extent);

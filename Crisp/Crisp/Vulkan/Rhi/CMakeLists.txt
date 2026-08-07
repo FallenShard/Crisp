@@ -215,6 +215,7 @@ add_cpp_static_library(
     CrispVulkanDescriptorSet
     "VulkanDescriptorSet.cpp"
     "VulkanDescriptorSet.hpp"
+    "VulkanDescriptorSetBinding.hpp"
 )
 target_link_libraries(
     CrispVulkanDescriptorSet

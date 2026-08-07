@@ -57,7 +57,7 @@ void addTonemapPass(
             }
 
             ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            material->bind(ctx.commandEncoder);
+            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
             renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 }

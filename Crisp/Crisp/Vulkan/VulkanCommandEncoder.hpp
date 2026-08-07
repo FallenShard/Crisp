@@ -2,6 +2,7 @@
 
 #include <span>
 
+#include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/VulkanSynchronization.hpp>
@@ -15,6 +16,7 @@ public:
     void setViewport(const VkViewport& viewport) const;
     void setScissor(const VkRect2D& scissorRect) const;
     void bindPipeline(const VulkanPipeline& pipeline) const;
+    void bindDescriptorSets(const VulkanDescriptorSetBinding& binding) const;
     void bindDescriptorSets(
         VkPipelineBindPoint bindPoint,
         VkPipelineLayout layout,
@@ -36,16 +38,10 @@ public:
     void insertBarrier(const VulkanSynchronizationScope& scope) const;
     void insertBufferMemoryBarrier(
         VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size, const VulkanSynchronizationScope& scope) const;
-    void insertBufferMemoryBarrier(VkBuffer buffer, const VulkanSynchronizationScope& scope) const {
-        insertBufferMemoryBarrier(buffer, 0, VK_WHOLE_SIZE, scope);
-    }
+    void insertBufferMemoryBarrier(VkBuffer buffer, const VulkanSynchronizationScope& scope) const;
     void insertBufferMemoryBarrier(
-        const VkDescriptorBufferInfo& bufferInfo, const VulkanSynchronizationScope& scope) const {
-        insertBufferMemoryBarrier(bufferInfo.buffer, bufferInfo.offset, bufferInfo.range, scope);
-    }
-    void insertBufferMemoryBarrier(const VulkanBuffer& buffer, const VulkanSynchronizationScope& scope) const {
-        insertBufferMemoryBarrier(buffer.getHandle(), scope);
-    }
+        const VkDescriptorBufferInfo& bufferInfo, const VulkanSynchronizationScope& scope) const;
+    void insertBufferMemoryBarrier(const VulkanBuffer& buffer, const VulkanSynchronizationScope& scope) const;
     void insertBufferMemoryBarriers(std::span<const VkBufferMemoryBarrier2> barriers) const;
     void insertImageMemoryBarrier(const VkImageMemoryBarrier2& barrier) const;
     void transferBufferOwnership(

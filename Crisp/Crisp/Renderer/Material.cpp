@@ -1,7 +1,5 @@
 #include <Crisp/Renderer/Material.hpp>
 
-#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
-
 #include <Crisp/Core/Format.hpp>
 
 namespace crisp {
@@ -159,23 +157,19 @@ void Material::setDynamicOffset(const uint32_t index, const uint32_t offset) {
     m_dynamicOffsets[index] = offset;
 }
 
-void Material::bind(const VulkanCommandEncoder& encoder) const {
-    encoder.bindDescriptorSets(
-        m_pipeline->getBindPoint(),
-        m_pipeline->getPipelineLayout()->getHandle(),
-        m_firstSet,
-        std::span{m_sets}.subspan(m_firstSet, m_setCount),
-        std::span{m_dynamicOffsets}.subspan(m_firstDynamicOffset, m_dynamicOffsetCount));
+VulkanDescriptorSetBinding Material::getDescriptorSetBinding() const {
+    return getDescriptorSetBinding(m_dynamicOffsets);
 }
 
-void Material::bind(
-    const VulkanCommandEncoder& encoder, const std::span<const uint32_t> dynamicBufferOffsets) const {
-    encoder.bindDescriptorSets(
-        m_pipeline->getBindPoint(),
-        m_pipeline->getPipelineLayout()->getHandle(),
-        m_firstSet,
-        std::span{m_sets}.subspan(m_firstSet, m_setCount),
-        dynamicBufferOffsets.subspan(m_firstDynamicOffset, m_dynamicOffsetCount));
+VulkanDescriptorSetBinding Material::getDescriptorSetBinding(
+    const std::span<const uint32_t> dynamicBufferOffsets) const {
+    return {
+        .bindPoint = m_pipeline->getBindPoint(),
+        .pipelineLayout = m_pipeline->getPipelineLayout()->getHandle(),
+        .firstSet = m_firstSet,
+        .descriptorSets = std::span{m_sets}.subspan(m_firstSet, m_setCount),
+        .dynamicOffsets = dynamicBufferOffsets.subspan(m_firstDynamicOffset, m_dynamicOffsetCount),
+    };
 }
 
 } // namespace crisp
