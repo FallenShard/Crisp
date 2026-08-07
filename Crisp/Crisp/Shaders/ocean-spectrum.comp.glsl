@@ -42,12 +42,12 @@ float calculatePhillipsSpectrum(const vec2 k)
     const float kLen2 = dot(k, k) + 0.000001f;
     const vec2 kDir = kLen2 == 0.0f ? vec2(0.0f) : k / sqrt(kLen2);
 
-    const float expTerm = exp(-1.0 / (kLen2 * Lw * Lw)) / pow(kLen2, 2);
+    const float expTerm = exp(-1.0 / (kLen2 * Lw * Lw)) / (kLen2 * kLen2);
     const float kDotW = dot(kDir, windDirection);
 
     const float tail = exp(-kLen2 * smallWaves * smallWaves);
 
-    return A * expTerm * pow(kDotW, 2) * tail;
+    return A * expTerm * (kDotW * kDotW) * tail;
 }
 
 void main()
