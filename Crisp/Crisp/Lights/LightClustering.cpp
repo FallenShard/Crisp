@@ -79,9 +79,8 @@ void LightClustering::configure(
         VkExtent3D{static_cast<uint32_t>(m_gridSize.x), static_cast<uint32_t>(m_gridSize.y), 1u});
     m_lightGridView = createView(renderer->getDevice(), *m_lightGrid, VK_IMAGE_VIEW_TYPE_2D);
 
-    renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
-        VulkanCommandEncoder{cmdBuffer}.transitionLayout(
-            *m_lightGrid, VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeRead);
+    renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
+        encoder.transitionLayout(*m_lightGrid, VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeRead);
     });
 }
 

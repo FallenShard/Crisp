@@ -74,7 +74,7 @@ public:
 
     void resize(int width, int height);
 
-    void enqueueResourceUpdate(const std::function<void(VkCommandBuffer)>& resourceUpdate);
+    void enqueueResourceUpdate(const std::function<void(const VulkanCommandEncoder&)>& resourceUpdate);
     void enqueueDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
     void enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction);
 

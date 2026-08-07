@@ -123,14 +123,14 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
 
     m_instancePropsBuffer = m_resourceContext->createStorageBuffer("instanceProps", m_sceneDesc.props);
 
-    m_renderer->enqueueResourceUpdate([this](VkCommandBuffer cmdBuffer) {
+    m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
         std::vector<VulkanAccelerationStructure*> blases;
         for (auto& blas : m_bottomLevelAccelStructures) {
-            blas->build(cmdBuffer);
+            blas->build(encoder.getHandle());
             blases.push_back(blas.get());
         }
 
-        m_topLevelAccelStructure->build(cmdBuffer);
+        m_topLevelAccelStructure->build(encoder.getHandle());
     });
 
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};

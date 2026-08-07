@@ -93,8 +93,8 @@ ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkP
             VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
         BufferMemoryType::GpuOnly);
     m_renderer.enqueueResourceUpdate(
-        [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](VkCommandBuffer cmdBuffer) {
-            vkCmdUpdateBuffer(cmdBuffer, buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
+        [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](const VulkanCommandEncoder& encoder) {
+            vkCmdUpdateBuffer(encoder.getHandle(), buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
         });
 
     std::vector<VkDeviceSize> sizes{0};

@@ -160,8 +160,9 @@ void Renderer::resize(int /*width*/, int /*height*/) {
     flushResourceUpdates(true);
 }
 
-void Renderer::enqueueResourceUpdate(const std::function<void(VkCommandBuffer)>& resourceUpdate) {
-    m_device->postResourceUpdate(resourceUpdate);
+void Renderer::enqueueResourceUpdate(const std::function<void(const VulkanCommandEncoder&)>& resourceUpdate) {
+    m_device->postResourceUpdate(
+        [resourceUpdate](const VkCommandBuffer cmdBuffer) { resourceUpdate(VulkanCommandEncoder(cmdBuffer)); });
 }
 
 void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction) {
