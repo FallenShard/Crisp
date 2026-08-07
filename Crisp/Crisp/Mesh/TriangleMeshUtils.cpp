@@ -42,8 +42,8 @@ TriangleMesh createGridMesh(const float size, const int tessellation) {
     const float scale = size / static_cast<float>(tessellation);
     for (int32_t i = 0; i <= tessellation; ++i) {
         for (int32_t j = 0; j <= tessellation; ++j) {
-            const float z = static_cast<float>(-i) * scale + size * 0.5f;
-            const float x = static_cast<float>(+j) * scale - size * 0.5f;
+            const float z = static_cast<float>(i) * scale - size * 0.5f;
+            const float x = static_cast<float>(j) * scale - size * 0.5f;
             positions.emplace_back(x, 0.0f, z);
             normals.emplace_back(0.0f, 1.0f, 0.0f);
             texCoords.emplace_back(x, z);
@@ -54,8 +54,8 @@ TriangleMesh createGridMesh(const float size, const int tessellation) {
                 const uint32_t nextZ = curr + tessellation + 1;
                 const uint32_t nextXZ = curr + tessellation + 2;
 
-                faces.emplace_back(curr, nextX, nextXZ);
-                faces.emplace_back(curr, nextXZ, nextZ);
+                faces.emplace_back(curr, nextXZ, nextX);
+                faces.emplace_back(curr, nextZ, nextXZ);
             }
         }
     }

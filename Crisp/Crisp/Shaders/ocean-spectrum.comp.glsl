@@ -47,46 +47,48 @@ float calculatePhillipsSpectrum(const vec2 k)
 
     const float tail = exp(-kLen2 * smallWaves * smallWaves);
 
+    // Squared by hand: pow(x, y) is undefined in GLSL for x < 0, and kDotW < 0 upwind.
     return A * expTerm * (kDotW * kDotW) * tail;
 }
 
 void main()
 {
-    const ivec2 idx = ivec2(gl_GlobalInvocationID.xy) - ivec2(N, M) / 2;
+    const ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 idx = gid - ivec2(N, M) / 2;
     const vec2 k = vec2(idx) * 2.0f * PI / vec2(Lx, Lz);
     const float kLen = sqrt(dot(k, k)) + 0.000001f;
 
-    // A discrete sample of a continuous spectral density has to carry the area of its spectral
-    // cell, dkx * dkz, and the inverse transform applies a 1 / (N * M) normalisation that the
-    // synthesis formula h(x) = sum_k h~(k) * e^(i*k*x) does not ask for. Folding both in here
-    // makes `A` the physical Phillips constant instead of a magic number that silently absorbs
-    // the transform's scaling.
+    // Spectral cell area, plus N * M to cancel the inverse transform's normalisation. Makes `A`
+    // the Phillips constant rather than a magic number absorbing the transform scaling.
     const float dkx = 2.0f * PI / Lx;
     const float dkz = 2.0f * PI / Lz;
     const float amplitudeScale = float(N) * float(M) * sqrt(dkx * dkz);
 
-    // Initial spectrum contains uniform gaussian samples, 2 + 2 components.
-    const vec4 initialSpectrum = imageLoad(initialSpectrumImg, ivec2(gl_GlobalInvocationID.xy));
+    // h~(k, t) = h0(k) * e^(i*w*t) + conj(h0(-k)) * e^(-i*w*t). The conjugate term must use the
+    // gaussian pair drawn for -k, else h~(-k) != conj(h~(k)) and the transform is not real.
+    const ivec2 mirrorGid = ivec2((N - gid.x) % N, (M - gid.y) % M);
+
     const float sqrtFactor = sqrt(2.0f) * 0.5f * amplitudeScale;
-    const vec2 h0 = initialSpectrum.xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
-    vec2 h0_star = initialSpectrum.zw * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
-    h0_star.y = -h0_star.y;
+    const vec2 h0 = imageLoad(initialSpectrumImg, gid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
+    const vec2 h0MinusK =
+        imageLoad(initialSpectrumImg, mirrorGid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
+    const vec2 h0Conj = vec2(h0MinusK.x, -h0MinusK.y);
 
     // The dispersion relation.
     const float wk = sqrt(g * kLen);
     const float phase = mod(wk * time, 2.0f * PI);
     const vec2 phaseVec = vec2(cos(phase), sin(phase));
 
-    const vec2 hkt = complexMul(h0, phaseVec) + complexMul(h0_star, vec2(phaseVec.x, -phaseVec.y));
-    imageStore(dispYImg, ivec2(gl_GlobalInvocationID.xy), vec4(hkt, 0.0, 0.0f));
+    const vec2 hkt = complexMul(h0, phaseVec) + complexMul(h0Conj, vec2(phaseVec.x, -phaseVec.y));
+    imageStore(dispYImg, gid, vec4(hkt, 0.0, 0.0f));
 
     const vec2 dispX = complexMul(hkt, vec2(0, -k.x / kLen));
     const vec2 dispZ = complexMul(hkt, vec2(0, -k.y / kLen));
-    imageStore(dispXImg, ivec2(gl_GlobalInvocationID.xy), vec4(dispX, 0.0, 0.0f));
-    imageStore(dispZImg, ivec2(gl_GlobalInvocationID.xy), vec4(dispZ, 0.0, 0.0f));
+    imageStore(dispXImg, gid, vec4(dispX, 0.0, 0.0f));
+    imageStore(dispZImg, gid, vec4(dispZ, 0.0, 0.0f));
 
     const vec2 normalX = complexMul(hkt, vec2(0, k.x));
     const vec2 normalZ = complexMul(hkt, vec2(0, k.y));
-    imageStore(normalXImg, ivec2(gl_GlobalInvocationID.xy), vec4(normalX, 0.0, 0.0f));
-    imageStore(normalZImg, ivec2(gl_GlobalInvocationID.xy), vec4(normalZ, 0.0, 0.0f));
+    imageStore(normalXImg, gid, vec4(normalX, 0.0, 0.0f));
+    imageStore(normalZImg, gid, vec4(normalZ, 0.0, 0.0f));
 }

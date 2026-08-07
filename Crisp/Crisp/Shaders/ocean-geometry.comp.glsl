@@ -25,14 +25,10 @@ layout(push_constant) uniform PushConstant
     float choppiness;
 };
 
-const float g = 9.81;
-
-const float signValue[2] = {1, -1};
+// Undoes the spectral origin shift: k_m = 2*pi*(m - N/2) / L costs a (-1)^n vs a plain IDFT.
 float getFactor(int i, int j) {
-    return signValue[1 - (i + j) % 2];
+    return ((i + j) & 1) == 0 ? 1.0 : -1.0;
 }
-
-const float texelCenterOffset = 0.5;
 
 float getHeight(int i, int j, float factor) {
     return texelFetch(displacementMap, ivec2(i, j), 0).r * factor;
@@ -46,38 +42,28 @@ float getDz(int i, int j, float factor) {
     return texelFetch(displacementZMap, ivec2(i, j), 0).r * factor;
 }
 
-vec3 makeNormal2(int i, int j, float factor) {
-    float nx = texelFetch(normalXMap, ivec2(i, j), 0).r * factor * patchWorldSize;
-    float nz = texelFetch(normalZMap, ivec2(i, j), 0).r * factor * patchWorldSize;
-    return normalize(vec3(-nx, 1, -nz));
-}
-
+// Choppy waves (Tessendorf, Simulating Ocean Water, "Choppy Waves"). The spectrum pass uses the
+// D(k) = -i * (k / |k|) * h~(k) convention, which requires a negative scale: x' = x - lambda * D.
+// A positive scale converges on troughs instead of crests. All components share one sign factor.
 vec3 getDisplacement(int i, int j) {
-    float factor = getFactor(i, j);
-    float chop = -choppiness;
-    float x = chop * getDx(i, j, factor);
-    float y = getHeight(i, j, factor);
-    float z = chop * getDz(i, j, factor);
-    return vec3(x, y, z);
+    const float factor = getFactor(i, j);
+    return vec3(-choppiness * getDx(i, j, factor),
+                getHeight(i, j, factor),
+                -choppiness * getDz(i, j, factor));
 }
 
-// Cannot apply standard heightmap -> normal map computation because there are
-// displacements in X and Z as well.
-vec3 makeNormal3(int i, int j, float f) {
+// Not a plain heightmap gradient: there is displacement in X and Z too. Index i runs +X, j runs
+// +Z; the cross products are ordered to give +Y for a flat patch.
+vec3 makeNormal(int i, int j) {
     const float cellSize = patchWorldSize / N;
 
     const vec3 center = getDisplacement(i, j);
     const vec3 right = vec3(+cellSize, 0, 0) + getDisplacement((i + 1) % N, j) - center;
     const vec3 left = vec3(-cellSize, 0, 0) + getDisplacement((i + N - 1) % N, j) - center;
-    const vec3 top = vec3(0, 0, -cellSize) + getDisplacement(i, (j + 1) % N) - center;
-    const vec3 bottom = vec3(0, 0, +cellSize) + getDisplacement(i, (j + N - 1) % N) - center;
-    
-    const vec3 rt = cross(right, top);
-    const vec3 tl = cross(top, left);
-    const vec3 lb = cross(left, bottom);
-    const vec3 br = cross(bottom, right);
+    const vec3 front = vec3(0, 0, +cellSize) + getDisplacement(i, (j + 1) % N) - center;
+    const vec3 back = vec3(0, 0, -cellSize) + getDisplacement(i, (j + N - 1) % N) - center;
 
-    return normalize(rt + tl + lb + br);
+    return normalize(cross(front, right) + cross(right, back) + cross(back, left) + cross(left, front));
 }
 
 vec3 readPosition(int linIdx) {
@@ -106,17 +92,14 @@ void main()
 
     const float cellSize = patchWorldSize / N;
 
+    // Last row/column wraps onto the first so neighbouring patches tile seamlessly.
     const int col = idx.x % N;
     const int row = idx.y % N;
-    const float factor = getFactor(col, row);
 
+    // Matches createGridMesh: i runs +X, j runs +Z.
     const vec3 startPos = vec3(idx.x, 0.0, idx.y) * cellSize - vec3(patchWorldSize * 0.5, 0, patchWorldSize * 0.5);
-    const vec3 pos = startPos + getDisplacement(col, row);
-    
-    const int linIdx = idx.y * (N + 1) + idx.x;
-    writePosition(linIdx, pos);
 
-    vec3 startNormal = vec3(0, 1, 0);//makeNormal3(col, row, factor);
-    startNormal = makeNormal3(col, row, factor);
-    writeNormal(linIdx, startNormal);
+    const int linIdx = idx.y * (N + 1) + idx.x;
+    writePosition(linIdx, startPos + getDisplacement(col, row));
+    writeNormal(linIdx, makeNormal(col, row));
 }

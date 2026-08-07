@@ -23,9 +23,7 @@ constexpr int32_t N = 512;
 constexpr int32_t logN = std::bit_width(static_cast<uint32_t>(N)) - 1;
 constexpr float kGravity = 9.81f;
 
-// World-space extent of a single ocean patch. This is the same L that defines the spectral grid
-// k = 2 * pi * n / L, so the spectrum and the tessellated geometry have to agree on it. With
-// N = 512 that gives 0.5 m grid cells and a shortest resolvable wavelength of 1 m.
+// Also the L in the spectral grid k = 2 * pi * n / L, so spectrum and geometry must agree on it.
 constexpr float kPatchWorldSize = 256.0f;
 constexpr float kCellSize = kPatchWorldSize / N;
 
@@ -195,10 +193,9 @@ void createFftDispatches(
 
 OceanScene::OceanScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
-    // `A` is now the Phillips constant: at 10 m/s wind it puts the spectral peak at an 85 m
-    // wavelength with a significant wave height of ~2.3 m. The small-wave cutoff is one grid cell.
+    // A is the Phillips constant; at 10 m/s this gives an 85 m peak wavelength and H_s ~ 2.3 m.
     , m_oceanParams(createOceanParameters(N, kPatchWorldSize, 10.0f, 0.0f, 0.001f, kCellSize))
-    , m_choppiness(0.0f) {
+    , m_choppiness(1.0f) {
     setupInput();
     setupResources();
     buildRenderGraph();
@@ -294,9 +291,8 @@ void OceanScene::drawGui() {
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
     }
     ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f");
-    // The spectrum tail is exp(-k^2 * l^2), so the cutoff is only meaningful relative to the cell.
     ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize);
-    ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 10.0f);
+    ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 5.0f);
     ImGui::End();
 
     ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
