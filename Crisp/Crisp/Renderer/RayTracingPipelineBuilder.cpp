@@ -1,5 +1,7 @@
 #include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
 
+#include <span>
+
 #include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
@@ -94,7 +96,7 @@ ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkP
         BufferMemoryType::GpuOnly);
     m_renderer.enqueueResourceUpdate(
         [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](const VulkanCommandEncoder& encoder) {
-            vkCmdUpdateBuffer(encoder.getHandle(), buffer->getHandle(), 0, handleStorage.size(), handleStorage.data());
+            encoder.updateBuffer(*buffer, std::as_bytes(std::span(handleStorage)));
         });
 
     std::vector<VkDeviceSize> sizes{0};

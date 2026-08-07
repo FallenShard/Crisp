@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <span>
 
+#include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
@@ -27,8 +28,8 @@ public:
     void bindVertexBuffers(
         uint32_t firstBinding, std::span<const VkBuffer> buffers, std::span<const VkDeviceSize> offsets) const;
     void bindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;
-    void draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0)
-        const;
+    void draw(
+        uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0) const;
     void drawIndexed(
         uint32_t indexCount,
         uint32_t instanceCount = 1,
@@ -71,19 +72,12 @@ public:
     void beginRendering(const VkRenderingInfo& renderingInfo) const;
     void endRendering() const;
 
-    void copyBufferToImage(
-        VkBuffer src, VulkanImage& dst, std::span<const VkBufferImageCopy> regions) const;
-    void copyBufferToImage(
-        const VulkanBuffer& src, VulkanImage& dst, const VkBufferImageCopy& region) const;
-    void copyImageToBuffer(
-        const VulkanImage& src, VkBuffer dst, std::span<const VkBufferImageCopy> regions) const;
-    void copyImageToBuffer(
-        const VulkanImage& src, const VulkanBuffer& dst, const VkBufferImageCopy& region) const;
+    void copyBufferToImage(VkBuffer src, VulkanImage& dst, std::span<const VkBufferImageCopy> regions) const;
+    void copyBufferToImage(const VulkanBuffer& src, VulkanImage& dst, const VkBufferImageCopy& region) const;
+    void copyImageToBuffer(const VulkanImage& src, VkBuffer dst, std::span<const VkBufferImageCopy> regions) const;
+    void copyImageToBuffer(const VulkanImage& src, const VulkanBuffer& dst, const VkBufferImageCopy& region) const;
     void blitImage(
-        const VulkanImage& src,
-        VulkanImage& dst,
-        const VkImageBlit& region,
-        VkFilter filter = VK_FILTER_LINEAR) const;
+        const VulkanImage& src, VulkanImage& dst, const VkImageBlit& region, VkFilter filter = VK_FILTER_LINEAR) const;
     void generateMipmaps(VulkanImage& image, const VulkanSynchronizationStage& initialStage = kTransferRead) const;
 
     void dispatchCompute(const VkExtent3D& workGroupCount) const;
@@ -91,11 +85,15 @@ public:
     void drawMeshTasks(uint32_t groupCount) const;
     void traceRays(std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const;
 
+    void updateBuffer(const VulkanBuffer& buffer, std::span<const std::byte> data) const;
+    void buildAccelerationStructure(VulkanAccelerationStructure& accelerationStructure) const;
+
     template <typename T, typename... Ts>
     void setPushConstants(
         const VulkanPipelineLayout& layout, VkShaderStageFlags stageFlags, const T& value, const Ts&... rest) const {
         setPushConstantsAt(layout, stageFlags, 0, value, rest...);
     }
+
     void setPushConstants(const VulkanPipelineLayout& layout, std::span<const std::byte> data) const;
 
     VkCommandBuffer getHandle() const {

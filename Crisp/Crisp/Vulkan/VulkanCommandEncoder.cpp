@@ -410,12 +410,28 @@ void VulkanCommandEncoder::traceRays(
         1);
 }
 
+void VulkanCommandEncoder::updateBuffer(const VulkanBuffer& buffer, const std::span<const std::byte> data) const {
+    vkCmdUpdateBuffer(m_cmdBuffer, buffer.getHandle(), 0, data.size(), data.data());
+}
+
+void VulkanCommandEncoder::buildAccelerationStructure(VulkanAccelerationStructure& accelerationStructure) const {
+    if (accelerationStructure.isTopLevel()) {
+        const auto instances = accelerationStructure.getInstances();
+        updateBuffer(accelerationStructure.getInstanceBuffer(), std::as_bytes(instances));
+        insertBarrier(kTransferWrite >> kAccelerationStructureWrite);
+    }
+
+    const auto& buildInfo = accelerationStructure.getBuildInfo();
+    const auto* buildRange = &accelerationStructure.getBuildRange();
+    vkCmdBuildAccelerationStructuresKHR(m_cmdBuffer, 1, &buildInfo, &buildRange);
+}
+
 void VulkanCommandEncoder::setPushConstants(
     const VulkanPipelineLayout& layout, const std::span<const std::byte> data) const {
     for (const auto& range : layout.getPushConstantRanges()) {
         CRISP_CHECK_LE(range.offset + range.size, data.size());
         vkCmdPushConstants(
-            m_cmdBuffer, layout.getHandle(), range.stageFlags, range.offset, range.size, data.data() + range.offset);
+            m_cmdBuffer, layout.getHandle(), range.stageFlags, range.offset, range.size, data.data() + range.offset); // NOLINT
     }
 }
 

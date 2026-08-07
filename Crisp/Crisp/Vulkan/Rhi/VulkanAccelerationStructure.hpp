@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <string_view>
 
 #include <Crisp/Math/Headers.hpp>
@@ -22,10 +23,29 @@ public:
     void setPrimitiveCount(uint32_t count);
     void setBuildRangeOffsets(uint32_t primitiveOffset, uint32_t firstVertex);
 
-    void build(VkCommandBuffer cmdBuffer);
     void setDebugName(const VulkanDevice& device, std::string_view name) const;
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
+
+    bool isTopLevel() const {
+        return m_buildInfo.type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    }
+
+    const VkAccelerationStructureBuildGeometryInfoKHR& getBuildInfo() const {
+        return m_buildInfo;
+    }
+
+    const VkAccelerationStructureBuildRangeInfoKHR& getBuildRange() const {
+        return m_buildRange;
+    }
+
+    const VulkanBuffer& getInstanceBuffer() const {
+        return *m_instanceBuffer;
+    }
+
+    std::span<const VkAccelerationStructureInstanceKHR> getInstances() const {
+        return m_instances;
+    }
 
 private:
     void createAccelerationStructure(const VulkanDevice& device);

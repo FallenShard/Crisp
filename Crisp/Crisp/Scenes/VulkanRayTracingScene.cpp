@@ -126,11 +126,11 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
     m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
         std::vector<VulkanAccelerationStructure*> blases;
         for (auto& blas : m_bottomLevelAccelStructures) {
-            blas->build(encoder.getHandle());
+            encoder.buildAccelerationStructure(*blas);
             blases.push_back(blas.get());
         }
 
-        m_topLevelAccelStructure->build(encoder.getHandle());
+        encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
     });
 
     VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
